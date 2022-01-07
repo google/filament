@@ -97,7 +97,7 @@ Animator* FFilamentAsset::getAnimator() noexcept {
     return mAnimator;
 }
 
-void FFilamentAsset::setMorphWeights(utils::Entity entity, const float* weights, int count) noexcept {
+void FFilamentAsset::setMorphWeights(utils::Entity entity, const float* weights, size_t count) noexcept {
     if (mResourcesLoaded) {
         mMorpher->setWeights(entity, weights, count);
     }
@@ -289,7 +289,7 @@ Animator* FilamentAsset::getAnimator() noexcept {
     return upcast(this)->getAnimator();
 }
 
-void FilamentAsset::setMorphWeights(utils::Entity entity, const float* weights, int count) {
+void FilamentAsset::setMorphWeights(utils::Entity entity, const float* weights, size_t count) {
     return upcast(this)->setMorphWeights(entity, weights, count);
 }
 

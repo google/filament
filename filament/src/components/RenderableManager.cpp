@@ -580,8 +580,8 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
     bones.offset = uint16_t(offset);
 }
 
-static void setMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
-        float const* weights, int count) noexcept {
+static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
+        float const* weights, size_t count) noexcept {
     auto& driver = engine.getDriverApi();
     auto size = sizeof(PerRenderableMorphingUib);
     auto* UTILS_RESTRICT out = (PerRenderableMorphingUib*)driver.allocate(size);
@@ -592,7 +592,7 @@ static void setMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferOb
     driver.updateBufferObject(handle, { out, size }, 0);
 }
 
-void FRenderableManager::setMorphWeights(Instance instance, float const* weights, int count) noexcept {
+void FRenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
     if (instance) {
         MorphWeights& morphWeights = mManager[instance].morphWeights;
 
@@ -601,7 +601,7 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
 
         if (morphWeights.handle) {
             morphWeights.count = count;
-            filament::setMorphWeights(mEngine, morphWeights.handle, weights, count);
+            updateMorphWeights(mEngine, morphWeights.handle, weights, count);
         }
     }
 }
@@ -746,7 +746,7 @@ void RenderableManager::setSkinningBuffer(Instance instance,
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
 }
 
-void RenderableManager::setMorphWeights(Instance instance, float const* weights, int count) noexcept {
+void RenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
     upcast(this)->setMorphWeights(instance, weights, count);
 }
 

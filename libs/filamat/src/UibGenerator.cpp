@@ -163,7 +163,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerRenderableMorphingUib::_name)
-            .add("count", 1, UniformInterfaceBlock::Type::INT)
+            .add("count", 1, UniformInterfaceBlock::Type::UINT)
             .add("weights", CONFIG_MAX_MORPH_TARGET_COUNT, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;

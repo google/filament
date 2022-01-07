@@ -42,11 +42,11 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    void setPositionsAt(int targetIndex, math::float3 const* positions, int count);
-    void setPositionsAt(int targetIndex, math::float4 const* positions, int count);
-    void setTangentsAt(int targetIndex, math::short4 const* tangents, int count);
-    inline auto getVertexCount() const noexcept { return mVertexCount; }
-    inline auto getCount() const noexcept { return mCount; }
+    void setPositionsAt(size_t targetIndex, math::float3 const* positions, size_t count);
+    void setPositionsAt(size_t targetIndex, math::float4 const* positions, size_t count);
+    void setTangentsAt(size_t targetIndex, math::short4 const* tangents, size_t count);
+    inline size_t getVertexCount() const noexcept { return mVertexCount; }
+    inline size_t getCount() const noexcept { return mCount; }
 
 private:
     friend class FView;
@@ -57,24 +57,24 @@ private:
 
     class Target {
     public:
-        explicit Target(int size) noexcept;
+        explicit Target(size_t size) noexcept;
 
         void initialize();
         void terminate();
 
-        void setPositions(math::float3 const* positions, int count) noexcept;
-        void setPositions(math::float4 const* positions, int count) noexcept;
-        void setTangents(math::short4 const* tangents, int count) noexcept;
+        void setPositions(math::float3 const* positions, size_t count) noexcept;
+        void setPositions(math::float4 const* positions, size_t count) noexcept;
+        void setTangents(math::short4 const* tangents, size_t count) noexcept;
 
         bool isAnyDirty(uint8_t dirtyFlags) const noexcept;
         void clearDirty() const noexcept;
 
-        inline auto getSize() const noexcept { return mSize; }
-        inline auto getPositions() const noexcept { return mPositions; }
-        inline auto getTangents() const noexcept { return mTangents; }
+        inline size_t getSize() const noexcept { return mSize; }
+        inline math::float4* getPositions() const noexcept { return mPositions; }
+        inline math::float4* getTangents() const noexcept { return mTangents; }
 
     private:
-        int mSize;
+        size_t mSize;
         utils::HeapAllocator mAllocator;
         math::float4* mPositions = nullptr;
         math::float4* mTangents = nullptr;
@@ -85,8 +85,8 @@ private:
     backend::Handle<backend::HwTexture> mTbHandle;
     std::vector<Target> mTargets;
     backend::SamplerGroup mSBuffer;
-    int mVertexCount;
-    int mCount;
+    size_t mVertexCount;
+    size_t mCount;
 };
 
 FILAMENT_UPCAST(MorphTargets)

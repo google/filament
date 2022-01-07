@@ -110,7 +110,7 @@ public:
     inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
     inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset) noexcept;
-    void setMorphWeights(Instance instance, float const* weights, int count) noexcept;
+    void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
     void setMorphTargetsAt(Instance instance,
             size_t primitiveIndex, FMorphTargets* morphTargets) noexcept;
     inline void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
@@ -139,7 +139,7 @@ public:
 
     struct MorphingBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
-        int count;
+        uint32_t count;
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
     inline int getMorphTargetCount(Instance instance) const noexcept;
@@ -178,7 +178,7 @@ private:
 
     struct MorphWeights {
         backend::Handle<backend::HwBufferObject> handle;
-        int count = 0;
+        uint32_t count = 0;
     };
     static_assert(sizeof(MorphWeights) == 8);
 

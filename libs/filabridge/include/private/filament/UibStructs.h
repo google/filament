@@ -227,9 +227,9 @@ static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
         "PerRenderableUibBone exceed max UBO size");
 
 struct alignas(16) PerRenderableMorphingUib {
-  static constexpr utils::StaticString _name{ "MorphingUniforms" };
-  int count;
-  math::float4 weights[CONFIG_MAX_MORPH_TARGET_COUNT];
+    static constexpr utils::StaticString _name{ "MorphingUniforms" };
+    uint32_t count;
+    math::float4 weights[CONFIG_MAX_MORPH_TARGET_COUNT];
 };
 static_assert(sizeof(PerRenderableMorphingUib) <= 16384,
         "PerRenderableMorphingUib exceed max UBO size");

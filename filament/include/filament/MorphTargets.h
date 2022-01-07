@@ -48,14 +48,14 @@ public:
          * @param vertexCount Number of vertex counts the morph targets can hold.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder& vertexCount(int vertexCount) noexcept;
+        Builder& vertexCount(size_t vertexCount) noexcept;
 
         /**
          * Size of the morph targets in targets.
          * @param count Number of targets the morph targets can hold.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder& count(int count) noexcept;
+        Builder& count(size_t count) noexcept;
 
         /**
          * Creates the MorphTargets object and returns a pointer to it.
@@ -80,7 +80,7 @@ public:
      * @param weights pointer to at least count positions
      * @param count number of position elements in positions
      */
-    void setPositionsAt(int targetIndex, math::float3 const* positions, int count);
+    void setPositionsAt(size_t targetIndex, math::float3 const* positions, size_t count);
 
     /**
      * Updates the position of morph target at the index.
@@ -88,7 +88,7 @@ public:
      * @param weights pointer to at least count positions
      * @param count number of position elements in positions
      */
-    void setPositionsAt(int targetIndex, math::float4 const* positions, int count);
+    void setPositionsAt(size_t targetIndex, math::float4 const* positions, size_t count);
 
     /**
      * Updates the position of morph target at the index.
@@ -96,19 +96,19 @@ public:
      * @param tangents pointer to at least count tangents
      * @param count number of tangent elements in tangents
      */
-    void setTangentsAt(int targetIndex, math::short4 const* tangents, int count);
+    void setTangentsAt(size_t targetIndex, math::short4 const* tangents, size_t count);
 
     /**
      * Returns the vertex count of this MorphTargets.
      * @return The number of vertices the MorphTargets holds.
      */
-    int getVertexCount() const noexcept;
+    size_t getVertexCount() const noexcept;
 
     /**
      * Returns the target count of this MorphTargets.
      * @return The number of targets the MorphTargets holds.
      */
-    int getCount() const noexcept;
+    size_t getCount() const noexcept;
 };
 
 } // namespace filament

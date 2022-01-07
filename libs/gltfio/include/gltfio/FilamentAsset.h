@@ -206,7 +206,7 @@ public:
     /**
      * Updates the morphing weights in the given entity.
      */
-    void setMorphWeights(utils::Entity entity, const float* weights, int count);
+    void setMorphWeights(utils::Entity entity, const float* weights, size_t count);
 
     /**
      * Gets the number of morphing in the given entity.
