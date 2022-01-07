@@ -76,27 +76,30 @@ public:
 
     /**
      * Updates the position of morph target at the index.
+     * @param engine Reference to the filament::Engine associated with this MorphTargets.
      * @param targetIndex the index of morph target to be updated.
      * @param weights pointer to at least count positions
      * @param count number of position elements in positions
      */
-    void setPositionsAt(size_t targetIndex, math::float3 const* positions, size_t count);
+    void setPositionsAt(Engine& engine, size_t targetIndex, math::float3 const* positions, size_t count);
 
     /**
      * Updates the position of morph target at the index.
+     * @param engine Reference to the filament::Engine associated with this MorphTargets.
      * @param targetIndex the index of morph target to be updated.
      * @param weights pointer to at least count positions
      * @param count number of position elements in positions
      */
-    void setPositionsAt(size_t targetIndex, math::float4 const* positions, size_t count);
+    void setPositionsAt(Engine& engine, size_t targetIndex, math::float4 const* positions, size_t count);
 
     /**
      * Updates the position of morph target at the index.
+     * @param engine Reference to the filament::Engine associated with this MorphTargets.
      * @param targetIndex the index of morph target to be updated.
      * @param tangents pointer to at least count tangents
      * @param count number of tangent elements in tangents
      */
-    void setTangentsAt(size_t targetIndex, math::short4 const* tangents, size_t count);
+    void setTangentsAt(Engine& engine, size_t targetIndex, math::short4 const* tangents, size_t count);
 
     /**
      * Returns the vertex count of this MorphTargets.

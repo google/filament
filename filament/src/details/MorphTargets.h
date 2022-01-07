@@ -42,9 +42,9 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    void setPositionsAt(size_t targetIndex, math::float3 const* positions, size_t count);
-    void setPositionsAt(size_t targetIndex, math::float4 const* positions, size_t count);
-    void setTangentsAt(size_t targetIndex, math::short4 const* tangents, size_t count);
+    void setPositionsAt(FEngine& engine, size_t targetIndex, math::float3 const* positions, size_t count);
+    void setPositionsAt(FEngine& engine, size_t targetIndex, math::float4 const* positions, size_t count);
+    void setTangentsAt(FEngine& engine, size_t targetIndex, math::short4 const* tangents, size_t count);
     inline size_t getVertexCount() const noexcept { return mVertexCount; }
     inline size_t getCount() const noexcept { return mCount; }
 
@@ -55,35 +55,8 @@ private:
     void commit(FEngine& engine) const noexcept;
     void bind(backend::DriverApi& driver) const noexcept;
 
-    class Target {
-    public:
-        explicit Target(size_t size) noexcept;
-
-        void initialize();
-        void terminate();
-
-        void setPositions(math::float3 const* positions, size_t count) noexcept;
-        void setPositions(math::float4 const* positions, size_t count) noexcept;
-        void setTangents(math::short4 const* tangents, size_t count) noexcept;
-
-        bool isAnyDirty(uint8_t dirtyFlags) const noexcept;
-        void clearDirty() const noexcept;
-
-        inline size_t getSize() const noexcept { return mSize; }
-        inline math::float4* getPositions() const noexcept { return mPositions; }
-        inline math::float4* getTangents() const noexcept { return mTangents; }
-
-    private:
-        size_t mSize;
-        utils::HeapAllocator mAllocator;
-        math::float4* mPositions = nullptr;
-        math::float4* mTangents = nullptr;
-        mutable int8_t mDirtyFlags = 0x0;
-    };
-
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
     backend::Handle<backend::HwTexture> mTbHandle;
-    std::vector<Target> mTargets;
     backend::SamplerGroup mSBuffer;
     size_t mVertexCount;
     size_t mCount;

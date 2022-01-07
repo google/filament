@@ -128,7 +128,8 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                 TangentsJob::run(&params);
 
                 if (params.out.results) {
-                    morphHelperPrim.targets->setTangentsAt(targetIndex, params.out.results, params.out.vertexCount);
+                    morphHelperPrim.targets->setTangentsAt(engine, targetIndex,
+                            params.out.results, params.out.vertexCount);
                     free(params.out.results);
                 }
                 continue;
@@ -146,11 +147,11 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                     auto* data = computeBindingOffset(accessor) + bufferData;
 
                     if (accessor->type == cgltf_type_vec3) {
-                        morphHelperPrim.targets->setPositionsAt(targetIndex,
+                        morphHelperPrim.targets->setPositionsAt(engine, targetIndex,
                                 (const float3*) data, vertexBuffer->getVertexCount());
                     } else {
                         assert_invariant(accessor->type == cgltf_type_vec4);
-                        morphHelperPrim.targets->setPositionsAt(targetIndex,
+                        morphHelperPrim.targets->setPositionsAt(engine, targetIndex,
                                 (const float4*) data, vertexBuffer->getVertexCount());
                     }
                 }

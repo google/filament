@@ -60,9 +60,9 @@ MorphTargets* MorphTargets::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-enum { POSITIONS_CHANGED = 0x1, TANGENTS_CHANGED = 0x02 };
-
 constexpr size_t MAX_TEXTURE_WIDTH = 4096;
+
+static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
 static inline size_t getWidth(size_t vertexCount) noexcept {
     return std::min(vertexCount, MAX_TEXTURE_WIDTH);
@@ -93,15 +93,10 @@ static inline size_t getTangentIndex(size_t targetIndex) noexcept {
 }
 
 FMorphTargets::FMorphTargets(FEngine& engine, const Builder& builder)
-        :mSBuffer(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT),
-         mVertexCount(builder->mVertexCount),
-         mCount(builder->mCount) {
+        : mSBuffer(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT),
+          mVertexCount(builder->mVertexCount),
+          mCount(builder->mCount) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-
-    mTargets.resize(mCount, Target(getSize(mVertexCount)));
-    for (auto& target : mTargets) {
-        target.initialize();
-    }
 
     mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
 
@@ -118,75 +113,76 @@ void FMorphTargets::terminate(FEngine& engine) {
 
     driver.destroySamplerGroup(mSbHandle);
     driver.destroyTexture(mTbHandle);
-
-    for (auto& target : mTargets) {
-        target.terminate();
-    }
-    mTargets.clear();
 }
 
-void FMorphTargets::setPositionsAt(size_t targetIndex, math::float3 const* positions, size_t count) {
+void FMorphTargets::setPositionsAt(FEngine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
-    auto& target = mTargets[targetIndex];
+    auto size = getSize(mVertexCount);
 
-    ASSERT_PRECONDITION((int)sizeof(math::float3) * count <= target.getSize(),
+    ASSERT_PRECONDITION((int)sizeof(math::float3) * count <= size,
             "MorphTargets (size=%lu) overflow (size=%lu)",
-            target.getSize(), sizeof(math::float3) * count);
+            size, sizeof(math::float3) * count);
 
-    target.setPositions(positions, count);
+    auto* out = (float4*) malloc(size);
+    std::transform(positions, positions + count, out,
+            [](const float3& p) { return float4(p, 1.0f); });
+
+    Texture::PixelBufferDescriptor buffer(out, size, Texture::Format::RGBA, Texture::Type::FLOAT,
+            FREE_CALLBACK);
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    driver.update3DImage(mTbHandle, 0, 0, 0, getPositionIndex(targetIndex),
+            getWidth(mVertexCount), getHeight(mVertexCount), 1,
+            std::move(buffer));
 }
 
-void FMorphTargets::setPositionsAt(size_t targetIndex, math::float4 const* positions, size_t count) {
+void FMorphTargets::setPositionsAt(FEngine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
-    auto& target = mTargets[targetIndex];
+    auto size = getSize(mVertexCount);
 
-    ASSERT_PRECONDITION((int)sizeof(math::float3) * count <= target.getSize(),
+    ASSERT_PRECONDITION((int)sizeof(math::float4) * count <= size,
             "MorphTargets (size=%lu) overflow (size=%lu)",
-            target.getSize(), sizeof(math::float3) * count);
+            size, sizeof(math::float4) * count);
 
-    target.setPositions(positions, count);
+    auto* out = (float4*) malloc(size);
+    memcpy(out, positions, sizeof(math::float4) * count);
+
+    Texture::PixelBufferDescriptor buffer(out, size, Texture::Format::RGBA, Texture::Type::FLOAT,
+            FREE_CALLBACK);
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    driver.update3DImage(mTbHandle, 0, 0, 0, getPositionIndex(targetIndex),
+            getWidth(mVertexCount), getHeight(mVertexCount), 1,
+            std::move(buffer));
 }
 
-void FMorphTargets::setTangentsAt(size_t targetIndex, math::short4 const* tangents, size_t count) {
+void FMorphTargets::setTangentsAt(FEngine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
-    auto& target = mTargets[targetIndex];
+    auto size = getSize(mVertexCount);
 
-    ASSERT_PRECONDITION((int)sizeof(math::short4) * count <= target.getSize(),
+    ASSERT_PRECONDITION((int)sizeof(math::short4) * count <= size,
             "MorphTargets (size=%lu) overflow (size=%lu)",
-            target.getSize(), sizeof(math::short4) * count);
+            size, sizeof(math::short4) * count);
 
-    target.setTangents(tangents, count);
+    auto* out = (float4*) malloc(size);
+    std::transform(tangents, tangents + count, out,
+            [](const short4& t) { return unpackSnorm16(t); });
+
+    Texture::PixelBufferDescriptor buffer(out, size, Texture::Format::RGBA, Texture::Type::FLOAT,
+            FREE_CALLBACK);
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    driver.update3DImage(mTbHandle, 0, 0, 0, getTangentIndex(targetIndex),
+            getWidth(mVertexCount), getHeight(mVertexCount), 1,
+            std::move(buffer));
 }
 
 void FMorphTargets::commit(FEngine& engine) const noexcept {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    for (size_t ti = 0, c = mCount; ti != c; ++ti) {
-        if (UTILS_UNLIKELY(mTargets[ti].isAnyDirty(POSITIONS_CHANGED))) {
-            Texture::PixelBufferDescriptor buffer(mTargets[ti].getPositions(), mTargets[ti].getSize(),
-                    Texture::Format::RGBA, Texture::Type::FLOAT);
-            driver.update3DImage(mTbHandle, 0,
-                    0, 0, getPositionIndex(ti),
-                    getWidth(mVertexCount), getHeight(mVertexCount), 1,
-                    std::move(buffer));
-        }
-
-        if (UTILS_UNLIKELY(mTargets[ti].isAnyDirty(TANGENTS_CHANGED))) {
-            Texture::PixelBufferDescriptor buffer(mTargets[ti].getTangents(), mTargets[ti].getSize(),
-                    Texture::Format::RGBA, Texture::Type::FLOAT);
-            driver.update3DImage(mTbHandle, 0,
-                    0, 0, getTangentIndex(ti),
-                    getWidth(mVertexCount), getHeight(mVertexCount), 1,
-                    std::move(buffer));
-        }
-
-        mTargets[ti].clearDirty();
-    }
-
     if (mSBuffer.isDirty()) {
+        FEngine::DriverApi& driver = engine.getDriverApi();
         driver.updateSamplerGroup(mSbHandle, std::move(mSBuffer.toCommandStream()));
     }
 }
@@ -195,59 +191,20 @@ void FMorphTargets::bind(backend::DriverApi& driver) const noexcept {
     driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING, mSbHandle);
 }
 
-FMorphTargets::Target::Target(size_t size) noexcept
-        : mSize(size) {
-}
-
-void FMorphTargets::Target::initialize() {
-    mPositions = static_cast<float4*>(mAllocator.alloc(mSize));
-    mTangents = static_cast<float4*>(mAllocator.alloc(mSize));
-}
-
-void FMorphTargets::Target::terminate() {
-    mAllocator.free(mTangents, mSize);
-    mAllocator.free(mPositions, mSize);
-}
-
-void FMorphTargets::Target::setPositions(math::float3 const* positions, size_t count) noexcept {
-    std::transform(positions, positions + count, mPositions,
-            [](const float3& p) { return float4(p, 1.0f); });
-    mDirtyFlags |= POSITIONS_CHANGED;
-}
-
-void FMorphTargets::Target::setPositions(math::float4 const* positions, size_t count) noexcept {
-    memcpy(mPositions, positions, sizeof(float4) * count);
-    mDirtyFlags |= POSITIONS_CHANGED;
-}
-
-void FMorphTargets::Target::setTangents(math::short4 const* tangents, size_t count) noexcept {
-    std::transform(tangents, tangents + count, mTangents,
-            [](const short4& t) { return unpackSnorm16(t); });
-    mDirtyFlags |= TANGENTS_CHANGED;
-}
-
-bool FMorphTargets::Target::isAnyDirty(uint8_t dirtyFlags) const noexcept {
-    return mDirtyFlags & dirtyFlags;
-}
-
-void FMorphTargets::Target::clearDirty() const noexcept {
-    mDirtyFlags = 0x0;
-}
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 
-void MorphTargets::setPositionsAt(size_t targetIndex, math::float3 const* positions, size_t count) {
-    upcast(this)->setPositionsAt(targetIndex, positions, count);
+void MorphTargets::setPositionsAt(Engine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
+    upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count);
 }
 
-void MorphTargets::setPositionsAt(size_t targetIndex, math::float4 const* positions, size_t count) {
-    upcast(this)->setPositionsAt(targetIndex, positions, count);
+void MorphTargets::setPositionsAt(Engine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
+    upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count);
 }
 
-void MorphTargets::setTangentsAt(size_t targetIndex, math::short4 const* tangents, size_t count) {
-    upcast(this)->setTangentsAt(targetIndex, tangents, count);
+void MorphTargets::setTangentsAt(Engine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
+    upcast(this)->setTangentsAt(upcast(engine), targetIndex, tangents, count);
 }
 
 size_t MorphTargets::getVertexCount() const noexcept {
