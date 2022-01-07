@@ -252,7 +252,7 @@ public:
      *
      * render() generates commands for each of the following stages:
      *
-     * 1. Shadow map pass, if needed (currently only a single shadow map is supported).
+     * 1. Shadow map passes, if needed.
      * 2. Depth pre-pass.
      * 3. Color pass.
      * 4. Post-processing pass.
