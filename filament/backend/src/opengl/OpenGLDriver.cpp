@@ -1808,9 +1808,9 @@ void OpenGLDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
 
     GLTexture* t = handle_cast<GLTexture *>(th);
     if (data.type == PixelDataType::COMPRESSED) {
-        setCompressedTextureData(t, level, 0, 0, 0, t->width >> level, t->height >> level, 0, std::move(data), &faceOffsets);
+        setCompressedTextureData(t, level, 0, 0, 0, std::max(1u, t->width >> level), std::max(1u, t->height >> level), 0, std::move(data), &faceOffsets);
     } else {
-        setTextureData(t, level, 0, 0, 0, t->width >> level, t->height >> level, 0, std::move(data), &faceOffsets);
+        setTextureData(t, level, 0, 0, 0, std::max(1u, t->width >> level), std::max(1u, t->height >> level), 0, std::move(data), &faceOffsets);
     }
 }
 
