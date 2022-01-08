@@ -135,7 +135,7 @@ static void printUsage(char* name) {
         "   --recompute-aabb, -r\n"
         "       Ignore the min/max attributes in the glTF file\n\n"
         "   --ignore-bind-transform, -g\n"
-        "       Ignore bind transform when recompute aabb\n\n"
+        "       Ignore bind transform when recomputing aabb\n\n"
         "   --settings=<path to JSON file>, -t\n"
         "       Apply the settings in the given JSON file\n\n"
         "   --ubershader, -u\n"
