@@ -1020,8 +1020,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
     auto computeBoundingBoxSkinned = [&](const cgltf_primitive* prim, const Skin* skin, Aabb* result) {
         Aabb aabb;
-        std::vector<mat4f> inverseGlobalTransforms;
-        inverseGlobalTransforms.resize(skin->targets.size());
+        std::vector<mat4f> inverseGlobalTransforms(skin->targets.size());
         for (size_t i = 0; i < skin->targets.size(); i++) {
             auto xformable = tm.getInstance(skin->targets[i]);
             if (xformable) {
