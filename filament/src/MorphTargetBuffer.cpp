@@ -64,7 +64,7 @@ MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
 // When you change this value, you must change MAX_MORPH_TARGET_BUFFER_WIDTH at getters.vs
 constexpr size_t MAX_MORPH_TARGET_BUFFER_WIDTH = 2048;
 
-static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
+static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { ::free(mem); };
 
 static inline size_t getWidth(size_t vertexCount) noexcept {
     return std::min(vertexCount, MAX_MORPH_TARGET_BUFFER_WIDTH);
@@ -126,6 +126,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, mat
             "MorphTargetBuffer (size=%lu) overflow (size=%lu)",
             size, sizeof(math::float3) * count);
 
+    // We could use a pool instead of malloc() directly.
     auto* out = (float4*) malloc(size);
     std::transform(positions, positions + count, out,
             [](const float3& p) { return float4(p, 1.0f); });
@@ -148,6 +149,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, mat
             "MorphTargetBuffer (size=%lu) overflow (size=%lu)",
             size, sizeof(math::float4) * count);
 
+    // We could use a pool instead of malloc() directly.
     auto* out = (float4*) malloc(size);
     memcpy(out, positions, sizeof(math::float4) * count);
 
@@ -169,6 +171,7 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex, math
             "MorphTargetBuffer (size=%lu) overflow (size=%lu)",
             size, sizeof(math::short4) * count);
 
+    // We could use a pool instead of malloc() directly.
     auto* out = (float4*) malloc(size);
     std::transform(tangents, tangents + count, out,
             [](const short4& t) { return unpackSnorm16(t); });

@@ -229,6 +229,7 @@ static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
 
 struct alignas(16) PerRenderableMorphingUib {
     static constexpr utils::StaticString _name{ "MorphingUniforms" };
+    // The array stride(the bytes between array elements) is always rounded up to the size of a vec4 in std140.
     math::float4 weights[CONFIG_MAX_MORPH_TARGET_COUNT];
 };
 static_assert(sizeof(PerRenderableMorphingUib) <= 16384,
