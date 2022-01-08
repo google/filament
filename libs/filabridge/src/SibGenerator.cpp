@@ -69,10 +69,11 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(uint8_t variantKey) noe
 SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(uint8_t variantKey) noexcept {
     using Type = SamplerInterfaceBlock::Type;
     using Format = SamplerInterfaceBlock::Format;
+    using Precision = SamplerInterfaceBlock::Precision;
 
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
             .name("Morphing")
-            .add("targets", Type::SAMPLER_2D_ARRAY, Format::FLOAT)
+            .add("targets", Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH)
             .build();
 
     return sib;
