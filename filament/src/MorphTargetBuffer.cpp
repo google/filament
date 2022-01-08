@@ -106,8 +106,8 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getWidth(mVertexCount), getHeight(mVertexCount), getDepth(mCount),
             TextureUsage::DEFAULT);
 
-    mSBuffer.setSampler(PerRenderPrimitiveMorphingSib::TARGETS,
-            { mTbHandle, { .filterMin = SamplerMinFilter::NEAREST, .filterMag = SamplerMagFilter::NEAREST } });
+    mSBuffer.setSampler(PerRenderPrimitiveMorphingSib::TARGETS, mTbHandle,
+            SamplerParams{ .filterMin = SamplerMinFilter::NEAREST, .filterMag = SamplerMagFilter::NEAREST });
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {
