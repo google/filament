@@ -1018,17 +1018,14 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
 
     const size_t posAttrSize = cgltf_num_components(cgltf_type_vec3);
     const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
-    const bool weightNormalized = pImpl->mNormalizeSkinningWeights;
     auto computeBoundingBoxSkinned = [&](const cgltf_primitive* prim, const Skin* skin, Aabb* result) {
         Aabb aabb;
         std::vector<mat4f> inverseGlobalTransforms;
         inverseGlobalTransforms.resize(skin->targets.size());
         for (size_t i = 0; i < skin->targets.size(); i++) {
             auto xformable = tm.getInstance(skin->targets[i]);
-            if (!skin->targets.empty()) {
+            if (xformable) {
                 inverseGlobalTransforms[i] = inverse(tm.getWorldTransform(xformable));
-            } else {
-                inverseGlobalTransforms[i] = mat4f();
             }
         }
         std::vector<float> verts;
@@ -1065,7 +1062,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
             }
             for (const auto& inverseGlobalTransform: inverseGlobalTransforms) {
                 mat4f skinMatrix = inverseGlobalTransform * tmp;
-                if (!weightNormalized) {
+                if (!pImpl->mNormalizeSkinningWeights) {
                     skinMatrix /= skinMatrix[3].w;
                 }
                 float3 skinnedPoint = (point.x * skinMatrix[0] + point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
