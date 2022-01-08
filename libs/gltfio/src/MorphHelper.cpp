@@ -20,7 +20,7 @@
 #include <filament/VertexBuffer.h>
 #include <utils/JobSystem.h>
 #include <math/norm.h>
-#include <filament/MorphTargets.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include "TangentsJob.h"
 
@@ -101,13 +101,13 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
     auto& morphHelperPrim = entry.primitives.back();
 
     if (prim.targets_count) {
-        morphHelperPrim.targets = MorphTargets::Builder()
+        morphHelperPrim.targets = MorphTargetBuffer::Builder()
                 .vertexCount(vertexBuffer->getVertexCount())
                 .count(prim.targets_count)
                 .build(engine);
 
         auto& rcm = engine.getRenderableManager();
-        rcm.setMorphTargetsAt(rcm.getInstance(entity),
+        rcm.setMorphTargetBufferAt(rcm.getInstance(entity),
                 primitiveIndex, morphHelperPrim.targets);
     }
 

@@ -20,7 +20,7 @@
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 
-#include <filament/MorphTargets.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include <math/vec4.h>
 
@@ -54,7 +54,7 @@ public:
 
 private:
     struct GltfPrimitive {
-        filament::MorphTargets* targets;
+        filament::MorphTargetBuffer* targets;
     };
 
     struct TableEntry {

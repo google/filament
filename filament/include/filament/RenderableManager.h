@@ -41,7 +41,7 @@ class Engine;
 class IndexBuffer;
 class Material;
 class MaterialInstance;
-class MorphTargets;
+class MorphTargetBuffer;
 class Renderer;
 class SkinningBuffer;
 class VertexBuffer;
@@ -461,10 +461,10 @@ public:
 
 
     /**
-     * Associates a MorphTargets to the given primitive.
+     * Associates a MorphTargetBuffer to the given primitive.
      */
-    void setMorphTargetsAt(Instance instance,
-            size_t primitiveIndex, MorphTargets* morphTargets) noexcept;
+    void setMorphTargetBufferAt(Instance instance,
+            size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept;
 
     /**
      * Gets the bounding box used for frustum culling.

@@ -198,7 +198,7 @@ public:
             FEngine& engine, const CameraInfo& camera,
             FScene::RenderableSoa& renderableData, Range visible) noexcept;
 
-    void updatePrimitivesMorphTargets(
+    void updatePrimitivesMorphTargetBuffer(
             FEngine& engine, const CameraInfo&,
             FScene::RenderableSoa& renderableData, Range visible) noexcept;
 

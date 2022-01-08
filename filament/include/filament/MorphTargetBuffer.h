@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_MORPHTARGETS_H
-#define TNT_FILAMENT_MORPHTARGETS_H
+#ifndef TNT_FILAMENT_MORPHTARGETBUFFER_H
+#define TNT_FILAMENT_MORPHTARGETBUFFER_H
 
 #include <filament/FilamentAPI.h>
 
@@ -27,9 +27,9 @@
 namespace filament {
 
 /**
- * MorphTargets is used to hold morphing data (positions and tangents).
+ * MorphTargetBuffer is used to hold morphing data (positions and tangents).
  */
-class UTILS_PUBLIC MorphTargets : public FilamentAPI {
+class UTILS_PUBLIC MorphTargetBuffer : public FilamentAPI {
     struct BuilderDetails;
 
 public:
@@ -58,9 +58,9 @@ public:
         Builder& count(size_t count) noexcept;
 
         /**
-         * Creates the MorphTargets object and returns a pointer to it.
+         * Creates the MorphTargetBuffer object and returns a pointer to it.
          *
-         * @param engine Reference to the filament::Engine to associate this MorphTargets with.
+         * @param engine Reference to the filament::Engine to associate this MorphTargetBuffer with.
          *
          * @return pointer to the newly created object or nullptr if exceptions are disabled and
          *         an error occurred.
@@ -69,14 +69,14 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        MorphTargets* build(Engine& engine);
+        MorphTargetBuffer* build(Engine& engine);
     private:
-        friend class FMorphTargets;
+        friend class FMorphTargetBuffer;
     };
 
     /**
      * Updates the position of morph target at the index.
-     * @param engine Reference to the filament::Engine associated with this MorphTargets.
+     * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
      * @param weights pointer to at least count positions
      * @param count number of position elements in positions
@@ -85,7 +85,7 @@ public:
 
     /**
      * Updates the position of morph target at the index.
-     * @param engine Reference to the filament::Engine associated with this MorphTargets.
+     * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
      * @param weights pointer to at least count positions
      * @param count number of position elements in positions
@@ -94,7 +94,7 @@ public:
 
     /**
      * Updates the position of morph target at the index.
-     * @param engine Reference to the filament::Engine associated with this MorphTargets.
+     * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
      * @param tangents pointer to at least count tangents
      * @param count number of tangent elements in tangents
@@ -102,18 +102,18 @@ public:
     void setTangentsAt(Engine& engine, size_t targetIndex, math::short4 const* tangents, size_t count);
 
     /**
-     * Returns the vertex count of this MorphTargets.
-     * @return The number of vertices the MorphTargets holds.
+     * Returns the vertex count of this MorphTargetBuffer.
+     * @return The number of vertices the MorphTargetBuffer holds.
      */
     size_t getVertexCount() const noexcept;
 
     /**
-     * Returns the target count of this MorphTargets.
-     * @return The number of targets the MorphTargets holds.
+     * Returns the target count of this MorphTargetBuffer.
+     * @return The number of targets the MorphTargetBuffer holds.
      */
     size_t getCount() const noexcept;
 };
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_MORPHTARGETS_H
+#endif //TNT_FILAMENT_MORPHTARGETBUFFER_H

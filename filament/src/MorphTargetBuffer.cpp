@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/MorphTargets.h"
+#include "details/MorphTargetBuffer.h"
 
 #include "private/filament/SibGenerator.h"
 
@@ -31,12 +31,12 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-struct MorphTargets::BuilderDetails {
+struct MorphTargetBuffer::BuilderDetails {
     size_t mVertexCount = 0;
     size_t mCount = 0;
 };
 
-using BuilderType = MorphTargets;
+using BuilderType = MorphTargetBuffer;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
 BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
@@ -44,18 +44,18 @@ BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
-MorphTargets::Builder& MorphTargets::Builder::vertexCount(size_t vertexCount) noexcept {
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::vertexCount(size_t vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
     return *this;
 }
 
-MorphTargets::Builder& MorphTargets::Builder::count(size_t count) noexcept {
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::count(size_t count) noexcept {
     mImpl->mCount = count;
     return *this;
 }
 
-MorphTargets* MorphTargets::Builder::build(Engine& engine) {
-    return upcast(engine).createMorphTargets(*this);
+MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
+    return upcast(engine).createMorphTargetBuffer(*this);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ static inline size_t getTangentIndex(size_t targetIndex) noexcept {
     return targetIndex * 2 + 1;
 }
 
-FMorphTargets::FMorphTargets(FEngine& engine, const Builder& builder)
+FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
         : mSBuffer(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT),
           mVertexCount(builder->mVertexCount),
           mCount(builder->mCount) {
@@ -108,20 +108,20 @@ FMorphTargets::FMorphTargets(FEngine& engine, const Builder& builder)
             { mTbHandle, { .filterMin = SamplerMinFilter::NEAREST, .filterMag = SamplerMagFilter::NEAREST } });
 }
 
-void FMorphTargets::terminate(FEngine& engine) {
+void FMorphTargetBuffer::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     driver.destroySamplerGroup(mSbHandle);
     driver.destroyTexture(mTbHandle);
 }
 
-void FMorphTargets::setPositionsAt(FEngine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
+void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
     auto size = getSize(mVertexCount);
 
     ASSERT_PRECONDITION((int)sizeof(math::float3) * count <= size,
-            "MorphTargets (size=%lu) overflow (size=%lu)",
+            "MorphTargetBuffer (size=%lu) overflow (size=%lu)",
             size, sizeof(math::float3) * count);
 
     auto* out = (float4*) malloc(size);
@@ -137,13 +137,13 @@ void FMorphTargets::setPositionsAt(FEngine& engine, size_t targetIndex, math::fl
             std::move(buffer));
 }
 
-void FMorphTargets::setPositionsAt(FEngine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
+void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
     auto size = getSize(mVertexCount);
 
     ASSERT_PRECONDITION((int)sizeof(math::float4) * count <= size,
-            "MorphTargets (size=%lu) overflow (size=%lu)",
+            "MorphTargetBuffer (size=%lu) overflow (size=%lu)",
             size, sizeof(math::float4) * count);
 
     auto* out = (float4*) malloc(size);
@@ -158,13 +158,13 @@ void FMorphTargets::setPositionsAt(FEngine& engine, size_t targetIndex, math::fl
             std::move(buffer));
 }
 
-void FMorphTargets::setTangentsAt(FEngine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
+void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
     auto size = getSize(mVertexCount);
 
     ASSERT_PRECONDITION((int)sizeof(math::short4) * count <= size,
-            "MorphTargets (size=%lu) overflow (size=%lu)",
+            "MorphTargetBuffer (size=%lu) overflow (size=%lu)",
             size, sizeof(math::short4) * count);
 
     auto* out = (float4*) malloc(size);
@@ -180,14 +180,14 @@ void FMorphTargets::setTangentsAt(FEngine& engine, size_t targetIndex, math::sho
             std::move(buffer));
 }
 
-void FMorphTargets::commit(FEngine& engine) const noexcept {
+void FMorphTargetBuffer::commit(FEngine& engine) const noexcept {
     if (mSBuffer.isDirty()) {
         FEngine::DriverApi& driver = engine.getDriverApi();
         driver.updateSamplerGroup(mSbHandle, std::move(mSBuffer.toCommandStream()));
     }
 }
 
-void FMorphTargets::bind(backend::DriverApi& driver) const noexcept {
+void FMorphTargetBuffer::bind(backend::DriverApi& driver) const noexcept {
     driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING, mSbHandle);
 }
 
@@ -195,23 +195,23 @@ void FMorphTargets::bind(backend::DriverApi& driver) const noexcept {
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 
-void MorphTargets::setPositionsAt(Engine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
+void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
     upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count);
 }
 
-void MorphTargets::setPositionsAt(Engine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
+void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
     upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count);
 }
 
-void MorphTargets::setTangentsAt(Engine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
+void MorphTargetBuffer::setTangentsAt(Engine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
     upcast(this)->setTangentsAt(upcast(engine), targetIndex, tangents, count);
 }
 
-size_t MorphTargets::getVertexCount() const noexcept {
+size_t MorphTargetBuffer::getVertexCount() const noexcept {
     return upcast(this)->getVertexCount();
 }
 
-size_t MorphTargets::getCount() const noexcept {
+size_t MorphTargetBuffer::getCount() const noexcept {
     return upcast(this)->getCount();
 }
 

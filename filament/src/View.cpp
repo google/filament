@@ -869,14 +869,14 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
     }
 }
 
-void FView::updatePrimitivesMorphTargets(FEngine& engine, const CameraInfo&,
+void FView::updatePrimitivesMorphTargetBuffer(FEngine& engine, const CameraInfo&,
         FScene::RenderableSoa& renderableData, Range visible) noexcept {
     for (uint32_t index : visible) {
         Slice<FRenderPrimitive> primitives = renderableData.elementAt<FScene::PRIMITIVES>(index);
         for (auto& primitive : primitives) {
-            auto morphTargets = primitive.getMorphTargets();
-            if (morphTargets) {
-                morphTargets->commit(engine);
+            auto morphTargetBuffer = primitive.getMorphTargetBuffer();
+            if (morphTargetBuffer) {
+                morphTargetBuffer->commit(engine);
             }
         }
     }

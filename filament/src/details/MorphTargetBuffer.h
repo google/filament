@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_MORPHTARGETS_H
-#define TNT_FILAMENT_DETAILS_MORPHTARGETS_H
+#ifndef TNT_FILAMENT_DETAILS_MORPHTARGETBUFFER_H
+#define TNT_FILAMENT_DETAILS_MORPHTARGETBUFFER_H
 
 #include "upcast.h"
 
-#include <filament/MorphTargets.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include "private/backend/DriverApiForward.h"
 
@@ -35,9 +35,9 @@ namespace filament {
 
 class FEngine;
 
-class FMorphTargets : public MorphTargets {
+class FMorphTargetBuffer : public MorphTargetBuffer {
 public:
-    FMorphTargets(FEngine& engine, const Builder& builder);
+    FMorphTargetBuffer(FEngine& engine, const Builder& builder);
 
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
@@ -62,8 +62,8 @@ private:
     size_t mCount;
 };
 
-FILAMENT_UPCAST(MorphTargets)
+FILAMENT_UPCAST(MorphTargetBuffer)
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_DETAILS_MORPHTARGETS_H
+#endif //TNT_FILAMENT_DETAILS_MORPHTARGETBUFFER_H

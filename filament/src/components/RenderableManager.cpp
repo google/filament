@@ -606,12 +606,12 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
     }
 }
 
-void FRenderableManager::setMorphTargetsAt(Instance instance,
-        size_t primitiveIndex, FMorphTargets* morphTargets) noexcept {
+void FRenderableManager::setMorphTargetBufferAt(Instance instance,
+        size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept {
     if (instance) {
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, 0);
         if (primitiveIndex < primitives.size()) {
-            primitives[primitiveIndex].set(morphTargets);
+            primitives[primitiveIndex].set(morphTargetBuffer);
         }
     }
 }
@@ -750,9 +750,9 @@ void RenderableManager::setMorphWeights(Instance instance, float const* weights,
     upcast(this)->setMorphWeights(instance, weights, count);
 }
 
-void RenderableManager::setMorphTargetsAt(Instance instance,
-        size_t primitiveIndex, MorphTargets* morphTargets) noexcept {
-    upcast(this)->setMorphTargetsAt(instance, primitiveIndex, upcast(morphTargets));
+void RenderableManager::setMorphTargetBufferAt(Instance instance,
+        size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept {
+    upcast(this)->setMorphTargetBufferAt(instance, primitiveIndex, upcast(morphTargetBuffer));
 }
 
 void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {

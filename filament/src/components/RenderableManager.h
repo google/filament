@@ -40,7 +40,7 @@ namespace filament {
 class FBufferObject;
 class FIndexBuffer;
 class FMaterialInstance;
-class FMorphTargets;
+class FMorphTargetBuffer;
 class FRenderPrimitive;
 class FSkinningBuffer;
 class FVertexBuffer;
@@ -111,8 +111,8 @@ public:
     inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset) noexcept;
     void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
-    void setMorphTargetsAt(Instance instance,
-            size_t primitiveIndex, FMorphTargets* morphTargets) noexcept;
+    void setMorphTargetBufferAt(Instance instance,
+            size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept;
     inline void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
 
     inline bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
