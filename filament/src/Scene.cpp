@@ -254,6 +254,10 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
                         visibility.screenSpaceContactShadows));
 
         UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, morphTargetCount),
+                sceneData.elementAt<MORPHING_BUFFER>(i).count);
+
+        UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, channels),
                 (uint32_t)sceneData.elementAt<CHANNELS>(i));
 

@@ -149,7 +149,8 @@ struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-memb
     static constexpr utils::StaticString _name{ "ObjectUniforms" };
     math::mat4f worldFromModelMatrix;
     math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
-    alignas(16) uint32_t flags;                           // see packFlags() below
+    alignas(16) uint32_t morphTargetCount;
+    uint32_t flags;                           // see packFlags() below
     uint32_t channels;                        // 0x000000ll
     uint32_t objectId;                        // used for picking
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
@@ -228,7 +229,6 @@ static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
 
 struct alignas(16) PerRenderableMorphingUib {
     static constexpr utils::StaticString _name{ "MorphingUniforms" };
-    uint32_t count;
     math::float4 weights[CONFIG_MAX_MORPH_TARGET_COUNT];
 };
 static_assert(sizeof(PerRenderableMorphingUib) <= 16384,

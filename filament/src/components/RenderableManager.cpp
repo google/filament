@@ -586,7 +586,6 @@ static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBuffe
     auto size = sizeof(PerRenderableMorphingUib);
     auto* UTILS_RESTRICT out = (PerRenderableMorphingUib*)driver.allocate(size);
     memset(out, 0, size);
-    out->count = count;
     std::transform(weights, weights + count, out->weights,
             [](float value) { return float4(value); });
     driver.updateBufferObject(handle, { out, size }, 0);
@@ -595,12 +594,12 @@ static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBuffe
 void FRenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
     if (instance) {
         MorphWeights& morphWeights = mManager[instance].morphWeights;
+        morphWeights.count = count;
 
         ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
                 "Only %d morph targets are supported (count=%d)", CONFIG_MAX_MORPH_TARGET_COUNT, count);
 
         if (morphWeights.handle) {
-            morphWeights.count = count;
             updateMorphWeights(mEngine, morphWeights.handle, weights, count);
         }
     }

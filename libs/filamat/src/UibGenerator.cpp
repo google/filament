@@ -128,6 +128,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .name(PerRenderableUib::_name)
             .add("worldFromModelMatrix",       1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromModelNormalMatrix", 1, UniformInterfaceBlock::Type::MAT3, Precision::HIGH)
+            .add("morphTargetCount", 1, UniformInterfaceBlock::Type::UINT)
             .add("flags", 1, UniformInterfaceBlock::Type::UINT)
             .add("channels", 1, UniformInterfaceBlock::Type::UINT)
             .add("objectId", 1, UniformInterfaceBlock::Type::UINT)
@@ -163,7 +164,6 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerRenderableMorphingUib::_name)
-            .add("count", 1, UniformInterfaceBlock::Type::UINT)
             .add("weights", CONFIG_MAX_MORPH_TARGET_COUNT, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
