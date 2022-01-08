@@ -107,8 +107,8 @@ public:
      * Clients can specify bones either using this quat-vec3 pair, or by using 4x4 matrices.
      */
     struct Bone {
-        math::quatf unitQuaternion = { 1, 0, 0, 0 };
-        math::float3 translation = { 0, 0, 0 };
+        math::quatf unitQuaternion = { 1.f, 0.f, 0.f, 0.f };
+        math::float3 translation = { 0.f, 0.f, 0.f };
         float reserved = 0;
     };
 
