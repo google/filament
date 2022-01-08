@@ -185,21 +185,21 @@ private:
     enum {
         AABB,               // user data
         LAYERS,             // user data
+        MORPH_WEIGHTS,      // filament data, UBO storing a pointer to the morph weights information
         CHANNELS,           // user data
         VISIBILITY,         // user data
         PRIMITIVES,         // user data
         BONES,              // filament data, UBO storing a pointer to the bones information
-        MORPH_WEIGHTS       // filament data, UBO storing a pointer to the morph weights information
     };
 
     using Base = utils::SingleInstanceComponentManager<
             Box,                             // AABB
             uint8_t,                         // LAYERS
+            MorphWeights,                    // MORPH_WEIGHTS
             uint8_t,                         // CHANNELS
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
-            Bones,                           // BONES
-            MorphWeights                     // MORPH_WEIGHTS
+            Bones                            // BONES
     >;
 
     struct Sim : public Base {
@@ -214,13 +214,13 @@ private:
 
             union {
                 // this specific usage of union is permitted. All fields are identical
-                Field<AABB>          aabb;
-                Field<LAYERS>        layers;
-                Field<CHANNELS>      channels;
-                Field<VISIBILITY>    visibility;
-                Field<PRIMITIVES>    primitives;
-                Field<BONES>         bones;
+                Field<AABB>         aabb;
+                Field<LAYERS>       layers;
                 Field<MORPH_WEIGHTS> morphWeights;
+                Field<CHANNELS>     channels;
+                Field<VISIBILITY>   visibility;
+                Field<PRIMITIVES>   primitives;
+                Field<BONES>        bones;
             };
         };
 
