@@ -73,10 +73,10 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
         + mulBoneVertex(p, ids.w) * weights.w;
 }
 
-#define MAX_MORPH_TARGETS_WIDTH 4096
+#define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
 
 void morphPosition(inout vec4 p) {
-    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGETS_WIDTH, getVertexIndex() / MAX_MORPH_TARGETS_WIDTH, 0);
+    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     for (uint i = 0u; i < morphingUniforms.count; ++i) {
         texcoord.z = int(i) * 2 + 0;
         p += morphingUniforms.weights[i] * texelFetch(morphing_targets, texcoord, 0);
@@ -84,7 +84,7 @@ void morphPosition(inout vec4 p) {
 }
 
 void morphNormal(inout vec3 n) {
-    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGETS_WIDTH, getVertexIndex() / MAX_MORPH_TARGETS_WIDTH, 0);
+    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     for (uint i = 0u; i < morphingUniforms.count; ++i) {
         texcoord.z = int(i) * 2 + 1;
         vec3 normal;

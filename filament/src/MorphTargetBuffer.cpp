@@ -60,16 +60,18 @@ MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-constexpr size_t MAX_TEXTURE_WIDTH = 4096;
+// This value is limited by ES3.0, ES3.0 only guarantees 2048.
+// When you change this value, you must change MAX_MORPH_TARGET_BUFFER_WIDTH at getters.vs
+constexpr size_t MAX_MORPH_TARGET_BUFFER_WIDTH = 2048;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
 static inline size_t getWidth(size_t vertexCount) noexcept {
-    return std::min(vertexCount, MAX_TEXTURE_WIDTH);
+    return std::min(vertexCount, MAX_MORPH_TARGET_BUFFER_WIDTH);
 }
 
 static inline size_t getHeight(size_t vertexCount) noexcept {
-    return (vertexCount + MAX_TEXTURE_WIDTH) / MAX_TEXTURE_WIDTH;
+    return (vertexCount + MAX_MORPH_TARGET_BUFFER_WIDTH) / MAX_MORPH_TARGET_BUFFER_WIDTH;
 }
 
 static inline size_t getDepth(size_t targetCount) noexcept {
