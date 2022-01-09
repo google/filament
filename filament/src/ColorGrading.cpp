@@ -400,7 +400,7 @@ constexpr mat3f adaptationTransform(float2 whiteBalance) noexcept {
     float y = chromaticityCoordinateIlluminantD(x) + t * 0.066f;
 
     float3 lms = XYZ_to_CIECAT16 * xyY_to_XYZ({x, y, 1.0f});
-    return LMS_CAT16_to_REC2020 * mat3f{ILLUMINANT_D65_LMS_CAT16 / lms} * REC2020_to_LMS_CAT16;
+    return LMS_CAT16_to_Rec2020 * mat3f{ILLUMINANT_D65_LMS_CAT16 / lms} * Rec2020_to_LMS_CAT16;
 }
 
 UTILS_ALWAYS_INLINE
@@ -575,21 +575,21 @@ static mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping toneMapping
     if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
         return mat3f{};
     }
-    return sRGB_to_REC2020;
+    return sRGB_to_Rec2020;
 }
 
 static mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) noexcept {
     if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
         return mat3f{};
     }
-    return REC2020_to_sRGB;
+    return Rec2020_to_sRGB;
 }
 
 static float3 selectColorGradingLuminance(ColorGrading::ToneMapping toneMapping) noexcept {
     if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
-        return LUMINANCE_REC709;
+        return LUMINANCE_Rec709;
     }
-    return LUMINANCE_REC2020;
+    return LUMINANCE_Rec2020;
 }
 #pragma clang diagnostic pop
 

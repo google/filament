@@ -105,10 +105,9 @@ private:
 };
 
 struct GenericToneMapperSettings {
-    float contrast = 1.585f;
-    float shoulder = 0.5f;
+    float contrast = 1.55f;
     float midGrayIn = 0.18f;
-    float midGrayOut = 0.268f;
+    float midGrayOut = 0.215f;
     float hdrMax = 10.0f;
     bool operator!=(const GenericToneMapperSettings &rhs) const { return !(rhs == *this); }
     bool operator==(const GenericToneMapperSettings &rhs) const;
