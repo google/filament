@@ -3,7 +3,15 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.15.3 (currently main branch)
+## v1.16.1 (currently main branch)
+
+## v1.16.0
+
+- engine: Fixes skinning calculations (#4887) [⚠️ **Material breakage**].
+- engine: Add support for the glTF extension KHR_materials_emissive_strength.
+- engine: Improvements and fixes to skinning calculations.
+- engine: Fix debug checks for compressed textures.
+- Metal: Fix `readPixels` when dimensions are greater than the render target's.
 
 ## v1.15.2
 

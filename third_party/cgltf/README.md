@@ -112,6 +112,8 @@ cgltf also supports some glTF extensions:
 - KHR_materials_variants
 - KHR_materials_volume
 - KHR_texture_transform
+- KHR_texture_basisu (requires a library like [Binomial Basisu](https://github.com/BinomialLLC/basis_universal) for transcoding to native compressed texture)
+- KHR_materials_emissive_strength
 
 cgltf does **not** yet support unlisted extensions. However, unlisted extensions can be accessed via "extensions" member on objects.
 

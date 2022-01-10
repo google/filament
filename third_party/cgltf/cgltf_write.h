@@ -59,7 +59,7 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 
 #if defined(__INTELLISENSE__) || defined(__JETBRAINS_IDE__)
 /* This makes MSVC/CLion intellisense work. */
-#define CGLTF_IMPLEMENTATION
+#define CGLTF_WRITE_IMPLEMENTATION
 #endif
 
 #ifdef CGLTF_WRITE_IMPLEMENTATION
@@ -84,6 +84,7 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 #define CGLTF_EXTENSION_FLAG_MATERIALS_VARIANTS     (1 << 10)
 #define CGLTF_EXTENSION_FLAG_MATERIALS_VOLUME       (1 << 11)
 #define CGLTF_EXTENSION_FLAG_TEXTURE_BASISU        (1 << 12)
+#define CGLTF_EXTENSION_FLAG_MATERIALS_EMISSIVE_STRENGTH (1 << 13)
 
 typedef struct {
 	char* buffer;
@@ -587,6 +588,11 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 		context->extension_flags |= CGLTF_EXTENSION_FLAG_MATERIALS_SHEEN;
 	}
 
+	if (material->has_emissive_strength)
+	{
+		context->extension_flags |= CGLTF_EXTENSION_FLAG_MATERIALS_EMISSIVE_STRENGTH;
+	}
+
 	if (material->has_pbr_metallic_roughness)
 	{
 		const cgltf_pbr_metallic_roughness* params = &material->pbr_metallic_roughness;
@@ -603,7 +609,7 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 		cgltf_write_line(context, "}");
 	}
 
-	if (material->unlit || material->has_pbr_specular_glossiness || material->has_clearcoat || material->has_ior || material->has_specular || material->has_transmission || material->has_sheen || material->has_volume)
+	if (material->unlit || material->has_pbr_specular_glossiness || material->has_clearcoat || material->has_ior || material->has_specular || material->has_transmission || material->has_sheen || material->has_volume || material->has_emissive_strength)
 	{
 		cgltf_write_line(context, "\"extensions\": {");
 		if (material->has_clearcoat)
@@ -694,6 +700,13 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 		if (material->unlit)
 		{
 			cgltf_write_line(context, "\"KHR_materials_unlit\": {}");
+		}
+		if (material->has_emissive_strength)
+		{
+			cgltf_write_line(context, "\"KHR_materials_emissive_strength\": {");
+			const cgltf_emissive_strength* params = &material->emissive_strength;
+			cgltf_write_floatprop(context, "emissiveStrength", params->emissive_strength, 1.f);
+			cgltf_write_line(context, "}");
 		}
 		cgltf_write_line(context, "}");
 	}
@@ -1096,6 +1109,9 @@ static void cgltf_write_extensions(cgltf_write_context* context, uint32_t extens
 	}
 	if (extension_flags & CGLTF_EXTENSION_FLAG_TEXTURE_BASISU) {
 		cgltf_write_stritem(context, "KHR_texture_basisu");
+	}
+	if (extension_flags & CGLTF_EXTENSION_FLAG_MATERIALS_EMISSIVE_STRENGTH) {
+		cgltf_write_stritem(context, "KHR_materials_emissive_strength");
 	}
 }
 
