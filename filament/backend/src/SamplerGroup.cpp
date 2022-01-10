@@ -20,8 +20,8 @@ namespace filament {
 namespace backend {
 
 // create a sampler buffer
-SamplerGroup::SamplerGroup(size_t count) noexcept
-        : mBuffer(count) {
+SamplerGroup::SamplerGroup(size_t count, ShaderStageFlags stageFlags) noexcept
+        : mBuffer(count), mStageFlags(stageFlags) {
 }
 
 SamplerGroup::SamplerGroup(const SamplerGroup& rhs) noexcept = default;

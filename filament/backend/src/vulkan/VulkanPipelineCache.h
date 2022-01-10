@@ -31,6 +31,7 @@
 #include <tsl/robin_map.h>
 #include <type_traits>
 #include <vector>
+#include <unordered_map>
 
 #include "VulkanCommands.h"
 
@@ -40,6 +41,8 @@ VK_DEFINE_HANDLE(VmaPool)
 
 namespace filament {
 namespace backend {
+
+struct VulkanProgram;
 
 // VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
@@ -145,7 +148,7 @@ public:
     void bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept;
 
     // Each of the following methods are fast and do not make Vulkan calls.
-    void bindProgramBundle(const ProgramBundle& bundle) noexcept;
+    void bindProgram(const VulkanProgram& program) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
@@ -184,6 +187,19 @@ public:
 private:
     static constexpr uint32_t ALL_COMMAND_BUFFERS = (1 << VK_MAX_COMMAND_BUFFERS) - 1;
 
+    struct LayoutBundleKey {
+        // Currently, only samplers can be bound to each shader stages.
+        std::array<VkShaderStageFlags, SAMPLER_BINDING_COUNT> samplers;
+    };
+
+    static LayoutBundleKey getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept;
+
+    using LayoutBundleHashFn = utils::hash::MurmurHashFn<LayoutBundleKey>;
+
+    struct LayoutBundleEqual {
+        bool operator()(const LayoutBundleKey& k1, const LayoutBundleKey& k2) const;
+    };
+
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreatePipeline.
@@ -197,6 +213,7 @@ private:
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 256 bytes
         VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 192 bytes
         uint32_t padding1;                                                          // 4 bytes
+        VkPipelineLayout pipelineLayout;             // 8 bytes
     };
 
     static_assert(sizeof(VkVertexInputBindingDescription) == 12);
@@ -207,7 +224,8 @@ private:
     static_assert(offsetof(PipelineKey, subpassIndex)     == 152);
     static_assert(offsetof(PipelineKey, vertexAttributes) == 156);
     static_assert(offsetof(PipelineKey, vertexBuffers)    == 412);
-    static_assert(sizeof(PipelineKey) == 608, "PipelineKey must not have any padding.");
+    static_assert(offsetof(PipelineKey, pipelineLayout)   == 608);
+    static_assert(sizeof(PipelineKey) == 616, "PipelineKey must not have any padding.");
 
     static_assert(std::is_trivially_copyable<PipelineKey>::value,
             "PipelineKey must be a POD for fast hashing.");
@@ -242,7 +260,13 @@ private:
     // Represents a group of descriptor sets that are bound simultaneously.
     struct DescriptorBundle {
         VkDescriptorSet handles[DESCRIPTOR_TYPE_COUNT];
+        VkPipelineLayout pipelineLayout;
         utils::bitset32 commandBuffers;
+    };
+
+    struct LayoutBundle {
+        std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
+        VkPipelineLayout pipelineLayout;
     };
 
     struct PipelineVal {
@@ -254,6 +278,7 @@ private:
         uint32_t age;
     };
 
+    using LayoutMap = tsl::robin_map<LayoutBundleKey, LayoutBundle, LayoutBundleHashFn, LayoutBundleEqual>;
     using PipelineMap = tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual>;
     using DescriptorMap = tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual>;
 
@@ -268,10 +293,12 @@ private:
     void getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT],
             bool* bind, bool* overflow) noexcept;
 
+    bool getOrCreateLayout(std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT>& setLayouts,
+            VkPipelineLayout& pipelineLayout) noexcept;
+
     // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
     bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
 
-    void createLayoutsAndDescriptors() noexcept;
     void destroyLayoutsAndDescriptors() noexcept;
     void markDirtyPipeline() noexcept { mDirtyPipeline.setValue(ALL_COMMAND_BUFFERS); }
     void markDirtyDescriptor() noexcept { mDirtyDescriptor.setValue(ALL_COMMAND_BUFFERS); }
@@ -285,6 +312,7 @@ private:
     // Current bindings are divided into two "keys" which are composed of a mix of actual values
     // (e.g., blending is OFF) and weak references to Vulkan objects (e.g., shader programs and
     // uniform buffers).
+    LayoutBundleKey mLayoutKey;
     PipelineKey mPipelineKey;
     DescriptorKey mDescriptorKey;
 
@@ -298,11 +326,9 @@ private:
     utils::bitset32 mDirtyPipeline;
     utils::bitset32 mDirtyDescriptor;
 
-    VkDescriptorSetLayout mDescriptorSetLayouts[DESCRIPTOR_TYPE_COUNT] = {};
+    std::unordered_multimap<VkPipelineLayout, VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
 
-    std::vector<VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
-
-    VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
+    LayoutMap mLayouts;
     PipelineMap mPipelines;
     DescriptorMap mDescriptorBundles;
     uint32_t mCmdBufferIndex = 0;

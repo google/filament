@@ -30,6 +30,7 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
     // The material variant currently only affects sampler formats (for VSM), not offsets.
     const uint8_t variantKey = 0;
     uint8_t offset = 0;
+    size_t numSampler = 0;
     size_t maxSamplerIndex = backend::MAX_SAMPLER_COUNT - 1;
     bool overflow = false;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
@@ -43,14 +44,22 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
         if (sib) {
             auto sibFields = sib->getSamplerInfoList();
             for (const auto& sInfo : sibFields) {
-                if (offset > maxSamplerIndex) {
+                if (numSampler > maxSamplerIndex) {
                     overflow = true;
                 }
+                auto stageFlags = sib->getStageFlags();
                 addSampler({
+                    .stageFlags = stageFlags,
                     .blockIndex = blockIndex,
                     .localOffset = sInfo.offset,
                     .globalOffset = offset++,
                 });
+                if (stageFlags.vertex) {
+                    ++numSampler;
+                }
+                if (stageFlags.fragment) {
+                    ++numSampler;
+                }
             }
         }
     }

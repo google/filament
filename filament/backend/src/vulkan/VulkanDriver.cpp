@@ -1770,7 +1770,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     }
 
     // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
-    mPipelineCache.bindProgramBundle(program->bundle);
+    mPipelineCache.bindProgram(*program);
     mPipelineCache.bindRasterState(mContext.rasterState);
     mPipelineCache.bindPrimitiveTopology(prim.primitiveTopology);
     mPipelineCache.bindVertexArray(varray);
@@ -1779,11 +1779,12 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
 
-    VkDescriptorImageInfo samplers[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
+    VkDescriptorImageInfo iInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
 
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
-        if (samplerGroup.empty()) {
+        const auto& samplers = samplerGroup.samplers;
+        if (samplers.empty()) {
             continue;
         }
         VulkanSamplerGroup* vksb = mSamplerBindings[samplerGroupIdx];
@@ -1791,9 +1792,9 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             continue;
         }
         SamplerGroup* sb = vksb->sb.get();
-        assert_invariant(sb->getSize() == samplerGroup.size());
+        assert_invariant(sb->getSize() == samplers.size());
         size_t samplerIdx = 0;
-        for (const auto& sampler : samplerGroup) {
+        for (const auto& sampler : samplers) {
             size_t bindingPoint = sampler.binding;
             const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
             samplerIdx++;
@@ -1821,19 +1822,19 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const SamplerParams& samplerParams = boundSampler->s;
             VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
 
-            samplers[bindingPoint] = {
+            iInfo[bindingPoint] = {
                 .sampler = vksampler,
                 .imageView = texture->getPrimaryImageView(),
                 .imageLayout = mContext.getTextureLayout(texture->usage)
             };
 
             if (mContext.currentRenderPass.depthFeedback == texture) {
-                samplers[bindingPoint].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+                iInfo[bindingPoint].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
             }
         }
     }
 
-    mPipelineCache.bindSamplers(samplers);
+    mPipelineCache.bindSamplers(iInfo);
 
     // Bind new descriptor sets if they need to change.
     // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error

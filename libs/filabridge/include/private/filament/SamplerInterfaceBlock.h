@@ -19,6 +19,7 @@
 
 
 #include <backend/DriverEnums.h>
+#include <backend/ShaderStageFlags.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -59,6 +60,8 @@ public:
             return name(utils::StaticString{ interfaceBlockName });
         }
 
+        Builder& stageFlags(backend::ShaderStageFlags stageFlags);
+
         // Add a sampler
         Builder& add(utils::CString const& samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
@@ -93,6 +96,7 @@ public:
             Precision precision;
         };
         utils::CString mName;
+        backend::ShaderStageFlags mStageFlags = backend::ALL_SHADER_STAGE_FLAGS;
         std::vector<Entry> mEntries;
     };
 
@@ -114,6 +118,8 @@ public:
 
     // name of this sampler interface block
     const utils::CString& getName() const noexcept { return mName; }
+
+    backend::ShaderStageFlags getStageFlags() const noexcept { return mStageFlags; }
 
     // size needed to store the samplers described by this interface block in a SamplerGroup
     size_t getSize() const noexcept { return mSize; }
@@ -138,6 +144,7 @@ private:
     explicit SamplerInterfaceBlock(Builder const& builder) noexcept;
 
     utils::CString mName;
+    backend::ShaderStageFlags mStageFlags;
     std::vector<SamplerInfo> mSamplersInfoList;
     tsl::robin_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
     uint32_t mSize = 0; // size in Samplers (i.e.: count)

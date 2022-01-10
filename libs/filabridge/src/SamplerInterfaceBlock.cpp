@@ -45,6 +45,12 @@ SamplerInterfaceBlock::Builder::name(utils::StaticString const& interfaceBlockNa
     return *this;
 }
 
+SamplerInterfaceBlock::Builder&
+SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags) {
+    mStageFlags = stageFlags;
+    return *this;
+}
+
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         utils::CString const& samplerName, Type type, Format format,
         Precision precision, bool multisample) noexcept {
@@ -82,7 +88,7 @@ SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(SamplerInterfaceBlock&& 
 SamplerInterfaceBlock::~SamplerInterfaceBlock() noexcept = default;
 
 SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
-    : mName(builder.mName)
+    : mName(builder.mName), mStageFlags(builder.mStageFlags)
 {
     auto& infoMap = mInfoMap;
     auto& samplersInfoList = mSamplersInfoList;

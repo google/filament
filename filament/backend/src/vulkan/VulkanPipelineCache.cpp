@@ -22,6 +22,7 @@
 #include <utils/trap.h>
 
 #include "VulkanConstants.h"
+#include "VulkanHandles.h"
 #include "VulkanUtility.h"
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
@@ -79,6 +80,7 @@ void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
     assert_invariant(mDevice == VK_NULL_HANDLE);
     mDevice = device;
     mAllocator = allocator;
+    mDescriptorPool = createDescriptorPool(mDescriptorPoolSize);
 
     // Next, create a small dummy UBO. Filament's fixed-sized binding arrays are nice because they
     // allow us to track only 1 VkPipelineLayout object. However, we occasionally need to clear
@@ -108,7 +110,7 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
     }
     if (bind) {
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                mPipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors,
+                mPipelineKey.pipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors,
                 0, nullptr);
     }
     return true;
@@ -133,9 +135,9 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         VkDescriptorSet descriptorSets[DESCRIPTOR_TYPE_COUNT],
         bool* bind, bool* overflow) noexcept {
     // If this method has never been called before, we need to create a new layout object.
-    if (!mPipelineLayout) {
-        createLayoutsAndDescriptors();
-    }
+    std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts = { VK_NULL_HANDLE };
+    VkPipelineLayout& pipelineLayout = mPipelineKey.pipelineLayout;
+    getOrCreateLayout(setLayouts, pipelineLayout);
 
     DescriptorBundle*& descriptorBundle = mCmdBufferState[mCmdBufferIndex].currentDescriptorBundle;
 
@@ -164,7 +166,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
 
     // If there are no available descriptor sets that can be re-used, then create brand new ones
     // (one for each type). Otherwise, grab a descriptor set from each of the arenas.
-    if (mDescriptorSetArena[0].empty()) {
+    if (!mDescriptorSetArena[0].count(pipelineLayout)) {
         if (mDescriptorBundles.size() >= mDescriptorPoolSize) {
             growDescriptorPool();
         }
@@ -172,7 +174,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = mDescriptorPool;
         allocInfo.descriptorSetCount = DESCRIPTOR_TYPE_COUNT;
-        allocInfo.pSetLayouts = mDescriptorSetLayouts;
+        allocInfo.pSetLayouts = setLayouts.data();
         VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptorSets);
         assert_invariant(err == VK_SUCCESS);
         if (err != VK_SUCCESS) {
@@ -181,8 +183,9 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         }
     } else {
         for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
-            descriptorSets[i] = mDescriptorSetArena[i].back();
-            mDescriptorSetArena[i].pop_back();
+            auto search = mDescriptorSetArena[i].find(pipelineLayout);
+            descriptorSets[i] = search->second;
+            mDescriptorSetArena[i].erase(search);
         }
     }
 
@@ -196,6 +199,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
         descriptorBundle->handles[i] = descriptorSets[i];
     }
+    descriptorBundle->pipelineLayout = pipelineLayout;
     descriptorBundle->commandBuffers.setValue(1 << mCmdBufferIndex);
 
     // Clear the dirty flag for this command buffer.
@@ -303,8 +307,72 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     *bind = true;
 }
 
+bool VulkanPipelineCache::getOrCreateLayout(std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT>& setLayouts,
+        VkPipelineLayout& pipelineLayout) noexcept {
+    auto iter = mLayouts.find(mLayoutKey);
+    if (UTILS_LIKELY(iter != mLayouts.end())) {
+        LayoutBundle& bundle = iter.value();
+        setLayouts = bundle.setLayouts;
+        pipelineLayout = bundle.pipelineLayout;
+        return true;
+    }
+
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.descriptorCount = 1; // NOTE: We never use arrays-of-blocks.
+    binding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS; // NOTE: This is potentially non-optimal.
+
+    // First create the descriptor set layout for UBO's.
+    VkDescriptorSetLayoutBinding ubindings[UBUFFER_BINDING_COUNT];
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    for (uint32_t i = 0; i < UBUFFER_BINDING_COUNT; i++) {
+        binding.binding = i;
+        ubindings[i] = binding;
+    }
+    VkDescriptorSetLayoutCreateInfo dlinfo = {};
+    dlinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    dlinfo.bindingCount = UBUFFER_BINDING_COUNT;
+    dlinfo.pBindings = ubindings;
+    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &setLayouts[0]);
+
+    // Next create the descriptor set layout for samplers.
+    VkDescriptorSetLayoutBinding sbindings[SAMPLER_BINDING_COUNT];
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
+        binding.stageFlags = mLayoutKey.samplers[i];
+        binding.binding = i;
+        sbindings[i] = binding;
+    }
+    dlinfo.bindingCount = SAMPLER_BINDING_COUNT;
+    dlinfo.pBindings = sbindings;
+    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &setLayouts[1]);
+
+    // Next create the descriptor set layout for input attachments.
+    VkDescriptorSetLayoutBinding tbindings[TARGET_BINDING_COUNT];
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    for (uint32_t i = 0; i < TARGET_BINDING_COUNT; i++) {
+        binding.binding = i;
+        tbindings[i] = binding;
+    }
+    dlinfo.bindingCount = TARGET_BINDING_COUNT;
+    dlinfo.pBindings = tbindings;
+    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &setLayouts[2]);
+
+    // Create the one and only VkPipelineLayout that we'll ever use.
+    VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
+    pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.setLayoutCount = setLayouts.size();
+    pPipelineLayoutCreateInfo.pSetLayouts = setLayouts.data();
+    VkResult err = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC,
+            &pipelineLayout);
+    ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
+
+    mLayouts.emplace(mLayoutKey, LayoutBundle{ setLayouts, pipelineLayout });
+    return true;
+}
+
 bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
-    assert_invariant(mPipelineLayout);
+    assert_invariant(mPipelineKey.pipelineLayout);
     PipelineVal*& currentPipeline = mCmdBufferState[mCmdBufferIndex].currentPipeline;
 
     // If no bindings have been dirtied, return false to indicate there's no need to re-bind.
@@ -390,7 +458,7 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineCreateInfo.layout = mPipelineLayout;
+    pipelineCreateInfo.layout = mPipelineKey.pipelineLayout;
     pipelineCreateInfo.renderPass = mPipelineKey.renderPass;
     pipelineCreateInfo.subpass = mPipelineKey.subpassIndex;
     pipelineCreateInfo.stageCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1;
@@ -482,14 +550,15 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     return true;
 }
 
-void VulkanPipelineCache::bindProgramBundle(const ProgramBundle& bundle) noexcept {
-    const VkShaderModule shaders[2] = { bundle.vertex, bundle.fragment };
+void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
+    const VkShaderModule shaders[2] = { program.bundle.vertex, program.bundle.fragment };
     for (uint32_t ssi = 0; ssi < SHADER_MODULE_COUNT; ssi++) {
         if (mPipelineKey.shaders[ssi] != shaders[ssi]) {
             markDirtyPipeline();
             mPipelineKey.shaders[ssi] = shaders[ssi];
         }
     }
+    mLayoutKey = getLayoutBundleKey(program.samplerGroupInfo);
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {
@@ -699,9 +768,9 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     for (ConstDescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end();) {
         const DescriptorBundle& cacheEntry = iter.value();
         if (cacheEntry.commandBuffers.getValue() == 0) {
-            mDescriptorSetArena[0].push_back(cacheEntry.handles[0]);
-            mDescriptorSetArena[1].push_back(cacheEntry.handles[1]);
-            mDescriptorSetArena[2].push_back(cacheEntry.handles[2]);
+            mDescriptorSetArena[0].emplace(cacheEntry.pipelineLayout, cacheEntry.handles[0]);
+            mDescriptorSetArena[1].emplace(cacheEntry.pipelineLayout, cacheEntry.handles[1]);
+            mDescriptorSetArena[2].emplace(cacheEntry.pipelineLayout, cacheEntry.handles[2]);
             iter = mDescriptorBundles.erase(iter);
         } else {
             ++iter;
@@ -755,59 +824,6 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     }
 }
 
-void VulkanPipelineCache::createLayoutsAndDescriptors() noexcept {
-    VkDescriptorSetLayoutBinding binding = {};
-    binding.descriptorCount = 1; // NOTE: We never use arrays-of-blocks.
-    binding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS; // NOTE: This is potentially non-optimal.
-
-    // First create the descriptor set layout for UBO's.
-    VkDescriptorSetLayoutBinding ubindings[UBUFFER_BINDING_COUNT];
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    for (uint32_t i = 0; i < UBUFFER_BINDING_COUNT; i++) {
-        binding.binding = i;
-        ubindings[i] = binding;
-    }
-    VkDescriptorSetLayoutCreateInfo dlinfo = {};
-    dlinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dlinfo.bindingCount = UBUFFER_BINDING_COUNT;
-    dlinfo.pBindings = ubindings;
-    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayouts[0]);
-
-    // Next create the descriptor set layout for samplers.
-    VkDescriptorSetLayoutBinding sbindings[SAMPLER_BINDING_COUNT];
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
-        binding.binding = i;
-        sbindings[i] = binding;
-    }
-    dlinfo.bindingCount = SAMPLER_BINDING_COUNT;
-    dlinfo.pBindings = sbindings;
-    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayouts[1]);
-
-    // Next create the descriptor set layout for input attachments.
-    VkDescriptorSetLayoutBinding tbindings[TARGET_BINDING_COUNT];
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    for (uint32_t i = 0; i < TARGET_BINDING_COUNT; i++) {
-        binding.binding = i;
-        tbindings[i] = binding;
-    }
-    dlinfo.bindingCount = TARGET_BINDING_COUNT;
-    dlinfo.pBindings = tbindings;
-    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayouts[2]);
-
-    // Create the one and only VkPipelineLayout that we'll ever use.
-    VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pPipelineLayoutCreateInfo.setLayoutCount = 3;
-    pPipelineLayoutCreateInfo.pSetLayouts = mDescriptorSetLayouts;
-    VkResult err = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC,
-            &mPipelineLayout);
-    ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
-
-    mDescriptorPool = createDescriptorPool(mDescriptorPoolSize);
-}
-
 VkDescriptorPool VulkanPipelineCache::createDescriptorPool(uint32_t size) const {
     VkDescriptorPoolSize poolSizes[DESCRIPTOR_TYPE_COUNT] = {};
     VkDescriptorPoolCreateInfo poolInfo {
@@ -832,7 +848,7 @@ VkDescriptorPool VulkanPipelineCache::createDescriptorPool(uint32_t size) const 
 }
 
 void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
-    if (mPipelineLayout == VK_NULL_HANDLE) {
+    if (mLayouts.empty()) {
         return;
     }
 
@@ -850,11 +866,11 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
     }
 
     mDescriptorBundles.clear();
-    vkDestroyPipelineLayout(mDevice, mPipelineLayout, VKALLOC);
-    mPipelineLayout = VK_NULL_HANDLE;
-    for (int i = 0; i < 3; i++) {
-        vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayouts[i], VKALLOC);
-        mDescriptorSetLayouts[i] = {};
+    for (auto& iter : mLayouts) {
+        vkDestroyPipelineLayout(mDevice, iter.second.pipelineLayout, VKALLOC);
+        for (auto setLayout : iter.second.setLayouts) {
+            vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
+        }
     }
     vkDestroyDescriptorPool(mDevice, mDescriptorPool, VKALLOC);
     mDescriptorPool = VK_NULL_HANDLE;
@@ -893,6 +909,23 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
         mExtinctDescriptorBundles.push_back(iter.value());
     }
     mDescriptorBundles.clear();
+}
+
+VulkanPipelineCache::LayoutBundleKey
+VulkanPipelineCache::getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
+    LayoutBundleKey key = {};
+    for (uint32_t binding = 0; binding < Program::BINDING_COUNT; ++binding) {
+        VkShaderStageFlags stageFlags = getShaderStageFlags( samplerGroupInfo[binding].stageFlags);
+        for (auto& sampler : samplerGroupInfo[binding].samplers) {
+            key.samplers[sampler.binding] = stageFlags;
+        }
+    }
+    return key;
+}
+
+bool VulkanPipelineCache::LayoutBundleEqual::operator()(const VulkanPipelineCache::LayoutBundleKey& k1,
+        const VulkanPipelineCache::LayoutBundleKey& k2) const {
+    return k1.samplers == k2.samplers;
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const VulkanPipelineCache::PipelineKey& k1,

@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_DRIVER_SAMPLERBINDINGMAP_H
 #define TNT_FILAMENT_DRIVER_SAMPLERBINDINGMAP_H
 
+#include <backend/ShaderStageFlags.h>
+
 #include <private/filament/EngineEnums.h>
 
 #include <tsl/robin_map.h>
@@ -34,6 +36,7 @@ namespace filament {
 // samplers to desciptor sets.
 //
 struct SamplerBindingInfo {
+    backend::ShaderStageFlags stageFlags;
     uint8_t blockIndex;   // Binding point of the parent block (see filament::BindingPoints)
     uint8_t localOffset;  // Index of this sampler within the block
     uint8_t globalOffset; // Finalized binding point for the sampler

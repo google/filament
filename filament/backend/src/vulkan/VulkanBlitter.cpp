@@ -324,7 +324,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     // DRAW THE TRIANGLE
     // -----------------
 
-    mPipelineCache.bindProgramBundle(mDepthResolveProgram->bundle);
+    mPipelineCache.bindProgram(*mDepthResolveProgram);
     mPipelineCache.bindPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 
     mContext.rasterState.depthStencil = {
