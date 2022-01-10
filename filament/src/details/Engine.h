@@ -379,7 +379,7 @@ private:
     ResourceList<FStream> mStreams{ "Stream" };
     ResourceList<FIndexBuffer> mIndexBuffers{ "IndexBuffer" };
     ResourceList<FSkinningBuffer> mSkinningBuffers{ "SkinningBuffer" };
-    ResourceList<FMorphTargetBuffer> mMorphTargetBuffers{"MorphTargetBuffer" };
+    ResourceList<FMorphTargetBuffer> mMorphTargetBuffers{ "MorphTargetBuffer" };
     ResourceList<FVertexBuffer> mVertexBuffers{ "VertexBuffer" };
     ResourceList<FIndirectLight> mIndirectLights{ "IndirectLight" };
     ResourceList<FMaterial> mMaterials{ "Material" };
