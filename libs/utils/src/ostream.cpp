@@ -105,15 +105,21 @@ ostream& ostream::print(const char* format, ...) noexcept {
     ssize_t s = vsnprintf(nullptr, 0, format, args0);
     va_end(args0);
 
-    // grow the buffer to the needed size
-    Buffer& buf = getBuffer();
-    auto [curr, size] = buf.grow(s + 1); // +1 to include the null-terminator
 
-    // print into the buffer
-    vsnprintf(curr, size, format, args1);
+    { // scope for the lock
+        std::lock_guard lock(mLock);
 
-    // advance the buffer
-    buf.advance(s);
+        Buffer& buf = getBuffer();
+
+        // grow the buffer to the needed size
+        auto[curr, size] = buf.grow(s + 1); // +1 to include the null-terminator
+
+        // print into the buffer
+        vsnprintf(curr, size, format, args1);
+
+        // advance the buffer
+        buf.advance(s);
+    }
 
     va_end(args1);
 
