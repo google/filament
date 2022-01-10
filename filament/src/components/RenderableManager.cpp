@@ -376,6 +376,8 @@ void FRenderableManager::create(
         }
 
         if (builder->mMorphingEnabled) {
+            // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
+            // and use bindUniformBufferRange which might be more efficient.
             MorphWeights& morphWeights = manager[ci].morphWeights;
             morphWeights = MorphWeights {
                 .handle = driver.createBufferObject(

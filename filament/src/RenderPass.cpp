@@ -583,6 +583,8 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
 
             auto morphTargetBuffer = info.morphTargetBuffer;
             if (UTILS_UNLIKELY(morphTargetBuffer)) {
+                // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
+                // and use bindUniformBufferRange which might be more efficient.
                 auto morphing = soaMorphing[info.index];
                 assert_invariant(morphing.handle);
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
