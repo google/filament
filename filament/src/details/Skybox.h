@@ -48,6 +48,7 @@ public:
     uint8_t getLayerMask() const noexcept { return mLayerMask; }
 
     float getIntensity() const noexcept { return mIntensity; }
+    void setIntensity(float intensity) noexcept { mIntensity = intensity; }
 
     FTexture const* getTexture() const noexcept { return mSkyboxTexture; }
 

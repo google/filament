@@ -108,6 +108,11 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     return instance;
 }
 
+const FMaterial* FEngine::getShaprMaterial(size_t index) const noexcept
+{
+    return mShaprGeneralMaterials[index];
+}
+
 #if UTILS_HAS_THREADING
 
 void FEngine::createAsync(CreateCallback callback, void* user, Backend backend, 
@@ -262,6 +267,33 @@ void FEngine::init() {
                     .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));
 
+    mShaprGeneralMaterials[0] = upcast(
+        FMaterial::Builder()
+            .package(MATERIALS_SHAPRGENERALMATERIALOPAQUE_DATA, MATERIALS_SHAPRGENERALMATERIALOPAQUE_SIZE)
+            .build(*const_cast<FEngine*>(this))
+    );
+    mShaprGeneralMaterials[1] = upcast(
+        FMaterial::Builder()
+        .package(MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_DATA, MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_SIZE)
+        .build(*const_cast<FEngine*>(this))
+    );
+    // for legacy reasons
+    mShaprGeneralMaterials[2] = upcast(
+        FMaterial::Builder()
+        .package(MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_DATA, MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_SIZE)
+        .build(*const_cast<FEngine*>(this))
+    );
+    mShaprGeneralMaterials[3] = upcast(
+        FMaterial::Builder()
+        .package(MATERIALS_SHAPRGENERALMATERIALCLOTH_DATA, MATERIALS_SHAPRGENERALMATERIALCLOTH_SIZE)
+        .build(*const_cast<FEngine*>(this))
+    );
+    mShaprGeneralMaterials[4] = upcast(
+        FMaterial::Builder()
+        .package(MATERIALS_SHAPRGENERALMATERIALSUBSURFACE_DATA, MATERIALS_SHAPRGENERALMATERIALSUBSURFACE_SIZE)
+        .build(*const_cast<FEngine*>(this))
+    );
+
     mPostProcessManager.init();
     mLightManager.init(*this);
     mDFG = std::make_unique<DFG>(*this);
@@ -315,6 +347,9 @@ void FEngine::shutdown() {
     destroy(mDefaultColorGrading);
 
     destroy(mDefaultMaterial);
+    for (auto& shaprMat : mShaprGeneralMaterials) {
+        destroy(shaprMat);
+    }
 
     /*
      * clean-up after the user -- we call terminate on each "leaked" object and clear each list.
@@ -899,12 +934,17 @@ void Engine::destroy(Engine** pEngine) {
     }
 }
 
+
 // -----------------------------------------------------------------------------------------------
 // Resource management
 // -----------------------------------------------------------------------------------------------
 
 const Material* Engine::getDefaultMaterial() const noexcept {
     return upcast(this)->getDefaultMaterial();
+}
+
+const Material* Engine::getShaprMaterial(size_t index) const noexcept {
+    return upcast(this)->getShaprMaterial(index);
 }
 
 Backend Engine::getBackend() const noexcept {

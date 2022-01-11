@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include <iostream>
+
 namespace filament {
 namespace math {
 // -------------------------------------------------------------------------------------
@@ -129,5 +131,12 @@ using bool3 = vec3<bool>;
 // ----------------------------------------------------------------------------------------
 }  // namespace math
 }  // namespace filament
+
+// hacky, but oh well...
+template <typename T>
+std::ostream& operator<<(std::ostream& out, const filament::math::details::TVec3<T>& value) {
+    out << "{ " << value.x << "; " << value.y << "; " << value.z << " }";
+    return out;
+}
 
 #endif  // TNT_MATH_VEC3_H

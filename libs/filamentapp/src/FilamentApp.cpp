@@ -131,10 +131,16 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     loadDirt(config);
     loadIBL(config);
+    loadSkybox(config);
     if (mIBL != nullptr) {
         mIBL->getSkybox()->setLayerMask(0x7, 0x4);
-        mScene->setSkybox(mIBL->getSkybox());
         mScene->setIndirectLight(mIBL->getIndirectLight());
+        if (mSkybox != nullptr) {
+            mScene->setSkybox(mSkybox->getSkybox());
+        }
+        else {
+            mScene->setSkybox(mIBL->getSkybox());
+        }
     }
 
     for (auto& view : window->mViews) {
@@ -143,7 +149,13 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         }
     }
 
+    mCameraMovementSpeedUpdateCallback = [&window] (float speed) {
+        window->mMainCameraMan->setFlightSpeed(speed);
+    };
+
     setupCallback(mEngine, window->mMainView->getView(), mScene);
+
+    window->mMainCameraMan->setFlightSpeedModifiedCallback(mFlightSpeedModifiedCallback);
 
     if (imguiCallback) {
         mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView(),
@@ -266,12 +278,19 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 case SDL_QUIT:
                     mClosed = true;
                     break;
-                case SDL_KEYDOWN:
-                    if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                case SDL_KEYDOWN: {
+                    if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE && config.escapeKeyExitsApp) {
                         mClosed = true;
                     }
-                    window->keyDown(event.key.keysym.scancode);
+                    bool handled = false;
+                    for (auto hook: mKeyDownHooks) {
+                        handled |= hook(event.key.keysym.sym, event.key.keysym.mod);
+                    }
+                    if (!handled) {
+                        window->keyDown(event.key.keysym.scancode);
+                    }
                     break;
+                }
                 case SDL_KEYUP:
                     window->keyUp(event.key.keysym.scancode);
                     break;
@@ -424,6 +443,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     window.reset();
 
     mIBL.reset();
+    mSkybox.reset();
     mEngine->destroy(mDepthMI);
     mEngine->destroy(mDepthMaterial);
     mEngine->destroy(mDefaultMaterial);
@@ -431,6 +451,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     mEngine->destroy(mScene);
     Engine::destroy(&mEngine);
     mEngine = nullptr;
+}
+
+FilamentApp::CameraMovementSpeedUpdateCallback FilamentApp::getCameraMovementSpeedUpdateCallback() {
+    return mCameraMovementSpeedUpdateCallback;
+}
+
+void FilamentApp::setCameraFlightSpeedUpdateOnUICallback(std::function<void(float)> callback) {
+    mFlightSpeedModifiedCallback = callback;
 }
 
 // RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
@@ -465,6 +493,34 @@ void FilamentApp::loadIBL(const Config& config) {
             if (!mIBL->loadFromDirectory(iblPath)) {
                 std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
                 mIBL.reset(nullptr);
+                return;
+            }
+        }
+    }
+}
+
+void FilamentApp::loadSkybox(const Config& config) {
+    if (!config.skyboxDirectory.empty()) {
+        Path skyboxPath(config.skyboxDirectory);
+
+        if (!skyboxPath.exists()) {
+            std::cerr << "The specified skybox path does not exist: " << skyboxPath << std::endl;
+            return;
+        }
+
+        mSkybox = std::make_unique<IBL>(*mEngine);
+
+        if (!skyboxPath.isDirectory()) {
+            if (!mSkybox->loadFromEquirect(skyboxPath)) {
+                std::cerr << "Could not load the specified skybox: " << skyboxPath << std::endl;
+                mSkybox.reset(nullptr);
+                return;
+            }
+        }
+        else {
+            if (!mSkybox->loadFromDirectory(skyboxPath)) {
+                std::cerr << "Could not load the specified skybox: " << skyboxPath << std::endl;
+                mSkybox.reset(nullptr);
                 return;
             }
         }
@@ -589,11 +645,15 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // set-up the camera manipulators
     mMainCameraMan = CameraManipulator::Builder()
-            .targetPosition(0, 0, -4)
+            .targetPosition(0, -4, 0)
+            .upVector(0, 0, 1)
+            .flightStartPosition(3, 1, 2)
+            .flightStartOrientation(-0.1, 1)
             .flightMoveDamping(15.0)
             .build(config.cameraMode);
     mDebugCameraMan = CameraManipulator::Builder()
-            .targetPosition(0, 0, -4)
+            .targetPosition(0, -4, 0)
+            .upVector(0, 0, 1)
             .build(camutils::Mode::ORBIT);
 
     mMainView->setCamera(mMainCamera);
@@ -616,7 +676,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     // configure the cameras
     configureCamerasForWindow();
 
-    mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
+    mMainCamera->lookAt({4, -4, 0}, {0, -4, 0}, {0, 0, 1});
 }
 
 FilamentApp::Window::~Window() {
@@ -780,12 +840,12 @@ void FilamentApp::Window::configureCamerasForWindow() {
     // the sidebar. To prevent this we simply clamp the width of the main viewport.
     const uint32_t mainWidth = splitview ? width : std::max(1, (int) width - sidebar);
 
-    double near = 0.1;
+    double near = 0.0078125;
     double far = 100;
     mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
-    mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
+    mDebugCamera->setProjection(45.0, double(width) / height, 0.0078125, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
-    mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
+    mOrthoCamera->lookAt({ 4, -4, 0 }, { 0, -4, 0 });
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {

@@ -57,18 +57,18 @@ vec3 anisotropicLobe(const MaterialInputs material, const PixelParams pixel, con
         D = distributionAnisotropicWard(at, ab, ToH, BoH, NoH, NoL, NoV); // Ward
     }
     float V = visibilityAnisotropic(pixel.roughness, at, ab, ToV, BoV, ToL, BoL, NoV, NoL);
-    vec3  F = fresnel(pixel.f0, LoH);
+    vec3  F = material.specularIntensity * fresnel(pixel.f0, LoH);
 
     return (D * V) * F;
 }
 #endif
 
-vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
+vec3 isotropicLobe(const MaterialInputs material, const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
     float D = distribution(pixel.roughness, NoH, h);
     float V = visibility(pixel.roughness, NoV, NoL);
-    vec3  F = fresnel(pixel.f0, LoH);
+    vec3  F = material.specularIntensity * fresnel(pixel.f0, LoH);
 
     return (D * V) * F;
 }
@@ -78,7 +78,7 @@ vec3 specularLobe(const MaterialInputs material, const PixelParams pixel, const 
 #if defined(MATERIAL_HAS_ANISOTROPY)
     return anisotropicLobe(material, pixel, light, h, NoV, NoL, NoH, LoH);
 #else
-    return isotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+    return isotropicLobe(material, pixel, light, h, NoV, NoL, NoH, LoH);
 #endif
 }
 

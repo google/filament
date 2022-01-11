@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
+#include <iostream>
+#include <fstream>
+
 #include <viewer/SimpleViewer.h>
+#include <viewer/CustomFileDialogs.h>
 
 #include <filament/RenderableManager.h>
+#include <filament/Skybox.h>
 #include <filament/TransformManager.h>
 #include <filament/LightManager.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
+#include <utils/Path.h>
 
 #include <filagui/ImGuiHelper.h>
 
@@ -32,14 +38,81 @@
 #include <imgui.h>
 #include <filagui/ImGuiExtensions.h>
 
+#include <cctype>
 #include <string>
 #include <vector>
+
+#include <viewer/json.hpp>
+
+#include "stb.h"
+#include "stb_image.h"
 
 using namespace filagui;
 using namespace filament::math;
 
+std::string g_ArtRootPathStr {};
+
 namespace filament {
 namespace viewer {
+
+// Taken from MeshAssimp.cpp
+static void loadTexture(Engine* engine, const std::string& filePath, Texture** map,
+    bool sRGB, bool hasAlpha, const std::string& artRootPathStr) {
+
+    std::cout << "Loading texture \"" << filePath << "\" relative to \"" << artRootPathStr << "\"" << std::endl;
+
+    if (!filePath.empty()) {
+        utils::Path path(filePath);
+        utils::Path artRootPath(artRootPathStr);
+        if (path.isAbsolute() && !artRootPath.isEmpty()) {
+            std::cout << "\tTexture path is absolute. Making it relative to '" << artRootPathStr << "'" << std::endl;
+            path.makeRelativeTo(artRootPath);
+        }
+        path = artRootPath + path;
+
+        std::cout << "\tResolved path: " << path.getPath() << std::endl;
+
+        if (path.exists()) {
+            int w, h, n;
+            int numChannels = hasAlpha ? 4 : 3;
+
+            Texture::InternalFormat inputFormat;
+            if (sRGB) {
+                inputFormat = hasAlpha ? Texture::InternalFormat::SRGB8_A8 : Texture::InternalFormat::SRGB8;
+            }
+            else {
+                inputFormat = hasAlpha ? Texture::InternalFormat::RGBA8 : Texture::InternalFormat::RGB8;
+            }
+
+            Texture::Format outputFormat = hasAlpha ? Texture::Format::RGBA : Texture::Format::RGB;
+
+            uint8_t* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, numChannels);
+            if (data != nullptr) {
+                *map = Texture::Builder()
+                    .width(uint32_t(w))
+                    .height(uint32_t(h))
+                    .levels(0xff)
+                    .format(inputFormat)
+                    .build(*engine);
+
+                Texture::PixelBufferDescriptor buffer(data,
+                    size_t(w * h * numChannels),
+                    outputFormat,
+                    Texture::Type::UBYTE,
+                    (Texture::PixelBufferDescriptor::Callback)&stbi_image_free);
+
+                (*map)->setImage(*engine, 0, std::move(buffer));
+                (*map)->generateMipmaps(*engine);
+            }
+            else {
+                std::cout << "The texture " << path << " could not be loaded" << std::endl;
+            }
+        }
+        else {
+            std::cout << "The texture " << path << " does not exist" << std::endl;
+        }
+    }
+}
 
 filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset) {
     using namespace filament::math;
@@ -391,7 +464,59 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
     view->setAmbientOcclusionOptions({ .upsampling = View::QualityLevel::HIGH });
 }
 
+// Add a dummy entity with our general shaders so that its IBL and whatnot will be set properly
+void SimpleViewer::generateDummyMaterial() {
+    struct Vertex {
+        filament::math::float2 position;
+        uint32_t color;
+    };
+    static const Vertex TRIANGLE_VERTICES[3] = {
+        {{1, 0}, 0xffff0000u},
+        {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
+        {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
+    };
+
+    static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+
+    const Material* currentMaterial = mEngine->getShaprMaterial(0);
+    const_cast<MaterialInstance*>(currentMaterial->getDefaultInstance())->setParameter("baseColor", filament::math::float4{ 1.0f, 0.0f, 0.0f, 1.0f });
+
+    mDummyVB = VertexBuffer::Builder()
+        .vertexCount(3)
+        .bufferCount(1)
+        .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
+        .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
+        .normalized(VertexAttribute::COLOR)
+        .build(*mEngine);
+    mDummyVB->setBufferAt(*mEngine, 0,
+        VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
+    mDummyIB = IndexBuffer::Builder()
+        .indexCount(3)
+        .bufferType(IndexBuffer::IndexType::USHORT)
+        .build(*mEngine);
+    mDummyIB->setBuffer(*mEngine,
+        IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+    mDummyEntity = utils::EntityManager::get().create();
+    RenderableManager::Builder(1)
+        .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+        .material(0, currentMaterial->getDefaultInstance())
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, mDummyVB, mDummyIB, 0, 3)
+        .culling(false)
+        .receiveShadows(true)
+        .castShadows(true)
+        .build(*mEngine, mDummyEntity);
+    mScene->addEntity(mDummyEntity);
+}
+
 SimpleViewer::~SimpleViewer() {
+    for (auto* mi : mMaterialInstances) {
+        if (mi != nullptr) {
+            mEngine->destroy(mi);
+        }
+    }
+    for (auto textureEntry : mTextures) {
+        mEngine->destroy(textureEntry.second);
+    }
     mEngine->destroy(mSunlight);
     delete mImGuiHelper;
 }
@@ -434,15 +559,23 @@ void SimpleViewer::removeAsset() {
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
+
+    mIbl = ibl;
+    mSh3 = sh3;
+
     mSettings.view.fog.color = sh3[0];
     mIndirectLight = ibl;
-    if (ibl) {
-        float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
-        float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
+}
+
+void SimpleViewer::setSunlightFromIbl() {
+    using namespace filament::math;
+    if (mIbl && mSh3) {
+        float3 d = filament::IndirectLight::getDirectionEstimate(mSh3);
+        float4 c = filament::IndirectLight::getColorEstimate(mSh3, d);
         if (!std::isnan(d.x * d.y * d.z)) {
-            mSettings.lighting.sunlightDirection = d;
+            mSettings.lighting.sunlightDirection = mIbl->getRotation() * d;
             mSettings.lighting.sunlightColor = c.rgb;
-            mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
+            mSettings.lighting.sunlightIntensity = c[3] * mIbl->getIntensity();
             updateIndirectLight();
         }
     }
@@ -465,9 +598,13 @@ void SimpleViewer::updateIndirectLight() {
     using namespace filament::math;
     if (mIndirectLight) {
         mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
-        mIndirectLight->setRotation(mat3f::rotation(mSettings.lighting.iblRotation, float3{ 0, 1, 0 }));
+        mIndirectLight->setRotation(
+            mat3f::rotation(mSettings.lighting.iblRotation, float3{ 0, 0, 1 }) *
+            mat3f::rotation((float)M_PI_2, float3{ 1, 0, 0 })
+        );
     }
     if (mScene->getSkybox()) {
+        mScene->getSkybox()->setIntensity(mSettings.lighting.skyIntensity);
         mScene->getSkybox()->setType(mSettings.lighting.skyboxType);
     }
 }
@@ -532,8 +669,7 @@ void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, f
     });
 }
 
-void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY,
-        bool control) {
+void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY, bool control) {
     if (mImGuiHelper) {
         ImGuiIO& io = ImGui::GetIO();
         io.MousePos.x = mouseX;
@@ -564,8 +700,94 @@ void SimpleViewer::keyPressEvent(int charCode) {
     }
 }
 
+void SimpleViewer::saveTweaksToFile(TweakableMaterial* tweaks, const char* filePath) {
+    nlohmann::json js = tweaks->toJson();
+    std::string filePathStr = filePath;
+    if (filePathStr.rfind(".json") != (filePathStr.size() - 5)) {
+        filePathStr += ".json";
+    }
+    mLastSavedFileName = filePathStr;
+    std::fstream outFile(filePathStr, std::ios::binary | std::ios::out);
+    outFile << js << std::endl;
+    outFile.close();
+}
+
+
+void SimpleViewer::loadTweaksFromFile(const std::string& entityName, const std::string& filePath) {
+    auto entityMaterial = mTweakedMaterials.find(entityName);
+    if (entityMaterial == mTweakedMaterials.end()) {
+        std::cout << "Cannot quick load material '" << filePath << "' for entity '" << entityName << "'" << std::endl;
+        return;
+    }
+    TweakableMaterial& tweaks = entityMaterial->second;
+
+    std::fstream inFile(filePath, std::ios::binary | std::ios::in);
+    nlohmann::json js{};
+    inFile >> js;
+    inFile.close();
+    tweaks.fromJson(js);
+
+    // fixup legacy transparent thin material
+    if (tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentThin) tweaks.mShaderType = TweakableMaterial::MaterialType::TransparentSolid;
+}
+
+void SimpleViewer::changeElementVisibility(utils::Entity entity, int elementIndex, bool newVisibility) {
+    // The children of the root are the below-Node level nodes in the graph - indexing refers to them by artist request
+    auto& tm = mEngine->getTransformManager();
+    auto& rm = mEngine->getRenderableManager();
+
+    auto rinstance = rm.getInstance(entity);
+    auto tinstance = tm.getInstance(entity);
+
+    auto getNthChild = [&](utils::Entity& parentEntity, int N = 0) {
+        auto tparentEntity = tm.getInstance(parentEntity);
+        utils::Entity nthChild;
+        if (N < tm.getChildCount(tparentEntity)) {
+            tm.getChildren(tparentEntity, &nthChild, N);
+        }
+        return nthChild;
+    };
+
+    auto hasChild = [&](utils::Entity& parentEntity) {
+        auto tparentEntity = tm.getInstance(parentEntity);
+        return tm.getChildCount(tparentEntity) != 0;
+    };
+
+    if (hasChild(entity)) {
+        auto tparentOfRoi = tm.getInstance(entity);
+        std::vector<utils::Entity> children(tm.getChildCount(tparentOfRoi));
+        tm.getChildren(tinstance, children.data(), children.size());
+
+        if (elementIndex < children.size()) {
+            changeAllVisibility(children[elementIndex], newVisibility);
+        }
+    }
+}
+
+void SimpleViewer::changeAllVisibility(utils::Entity entity, bool changeToVisible) {
+    auto& tm = mEngine->getTransformManager();
+    if (!changeToVisible) {
+        mScene->remove(entity);
+    }
+    else {
+        mScene->addEntity(entity);
+    }
+
+    auto tinstance = tm.getInstance(entity);
+
+    std::vector<utils::Entity> children(tm.getChildCount(tinstance));
+
+    tm.getChildren(tinstance, children.data(), children.size());
+    for (auto ce : children) {
+        changeAllVisibility(ce, changeToVisible);
+    }
+};
+
 void SimpleViewer::updateUserInterface() {
     using namespace filament;
+
+    static char fileDialogPath[1024];
+    static const char* materialFileFilter = "JSON\0*.JSON\0";
 
     auto& tm = mEngine->getTransformManager();
     auto& rm = mEngine->getRenderableManager();
@@ -575,18 +797,136 @@ void SimpleViewer::updateUserInterface() {
     auto renderableTreeItem = [this, &rm](utils::Entity entity) {
         bool rvis = mScene->hasEntity(entity);
         ImGui::Checkbox("visible", &rvis);
-        if (rvis) {
+        if ( rvis ) {
             mScene->addEntity(entity);
         } else {
             mScene->remove(entity);
         }
+
         auto instance = rm.getInstance(entity);
         bool scaster = rm.isShadowCaster(instance);
         ImGui::Checkbox("casts shadows", &scaster);
         rm.setCastShadows(instance, scaster);
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
-            const char* mname = rm.getMaterialInstanceAt(instance, prim)->getName();
+            // check if we have already assigned a custom material tweak to this entity
+            const char* entityName = mAsset->getName(entity);
+            auto entityMaterial = mTweakedMaterials.find(entityName);
+            if (entityMaterial == mTweakedMaterials.end()) {
+                // Only allow adding a new material, nothing else
+                if (ImGui::Button("Add custom material")) {                
+                    mTweakedMaterials.emplace(std::pair<std::string, TweakableMaterial>(entityName, TweakableMaterial{}));
+                    filament::MaterialInstance* newInstance = mEngine->getShaprMaterial(0)->createInstance();
+                    mMaterialInstances.push_back(newInstance);
+                    rm.setMaterialInstanceAt(instance, prim, newInstance);
+                }
+            } else {
+                // As soon as they have assigned a material to it, we display its settings all the time
+                if (ImGui::CollapsingHeader("Custom persistent material tweaks")) {
+                    TweakableMaterial& tweaks = entityMaterial->second;
+
+                    if (ImGui::Button("Load material")) {
+
+                        if (SD_OpenFileDialog(fileDialogPath, materialFileFilter)) {
+                            TweakableMaterial::MaterialType prevType = tweaks.mShaderType;
+
+                            loadTweaksFromFile(entityName, fileDialogPath);
+
+                            mLastSavedEntityName = entityName;
+                            mLastSavedFileName = fileDialogPath;
+
+                            if (tweaks.mShaderType != prevType) {
+                                filament::MaterialInstance* currentInstance = rm.getMaterialInstanceAt(instance, prim);
+                                for (auto& mat : mMaterialInstances) if (mat == currentInstance) mat = nullptr;
+                                mEngine->destroy(currentInstance);
+
+                                filament::MaterialInstance* newInstance = mEngine->getShaprMaterial(tweaks.mShaderType)->createInstance();
+                                mMaterialInstances.push_back(newInstance);
+                                rm.setMaterialInstanceAt(instance, prim, newInstance);
+                            }
+                        }
+
+                    } else {
+                        ImGui::SameLine();
+                        if (ImGui::Button("Save material")) {
+                            if (SD_SaveFileDialog(fileDialogPath, materialFileFilter)) {
+                                mLastSavedEntityName = entityName;
+                                saveTweaksToFile(&tweaks, fileDialogPath);
+                            }
+                        } else {
+                            ImGui::SameLine();
+                            if (ImGui::Button("Reset")) {
+                                TweakableMaterial::MaterialType prevType = tweaks.mShaderType;
+                                tweaks.resetWithType(prevType);
+                            }
+
+                            std::function<void( TweakableMaterial::MaterialType materialType)> changeMaterialTypeTo;
+                            changeMaterialTypeTo = [&]( TweakableMaterial::MaterialType materialType) {
+                                if (tweaks.mShaderType != materialType) {
+                                    filament::MaterialInstance* currentInstance = rm.getMaterialInstanceAt(instance, prim);
+                                    for (auto& mat : mMaterialInstances) if (mat == currentInstance) mat = nullptr;
+                                    mEngine->destroy(currentInstance);
+
+                                    filament::MaterialInstance* newInstance = mEngine->getShaprMaterial(materialType)->createInstance();
+                                    mMaterialInstances.push_back(newInstance);
+                                    rm.setMaterialInstanceAt(instance, prim, newInstance);
+                                }
+                                tweaks.mShaderType = materialType;
+                            };
+
+                            if (ImGui::RadioButton("Opaque", tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque)) {
+                                changeMaterialTypeTo(TweakableMaterial::MaterialType::Opaque);
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::RadioButton("Transparent solid", tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentSolid)) {
+                                changeMaterialTypeTo(TweakableMaterial::MaterialType::TransparentSolid);
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::RadioButton("Cloth", tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth)) {
+                                changeMaterialTypeTo(TweakableMaterial::MaterialType::Cloth);
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::RadioButton("Subsurface", tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface)) {
+                                changeMaterialTypeTo(TweakableMaterial::MaterialType::Subsurface);
+                            }
+                        }
+                    }
+
+                    tweaks.drawUI();
+
+                    auto checkAndFixPathRelative([](auto& path) {
+                        utils::Path asPath(path);
+                        if (asPath.isAbsolute()) {
+                            std::string newFilePath = asPath.makeRelativeTo(g_ArtRootPathStr).c_str();
+                            //std::cout << "\t\tMaking path relative: " << path << std::endl;
+                            //std::cout << "\t\tMade path relative: " << newFilePath << std::endl;
+                            path = newFilePath;
+                        }
+                    });
+
+                    // Load the requested textures
+                    TweakableMaterial::RequestedTexture currentRequestedTexture = tweaks.nextRequestedTexture();
+                    while (currentRequestedTexture.filename != "") {
+                        checkAndFixPathRelative(currentRequestedTexture.filename);
+                        std::string keyName = currentRequestedTexture.filename;
+                        auto textureEntry = mTextures.find(keyName);
+                        if (textureEntry == mTextures.end() ) {
+                            mTextures[keyName] = nullptr;
+                            loadTexture(mEngine, currentRequestedTexture.filename, &mTextures[keyName], currentRequestedTexture.isSrgb, currentRequestedTexture.isAlpha, mSettings.viewer.artRootPath);
+                        } else if (currentRequestedTexture.doRequestReload) {
+                            if (mTextures[keyName] != nullptr) mEngine->destroy(mTextures[keyName]);
+                            loadTexture(mEngine, currentRequestedTexture.filename, &mTextures[keyName], currentRequestedTexture.isSrgb, currentRequestedTexture.isAlpha, mSettings.viewer.artRootPath);
+                        }
+
+                        currentRequestedTexture = tweaks.nextRequestedTexture();
+                    }
+                }
+            }
+
+            const auto& matInstance = rm.getMaterialInstanceAt(instance, prim);
+            const char* mname = matInstance->getName();
+            const auto* mat = matInstance->getMaterial();
+            
             if (mname) {
                 ImGui::Text("prim %zu: material %s", prim, mname);
             } else {
@@ -652,6 +992,137 @@ void SimpleViewer::updateUserInterface() {
         }
     };
 
+    std::function<void(utils::Entity)> applyMaterialSettingsInTree;
+    applyMaterialSettingsInTree = [&](utils::Entity entity) {
+        auto tinstance = tm.getInstance(entity);
+        auto rinstance = rm.getInstance(entity);
+        auto linstance = lm.getInstance(entity);
+        intptr_t treeNodeId = 1 + entity.getId();
+
+        std::vector<utils::Entity> children(tm.getChildCount(tinstance));
+        if (rinstance) {
+            const char* entityName = mAsset->getName(entity);
+            auto instance = rm.getInstance(entity);
+            size_t numPrims = rm.getPrimitiveCount(instance);
+
+            auto entityMaterial = mTweakedMaterials.find(entityName);
+            if (entityMaterial != mTweakedMaterials.end()) {
+                // These attributes are only present in the Shapr general material
+                const auto& tweaks = entityMaterial->second;
+                for (size_t prim = 0; prim < numPrims; ++prim) {
+                    const auto& matInstance = rm.getMaterialInstanceAt(instance, prim);
+
+                    auto setTextureIfPresent ([&](bool useTexture, const auto& filename, const std::string& propertyName) {
+                        std::string useTextureName = "use" + propertyName + "Texture";
+                        std::string samplerName = propertyName + "Texture";
+
+                        useTextureName[3] = std::toupper(useTextureName[3]);
+
+                        auto textureEntry = mTextures.find(filename.asString());
+                        if (useTexture && textureEntry != mTextures.end() && textureEntry->second != nullptr) {
+                            matInstance->setParameter(useTextureName.c_str(), 1);
+                            matInstance->setParameter(samplerName.c_str(), textureEntry->second, trilinSampler);
+                        }
+                        else {
+                            matInstance->setParameter(useTextureName.c_str(), 0);
+                        }
+
+                    });
+
+                    matInstance->setParameter("useWard", (tweaks.mUseWard) ? 1 : 0 );
+
+                    setTextureIfPresent(tweaks.mBaseColor.isFile, tweaks.mBaseColor.filename, "baseColor");
+
+                    matInstance->setParameter("normalScale", tweaks.mNormalIntensity.value);
+                    setTextureIfPresent(tweaks.mNormal.isFile, tweaks.mNormal.filename, "normal");
+                    matInstance->setParameter("roughnessScale", tweaks.mRoughnessScale.value);
+                    setTextureIfPresent(tweaks.mRoughness.isFile, tweaks.mRoughness.filename, "roughness");
+                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth || tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface) {
+                        matInstance->setParameter("occlusionIntensity", tweaks.mOcclusionIntensity.value);
+                        setTextureIfPresent(tweaks.mOcclusion.isFile, tweaks.mOcclusion.filename, "occlusion");
+                        matInstance->setParameter("occlusion", tweaks.mOcclusion.value);
+                    }
+
+                    matInstance->setParameter("clearCoatNormalScale", tweaks.mClearCoatNormalIntensity.value);
+                    setTextureIfPresent(tweaks.mClearCoatNormal.isFile, tweaks.mClearCoatNormal.filename, "clearCoatNormal");
+                    setTextureIfPresent(tweaks.mClearCoatRoughness.isFile, tweaks.mClearCoatRoughness.filename, "clearCoatRoughness");
+
+                    matInstance->setParameter("useBumpTexture", 0);
+
+                    matInstance->setParameter("textureScaler", math::float4(tweaks.mBaseTextureScale, tweaks.mNormalTextureScale, tweaks.mClearCoatTextureScale, tweaks.mRefractiveTextureScale));
+                    matInstance->setParameter("specularIntensity", tweaks.mSpecularIntensity.value);
+                    math::float4 gammaBaseColor{}; 
+                    gammaBaseColor.r = std::pow(tweaks.mBaseColor.value.r, 2.22f); 
+                    gammaBaseColor.g = std::pow(tweaks.mBaseColor.value.g, 2.22f);
+                    gammaBaseColor.b = std::pow(tweaks.mBaseColor.value.b, 2.22f);
+                    gammaBaseColor.a = tweaks.mBaseColor.value.a;
+                    matInstance->setParameter("baseColor", gammaBaseColor);
+                    matInstance->setParameter("roughness", tweaks.mRoughness.value);
+                    matInstance->setParameter("clearCoat", tweaks.mClearCoat.value);
+                    matInstance->setParameter("clearCoatRoughness", tweaks.mClearCoatRoughness.value);
+                    
+                    if (tweaks.mShaderType != TweakableMaterial::MaterialType::Cloth) {
+                        setTextureIfPresent(tweaks.mMetallic.isFile, tweaks.mMetallic.filename, "metallic");
+                        matInstance->setParameter("metallic", tweaks.mMetallic.value);
+                    }
+
+                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth) {
+                        if (tweaks.mSheenColor.useDerivedQuantity) {
+                            matInstance->setParameter("doDeriveSheenColor", 1);
+                        } else {
+                            matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
+                            matInstance->setParameter("doDeriveSheenColor", 0);
+                        }
+                        matInstance->setParameter("subsurfaceColor", tweaks.mSubsurfaceColor.value);
+                    } else if (tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface) {
+                        matInstance->setParameter("thickness", tweaks.mThickness.value);
+                        setTextureIfPresent(tweaks.mThickness.isFile, tweaks.mThickness.filename, "thickness");
+                        matInstance->setParameter("subsurfaceColor", tweaks.mSubsurfaceColor.value);
+                        matInstance->setParameter("subsurfacePower", tweaks.mSubsurfacePower.value);
+                    }
+
+                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque) {
+                        // Transparent materials do not expose anisotropy and sheen, these are not present in their UBOs
+                        matInstance->setParameter("anisotropy", tweaks.mAnisotropy.value);
+                        matInstance->setParameter("anisotropyDirection", normalize(tweaks.mAnisotropyDirection.value));
+
+                        if (tweaks.mSheenColor.useDerivedQuantity) {
+                            matInstance->setParameter("doDeriveSheenColor", 1);
+                        }
+                        else {
+                            matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
+                            matInstance->setParameter("doDeriveSheenColor", 0);
+                        }
+                        setTextureIfPresent(tweaks.mSheenRoughness.isFile, tweaks.mSheenRoughness.filename, "sheenRoughness");
+                        matInstance->setParameter("sheenRoughness", tweaks.mSheenRoughness.value);
+                    } else if (tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentSolid) {
+                        // Only transparent materials have the properties below
+                        if (tweaks.mSheenColor.useDerivedQuantity) {
+                            matInstance->setParameter("doDeriveAbsorption", 1);
+                        }
+                        else {
+                            matInstance->setParameter("absorption", tweaks.mAbsorption.value);
+                            matInstance->setParameter("doDeriveAbsorption", 0);
+                        }
+                        
+                        setTextureIfPresent(tweaks.mTransmission.isFile, tweaks.mTransmission.filename, "transmission");
+                        setTextureIfPresent(tweaks.mThickness.isFile, tweaks.mThickness.filename, "thickness");
+
+                        matInstance->setParameter("iorScale", tweaks.mIorScale.value);
+                        matInstance->setParameter("ior", tweaks.mIor.value);
+                        matInstance->setParameter("transmission", tweaks.mTransmission.value);
+                        matInstance->setParameter("thickness", tweaks.mThickness.value);
+                        matInstance->setParameter("maxThickness", tweaks.mMaxThickness.value);
+                    }
+                }
+            }
+        }
+        tm.getChildren(tinstance, children.data(), children.size());
+        for (auto ce : children) {
+            applyMaterialSettingsInTree(ce);
+        }
+    };
+
     // Disable rounding and draw a fixed-height ImGui window that looks like a sidebar.
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -703,13 +1174,23 @@ void SimpleViewer::updateUserInterface() {
             int lowpass = (int) ssao.lowPassFilter;
             bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
 
-            bool halfRes = ssao.resolution == 1.0f ? false : true;
+            ImGui::SliderFloat("SSAO power (contrast)", &ssao.power, 0.0f, 8.0f);
+            ImGui::SliderFloat("SSAO intensity", &ssao.intensity, 0.0f, 2.0f);
+            ImGui::SliderFloat("SSAO radius (meters)", &ssao.radius, 0.0f, 10.0f);
+            ImGui::SliderFloat("SSAO bias (meters)", &ssao.bias, 0.0f, 0.1f, "%.6f");
+
+            static int ssaoRes = 2;
+            ImGui::RadioButton("SSAO half resolution", &ssaoRes, 1);
+            ImGui::RadioButton("SSAO fullresolution", &ssaoRes, 2);
+            ssao.resolution = ssaoRes * 0.5f;
+
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
             ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
             ImGui::Checkbox("High quality upsampling", &upsampling);
             ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
             ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);
+            bool halfRes = ssao.resolution == 1.0f ? false : true;
             ImGui::Checkbox("Half resolution", &halfRes);
             ssao.resolution = halfRes ? 0.5f : 1.0f;
 
@@ -738,19 +1219,25 @@ void SimpleViewer::updateUserInterface() {
     auto& light = mSettings.lighting;
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();
+        if (ImGui::CollapsingHeader("Skybox")) {
+            ImGui::SliderFloat("Intensity", &light.skyIntensity, 0.0f, 100000.0f);
+        }
+
         if (ImGui::CollapsingHeader("Indirect light")) {
             ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
             ImGui::SliderAngle("IBL rotation", &light.iblRotation);
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
-            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 50000.0, 150000.0f);
+            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 1000.0, 150000.0f);
             ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
+            ImGui::ColorEdit3("Sun color", light.sunlightColor.v);
+            if (ImGui::Button("Reset Sunlight from IBL")) setSunlightFromIbl();
         }
         if (ImGui::CollapsingHeader("All lights")) {
             ImGui::Checkbox("Enable shadows", &light.enableShadows);
             int mapSize = light.shadowOptions.mapSize;
-            ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);
+            ImGui::SliderInt("Shadow map size", &mapSize, 32, 4096);
             light.shadowOptions.mapSize = mapSize;
 
 
@@ -924,11 +1411,22 @@ void SimpleViewer::updateUserInterface() {
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
+            if (ImGui::Button("Make all visible")) {
+                changeAllVisibility(mAsset->getRoot(), true);
+                for (bool& isVisible : mVisibility) isVisible = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Make all invisible")) {
+                changeAllVisibility(mAsset->getRoot(), false);
+                for (bool& isVisible : mVisibility) isVisible = false;
+            }
             ImGui::Indent();
             ImGui::Checkbox("Show bounds", &mEnableWireframe);
             treeNode(mAsset->getRoot());
             ImGui::Unindent();
         }
+
+        applyMaterialSettingsInTree(mAsset->getRoot());
 
         // We do not yet support animation selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
@@ -958,11 +1456,76 @@ void SimpleViewer::updateUserInterface() {
         }
     }
 
+    {
+        // Camera movement speed setting UI
+        ImGui::Separator();
+        if (ImGui::SliderFloat("Cam move speed", &mSettings.viewer.cameraMovementSpeed, 1.0f, 100.0f)) {
+            updateCameraMovementSpeed();
+        }
+    }
+
+    {
+        // Art root directory display
+        ImGui::Separator();
+        ImGui::Text("Art root: %s", mSettings.viewer.artRootPath.empty() ? "<none>" : mSettings.viewer.artRootPath.c_str());
+        char tempArtRootPath[1024];
+        if (ImGui::Button("Set art root") && mDoSaveSettings && SD_OpenFolderDialog(&tempArtRootPath[0])) {
+            utils::Path tempPath = tempArtRootPath;
+            if (tempPath.exists()) {
+                auto sanitizePath = [](std::string& path) {
+                    for (int i = 0; i < path.length(); ++i) {
+                        if (path[i] == '\\') path[i] = '/';
+                    }
+                };
+
+                mSettings.viewer.artRootPath = tempPath.c_str();
+                sanitizePath(mSettings.viewer.artRootPath);
+                g_ArtRootPathStr = tempArtRootPath;
+                mDoSaveSettings();
+            }
+            else {
+                // error
+            }
+        }
+    }
+
+    {
+        // Hotkey-related feedback UI
+        ImGui::Separator();
+        ImGui::Text("Entity material to save: %s", mLastSavedEntityName.empty() ? "<none>" : mLastSavedEntityName.c_str());
+        ImGui::Text("Save filename: %s", mLastSavedFileName.empty() ? "<none>" : mLastSavedFileName.c_str());
+    }
     mSidebarWidth = ImGui::GetWindowWidth();
     ImGui::End();
 
     updateIndirectLight();
 }
+
+// This loads the last saved (or loaded) material from file, to its entity
+void SimpleViewer::quickLoad() {
+    loadTweaksFromFile(mLastSavedEntityName, mLastSavedFileName);
+}
+
+void SimpleViewer::undoLastModification() {
+    // TODO implement
+}
+
+void SimpleViewer::updateCameraMovementSpeed() {
+    if (mCameraMovementSpeedUpdateCallback) {
+        mCameraMovementSpeedUpdateCallback(mSettings.viewer.cameraMovementSpeed);
+    } else {
+        std::cout << "Oops! No mCameraMovementSpeedUpdateCallback set!" << std::endl;
+    }
+}
+
+void SimpleViewer::setCameraMovementSpeedUpdateCallback(std::function<void(float)>&& callback) {
+    mCameraMovementSpeedUpdateCallback = std::move(callback);
+}
+
+void SimpleViewer::updateCameraSpeedOnUI(float value) {
+    mSettings.viewer.cameraMovementSpeed = value;
+}
+
 
 } // namespace viewer
 } // namespace filament

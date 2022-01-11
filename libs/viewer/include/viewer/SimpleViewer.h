@@ -35,6 +35,8 @@
 #include <math/mat4.h>
 #include <math/vec3.h>
 
+#include <viewer/TweakableMaterial.h>
+
 namespace filagui {
     class ImGuiHelper;
 }
@@ -57,7 +59,7 @@ public:
     using FilamentAsset = gltfio::FilamentAsset;
     using FilamentInstance =  gltfio::FilamentInstance;
 
-    static constexpr int DEFAULT_SIDEBAR_WIDTH = 350;
+    static constexpr int DEFAULT_SIDEBAR_WIDTH = 600;
 
     /**
      * Constructs a SimpleViewer that has a fixed association with the given Filament objects.
@@ -95,6 +97,11 @@ public:
      * Sets or changes the current scene's IBL to allow the UI manipulate it.
      */
     void setIndirectLight(filament::IndirectLight* ibl, filament::math::float3 const* sh3);
+
+    /**
+     * Computes Sunlight direction, intensity, and color from the IBL
+     */
+    void setSunlightFromIbl();
 
     /**
      * Applies the currently-selected glTF animation to the transformation hierarchy and updates
@@ -212,8 +219,26 @@ public:
 
     int getCurrentCamera() const { return mCurrentCamera; }
 
+    void generateDummyMaterial();
+
+    void setCameraMovementSpeedUpdateCallback(std::function<void(float)>&& callback);
+
+    void updateCameraSpeedOnUI(float value);
 private:
     void updateIndirectLight();
+
+    void changeElementVisibility(utils::Entity entity, int elementIndex, bool newVisibility);
+    void changeAllVisibility(utils::Entity entity, bool changeToVisible);
+
+    void quickLoad();
+    void undoLastModification();
+    //void redoLastModification();
+
+    void updateCameraMovementSpeed();
+    std::function<void(float)> mCameraMovementSpeedUpdateCallback;
+
+    void saveTweaksToFile(TweakableMaterial* tweaks, const char* filePath);
+    void loadTweaksFromFile(const std::string& entityName, const std::string& filePath);
 
     // Immutable properties set from the constructor.
     filament::Engine* const mEngine;
@@ -246,6 +271,88 @@ private:
     float mToneMapPlot[1024];
     float mRangePlot[1024 * 3];
     float mCurvePlot[1024 * 3];
+
+    filament::IndirectLight * mIbl{};
+    filament::math::float3 const* mSh3{};
+
+    filament::VertexBuffer* mDummyVB{};
+    filament::IndexBuffer* mDummyIB{};
+    utils::Entity mDummyEntity{};
+
+    std::string mLastSavedEntityName;
+    std::string mLastSavedFileName;
+    std::unordered_map<std::string, TweakableMaterial> mTweakedMaterials{};
+    std::vector<filament::MaterialInstance*> mMaterialInstances{};
+    std::unordered_map<std::string, filament::Texture*> mTextures{};
+    bool mVisibility[10]{ true, true, true, true, true, true, true, true, true, true };
+
+    TextureSampler trilinSampler = TextureSampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR, TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+
+    class SimpleViewerInputPredicates {
+        // Taken from SDL_keycode.h
+        static constexpr uint16_t KMOD_LCTRL = 0x0040;
+        static constexpr uint16_t KMOD_RCTRL = 0x0080;
+        static constexpr uint16_t KMOD_LGUI = 0x0400;
+        static constexpr uint16_t KMOD_RGUI = 0x0800;
+        // Ctrl+S on Win, Cmd+S on macOS (Cmd is KMOD_[LR]GUI, not KMOD_[LR]CTRL)
+#ifdef TARGET_OS_MAC
+        static constexpr uint16_t MOD_FOR_HOTKEYS = KMOD_LGUI | KMOD_RGUI;
+#else
+        static constexpr uint16_t MOD_FOR_HOTKEYS = KMOD_LCTRL | KMOD_RCTRL;
+#endif
+
+    public:
+        static bool shouldSaveOnKeyDownEvent(int keyCode, uint16_t modState) {
+            return keyCode == 's' && (modState & MOD_FOR_HOTKEYS);
+        }
+
+        static bool shouldQuickLoadOnKeyDownEvent(int keyCode, uint16_t modState) {
+            return keyCode == 'l' && (modState & MOD_FOR_HOTKEYS);
+        }
+
+        static bool shouldUndoOnKeyDownEvent(int keyCode, uint16_t modState) {
+            return keyCode == 'z' && (modState & MOD_FOR_HOTKEYS);
+        }
+
+        static bool shouldToggleVisibilityOnKeyDownEvent(int keyCode, uint16_t modState) {
+            return keyCode == 'i' && (modState & MOD_FOR_HOTKEYS);
+        }
+
+        static bool shouldToggleElementVisibilityOnKeyDownEvent(int keyCode, uint16_t modState) {
+            return keyCode >= '1' && keyCode <= '9' && (modState & MOD_FOR_HOTKEYS);
+        }        
+    };
+
+public:
+
+    std::function<bool (int, uint16_t)> getKeyDownHook () {
+        return [this] (int keyCode, uint16_t modState) {
+            if (SimpleViewerInputPredicates::shouldSaveOnKeyDownEvent(keyCode, modState)) {
+                if (!this->mLastSavedEntityName.empty() && !this->mLastSavedFileName.empty()) {
+                    saveTweaksToFile(&mTweakedMaterials[mLastSavedEntityName], mLastSavedFileName.c_str());
+                }
+                return true;
+            } else if (SimpleViewerInputPredicates::shouldQuickLoadOnKeyDownEvent(keyCode, modState)) {
+                quickLoad();
+                return true;
+            } else if (SimpleViewerInputPredicates::shouldToggleVisibilityOnKeyDownEvent(keyCode, modState)) {
+                static bool currentlyVisible = true;
+                currentlyVisible = !currentlyVisible;
+                changeAllVisibility(mAsset->getRoot(), currentlyVisible);
+                for (bool& isVisible : mVisibility) isVisible = currentlyVisible;
+                return true;
+            } else if (SimpleViewerInputPredicates::shouldToggleElementVisibilityOnKeyDownEvent(keyCode, modState)) {
+                int indexToModify = keyCode - '1';
+                if (indexToModify >= 0 && indexToModify <= 8) {
+                    mVisibility[indexToModify] = !mVisibility[indexToModify];
+                    changeElementVisibility(mAsset->getRoot(), indexToModify, mVisibility[indexToModify]);
+                }
+            }
+            return false;
+        };
+    }
+
+    std::function<void(void)> mDoSaveSettings{};
 };
 
 UTILS_PUBLIC

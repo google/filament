@@ -84,13 +84,14 @@ bool DirectionWidget(const char* label, float v[3]) {
         v[2] = dir.z;
     }
 
-    ArrowWidget widget(normalize(dir));
+    float3 arrowDir{ dir.x, dir.z, dir.y };
+    ArrowWidget widget(normalize(arrowDir));
     if (widget.draw() && !changed) {
         changed = true;
         dir = widget.getDirection();
         v[0] = dir.x;
-        v[1] = dir.y;
-        v[2] = dir.z;
+        v[1] = dir.z;
+        v[2] = dir.y;
     }
     ImGui::EndGroup();
     ImGui::PopID();

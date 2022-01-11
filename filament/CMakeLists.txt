@@ -177,6 +177,10 @@ set(MATERIAL_SRCS
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
+        src/materials/shaprGeneralMaterialOpaque.mat
+        src/materials/shaprGeneralMaterialTransparentSolid.mat
+        src/materials/shaprGeneralMaterialSubsurface.mat
+        src/materials/shaprGeneralMaterialCloth.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
         src/materials/dof/dofDownsample.mat
@@ -262,7 +266,7 @@ foreach (mat_src ${MATERIAL_SRCS})
             COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
             MAIN_DEPENDENCY ${fullname}
             DEPENDS matc
-            COMMENT "Compiling material ${mat_src} to ${output_path}"
+            COMMENT "Compiling material ${mat_src} to ${output_path} with options '${MATC_BASE_FLAGS}'"
     )
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()

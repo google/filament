@@ -217,6 +217,10 @@ float Skybox::getIntensity() const noexcept {
     return upcast(this)->getIntensity();
 }
 
+void Skybox::setIntensity(float intensity) noexcept {
+    upcast(this)->setIntensity(intensity);
+}
+
 void Skybox::setColor(math::float4 color) noexcept {
     upcast(this)->setColor(color);
 }

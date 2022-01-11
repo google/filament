@@ -51,6 +51,13 @@ class MeshAssimp;
 
 class FilamentApp {
 public:
+    using KeyDownEventHook = std::function<bool(int, int16_t)>;
+    std::vector<KeyDownEventHook> mKeyDownHooks;
+
+    using CameraMovementSpeedUpdateCallback = std::function<void(float)>;
+    CameraMovementSpeedUpdateCallback getCameraMovementSpeedUpdateCallback();
+    void setCameraFlightSpeedUpdateOnUICallback(std::function<void(float)>);
+
     using SetupCallback = std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
     using CleanupCallback =
             std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
@@ -76,7 +83,7 @@ public:
     void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
             ImGuiCallback imgui = ImGuiCallback(), PreRenderCallback preRender = PreRenderCallback(),
             PostRenderCallback postRender = PostRenderCallback(),
-            size_t width = 1024, size_t height = 640);
+            size_t width = 1600, size_t height = 900);
 
     filament::Material const* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
@@ -217,11 +224,13 @@ private:
     void initSDL();
 
     void loadIBL(const Config& config);
+    void loadSkybox(const Config& config);
     void loadDirt(const Config& config);
 
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
+    std::unique_ptr<IBL> mSkybox;
     filament::Texture* mDirt = nullptr;
     bool mClosed = false;
     uint64_t mTime = 0;
@@ -239,6 +248,9 @@ private:
     std::string mWindowTitle;
     std::vector<filament::View*> mOffscreenViews;
     float mCameraFocalLength = 28.0f;
+
+    CameraMovementSpeedUpdateCallback mCameraMovementSpeedUpdateCallback = nullptr;
+    filament::camutils::Manipulator<float>::FlightSpeedModifiedCallback mFlightSpeedModifiedCallback = nullptr;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

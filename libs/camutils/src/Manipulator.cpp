@@ -170,7 +170,7 @@ void Manipulator<FLOAT>::setProperties(const Config& props) {
     }
 
     if (mProps.upVector == vec3(0)) {
-        mProps.upVector = vec3(0, 1, 0);
+        mProps.upVector = vec3(0, 0, 1);
     }
 
     if (mProps.fovDegrees == FLOAT(0)) {
@@ -316,6 +316,17 @@ void Manipulator<FLOAT>::keyUp(Manipulator<FLOAT>::Key key) { }
 
 template <typename FLOAT>
 void Manipulator<FLOAT>::update(FLOAT deltaTime) { }
+
+template <typename FLOAT>
+void Manipulator<FLOAT>::setFlightSpeed(float speed) { }
+
+template <typename FLOAT>
+FLOAT Manipulator<FLOAT>::getFlightSpeed() { return -1; }
+
+template <typename FLOAT>
+void Manipulator<FLOAT>::setFlightSpeedModifiedCallback(FlightSpeedModifiedCallback callback) {
+    mFlightSpeedModifiedCallback = callback;
+}
 
 template class Manipulator<float>;
 

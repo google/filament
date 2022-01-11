@@ -78,17 +78,18 @@ float D_GGX(float roughness, float NoH, const vec3 h) {
     return saturateMediump(d);
 }
 
+float pow2( float x ) {
+    return x*x;
+}
+
 float D_GGX_Anisotropic_Ward(float at, float ab, float ToH, float BoH, float NoH, float NoL, float NoV) {
-    // It's OK to divide by at and ab as both of them are clamped to MIN_ROUGHNESS, which is larger than smallest subnormal
+    // It's OK to divide by at and ab as both of them are clamped to MIN_ROUGHNESS, which is larger than 0
     float  oneOverAt = 1.0 / at;
     float  oneOverAb = 1.0 / ab;
-    float  ToHoverAt = ToH * oneOverAt;
-    float  BoHoverAb = BoH * oneOverAb;
+    float  exponent  = -( pow2( ToH * oneOverAt ) + pow2( BoH * oneOverAb ) ) / pow2( NoH );
 
-    float  exponent  = -( ToHoverAt*ToHoverAt + BoHoverAb*BoHoverAb ) / ( NoH*NoH );
-
-    // We would go out on a limb believing that NoL * NoV is sufficiently large to '1/sqrt' it, unless we clamp it to 2^(-14/2) = 2^-7 = 0.0078125
     const float oneOverFourPi = 1.0 / (4.0 * PI );
+    // We go out on a limb believing that NoL * NoV is sufficiently large to '1/sqrt' it unless we max-it; 2^(-14/2) = 2^-7 = 
     float  Distribution  = oneOverFourPi * oneOverAt * oneOverAb * inversesqrt( max( NoL * NoV, 0.0078125 ) );
            Distribution *= exp(exponent);
 

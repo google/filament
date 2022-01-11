@@ -165,6 +165,14 @@ public:
     bool isAbsolute() const;
 
     /**
+     * Returns this path as a relative path from the parameter path.
+     * @param path the base path to make this relative from
+     * @return a new path representing the same object, but relative
+     *         to path
+     */
+    Path makeRelativeTo(const Path& path) const;
+
+    /**
      * Splits this object's abstract pathname in a vector of file
      * and directory name. If the underlying abstract pathname
      * starts with a '/', the returned vector's first element

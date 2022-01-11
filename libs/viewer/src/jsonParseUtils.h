@@ -19,6 +19,8 @@
 
 #include <jsmn.h>
 
+struct TweakableMaterial;
+
 namespace filament {
 namespace viewer {
 
@@ -29,6 +31,7 @@ namespace viewer {
 struct Settings;
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out);
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TweakableMaterial* out);
 int parse(jsmntok_t const* tokens, int i);
 int compare(jsmntok_t tok, const char* jsonChunk, const char* str);
 

@@ -95,6 +95,7 @@ bool IBL::loadFromEquirect(Path const& path) {
     IBLPrefilterContext::EquirectangularToCubemap equirectangularToCubemap(context);
     IBLPrefilterContext::SpecularFilter specularFilter(context);
 
+    IBLPrefilterContext::setCubemapFaceResolution(2048);
     mSkyboxTexture = equirectangularToCubemap(equirect);
 
     mEngine.destroy(equirect);

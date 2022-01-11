@@ -222,6 +222,11 @@ public:
     float getIntensity() const noexcept;
 
     /**
+     * Sets the skybox's intensity in lux, or lumen/m^2.
+     */
+    void setIntensity(float intensity) noexcept;
+
+    /**
      * @return the associated texture, or null if it does not exist
      */
     Texture const* getTexture() const noexcept;

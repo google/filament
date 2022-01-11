@@ -57,7 +57,7 @@ public:
             resolved.flightPanSpeed = vec2(0.01, 0.01);
         }
         if (resolved.flightMaxSpeed == 0.0) {
-            resolved.flightMaxSpeed = 10.0;
+            resolved.flightMaxSpeed = 100.0;
         }
         if (resolved.flightSpeedSteps == 0) {
             resolved.flightSpeedSteps = 80;
@@ -67,7 +67,7 @@ public:
     }
 
     void updateTarget(FLOAT pitch, FLOAT yaw) {
-        Base::mTarget = Base::mEye + (mat3::eulerZYX(0, yaw, pitch) * vec3(0.0, 0.0, -1.0));
+        Base::mTarget = Base::mEye + (mat3::eulerZYX(yaw, 0, pitch) * vec3(0.0, 1.0, 0.0));
     }
 
     void grabBegin(int x, int y, bool strafe) override {
@@ -118,6 +118,10 @@ public:
         // units per second.
         mScrollPositionNormalized = (mScrollWheel + halfSpeedSteps) / halfSpeedSteps - 1.0;
         mMoveSpeed = pow(Base::mProps.flightMaxSpeed, mScrollPositionNormalized);
+
+        if (Base::mFlightSpeedModifiedCallback) {
+            Base::mFlightSpeedModifiedCallback(mMoveSpeed);
+        }
     }
 
     void update(FLOAT deltaTime) override {
@@ -140,10 +144,10 @@ public:
         vec3 forceWorld = (orientation * vec4{ forceLocal, 0.0f }).xyz;
 
         if (mKeyDown[(int) Base::Key::UP]) {
-            forceWorld += vec3{  0.0,  1.0,  0.0 };
+            forceWorld += vec3{  0.0,  0.0,  1.0 };
         }
         if (mKeyDown[(int) Base::Key::DOWN]) {
-            forceWorld += vec3{  0.0, -1.0,  0.0 };
+            forceWorld += vec3{  0.0,  0.0, -1.0 };
         }
 
         forceWorld *= mMoveSpeed;
@@ -188,6 +192,14 @@ public:
         updateTarget(bookmark.flight.pitch, bookmark.flight.yaw);
     }
 
+    void setFlightSpeed(float speed) override {
+        mMoveSpeed = speed;
+    }
+
+    FLOAT getFlightSpeed() override {
+        return mMoveSpeed;
+    }
+
 private:
     vec2 mGrabWin;
     vec2 mTargetEuler;  // (pitch, yaw)
@@ -196,7 +208,7 @@ private:
     bool mGrabbing = false;
     FLOAT mScrollWheel = 0.0f;
     FLOAT mScrollPositionNormalized = 0.0f;
-    FLOAT mMoveSpeed = 1.0f;
+    FLOAT mMoveSpeed = 64.0f;
     vec3 mEyeVelocity;
 };
 

@@ -330,7 +330,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     MaterialBuilder builder = MaterialBuilder()
             .name(name)
             .flipUV(false)
-            .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::SIMPLE)
+            .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::BENT_NORMALS)
             .specularAntiAliasing(true)
             .clearCoatIorChange(false)
             .material(shader.c_str())
@@ -374,6 +374,9 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     // METALLIC-ROUGHNESS
     builder.parameter(MaterialBuilder::UniformType::FLOAT, "metallicFactor");
     builder.parameter(MaterialBuilder::UniformType::FLOAT, "roughnessFactor");
+
+    builder.parameter(MaterialBuilder::UniformType::FLOAT4, "scalingControl");
+    
     if (config.hasMetallicRoughnessTexture) {
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "metallicRoughnessMap");
         if (config.hasTextureTransforms) {

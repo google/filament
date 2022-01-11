@@ -225,6 +225,8 @@ public:
         uint8_t mLevelCount = 1u;
     };
 
+    static void setCubemapFaceResolution(unsigned int res);
+
 private:
     friend class Filter;
     filament::Engine& mEngine;
@@ -237,6 +239,7 @@ private:
     utils::Entity mCameraEntity{};
     filament::View* mView{};
     filament::Material* mIntegrationMaterial{};
+    static uint32_t cubemapFaceResolution;
 };
 
 #endif //TNT_IBL_PREFILTER_IBLPREFILTER_H

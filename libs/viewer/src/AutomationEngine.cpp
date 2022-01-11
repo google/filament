@@ -134,7 +134,7 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
         gStatus = "Failed to export settings file.";
     }
     out << contents << std::endl;
-    gStatus = "Exported to '" + std::string(filename) + "' in the current folder.";
+    gStatus = "Exported to '" + std::string(filename) + "'.";
 }
 
 void AutomationEngine::applySettings(const char* json, size_t jsonLength,

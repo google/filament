@@ -15,6 +15,7 @@
  */
 
 #include <viewer/Settings.h>
+#include <viewer/TweakableMaterial.h>
 
 #include "jsonParseUtils.h"
 
@@ -68,6 +69,13 @@ int parse(jsmntok_t const* tokens, int i) {
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint8_t* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
     *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
+    return i + 1;
+}
+
+//template <size_t N>
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, std::string& val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_STRING);
+    val.append(jsonChunk + tokens[i].start, tokens[i].end - tokens[i].start);
     return i + 1;
 }
 
@@ -837,6 +845,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->sunlightColor);
         } else if (compare(tok, jsonChunk, "iblIntensity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblIntensity);
+        } else if (compare(tok, jsonChunk, "skyIntensity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->skyIntensity);
         } else if (compare(tok, jsonChunk, "iblRotation") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblRotation);
         } else {
@@ -877,7 +887,36 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOp
              i = parse(tokens, i + 1, jsonChunk, &out->cameraFocusDistance);
         } else if (compare(tok, jsonChunk, "autoScaleEnabled") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->autoScaleEnabled);
+        } else if (compare(tok, jsonChunk, "cameraMovementSpeed") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraMovementSpeed);
+        } else if (compare(tok, jsonChunk, "artRootPath") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, out->artRootPath);
         } else {
+            slog.w << "Invalid viewer options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid viewer options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+template <typename T, typename = std::enable_if_t< std::is_same_v<T, float> || std::is_same_v<T, filament::math::float2> || std::is_same_v<T, filament::math::float3> || std::is_same_v<T, filament::math::float4> > >
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TweakableProperty<T>* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "isFile") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->isFile);
+        }
+        else if (compare(tok, jsonChunk, "value") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->value);
+        }
+        else {
             slog.w << "Invalid viewer options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
         }
@@ -910,6 +949,19 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
         if (i < 0) {
             slog.e << "Invalid group value: '" << STR(tok, jsonChunk) << "'" << io::endl;
             return i;
+        }
+    }
+    return i;
+}
+
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TweakableMaterial* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "baseColor") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->mBaseColor.value);
         }
     }
     return i;
@@ -967,6 +1019,7 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
     }
     if (scene->getSkybox())
     {
+        scene->getSkybox()->setIntensity(settings.skyIntensity);
         scene->getSkybox()->setType(settings.skyboxType);
     }
     for (size_t i = 0; i < sceneLightCount; i++) {
@@ -1326,6 +1379,7 @@ static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
         << "\"sunlightDirection\": " << (in.sunlightDirection) << ",\n"
         << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
         << "\"iblIntensity\": " << (in.iblIntensity) << ",\n"
+        << "\"skyIntensity\": " << (in.skyIntensity) << ",\n"
         << "\"iblRotation\": " << (in.iblRotation) << "\n"
         << "}";
 }
@@ -1341,7 +1395,9 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
         << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
         << "\"cameraFocalLength\": " << (in.cameraFocalLength) << ",\n"
         << "\"cameraFocusDistance\": " << (in.cameraFocusDistance) << ",\n"
-        << "\"autoScaleEnabled\": " << to_string(in.autoScaleEnabled) << "\n"
+        << "\"autoScaleEnabled\": " << to_string(in.autoScaleEnabled) << ",\n"
+        << "\"cameraMovementSpeed\": " << (in.cameraMovementSpeed) << ",\n"
+        << "\"artRootPath\": \"" << (in.artRootPath) << "\"\n"
         << "}";
 }
 

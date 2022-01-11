@@ -484,6 +484,8 @@ public:
      */
     const Material* getDefaultMaterial() const noexcept;
 
+    const Material* getShaprMaterial(size_t index) const noexcept;
+
     /**
      * Returns the resolved backend.
      */

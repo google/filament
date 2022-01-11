@@ -19,8 +19,11 @@
 #include <sstream>
 #include <ostream>
 #include <iterator>
+#include <deque>
+#include <iostream>
 
 #if defined(WIN32)
+#   include <assert.h>
 #   include <utils/compiler.h>
 #   include <utils/win32/stdtypes.h>
 #   define SEPARATOR '\\'
@@ -114,6 +117,57 @@ bool Path::isAbsolute() const {
     return !isEmpty() && m_path.front() == '/';
 }
 #endif
+
+Path Path::makeRelativeTo(const Path& path) const {
+    auto thisSplitVec = split();
+    auto baseSplitVec = path.split();
+
+    std::deque<std::string> thisSplit = std::deque<std::string>(thisSplitVec.cbegin(), thisSplitVec.cend());
+    std::deque<std::string> baseSplit = std::deque<std::string>(baseSplitVec.cbegin(), baseSplitVec.cend());
+
+    // if root is "", return path to retain previous load/save behaviour
+    if (path == "") return *this;
+
+#ifdef WIN32
+    // Having ':' as second char of first path element implies the first char must match
+    // aka if both paths are absolute, then they must point to the same drive
+    if (thisSplit.size() > 0 && baseSplit.size() > 0 && thisSplit.front().size() > 1 && baseSplit.front().size() > 1 && thisSplit.front()[1] == ':' && thisSplit.front()[1] == baseSplit.front()[1] && thisSplit.front()[0] != baseSplit.front()[0]) {
+        std::cout << "The loaded texture must be on the same drive as the data root folder!" << std::endl;
+        return *this;
+    }
+#endif
+
+    while (!thisSplit.empty() && !baseSplit.empty() && thisSplit.front() == baseSplit.front()) {
+        thisSplit.pop_front();
+        baseSplit.pop_front();
+    }
+
+    std::vector<std::string> resultElements {"."};
+
+    while (!baseSplit.empty()) {
+        if (std::isalpha(baseSplit.front()[0]) && std::isupper(baseSplit.front()[0]) && (baseSplit.front()[1] == ':')) {
+            baseSplit.pop_front();
+            continue;
+        }
+        resultElements.push_back("..");
+        baseSplit.pop_front();
+    }
+
+#ifdef WIN32
+    const uint8_t skipFirstItem = std::isalpha(thisSplit.front()[0]) && std::isupper(thisSplit.front()[0]) && (thisSplit.front()[1] == ':');
+#else
+    const uint8_t skipFirstItem = 0;
+#endif
+
+    std::copy(thisSplit.cbegin() + skipFirstItem, thisSplit.cend(), std::back_inserter(resultElements));
+
+    std::stringstream resultPath;
+    std::copy(resultElements.begin(), resultElements.end() - 1,
+              std::ostream_iterator<std::string>(resultPath, SEPARATOR_STR));
+
+    auto finalResult = resultPath.str() + resultElements.back();
+    return finalResult;
+}
 
 Path Path::getParent() const {
     if (isEmpty()) return "";
@@ -242,9 +296,11 @@ std::string Path::getCanonicalPath(const std::string& path) {
             if (segments.back().empty()) { // ignore if .. follows initial /
                 continue;
             }
-            if (segments.back() != "..") {
+            if (segments.back() != ".." && segments.back() != ".") {
                 segments.pop_back();
                 continue;
+            } else if (segments.back() == ".") {
+                segments.pop_back();
             }
         }
 

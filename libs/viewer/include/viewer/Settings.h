@@ -115,8 +115,8 @@ struct GenericToneMapperSettings {
 
 struct ColorGradingSettings {
     bool enabled = true;
-    filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
-    ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+    filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::ULTRA;
+    ToneMapping toneMapping = ToneMapping::LINEAR;
     GenericToneMapperSettings genericToneMapper;
     bool luminanceScaling = false;
     bool gamutMapping = false;
@@ -188,6 +188,7 @@ struct LightSettings {
     math::float3 sunlightDirection = {0.6, -1.0, -0.8};;
     math::float3 sunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
     float iblIntensity = 30000.0f;
+    float skyIntensity = 30000.0f;
     float iblRotation = 0.0f;
     Skybox::SkyboxType skyboxType = Skybox::SkyboxType::ENVIRONMENT;
 };
@@ -203,6 +204,9 @@ struct ViewerOptions {
     float cameraFocalLength = 28.0f;
     float cameraFocusDistance = 10.0f;
     bool autoScaleEnabled = true;
+
+    float cameraMovementSpeed = 5.0f;
+    std::string artRootPath;
 };
 
 struct Settings {

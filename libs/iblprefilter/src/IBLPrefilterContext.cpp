@@ -41,6 +41,8 @@
 using namespace filament::math;
 using namespace filament;
 
+uint32_t IBLPrefilterContext::cubemapFaceResolution = 256;
+
 constexpr static float4 sFullScreenTriangleVertices[3] = {
         { -1.0f, -1.0f, 1.0f, 1.0f },
         { 3.0f,  -1.0f, 1.0f, 1.0f },
@@ -158,6 +160,10 @@ IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) n
     return *this;
 }
 
+void IBLPrefilterContext::setCubemapFaceResolution(uint32_t res) {
+    cubemapFaceResolution = res;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
@@ -221,7 +227,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
                 .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
                 .format(Texture::InternalFormat::R11F_G11F_B10F)
                 .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
-                .width(256).height(256).levels(0xFF)
+                .width(cubemapFaceResolution).height(cubemapFaceResolution).levels(0xFF)
                 .build(engine);
     }
 
@@ -350,7 +356,7 @@ Texture* IBLPrefilterContext::SpecularFilter::createReflectionsTexture() {
     const uint8_t levels = mLevelCount;
 
     // default texture is 256 or larger to accommodate the level count requested
-    const uint32_t dim = std::max(256u, 1u << (levels - 1u));
+    const uint32_t dim = std::max(cubemapFaceResolution, 1u << (levels - 1u));
 
     Texture* const outCubemap = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)

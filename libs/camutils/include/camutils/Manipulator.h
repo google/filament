@@ -25,6 +25,7 @@
 #include <math/vec4.h>
 
 #include <cstdint>
+#include <functional>
 
 namespace filament {
 namespace camutils {
@@ -279,6 +280,12 @@ public:
      */
     virtual void jumpToBookmark(const Bookmark& bookmark) = 0;
 
+    virtual void setFlightSpeed(float speed);
+    virtual FLOAT getFlightSpeed();
+
+    using FlightSpeedModifiedCallback = std::function<void (float)>;
+    virtual void setFlightSpeedModifiedCallback(FlightSpeedModifiedCallback callback);
+
 protected:
     Manipulator(Mode mode, const Config& props);
 
@@ -290,6 +297,8 @@ protected:
     Config mProps;
     vec3 mEye;
     vec3 mTarget;
+
+    FlightSpeedModifiedCallback mFlightSpeedModifiedCallback;
 };
 
 } // namespace camutils
