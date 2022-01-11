@@ -540,11 +540,14 @@ void applyRefraction(
     vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
     vec3 Ft;
+#if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
     if (frameUniforms.ssrDistance > 0.0f) {
         // if screen-space reflections is enabled, we can't read from the screen-space buffer, so
         // fall back to cubemap refractions
         Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
-    } else {
+    } else
+#endif
+    {
         // compute the point where the ray exits the medium, if needed
         vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
         p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
