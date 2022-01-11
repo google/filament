@@ -809,10 +809,10 @@ using AttributeArray = std::array<Attribute, MAX_VERTEX_ATTRIBUTE_COUNT>;
 //! Raster state descriptor
 struct RasterState {
 
-    using CullingMode = CullingMode;
-    using DepthFunc = SamplerCompareFunc;
-    using BlendEquation = BlendEquation;
-    using BlendFunction = BlendFunction;
+    using CullingMode = backend::CullingMode;
+    using DepthFunc = backend::SamplerCompareFunc;
+    using BlendEquation = backend::BlendEquation;
+    using BlendFunction = backend::BlendFunction;
 
     RasterState() noexcept { // NOLINT
         static_assert(sizeof(RasterState) == sizeof(uint32_t),

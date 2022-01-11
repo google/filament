@@ -307,6 +307,7 @@ class FilamentViewer extends LitElement {
             const config = {
                 normalizeSkinningWeights: true,
                 recomputeBoundingBoxes: false,
+                ignoreBindTransform: false,
                 asyncInterval: 30
             };
 
@@ -333,7 +334,8 @@ class FilamentViewer extends LitElement {
 
                 const resourceLoader = new Filament.gltfio$ResourceLoader(this.engine,
                     config.normalizeSkinningWeights,
-                    config.recomputeBoundingBoxes);
+                    config.recomputeBoundingBoxes,
+                    config.ignoreBindTransform);
 
                 let remaining = Object.keys(this.srcBlobResources).length;
                 for (const name in this.srcBlobResources) {
