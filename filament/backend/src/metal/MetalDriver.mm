@@ -1267,101 +1267,101 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
 
-    id<MTLTexture> texturesToBindVertexShader[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindVertexShader[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
-
-    enumerateSamplerGroups(program, ShaderType::VERTEX,
-            [this, &texturesToBindVertexShader, &samplersToBindVertexShader](
-                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
-        // We currently only support a max of SAMPLER_BINDING_COUNT samplers. Ignore any additional
-        // samplers that may be bound.
-        if (binding >= backend::MAX_VERTEX_SAMPLER_COUNT) {
-            return;
-        }
+    auto getTextureToBind = [this](const SamplerGroup::Sampler* sampler) {
         const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
-        texturesToBindVertexShader[binding] = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
-                                                                                : metalTexture->texture;
-
+        id<MTLTexture> textureToBind = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
+                                                                         : metalTexture->texture;
         if (metalTexture->externalImage.isValid()) {
-            texturesToBindVertexShader[binding] = metalTexture->externalImage.getMetalTextureForDraw();
+            textureToBind = metalTexture->externalImage.getMetalTextureForDraw();
         }
+        return textureToBind;
+    };
 
-        if (!texturesToBindVertexShader[binding]) {
-            utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
-                    << "." << utils::io::endl;
-            texturesToBindVertexShader[binding] = getOrCreateEmptyTexture(mContext);
-        }
-
+    auto getSamplerToBind = [this](const SamplerGroup::Sampler* sampler) {
+        const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
         SamplerState s {
             .samplerParams = sampler->s,
             .minLod = metalTexture->minLod,
             .maxLod = metalTexture->maxLod
         };
-        id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(s);
-        samplersToBindVertexShader[binding] = samplerState;
+        return mContext->samplerStateCache.getOrCreateState(s);
+    };
+
+    id<MTLTexture> texturesToBindVertex[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindVertex[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
+
+    enumerateSamplerGroups(program, ShaderType::VERTEX,
+            [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
+                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
+        // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
+        // samplers that may be bound.
+        if (binding >= backend::MAX_VERTEX_SAMPLER_COUNT) {
+            return;
+        }
+
+        auto& textureToBind = texturesToBindVertex[binding];
+        textureToBind = getTextureToBind(sampler);
+        if (!textureToBind) {
+            utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
+                    << " at the vertex shader." << utils::io::endl;
+            textureToBind = getOrCreateEmptyTexture(mContext);
+        }
+
+        auto& samplerToBind = samplersToBindVertex[binding];
+        samplerToBind = getSamplerToBind(sampler);
     });
 
     // Assign a default sampler to empty slots, in case Filament hasn't bound all samplers.
     // Metal requires all samplers referenced in shaders to be bound.
-    for (auto& sampler : samplersToBindVertexShader) {
+    for (auto& sampler : samplersToBindVertex) {
         if (!sampler) {
             sampler = mContext->samplerStateCache.getOrCreateState({});
         }
     }
 
-    NSRange vertexShaderSamplerRange = NSMakeRange(0, backend::MAX_VERTEX_SAMPLER_COUNT);
-    [mContext->currentRenderPassEncoder setVertexTextures:texturesToBindVertexShader
-                                                withRange:vertexShaderSamplerRange];
-    [mContext->currentRenderPassEncoder setVertexSamplerStates:samplersToBindVertexShader
-                                                     withRange:vertexShaderSamplerRange];
+    NSRange vertexSamplerRange = NSMakeRange(0, backend::MAX_VERTEX_SAMPLER_COUNT);
+    [mContext->currentRenderPassEncoder setVertexTextures:texturesToBindVertex
+                                                withRange:vertexSamplerRange];
+    [mContext->currentRenderPassEncoder setVertexSamplerStates:samplersToBindVertex
+                                                     withRange:vertexSamplerRange];
 
-    id<MTLTexture> texturesToBindFragmentShader[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindFragmentShader[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLTexture> texturesToBindFragment[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindFragment[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
 
     enumerateSamplerGroups(program, ShaderType::FRAGMENT,
-            [this, &texturesToBindFragmentShader, &samplersToBindFragmentShader](
+            [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
                     const SamplerGroup::Sampler* sampler, uint8_t binding) {
-      // We currently only support a max of SAMPLER_BINDING_COUNT samplers. Ignore any additional
-      // samplers that may be bound.
-      if (binding >= backend::MAX_FRAGMENT_SAMPLER_COUNT) {
-          return;
-      }
-      const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
-      texturesToBindFragmentShader[binding] = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
-                                                                                : metalTexture->texture;
+        // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
+        // samplers that may be bound.
+        if (binding >= backend::MAX_FRAGMENT_SAMPLER_COUNT) {
+            return;
+        }
 
-      if (metalTexture->externalImage.isValid()) {
-          texturesToBindFragmentShader[binding] = metalTexture->externalImage.getMetalTextureForDraw();
-      }
+        auto& textureToBind = texturesToBindFragment[binding];
+        textureToBind = getTextureToBind(sampler);
+        if (!textureToBind) {
+            utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
+                          << " at the fragment shader." << utils::io::endl;
+            textureToBind = getOrCreateEmptyTexture(mContext);
+        }
 
-      if (!texturesToBindFragmentShader[binding]) {
-          utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
-                        << "." << utils::io::endl;
-          texturesToBindFragmentShader[binding] = getOrCreateEmptyTexture(mContext);
-      }
-
-      SamplerState s {
-              .samplerParams = sampler->s,
-              .minLod = metalTexture->minLod,
-              .maxLod = metalTexture->maxLod
-      };
-      id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(s);
-      samplersToBindFragmentShader[binding] = samplerState;
+        auto& samplerToBind = samplersToBindFragment[binding];
+        samplerToBind = getSamplerToBind(sampler);
     });
 
     // Assign a default sampler to empty slots, in case Filament hasn't bound all samplers.
     // Metal requires all samplers referenced in shaders to be bound.
-    for (auto& sampler : samplersToBindFragmentShader) {
+    for (auto& sampler : samplersToBindFragment) {
         if (!sampler) {
             sampler = mContext->samplerStateCache.getOrCreateState({});
         }
     }
 
-    NSRange fragmentShaderSamplerRange = NSMakeRange(0, backend::MAX_FRAGMENT_SAMPLER_COUNT);
-    [mContext->currentRenderPassEncoder setFragmentTextures:texturesToBindFragmentShader
-                                                  withRange:fragmentShaderSamplerRange];
-    [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBindFragmentShader
-                                                       withRange:fragmentShaderSamplerRange];
+    NSRange fragmentSamplerRange = NSMakeRange(0, backend::MAX_FRAGMENT_SAMPLER_COUNT);
+    [mContext->currentRenderPassEncoder setFragmentTextures:texturesToBindFragment
+                                                  withRange:fragmentSamplerRange];
+    [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBindFragment
+                                                       withRange:fragmentSamplerRange];
 
     // Bind the vertex buffers.
 
