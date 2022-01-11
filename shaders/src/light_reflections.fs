@@ -69,8 +69,8 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
     highp vec3 vsEndPoint = vsDirection * rayLength + vsOrigin;
 
     // Project into screen space
-    highp vec4 H0 = projectToPixelMatrix * vec4(vsOrigin, 1.0);
-    highp vec4 H1 = projectToPixelMatrix * vec4(vsEndPoint, 1.0);
+    highp vec4 H0 = mulMat4x4Float3(projectToPixelMatrix, vsOrigin);
+    highp vec4 H1 = mulMat4x4Float3(projectToPixelMatrix, vsEndPoint);
 
     // There are a lot of divisions by w that can be turned into multiplications at some minor
     // precision loss...and we need to interpolate these 1/w values anyway.
@@ -204,7 +204,7 @@ void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 
     // ray start/end in view space
-    highp vec4 vsRayStart = getViewFromWorldMatrix() * vec4(wsRayStart, 1.0);
+    highp vec4 vsRayStart = mulMat4x4Float3(getViewFromWorldMatrix(), wsRayStart);
     highp vec4 vsRayDirection = getViewFromWorldMatrix() * vec4(wsRayDirection, 0.0);
 
     highp vec3 vsOrigin = vsRayStart.xyz;
