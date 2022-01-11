@@ -58,7 +58,7 @@ highp float distanceSquared(highp vec2 a, highp vec2 b) {
 // Note: McGuire and Mara use the "cs" prefix to stand for "camera space", equivalent to Filament's
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
 bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection,
-        const highp mat4x4 projectToPixelMatrix, const highp sampler2D vsZBuffer,
+        const highp mat4 projectToPixelMatrix, const highp sampler2D vsZBuffer,
         const float vsZThickness, const highp float nearPlaneZ, const float stride,
         const float jitterFraction, const highp float maxSteps, const float maxRayTraceDistance,
         out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
@@ -217,7 +217,7 @@ void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
     float maxRayTraceDistance = frameUniforms.ssrDistance;
 
     highp vec2 res = vec2(textureSize(light_structure, 0).xy);
-    highp mat4x4 projectToPixelMatrix =
+    highp mat4 projectToPixelMatrix =
         scaleMatrix(res.x, res.y) *
         frameUniforms.ssrProjectToPixelMatrix;
 
