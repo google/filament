@@ -59,7 +59,7 @@ highp float distanceSquared(highp vec2 a, highp vec2 b) {
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
 bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection,
         const highp mat4x4 projectToPixelMatrix, const highp sampler2D vsZBuffer,
-        const float vsZThickness, const float nearPlaneZ, const float stride,
+        const float vsZThickness, const highp float nearPlaneZ, const float stride,
         const float jitterFraction, const highp float maxSteps, const float maxRayTraceDistance,
         out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
     // Clip ray to a near plane in 3D (doesn't have to be *the* near plane, although that would be a
@@ -210,8 +210,7 @@ void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
     highp vec3 vsOrigin = vsRayStart.xyz;
     highp vec3 vsDirection = vsRayDirection.xyz;
     float vsZThickness = frameUniforms.ssrThickness;
-    // TODO: use the actual near plane.
-    const float nearPlaneZ = -0.1f;
+    highp float nearPlaneZ = -frameUniforms.nearOverFarMinusNear / frameUniforms.oneOverFarMinusNear;
     const float stride = 1.0;
     // TODO: jitterFraction should be between 0 and 1, but anything < 1 gives banding artifacts.
     const float jitterFraction = 1.0f;
