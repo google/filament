@@ -194,7 +194,11 @@ void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f const&
 }
 
 void PerViewUniforms::disableSSReflections() noexcept {
+    // We must bind a placeholder texture, even if reflections are disabled, to avoid a
+    // "no texture unit bound" warning.
+    Handle<backend::HwTexture> placeholder = mEngine.getPostProcessManager().getOneTexture();
     auto& s = mPerViewUb.edit();
+    mPerViewSb.setSampler(PerViewSib::SSR, placeholder, {});
     s.ssrDistance = 0.0f;
 }
 
