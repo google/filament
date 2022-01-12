@@ -101,13 +101,14 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
-
     mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RGBA32F, 1,
             getWidth(mVertexCount), getHeight(mVertexCount), getDepth(mCount),
             TextureUsage::DEFAULT);
 
-    mSBuffer.setSampler(PerRenderPrimitiveMorphingSib::TARGETS, mTbHandle,
-            SamplerParams{ .filterMin = SamplerMinFilter::NEAREST, .filterMag = SamplerMagFilter::NEAREST });
+    SamplerParams samplerParams{};
+    samplerParams.filterMin = SamplerMinFilter::NEAREST;
+    samplerParams.filterMag = SamplerMagFilter::NEAREST;
+    mSBuffer.setSampler(PerRenderPrimitiveMorphingSib::TARGETS, mTbHandle, samplerParams);
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {
