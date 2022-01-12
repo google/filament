@@ -195,7 +195,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         if (colorGrading.toneMapping == ToneMapping::GENERIC) {
             if (ImGui::CollapsingHeader("Tonemap parameters")) {
                 GenericToneMapperSettings& generic = colorGrading.genericToneMapper;
-                ImGui::SliderFloat("Contrast##genericToneMapper", &generic.contrast, 1e-5f, 8.0f);
+                ImGui::SliderFloat("Contrast##genericToneMapper", &generic.contrast, 1e-5f, 3.0f);
                 ImGui::SliderFloat("Mid-gray in##genericToneMapper", &generic.midGrayIn, 0.0f, 1.0f);
                 ImGui::SliderFloat("Mid-gray out##genericToneMapper", &generic.midGrayOut, 0.0f, 1.0f);
                 ImGui::SliderFloat("HDR max", &generic.hdrMax, 1.0f, 64.0f);

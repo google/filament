@@ -129,7 +129,7 @@ public class ToneMapper {
          * </ul>
          */
         public Generic() {
-            this(1.585f, 0.5f, 0.18f, 0.268f, 10.0f);
+            this(1.55f, 0.18f, 0.215f, 10.0f);
         }
 
         /**
