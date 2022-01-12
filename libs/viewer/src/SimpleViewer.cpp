@@ -34,6 +34,7 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 
 using namespace filagui;
 using namespace filament::math;
@@ -137,7 +138,6 @@ static void computeToneMapPlot(ColorGradingSettings& settings, float* plot) {
         case ToneMapping::GENERIC:
             mapper = new GenericToneMapper(
                     settings.genericToneMapper.contrast,
-                    settings.genericToneMapper.shoulder,
                     settings.genericToneMapper.midGrayIn,
                     settings.genericToneMapper.midGrayOut,
                     settings.genericToneMapper.hdrMax
@@ -197,7 +197,6 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
             if (ImGui::CollapsingHeader("Tonemap parameters")) {
                 GenericToneMapperSettings& generic = colorGrading.genericToneMapper;
                 ImGui::SliderFloat("Contrast##genericToneMapper", &generic.contrast, 1e-5f, 3.0f);
-                ImGui::SliderFloat("Shoulder##genericToneMapper", &generic.shoulder, 0.0f, 1.0f);
                 ImGui::SliderFloat("Mid-gray in##genericToneMapper", &generic.midGrayIn, 0.0f, 1.0f);
                 ImGui::SliderFloat("Mid-gray out##genericToneMapper", &generic.midGrayOut, 0.0f, 1.0f);
                 ImGui::SliderFloat("HDR max", &generic.hdrMax, 1.0f, 64.0f);
@@ -408,6 +407,13 @@ void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instan
         mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
+
+        int morphCount = 0;
+        for (size_t i = 0, c = asset->getEntityCount(); i < c; ++i) {
+            auto entity = asset->getEntities()[i];
+            morphCount = std::max(morphCount, asset->getMorphTargetCount(entity));
+        }
+        mMorphWeights.resize(std::min(morphCount, 128), 0);
     }
 
     auto& tcm = mEngine->getRenderableManager();
@@ -429,6 +435,7 @@ void SimpleViewer::removeAsset() {
     }
     mAsset = nullptr;
     mAnimator = nullptr;
+    mMorphWeights.clear();
 }
 
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
@@ -976,6 +983,19 @@ void SimpleViewer::updateUserInterface() {
                 mResetAnimation = true;
             }
             ImGui::Unindent();
+        }
+
+        if (!mMorphWeights.empty() && ImGui::CollapsingHeader("Morphing")) {
+            for (int i = 0; i != mMorphWeights.size(); ++i) {
+                std::stringstream ss;
+                ss << i + 1 << " Weight";
+                std::string label = ss.str();
+                ImGui::SliderFloat(label.data(), &mMorphWeights[i], 0.0f, 1.0);
+            }
+            for (size_t i = 0, c = mAsset->getEntityCount(); i != c; ++i) {
+                mAsset->setMorphWeights(mAsset->getEntities()[i],
+                        mMorphWeights.data(), mMorphWeights.size());
+            }
         }
 
         if (mEnableWireframe) {

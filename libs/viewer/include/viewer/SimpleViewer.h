@@ -35,6 +35,8 @@
 #include <math/mat4.h>
 #include <math/vec3.h>
 
+#include <vector>
+
 namespace filagui {
     class ImGuiHelper;
 }
@@ -241,6 +243,7 @@ private:
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;
+    std::vector<float> mMorphWeights;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).
     int mCurrentCamera = 0;

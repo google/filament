@@ -23,7 +23,10 @@
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
+#include "details/Texture.h"
 #include "details/Material.h"
+
+#include "private/filament/SibGenerator.h"
 
 #include <backend/DriverEnums.h>
 
@@ -316,7 +319,6 @@ void FRenderableManager::create(
         setCulling(ci, builder->mCulling);
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphingEnabled);
-        setMorphWeights(ci, {0, 0, 0, 0});
         mManager[ci].channels = builder->mChannels;
 
         const uint32_t count = builder->mSkinningBoneCount;
@@ -364,13 +366,25 @@ void FRenderableManager::create(
                                 builder->mUserBoneMatrices, count, 0);
                     } else {
                         // initialize the bones to identity
-                        size_t size = count * sizeof(PerRenderableUibBone);
-                        auto* out = (PerRenderableUibBone*)driver.allocate(size);
+                        auto* out = driver.allocatePod<PerRenderableUibBone>(count);
                         std::uninitialized_fill_n(out, count, PerRenderableUibBone{});
-                        driver.updateBufferObject(bones.handle, { out, size }, 0);
+                        driver.updateBufferObject(bones.handle, {
+                            out, count * sizeof(PerRenderableUibBone) }, 0);
                     }
                 }
             }
+        }
+
+        if (builder->mMorphingEnabled) {
+            // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
+            // and use bindUniformBufferRange which might be more efficient.
+            MorphWeights& morphWeights = manager[ci].morphWeights;
+            morphWeights = MorphWeights {
+                .handle = driver.createBufferObject(
+                        sizeof(PerRenderableMorphingUib),
+                        BufferObjectBinding::UNIFORM,
+                        backend::BufferUsage::DYNAMIC),
+                .count = 0 };
         }
     }
     engine.flushIfNeeded();
@@ -415,6 +429,12 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     Bones const& bones = manager[ci].bones;
     if (bones.handle && !bones.skinningBufferMode) {
         driver.destroyBufferObject(bones.handle);
+    }
+
+    // destroy the weights structures if any
+    MorphWeights const& morphWeights = manager[ci].morphWeights;
+    if (morphWeights.handle) {
+        driver.destroyBufferObject(morphWeights.handle);
     }
 }
 
@@ -562,9 +582,38 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
     bones.offset = uint16_t(offset);
 }
 
-void FRenderableManager::setMorphWeights(Instance ci, const float4& weights) noexcept {
-    if (ci) {
-        mManager[ci].morphWeights = weights;
+static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
+        float const* weights, size_t count) noexcept {
+    auto& driver = engine.getDriverApi();
+    auto size = sizeof(PerRenderableMorphingUib);
+    auto* UTILS_RESTRICT out = (PerRenderableMorphingUib*)driver.allocate(size);
+    memset(out, 0, size);
+    std::transform(weights, weights + count, out->weights,
+            [](float value) { return float4(value); });
+    driver.updateBufferObject(handle, { out, size }, 0);
+}
+
+void FRenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
+    if (instance) {
+        MorphWeights& morphWeights = mManager[instance].morphWeights;
+        morphWeights.count = count;
+
+        ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
+                "Only %d morph targets are supported (count=%d)", CONFIG_MAX_MORPH_TARGET_COUNT, count);
+
+        if (morphWeights.handle) {
+            updateMorphWeights(mEngine, morphWeights.handle, weights, count);
+        }
+    }
+}
+
+void FRenderableManager::setMorphTargetBufferAt(Instance instance,
+        size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept {
+    if (instance) {
+        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, 0);
+        if (primitiveIndex < primitives.size()) {
+            primitives[primitiveIndex].set(morphTargetBuffer);
+        }
     }
 }
 
@@ -693,13 +742,18 @@ void RenderableManager::setBones(Instance instance,
     upcast(this)->setBones(instance, transforms, boneCount, offset);
 }
 
-void RenderableManager::setMorphWeights(Instance instance, float4 const& weights) noexcept {
-    upcast(this)->setMorphWeights(instance, weights);
-}
-
 void RenderableManager::setSkinningBuffer(Instance instance,
         SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
+}
+
+void RenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
+    upcast(this)->setMorphWeights(instance, weights, count);
+}
+
+void RenderableManager::setMorphTargetBufferAt(Instance instance,
+        size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept {
+    upcast(this)->setMorphTargetBufferAt(instance, primitiveIndex, upcast(morphTargetBuffer));
 }
 
 void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {

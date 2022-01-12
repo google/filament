@@ -1045,11 +1045,10 @@ class_<RenderableManager>("RenderableManager")
         }
         self->setBones(instance, bones.data(), bones.size(), offset);
     }), allow_raw_pointers())
-
-    // NOTE: this cannot take a float4 due to a binding issue.
+    
     .function("setMorphWeights", EMBIND_LAMBDA(void, (RenderableManager* self,
-            RenderableManager::Instance instance, float x, float y, float z, float w), {
-        self->setMorphWeights(instance, {x, y, z, w});
+            RenderableManager::Instance instance, float* weights, size_t count), {
+        self->setMorphWeights(instance, weights, count);
     }), allow_raw_pointers())
 
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
@@ -1910,12 +1909,13 @@ class_<AssetLoader>("gltfio$AssetLoader")
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights,
-            bool recomputeBoundingBoxes), {
+            bool recomputeBoundingBoxes, bool ignoreBindTransform), {
         return new ResourceLoader({
             .engine = engine,
             .gltfPath = nullptr,
             .normalizeSkinningWeights = normalizeSkinningWeights,
-            .recomputeBoundingBoxes = recomputeBoundingBoxes
+            .recomputeBoundingBoxes = recomputeBoundingBoxes,
+            .ignoreBindTransform = ignoreBindTransform
         });
     }), allow_raw_pointers())
 

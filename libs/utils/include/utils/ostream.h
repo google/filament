@@ -17,13 +17,14 @@
 #ifndef TNT_UTILS_OSTREAM_H
 #define TNT_UTILS_OSTREAM_H
 
+#include <mutex>
 #include <string>
+#include <utility>
 
 #include <utils/bitset.h>
 #include <utils/compiler.h> // ssize_t is a POSIX type.
 
-namespace utils {
-namespace io {
+namespace utils::io {
 
 class UTILS_PUBLIC  ostream {
 public:
@@ -70,18 +71,26 @@ protected:
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
 
+        const char* get() const noexcept { return buffer; }
+
+        std::pair<char*, size_t> grow(size_t s) noexcept;
+        void advance(ssize_t n) noexcept;
+        void reset() noexcept;
+
+    private:
+        void reserve(size_t newSize) noexcept;
+
         char* buffer = nullptr;     // buffer address
         char* curr = nullptr;       // current pointer
         size_t size = 0;            // size remaining
         size_t capacity = 0;        // total capacity of the buffer
-        const char* get() const noexcept { return buffer; }
-        void advance(ssize_t n) noexcept;
-        void reset() noexcept;
-        void reserve(size_t newSize) noexcept;
     };
 
+    std::mutex mLock;
     Buffer mData;
     Buffer& getBuffer() noexcept { return mData; }
+
+    ostream& print(const char* format, ...) noexcept;
 
 private:
     virtual ostream& flush() noexcept = 0;
@@ -96,13 +105,9 @@ private:
         LONG_DOUBLE
     };
 
-    bool mShowHex = false;
-    const char* getFormat(type t) const noexcept;
+    inline const char* getFormat(type t) const noexcept;
 
-    /*
-     * Checks that the buffer has room for s additional bytes, growing the allocation if necessary.
-     */
-    void growBufferIfNeeded(size_t s) noexcept;
+    bool mShowHex = false;
 };
 
 // handles std::string
@@ -129,8 +134,6 @@ inline ostream& dec(ostream& s) noexcept { return s.dec(); }
 inline ostream& endl(ostream& s) noexcept { s << "\n"; return s.flush(); }
 inline ostream& flush(ostream& s) noexcept { return s.flush(); }
 
-} // namespace io
-
-} // namespace utils
+} // namespace utils::io
 
 #endif // TNT_UTILS_OSTREAM_H

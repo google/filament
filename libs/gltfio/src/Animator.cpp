@@ -176,7 +176,6 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
-    mImpl->morpher = new MorphHelper(asset, instance);
 
     const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
@@ -222,6 +221,8 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
             }
         }
     }
+
+    mImpl->morpher = asset->mMorpher;
 }
 
 void Animator::addInstance(FFilamentInstance* instance) {
@@ -235,7 +236,6 @@ void Animator::addInstance(FFilamentInstance* instance) {
 }
 
 Animator::~Animator() {
-    delete mImpl->morpher;
     delete mImpl;
 }
 
@@ -461,7 +461,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                 }
             }
 
-            morpher->applyWeights(channel.targetEntity, weights.data(), weights.size());
+            morpher->setWeights(channel.targetEntity, weights.data(), weights.size());
             return;
         }
     }

@@ -52,6 +52,10 @@ struct ResourceConfiguration {
     //! If true, computes the bounding boxes of all \c POSITION attibutes. Well formed glTF files
     //! do not need this, but it is useful for robustness.
     bool recomputeBoundingBoxes;
+
+    //! If true, ignore skinned primitives bind transform when compute bounding box. Implicitly true 
+    //! for instanced asset. Only applicable when recomputeBoundingBoxes is set to true
+    bool ignoreBindTransform;
 };
 
 /**

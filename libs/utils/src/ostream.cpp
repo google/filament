@@ -18,11 +18,10 @@
 #include <utils/compiler.h>
 
 #include <algorithm>
+#include <stdarg.h>
 #include <string>
 
-namespace utils {
-
-namespace io {
+namespace utils::io {
 
 ostream::~ostream() = default;
 
@@ -35,7 +34,6 @@ ostream::Buffer::~Buffer() noexcept {
     free(buffer);
 }
 
-UTILS_NOINLINE
 void ostream::Buffer::advance(ssize_t n) noexcept {
     if (n > 0) {
         size_t written = n < size ? size_t(n) : size;
@@ -44,7 +42,6 @@ void ostream::Buffer::advance(ssize_t n) noexcept {
     }
 }
 
-UTILS_NOINLINE
 void ostream::Buffer::reserve(size_t newSize) noexcept {
     size_t offset = curr - buffer;
     if (buffer == nullptr) {
@@ -58,7 +55,6 @@ void ostream::Buffer::reserve(size_t newSize) noexcept {
     size = capacity - offset;
 }
 
-UTILS_NOINLINE
 void ostream::Buffer::reset() noexcept {
     // aggressively shrink the buffer
     if (capacity > 1024) {
@@ -68,6 +64,17 @@ void ostream::Buffer::reset() noexcept {
     }
     curr = buffer;
     size = capacity;
+}
+
+
+std::pair<char*, size_t> ostream::Buffer::grow(size_t s) noexcept {
+    if (UTILS_UNLIKELY(size < s)) {
+        size_t used = curr - buffer;
+        size_t newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
+        reserve(newCapacity);
+        assert(size >= s);
+    }
+    return { curr, size };
 }
 
 const char* ostream::getFormat(ostream::type t) const noexcept {
@@ -87,94 +94,86 @@ const char* ostream::getFormat(ostream::type t) const noexcept {
     }
 }
 
-void ostream::growBufferIfNeeded(size_t s) noexcept {
-    Buffer& buf = getBuffer();
-    if (UTILS_UNLIKELY(buf.size < s)) {
-        size_t used = buf.curr - buf.buffer;
-        size_t newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
-        buf.reserve(newCapacity);
-        assert(buf.size >= s);
+UTILS_NOINLINE
+ostream& ostream::print(const char* format, ...) noexcept {
+    va_list args0;
+    va_list args1;
+
+    // figure out how much size to we need
+    va_start(args0, format);
+    va_copy(args1, args0);
+    ssize_t s = vsnprintf(nullptr, 0, format, args0);
+    va_end(args0);
+
+
+    { // scope for the lock
+        std::lock_guard lock(mLock);
+
+        Buffer& buf = getBuffer();
+
+        // grow the buffer to the needed size
+        auto[curr, size] = buf.grow(s + 1); // +1 to include the null-terminator
+
+        // print into the buffer
+        vsnprintf(curr, size, format, args1);
+
+        // advance the buffer
+        buf.advance(s);
     }
+
+    va_end(args1);
+
+    return *this;
 }
 
 ostream& ostream::operator<<(short value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::SHORT), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::SHORT), value));
-    return *this;
+    const char* format = getFormat(type::SHORT);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(unsigned short value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::USHORT), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::USHORT), value));
-    return *this;
+    const char* format = getFormat(type::USHORT);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(char value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::CHAR), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::CHAR), value));
-    return *this;
+    const char* format = getFormat(type::CHAR);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(unsigned char value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::UCHAR), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::UCHAR), value));
-    return *this;
+    const char* format = getFormat(type::UCHAR);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(int value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::INT), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::INT), value));
-    return *this;
+    const char* format = getFormat(type::INT);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(unsigned int value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::UINT), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::UINT), value));
-    return *this;
+    const char* format = getFormat(type::UINT);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(long value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::LONG), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::LONG), value));
-    return *this;
+    const char* format = getFormat(type::LONG);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(unsigned long value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::ULONG), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::ULONG), value));
-    return *this;
+    const char* format = getFormat(type::ULONG);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(long long value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::LONG_LONG), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::LONG_LONG), value));
-    return *this;
+    const char* format = getFormat(type::LONG_LONG);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(unsigned long long value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::ULONG_LONG), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::ULONG_LONG), value));
-    return *this;
+    const char* format = getFormat(type::ULONG_LONG);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(float value) noexcept {
@@ -182,19 +181,13 @@ ostream& ostream::operator<<(float value) noexcept {
 }
 
 ostream& ostream::operator<<(double value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::DOUBLE), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::DOUBLE), value));
-    return *this;
+    const char* format = getFormat(type::DOUBLE);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(long double value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, getFormat(type::LONG_DOUBLE), value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, getFormat(type::LONG_DOUBLE), value));
-    return *this;
+    const char* format = getFormat(type::LONG_DOUBLE);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(bool value) noexcept {
@@ -202,27 +195,15 @@ ostream& ostream::operator<<(bool value) noexcept {
 }
 
 ostream& ostream::operator<<(const char* string) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, "%s", string);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, "%s", string));
-    return *this;
+    return print("%s", string);
 }
 
 ostream& ostream::operator<<(const unsigned char* string) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, "%s", string);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, "%s", string));
-    return *this;
+    return print("%s", string);
 }
 
 ostream& ostream::operator<<(const void* value) noexcept {
-    Buffer& buf = getBuffer();
-    size_t s = snprintf(nullptr, 0, "%p", value);
-    growBufferIfNeeded(s + 1); // +1 to include the null-terminator
-    buf.advance(snprintf(buf.curr, buf.size, "%p", value));
-    return *this;
+    return print("%p", value);
 }
 
 ostream& ostream::hex() noexcept {
@@ -235,6 +216,4 @@ ostream& ostream::dec() noexcept {
     return *this;
 }
 
-} // namespace io
-
-} // namespace utils
+} // namespace utils::io

@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
+#ifndef GLTFIO_MORPHHELPER_H
+#define GLTFIO_MORPHHELPER_H
+
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
+
+#include <filament/MorphTargetBuffer.h>
 
 #include <math/vec4.h>
 
@@ -44,35 +49,25 @@ public:
     MorphHelper(FFilamentAsset* asset, FFilamentInstance* inst);
     ~MorphHelper();
 
-    /**
-     * Picks the 4 most influential weights and applies them to the target entity.
-     */
-    void applyWeights(Entity targetEntity, float const* weights, size_t count) noexcept;
+    void setWeights(Entity entity, float const* weights, int count) noexcept;
+    int getTargetCount(Entity entity) const noexcept;
 
 private:
-    struct GltfTarget {
-        filament::BufferObject* bufferObject;
-        int morphTargetIndex;
-        cgltf_attribute_type type;
-    };
-
     struct GltfPrimitive {
-        filament::VertexBuffer* vertexBuffer;
-        uint8_t positions[4];
-        uint8_t tangents[4];
-        std::vector<GltfTarget> targets; // TODO: flatten this?
+        filament::MorphTargetBuffer* targets;
     };
 
     struct TableEntry {
         std::vector<GltfPrimitive> primitives; // TODO: flatten this?
     };
 
-    void addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, TableEntry* entry);
+    void addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entity entity);
 
-    std::vector<float> mPartiallySortedWeights;
     tsl::robin_map<Entity, TableEntry> mMorphTable;
     const FFilamentAsset* mAsset;
     const FFilamentInstance* mInstance;
 };
 
 } // namespace gltfio
+
+#endif // GLTFIO_MORPHHELPER_H

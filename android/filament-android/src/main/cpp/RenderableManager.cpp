@@ -270,9 +270,9 @@ Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env,
         jlong nativeRenderableManager, jint instance, jfloatArray weights) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     jfloat* vec = env->GetFloatArrayElements(weights, NULL);
-    math::float4 floatvec(vec[0], vec[1], vec[2], vec[3]);
+    jsize count = env->GetArrayLength(weights);
+    rm->setMorphWeights((RenderableManager::Instance)instance, vec, count);
     env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
-    rm->setMorphWeights((RenderableManager::Instance)instance, floatvec);
 }
 
 extern "C" JNIEXPORT void JNICALL

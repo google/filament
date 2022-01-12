@@ -65,13 +65,13 @@ namespace gltfio {
 
 class Animator;
 class Wireframe;
+class MorphHelper;
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
 struct BufferSlot {
     const cgltf_accessor* accessor;
     cgltf_attribute_type attribute;
     int bufferIndex; // for vertex buffers only
-    int morphTarget; // 0 if no morphing, otherwise 1-based index
     filament::VertexBuffer* vertexBuffer;
     filament::IndexBuffer* indexBuffer;
 };
@@ -97,8 +97,6 @@ struct Primitive {
     filament::IndexBuffer* indices = nullptr;
     filament::Aabb aabb; // object-space bounding box
     UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
-    uint8_t morphPositions[4] = {};  // Buffer indices for MORPH_POSITION_0, MORPH_POSITION_1 etc.
-    uint8_t morphTangents[4] = {};   // Buffer indices for MORPH_TANGENTS_0, MORPH_TANGENTS_1, etc.
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
@@ -194,6 +192,10 @@ struct FFilamentAsset : public FilamentAsset {
 
     Animator* getAnimator() noexcept;
 
+    void setMorphWeights(utils::Entity entity , const float* weights, size_t count) noexcept;
+
+    int getMorphTargetCount(utils::Entity entity) noexcept;
+
     utils::Entity getWireframe() noexcept;
 
     filament::Engine* getEngine() const noexcept {
@@ -243,6 +245,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<FFilamentInstance*> mInstances;
     SkinVector mSkins; // unused for instanced assets
     Animator* mAnimator = nullptr;
+    MorphHelper* mMorpher = nullptr;
     Wireframe* mWireframe = nullptr;
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;

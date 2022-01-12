@@ -379,6 +379,10 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey) const noe
 
     if (Variant(variantKey).hasSkinningOrMorphing()) {
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableUibBone::_name);
+        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_MORPHING, PerRenderableMorphingUib::_name);
+
+        addSamplerGroup(pb, BindingPoints::PER_RENDERABLE_MORPHING,
+                SibGenerator::getPerRenderPrimitiveMorphingSib(variantKey), mSamplerBindings);
     }
 
     addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variantKey), mSamplerBindings);

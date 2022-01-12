@@ -41,9 +41,11 @@ class Engine;
 class IndexBuffer;
 class Material;
 class MaterialInstance;
+class MorphTargetBuffer;
 class Renderer;
 class SkinningBuffer;
 class VertexBuffer;
+class Texture;
 
 class FEngine;
 class FRenderPrimitive;
@@ -105,8 +107,8 @@ public:
      * Clients can specify bones either using this quat-vec3 pair, or by using 4x4 matrices.
      */
     struct Bone {
-        math::quatf unitQuaternion = { 1, 0, 0, 0 };
-        math::float3 translation = { 0, 0, 0 };
+        math::quatf unitQuaternion = { 1.f, 0.f, 0.f, 0.f };
+        math::float3 translation = { 0.f, 0.f, 0.f };
         float reserved = 0;
     };
 
@@ -300,9 +302,6 @@ public:
         /**
          * Controls if the renderable has vertex morphing targets, false by default.
          *
-         * This is required to enable GPU morphing for up to 4 attributes. The attached VertexBuffer
-         * must provide data in the appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc).
-         *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
          */
@@ -456,12 +455,16 @@ public:
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * This is specified using a 4-tuple, one float per morph target. If the renderable has fewer
-     * than 4 morph targets, then clients should fill the unused components with zeroes.
-     *
      * The renderable must be built with morphing enabled, see Builder::morphing().
      */
-    void setMorphWeights(Instance instance, math::float4 const& weights) noexcept;
+    void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
+
+
+    /**
+     * Associates a MorphTargetBuffer to the given primitive.
+     */
+    void setMorphTargetBufferAt(Instance instance,
+            size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept;
 
     /**
      * Gets the bounding box used for frustum culling.

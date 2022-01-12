@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.15.2'
+    implementation 'com.google.android.filament:filament-android:1.16.0'
 }
 ```
 
@@ -52,7 +52,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.15.2'
+pod 'Filament', '~> 1.16.0'
 ```
 
 ### Snapshots
@@ -151,9 +151,9 @@ steps:
   - [x] Points
   - [x] Lines
   - [ ] Line Loop
-  - [ ] Line Strip
+  - [x] Line Strip
   - [x] Triangles
-  - [ ] Triangle Strip
+  - [x] Triangle Strip
   - [ ] Triangle Fan
 
 - Animation

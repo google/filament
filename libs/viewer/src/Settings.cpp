@@ -336,8 +336,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GenericT
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "contrast") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->contrast);
-        } else if (compare(tok, jsonChunk, "shoulder") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->shoulder);
         } else if (compare(tok, jsonChunk, "midGrayIn") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->midGrayIn);
         } else if (compare(tok, jsonChunk, "midGrayOut") == 0) {
@@ -1131,7 +1129,6 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
         case ToneMapping::FILMIC: return new FilmicToneMapper;
         case ToneMapping::GENERIC: return new GenericToneMapper(
                     settings.genericToneMapper.contrast,
-                    settings.genericToneMapper.shoulder,
                     settings.genericToneMapper.midGrayIn,
                     settings.genericToneMapper.midGrayOut,
                     settings.genericToneMapper.hdrMax
@@ -1295,7 +1292,6 @@ static std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOpt
 static std::ostream& operator<<(std::ostream& out, const GenericToneMapperSettings& in) {
     return out << "{\n"
        << "\"contrast\": " << (in.contrast) << ",\n"
-       << "\"shoulder\": " << (in.shoulder) << ",\n"
        << "\"midGrayIn\": " << (in.midGrayIn) << ",\n"
        << "\"midGrayOut\": " << (in.midGrayOut) << ",\n"
        << "\"hdrMax\": " << (in.hdrMax) << "\n"
@@ -1584,9 +1580,8 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
 }
 
 bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs) const {
-    static_assert(sizeof(GenericToneMapperSettings) == 20, "Please update Settings.cpp");
+    static_assert(sizeof(GenericToneMapperSettings) == 16, "Please update Settings.cpp");
     return contrast == rhs.contrast &&
-           shoulder == rhs.shoulder &&
            midGrayIn == rhs.midGrayIn &&
            midGrayOut == rhs.midGrayOut &&
            hdrMax == rhs.hdrMax;
@@ -1595,7 +1590,7 @@ bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs)
 bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
-    static_assert(sizeof(ColorGradingSettings) == 232, "Please update Settings.cpp");
+    static_assert(sizeof(ColorGradingSettings) == 228, "Please update Settings.cpp");
     return enabled == rhs.enabled &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
