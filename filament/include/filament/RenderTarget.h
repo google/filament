@@ -37,6 +37,12 @@ class Texture;
  * An offscreen render target that can be associated with a View and contains
  * weak references to a set of attached Texture objects.
  *
+ * RenderTarget is intended to be used with the View's post-processing disabled for the most part.
+ * especially when a DEPTH attachment is also used (see Builder::texture()).
+ *
+ * Custom RenderTarget are ultimately intended to render into textures that might be used during
+ * the main render pass.
+ *
  * Clients are responsible for the lifetime of all associated Texture attachments.
  *
  * @see View
@@ -86,6 +92,14 @@ public:
          * Sets a texture to a given attachment point.
          *
          * All RenderTargets must have a non-null COLOR attachment.
+         *
+         * When using a DEPTH attachment, it is important to always disable post-processing
+         * in the View. Failing to do so will cause the DEPTH attachment to be ignored in most
+         * cases.
+         *
+         * When the intention is to keep the content of the DEPTH attachment after rendering,
+         * Usage::SAMPLEABLE must be set on the DEPTH attachment, otherwise the content of the
+         * DEPTH buffer may be discarded.
          *
          * @param attachment The attachment point of the texture.
          * @param texture The associated texture object.
