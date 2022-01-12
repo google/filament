@@ -82,7 +82,8 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             if (sib) {
                 auto sibFields = sib->getSamplerInfoList();
                 for (auto sInfo : sibFields) {
-                    utils::slog.e << "  " << (int) offset << " " << sInfo.name.c_str() << utils::io::endl;
+                    utils::slog.e << "  " << (int) offset << " " << sInfo.name.c_str()
+                        << " " << sib->getStageFlags() << utils::io::endl;
                     offset++;
                 }
             }

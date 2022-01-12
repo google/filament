@@ -43,6 +43,23 @@ inline bool operator!=(ShaderStageFlags lhs, ShaderStageFlags rhs) {
     return lhs.data != rhs.data;
 }
 
+inline utils::io::ostream& operator<<(utils::io::ostream& stream, ShaderStageFlags stageFlags) {
+    bool needVerticalBar = false;
+    stream << "{ ";
+    if (stageFlags.vertex) {
+        stream << "vertex";
+        needVerticalBar = true;
+    }
+    if (stageFlags.fragment) {
+        if (needVerticalBar)
+            stream << " | ";
+        stream << "fragment";
+        needVerticalBar = true;
+    }
+    stream << " }";
+    return stream;
+}
+
 } // namespace filament
 
 #endif // TNT_FILAMENT_BACKEND_SHADERSTAGEFLAGS_H
