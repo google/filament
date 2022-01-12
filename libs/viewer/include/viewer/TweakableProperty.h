@@ -174,6 +174,21 @@ struct TweakableProperty {
             return mFilename;
         }
 
+        std::string getFileExtension() const {
+            std::string result = "";
+
+            size_t lastDotPlusOne = mFilename.find_last_of(".") + 1;
+            if (lastDotPlusOne < mFilename.length()) {
+                result = mFilename.substr(lastDotPlusOne);
+            }
+
+            for (auto& c : result) {
+                c = std::tolower(c);
+            }
+
+            return result;
+        }
+
         bool empty() { return mFilename.empty(); }
         void clear() { mFilename.clear(); }
     };
@@ -182,7 +197,7 @@ struct TweakableProperty {
     FilenameHolder filename{};
 };
 
-template <typename T, bool IsColor = true, typename = IsValidTweakableType<T> >
+template <typename T, bool IsColor = false, typename = IsValidTweakableType<T> >
 using TweakablePropertyTextured = TweakableProperty<T, true, IsColor>;
 
 template <typename T, bool IsColor = true, typename = IsValidTweakableType<T> >

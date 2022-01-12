@@ -230,6 +230,8 @@ private:
     void changeElementVisibility(utils::Entity entity, int elementIndex, bool newVisibility);
     void changeAllVisibility(utils::Entity entity, bool changeToVisible);
 
+    std::string validateTweaks(const TweakableMaterial&);
+
     void quickLoad();
     void undoLastModification();
     //void redoLastModification();
@@ -284,6 +286,7 @@ private:
     std::unordered_map<std::string, TweakableMaterial> mTweakedMaterials{};
     std::vector<filament::MaterialInstance*> mMaterialInstances{};
     std::unordered_map<std::string, filament::Texture*> mTextures{};
+    std::unordered_map<std::string, int> mTextureFileChannels{};
     bool mVisibility[10]{ true, true, true, true, true, true, true, true, true, true };
 
     TextureSampler trilinSampler = TextureSampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR, TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);

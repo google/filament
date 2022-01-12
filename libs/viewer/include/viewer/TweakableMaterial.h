@@ -72,6 +72,7 @@ public:
 
     struct RequestedTexture {
         std::string filename{};
+        int channelCount{};
         bool isSrgb{};
         bool isAlpha{};
         bool doRequestReload{};
@@ -79,14 +80,14 @@ public:
 
     json toJson();
     void fromJson(const json& source);
-    void drawUI();
+    void drawUI(const std::string& header);
 
     const TweakableMaterial::RequestedTexture nextRequestedTexture();
 
-    TweakablePropertyTextured<filament::math::float4> mBaseColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
+    TweakablePropertyTextured<filament::math::float4,true> mBaseColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
 
     TweakablePropertyTextured<float, false> mNormal{};
-    TweakablePropertyTextured<float, false> mOcclusionIntensity{ 1.0f };
+    TweakableProperty<float, false> mOcclusionIntensity{ 1.0f };
     TweakablePropertyTextured<float, false> mOcclusion{1.0f};
     TweakableProperty<float> mRoughnessScale{};
     TweakablePropertyTextured<float> mRoughness;
@@ -130,14 +131,16 @@ public:
 
     void resetWithType(MaterialType newType);
 
+    bool mDoesRequireValidation = false;
+
 private:
     template< typename T, bool MayContainFile = false, bool IsColor = true, bool IsDerivable = false, typename = IsValidTweakableType<T> >
-    void enqueueTextureRequest(TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpa = false) {
-        enqueueTextureRequest(item.filename, item.doRequestReload, isSrgb, isAlpa);
+    void enqueueTextureRequest(TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpha = false, int channelCount = 1) {
+        enqueueTextureRequest(item.filename, item.doRequestReload, isSrgb, isAlpha, channelCount);
         item.doRequestReload = false;
     }
-
-    void enqueueTextureRequest(const std::string& filename, bool doRequestReload, bool isSrgb = false, bool isAlpa = false);
+    void enqueueTextureRequest(const std::string& filename, bool doRequestReload, bool isSrgb = false, bool isAlpha = false, int channelCount = 1);
+    void requestValidation();
 
     template< typename T, bool MayContainFile = false, bool IsColor = true, bool IsDerivable = false, typename = IsValidTweakableType<T> >
     void writeTexturedToJson(json& result, const std::string& prefix, const TweakableProperty<T, MayContainFile, IsColor>& item) {

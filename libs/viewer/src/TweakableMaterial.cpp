@@ -31,7 +31,7 @@ json TweakableMaterial::toJson() {
     writeTexturedToJson(result, "metallic", mMetallic);
 
     result["occlusionIntensity"] = mOcclusionIntensity.value;
-    writeTexturedToJson(result, "occlusion", mOcclusion);
+    result["occlusion"] = mOcclusion.value;
 
     result["clearCoat"] = mClearCoat.value;
     result["clearCoatNormalIntensity"] = mClearCoatNormalIntensity.value;
@@ -199,9 +199,20 @@ void TweakableMaterial::resetWithType(MaterialType newType) {
     mShaderType = newType;
 }
 
-void TweakableMaterial::drawUI() {
+void TweakableMaterial::drawUI(const std::string& header) {
     if (ImGui::CollapsingHeader("Integration")) {
-        ImGui::Checkbox("Release material", &mDoRelease);
+        if (ImGui::Checkbox("Release material", &mDoRelease)) {
+            // The button was pressed, so request validation if it turned from false to true
+            if (mDoRelease) {
+                mDoesRequireValidation = true;
+            }
+        }
+        if (header.size() > 0) {
+            ImGui::TextColored({ 1,0,0,1 }, header.c_str());
+        }
+        else {
+            ImGui::TextColored({ 0,1,0,1 }, "OK");
+        }
     }
     if (ImGui::CollapsingHeader("Base color")) {
         ImGui::SliderFloat("Tile: albedo texture", &mBaseTextureScale, 1.0f / 1024.0f, 32.0f);
@@ -209,8 +220,8 @@ void TweakableMaterial::drawUI() {
 
         mBaseColor.addWidget("baseColor");
         if (mBaseColor.isFile) {
-            bool isAlpha = (mShaderType != MaterialType::Opaque);
-            enqueueTextureRequest(mBaseColor, true, isAlpha);
+            bool isAlpha = (mShaderType == MaterialType::TransparentSolid);
+            enqueueTextureRequest(mBaseColor, true, isAlpha, isAlpha ? 4 : 3);
         }
     }
 
@@ -221,7 +232,7 @@ void TweakableMaterial::drawUI() {
         mNormalIntensity.addWidget("normal intensity", 0.0f, 32.0f);
         
         mNormal.addWidget("normal");
-        if (mNormal.isFile) enqueueTextureRequest(mNormal);
+        if (mNormal.isFile) enqueueTextureRequest(mNormal, false, false, 3);
 
         mRoughnessScale.addWidget("roughness scale", 0.0f, 3.0f);
 
@@ -248,7 +259,7 @@ void TweakableMaterial::drawUI() {
 
         mClearCoatNormalIntensity.addWidget("clearCoat normal intensity");
         mClearCoatNormal.addWidget("clearCoat normal");
-        if (mClearCoatNormal.isFile) enqueueTextureRequest(mClearCoatNormal);
+        if (mClearCoatNormal.isFile) enqueueTextureRequest(mClearCoatNormal, false, false, 3);
 
         mClearCoatRoughness.addWidget("clearCoat roughness");
         if (mClearCoatRoughness.isFile) enqueueTextureRequest(mClearCoatRoughness);
@@ -329,6 +340,6 @@ const TweakableMaterial::RequestedTexture TweakableMaterial::nextRequestedTextur
     return lastRequest;
 }
 
-void TweakableMaterial::enqueueTextureRequest(const std::string& filename, bool doRequestReload, bool isSrgb, bool isAlpha) {
-    mRequestedTextures.push_back({ filename, isSrgb, isAlpha, doRequestReload });
+void TweakableMaterial::enqueueTextureRequest(const std::string& filename, bool doRequestReload, bool isSrgb, bool isAlpha, int channelCount) {
+    mRequestedTextures.push_back({ filename, channelCount, isSrgb, isAlpha, doRequestReload });
 }
