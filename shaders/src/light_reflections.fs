@@ -191,11 +191,12 @@ highp mat4 scaleMatrix(const highp float x, const highp float y) {
 }
 
 /**
- * Evaluates screen-space reflections, storing the color in Fr.rgb if there's a hit.
+ * Evaluates screen-space reflections, storing a premultiplied color in Fr.rgb if there's a hit.
  * r is the desired reflected vector.
  *
  * Fr.a is set to a value between [0, 1] representing the "opacity" of the reflection. 1.0f is full
- * screen-space reflection. Values < 1.0f should be blended with the scene's IBL.
+ * screen-space reflection. Values < 1.0f should be blended with the scene's IBL. Fr.rgb is
+ * premultiplied by Fr.a.
  *
  * If there is no hit, Fr is unmodified.
  */
@@ -246,7 +247,8 @@ void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
         float distFactor = max(fadeRate * (t - 0.5f) - (fadeRate / 2.0f - 1.0f), 0.0f);
         float distanceFade = saturate(1.0 - (distFactor, distFactor));
 
-        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0f).rgb, edgeFade * distanceFade);
+        float fade = edgeFade * distanceFade;
+        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0f).rgb * fade, fade);
     }
 }
 

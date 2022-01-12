@@ -621,14 +621,14 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     if (ssr.a < 1.0f) {
         ibl = E * prefilteredRadiance(r, pixel.perceptualRoughness);
     }
-    Fr = mix(ibl, ssr.rgb, ssr.a);
+    Fr = (1.0f - ssr.a) * ibl + ssr.rgb;
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
     vec3 ibl = vec3(0.0f);
     if (ssr.a < 1.0f) {
         ibl = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
     }
-    Fr = mix(ibl, ssr.rgb, ssr.a);
+    Fr = (1.0f - ssr.a) * ibl + ssr.rgb;
 #endif
 
     SSAOInterpolationCache interpolationCache;
