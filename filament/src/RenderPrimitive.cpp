@@ -83,4 +83,8 @@ void FRenderPrimitive::set(FEngine& engine, RenderableManager::PrimitiveType typ
     mPrimitiveType = type;
 }
 
+void FRenderPrimitive::set(FMorphTargetBuffer* morphTargetBuffer) noexcept {
+    mMorphTargetBuffer = morphTargetBuffer;
+}
+
 } // namespace filament

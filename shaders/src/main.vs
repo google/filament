@@ -36,15 +36,7 @@ void main() {
 
         #if defined(HAS_SKINNING_OR_MORPHING)
         if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
-            vec3 normal0, normal1, normal2, normal3;
-            toTangentFrame(mesh_custom4, normal0);
-            toTangentFrame(mesh_custom5, normal1);
-            toTangentFrame(mesh_custom6, normal2);
-            toTangentFrame(mesh_custom7, normal3);
-            material.worldNormal += objectUniforms.morphWeights.x * normal0;
-            material.worldNormal += objectUniforms.morphWeights.y * normal1;
-            material.worldNormal += objectUniforms.morphWeights.z * normal2;
-            material.worldNormal += objectUniforms.morphWeights.w * normal3;
+            morphNormal(material.worldNormal);
             material.worldNormal = normalize(material.worldNormal);
         }
 

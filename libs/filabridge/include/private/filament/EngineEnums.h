@@ -33,14 +33,15 @@ enum class PostProcessVariant : uint8_t {
 // Binding points for uniform buffers and sampler buffers.
 // Effectively, these are just names.
 namespace BindingPoints {
-    constexpr uint8_t PER_VIEW                = 0;    // uniforms/samplers updated per view
-    constexpr uint8_t PER_RENDERABLE          = 1;    // uniforms/samplers updated per renderable
-    constexpr uint8_t PER_RENDERABLE_BONES    = 2;    // bones data, per renderable
-    constexpr uint8_t LIGHTS                  = 3;    // lights data array
-    constexpr uint8_t SHADOW                  = 4;    // punctual shadow data
-    constexpr uint8_t FROXEL_RECORDS          = 5;
-    constexpr uint8_t PER_MATERIAL_INSTANCE   = 6;    // uniforms/samplers updates per material
-    constexpr uint8_t COUNT                   = 7;
+    constexpr uint8_t PER_VIEW                   = 0;    // uniforms/samplers updated per view
+    constexpr uint8_t PER_RENDERABLE             = 1;    // uniforms/samplers updated per renderable
+    constexpr uint8_t PER_RENDERABLE_BONES       = 2;    // bones data, per renderable
+    constexpr uint8_t PER_RENDERABLE_MORPHING    = 3;    // morphing uniform/sampler updated per render primitive
+    constexpr uint8_t LIGHTS                     = 4;    // lights data array
+    constexpr uint8_t SHADOW                     = 5;    // punctual shadow data
+    constexpr uint8_t FROXEL_RECORDS             = 6;
+    constexpr uint8_t PER_MATERIAL_INSTANCE      = 7;    // uniforms/samplers updates per material
+    constexpr uint8_t COUNT                      = 8;
     // These are limited by Program::UNIFORM_BINDING_COUNT (currently 8)
 }
 
@@ -65,6 +66,11 @@ constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
 // We store 64 bytes per bone.
 constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
+
+// The maximum number of morph target count.
+// This value is limited by ES3.0, ES3.0 only guarantees 256 layers in an array texture.
+// For morphing, 128 layers are used for the positions and others are used for tangents.
+constexpr int CONFIG_MAX_MORPH_TARGET_COUNT = 128;
 
 } // namespace filament
 

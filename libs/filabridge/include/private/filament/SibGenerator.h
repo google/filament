@@ -30,6 +30,7 @@ class SamplerInterfaceBlock;
 class SibGenerator {
 public:
     static SamplerInterfaceBlock const& getPerViewSib(uint8_t variantKey) noexcept;
+    static SamplerInterfaceBlock const& getPerRenderPrimitiveMorphingSib(uint8_t variantKey) noexcept;
     static SamplerInterfaceBlock const* getSib(uint8_t bindingPoint, uint8_t variantKey) noexcept;
     // When adding a sampler block here, make sure to also update
     //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
@@ -46,6 +47,15 @@ struct PerViewSib {
     static constexpr size_t STRUCTURE      = 6;     // variable, DEPTH
 
     static constexpr size_t SAMPLER_COUNT  = 7;
+};
+
+struct PerRenderPrimitiveMorphingSib {
+    // Morph positions and normals are packed into one texture.
+    // Because some materials exceed MAX_SAMPLER_COUNT(16)
+    // when morph positions and normals are bound to samplers separately.
+    static constexpr size_t TARGETS       = 0;      // morph positions and normals
+
+    static constexpr size_t SAMPLER_COUNT = 1;
 };
 
 }

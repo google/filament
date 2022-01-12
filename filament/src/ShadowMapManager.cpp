@@ -264,6 +264,8 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 
                     // updatePrimitivesLod must be run before RenderPass::appendCommands.
                     view.updatePrimitivesLod(engine, cameraInfo, scene->getRenderableData(), entry.range);
+                    // updatePrimitivesMorphTargetBuffer must be run after updatePrimitivesLod.
+                    view.updatePrimitivesMorphTargetBuffer(engine, cameraInfo, scene->getRenderableData(), entry.range);
 
                     // generate and sort the commands for rendering the shadow map
                     RenderPass entryPass(pass);
