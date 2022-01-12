@@ -25,7 +25,6 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
-#include <backend/ShaderStageFlags.h>
 
 namespace filament {
 namespace backend {
@@ -43,7 +42,7 @@ public:
     SamplerGroup() noexcept { } // NOLINT
 
     // create a sampler group
-    SamplerGroup(size_t count, ShaderStageFlags stageFlags = ALL_SHADER_STAGE_FLAGS) noexcept;
+    explicit SamplerGroup(size_t count) noexcept;
 
     // can be copied -- this preserves dirty bits
     SamplerGroup(const SamplerGroup& rhs) noexcept;
@@ -67,8 +66,6 @@ public:
 
     // sampler count
     size_t getSize() const noexcept { return mBuffer.size(); }
-
-    ShaderStageFlags getStageFlags() const noexcept { return mStageFlags; }
 
     // return if any samplers has been changed
     bool isDirty() const noexcept { return mDirty.any(); }
@@ -151,7 +148,6 @@ private:
     };
 
     static_vector<Sampler, backend::MAX_SAMPLER_COUNT> mBuffer;    // 128 bytes
-    ShaderStageFlags mStageFlags;
     mutable utils::bitset32 mDirty;
 };
 
