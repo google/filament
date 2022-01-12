@@ -47,13 +47,12 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
                 if (numSampler > maxSamplerIndex) {
                     overflow = true;
                 }
-                auto stageFlags = sib->getStageFlags();
                 addSampler({
-                    .stageFlags = stageFlags,
                     .blockIndex = blockIndex,
                     .localOffset = sInfo.offset,
                     .globalOffset = offset++,
                 });
+                const auto stageFlags = sib->getStageFlags();
                 if (stageFlags.vertex) {
                     ++numSampler;
                 }
