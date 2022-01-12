@@ -263,6 +263,7 @@ public:
         options.thickness = std::max(0.0f, options.thickness);
         options.bias = std::max(0.0f, options.bias);
         options.maxDistance = std::max(0.0f, options.maxDistance);
+        options.stride = std::max(1.0f, options.stride);
         mScreenSpaceReflectionsOptions = options;
     }
 

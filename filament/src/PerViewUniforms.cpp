@@ -190,6 +190,7 @@ void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f const&
     s.ssrThickness = ssrOptions.thickness;
     s.ssrBias = ssrOptions.bias;
     s.ssrDistance = ssrOptions.maxDistance;
+    s.ssrStride = ssrOptions.stride;
 }
 
 void PerViewUniforms::disableSSReflections() noexcept {

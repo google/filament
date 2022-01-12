@@ -212,7 +212,7 @@ void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
     highp vec3 vsDirection = vsRayDirection.xyz;
     float vsZThickness = frameUniforms.ssrThickness;
     highp float nearPlaneZ = -frameUniforms.nearOverFarMinusNear / frameUniforms.oneOverFarMinusNear;
-    const float stride = 1.0;
+    float stride = frameUniforms.ssrStride;
     // TODO: jitterFraction should be between 0 and 1, but anything < 1 gives banding artifacts.
     const float jitterFraction = 1.0f;
     float maxRayTraceDistance = frameUniforms.ssrDistance;
