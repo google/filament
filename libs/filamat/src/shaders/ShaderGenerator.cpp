@@ -308,6 +308,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
     CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 
+    // Currently, we only support either screen-space refractions or reflections.
+    // The HAS_REFRACTION/HAS_REFLECTIONS defines signify if refraction/reflections are supported by
+    // the material, yet only one technique will be selected at runtime.
+    // TODO: support simultaneous screen-space refractions and reflections.
+
     CodeGenerator::generateDefine(fs, "HAS_REFRACTION", material.refractionMode != RefractionMode::NONE);
     if (material.refractionMode != RefractionMode::NONE) {
         CodeGenerator::generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(RefractionMode::CUBEMAP));
@@ -332,6 +337,14 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
             case RefractionType::THIN:
                 CodeGenerator::generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_THIN");
                 break;
+        }
+    }
+
+    CodeGenerator::generateDefine(fs, "HAS_REFLECTIONS", material.reflectionMode != ReflectionMode::DEFAULT);
+    if (material.reflectionMode != ReflectionMode::DEFAULT) {
+        CodeGenerator::generateDefine(fs, "REFLECTION_MODE_SCREEN_SPACE", uint32_t(ReflectionMode::SCREEN_SPACE));
+        if (material.reflectionMode == ReflectionMode::SCREEN_SPACE) {
+            CodeGenerator::generateDefine(fs, "REFLECTION_MODE", "REFLECTION_MODE_SCREEN_SPACE");
         }
     }
 

@@ -7,6 +7,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.16.1
 
+- engine: add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
+  access this new feature**].
+
 ## v1.16.0
 
 - engine: Fixes skinning calculations (#4887) [⚠️ **Material breakage**].

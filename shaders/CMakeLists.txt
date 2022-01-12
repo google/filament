@@ -29,6 +29,7 @@ set(SHADERS
         src/inputs.vs
         src/light_directional.fs
         src/light_indirect.fs
+        src/light_reflections.fs
         src/light_punctual.fs
         src/main.fs
         src/main.vs

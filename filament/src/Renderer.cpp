@@ -240,6 +240,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto taaOptions = view.getTemporalAntiAliasingOptions();
     auto vignetteOptions = view.getVignetteOptions();
     auto colorGrading = view.getColorGrading();
+    auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         dofOptions.enabled = false;
@@ -384,7 +385,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .msaa = msaaSampleCount,
             .clearFlags = clearFlags,
             .clearColor = clearColor,
-            .hasContactShadows = scene.hasContactShadows()
+            .hasContactShadows = scene.hasContactShadows(),
+            .hasScreenSpaceReflections = ssReflectionsOptions.enabled
     };
 
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
@@ -468,6 +470,17 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     auto out = resources.getRenderPassInfo();
                     view.executePickingQueries(driver, out.target, aoOptions.resolution);
                 });
+    }
+
+    // Store this frame's camera projection in the frame history.
+    if (UTILS_UNLIKELY(taaOptions.enabled || ssReflectionsOptions.enabled)) {
+        auto projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+        setHistoryProjection(view, projection);
+        // update frame id
+        auto& history = view.getFrameHistory();
+        auto const& previous = history[0];
+        auto& current = history.getCurrent();
+        current.frameId = previous.frameId + 1;
     }
 
     // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
@@ -599,7 +612,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     struct ExportColorHistoryData {
         FrameGraphId<FrameGraphTexture> color;
     };
-    if (taaOptions.enabled) {
+    if (taaOptions.enabled || ssReflectionsOptions.enabled) {
         fg.addPass<ExportColorHistoryData>("Export color history", [&](FrameGraph::Builder& builder,
                 auto& data) {
             // We need to use sideEffect here to ensure this pass won't be culled. The "output" of
@@ -832,11 +845,24 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> ssao;
-        FrameGraphId<FrameGraphTexture> ssr;
+        FrameGraphId<FrameGraphTexture> ssr;    // either screen-space reflections or refractions
         FrameGraphId<FrameGraphTexture> structure;
         float4 clearColor{};
         TargetBufferFlags clearFlags{};
     };
+
+    FrameGraphId<FrameGraphTexture> colorHistory;
+    mat4f historyProjection;
+    if (config.hasScreenSpaceReflections) {
+        colorHistory = getColorHistory(fg, view.getFrameHistory());
+        if (UTILS_UNLIKELY(!colorHistory)) {
+            // if we don't have a history yet, don't render reflections this frame
+        } else {
+            const FrameHistory& frameHistory = view.getFrameHistory();
+            FrameHistoryEntry const& entry = frameHistory[0];
+            historyProjection = entry.projection;
+        }
+    }
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
@@ -846,12 +872,24 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
-                data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
                 data.color = blackboard.get<FrameGraphTexture>("color");
                 data.depth = blackboard.get<FrameGraphTexture>("depth");
 
-                if (config.hasContactShadows) {
+                // TODO: we currently only allow either screen-space reflections or refractions,
+                // but not both. If SS reflections are enabled, we prefer those.
+                if (config.hasScreenSpaceReflections && colorHistory) {
+                    // Screen-space reflections
+                    data.ssr = builder.sample(colorHistory);
+                } else {
+                    // Screen-space refractions
+                    data.ssr = blackboard.get<FrameGraphTexture>("ssr");
+                    if (data.ssr) {
+                        data.ssr = builder.sample(data.ssr);
+                    }
+                }
+
+                if (config.hasContactShadows || config.hasScreenSpaceReflections) {
                     data.structure = blackboard.get<FrameGraphTexture>("structure");
                     assert_invariant(data.structure);
                     data.structure = builder.sample(data.structure);
@@ -859,10 +897,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 if (data.shadows) {
                     data.shadows = builder.sample(data.shadows);
-                }
-
-                if (data.ssr) {
-                    data.ssr = builder.sample(data.ssr);
                 }
 
                 if (data.ssao) {
@@ -942,8 +976,32 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : ppm.getOneTexture());
 
+                // set screen-space reflections or screen-space refractions
                 if (data.ssr) {
-                    view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
+                    // We currently only allow either SS reflections or refractions.
+                    auto const& ssrOptions = view.getScreenSpaceReflectionsOptions();
+                    const bool reflections = config.hasScreenSpaceReflections && ssrOptions.enabled;
+                    const bool refractions = !config.hasScreenSpaceReflections;
+
+                    if (reflections) {
+                        const auto& cameraInfo = view.getCameraInfo();
+                        auto reprojection =
+                                getClipSpaceToTextureSpaceMatrix() *
+                                historyProjection *
+                                inverse(cameraInfo.view * cameraInfo.worldOrigin);
+
+                        auto projectToPixelMatrix =
+                                getClipSpaceToTextureSpaceMatrix() *
+                                cameraInfo.projection;
+
+                        view.prepareSSReflections(resources.getTexture(data.ssr), reprojection,
+                                projectToPixelMatrix, ssrOptions);
+                    } else if (refractions) { // TODO: support both
+                        view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
+                    }
+                } else {
+                    // Screen-space reflections must be explicitly disabled.
+                    view.disableSSReflections();
                 }
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
@@ -1267,6 +1325,30 @@ void FRenderer::initializeClearFlags() {
 
     mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
             | TargetBufferFlags::DEPTH_AND_STENCIL;
+}
+
+math::mat4f FRenderer::getClipSpaceToTextureSpaceMatrix() const noexcept {
+    // Compute a clip-space [-1 to 1] to texture space [0 to 1] matrix, taking into account
+    // API-level differences.
+    const bool textureSpaceYFlipped =
+            mEngine.getBackend() == Backend::METAL || mEngine.getBackend() == Backend::VULKAN;
+    return mat4f(textureSpaceYFlipped ? mat4f::row_major_init{
+            0.5f,  0.0f,   0.0f, 0.5f,
+            0.0f, -0.5f,   0.0f, 0.5f,
+            0.0f,  0.0f,   1.0f, 0.0f,
+            0.0f,  0.0f,   0.0f, 1.0f
+    } : mat4f::row_major_init{
+            0.5f,  0.0f,   0.0f, 0.5f,
+            0.0f,  0.5f,   0.0f, 0.5f,
+            0.0f,  0.0f,   1.0f, 0.0f,
+            0.0f,  0.0f,   0.0f, 1.0f
+    });
+}
+
+void FRenderer::setHistoryProjection(FView& view, math::mat4f const& projection) {
+    auto& history = view.getFrameHistory();
+    auto& current = history.getCurrent();
+    current.projection = projection;
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg,

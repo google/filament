@@ -466,6 +466,33 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        ScreenSpaceReflectionsOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "thickness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->thickness);
+        } else if (compare(tok, jsonChunk, "bias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bias);
+        } else if (compare(tok, jsonChunk, "maxDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxDistance);
+        } else {
+            slog.w << "Invalid screen-space reflections key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid screen-space reflections value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         AmbientOcclusionOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -736,6 +763,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->colorGrading);
         } else if (compare(tok, jsonChunk, "ssao") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->ssao);
+        } else if (compare(tok, jsonChunk, "screenSpaceReflections") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceReflections);
         } else if (compare(tok, jsonChunk, "bloom") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->bloom);
         } else if (compare(tok, jsonChunk, "fog") == 0) {
@@ -1009,6 +1038,7 @@ void applySettings(const ViewSettings& settings, View* dest) {
     dest->setMultiSampleAntiAliasingOptions(settings.msaa);
     dest->setDynamicResolutionOptions(settings.dsr);
     dest->setAmbientOcclusionOptions(settings.ssao);
+    dest->setScreenSpaceReflectionsOptions(settings.screenSpaceReflections);
     dest->setBloomOptions(settings.bloom);
     dest->setFogOptions(settings.fog);
     dest->setDepthOfFieldOptions(settings.dof);
@@ -1315,6 +1345,15 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsOptions& in) {
+    return out << "{\n"
+               << "\"enabled\": " << to_string(in.enabled) << ",\n"
+               << "\"thickness\": " << in.thickness << ",\n"
+               << "\"bias\": " << in.bias << ",\n"
+               << "\"maxDistance\": " << in.maxDistance << ",\n"
+               << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions& in) {
     return out << "{\n"
         << "\"radius\": " << (in.radius) << ",\n"
@@ -1517,6 +1556,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"dsr\": " << in.dsr << ",\n"
         << "\"colorGrading\": " << (in.colorGrading) << ",\n"
         << "\"ssao\": " << (in.ssao) << ",\n"
+        << "\"screenSpaceReflections\": " << (in.screenSpaceReflections) << ",\n"
         << "\"bloom\": " << (in.bloom) << ",\n"
         << "\"fog\": " << (in.fog) << ",\n"
         << "\"dof\": " << (in.dof) << ",\n"

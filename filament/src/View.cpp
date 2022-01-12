@@ -659,6 +659,19 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 
 void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
+    // If screen-space refractions are enabled, make sure to disable screen-space reflections.
+    // TODO: support simultaneous screen-space refractions and reflections.
+    mPerViewUniforms.disableSSReflections();
+}
+
+void FView::disableSSReflections() const noexcept {
+    mPerViewUniforms.disableSSReflections();
+}
+
+void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
+        math::mat4f historyProjection, math::mat4f projectToPixelMatrix,
+        ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
+    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, projectToPixelMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
@@ -1028,6 +1041,14 @@ void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions opti
 
 const View::MultiSampleAntiAliasingOptions& View::getMultiSampleAntiAliasingOptions() const noexcept {
     return upcast(this)->getMultiSampleAntiAliasingOptions();
+}
+
+void View::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
+    upcast(this)->setScreenSpaceReflectionsOptions(options);
+}
+
+const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOptions() const noexcept {
+    return upcast(this)->getScreenSpaceReflectionsOptions();
 }
 
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {

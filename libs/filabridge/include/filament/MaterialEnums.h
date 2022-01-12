@@ -176,6 +176,14 @@ enum class RefractionType : uint8_t {
     THIN            = 1, //!< refraction through thin objects (e.g. window)
 };
 
+/**
+ * Reflection mode
+ */
+enum class ReflectionMode : uint8_t {
+    DEFAULT         = 0, //! reflections sample from the scene's IBL only
+    SCREEN_SPACE    = 1, //! reflections sample from screen space, and fallback to the scene's IBL
+};
+
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 

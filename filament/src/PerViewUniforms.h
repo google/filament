@@ -35,6 +35,7 @@ namespace filament {
 struct AmbientOcclusionOptions;
 struct DynamicResolutionOptions;
 struct FogOptions;
+struct ScreenSpaceReflectionsOptions;
 struct SoftShadowOptions;
 struct TemporalAntiAliasingOptions;
 struct VsmShadowOptions;
@@ -72,6 +73,10 @@ public:
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareSSR(TextureHandle ssr, float refractionLodOffset) noexcept;
+    void prepareSSReflections(TextureHandle ssr, math::mat4f const& historyProjection,
+            math::mat4f const& projectToPixelMatrix,
+            ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
+    void disableSSReflections() noexcept;
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
             VsmShadowOptions const& options) noexcept;
 

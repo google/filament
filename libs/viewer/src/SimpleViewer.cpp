@@ -737,6 +737,15 @@ void SimpleViewer::updateUserInterface() {
                 ssao.ssct.sampleCount = sampleCount;
             }
         }
+
+        ImGui::Checkbox("Screen-space reflections", &mSettings.view.screenSpaceReflections.enabled);
+        if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
+            auto& ssrefl = mSettings.view.screenSpaceReflections;
+            ImGui::SliderFloat("Ray thickness", &ssrefl.thickness, 0.001f, 0.2f);
+            ImGui::SliderFloat("Bias", &ssrefl.bias, 0.001f, 0.5f);
+            ImGui::SliderFloat("Max distance", &ssrefl.maxDistance, 0.1, 10.0f);
+            ImGui::SliderFloat("Stride", &ssrefl.stride, 1.0, 10.0f);
+        }
         ImGui::Unindent();
     }
 

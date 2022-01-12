@@ -59,6 +59,7 @@ enum class ToneMapping : uint8_t {
 };
 
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
+using ScreenSpaceReflectionsOptions = filament::View::ScreenSpaceReflectionsOptions;
 using AntiAliasing = filament::View::AntiAliasing;
 using BloomOptions = filament::View::BloomOptions;
 using DepthOfFieldOptions = filament::View::DepthOfFieldOptions;
@@ -160,6 +161,7 @@ struct ViewSettings {
 
     // View Options (sorted)
     AmbientOcclusionOptions ssao;
+    ScreenSpaceReflectionsOptions screenSpaceReflections;
     BloomOptions bloom;
     DepthOfFieldOptions dof;
     DynamicResolutionOptions dsr;
