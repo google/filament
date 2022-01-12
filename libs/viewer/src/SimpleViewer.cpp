@@ -926,6 +926,10 @@ std::string SimpleViewer::validateTweaks(const TweakableMaterial& tweaks) {
                         expectedFormat = filament::Texture::InternalFormat::R8;
                         expectedChannelCount = 1;
                     }
+                } else {
+                    if (expectedFormat == filament::Texture::InternalFormat::SRGB8_A8) expectedChannelCount = 4;
+                    else if (expectedFormat == filament::Texture::InternalFormat::SRGB8 || expectedFormat == filament::Texture::InternalFormat::RGB8) expectedChannelCount = 3;
+                    else if (expectedFormat == filament::Texture::InternalFormat::R8 ) expectedChannelCount = 1;
                 }
 
                 if (textureEntry->second->getFormat() != expectedFormat) {

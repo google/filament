@@ -149,8 +149,8 @@ private:
         result[prefix + "Texture"] = (item.isFile) ? item.filename.asString() : "";
     }
 
-    template< typename T, bool MayContainFile = false, bool IsColor = true, bool IsDerivable = false, typename = IsValidTweakableType<T> >
-    void readTexturedFromJson(const json& source, const std::string& prefix, TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpha = false, T defaultValue = {}) {
+    template< typename T, bool MayContainFile = false, bool IsColor = false, bool IsDerivable = false, typename = IsValidTweakableType<T> >
+    void readTexturedFromJson(const json& source, const std::string& prefix, TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpha = false, int channelCount = 1, T defaultValue = {}) {
         item.value = source.value(prefix, defaultValue);
         if (source.find(prefix) == source.end()) {
             std::cout << "Unable to read textured property '" << prefix << "', reverting to default value without texture." << std::endl;
@@ -163,7 +163,7 @@ private:
             item.filename = filename;
             item.doRequestReload = true;
             if (item.isFile) {
-                enqueueTextureRequest(item.filename.asString(), item.doRequestReload, isSrgb, isAlpha);
+                enqueueTextureRequest(item.filename.asString(), item.doRequestReload, isSrgb, isAlpha, channelCount);
             }
         }
     }
