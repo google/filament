@@ -118,6 +118,7 @@ public:
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }
     RefractionMode getRefractionMode() const noexcept { return mRefractionMode; }
     RefractionType getRefractionType() const noexcept { return mRefractionType; }
+    ReflectionMode getReflectionMode() const noexcept { return mReflectionMode; }
 
     bool hasSpecularAntiAliasing() const noexcept { return mSpecularAntiAliasing; }
     float getSpecularAntiAliasingVariance() const noexcept { return mSpecularAntiAliasingVariance; }
@@ -188,6 +189,7 @@ private:
     AttributeBitset mRequiredAttributes;
     RefractionMode mRefractionMode = RefractionMode::NONE;
     RefractionType mRefractionType = RefractionType::SOLID;
+    ReflectionMode mReflectionMode = ReflectionMode::DEFAULT;
     uint64_t mMaterialProperties = 0;
 
     float mMaskThreshold = 0.4f;

@@ -172,6 +172,10 @@ public:
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
+    void disableSSReflections() const noexcept;
+    void prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
+            math::mat4f historyProjection, math::mat4f projectToPixelMatrix,
+            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadowMap() const noexcept;
@@ -196,6 +200,10 @@ public:
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
+            FScene::RenderableSoa& renderableData, Range visible) noexcept;
+
+    void updatePrimitivesMorphTargetBuffer(
+            FEngine& engine, const CameraInfo&,
             FScene::RenderableSoa& renderableData, Range visible) noexcept;
 
     void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
@@ -253,6 +261,18 @@ public:
 
     const MultiSampleAntiAliasingOptions& getMultiSampleAntiAliasingOptions() const noexcept {
         return mMultiSampleAntiAliasingOptions;
+    }
+
+    void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
+        options.thickness = std::max(0.0f, options.thickness);
+        options.bias = std::max(0.0f, options.bias);
+        options.maxDistance = std::max(0.0f, options.maxDistance);
+        options.stride = std::max(1.0f, options.stride);
+        mScreenSpaceReflectionsOptions = options;
+    }
+
+    const ScreenSpaceReflectionsOptions& getScreenSpaceReflectionsOptions() const noexcept {
+        return mScreenSpaceReflectionsOptions;
     }
 
     void setColorGrading(FColorGrading* colorGrading) noexcept {
@@ -570,6 +590,7 @@ private:
     VignetteOptions mVignetteOptions;
     TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
+    ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;

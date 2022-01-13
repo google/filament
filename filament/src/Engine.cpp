@@ -333,6 +333,7 @@ void FEngine::shutdown() {
 
     cleanupResourceList(mBufferObjects);
     cleanupResourceList(mIndexBuffers);
+    cleanupResourceList(mMorphTargetBuffers);
     cleanupResourceList(mSkinningBuffers);
     cleanupResourceList(mVertexBuffers);
     cleanupResourceList(mTextures);
@@ -567,6 +568,10 @@ FSkinningBuffer* FEngine::createSkinningBuffer(const SkinningBuffer::Builder& bu
     return create(mSkinningBuffers, builder);
 }
 
+FMorphTargetBuffer* FEngine::createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept {
+    return create(mMorphTargetBuffers, builder);
+}
+
 FTexture* FEngine::createTexture(const Texture::Builder& builder) noexcept {
     return create(mTextures, builder);
 }
@@ -751,6 +756,10 @@ bool FEngine::destroy(const FIndexBuffer* p) {
 
 bool FEngine::destroy(const FSkinningBuffer* p) {
     return terminateAndDestroy(p, mSkinningBuffers);
+}
+
+bool FEngine::destroy(const FMorphTargetBuffer* p) {
+    return terminateAndDestroy(p, mMorphTargetBuffers);
 }
 
 inline bool FEngine::destroy(const FRenderer* p) {
@@ -963,6 +972,10 @@ bool Engine::destroy(const IndexBuffer* p) {
 }
 
 bool Engine::destroy(const SkinningBuffer* p) {
+    return upcast(this)->destroy(upcast(p));
+}
+
+bool Engine::destroy(const MorphTargetBuffer* p) {
     return upcast(this)->destroy(upcast(p));
 }
 

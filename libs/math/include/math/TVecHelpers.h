@@ -477,6 +477,13 @@ private:
         return v;
     }
 
+    friend inline VECTOR<T> MATH_PURE sign(VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = std::copysign(T(1), v[i]);
+        }
+        return v;
+    }
+
     friend inline VECTOR<T> MATH_PURE pow(VECTOR<T> v, T p) {
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::pow(v[i], p);

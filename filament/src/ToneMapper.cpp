@@ -111,7 +111,7 @@ inline float3 darkSurround_to_dimSurround(float3 linearCV) {
     float3 XYZ = AP1_to_XYZ * linearCV;
     float3 xyY = XYZ_to_xyY(XYZ);
 
-    xyY.z = clamp(xyY.z, 0.0f, (float)std::numeric_limits<half>::max());
+    xyY.z = clamp(xyY.z, 0.0f, (float) std::numeric_limits<half>::max());
     xyY.z = std::pow(xyY.z, DIM_SURROUND_GAMMA);
 
     XYZ = xyY_to_XYZ(xyY);
@@ -135,7 +135,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     constexpr float RRT_SAT_FACTOR = 0.96f;
     constexpr float ODT_SAT_FACTOR = 0.93f;
 
-    float3 ap0 = REC2020_to_AP0 * color;
+    float3 ap0 = Rec2020_to_AP0 * color;
 
     // Glow module
     float saturation = rgb_2_saturation(ap0);
@@ -177,7 +177,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     // Apply desaturation to compensate for luminance difference
     linearCV = mix(float3(dot(linearCV, LUMINANCE_AP1)), linearCV, ODT_SAT_FACTOR);
 
-    return AP1_to_REC2020 * linearCV;
+    return AP1_to_Rec2020 * linearCV;
 }
 
 } // namespace aces
@@ -261,7 +261,7 @@ float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
     // The 5th color in the array (cyan) represents middle gray (18%)
     // Every stop above or below middle gray causes a color shift
     // TODO: This should depend on the working color grading color space
-    float v = log2(dot(c, LUMINANCE_REC2020) / 0.18f);
+    float v = log2(dot(c, LUMINANCE_Rec2020) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
 
     size_t index = size_t(v);
@@ -272,71 +272,52 @@ float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
 // Generic tone mapper
 //------------------------------------------------------------------------------
 
-// Lottes, 2016,"Advanced Techniques and Optimization of VDR Color Pipelines":
-// https://gpuopen.com/wp-content/uploads/2016/03/GdcVdrLottes.pdf
-// Includes fix from Bart Wronski:
-// https://bartwronski.com/2016/09/01/dynamic-range-and-evs/
-
 struct GenericToneMapper::Options {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wshadow"
     void setParameters(
             float contrast,
-            float shoulder,
             float midGrayIn,
             float midGrayOut,
             float hdrMax
     ) {
         contrast = max(contrast, 1e-5f);
-        shoulder = saturate(shoulder);
         midGrayIn = clamp(midGrayIn, 1e-5f, 1.0f);
         midGrayOut = clamp(midGrayOut, 1e-5f, 1.0f);
         hdrMax = max(hdrMax, 1.0f);
 
         this->contrast = contrast;
-        this->shoulder = shoulder;
         this->midGrayIn = midGrayIn;
         this->midGrayOut = midGrayOut;
         this->hdrMax = hdrMax;
 
-        // remap shoulder
-        d = 0.8f + 0.4f * shoulder;
+        float a = pow(midGrayIn, contrast);
+        float b = pow(hdrMax, contrast);
+        float c = a - midGrayOut * b;
 
-        float mc = std::pow(midGrayIn, contrast);
-        float mcs = std::pow(mc, d);
-
-        float hc = std::pow(hdrMax, contrast);
-        float hcs = std::pow(hc, d);
-
-        float u = (hcs - mcs) * midGrayOut;
-        float v = mcs * midGrayOut;
-
-        b = -((-mc + (midGrayOut * (hcs * mc - hc * v)) / u) / v);
-        c = (hcs * mc - hc * v) / u;
+        inputScale = (a * b * (midGrayOut - 1.0f)) / c;
+        outputScale = midGrayOut * (a - b) / c;
     }
 #pragma clang diagnostic pop
 
     float contrast;
-    float shoulder;
     float midGrayIn;
     float midGrayOut;
     float hdrMax;
 
-    // Computed fields, do not modify
-    float b;
-    float c;
-    float d;
+    // TEMP
+    float inputScale;
+    float outputScale;
 };
 
 GenericToneMapper::GenericToneMapper(
         float contrast,
-        float shoulder,
         float midGrayIn,
         float midGrayOut,
         float hdrMax
 ) noexcept {
     mOptions = new Options();
-    mOptions->setParameters(contrast, shoulder, midGrayIn, midGrayOut, hdrMax);
+    mOptions->setParameters(contrast, midGrayIn, midGrayOut, hdrMax);
 }
 
 GenericToneMapper::~GenericToneMapper() noexcept {
@@ -354,12 +335,11 @@ GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper&& rhs) noexcep
 }
 
 float3 GenericToneMapper::operator()(math::float3 x) const noexcept {
-    float3 xc = pow(clamp(x, 0.0f, mOptions->hdrMax), mOptions->contrast);
-    return saturate(xc / (pow(xc, mOptions->d) * mOptions->b + mOptions->c));
+    x = pow(x, mOptions->contrast);
+    return mOptions->outputScale * x / (x + mOptions->inputScale);
 }
 
 float GenericToneMapper::getContrast() const noexcept { return  mOptions->contrast; }
-float GenericToneMapper::getShoulder() const noexcept { return  mOptions->shoulder; }
 float GenericToneMapper::getMidGrayIn() const noexcept { return  mOptions->midGrayIn; }
 float GenericToneMapper::getMidGrayOut() const noexcept { return  mOptions->midGrayOut; }
 float GenericToneMapper::getHdrMax() const noexcept { return  mOptions->hdrMax; }
@@ -367,27 +347,14 @@ float GenericToneMapper::getHdrMax() const noexcept { return  mOptions->hdrMax; 
 void GenericToneMapper::setContrast(float contrast) noexcept {
     mOptions->setParameters(
             contrast,
-            mOptions->shoulder,
             mOptions->midGrayIn,
             mOptions->midGrayOut,
             mOptions->hdrMax
     );
 }
-
-void GenericToneMapper::setShoulder(float shoulder) noexcept {
-    mOptions->setParameters(
-            mOptions->contrast,
-            shoulder,
-            mOptions->midGrayIn,
-            mOptions->midGrayOut,
-            mOptions->hdrMax
-    );
-}
-
 void GenericToneMapper::setMidGrayIn(float midGrayIn) noexcept {
     mOptions->setParameters(
             mOptions->contrast,
-            mOptions->shoulder,
             midGrayIn,
             mOptions->midGrayOut,
             mOptions->hdrMax
@@ -397,7 +364,6 @@ void GenericToneMapper::setMidGrayIn(float midGrayIn) noexcept {
 void GenericToneMapper::setMidGrayOut(float midGrayOut) noexcept {
     mOptions->setParameters(
             mOptions->contrast,
-            mOptions->shoulder,
             mOptions->midGrayIn,
             midGrayOut,
             mOptions->hdrMax
@@ -407,7 +373,6 @@ void GenericToneMapper::setMidGrayOut(float midGrayOut) noexcept {
 void GenericToneMapper::setHdrMax(float hdrMax) noexcept {
     mOptions->setParameters(
             mOptions->contrast,
-            mOptions->shoulder,
             mOptions->midGrayIn,
             mOptions->midGrayOut,
             hdrMax

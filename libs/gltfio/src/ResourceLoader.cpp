@@ -20,6 +20,7 @@
 #include "GltfEnums.h"
 #include "FFilamentAsset.h"
 #include "TangentsJob.h"
+#include "MorphHelper.h"
 #include "upcast.h"
 
 #include <filament/BufferObject.h>
@@ -872,13 +873,8 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Collect all TANGENT vertex attribute slots that need to be populated.
     tsl::robin_map<VertexBuffer*, uint8_t> baseTangents;
-    tsl::robin_map<VertexBuffer*, uint8_t> morphTangents[4];
     for (auto slot : asset->mBufferSlots) {
         if (slot.accessor != kGenerateTangents && slot.accessor != kGenerateNormals) {
-            continue;
-        }
-        if (slot.morphTarget) {
-            morphTangents[slot.morphTarget - 1][slot.vertexBuffer] = slot.bufferIndex;
             continue;
         }
         baseTangents[slot.vertexBuffer] = slot.bufferIndex;
@@ -895,13 +891,6 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
             jobParams.emplace_back(Params {{ pair.first }, {vb, iter->second }});
-        }
-        for (int morphTarget = 0; morphTarget < 4; morphTarget++) {
-            const auto& tangents = morphTangents[morphTarget];
-            auto iter = tangents.find(vb);
-            if (iter != tangents.end()) {
-                jobParams.emplace_back(Params {{ pair.first, morphTarget }, {vb, iter->second }});
-            }
         }
     }
 
@@ -923,6 +912,8 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
                 params.out.results, bo->getByteCount(), FREE_CALLBACK));
         params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
     }
+
+    asset->mMorpher = new MorphHelper(asset, nullptr);
 }
 
 ResourceLoader::Impl::~Impl() {

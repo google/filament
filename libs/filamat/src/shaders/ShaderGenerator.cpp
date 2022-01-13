@@ -218,14 +218,6 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     if (variant.hasSkinningOrMorphing()) {
         attributes.set(VertexAttribute::BONE_INDICES);
         attributes.set(VertexAttribute::BONE_WEIGHTS);
-        attributes.set(VertexAttribute::MORPH_POSITION_0);
-        attributes.set(VertexAttribute::MORPH_POSITION_1);
-        attributes.set(VertexAttribute::MORPH_POSITION_2);
-        attributes.set(VertexAttribute::MORPH_POSITION_3);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_0);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_1);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_2);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_3);
     }
     CodeGenerator::generateShaderInputs(vs, ShaderType::VERTEX, attributes, interpolation);
 
@@ -247,6 +239,12 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
         cg.generateUniforms(vs, ShaderType::VERTEX,
                 BindingPoints::PER_RENDERABLE_BONES,
                 UibGenerator::getPerRenderableBonesUib());
+        cg.generateUniforms(vs, ShaderType::VERTEX,
+                BindingPoints::PER_RENDERABLE_MORPHING,
+                UibGenerator::getPerRenderableMorphingUib());
+        cg.generateSamplers(vs,
+                material.samplerBindings.getBlockOffset(BindingPoints::PER_RENDERABLE_MORPHING),
+                SibGenerator::getPerRenderPrimitiveMorphingSib(variantKey));
     }
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
@@ -310,6 +308,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
     CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 
+    // Currently, we only support either screen-space refractions or reflections.
+    // The HAS_REFRACTION/HAS_REFLECTIONS defines signify if refraction/reflections are supported by
+    // the material, yet only one technique will be selected at runtime.
+    // TODO: support simultaneous screen-space refractions and reflections.
+
     CodeGenerator::generateDefine(fs, "HAS_REFRACTION", material.refractionMode != RefractionMode::NONE);
     if (material.refractionMode != RefractionMode::NONE) {
         CodeGenerator::generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(RefractionMode::CUBEMAP));
@@ -334,6 +337,14 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
             case RefractionType::THIN:
                 CodeGenerator::generateDefine(fs, "REFRACTION_TYPE", "REFRACTION_TYPE_THIN");
                 break;
+        }
+    }
+
+    CodeGenerator::generateDefine(fs, "HAS_REFLECTIONS", material.reflectionMode != ReflectionMode::DEFAULT);
+    if (material.reflectionMode != ReflectionMode::DEFAULT) {
+        CodeGenerator::generateDefine(fs, "REFLECTION_MODE_SCREEN_SPACE", uint32_t(ReflectionMode::SCREEN_SPACE));
+        if (material.reflectionMode == ReflectionMode::SCREEN_SPACE) {
+            CodeGenerator::generateDefine(fs, "REFLECTION_MODE", "REFLECTION_MODE_SCREEN_SPACE");
         }
     }
 

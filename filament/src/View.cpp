@@ -19,6 +19,7 @@
 #include "Culler.h"
 #include "DFG.h"
 #include "Froxelizer.h"
+#include "RenderPrimitive.h"
 #include "ResourceAllocator.h"
 
 #include "details/Engine.h"
@@ -658,6 +659,19 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 
 void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
+    // If screen-space refractions are enabled, make sure to disable screen-space reflections.
+    // TODO: support simultaneous screen-space refractions and reflections.
+    mPerViewUniforms.disableSSReflections();
+}
+
+void FView::disableSSReflections() const noexcept {
+    mPerViewUniforms.disableSSReflections();
+}
+
+void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
+        math::mat4f historyProjection, math::mat4f projectToPixelMatrix,
+        ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
+    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, projectToPixelMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
@@ -868,6 +882,19 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
     }
 }
 
+void FView::updatePrimitivesMorphTargetBuffer(FEngine& engine, const CameraInfo&,
+        FScene::RenderableSoa& renderableData, Range visible) noexcept {
+    for (uint32_t index : visible) {
+        Slice<FRenderPrimitive> primitives = renderableData.elementAt<FScene::PRIMITIVES>(index);
+        for (auto& primitive : primitives) {
+            auto morphTargetBuffer = primitive.getMorphTargetBuffer();
+            if (morphTargetBuffer) {
+                morphTargetBuffer->commit(engine);
+            }
+        }
+    }
+}
+
 void FView::renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
         RenderPass const& pass) noexcept {
     mShadowMapManager.render(fg, engine, driver, pass, *this);
@@ -1014,6 +1041,14 @@ void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions opti
 
 const View::MultiSampleAntiAliasingOptions& View::getMultiSampleAntiAliasingOptions() const noexcept {
     return upcast(this)->getMultiSampleAntiAliasingOptions();
+}
+
+void View::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
+    upcast(this)->setScreenSpaceReflectionsOptions(options);
+}
+
+const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOptions() const noexcept {
+    return upcast(this)->getScreenSpaceReflectionsOptions();
 }
 
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {

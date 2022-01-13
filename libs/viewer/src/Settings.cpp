@@ -336,8 +336,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GenericT
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "contrast") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->contrast);
-        } else if (compare(tok, jsonChunk, "shoulder") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->shoulder);
         } else if (compare(tok, jsonChunk, "midGrayIn") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->midGrayIn);
         } else if (compare(tok, jsonChunk, "midGrayOut") == 0) {
@@ -461,6 +459,33 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         }
         if (i < 0) {
             slog.e << "Invalid SSCT value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        ScreenSpaceReflectionsOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "thickness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->thickness);
+        } else if (compare(tok, jsonChunk, "bias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bias);
+        } else if (compare(tok, jsonChunk, "maxDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxDistance);
+        } else {
+            slog.w << "Invalid screen-space reflections key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid screen-space reflections value: '" << STR(tok, jsonChunk) << "'" << io::endl;
             return i;
         }
     }
@@ -738,6 +763,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->colorGrading);
         } else if (compare(tok, jsonChunk, "ssao") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->ssao);
+        } else if (compare(tok, jsonChunk, "screenSpaceReflections") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceReflections);
         } else if (compare(tok, jsonChunk, "bloom") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->bloom);
         } else if (compare(tok, jsonChunk, "fog") == 0) {
@@ -1011,6 +1038,7 @@ void applySettings(const ViewSettings& settings, View* dest) {
     dest->setMultiSampleAntiAliasingOptions(settings.msaa);
     dest->setDynamicResolutionOptions(settings.dsr);
     dest->setAmbientOcclusionOptions(settings.ssao);
+    dest->setScreenSpaceReflectionsOptions(settings.screenSpaceReflections);
     dest->setBloomOptions(settings.bloom);
     dest->setFogOptions(settings.fog);
     dest->setDepthOfFieldOptions(settings.dof);
@@ -1101,7 +1129,6 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
         case ToneMapping::FILMIC: return new FilmicToneMapper;
         case ToneMapping::GENERIC: return new GenericToneMapper(
                     settings.genericToneMapper.contrast,
-                    settings.genericToneMapper.shoulder,
                     settings.genericToneMapper.midGrayIn,
                     settings.genericToneMapper.midGrayOut,
                     settings.genericToneMapper.hdrMax
@@ -1265,7 +1292,6 @@ static std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOpt
 static std::ostream& operator<<(std::ostream& out, const GenericToneMapperSettings& in) {
     return out << "{\n"
        << "\"contrast\": " << (in.contrast) << ",\n"
-       << "\"shoulder\": " << (in.shoulder) << ",\n"
        << "\"midGrayIn\": " << (in.midGrayIn) << ",\n"
        << "\"midGrayOut\": " << (in.midGrayOut) << ",\n"
        << "\"hdrMax\": " << (in.hdrMax) << "\n"
@@ -1317,6 +1343,15 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "\"sampleCount\": " << int(in.sampleCount) << ",\n"
         << "\"rayCount\": " << int(in.rayCount) << "\n"
         << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsOptions& in) {
+    return out << "{\n"
+               << "\"enabled\": " << to_string(in.enabled) << ",\n"
+               << "\"thickness\": " << in.thickness << ",\n"
+               << "\"bias\": " << in.bias << ",\n"
+               << "\"maxDistance\": " << in.maxDistance << ",\n"
+               << "}";
 }
 
 static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions& in) {
@@ -1521,6 +1556,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"dsr\": " << in.dsr << ",\n"
         << "\"colorGrading\": " << (in.colorGrading) << ",\n"
         << "\"ssao\": " << (in.ssao) << ",\n"
+        << "\"screenSpaceReflections\": " << (in.screenSpaceReflections) << ",\n"
         << "\"bloom\": " << (in.bloom) << ",\n"
         << "\"fog\": " << (in.fog) << ",\n"
         << "\"dof\": " << (in.dof) << ",\n"
@@ -1544,9 +1580,8 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
 }
 
 bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs) const {
-    static_assert(sizeof(GenericToneMapperSettings) == 20, "Please update Settings.cpp");
+    static_assert(sizeof(GenericToneMapperSettings) == 16, "Please update Settings.cpp");
     return contrast == rhs.contrast &&
-           shoulder == rhs.shoulder &&
            midGrayIn == rhs.midGrayIn &&
            midGrayOut == rhs.midGrayOut &&
            hdrMax == rhs.hdrMax;
@@ -1555,7 +1590,7 @@ bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs)
 bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
-    static_assert(sizeof(ColorGradingSettings) == 232, "Please update Settings.cpp");
+    static_assert(sizeof(ColorGradingSettings) == 228, "Please update Settings.cpp");
     return enabled == rhs.enabled &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&

@@ -83,6 +83,7 @@ public:
     using MultiSampleAntiAliasingOptions = MultiSampleAntiAliasingOptions;
     using VsmShadowOptions = VsmShadowOptions;
     using SoftShadowOptions = SoftShadowOptions;
+    using ScreenSpaceReflectionsOptions = ScreenSpaceReflectionsOptions;
 
     /**
      * Sets the View's name. Only useful for debugging.
@@ -329,6 +330,20 @@ public:
      * @return temporal anti-aliasing options
      */
     TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
+
+    /**
+     * Enables or disable screen-space reflections. Disabled by default.
+     *
+     * @param options screen-space reflections options
+     */
+    void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept;
+
+    /**
+     * Returns screen-space reflections options.
+     *
+     * @return screen-space reflections options
+     */
+    ScreenSpaceReflectionsOptions const& getScreenSpaceReflectionsOptions() const noexcept;
 
     /**
      * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.

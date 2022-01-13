@@ -2167,12 +2167,8 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
     auto& current = frameHistory.getCurrent();
     // get sample position within a pixel [-0.5, 0.5]
     const float2 jitter = halton(previous.frameId) - 0.5f;
-    // compute the world-space to clip-space matrix for this frame
-    current.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
     // save this frame's sample position
     current.jitter = jitter;
-    // update frame id
-    current.frameId = previous.frameId + 1;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,

@@ -30,6 +30,7 @@ namespace filament {
 class FEngine;
 class FVertexBuffer;
 class FIndexBuffer;
+class FMorphTargetBuffer;
 class FRenderer;
 
 class FRenderPrimitive {
@@ -45,6 +46,8 @@ public:
     void set(FEngine& engine, RenderableManager::PrimitiveType type,
             size_t offset, size_t minIndex, size_t maxIndex, size_t count) noexcept;
 
+    void set(FMorphTargetBuffer* morphTargetBuffer) noexcept;
+
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
@@ -53,6 +56,7 @@ public:
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
+    FMorphTargetBuffer* getMorphTargetBuffer() const noexcept { return mMorphTargetBuffer; }
 
     void setMaterialInstance(FMaterialInstance const* mi) noexcept { mMaterialInstance = mi; }
     void setBlendOrder(uint16_t order) noexcept {
@@ -65,6 +69,7 @@ private:
     backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::NONE;
     AttributeBitset mEnabledAttributes;
     uint16_t mBlendOrder = 0;
+    FMorphTargetBuffer* mMorphTargetBuffer = nullptr;
 };
 
 } // namespace filament
