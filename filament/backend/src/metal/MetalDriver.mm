@@ -1422,36 +1422,31 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 void MetalDriver::enumerateSamplerGroups(
         const MetalProgram* program, ShaderType shaderType,
         const std::function<void(const SamplerGroup::Sampler*, size_t)>& f) {
-    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < SAMPLER_GROUP_COUNT; samplerGroupIdx++) {
-        const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
-        const auto stageFlags = samplerGroup.stageFlags;
-        const auto& samplers = samplerGroup.samplers;
-        if ((stageFlags.data & (0x1 << shaderType)) == 0) {
+    auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ?
+            program->vertexSamplerBlockInfo : program->fragmentSamplerBlockInfo;
+    auto maxSamplerCount = (shaderType == ShaderType::VERTEX) ?
+            MAX_VERTEX_SAMPLER_COUNT : MAX_FRAGMENT_SAMPLER_COUNT;
+    for (size_t bindingIdx = 0; bindingIdx != maxSamplerCount; ++bindingIdx) {
+        auto& blockInfo = samplerBlockInfo[bindingIdx];
+        if (blockInfo.samplerGroup == UINT8_MAX) {
             continue;
         }
-        if (samplers.empty()) {
-            continue;
-        }
-        const auto* metalSamplerGroup = mContext->samplerBindings[samplerGroupIdx];
+
+        const auto* metalSamplerGroup = mContext->samplerBindings[blockInfo.samplerGroup];
         if (!metalSamplerGroup) {
-            utils::slog.w << "Program has non-empty samplerGroup (index " << samplerGroupIdx <<
+            utils::slog.w << "Program has non-empty samplerGroup (index " << blockInfo.samplerGroup <<
                     ") but has not bound any samplers." << utils::io::endl;
             continue;
         }
+
         SamplerGroup* sb = metalSamplerGroup->sb.get();
-        assert_invariant(sb->getSize() == samplers.size());
-        size_t samplerIdx = 0;
-        for (const auto& sampler : samplers) {
-            size_t bindingPoint = sampler.binding;
-            const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
-            samplerIdx++;
+        const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + blockInfo.sampler;
 
-            if (!boundSampler->t) {
-                continue;
-            }
-
-            f(boundSampler, bindingPoint);
+        if (!boundSampler->t) {
+            continue;
         }
+
+        f(boundSampler, bindingIdx);
     }
 }
 

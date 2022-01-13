@@ -137,22 +137,31 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
 
     auto executionModel = mslCompiler.get_execution_model();
 
-    auto duplicateResourceBinding = [executionModel, &mslCompiler](const auto& resource) {
+    auto duplicateResourceBinding = [executionModel, &mslCompiler](const auto& resource, uint16_t index = UINT16_MAX) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
         MSLResourceBinding newBinding;
         newBinding.stage = executionModel;
         newBinding.desc_set = set;
         newBinding.binding = binding;
-        newBinding.msl_texture = binding;
-        newBinding.msl_sampler = binding;
-        newBinding.msl_buffer = binding;
+        if (index != UINT16_MAX) {
+            newBinding.msl_texture = newBinding.msl_sampler = newBinding.msl_buffer = index;
+        } else {
+            newBinding.msl_texture = newBinding.msl_sampler = newBinding.msl_buffer = binding;
+        }
         mslCompiler.add_msl_resource_binding(newBinding);
     };
 
+    auto resourceCompare = [&mslCompiler](const auto &lhs, auto& rhs) {
+      return mslCompiler.get_decoration(lhs.id, spv::DecorationBinding)
+           < mslCompiler.get_decoration(rhs.id, spv::DecorationBinding);
+    };
+
     auto resources = mslCompiler.get_shader_resources();
-    for (const auto& resource : resources.sampled_images) {
-        duplicateResourceBinding(resource);
+    auto& images = resources.sampled_images;
+    std::sort(images.begin(), images.end(), resourceCompare); // Packing sampler binding sequentially.
+    for (size_t i = 0, c = images.size(); i != c; ++i) {
+        duplicateResourceBinding(images[i], i);
     }
     for (const auto& resource : resources.uniform_buffers) {
         duplicateResourceBinding(resource);

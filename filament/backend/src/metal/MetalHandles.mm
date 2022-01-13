@@ -332,7 +332,7 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 }
 
 MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
-    : HwProgram(program.getName()), vertexFunction(nil), fragmentFunction(nil), samplerGroupInfo(),
+    : HwProgram(program.getName()), vertexFunction(nil), fragmentFunction(nil),
         isValid(false) {
 
     using MetalFunctionPtr = __strong id<MTLFunction>*;
@@ -372,7 +372,25 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
     // All stages of the program have compiled successfuly, this is a valid program.
     isValid = true;
 
-    samplerGroupInfo = program.getSamplerGroupInfo();
+    auto& samplerGroupInfo = program.getSamplerGroupInfo();
+    for (size_t shaderType = 0; shaderType != PIPELINE_STAGE_COUNT; ++shaderType) {
+        size_t bindingIdx = 0;
+        auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ? vertexSamplerBlockInfo
+                                                                    : fragmentSamplerBlockInfo;
+        for (size_t samplerGroupIdx = 0; samplerGroupIdx != SAMPLER_GROUP_COUNT; ++samplerGroupIdx) {
+            auto& groupData = samplerGroupInfo[samplerGroupIdx];
+            auto stageFlags = groupData.stageFlags;
+            if ((stageFlags.data & (0x1 << shaderType)) == 0) {
+                continue;
+            }
+            auto& samplers = groupData.samplers;
+            for (size_t samplerIdx = 0, c = samplers.size(); samplerIdx != c; ++samplerIdx) {
+                samplerBlockInfo[bindingIdx].samplerGroup = samplerGroupIdx;
+                samplerBlockInfo[bindingIdx].sampler = samplerIdx;
+                ++bindingIdx;
+            }
+        }
+    }
 }
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
