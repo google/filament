@@ -52,6 +52,8 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
                     .localOffset = sInfo.offset,
                     .globalOffset = offset++,
                 });
+                // Shader stage flags is only needed to check if MAX_SAMPLER_COUNT is exceeded.
+                // Somehow if we can get shader stage flags from Program then we can remove it in SamplerInterfaceBlock.
                 const auto stageFlags = sib->getStageFlags();
                 if (stageFlags.vertex) {
                     ++numSampler;
