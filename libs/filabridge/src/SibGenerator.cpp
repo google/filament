@@ -33,7 +33,8 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(uint8_t variantKey) noe
         auto builder = SamplerInterfaceBlock::Builder();
 
         builder
-            .name("Light");
+            .name("Light")
+            .stageFlags({ .fragment = true });
 
         if (hasVsm) {
             builder.add("shadowMap", Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::HIGH);
@@ -72,8 +73,10 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(uint
     using Precision = SamplerInterfaceBlock::Precision;
 
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
-            .name("Morphing")
-            .add("targets", Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH)
+            .name("MorphTargetBuffer")
+            .stageFlags({ .vertex = true })
+            .add("positions", Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH)
+            .add("tangents",  Type::SAMPLER_2D_ARRAY, Format::INT,   Precision::MEDIUM)
             .build();
 
     return sib;

@@ -78,17 +78,18 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
 void morphPosition(inout vec4 p) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
-        texcoord.z = int(i) * 2 + 0;
-        p += morphingUniforms.weights[i] * texelFetch(morphing_targets, texcoord, 0);
+        texcoord.z = int(i);
+        p += morphingUniforms.weights[i] * texelFetch(morphTargetBuffer_positions, texcoord, 0);
     }
 }
 
 void morphNormal(inout vec3 n) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
-        texcoord.z = int(i) * 2 + 1;
+        texcoord.z = int(i);
+        vec4 tangent = normalize(vec4(texelFetch(morphTargetBuffer_tangents, texcoord, 0)));
         vec3 normal;
-        toTangentFrame(texelFetch(morphing_targets, texcoord, 0), normal);
+        toTangentFrame(tangent, normal);
         n += morphingUniforms.weights[i].xyz * normal;
     }
 }

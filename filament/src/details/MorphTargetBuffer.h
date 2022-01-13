@@ -56,6 +56,7 @@ private:
     void bind(backend::DriverApi& driver) const noexcept;
 
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
+    backend::Handle<backend::HwTexture> mPbHandle;
     backend::Handle<backend::HwTexture> mTbHandle;
     backend::SamplerGroup mSBuffer;
     size_t mVertexCount;
