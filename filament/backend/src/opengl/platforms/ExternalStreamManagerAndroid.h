@@ -84,13 +84,6 @@ private:
     jmethodID mSurfaceTextureClass_getTimestamp{};
     jmethodID mSurfaceTextureClass_attachToGLContext{};
     jmethodID mSurfaceTextureClass_detachFromGLContext{};
-
-    ASurfaceTexture* (*ASurfaceTexture_fromSurfaceTexture)(JNIEnv*, jobject){};
-    void (*ASurfaceTexture_release)(ASurfaceTexture*){};
-    int  (*ASurfaceTexture_attachToGLContext)(ASurfaceTexture*, uint32_t){};
-    int  (*ASurfaceTexture_detachFromGLContext)(ASurfaceTexture*){};
-    int  (*ASurfaceTexture_updateTexImage)(ASurfaceTexture*){};
-    int64_t (*ASurfaceTexture_getTimestamp)(ASurfaceTexture*){};   // available since api 28
 };
 
 } // namespace filament
