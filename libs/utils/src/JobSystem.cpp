@@ -39,7 +39,7 @@ static constexpr bool DEBUG_FINISH_HANGS = false;
 #    include <pthread.h>
 #endif
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #    include <sys/time.h>
 #    include <sys/resource.h>
 #    ifndef ANDROID_PRIORITY_URGENT_DISPLAY
@@ -81,7 +81,7 @@ void JobSystem::setThreadName(const char* name) noexcept {
 }
 
 void JobSystem::setThreadPriority(Priority priority) noexcept {
-#ifdef ANDROID
+#ifdef __ANDROID__
     int androidPriority = 0;
     switch (priority) {
         case Priority::NORMAL:
@@ -208,7 +208,7 @@ inline bool JobSystem::hasActiveJobs() const noexcept {
 }
 
 inline bool JobSystem::hasJobCompleted(JobSystem::Job const* job) noexcept {
-    return job->runningJobCount.load(std::memory_order_relaxed) <= 0;
+    return job->runningJobCount.load(std::memory_order_acquire) <= 0;
 }
 
 void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {

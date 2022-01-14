@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_HANDLE_H
-#define TNT_FILAMENT_DRIVER_HANDLE_H
+#ifndef TNT_FILAMENT_BACKEND_HANDLE_H
+#define TNT_FILAMENT_BACKEND_HANDLE_H
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/debug.h>
+
+#include <limits>
 
 namespace filament {
 namespace backend {
@@ -113,4 +115,4 @@ using VertexBufferHandle    = Handle<HwVertexBuffer>;
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_HANDLE_H
+#endif // TNT_FILAMENT_BACKEND_HANDLE_H

@@ -126,6 +126,91 @@ OpFunctionEnd
                                                   predefs + after, true, true);
 }
 
+TEST_F(LocalSingleStoreElimTest, LSSElimForLinkage) {
+  const std::string predefs =
+      R"(OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %v "v"
+OpName %BaseColor "BaseColor"
+OpName %f "f"
+OpName %fi "fi"
+OpName %gl_FragColor "gl_FragColor"
+OpDecorate %main LinkageAttributes "main" Export
+%void = OpTypeVoid
+%9 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%BaseColor = OpVariable %_ptr_Input_v4float Input
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Input_float = OpTypePointer Input %float
+%fi = OpVariable %_ptr_Input_float Input
+%float_0 = OpConstant %float 0
+%bool = OpTypeBool
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%gl_FragColor = OpVariable %_ptr_Output_v4float Output
+)";
+
+  const std::string before =
+      R"(%main = OpFunction %void None %9
+%19 = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%f = OpVariable %_ptr_Function_float Function
+%20 = OpLoad %v4float %BaseColor
+OpStore %v %20
+%21 = OpLoad %float %fi
+OpStore %f %21
+%22 = OpLoad %float %f
+%23 = OpFOrdLessThan %bool %22 %float_0
+OpSelectionMerge %24 None
+OpBranchConditional %23 %25 %24
+%25 = OpLabel
+OpStore %f %float_0
+OpBranch %24
+%24 = OpLabel
+%26 = OpLoad %v4float %v
+%27 = OpLoad %float %f
+%28 = OpCompositeConstruct %v4float %27 %27 %27 %27
+%29 = OpFAdd %v4float %26 %28
+OpStore %gl_FragColor %29
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string after =
+      R"(%main = OpFunction %void None %9
+%19 = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%f = OpVariable %_ptr_Function_float Function
+%20 = OpLoad %v4float %BaseColor
+OpStore %v %20
+%21 = OpLoad %float %fi
+OpStore %f %21
+%22 = OpLoad %float %f
+%23 = OpFOrdLessThan %bool %22 %float_0
+OpSelectionMerge %24 None
+OpBranchConditional %23 %25 %24
+%25 = OpLabel
+OpStore %f %float_0
+OpBranch %24
+%24 = OpLabel
+%27 = OpLoad %float %f
+%28 = OpCompositeConstruct %v4float %27 %27 %27 %27
+%29 = OpFAdd %v4float %20 %28
+OpStore %gl_FragColor %29
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<LocalSingleStoreElimPass>(predefs + before,
+                                                  predefs + after, true, true);
+}
+
 TEST_F(LocalSingleStoreElimTest, ThreeStores) {
   // Three stores to multiple loads of v is not optimized.
 

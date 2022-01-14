@@ -57,12 +57,12 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
     mBufferObject = mDriverApi.createBufferObject(size, BufferObjectBinding::VERTEX, BufferUsage::STATIC);
     mVertexBuffer = mDriverApi.createVertexBuffer(1, 1, mVertexCount, attributes);
     mDriverApi.setVertexBufferObject(mVertexBuffer, 0, mBufferObject);
-    BufferDescriptor vertexBufferDesc(gVertices, size, nullptr);
+    BufferDescriptor vertexBufferDesc(gVertices, size);
     mDriverApi.updateBufferObject(mBufferObject, std::move(vertexBufferDesc), 0);
 
     mIndexBuffer = mDriverApi.createIndexBuffer(ElementType::SHORT, mIndexCount,
             BufferUsage::STATIC);
-    BufferDescriptor indexBufferDesc(gIndices, sizeof(short) * 3, nullptr);
+    BufferDescriptor indexBufferDesc(gIndices, sizeof(short) * 3);
     mDriverApi.updateIndexBuffer(mIndexBuffer, std::move(indexBufferDesc), 0);
 
     mRenderPrimitive = mDriverApi.createRenderPrimitive(0);

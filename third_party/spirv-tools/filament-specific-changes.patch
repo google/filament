@@ -1,17 +1,17 @@
-From f2c7730fd3246c70c6cb23f1637aa05a3a8b517a Mon Sep 17 00:00:00 2001
+From 468f1935352773b5f9975cae8800ed148b0c8bf3 Mon Sep 17 00:00:00 2001
 From: Benjamin Doherty <bendoherty@google.com>
-Date: Tue, 1 Jun 2021 23:31:16 -0700
+Date: Tue, 2 Nov 2021 14:48:14 -0700
 Subject: [PATCH] Filament specific changes
 
 ---
- third_party/spirv-tools/CMakeLists.txt        | 86 ++++++++++++-------
+ third_party/spirv-tools/CMakeLists.txt        | 94 ++++++++++++-------
  .../spirv-tools/external/CMakeLists.txt       |  6 +-
  .../external/spirv-headers/CMakeLists.txt     |  8 +-
- third_party/spirv-tools/source/CMakeLists.txt | 26 ++++--
- 4 files changed, 81 insertions(+), 45 deletions(-)
+ third_party/spirv-tools/source/CMakeLists.txt | 26 +++--
+ 4 files changed, 86 insertions(+), 48 deletions(-)
 
 diff --git a/third_party/spirv-tools/CMakeLists.txt b/third_party/spirv-tools/CMakeLists.txt
-index 55f84e6d8..41ae7897c 100755
+index 70caf857a..3991bf660 100755
 --- a/third_party/spirv-tools/CMakeLists.txt
 +++ b/third_party/spirv-tools/CMakeLists.txt
 @@ -24,8 +24,19 @@ if (POLICY CMP0054)
@@ -35,7 +35,7 @@ index 55f84e6d8..41ae7897c 100755
  set(SPIRV_TOOLS "SPIRV-Tools")
  
  include(GNUInstallDirs)
-@@ -68,7 +79,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
+@@ -71,7 +82,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
    set(CMAKE_BUILD_TYPE "Debug")
  endif()
  
@@ -46,9 +46,9 @@ index 55f84e6d8..41ae7897c 100755
  if(NOT ${SKIP_SPIRV_TOOLS_INSTALL})
    set(ENABLE_SPIRV_TOOLS_INSTALL ON)
  endif()
-@@ -81,7 +94,10 @@ endif(SPIRV_BUILD_COMPRESSION)
+@@ -88,7 +101,10 @@ set(SPIRV_LIB_FUZZING_ENGINE_LINK_OPTIONS "" CACHE STRING "Used by OSS-Fuzz to c
  
- option(SPIRV_BUILD_FUZZER "Build spirv-fuzz" OFF)
+ option(SPIRV_BUILD_LIBFUZZER_TARGETS "Build libFuzzer targets" OFF)
  
 -option(SPIRV_WERROR "Enable error on warning" ON)
 +# Filament specific changes
@@ -58,36 +58,41 @@ index 55f84e6d8..41ae7897c 100755
  if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") AND (NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")))
    set(COMPILER_IS_LIKE_GNU TRUE)
  endif()
-@@ -230,7 +246,11 @@ if(NOT COMMAND find_host_program)
+@@ -243,7 +259,13 @@ if(NOT COMMAND find_host_program)
  endif()
  
  # Tests require Python3
 -find_host_package(PythonInterp 3 REQUIRED)
++# Filament specific changes
 +if(CMAKE_VERSION VERSION_LESS "3.12" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 +  find_host_package(PythonInterp 3 REQUIRED)
 +else()
 +  find_package(Python3 COMPONENTS Interpreter)
 +endif()
++# End Filament specific changes
  
  # Check for symbol exports on Linux.
  # At the moment, this check will fail on the OSX build machines for the Android NDK.
-@@ -273,11 +293,13 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
+@@ -286,11 +308,13 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
  endif()
  
  # Defaults to OFF if the user didn't set it.
-+# Filament specific changes
- option(SPIRV_SKIP_EXECUTABLES
-   "Skip building the executable and tests along with the library"
+-option(SPIRV_SKIP_EXECUTABLES
+-  "Skip building the executable and tests along with the library"
 -  ${SPIRV_SKIP_EXECUTABLES})
-+  ${SPIRV_SKIP_EXECUTABLES_OPTION})
- option(SPIRV_SKIP_TESTS
+-option(SPIRV_SKIP_TESTS
 -  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS})
++# Filament specific changes
++ option(SPIRV_SKIP_EXECUTABLES
++   "Skip building the executable and tests along with the library"
++  ${SPIRV_SKIP_EXECUTABLES_OPTION})
++ option(SPIRV_SKIP_TESTS
 +  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
 +# End Filament specific changes
  if ("${SPIRV_SKIP_EXECUTABLES}")
    set(SPIRV_SKIP_TESTS ON)
  endif()
-@@ -321,8 +343,10 @@ endif()
+@@ -334,8 +358,10 @@ endif()
  add_subdirectory(source)
  add_subdirectory(tools)
  
@@ -100,7 +105,7 @@ index 55f84e6d8..41ae7897c 100755
  
  if(ENABLE_SPIRV_TOOLS_INSTALL)
    install(
-@@ -347,28 +371,30 @@ set(SPIRV_SHARED_LIBRARIES "-lSPIRV-Tools-shared")
+@@ -360,28 +386,30 @@ set(SPIRV_SHARED_LIBRARIES "-lSPIRV-Tools-shared")
  
  # Build pkg-config file
  # Use a first-class target so it's regenerated when relevant files are updated.
@@ -171,7 +176,7 @@ index 179a4012f..152cfc421 100644
    endif()
  else()
 diff --git a/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt b/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
-index 6f01ef098..ef2e56606 100644
+index c11150008..1a1fe9548 100644
 --- a/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
 +++ b/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
 @@ -49,11 +49,11 @@ add_custom_target(install-headers
@@ -191,10 +196,10 @@ index 6f01ef098..ef2e56606 100644
  if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})
    set(SPIRV_HEADERS_ENABLE_EXAMPLES ON)
 diff --git a/third_party/spirv-tools/source/CMakeLists.txt b/third_party/spirv-tools/source/CMakeLists.txt
-index 6633bc916..5f5904567 100644
+index 331ff6755..ef6eb8e77 100644
 --- a/third_party/spirv-tools/source/CMakeLists.txt
 +++ b/third_party/spirv-tools/source/CMakeLists.txt
-@@ -364,13 +364,15 @@ endfunction()
+@@ -371,13 +371,15 @@ endfunction()
  
  # Always build ${SPIRV_TOOLS}-shared. This is expected distro packages, and
  # unlike the other SPIRV_TOOLS target, defaults to hidden symbol visibility.
@@ -217,7 +222,7 @@ index 6633bc916..5f5904567 100644
  
  if(SPIRV_TOOLS_BUILD_STATIC)
    add_library(${SPIRV_TOOLS}-static STATIC ${SPIRV_SOURCES})
-@@ -386,11 +388,17 @@ if(SPIRV_TOOLS_BUILD_STATIC)
+@@ -393,11 +395,17 @@ if(SPIRV_TOOLS_BUILD_STATIC)
      add_library(${SPIRV_TOOLS} ALIAS ${SPIRV_TOOLS}-static)
    endif()
  
@@ -238,5 +243,5 @@ index 6633bc916..5f5904567 100644
  
  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 -- 
-2.32.0.rc0.204.g9fa02ecfa5-goog
+2.33.1.1089.g2158813163f-goog
 

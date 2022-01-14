@@ -38,30 +38,6 @@ struct BlitterUniforms {
     float inverseSampleCount;
 };
 
-// Helper function for populating barrier fields based on the desired image layout.
-// This logic is specific to blitting, please keep this private to VulkanBlitter.
-static VulkanLayoutTransition transitionHelper(VulkanLayoutTransition transition) {
-    switch (transition.newLayout) {
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        case VK_IMAGE_LAYOUT_GENERAL:
-            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-        default:
-            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            transition.dstAccessMask = 0;
-            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            break;
-    }
-    return transition;
-}
-
 void VulkanBlitter::blitColor(BlitArgs args) {
     const VulkanAttachment src = args.srcTarget->getColor(mContext.currentSurface, args.targetIndex);
     const VulkanAttachment dst = args.dstTarget->getColor(mContext.currentSurface, 0);
@@ -153,9 +129,15 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
+
+    VkImageLayout srcLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    if (src.texture) {
+        srcLayout = mContext.getTextureLayout(src.texture->usage);
+    }
+
     transitionImageLayout(cmdbuffer, {
         src.image,
-        VK_IMAGE_LAYOUT_UNDEFINED,
+        srcLayout,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         srcRange,
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0,
@@ -180,21 +162,12 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, filter);
     }
 
-    if (src.texture) {
-        transitionImageLayout(cmdbuffer, transitionHelper({
-            .image = src.image,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = mContext.getTextureLayout(src.texture->usage),
-            .subresources = srcRange
-        }));
-    } else if (!mContext.currentSurface->headlessQueue) {
-        transitionImageLayout(cmdbuffer, transitionHelper({
-            .image = src.image,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            .subresources = srcRange
-        }));
-    }
+    transitionImageLayout(cmdbuffer, blitterTransitionHelper({
+        .image = src.image,
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        .newLayout = srcLayout,
+        .subresources = srcRange
+    }));
 
     // Determine the desired texture layout for the destination while ensuring that the default
     // render target is supported, which has no associated texture.
@@ -202,9 +175,9 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
             mContext.getTextureLayout(dst.texture->usage) :
             mContext.currentSurface->getColor().layout;
 
-    transitionImageLayout(cmdbuffer, transitionHelper({
+    transitionImageLayout(cmdbuffer, blitterTransitionHelper({
         .image = dst.image,
-        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .newLayout = desiredLayout,
         .subresources = dstRange,
     }));

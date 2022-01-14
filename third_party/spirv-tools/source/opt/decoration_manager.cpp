@@ -490,6 +490,14 @@ void DecorationManager::ForEachDecoration(
   });
 }
 
+bool DecorationManager::HasDecoration(uint32_t id, uint32_t decoration) {
+  bool has_decoration = false;
+  ForEachDecoration(id, decoration, [&has_decoration](const Instruction&) {
+    has_decoration = true;
+  });
+  return has_decoration;
+}
+
 bool DecorationManager::FindDecoration(
     uint32_t id, uint32_t decoration,
     std::function<bool(const Instruction&)> f) {

@@ -31,6 +31,22 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+find_host_package(PythonInterp 3 REQUIRED)
+
+set(GLSLANG_INTRINSIC_H          "${GLSLANG_GENERATED_INCLUDEDIR}/glslang/glsl_intrinsic_header.h")
+set(GLSLANG_INTRINSIC_PY         "${CMAKE_CURRENT_SOURCE_DIR}/../gen_extension_headers.py")
+set(GLSLANG_INTRINSIC_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../glslang/ExtensionHeaders")
+
+add_custom_command(
+    OUTPUT  ${GLSLANG_INTRINSIC_H}
+    COMMAND ${PYTHON_EXECUTABLE} "${GLSLANG_INTRINSIC_PY}"
+            "-i" ${GLSLANG_INTRINSIC_HEADER_DIR}
+            "-o" ${GLSLANG_INTRINSIC_H}
+    DEPENDS ${GLSLANG_INTRINSIC_PY}
+    COMMENT "Generating ${GLSLANG_INTRINSIC_H}")
+
+#add_custom_target(glslangValidator DEPENDS ${GLSLANG_INTRINSIC_H})
+
 add_library(glslang-default-resource-limits
             ${CMAKE_CURRENT_SOURCE_DIR}/ResourceLimits.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/resource_limits_c.cpp)
@@ -41,7 +57,7 @@ target_include_directories(glslang-default-resource-limits
                            PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
                            PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 
-set(SOURCES StandAlone.cpp DirStackFileIncluder.h)
+set(SOURCES StandAlone.cpp DirStackFileIncluder.h  ${GLSLANG_INTRINSIC_H})
 
 add_executable(glslangValidator ${SOURCES})
 set_property(TARGET glslangValidator PROPERTY FOLDER tools)
@@ -62,7 +78,7 @@ elseif(UNIX)
     if(NOT ANDROID)
         set(LIBRARIES ${LIBRARIES} pthread)
     endif()
-endif(WIN32)
+endif()
 
 target_link_libraries(glslangValidator ${LIBRARIES})
 target_include_directories(glslangValidator PUBLIC
@@ -73,7 +89,7 @@ if(ENABLE_OPT)
     target_include_directories(glslangValidator
         PRIVATE ${spirv-tools_SOURCE_DIR}/include
     )
-endif(ENABLE_OPT)
+endif()
 
 if(ENABLE_SPVREMAPPER)
     set(REMAPPER_SOURCES spirv-remap.cpp)
@@ -85,7 +101,7 @@ endif()
 
 if(WIN32)
     source_group("Source" FILES ${SOURCES})
-endif(WIN32)
+endif()
 
 if(ENABLE_GLSLANG_INSTALL)
     install(TARGETS glslangValidator EXPORT glslangValidatorTargets
@@ -108,4 +124,4 @@ if(ENABLE_GLSLANG_INSTALL)
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endif()
     install(EXPORT glslang-default-resource-limitsTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-endif(ENABLE_GLSLANG_INSTALL)
+endif()

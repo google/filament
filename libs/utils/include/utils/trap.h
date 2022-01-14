@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_TRAP_H
-#define UTILS_TRAP_H
+#ifndef TNT_UTILS_TRAP_H
+#define TNT_UTILS_TRAP_H
 
 #include <csignal>
 
@@ -37,4 +37,4 @@ inline void debug_trap() noexcept {
 
 } // namespace utils
 
-#endif // UTILS_TRAP_H
+#endif // TNT_UTILS_TRAP_H

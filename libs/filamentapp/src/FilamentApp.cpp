@@ -19,7 +19,9 @@
 #include <filamentapp/FilamentApp.h>
 
 #if !defined(WIN32)
-#    include <unistd.h>
+#if defined(FILAMENT_SUPPORTS_WAYLAND)
+#    include <SDL_syswm.h>
+#endif
 #else
 #    include <SDL_syswm.h>
 #    include <utils/unwindows.h>
@@ -41,6 +43,10 @@
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/View.h>
+
+#ifndef NDEBUG
+#include <filament/DebugRegistry.h>
+#endif
 
 #include <filagui/ImGuiHelper.h>
 
@@ -270,6 +276,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                     if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
                         mClosed = true;
                     }
+#ifndef NDEBUG
+                    if (event.key.keysym.scancode == SDL_SCANCODE_PRINTSCREEN) {
+                        DebugRegistry& debug = mEngine->getDebugRegistry();
+                        bool* captureFrame =
+                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                        *captureFrame = true;
+                    }
+#endif
                     window->keyDown(event.key.keysym.scancode);
                     break;
                 case SDL_KEYUP:
@@ -532,15 +546,37 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mWidth = w;
         mHeight = h;
     } else {
+
+#if defined(FILAMENT_SUPPORTS_WAYLAND)
+        struct {
+            struct wl_display *display;
+            struct wl_surface *surface;
+        } wayland{};
+
+        SDL_SysWMinfo wmi;
+        SDL_VERSION(&wmi.version);
+        ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(mWindow, &wmi), "SDL version unsupported!");
+        if (wmi.subsystem == SDL_SYSWM_WAYLAND) {
+            wayland.display = wmi.info.wl.display;
+            wayland.surface = wmi.info.wl.surface;
+        }
+        void* nativeWindow = &wayland;
+
+        // Create the Engine after the window in case this happens to be a single-threaded platform.
+        // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
+        // current, rather than the one created by SDL.
+        mFilamentApp->mEngine = Engine::create(config.backend, nullptr, nativeWindow);
+#else
+        void* nativeWindow = ::getNativeWindow(mWindow);
+
         // Create the Engine after the window in case this happens to be a single-threaded platform.
         // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
         // current, rather than the one created by SDL.
         mFilamentApp->mEngine = Engine::create(config.backend);
-
+#endif
         // get the resolved backend
         mBackend = config.backend = mFilamentApp->mEngine->getBackend();
 
-        void* nativeWindow = ::getNativeWindow(mWindow);
         void* nativeSwapChain = nativeWindow;
 
 #if defined(__APPLE__)

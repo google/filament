@@ -1351,6 +1351,72 @@ OpFunctionEnd
   SinglePassRunAndMatch<VectorDCE>(text, true);
 }
 
+TEST_F(VectorDCETest, OutOfBoundsExtract) {
+  // It tests that the vector DCE pass is able to handle an extract with an
+  // index that is out of bounds.
+  const std::string text = R"(
+; CHECK: [[undef:%\w+]] = OpUndef %v4float
+; CHECK: OpCompositeExtract %float [[undef]] 8
+                     OpCapability Shader
+                     OpMemoryModel Logical GLSL450
+                     OpEntryPoint Fragment %main "main" %OutColor
+                     OpExecutionMode %main OriginUpperLeft
+                     OpDecorate %OutColor Location 0
+             %void = OpTypeVoid
+               %10 = OpTypeFunction %void
+            %float = OpTypeFloat 32
+          %v4float = OpTypeVector %float 4
+%_ptr_Output_float = OpTypePointer Output %float
+         %OutColor = OpVariable %_ptr_Output_float Output
+             %null = OpConstantNull %v4float
+          %float_1 = OpConstant %float 1
+             %main = OpFunction %void None %10
+               %28 = OpLabel
+               %33 = OpCompositeInsert %v4float %float_1 %null 1
+          %extract = OpCompositeExtract %float %33 8
+                     OpStore %OutColor %extract
+                     OpReturn
+                     OpFunctionEnd
+)";
+
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<VectorDCE>(text, false);
+}
+
+TEST_F(VectorDCETest, OutOfBoundsShuffle) {
+  // It tests that the vector DCE pass is able to handle a shuffle with an
+  // index that is out of bounds.
+  const std::string text = R"(
+; CHECK: [[undef:%\w+]] = OpUndef %v4float
+; CHECK: OpVectorShuffle %v4float [[undef]] [[undef]] 9 10 11 12
+                     OpCapability Shader
+                     OpMemoryModel Logical GLSL450
+                     OpEntryPoint Fragment %main "main" %OutColor
+                     OpExecutionMode %main OriginUpperLeft
+                     OpDecorate %OutColor Location 0
+             %void = OpTypeVoid
+               %10 = OpTypeFunction %void
+            %float = OpTypeFloat 32
+          %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+         %OutColor = OpVariable %_ptr_Output_v4float Output
+             %null = OpConstantNull %v4float
+          %float_1 = OpConstant %float 1
+             %main = OpFunction %void None %10
+               %28 = OpLabel
+               %33 = OpCompositeInsert %v4float %float_1 %null 1
+          %shuffle = OpVectorShuffle %v4float %33 %33 9 10 11 12
+                     OpStore %OutColor %shuffle
+                     OpReturn
+                     OpFunctionEnd
+)";
+
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<VectorDCE>(text, false);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

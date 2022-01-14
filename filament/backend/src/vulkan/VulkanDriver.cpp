@@ -166,7 +166,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         }
 
     } else {
-#if defined(ANDROID)
+#if defined(__ANDROID__)
         utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
                 << "gradle file?" << utils::io::endl;
 #else
@@ -186,7 +186,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_surface";
     ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_get_physical_device_properties2";
 #if VK_ENABLE_VALIDATION
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
 #endif
     if (validationFeaturesSupported) {
@@ -307,7 +307,7 @@ Driver* VulkanDriver::create(VulkanPlatform* const platform,
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {
-#if defined(ANDROID) || defined(IOS)
+#if defined(__ANDROID__) || defined(IOS)
     return ShaderModel::GL_ES_30;
 #else
     return ShaderModel::GL_CORE_41;
@@ -721,8 +721,8 @@ Handle<HwStream> VulkanDriver::createStreamAcquired() {
     return {};
 }
 
-void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
-        void* userData) {
+void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
+        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
@@ -806,18 +806,25 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
-    // TODO: We might need a better way to handle vendor-specific workaround
-    // Disable framebuffer fetch on APPLE M1 (vendor 0x106b, device 0xa140)
-    // Subpasses, don't seen to work on M1, this possibly needs more investigation.
-    VkPhysicalDeviceProperties const& deviceProperties = mContext.physicalDeviceProperties;
-    if ((deviceProperties.vendorID == 0x106b) && (deviceProperties.deviceID == 0xa140)) {
-        return false;
-    }
     return true;
+}
+
+bool VulkanDriver::isFrameBufferFetchMultiSampleSupported() {
+    return false;
 }
 
 bool VulkanDriver::isFrameTimeSupported() {
     return true;
+}
+
+bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
+    VkPhysicalDeviceProperties const& deviceProperties = mContext.physicalDeviceProperties;
+    switch (workaround) {
+        case Workaround::SPLIT_EASU:
+            // early exit condition is flattened in EASU code
+            return deviceProperties.vendorID == 0x5143; // Qualcomm
+    }
+    return false;
 }
 
 math::float2 VulkanDriver::getClipSpaceParams() {
@@ -929,7 +936,8 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     // However there are plans for implementing this properly. See the following GitHub ticket.
     // https://github.com/KhronosGroup/MoltenVK/issues/773
 
-    uint64_t delta = timestamp1 - timestamp0;
+    float period = mContext.physicalDeviceProperties.limits.timestampPeriod;
+    uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
     *elapsedTime = delta;
     return true;
 }
@@ -1441,6 +1449,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
+    // TODO: don't flush/wait here, this should be asynchronous
+
     mContext.commands->flush();
     mContext.commands->wait();
 
@@ -1448,6 +1458,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
+    // TODO: staging should just use the GENERAL layout
     transitionImageLayout(cmdbuffer, {
         .image = stagingImage,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1476,7 +1487,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         },
         .srcOffset = {
             .x = (int32_t) x,
-            .y = (int32_t) y,
+            .y = (int32_t) (srcTarget->getExtent(mContext.currentSurface).height - (height + y)),
         },
         .dstSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1499,6 +1510,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         .layerCount = 1,
     };
 
+    // FIXME: the content of the source may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
     VkImage srcImage = srcTarget->getColor(mContext.currentSurface, 0).image;
     transitionImageLayout(cmdbuffer, {
         .image = srcImage,
@@ -1521,6 +1533,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     if (srcTexture || mContext.currentSurface->presentQueue) {
         const VkImageLayout present = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        // FIXME: the content of image we just blitted into may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
         transitionImageLayout(cmdbuffer, {
             .image = srcImage,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1532,6 +1545,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         });
     } else {
+        // FIXME: the content of image we just blitted into may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
         transitionImageLayout(cmdbuffer, {
             .image = srcImage,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1546,6 +1560,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     // Transition the staging image layout to GENERAL.
 
+    // TODO: why is this not using transitionImageLayout() ?
     VkImageMemoryBarrier barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1566,6 +1581,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    // TODO: don't flush/wait here -- we should do this asynchronously
 
     // Flush and wait.
     mContext.commands->flush();

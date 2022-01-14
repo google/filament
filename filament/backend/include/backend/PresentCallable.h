@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_BACKEND_PRESENT_CALLABLE
-#define TNT_FILAMENT_BACKEND_PRESENT_CALLABLE
+#ifndef TNT_FILAMENT_BACKEND_PRESENTCALLABLE
+#define TNT_FILAMENT_BACKEND_PRESENTCALLABLE
 
 #include <utils/compiler.h>
 
@@ -101,4 +101,4 @@ using FrameFinishedCallback UTILS_DEPRECATED = void(*)(PresentCallable callable,
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_BACKEND_PRESENT_FRAME_CALLABLE
+#endif // TNT_FILAMENT_BACKEND_PRESENTCALLABLE

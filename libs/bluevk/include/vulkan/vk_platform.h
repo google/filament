@@ -32,6 +32,9 @@
 #if defined(FILAMENT_SUPPORTS_XLIB)
 #define VK_USE_PLATFORM_XLIB_KHR 1
 #endif
+#if defined(FILAMENT_SUPPORTS_WAYLAND)
+#define VK_USE_PLATFORM_WAYLAND_KHR 1
+#endif
 #elif defined(__APPLE__)
 #define VK_USE_PLATFORM_MACOS_MVK 1
 #elif defined(WIN32)

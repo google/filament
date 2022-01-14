@@ -125,6 +125,7 @@ target_link_libraries(filament-jni
 target_include_directories(filament-jni PRIVATE
         ..
         ${FILAMENT_DIR}/include
+        ../../filament/backend/include
         ../../third_party/robin-map
         ../../libs/utils/include)
 

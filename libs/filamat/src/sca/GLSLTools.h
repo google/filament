@@ -150,6 +150,8 @@ public:
     static void prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslang::TShader& shader,
             EShLanguage language, int version, MaterialBuilder::Optimization optimization);
 
+    static void textureLodBias(glslang::TShader& shader);
+
 private:
 
 

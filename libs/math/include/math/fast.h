@@ -17,12 +17,13 @@
 #ifndef TNT_MATH_FAST_H
 #define TNT_MATH_FAST_H
 
-#include <cmath>
-#include <cstdint>
-#include <type_traits>
-
 #include <math/compiler.h>
 #include <math/scalar.h>
+
+#include <cmath>
+#include <type_traits>
+
+#include <stdint.h>
 
 #ifdef __ARM_NEON
 #include <arm_neon.h>

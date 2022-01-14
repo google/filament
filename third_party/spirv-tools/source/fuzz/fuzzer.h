@@ -62,7 +62,8 @@ class Fuzzer {
          const std::vector<fuzzerutil::ModuleSupplier>& donor_suppliers,
          bool enable_all_passes, RepeatedPassStrategy repeated_pass_strategy,
          bool validate_after_each_fuzzer_pass,
-         spv_validator_options validator_options);
+         spv_validator_options validator_options,
+         bool ignore_inapplicable_transformations = true);
 
   // Disables copy/move constructor/assignment operations.
   Fuzzer(const Fuzzer&) = delete;
@@ -187,6 +188,12 @@ class Fuzzer {
   // Some passes that it does not make sense to apply repeatedly, as they do not
   // unlock other passes.
   std::vector<std::unique_ptr<FuzzerPass>> final_passes_;
+
+  // When set, this flag causes inapplicable transformations that should be
+  // applicable by construction to be ignored. This is useful when the fuzzer
+  // is being deployed at scale to test a SPIR-V processing tool, and where it
+  // is desirable to ignore bugs in the fuzzer itself.
+  const bool ignore_inapplicable_transformations_;
 };
 
 }  // namespace fuzz

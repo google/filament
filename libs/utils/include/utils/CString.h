@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_CSTRING_H
-#define TNT_FILAMENT_CSTRING_H
+#ifndef TNT_UTILS_CSTRING_H
+#define TNT_UTILS_CSTRING_H
 
 // NOTE: this header should not include STL headers
 
@@ -390,4 +390,4 @@ struct hash<utils::StaticString> {
 
 } // namespace std
 
-#endif // TNT_FILAMENT_CSTRING_H
+#endif // TNT_UTILS_CSTRING_H

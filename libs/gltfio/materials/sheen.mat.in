@@ -5,9 +5,11 @@ material {
     blending : fade,
     depthWrite : true,
     doubleSided : ${DOUBLESIDED},
+    transparency : ${TRANSPARENCY},
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
+    reflections : screenspace,
     parameters : [
 
         // Base Color

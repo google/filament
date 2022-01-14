@@ -733,7 +733,6 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     // Declare a small mask of bits that will later be OR'd into the texture's resolve mask.
     TargetBufferFlags resolveFlags = {};
 
-    GLTexture* pAttachmentTexture = nullptr;
     switch (attachment) {
         case GL_COLOR_ATTACHMENT0:
         case GL_COLOR_ATTACHMENT1:
@@ -745,26 +744,20 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         case GL_COLOR_ATTACHMENT7:
             static_assert(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT == 8);
             resolveFlags = getTargetBufferFlagsAt(attachment - GL_COLOR_ATTACHMENT0);
-            pAttachmentTexture = rt->gl.color[attachment - GL_COLOR_ATTACHMENT0];
             break;
         case GL_DEPTH_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
-            pAttachmentTexture = rt->gl.depth;
             break;
         case GL_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::STENCIL;
-            pAttachmentTexture = rt->gl.stencil;
             break;
         case GL_DEPTH_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
             resolveFlags |= TargetBufferFlags::STENCIL;
-            pAttachmentTexture = rt->gl.depth;
             break;
         default:
             break;
     }
-
-    assert_invariant(pAttachmentTexture);
 
     // depth/stencil attachment must match the rendertarget sample count
     // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
@@ -903,22 +896,22 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         // The sidecar will be destroyed when the render target handle is destroyed.
 
         assert_invariant(rt->gl.samples > 1);
-        assert_invariant(pAttachmentTexture);
 
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-        if (UTILS_UNLIKELY(pAttachmentTexture->gl.sidecarRenderBufferMS == 0 ||
-                rt->gl.samples != pAttachmentTexture->gl.sidecarSamples)) {
-            if (pAttachmentTexture->gl.sidecarRenderBufferMS == 0) {
-                glGenRenderbuffers(1, &pAttachmentTexture->gl.sidecarRenderBufferMS);
+        if (UTILS_UNLIKELY(t->gl.sidecarRenderBufferMS == 0 ||
+                rt->gl.samples != t->gl.sidecarSamples))
+        {
+            if (t->gl.sidecarRenderBufferMS == 0) {
+                glGenRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
             }
-            renderBufferStorage(pAttachmentTexture->gl.sidecarRenderBufferMS,
-                    t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
-            pAttachmentTexture->gl.sidecarSamples = rt->gl.samples;
+            renderBufferStorage(t->gl.sidecarRenderBufferMS,
+                    t->gl.internalFormat, t->width, t->height, rt->gl.samples);
+            t->gl.sidecarSamples = rt->gl.samples;
         }
 
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER,
-                pAttachmentTexture->gl.sidecarRenderBufferMS);
+                t->gl.sidecarRenderBufferMS);
 
         // Here we lazily create a "read" sidecar FBO, used later as the resolve target. Note that
         // at least one of the render target's attachments needs to be both MSAA and sampleable in
@@ -1367,13 +1360,14 @@ Handle<HwStream> OpenGLDriver::createStreamAcquired() {
 // called only once per frame. If the user pushes images to the same stream multiple times in a
 // single frame, we emit a warning and honor only the final image, but still invoke all callbacks.
 void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
-        backend::StreamCallback cb, void* userData) {
+        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
     GLStream* glstream = handle_cast<GLStream*>(sh);
     if (glstream->user_thread.pending.image) {
-        scheduleRelease(std::move(glstream->user_thread.pending));
+        scheduleRelease(glstream->user_thread.pending);
         slog.w << "Acquired image is set more than once per frame." << io::endl;
     }
-    glstream->user_thread.pending = mPlatform.transformAcquiredImage({hwbuffer, cb, userData});
+    glstream->user_thread.pending = mPlatform.transformAcquiredImage({
+            hwbuffer, cb, userData, handler });
 }
 
 void OpenGLDriver::updateStreams(DriverApi* driver) {
@@ -1559,8 +1553,20 @@ bool OpenGLDriver::isFrameBufferFetchSupported() {
     return gl.ext.EXT_shader_framebuffer_fetch;
 }
 
+bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
+    return isFrameBufferFetchSupported();
+}
+
 bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
+}
+
+bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
+    switch (workaround) {
+        case Workaround::SPLIT_EASU:
+            return mContext.bugs.split_easu;
+    }
+    return false;
 }
 
 math::float2 OpenGLDriver::getClipSpaceParams() {
@@ -1801,10 +1807,12 @@ void OpenGLDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     DEBUG_MARKER()
 
     GLTexture* t = handle_cast<GLTexture *>(th);
+    auto width = std::max(1u, t->width >> level);
+    auto height = std::max(1u, t->height >> level);
     if (data.type == PixelDataType::COMPRESSED) {
-        setCompressedTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
+        setCompressedTextureData(t, level, 0, 0, 0, width, height, 0, std::move(data), &faceOffsets);
     } else {
-        setTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
+        setTextureData(t, level, 0, 0, 0, width, height, 0, std::move(data), &faceOffsets);
     }
 }
 
@@ -1901,7 +1909,7 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             for (size_t face = 0; face < 6; face++) {
                 GLenum target = getCubemapTarget(TextureCubemapFace(face));
                 glTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, glFormat, glType,
+                        width, height, glFormat, glType,
                         static_cast<uint8_t const*>(p.buffer) + offsets[face]);
             }
             break;
@@ -1932,8 +1940,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert_invariant(xoffset + width <= t->width >> level);
-    assert_invariant(yoffset + height <= t->height >> level);
+    assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
+    assert_invariant(yoffset + height <= std::max(1u, t->height >> level));
     assert_invariant(zoffset + depth <= t->depth);
     assert_invariant(t->samples <= 1);
 
@@ -1986,7 +1994,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             for (size_t face = 0; face < 6; face++) {
                 GLenum target = getCubemapTarget(TextureCubemapFace(face));
                 glCompressedTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, t->gl.internalFormat,
+                        width, height, t->gl.internalFormat,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
             }
             break;
@@ -2232,6 +2240,13 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             }
             CHECK_GL_ERROR(utils::slog.e)
         }
+    } else {
+        // on GL desktop we assume we don't have glInvalidateFramebuffer, but even if the GPU is
+        // not a tiler, it's important to clear the framebuffer before drawing, as it resets
+        // the fb to a known state (resets fb compression and possibly other things).
+        // So we use glClear instead of glInvalidateFramebuffer
+        gl.disable(GL_SCISSOR_TEST);
+        clearWithRasterPipe(discardFlags & ~clearFlags, { 0.0f }, 0.0f, 0);
     }
 
     if (rt->gl.fbo_read) {
@@ -2262,8 +2277,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
-    mContext.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-    mContext.disable(GL_SCISSOR_TEST);
+    gl.disable(GL_SCISSOR_TEST);
     clearWithRasterPipe(discardFlags & ~clearFlags,
             { 1, 0, 0, 1 }, 1.0, 0);
 #endif
@@ -2292,11 +2306,15 @@ void OpenGLDriver::endRenderPass(int) {
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES30_HEADERS) {
+        auto effectiveDiscardFlags = discardFlags;
+        if (gl.bugs.invalidate_end_only_if_invalidate_start) {
+            effectiveDiscardFlags &= mRenderPassParams.flags.discardStart;
+        }
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            GLsizei attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
@@ -2743,7 +2761,7 @@ void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 #endif
 }
 
-void OpenGLDriver::pushGroupMarker(char const* string,  uint32_t len) {
+void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
@@ -2827,6 +2845,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     glBufferData(GL_PIXEL_PACK_BUFFER, p.size, nullptr, GL_STATIC_DRAW);
     glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, nullptr);
     gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    CHECK_GL_ERROR(utils::slog.e)
 
     // we're forced to make a copy on the heap because otherwise it deletes std::function<> copy
     // constructor.
@@ -2858,8 +2877,6 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         delete pUserBuffer;
         CHECK_GL_ERROR(utils::slog.e)
     });
-
-    CHECK_GL_ERROR(utils::slog.e)
 }
 
 void OpenGLDriver::whenGpuCommandsComplete(std::function<void()> fn) noexcept {
@@ -3003,6 +3020,18 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
     }
     if (any(clearFlags & TargetBufferFlags::COLOR3)) {
         glClearBufferfv(GL_COLOR, 3, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR4)) {
+        glClearBufferfv(GL_COLOR, 4, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR5)) {
+        glClearBufferfv(GL_COLOR, 5, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR6)) {
+        glClearBufferfv(GL_COLOR, 6, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR7)) {
+        glClearBufferfv(GL_COLOR, 7, linearColor.v);
     }
 
     if ((clearFlags & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {

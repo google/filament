@@ -35,6 +35,8 @@
 #include <math/mat4.h>
 #include <math/vec3.h>
 
+#include <vector>
+
 namespace filagui {
     class ImGuiHelper;
 }
@@ -177,7 +179,10 @@ public:
      * Enables hardware-based MSAA antialiasing.
      * Defaults to true.
      */
-    void enableMsaa(bool b) { mSettings.view.sampleCount = b ? 4 : 1; }
+    void enableMsaa(bool b) {
+        mSettings.view.msaa.sampleCount = 4;
+        mSettings.view.msaa.enabled = b;
+    }
 
     /**
      * Enables screen-space ambient occlusion in the post-process pipeline.
@@ -238,6 +243,7 @@ private:
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;
+    std::vector<float> mMorphWeights;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).
     int mCurrentCamera = 0;

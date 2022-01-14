@@ -47,7 +47,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(uint8_t variantKey) noe
             .add("iblSpecular",   Type::SAMPLER_CUBEMAP,    Format::FLOAT,   Precision::MEDIUM)
             .add("ssao",          Type::SAMPLER_2D_ARRAY,   Format::FLOAT,   Precision::MEDIUM)
             .add("ssr",           Type::SAMPLER_2D,         Format::FLOAT,   Precision::MEDIUM)
-            .add("structure",     Type::SAMPLER_2D,         Format::FLOAT,   Precision::MEDIUM)
+            .add("structure",     Type::SAMPLER_2D,         Format::FLOAT,   Precision::HIGH)
             .build();
     };
 
@@ -66,12 +66,27 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(uint8_t variantKey) noe
     return v.hasVsm() ? sibVsm : sibPcf;
 }
 
+SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(uint8_t variantKey) noexcept {
+    using Type = SamplerInterfaceBlock::Type;
+    using Format = SamplerInterfaceBlock::Format;
+    using Precision = SamplerInterfaceBlock::Precision;
+
+    static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
+            .name("Morphing")
+            .add("targets", Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH)
+            .build();
+
+    return sib;
+}
+
 SamplerInterfaceBlock const* SibGenerator::getSib(uint8_t bindingPoint, uint8_t variantKey) noexcept {
     switch (bindingPoint) {
         case BindingPoints::PER_VIEW:
             return &getPerViewSib(variantKey);
         case BindingPoints::PER_RENDERABLE:
             return nullptr;
+        case BindingPoints::PER_RENDERABLE_MORPHING:
+            return &getPerRenderPrimitiveMorphingSib(variantKey);
         case BindingPoints::LIGHTS:
             return nullptr;
         default:

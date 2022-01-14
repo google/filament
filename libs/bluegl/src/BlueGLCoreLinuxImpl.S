@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6592 +19,10 @@
  * DO NOT EDIT
  **********************************************************************************************/
 
-.global glMultiDrawArraysIndirectBindlessCountNV
-.type glMultiDrawArraysIndirectBindlessCountNV, %function
-glMultiDrawArraysIndirectBindlessCountNV:
-    mov __blue_glCore_glMultiDrawArraysIndirectBindlessCountNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexImage1D
-.type glCopyTexImage1D, %function
-glCopyTexImage1D:
-    mov __blue_glCore_glCopyTexImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetListParameterivSGIX
-.type glGetListParameterivSGIX, %function
-glGetListParameterivSGIX:
-    mov __blue_glCore_glGetListParameterivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1i64ARB
-.type glProgramUniform1i64ARB, %function
-glProgramUniform1i64ARB:
-    mov __blue_glCore_glProgramUniform1i64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayElementBuffer
-.type glVertexArrayElementBuffer, %function
-glVertexArrayElementBuffer:
-    mov __blue_glCore_glVertexArrayElementBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glHintPGI
-.type glHintPGI, %function
-glHintPGI:
-    mov __blue_glCore_glHintPGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilMaskSeparate
-.type glStencilMaskSeparate, %function
-glStencilMaskSeparate:
-    mov __blue_glCore_glStencilMaskSeparate@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFramebufferAttachmentParameterivEXT
-.type glGetFramebufferAttachmentParameterivEXT, %function
-glGetFramebufferAttachmentParameterivEXT:
-    mov __blue_glCore_glGetFramebufferAttachmentParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage3DMultisample
-.type glTextureStorage3DMultisample, %function
-glTextureStorage3DMultisample:
-    mov __blue_glCore_glTextureStorage3DMultisample@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetIntegerIndexedvEXT
-.type glGetIntegerIndexedvEXT, %function
-glGetIntegerIndexedvEXT:
-    mov __blue_glCore_glGetIntegerIndexedvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterfv
-.type glTextureParameterfv, %function
-glTextureParameterfv:
-    mov __blue_glCore_glTextureParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexRenderbufferNV
-.type glTexRenderbufferNV, %function
-glTexRenderbufferNV:
-    mov __blue_glCore_glTexRenderbufferNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFrustumxOES
-.type glFrustumxOES, %function
-glFrustumxOES:
-    mov __blue_glCore_glFrustumxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4ui64ARB
-.type glProgramUniform4ui64ARB, %function
-glProgramUniform4ui64ARB:
-    mov __blue_glCore_glProgramUniform4ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInstrumentsBufferSGIX
-.type glInstrumentsBufferSGIX, %function
-glInstrumentsBufferSGIX:
-    mov __blue_glCore_glInstrumentsBufferSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2sARB
-.type glMultiTexCoord2sARB, %function
-glMultiTexCoord2sARB:
-    mov __blue_glCore_glMultiTexCoord2sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameter4fARB
-.type glProgramEnvParameter4fARB, %function
-glProgramEnvParameter4fARB:
-    mov __blue_glCore_glProgramEnvParameter4fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexSubImage3D
-.type glCompressedTexSubImage3D, %function
-glCompressedTexSubImage3D:
-    mov __blue_glCore_glCompressedTexSubImage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordP3uiv
-.type glTexCoordP3uiv, %function
-glTexCoordP3uiv:
-    mov __blue_glCore_glTexCoordP3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3hvNV
-.type glSecondaryColor3hvNV, %function
-glSecondaryColor3hvNV:
-    mov __blue_glCore_glSecondaryColor3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage3DEXT
-.type glTextureStorage3DEXT, %function
-glTextureStorage3DEXT:
-    mov __blue_glCore_glTextureStorage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4uiEXT
-.type glUniform4uiEXT, %function
-glUniform4uiEXT:
-    mov __blue_glCore_glUniform4uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3ui64ARB
-.type glProgramUniform3ui64ARB, %function
-glProgramUniform3ui64ARB:
-    mov __blue_glCore_glProgramUniform3ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayBindVertexBufferEXT
-.type glVertexArrayBindVertexBufferEXT, %function
-glVertexArrayBindVertexBufferEXT:
-    mov __blue_glCore_glVertexArrayBindVertexBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3uiEXT
-.type glUniform3uiEXT, %function
-glUniform3uiEXT:
-    mov __blue_glCore_glUniform3uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3uivEXT
-.type glVertexAttribI3uivEXT, %function
-glVertexAttribI3uivEXT:
-    mov __blue_glCore_glVertexAttribI3uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMapfv
-.type glGetnMapfv, %function
-glGetnMapfv:
-    mov __blue_glCore_glGetnMapfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformFeedbackBufferRange
-.type glTransformFeedbackBufferRange, %function
-glTransformFeedbackBufferRange:
-    mov __blue_glCore_glTransformFeedbackBufferRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathGlyphsNV
-.type glPathGlyphsNV, %function
-glPathGlyphsNV:
-    mov __blue_glCore_glPathGlyphsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3fv
-.type glSecondaryColor3fv, %function
-glSecondaryColor3fv:
-    mov __blue_glCore_glSecondaryColor3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCombinerInputParameterivNV
-.type glGetCombinerInputParameterivNV, %function
-glGetCombinerInputParameterivNV:
-    mov __blue_glCore_glGetCombinerInputParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndPerfMonitorAMD
-.type glEndPerfMonitorAMD, %function
-glEndPerfMonitorAMD:
-    mov __blue_glCore_glEndPerfMonitorAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexP4ui
-.type glVertexP4ui, %function
-glVertexP4ui:
-    mov __blue_glCore_glVertexP4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementsInstancedBaseInstance
-.type glDrawElementsInstancedBaseInstance, %function
-glDrawElementsInstancedBaseInstance:
-    mov __blue_glCore_glDrawElementsInstancedBaseInstance@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultTransposeMatrixdARB
-.type glMultTransposeMatrixdARB, %function
-glMultTransposeMatrixdARB:
-    mov __blue_glCore_glMultTransposeMatrixdARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4dEXT
-.type glVertexAttribL4dEXT, %function
-glVertexAttribL4dEXT:
-    mov __blue_glCore_glVertexAttribL4dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureParameterivEXT
-.type glGetTextureParameterivEXT, %function
-glGetTextureParameterivEXT:
-    mov __blue_glCore_glGetTextureParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCoverStrokePathInstancedNV
-.type glCoverStrokePathInstancedNV, %function
-glCoverStrokePathInstancedNV:
-    mov __blue_glCore_glCoverStrokePathInstancedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeformSGIX
-.type glDeformSGIX, %function
-glDeformSGIX:
-    mov __blue_glCore_glDeformSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2ui64NV
-.type glUniform2ui64NV, %function
-glUniform2ui64NV:
-    mov __blue_glCore_glUniform2ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyPathNV
-.type glCopyPathNV, %function
-glCopyPathNV:
-    mov __blue_glCore_glCopyPathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP4ui
-.type glVertexAttribP4ui, %function
-glVertexAttribP4ui:
-    mov __blue_glCore_glVertexAttribP4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsBuffer
-.type glIsBuffer, %function
-glIsBuffer:
-    mov __blue_glCore_glIsBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultisamplefv
-.type glGetMultisamplefv, %function
-glGetMultisamplefv:
-    mov __blue_glCore_glGetMultisamplefv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedMultiTexSubImage3DEXT
-.type glCompressedMultiTexSubImage3DEXT, %function
-glCompressedMultiTexSubImage3DEXT:
-    mov __blue_glCore_glCompressedMultiTexSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAURegisterOutputSurfaceNV
-.type glVDPAURegisterOutputSurfaceNV, %function
-glVDPAURegisterOutputSurfaceNV:
-    mov __blue_glCore_glVDPAURegisterOutputSurfaceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4fv
-.type glProgramUniformMatrix4fv, %function
-glProgramUniformMatrix4fv:
-    mov __blue_glCore_glProgramUniformMatrix4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4fEXT
-.type glProgramUniform4fEXT, %function
-glProgramUniform4fEXT:
-    mov __blue_glCore_glProgramUniform4fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCoverStrokePathNV
-.type glCoverStrokePathNV, %function
-glCoverStrokePathNV:
-    mov __blue_glCore_glCoverStrokePathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureImage2DMultisampleNV
-.type glTextureImage2DMultisampleNV, %function
-glTextureImage2DMultisampleNV:
-    mov __blue_glCore_glTextureImage2DMultisampleNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex3bOES
-.type glVertex3bOES, %function
-glVertex3bOES:
-    mov __blue_glCore_glVertex3bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTessellationFactorAMD
-.type glTessellationFactorAMD, %function
-glTessellationFactorAMD:
-    mov __blue_glCore_glTessellationFactorAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageControl
-.type glDebugMessageControl, %function
-glDebugMessageControl:
-    mov __blue_glCore_glDebugMessageControl@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsObjectBufferATI
-.type glIsObjectBufferATI, %function
-glIsObjectBufferATI:
-    mov __blue_glCore_glIsObjectBufferATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4iEXT
-.type glProgramUniform4iEXT, %function
-glProgramUniform4iEXT:
-    mov __blue_glCore_glProgramUniform4iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4ubNV
-.type glVertexAttrib4ubNV, %function
-glVertexAttrib4ubNV:
-    mov __blue_glCore_glVertexAttrib4ubNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2svARB
-.type glVertexAttrib2svARB, %function
-glVertexAttrib2svARB:
-    mov __blue_glCore_glVertexAttrib2svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMinSampleShadingARB
-.type glMinSampleShadingARB, %function
-glMinSampleShadingARB:
-    mov __blue_glCore_glMinSampleShadingARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSpriteParameteriSGIX
-.type glSpriteParameteriSGIX, %function
-glSpriteParameteriSGIX:
-    mov __blue_glCore_glSpriteParameteriSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentMaterialfSGIX
-.type glFragmentMaterialfSGIX, %function
-glFragmentMaterialfSGIX:
-    mov __blue_glCore_glFragmentMaterialfSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUGetSurfaceivNV
-.type glVDPAUGetSurfaceivNV, %function
-glVDPAUGetSurfaceivNV:
-    mov __blue_glCore_glVDPAUGetSurfaceivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMapiv
-.type glGetnMapiv, %function
-glGetnMapiv:
-    mov __blue_glCore_glGetnMapiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInternalformatSampleivNV
-.type glGetInternalformatSampleivNV, %function
-glGetInternalformatSampleivNV:
-    mov __blue_glCore_glGetInternalformatSampleivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4ubv
-.type glVertexAttrib4ubv, %function
-glVertexAttrib4ubv:
-    mov __blue_glCore_glVertexAttrib4ubv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBufferParameteriv
-.type glGetBufferParameteriv, %function
-glGetBufferParameteriv:
-    mov __blue_glCore_glGetBufferParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs4hvNV
-.type glVertexAttribs4hvNV, %function
-glVertexAttribs4hvNV:
-    mov __blue_glCore_glVertexAttribs4hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4NubvARB
-.type glVertexAttrib4NubvARB, %function
-glVertexAttrib4NubvARB:
-    mov __blue_glCore_glVertexAttrib4NubvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3hvNV
-.type glMultiTexCoord3hvNV, %function
-glMultiTexCoord3hvNV:
-    mov __blue_glCore_glMultiTexCoord3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixPushEXT
-.type glMatrixPushEXT, %function
-glMatrixPushEXT:
-    mov __blue_glCore_glMatrixPushEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2fEXT
-.type glProgramUniform2fEXT, %function
-glProgramUniform2fEXT:
-    mov __blue_glCore_glProgramUniform2fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawElementsIndirectBindlessNV
-.type glMultiDrawElementsIndirectBindlessNV, %function
-glMultiDrawElementsIndirectBindlessNV:
-    mov __blue_glCore_glMultiDrawElementsIndirectBindlessNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlitFramebuffer
-.type glBlitFramebuffer, %function
-glBlitFramebuffer:
-    mov __blue_glCore_glBlitFramebuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP2ui
-.type glMultiTexCoordP2ui, %function
-glMultiTexCoordP2ui:
-    mov __blue_glCore_glMultiTexCoordP2ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorPointerListIBM
-.type glColorPointerListIBM, %function
-glColorPointerListIBM:
-    mov __blue_glCore_glColorPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4d
-.type glVertexAttribL4d, %function
-glVertexAttribL4d:
-    mov __blue_glCore_glVertexAttribL4d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFragmentMaterialfvSGIX
-.type glGetFragmentMaterialfvSGIX, %function
-glGetFragmentMaterialfvSGIX:
-    mov __blue_glCore_glGetFragmentMaterialfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramLocalParameterIuivNV
-.type glGetProgramLocalParameterIuivNV, %function
-glGetProgramLocalParameterIuivNV:
-    mov __blue_glCore_glGetProgramLocalParameterIuivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexEnvxvOES
-.type glGetTexEnvxvOES, %function
-glGetTexEnvxvOES:
-    mov __blue_glCore_glGetTexEnvxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix3dv
-.type glUniformMatrix3dv, %function
-glUniformMatrix3dv:
-    mov __blue_glCore_glUniformMatrix3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribLdvEXT
-.type glGetVertexAttribLdvEXT, %function
-glGetVertexAttribLdvEXT:
-    mov __blue_glCore_glGetVertexAttribLdvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateBufferSubData
-.type glInvalidateBufferSubData, %function
-glInvalidateBufferSubData:
-    mov __blue_glCore_glInvalidateBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResumeTransformFeedback
-.type glResumeTransformFeedback, %function
-glResumeTransformFeedback:
-    mov __blue_glCore_glResumeTransformFeedback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInsertEventMarkerEXT
-.type glInsertEventMarkerEXT, %function
-glInsertEventMarkerEXT:
-    mov __blue_glCore_glInsertEventMarkerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTessellationModeAMD
-.type glTessellationModeAMD, %function
-glTessellationModeAMD:
-    mov __blue_glCore_glTessellationModeAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFinishAsyncSGIX
-.type glFinishAsyncSGIX, %function
-glFinishAsyncSGIX:
-    mov __blue_glCore_glFinishAsyncSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfMonitorCounterDataAMD
-.type glGetPerfMonitorCounterDataAMD, %function
-glGetPerfMonitorCounterDataAMD:
-    mov __blue_glCore_glGetPerfMonitorCounterDataAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1d
-.type glMultiTexCoord1d, %function
-glMultiTexCoord1d:
-    mov __blue_glCore_glMultiTexCoord1d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1f
-.type glMultiTexCoord1f, %function
-glMultiTexCoord1f:
-    mov __blue_glCore_glMultiTexCoord1f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexParameterivEXT
-.type glGetMultiTexParameterivEXT, %function
-glGetMultiTexParameterivEXT:
-    mov __blue_glCore_glGetMultiTexParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x4fvEXT
-.type glProgramUniformMatrix3x4fvEXT, %function
-glProgramUniformMatrix3x4fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix3x4fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI2i
-.type glVertexAttribI2i, %function
-glVertexAttribI2i:
-    mov __blue_glCore_glVertexAttribI2i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1i
-.type glMultiTexCoord1i, %function
-glMultiTexCoord1i:
-    mov __blue_glCore_glMultiTexCoord1i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeTextureHandleResidentARB
-.type glMakeTextureHandleResidentARB, %function
-glMakeTextureHandleResidentARB:
-    mov __blue_glCore_glMakeTextureHandleResidentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadProgramNV
-.type glLoadProgramNV, %function
-glLoadProgramNV:
-    mov __blue_glCore_glLoadProgramNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWriteMaskEXT
-.type glWriteMaskEXT, %function
-glWriteMaskEXT:
-    mov __blue_glCore_glWriteMaskEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetGraphicsResetStatus
-.type glGetGraphicsResetStatus, %function
-glGetGraphicsResetStatus:
-    mov __blue_glCore_glGetGraphicsResetStatus@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsEnabled
-.type glIsEnabled, %function
-glIsEnabled:
-    mov __blue_glCore_glIsEnabled@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilOp
-.type glStencilOp, %function
-glStencilOp:
-    mov __blue_glCore_glStencilOp@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTexture2D
-.type glFramebufferTexture2D, %function
-glFramebufferTexture2D:
-    mov __blue_glCore_glFramebufferTexture2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFragmentLightfvSGIX
-.type glGetFragmentLightfvSGIX, %function
-glGetFragmentLightfvSGIX:
-    mov __blue_glCore_glGetFragmentLightfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glListParameterfSGIX
-.type glListParameterfSGIX, %function
-glListParameterfSGIX:
-    mov __blue_glCore_glListParameterfSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapNamedBufferRange
-.type glMapNamedBufferRange, %function
-glMapNamedBufferRange:
-    mov __blue_glCore_glMapNamedBufferRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferRenderbufferEXT
-.type glNamedFramebufferRenderbufferEXT, %function
-glNamedFramebufferRenderbufferEXT:
-    mov __blue_glCore_glNamedFramebufferRenderbufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightModelfSGIX
-.type glFragmentLightModelfSGIX, %function
-glFragmentLightModelfSGIX:
-    mov __blue_glCore_glFragmentLightModelfSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIndexPointerEXT
-.type glIndexPointerEXT, %function
-glIndexPointerEXT:
-    mov __blue_glCore_glIndexPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayAttribIFormat
-.type glVertexArrayAttribIFormat, %function
-glVertexArrayAttribIFormat:
-    mov __blue_glCore_glVertexArrayAttribIFormat@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN
-.type glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN, %function
-glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeubvSUN
-.type glReplacementCodeubvSUN, %function
-glReplacementCodeubvSUN:
-    mov __blue_glCore_glReplacementCodeubvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenFramebuffers
-.type glGenFramebuffers, %function
-glGenFramebuffers:
-    mov __blue_glCore_glGenFramebuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelMapx
-.type glPixelMapx, %function
-glPixelMapx:
-    mov __blue_glCore_glPixelMapx@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexSubImage3DEXT
-.type glTexSubImage3DEXT, %function
-glTexSubImage3DEXT:
-    mov __blue_glCore_glTexSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetAttachedShaders
-.type glGetAttachedShaders, %function
-glGetAttachedShaders:
-    mov __blue_glCore_glGetAttachedShaders@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPixelTexGenParameterfvSGIS
-.type glGetPixelTexGenParameterfvSGIS, %function
-glGetPixelTexGenParameterfvSGIS:
-    mov __blue_glCore_glGetPixelTexGenParameterfvSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameters4fvEXT
-.type glProgramLocalParameters4fvEXT, %function
-glProgramLocalParameters4fvEXT:
-    mov __blue_glCore_glProgramLocalParameters4fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetDebugMessageLogAMD
-.type glGetDebugMessageLogAMD, %function
-glGetDebugMessageLogAMD:
-    mov __blue_glCore_glGetDebugMessageLogAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4sATI
-.type glVertexStream4sATI, %function
-glVertexStream4sATI:
-    mov __blue_glCore_glVertexStream4sATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteVertexArrays
-.type glDeleteVertexArrays, %function
-glDeleteVertexArrays:
-    mov __blue_glCore_glDeleteVertexArrays@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMapdvARB
-.type glGetnMapdvARB, %function
-glGetnMapdvARB:
-    mov __blue_glCore_glGetnMapdvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glOrthofOES
-.type glOrthofOES, %function
-glOrthofOES:
-    mov __blue_glCore_glOrthofOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glViewportArrayv
-.type glViewportArrayv, %function
-glViewportArrayv:
-    mov __blue_glCore_glViewportArrayv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementArrayATI
-.type glDrawElementArrayATI, %function
-glDrawElementArrayATI:
-    mov __blue_glCore_glDrawElementArrayATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathColorGenfvNV
-.type glGetPathColorGenfvNV, %function
-glGetPathColorGenfvNV:
-    mov __blue_glCore_glGetPathColorGenfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3iMESA
-.type glWindowPos3iMESA, %function
-glWindowPos3iMESA:
-    mov __blue_glCore_glWindowPos3iMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4ubVertex2fSUN
-.type glColor4ubVertex2fSUN, %function
-glColor4ubVertex2fSUN:
-    mov __blue_glCore_glColor4ubVertex2fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fColor3fVertex3fSUN
-.type glTexCoord2fColor3fVertex3fSUN, %function
-glTexCoord2fColor3fVertex3fSUN:
-    mov __blue_glCore_glTexCoord2fColor3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3ui64ARB
-.type glUniform3ui64ARB, %function
-glUniform3ui64ARB:
-    mov __blue_glCore_glUniform3ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3ubvEXT
-.type glSecondaryColor3ubvEXT, %function
-glSecondaryColor3ubvEXT:
-    mov __blue_glCore_glSecondaryColor3ubvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferSubDataEXT
-.type glGetNamedBufferSubDataEXT, %function
-glGetNamedBufferSubDataEXT:
-    mov __blue_glCore_glGetNamedBufferSubDataEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionFilter2D
-.type glConvolutionFilter2D, %function
-glConvolutionFilter2D:
-    mov __blue_glCore_glConvolutionFilter2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMemoryBarrierByRegion
-.type glMemoryBarrierByRegion, %function
-glMemoryBarrierByRegion:
-    mov __blue_glCore_glMemoryBarrierByRegion@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fNormal3fVertex3fSUN
-.type glTexCoord2fNormal3fVertex3fSUN, %function
-glTexCoord2fNormal3fVertex3fSUN:
-    mov __blue_glCore_glTexCoord2fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixRotatedEXT
-.type glMatrixRotatedEXT, %function
-glMatrixRotatedEXT:
-    mov __blue_glCore_glMatrixRotatedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsProgramNV
-.type glIsProgramNV, %function
-glIsProgramNV:
-    mov __blue_glCore_glIsProgramNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2dv
-.type glUniform2dv, %function
-glUniform2dv:
-    mov __blue_glCore_glUniform2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthBoundsEXT
-.type glDepthBoundsEXT, %function
-glDepthBoundsEXT:
-    mov __blue_glCore_glDepthBoundsEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4hvNV
-.type glVertexAttrib4hvNV, %function
-glVertexAttrib4hvNV:
-    mov __blue_glCore_glVertexAttrib4hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorFragmentOp1ATI
-.type glColorFragmentOp1ATI, %function
-glColorFragmentOp1ATI:
-    mov __blue_glCore_glColorFragmentOp1ATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPointerv
-.type glGetPointerv, %function
-glGetPointerv:
-    mov __blue_glCore_glGetPointerv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexBindingDivisor
-.type glVertexBindingDivisor, %function
-glVertexBindingDivisor:
-    mov __blue_glCore_glVertexBindingDivisor@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformfv
-.type glGetUniformfv, %function
-glGetUniformfv:
-    mov __blue_glCore_glGetUniformfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformuiv
-.type glGetUniformuiv, %function
-glGetUniformuiv:
-    mov __blue_glCore_glGetUniformuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3ivMESA
-.type glWindowPos3ivMESA, %function
-glWindowPos3ivMESA:
-    mov __blue_glCore_glWindowPos3ivMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformfvARB
-.type glGetnUniformfvARB, %function
-glGetnUniformfvARB:
-    mov __blue_glCore_glGetnUniformfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glArrayObjectATI
-.type glArrayObjectATI, %function
-glArrayObjectATI:
-    mov __blue_glCore_glArrayObjectATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearColorxOES
-.type glClearColorxOES, %function
-glClearColorxOES:
-    mov __blue_glCore_glClearColorxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPNTrianglesiATI
-.type glPNTrianglesiATI, %function
-glPNTrianglesiATI:
-    mov __blue_glCore_glPNTrianglesiATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSampleMaskIndexedNV
-.type glSampleMaskIndexedNV, %function
-glSampleMaskIndexedNV:
-    mov __blue_glCore_glSampleMaskIndexedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompileShaderIncludeARB
-.type glCompileShaderIncludeARB, %function
-glCompileShaderIncludeARB:
-    mov __blue_glCore_glCompileShaderIncludeARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementsInstanced
-.type glDrawElementsInstanced, %function
-glDrawElementsInstanced:
-    mov __blue_glCore_glDrawElementsInstanced@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4svATI
-.type glVertexStream4svATI, %function
-glVertexStream4svATI:
-    mov __blue_glCore_glVertexStream4svATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4iARB
-.type glMultiTexCoord4iARB, %function
-glMultiTexCoord4iARB:
-    mov __blue_glCore_glMultiTexCoord4iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantfvEXT
-.type glVariantfvEXT, %function
-glVariantfvEXT:
-    mov __blue_glCore_glVariantfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoadfEXT
-.type glMatrixLoadfEXT, %function
-glMatrixLoadfEXT:
-    mov __blue_glCore_glMatrixLoadfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadIdentityDeformationMapSGIX
-.type glLoadIdentityDeformationMapSGIX, %function
-glLoadIdentityDeformationMapSGIX:
-    mov __blue_glCore_glLoadIdentityDeformationMapSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetRenderbufferParameteriv
-.type glGetRenderbufferParameteriv, %function
-glGetRenderbufferParameteriv:
-    mov __blue_glCore_glGetRenderbufferParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedRenderbufferStorage
-.type glNamedRenderbufferStorage, %function
-glNamedRenderbufferStorage:
-    mov __blue_glCore_glNamedRenderbufferStorage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramPathFragmentInputGenNV
-.type glProgramPathFragmentInputGenNV, %function
-glProgramPathFragmentInputGenNV:
-    mov __blue_glCore_glProgramPathFragmentInputGenNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordPointerListIBM
-.type glFogCoordPointerListIBM, %function
-glFogCoordPointerListIBM:
-    mov __blue_glCore_glFogCoordPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFenceSync
-.type glFenceSync, %function
-glFenceSync:
-    mov __blue_glCore_glFenceSync@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribIivEXT
-.type glGetVertexAttribIivEXT, %function
-glGetVertexAttribIivEXT:
-    mov __blue_glCore_glGetVertexAttribIivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferDrawBuffersEXT
-.type glFramebufferDrawBuffersEXT, %function
-glFramebufferDrawBuffersEXT:
-    mov __blue_glCore_glFramebufferDrawBuffersEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs4fvNV
-.type glVertexAttribs4fvNV, %function
-glVertexAttribs4fvNV:
-    mov __blue_glCore_glVertexAttribs4fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3sv
-.type glVertexAttrib3sv, %function
-glVertexAttrib3sv:
-    mov __blue_glCore_glVertexAttrib3sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjecti64vEXT
-.type glGetQueryObjecti64vEXT, %function
-glGetQueryObjecti64vEXT:
-    mov __blue_glCore_glGetQueryObjecti64vEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4uiEXT
-.type glProgramUniform4uiEXT, %function
-glProgramUniform4uiEXT:
-    mov __blue_glCore_glProgramUniform4uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glValidateProgramPipeline
-.type glValidateProgramPipeline, %function
-glValidateProgramPipeline:
-    mov __blue_glCore_glValidateProgramPipeline@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3hvNV
-.type glVertexAttrib3hvNV, %function
-glVertexAttrib3hvNV:
-    mov __blue_glCore_glVertexAttrib3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexPageCommitmentARB
-.type glTexPageCommitmentARB, %function
-glTexPageCommitmentARB:
-    mov __blue_glCore_glTexPageCommitmentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInstrumentsSGIX
-.type glGetInstrumentsSGIX, %function
-glGetInstrumentsSGIX:
-    mov __blue_glCore_glGetInstrumentsSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3dvARB
-.type glWindowPos3dvARB, %function
-glWindowPos3dvARB:
-    mov __blue_glCore_glWindowPos3dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilStrokePathInstancedNV
-.type glStencilStrokePathInstancedNV, %function
-glStencilStrokePathInstancedNV:
-    mov __blue_glCore_glStencilStrokePathInstancedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexEnvxvOES
-.type glTexEnvxvOES, %function
-glTexEnvxvOES:
-    mov __blue_glCore_glTexEnvxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2i64NV
-.type glProgramUniform2i64NV, %function
-glProgramUniform2i64NV:
-    mov __blue_glCore_glProgramUniform2i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex2xOES
-.type glVertex2xOES, %function
-glVertex2xOES:
-    mov __blue_glCore_glVertex2xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenSamplers
-.type glGenSamplers, %function
-glGenSamplers:
-    mov __blue_glCore_glGenSamplers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameterI4iNV
-.type glProgramEnvParameterI4iNV, %function
-glProgramEnvParameterI4iNV:
-    mov __blue_glCore_glProgramEnvParameterI4iNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs2fvNV
-.type glVertexAttribs2fvNV, %function
-glVertexAttribs2fvNV:
-    mov __blue_glCore_glVertexAttribs2fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawTransformFeedbackInstanced
-.type glDrawTransformFeedbackInstanced, %function
-glDrawTransformFeedbackInstanced:
-    mov __blue_glCore_glDrawTransformFeedbackInstanced@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilThenCoverStrokePathNV
-.type glStencilThenCoverStrokePathNV, %function
-glStencilThenCoverStrokePathNV:
-    mov __blue_glCore_glStencilThenCoverStrokePathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteVertexArraysAPPLE
-.type glDeleteVertexArraysAPPLE, %function
-glDeleteVertexArraysAPPLE:
-    mov __blue_glCore_glDeleteVertexArraysAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferParameterui64vNV
-.type glGetNamedBufferParameterui64vNV, %function
-glGetNamedBufferParameterui64vNV:
-    mov __blue_glCore_glGetNamedBufferParameterui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glQueryMatrixxOES
-.type glQueryMatrixxOES, %function
-glQueryMatrixxOES:
-    mov __blue_glCore_glQueryMatrixxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTranslatexOES
-.type glTranslatexOES, %function
-glTranslatexOES:
-    mov __blue_glCore_glTranslatexOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawTransformFeedback
-.type glDrawTransformFeedback, %function
-glDrawTransformFeedback:
-    mov __blue_glCore_glDrawTransformFeedback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fColor4fNormal3fVertex3fvSUN
-.type glTexCoord2fColor4fNormal3fVertex3fvSUN, %function
-glTexCoord2fColor4fNormal3fVertex3fvSUN:
-    mov __blue_glCore_glTexCoord2fColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAURegisterVideoSurfaceNV
-.type glVDPAURegisterVideoSurfaceNV, %function
-glVDPAURegisterVideoSurfaceNV:
-    mov __blue_glCore_glVDPAURegisterVideoSurfaceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameterIuiv
-.type glGetTexParameterIuiv, %function
-glGetTexParameterIuiv:
-    mov __blue_glCore_glGetTexParameterIuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2iATI
-.type glVertexStream2iATI, %function
-glVertexStream2iATI:
-    mov __blue_glCore_glVertexStream2iATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4Nbv
-.type glVertexAttrib4Nbv, %function
-glVertexAttrib4Nbv:
-    mov __blue_glCore_glVertexAttrib4Nbv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glListParameteriSGIX
-.type glListParameteriSGIX, %function
-glListParameteriSGIX:
-    mov __blue_glCore_glListParameteriSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendColorxOES
-.type glBlendColorxOES, %function
-glBlendColorxOES:
-    mov __blue_glCore_glBlendColorxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformui64vNV
-.type glUniformui64vNV, %function
-glUniformui64vNV:
-    mov __blue_glCore_glUniformui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsSync
-.type glIsSync, %function
-glIsSync:
-    mov __blue_glCore_glIsSync@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordhvNV
-.type glFogCoordhvNV, %function
-glFogCoordhvNV:
-    mov __blue_glCore_glFogCoordhvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureLayerEXT
-.type glFramebufferTextureLayerEXT, %function
-glFramebufferTextureLayerEXT:
-    mov __blue_glCore_glFramebufferTextureLayerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetObjectPtrLabel
-.type glGetObjectPtrLabel, %function
-glGetObjectPtrLabel:
-    mov __blue_glCore_glGetObjectPtrLabel@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameteri
-.type glTextureParameteri, %function
-glTextureParameteri:
-    mov __blue_glCore_glTextureParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterf
-.type glTextureParameterf, %function
-glTextureParameterf:
-    mov __blue_glCore_glTextureParameterf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix2x3dv
-.type glUniformMatrix2x3dv, %function
-glUniformMatrix2x3dv:
-    mov __blue_glCore_glUniformMatrix2x3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferDrawBufferEXT
-.type glFramebufferDrawBufferEXT, %function
-glFramebufferDrawBufferEXT:
-    mov __blue_glCore_glFramebufferDrawBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyColorSubTable
-.type glCopyColorSubTable, %function
-glCopyColorSubTable:
-    mov __blue_glCore_glCopyColorSubTable@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3d
-.type glVertexAttribL3d, %function
-glVertexAttribL3d:
-    mov __blue_glCore_glVertexAttribL3d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathParameterfNV
-.type glPathParameterfNV, %function
-glPathParameterfNV:
-    mov __blue_glCore_glPathParameterfNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoadTranspose3x3fNV
-.type glMatrixLoadTranspose3x3fNV, %function
-glMatrixLoadTranspose3x3fNV:
-    mov __blue_glCore_glMatrixLoadTranspose3x3fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2iv
-.type glWindowPos2iv, %function
-glWindowPos2iv:
-    mov __blue_glCore_glWindowPos2iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawRangeElementsEXT
-.type glDrawRangeElementsEXT, %function
-glDrawRangeElementsEXT:
-    mov __blue_glCore_glDrawRangeElementsEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4xOES
-.type glColor4xOES, %function
-glColor4xOES:
-    mov __blue_glCore_glColor4xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordd
-.type glFogCoordd, %function
-glFogCoordd:
-    mov __blue_glCore_glFogCoordd@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1ui
-.type glProgramUniform1ui, %function
-glProgramUniform1ui:
-    mov __blue_glCore_glProgramUniform1ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteBuffersARB
-.type glDeleteBuffersARB, %function
-glDeleteBuffersARB:
-    mov __blue_glCore_glDeleteBuffersARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUnmapBufferARB
-.type glUnmapBufferARB, %function
-glUnmapBufferARB:
-    mov __blue_glCore_glUnmapBufferARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexImage2D
-.type glCopyTexImage2D, %function
-glCopyTexImage2D:
-    mov __blue_glCore_glCopyTexImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMaterialxOES
-.type glMaterialxOES, %function
-glMaterialxOES:
-    mov __blue_glCore_glMaterialxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x4fvEXT
-.type glProgramUniformMatrix2x4fvEXT, %function
-glProgramUniformMatrix2x4fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix2x4fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTestObjectAPPLE
-.type glTestObjectAPPLE, %function
-glTestObjectAPPLE:
-    mov __blue_glCore_glTestObjectAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRenderbufferStorageEXT
-.type glRenderbufferStorageEXT, %function
-glRenderbufferStorageEXT:
-    mov __blue_glCore_glRenderbufferStorageEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1ui64ARB
-.type glVertexAttribL1ui64ARB, %function
-glVertexAttribL1ui64ARB:
-    mov __blue_glCore_glVertexAttribL1ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndFragmentShaderATI
-.type glEndFragmentShaderATI, %function
-glEndFragmentShaderATI:
-    mov __blue_glCore_glEndFragmentShaderATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathParameterivNV
-.type glPathParameterivNV, %function
-glPathParameterivNV:
-    mov __blue_glCore_glPathParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4uiv
-.type glUniform4uiv, %function
-glUniform4uiv:
-    mov __blue_glCore_glUniform4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFrameZoomSGIX
-.type glFrameZoomSGIX, %function
-glFrameZoomSGIX:
-    mov __blue_glCore_glFrameZoomSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3fEXT
-.type glSecondaryColor3fEXT, %function
-glSecondaryColor3fEXT:
-    mov __blue_glCore_glSecondaryColor3fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1dv
-.type glVertexAttribL1dv, %function
-glVertexAttribL1dv:
-    mov __blue_glCore_glVertexAttribL1dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3svATI
-.type glNormalStream3svATI, %function
-glNormalStream3svATI:
-    mov __blue_glCore_glNormalStream3svATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathStencilFuncNV
-.type glPathStencilFuncNV, %function
-glPathStencilFuncNV:
-    mov __blue_glCore_glPathStencilFuncNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSetInvariantEXT
-.type glSetInvariantEXT, %function
-glSetInvariantEXT:
-    mov __blue_glCore_glSetInvariantEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexBumpParameterivATI
-.type glGetTexBumpParameterivATI, %function
-glGetTexBumpParameterivATI:
-    mov __blue_glCore_glGetTexBumpParameterivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationSeparateEXT
-.type glBlendEquationSeparateEXT, %function
-glBlendEquationSeparateEXT:
-    mov __blue_glCore_glBlendEquationSeparateEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndOcclusionQueryNV
-.type glEndOcclusionQueryNV, %function
-glEndOcclusionQueryNV:
-    mov __blue_glCore_glEndOcclusionQueryNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glScissorArrayv
-.type glScissorArrayv, %function
-glScissorArrayv:
-    mov __blue_glCore_glScissorArrayv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapTexture2DINTEL
-.type glMapTexture2DINTEL, %function
-glMapTexture2DINTEL:
-    mov __blue_glCore_glMapTexture2DINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribArrayObjectfvATI
-.type glGetVertexAttribArrayObjectfvATI, %function
-glGetVertexAttribArrayObjectfvATI:
-    mov __blue_glCore_glGetVertexAttribArrayObjectfvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4ubvNV
-.type glVertexAttrib4ubvNV, %function
-glVertexAttrib4ubvNV:
-    mov __blue_glCore_glVertexAttrib4ubvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterfvARB
-.type glPointParameterfvARB, %function
-glPointParameterfvARB:
-    mov __blue_glCore_glPointParameterfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTagSampleBufferSGIX
-.type glTagSampleBufferSGIX, %function
-glTagSampleBufferSGIX:
-    mov __blue_glCore_glTagSampleBufferSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4dvEXT
-.type glProgramUniformMatrix4dvEXT, %function
-glProgramUniformMatrix4dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix4dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnColorTable
-.type glGetnColorTable, %function
-glGetnColorTable:
-    mov __blue_glCore_glGetnColorTable@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureLayerARB
-.type glFramebufferTextureLayerARB, %function
-glFramebufferTextureLayerARB:
-    mov __blue_glCore_glFramebufferTextureLayerARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2dvEXT
-.type glVertexAttribL2dvEXT, %function
-glVertexAttribL2dvEXT:
-    mov __blue_glCore_glVertexAttribL2dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCombinerStageParameterfvNV
-.type glGetCombinerStageParameterfvNV, %function
-glGetCombinerStageParameterfvNV:
-    mov __blue_glCore_glGetCombinerStageParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP1uiv
-.type glMultiTexCoordP1uiv, %function
-glMultiTexCoordP1uiv:
-    mov __blue_glCore_glMultiTexCoordP1uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapBuffer
-.type glMapBuffer, %function
-glMapBuffer:
-    mov __blue_glCore_glMapBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3d
-.type glSecondaryColor3d, %function
-glSecondaryColor3d:
-    mov __blue_glCore_glSecondaryColor3d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3f
-.type glSecondaryColor3f, %function
-glSecondaryColor3f:
-    mov __blue_glCore_glSecondaryColor3f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribLFormat
-.type glVertexAttribLFormat, %function
-glVertexAttribLFormat:
-    mov __blue_glCore_glVertexAttribLFormat@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3b
-.type glSecondaryColor3b, %function
-glSecondaryColor3b:
-    mov __blue_glCore_glSecondaryColor3b@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1fATI
-.type glVertexStream1fATI, %function
-glVertexStream1fATI:
-    mov __blue_glCore_glVertexStream1fATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCoverageModulationNV
-.type glCoverageModulationNV, %function
-glCoverageModulationNV:
-    mov __blue_glCore_glCoverageModulationNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3i
-.type glSecondaryColor3i, %function
-glSecondaryColor3i:
-    mov __blue_glCore_glSecondaryColor3i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteSync
-.type glDeleteSync, %function
-glDeleteSync:
-    mov __blue_glCore_glDeleteSync@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramParameterfvNV
-.type glGetProgramParameterfvNV, %function
-glGetProgramParameterfvNV:
-    mov __blue_glCore_glGetProgramParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMaxShaderCompilerThreadsARB
-.type glMaxShaderCompilerThreadsARB, %function
-glMaxShaderCompilerThreadsARB:
-    mov __blue_glCore_glMaxShaderCompilerThreadsARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix4x2dv
-.type glUniformMatrix4x2dv, %function
-glUniformMatrix4x2dv:
-    mov __blue_glCore_glUniformMatrix4x2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribLOffsetEXT
-.type glVertexArrayVertexAttribLOffsetEXT, %function
-glVertexArrayVertexAttribLOffsetEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribLOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3s
-.type glSecondaryColor3s, %function
-glSecondaryColor3s:
-    mov __blue_glCore_glSecondaryColor3s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsImageHandleResidentNV
-.type glIsImageHandleResidentNV, %function
-glIsImageHandleResidentNV:
-    mov __blue_glCore_glIsImageHandleResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3iv
-.type glUniform3iv, %function
-glUniform3iv:
-    mov __blue_glCore_glUniform3iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3i64vNV
-.type glVertexAttribL3i64vNV, %function
-glVertexAttribL3i64vNV:
-    mov __blue_glCore_glVertexAttribL3i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPolygonMode
-.type glPolygonMode, %function
-glPolygonMode:
-    mov __blue_glCore_glPolygonMode@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4iv
-.type glProgramUniform4iv, %function
-glProgramUniform4iv:
-    mov __blue_glCore_glProgramUniform4iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1dvARB
-.type glVertexAttrib1dvARB, %function
-glVertexAttrib1dvARB:
-    mov __blue_glCore_glVertexAttrib1dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureSubImage2DEXT
-.type glTextureSubImage2DEXT, %function
-glTextureSubImage2DEXT:
-    mov __blue_glCore_glTextureSubImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsVertexArrayAPPLE
-.type glIsVertexArrayAPPLE, %function
-glIsVertexArrayAPPLE:
-    mov __blue_glCore_glIsVertexArrayAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUseProgram
-.type glUseProgram, %function
-glUseProgram:
-    mov __blue_glCore_glUseProgram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramInfoLog
-.type glGetProgramInfoLog, %function
-glGetProgramInfoLog:
-    mov __blue_glCore_glGetProgramInfoLog@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParametersI4uivNV
-.type glProgramEnvParametersI4uivNV, %function
-glProgramEnvParametersI4uivNV:
-    mov __blue_glCore_glProgramEnvParametersI4uivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribLFormatEXT
-.type glVertexArrayVertexAttribLFormatEXT, %function
-glVertexArrayVertexAttribLFormatEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribLFormatEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3fvARB
-.type glUniform3fvARB, %function
-glUniform3fvARB:
-    mov __blue_glCore_glUniform3fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x2fvEXT
-.type glProgramUniformMatrix3x2fvEXT, %function
-glProgramUniformMatrix3x2fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix3x2fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTextureSubImage3DEXT
-.type glCopyTextureSubImage3DEXT, %function
-glCopyTextureSubImage3DEXT:
-    mov __blue_glCore_glCopyTextureSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferBaseNV
-.type glBindBufferBaseNV, %function
-glBindBufferBaseNV:
-    mov __blue_glCore_glBindBufferBaseNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2bvOES
-.type glMultiTexCoord2bvOES, %function
-glMultiTexCoord2bvOES:
-    mov __blue_glCore_glMultiTexCoord2bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3i64vARB
-.type glUniform3i64vARB, %function
-glUniform3i64vARB:
-    mov __blue_glCore_glUniform3i64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureLightEXT
-.type glTextureLightEXT, %function
-glTextureLightEXT:
-    mov __blue_glCore_glTextureLightEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3dARB
-.type glMultiTexCoord3dARB, %function
-glMultiTexCoord3dARB:
-    mov __blue_glCore_glMultiTexCoord3dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTextureEXT
-.type glNamedFramebufferTextureEXT, %function
-glNamedFramebufferTextureEXT:
-    mov __blue_glCore_glNamedFramebufferTextureEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEvalCoord2xvOES
-.type glEvalCoord2xvOES, %function
-glEvalCoord2xvOES:
-    mov __blue_glCore_glEvalCoord2xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindFragDataLocationEXT
-.type glBindFragDataLocationEXT, %function
-glBindFragDataLocationEXT:
-    mov __blue_glCore_glBindFragDataLocationEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexImage2DMultisampleCoverageNV
-.type glTexImage2DMultisampleCoverageNV, %function
-glTexImage2DMultisampleCoverageNV:
-    mov __blue_glCore_glTexImage2DMultisampleCoverageNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetAttribLocationARB
-.type glGetAttribLocationARB, %function
-glGetAttribLocationARB:
-    mov __blue_glCore_glGetAttribLocationARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteShader
-.type glDeleteShader, %function
-glDeleteShader:
-    mov __blue_glCore_glDeleteShader@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1fARB
-.type glVertexAttrib1fARB, %function
-glVertexAttrib1fARB:
-    mov __blue_glCore_glVertexAttrib1fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fColor4ubVertex3fSUN
-.type glTexCoord2fColor4ubVertex3fSUN, %function
-glTexCoord2fColor4ubVertex3fSUN:
-    mov __blue_glCore_glTexCoord2fColor4ubVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTextureSubImage1D
-.type glCopyTextureSubImage1D, %function
-glCopyTextureSubImage1D:
-    mov __blue_glCore_glCopyTextureSubImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameteriEXT
-.type glTextureParameteriEXT, %function
-glTextureParameteriEXT:
-    mov __blue_glCore_glTextureParameteriEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapParameterfvNV
-.type glMapParameterfvNV, %function
-glMapParameterfvNV:
-    mov __blue_glCore_glMapParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterIuiv
-.type glTextureParameterIuiv, %function
-glTextureParameterIuiv:
-    mov __blue_glCore_glTextureParameterIuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMinmaxParameterivEXT
-.type glGetMinmaxParameterivEXT, %function
-glGetMinmaxParameterivEXT:
-    mov __blue_glCore_glGetMinmaxParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVideoi64vNV
-.type glGetVideoi64vNV, %function
-glGetVideoi64vNV:
-    mov __blue_glCore_glGetVideoi64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3sARB
-.type glWindowPos3sARB, %function
-glWindowPos3sARB:
-    mov __blue_glCore_glWindowPos3sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetConvolutionParameterfv
-.type glGetConvolutionParameterfv, %function
-glGetConvolutionParameterfv:
-    mov __blue_glCore_glGetConvolutionParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2ui
-.type glUniform2ui, %function
-glUniform2ui:
-    mov __blue_glCore_glUniform2ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3i
-.type glVertexAttribI3i, %function
-glVertexAttribI3i:
-    mov __blue_glCore_glVertexAttribI3i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2xOES
-.type glTexCoord2xOES, %function
-glTexCoord2xOES:
-    mov __blue_glCore_glTexCoord2xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribFormat
-.type glVertexAttribFormat, %function
-glVertexAttribFormat:
-    mov __blue_glCore_glVertexAttribFormat@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramivARB
-.type glGetProgramivARB, %function
-glGetProgramivARB:
-    mov __blue_glCore_glGetProgramivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathGlyphRangeNV
-.type glPathGlyphRangeNV, %function
-glPathGlyphRangeNV:
-    mov __blue_glCore_glPathGlyphRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4usv
-.type glVertexAttribI4usv, %function
-glVertexAttribI4usv:
-    mov __blue_glCore_glVertexAttribI4usv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterf
-.type glTexParameterf, %function
-glTexParameterf:
-    mov __blue_glCore_glTexParameterf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribBinding
-.type glVertexAttribBinding, %function
-glVertexAttribBinding:
-    mov __blue_glCore_glVertexAttribBinding@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetHistogramParameteriv
-.type glGetHistogramParameteriv, %function
-glGetHistogramParameteriv:
-    mov __blue_glCore_glGetHistogramParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameteri
-.type glTexParameteri, %function
-glTexParameteri:
-    mov __blue_glCore_glTexParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetShaderSource
-.type glGetShaderSource, %function
-glGetShaderSource:
-    mov __blue_glCore_glGetShaderSource@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferSampleLocationsfvNV
-.type glFramebufferSampleLocationsfvNV, %function
-glFramebufferSampleLocationsfvNV:
-    mov __blue_glCore_glFramebufferSampleLocationsfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNextPerfQueryIdINTEL
-.type glGetNextPerfQueryIdINTEL, %function
-glGetNextPerfQueryIdINTEL:
-    mov __blue_glCore_glGetNextPerfQueryIdINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureBufferEXT
-.type glTextureBufferEXT, %function
-glTextureBufferEXT:
-    mov __blue_glCore_glTextureBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexImageEXT
-.type glGetMultiTexImageEXT, %function
-glGetMultiTexImageEXT:
-    mov __blue_glCore_glGetMultiTexImageEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathCoordsNV
-.type glGetPathCoordsNV, %function
-glGetPathCoordsNV:
-    mov __blue_glCore_glGetPathCoordsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenProgramPipelines
-.type glGenProgramPipelines, %function
-glGenProgramPipelines:
-    mov __blue_glCore_glGenProgramPipelines@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferParameteriAPPLE
-.type glBufferParameteriAPPLE, %function
-glBufferParameteriAPPLE:
-    mov __blue_glCore_glBufferParameteriAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexStorageSparseAMD
-.type glTexStorageSparseAMD, %function
-glTexStorageSparseAMD:
-    mov __blue_glCore_glTexStorageSparseAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferParameteriv
-.type glGetNamedBufferParameteriv, %function
-glGetNamedBufferParameteriv:
-    mov __blue_glCore_glGetNamedBufferParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformFeedbackVaryingsEXT
-.type glTransformFeedbackVaryingsEXT, %function
-glTransformFeedbackVaryingsEXT:
-    mov __blue_glCore_glTransformFeedbackVaryingsEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP1uiv
-.type glVertexAttribP1uiv, %function
-glVertexAttribP1uiv:
-    mov __blue_glCore_glVertexAttribP1uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLinkProgram
-.type glLinkProgram, %function
-glLinkProgram:
-    mov __blue_glCore_glLinkProgram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetObjectLabel
-.type glGetObjectLabel, %function
-glGetObjectLabel:
-    mov __blue_glCore_glGetObjectLabel@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexPointerEXT
-.type glVertexPointerEXT, %function
-glVertexPointerEXT:
-    mov __blue_glCore_glVertexPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageCallbackARB
-.type glDebugMessageCallbackARB, %function
-glDebugMessageCallbackARB:
-    mov __blue_glCore_glDebugMessageCallbackARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetString
-.type glGetString, %function
-glGetString:
-    mov __blue_glCore_glGetString@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathParameterfvNV
-.type glGetPathParameterfvNV, %function
-glGetPathParameterfvNV:
-    mov __blue_glCore_glGetPathParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLightxvOES
-.type glLightxvOES, %function
-glLightxvOES:
-    mov __blue_glCore_glLightxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndQuery
-.type glEndQuery, %function
-glEndQuery:
-    mov __blue_glCore_glEndQuery@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3uiv
-.type glSecondaryColor3uiv, %function
-glSecondaryColor3uiv:
-    mov __blue_glCore_glSecondaryColor3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPrioritizeTexturesxOES
-.type glPrioritizeTexturesxOES, %function
-glPrioritizeTexturesxOES:
-    mov __blue_glCore_glPrioritizeTexturesxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferParameteri
-.type glFramebufferParameteri, %function
-glFramebufferParameteri:
-    mov __blue_glCore_glFramebufferParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord3hNV
-.type glTexCoord3hNV, %function
-glTexCoord3hNV:
-    mov __blue_glCore_glTexCoord3hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiModeDrawElementsIBM
-.type glMultiModeDrawElementsIBM, %function
-glMultiModeDrawElementsIBM:
-    mov __blue_glCore_glMultiModeDrawElementsIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI2ui
-.type glVertexAttribI2ui, %function
-glVertexAttribI2ui:
-    mov __blue_glCore_glVertexAttribI2ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2iARB
-.type glUniform2iARB, %function
-glUniform2iARB:
-    mov __blue_glCore_glUniform2iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorPointervINTEL
-.type glColorPointervINTEL, %function
-glColorPointervINTEL:
-    mov __blue_glCore_glColorPointervINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteTextures
-.type glDeleteTextures, %function
-glDeleteTextures:
-    mov __blue_glCore_glDeleteTextures@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMinmaxParameterfvEXT
-.type glGetMinmaxParameterfvEXT, %function
-glGetMinmaxParameterfvEXT:
-    mov __blue_glCore_glGetMinmaxParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3sMESA
-.type glWindowPos3sMESA, %function
-glWindowPos3sMESA:
-    mov __blue_glCore_glWindowPos3sMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4f
-.type glVertexAttrib4f, %function
-glVertexAttrib4f:
-    mov __blue_glCore_glVertexAttrib4f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferParameteri
-.type glNamedFramebufferParameteri, %function
-glNamedFramebufferParameteri:
-    mov __blue_glCore_glNamedFramebufferParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fVertex3fvSUN
-.type glTexCoord2fVertex3fvSUN, %function
-glTexCoord2fVertex3fvSUN:
-    mov __blue_glCore_glTexCoord2fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeusSUN
-.type glReplacementCodeusSUN, %function
-glReplacementCodeusSUN:
-    mov __blue_glCore_glReplacementCodeusSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedFramebufferParameteriv
-.type glGetNamedFramebufferParameteriv, %function
-glGetNamedFramebufferParameteriv:
-    mov __blue_glCore_glGetNamedFramebufferParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1fvATI
-.type glVertexStream1fvATI, %function
-glVertexStream1fvATI:
-    mov __blue_glCore_glVertexStream1fvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateVertexArrays
-.type glCreateVertexArrays, %function
-glCreateVertexArrays:
-    mov __blue_glCore_glCreateVertexArrays@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginConditionalRender
-.type glBeginConditionalRender, %function
-glBeginConditionalRender:
-    mov __blue_glCore_glBeginConditionalRender@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionFilter1D
-.type glConvolutionFilter1D, %function
-glConvolutionFilter1D:
-    mov __blue_glCore_glConvolutionFilter1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3fARB
-.type glMultiTexCoord3fARB, %function
-glMultiTexCoord3fARB:
-    mov __blue_glCore_glMultiTexCoord3fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjectuivARB
-.type glGetQueryObjectuivARB, %function
-glGetQueryObjectuivARB:
-    mov __blue_glCore_glGetQueryObjectuivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glScalexOES
-.type glScalexOES, %function
-glScalexOES:
-    mov __blue_glCore_glScalexOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSamplerParameteri
-.type glSamplerParameteri, %function
-glSamplerParameteri:
-    mov __blue_glCore_glSamplerParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSamplerParameterf
-.type glSamplerParameterf, %function
-glSamplerParameterf:
-    mov __blue_glCore_glSamplerParameterf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glShaderOp1EXT
-.type glShaderOp1EXT, %function
-glShaderOp1EXT:
-    mov __blue_glCore_glShaderOp1EXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginVideoCaptureNV
-.type glBeginVideoCaptureNV, %function
-glBeginVideoCaptureNV:
-    mov __blue_glCore_glBeginVideoCaptureNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1f
-.type glUniform1f, %function
-glUniform1f:
-    mov __blue_glCore_glUniform1f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1d
-.type glUniform1d, %function
-glUniform1d:
-    mov __blue_glCore_glUniform1d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearColorIiEXT
-.type glClearColorIiEXT, %function
-glClearColorIiEXT:
-    mov __blue_glCore_glClearColorIiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCompressedTexImage
-.type glGetCompressedTexImage, %function
-glGetCompressedTexImage:
-    mov __blue_glCore_glGetCompressedTexImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDetailTexFuncSGIS
-.type glDetailTexFuncSGIS, %function
-glDetailTexFuncSGIS:
-    mov __blue_glCore_glDetailTexFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1i
-.type glUniform1i, %function
-glUniform1i:
-    mov __blue_glCore_glUniform1i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSetFenceNV
-.type glSetFenceNV, %function
-glSetFenceNV:
-    mov __blue_glCore_glSetFenceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorTableParameterivSGI
-.type glColorTableParameterivSGI, %function
-glColorTableParameterivSGI:
-    mov __blue_glCore_glColorTableParameterivSGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCullFace
-.type glCullFace, %function
-glCullFace:
-    mov __blue_glCore_glCullFace@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteFencesAPPLE
-.type glDeleteFencesAPPLE, %function
-glDeleteFencesAPPLE:
-    mov __blue_glCore_glDeleteFencesAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4i
-.type glProgramUniform4i, %function
-glProgramUniform4i:
-    mov __blue_glCore_glProgramUniform4i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformHandleui64ARB
-.type glUniformHandleui64ARB, %function
-glUniformHandleui64ARB:
-    mov __blue_glCore_glUniformHandleui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4f
-.type glProgramUniform4f, %function
-glProgramUniform4f:
-    mov __blue_glCore_glProgramUniform4f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glViewportIndexedf
-.type glViewportIndexedf, %function
-glViewportIndexedf:
-    mov __blue_glCore_glViewportIndexedf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4d
-.type glProgramUniform4d, %function
-glProgramUniform4d:
-    mov __blue_glCore_glProgramUniform4d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord1xOES
-.type glTexCoord1xOES, %function
-glTexCoord1xOES:
-    mov __blue_glCore_glTexCoord1xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3ivATI
-.type glVertexStream3ivATI, %function
-glVertexStream3ivATI:
-    mov __blue_glCore_glVertexStream3ivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI2uiv
-.type glVertexAttribI2uiv, %function
-glVertexAttribI2uiv:
-    mov __blue_glCore_glVertexAttribI2uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndQueryARB
-.type glEndQueryARB, %function
-glEndQueryARB:
-    mov __blue_glCore_glEndQueryARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetConvolutionParameterxvOES
-.type glGetConvolutionParameterxvOES, %function
-glGetConvolutionParameterxvOES:
-    mov __blue_glCore_glGetConvolutionParameterxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4uivARB
-.type glVertexAttrib4uivARB, %function
-glVertexAttrib4uivARB:
-    mov __blue_glCore_glVertexAttrib4uivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResumeTransformFeedbackNV
-.type glResumeTransformFeedbackNV, %function
-glResumeTransformFeedbackNV:
-    mov __blue_glCore_glResumeTransformFeedbackNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAttachShader
-.type glAttachShader, %function
-glAttachShader:
-    mov __blue_glCore_glAttachShader@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4hNV
-.type glColor4hNV, %function
-glColor4hNV:
-    mov __blue_glCore_glColor4hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fColor4ubVertex3fvSUN
-.type glTexCoord2fColor4ubVertex3fvSUN, %function
-glTexCoord2fColor4ubVertex3fvSUN:
-    mov __blue_glCore_glTexCoord2fColor4ubVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glQueryCounter
-.type glQueryCounter, %function
-glQueryCounter:
-    mov __blue_glCore_glQueryCounter@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordPointer
-.type glFogCoordPointer, %function
-glFogCoordPointer:
-    mov __blue_glCore_glFogCoordPointer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFogFuncSGIS
-.type glGetFogFuncSGIS, %function
-glGetFogFuncSGIS:
-    mov __blue_glCore_glGetFogFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUnmapNamedBuffer
-.type glUnmapNamedBuffer, %function
-glUnmapNamedBuffer:
-    mov __blue_glCore_glUnmapNamedBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4bvOES
-.type glTexCoord4bvOES, %function
-glTexCoord4bvOES:
-    mov __blue_glCore_glTexCoord4bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3fARB
-.type glVertexAttrib3fARB, %function
-glVertexAttrib3fARB:
-    mov __blue_glCore_glVertexAttrib3fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRasterPos2xOES
-.type glRasterPos2xOES, %function
-glRasterPos2xOES:
-    mov __blue_glCore_glRasterPos2xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4ubVertex2fvSUN
-.type glColor4ubVertex2fvSUN, %function
-glColor4ubVertex2fvSUN:
-    mov __blue_glCore_glColor4ubVertex2fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3dv
-.type glSecondaryColor3dv, %function
-glSecondaryColor3dv:
-    mov __blue_glCore_glSecondaryColor3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4sv
-.type glVertexAttribI4sv, %function
-glVertexAttribI4sv:
-    mov __blue_glCore_glVertexAttribI4sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawTransformFeedbackStreamInstanced
-.type glDrawTransformFeedbackStreamInstanced, %function
-glDrawTransformFeedbackStreamInstanced:
-    mov __blue_glCore_glDrawTransformFeedbackStreamInstanced@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3ui64vNV
-.type glVertexAttribL3ui64vNV, %function
-glVertexAttribL3ui64vNV:
-    mov __blue_glCore_glVertexAttribL3ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSpriteParameterfSGIX
-.type glSpriteParameterfSGIX, %function
-glSpriteParameterfSGIX:
-    mov __blue_glCore_glSpriteParameterfSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindVideoCaptureStreamTextureNV
-.type glBindVideoCaptureStreamTextureNV, %function
-glBindVideoCaptureStreamTextureNV:
-    mov __blue_glCore_glBindVideoCaptureStreamTextureNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterIuiv
-.type glTexParameterIuiv, %function
-glTexParameterIuiv:
-    mov __blue_glCore_glTexParameterIuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushPixelDataRangeNV
-.type glFlushPixelDataRangeNV, %function
-glFlushPixelDataRangeNV:
-    mov __blue_glCore_glFlushPixelDataRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3fv
-.type glWindowPos3fv, %function
-glWindowPos3fv:
-    mov __blue_glCore_glWindowPos3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribLFormatNV
-.type glVertexAttribLFormatNV, %function
-glVertexAttribLFormatNV:
-    mov __blue_glCore_glVertexAttribLFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMap2xOES
-.type glMap2xOES, %function
-glMap2xOES:
-    mov __blue_glCore_glMap2xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableSGI
-.type glGetColorTableSGI, %function
-glGetColorTableSGI:
-    mov __blue_glCore_glGetColorTableSGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCompressedTexImageARB
-.type glGetCompressedTexImageARB, %function
-glGetCompressedTexImageARB:
-    mov __blue_glCore_glGetCompressedTexImageARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameteri
-.type glConvolutionParameteri, %function
-glConvolutionParameteri:
-    mov __blue_glCore_glConvolutionParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexWeighthNV
-.type glVertexWeighthNV, %function
-glVertexWeighthNV:
-    mov __blue_glCore_glVertexWeighthNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameterf
-.type glConvolutionParameterf, %function
-glConvolutionParameterf:
-    mov __blue_glCore_glConvolutionParameterf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4ubvEXT
-.type glVertexAttribI4ubvEXT, %function
-glVertexAttribI4ubvEXT:
-    mov __blue_glCore_glVertexAttribI4ubvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1dNV
-.type glVertexAttrib1dNV, %function
-glVertexAttrib1dNV:
-    mov __blue_glCore_glVertexAttrib1dNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUnmapObjectBufferATI
-.type glUnmapObjectBufferATI, %function
-glUnmapObjectBufferATI:
-    mov __blue_glCore_glUnmapObjectBufferATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParameterI4uiEXT
-.type glNamedProgramLocalParameterI4uiEXT, %function
-glNamedProgramLocalParameterI4uiEXT:
-    mov __blue_glCore_glNamedProgramLocalParameterI4uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1iEXT
-.type glProgramUniform1iEXT, %function
-glProgramUniform1iEXT:
-    mov __blue_glCore_glProgramUniform1iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteQueriesARB
-.type glDeleteQueriesARB, %function
-glDeleteQueriesARB:
-    mov __blue_glCore_glDeleteQueriesARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedBufferDataEXT
-.type glClearNamedBufferDataEXT, %function
-glClearNamedBufferDataEXT:
-    mov __blue_glCore_glClearNamedBufferDataEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3svARB
-.type glWindowPos3svARB, %function
-glWindowPos3svARB:
-    mov __blue_glCore_glWindowPos3svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage3D
-.type glTextureStorage3D, %function
-glTextureStorage3D:
-    mov __blue_glCore_glTextureStorage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenPathsNV
-.type glGenPathsNV, %function
-glGenPathsNV:
-    mov __blue_glCore_glGenPathsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStringMarkerGREMEDY
-.type glStringMarkerGREMEDY, %function
-glStringMarkerGREMEDY:
-    mov __blue_glCore_glStringMarkerGREMEDY@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsTransformFeedback
-.type glIsTransformFeedback, %function
-glIsTransformFeedback:
-    mov __blue_glCore_glIsTransformFeedback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x3dvEXT
-.type glProgramUniformMatrix2x3dvEXT, %function
-glProgramUniformMatrix2x3dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix2x3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetObjectLabelEXT
-.type glGetObjectLabelEXT, %function
-glGetObjectLabelEXT:
-    mov __blue_glCore_glGetObjectLabelEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformHandleui64vNV
-.type glUniformHandleui64vNV, %function
-glUniformHandleui64vNV:
-    mov __blue_glCore_glUniformHandleui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsProgramPipeline
-.type glIsProgramPipeline, %function
-glIsProgramPipeline:
-    mov __blue_glCore_glIsProgramPipeline@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedProgramStringEXT
-.type glGetNamedProgramStringEXT, %function
-glGetNamedProgramStringEXT:
-    mov __blue_glCore_glGetNamedProgramStringEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4sNV
-.type glVertexAttrib4sNV, %function
-glVertexAttrib4sNV:
-    mov __blue_glCore_glVertexAttrib4sNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameter4dvARB
-.type glProgramLocalParameter4dvARB, %function
-glProgramLocalParameter4dvARB:
-    mov __blue_glCore_glProgramLocalParameter4dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordFormatNV
-.type glFogCoordFormatNV, %function
-glFogCoordFormatNV:
-    mov __blue_glCore_glFogCoordFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix3fv
-.type glUniformMatrix3fv, %function
-glUniformMatrix3fv:
-    mov __blue_glCore_glUniformMatrix3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMapfvARB
-.type glGetnMapfvARB, %function
-glGetnMapfvARB:
-    mov __blue_glCore_glGetnMapfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformfv
-.type glGetnUniformfv, %function
-glGetnUniformfv:
-    mov __blue_glCore_glGetnUniformfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2dv
-.type glVertexAttribL2dv, %function
-glVertexAttribL2dv:
-    mov __blue_glCore_glVertexAttribL2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexWeightPointerEXT
-.type glVertexWeightPointerEXT, %function
-glVertexWeightPointerEXT:
-    mov __blue_glCore_glVertexWeightPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3sEXT
-.type glTangent3sEXT, %function
-glTangent3sEXT:
-    mov __blue_glCore_glTangent3sEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColorPointer
-.type glSecondaryColorPointer, %function
-glSecondaryColorPointer:
-    mov __blue_glCore_glSecondaryColorPointer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedStringARB
-.type glGetNamedStringARB, %function
-glGetNamedStringARB:
-    mov __blue_glCore_glGetNamedStringARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferPageCommitmentARB
-.type glBufferPageCommitmentARB, %function
-glBufferPageCommitmentARB:
-    mov __blue_glCore_glBufferPageCommitmentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2d
-.type glVertexAttribL2d, %function
-glVertexAttribL2d:
-    mov __blue_glCore_glVertexAttribL2d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilFunc
-.type glStencilFunc, %function
-glStencilFunc:
-    mov __blue_glCore_glStencilFunc@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribdvNV
-.type glGetVertexAttribdvNV, %function
-glGetVertexAttribdvNV:
-    mov __blue_glCore_glGetVertexAttribdvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryBufferObjectiv
-.type glGetQueryBufferObjectiv, %function
-glGetQueryBufferObjectiv:
-    mov __blue_glCore_glGetQueryBufferObjectiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexGenxOES
-.type glTexGenxOES, %function
-glTexGenxOES:
-    mov __blue_glCore_glTexGenxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLightEnviSGIX
-.type glLightEnviSGIX, %function
-glLightEnviSGIX:
-    mov __blue_glCore_glLightEnviSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramPipelineiv
-.type glGetProgramPipelineiv, %function
-glGetProgramPipelineiv:
-    mov __blue_glCore_glGetProgramPipelineiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2ivATI
-.type glVertexStream2ivATI, %function
-glVertexStream2ivATI:
-    mov __blue_glCore_glVertexStream2ivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableEXT
-.type glGetColorTableEXT, %function
-glGetColorTableEXT:
-    mov __blue_glCore_glGetColorTableEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetShaderInfoLog
-.type glGetShaderInfoLog, %function
-glGetShaderInfoLog:
-    mov __blue_glCore_glGetShaderInfoLog@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetOcclusionQueryuivNV
-.type glGetOcclusionQueryuivNV, %function
-glGetOcclusionQueryuivNV:
-    mov __blue_glCore_glGetOcclusionQueryuivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateNamedFramebufferSubData
-.type glInvalidateNamedFramebufferSubData, %function
-glInvalidateNamedFramebufferSubData:
-    mov __blue_glCore_glInvalidateNamedFramebufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1i64NV
-.type glVertexAttribL1i64NV, %function
-glVertexAttribL1i64NV:
-    mov __blue_glCore_glVertexAttribL1i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUInitNV
-.type glVDPAUInitNV, %function
-glVDPAUInitNV:
-    mov __blue_glCore_glVDPAUInitNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1hvNV
-.type glVertexAttrib1hvNV, %function
-glVertexAttrib1hvNV:
-    mov __blue_glCore_glVertexAttrib1hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4i
-.type glVertexAttribI4i, %function
-glVertexAttribI4i:
-    mov __blue_glCore_glVertexAttribI4i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetIntegerui64i_vNV
-.type glGetIntegerui64i_vNV, %function
-glGetIntegerui64i_vNV:
-    mov __blue_glCore_glGetIntegerui64i_vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glImageTransformParameterfvHP
-.type glImageTransformParameterfvHP, %function
-glImageTransformParameterfvHP:
-    mov __blue_glCore_glImageTransformParameterfvHP@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEdgeFlagFormatNV
-.type glEdgeFlagFormatNV, %function
-glEdgeFlagFormatNV:
-    mov __blue_glCore_glEdgeFlagFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformHandleui64NV
-.type glUniformHandleui64NV, %function
-glUniformHandleui64NV:
-    mov __blue_glCore_glUniformHandleui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageInsertAMD
-.type glDebugMessageInsertAMD, %function
-glDebugMessageInsertAMD:
-    mov __blue_glCore_glDebugMessageInsertAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4ivEXT
-.type glVertexAttribI4ivEXT, %function
-glVertexAttribI4ivEXT:
-    mov __blue_glCore_glVertexAttribI4ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexImage4DSGIS
-.type glTexImage4DSGIS, %function
-glTexImage4DSGIS:
-    mov __blue_glCore_glTexImage4DSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationSeparate
-.type glBlendEquationSeparate, %function
-glBlendEquationSeparate:
-    mov __blue_glCore_glBlendEquationSeparate@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementsInstancedARB
-.type glDrawElementsInstancedARB, %function
-glDrawElementsInstancedARB:
-    mov __blue_glCore_glDrawElementsInstancedARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSubroutineIndex
-.type glGetSubroutineIndex, %function
-glGetSubroutineIndex:
-    mov __blue_glCore_glGetSubroutineIndex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2sv
-.type glVertexAttrib2sv, %function
-glVertexAttrib2sv:
-    mov __blue_glCore_glVertexAttrib2sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSamplePatternSGIS
-.type glSamplePatternSGIS, %function
-glSamplePatternSGIS:
-    mov __blue_glCore_glSamplePatternSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex3hNV
-.type glVertex3hNV, %function
-glVertex3hNV:
-    mov __blue_glCore_glVertex3hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRasterPos3xvOES
-.type glRasterPos3xvOES, %function
-glRasterPos3xvOES:
-    mov __blue_glCore_glRasterPos3xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureImage1DEXT
-.type glCompressedTextureImage1DEXT, %function
-glCompressedTextureImage1DEXT:
-    mov __blue_glCore_glCompressedTextureImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3dv
-.type glVertexAttribL3dv, %function
-glVertexAttribL3dv:
-    mov __blue_glCore_glVertexAttribL3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMaterialxvOES
-.type glMaterialxvOES, %function
-glMaterialxvOES:
-    mov __blue_glCore_glMaterialxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParameter4fEXT
-.type glNamedProgramLocalParameter4fEXT, %function
-glNamedProgramLocalParameter4fEXT:
-    mov __blue_glCore_glNamedProgramLocalParameter4fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1dEXT
-.type glVertexAttribL1dEXT, %function
-glVertexAttribL1dEXT:
-    mov __blue_glCore_glVertexAttribL1dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformdvARB
-.type glGetnUniformdvARB, %function
-glGetnUniformdvARB:
-    mov __blue_glCore_glGetnUniformdvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3bEXT
-.type glSecondaryColor3bEXT, %function
-glSecondaryColor3bEXT:
-    mov __blue_glCore_glSecondaryColor3bEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginPerfQueryINTEL
-.type glBeginPerfQueryINTEL, %function
-glBeginPerfQueryINTEL:
-    mov __blue_glCore_glBeginPerfQueryINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1uivEXT
-.type glProgramUniform1uivEXT, %function
-glProgramUniform1uivEXT:
-    mov __blue_glCore_glProgramUniform1uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureImage3DEXT
-.type glTextureImage3DEXT, %function
-glTextureImage3DEXT:
-    mov __blue_glCore_glTextureImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteBuffers
-.type glDeleteBuffers, %function
-glDeleteBuffers:
-    mov __blue_glCore_glDeleteBuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindProgramPipeline
-.type glBindProgramPipeline, %function
-glBindProgramPipeline:
-    mov __blue_glCore_glBindProgramPipeline@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glScissor
-.type glScissor, %function
-glScissor:
-    mov __blue_glCore_glScissor@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBooleanv
-.type glGetBooleanv, %function
-glGetBooleanv:
-    mov __blue_glCore_glGetBooleanv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4fvMESA
-.type glWindowPos4fvMESA, %function
-glWindowPos4fvMESA:
-    mov __blue_glCore_glWindowPos4fvMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribIPointerEXT
-.type glVertexAttribIPointerEXT, %function
-glVertexAttribIPointerEXT:
-    mov __blue_glCore_glVertexAttribIPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramBufferParametersfvNV
-.type glProgramBufferParametersfvNV, %function
-glProgramBufferParametersfvNV:
-    mov __blue_glCore_glProgramBufferParametersfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAlphaFuncxOES
-.type glAlphaFuncxOES, %function
-glAlphaFuncxOES:
-    mov __blue_glCore_glAlphaFuncxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawArraysIndirectAMD
-.type glMultiDrawArraysIndirectAMD, %function
-glMultiDrawArraysIndirectAMD:
-    mov __blue_glCore_glMultiDrawArraysIndirectAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3ivATI
-.type glNormalStream3ivATI, %function
-glNormalStream3ivATI:
-    mov __blue_glCore_glNormalStream3ivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureImage3DMultisampleNV
-.type glTextureImage3DMultisampleNV, %function
-glTextureImage3DMultisampleNV:
-    mov __blue_glCore_glTextureImage3DMultisampleNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4uivEXT
-.type glProgramUniform4uivEXT, %function
-glProgramUniform4uivEXT:
-    mov __blue_glCore_glProgramUniform4uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribArrayObjectivATI
-.type glGetVertexAttribArrayObjectivATI, %function
-glGetVertexAttribArrayObjectivATI:
-    mov __blue_glCore_glGetVertexAttribArrayObjectivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPollInstrumentsSGIX
-.type glPollInstrumentsSGIX, %function
-glPollInstrumentsSGIX:
-    mov __blue_glCore_glPollInstrumentsSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureLevelParameteriv
-.type glGetTextureLevelParameteriv, %function
-glGetTextureLevelParameteriv:
-    mov __blue_glCore_glGetTextureLevelParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetStringi
-.type glGetStringi, %function
-glGetStringi:
-    mov __blue_glCore_glGetStringi@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3f
-.type glWindowPos3f, %function
-glWindowPos3f:
-    mov __blue_glCore_glWindowPos3f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapControlPointsNV
-.type glMapControlPointsNV, %function
-glMapControlPointsNV:
-    mov __blue_glCore_glMapControlPointsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexArrayIndexediv
-.type glGetVertexArrayIndexediv, %function
-glGetVertexArrayIndexediv:
-    mov __blue_glCore_glGetVertexArrayIndexediv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1hNV
-.type glMultiTexCoord1hNV, %function
-glMultiTexCoord1hNV:
-    mov __blue_glCore_glMultiTexCoord1hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterfv
-.type glPointParameterfv, %function
-glPointParameterfv:
-    mov __blue_glCore_glPointParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix2fvARB
-.type glUniformMatrix2fvARB, %function
-glUniformMatrix2fvARB:
-    mov __blue_glCore_glUniformMatrix2fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2fv
-.type glUniform2fv, %function
-glUniform2fv:
-    mov __blue_glCore_glUniform2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexPointerListIBM
-.type glVertexPointerListIBM, %function
-glVertexPointerListIBM:
-    mov __blue_glCore_glVertexPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexGenfvEXT
-.type glGetMultiTexGenfvEXT, %function
-glGetMultiTexGenfvEXT:
-    mov __blue_glCore_glGetMultiTexGenfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMinmaxEXT
-.type glGetMinmaxEXT, %function
-glGetMinmaxEXT:
-    mov __blue_glCore_glGetMinmaxEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsFenceNV
-.type glIsFenceNV, %function
-glIsFenceNV:
-    mov __blue_glCore_glIsFenceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixFrustumEXT
-.type glMatrixFrustumEXT, %function
-glMatrixFrustumEXT:
-    mov __blue_glCore_glMatrixFrustumEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDispatchComputeIndirect
-.type glDispatchComputeIndirect, %function
-glDispatchComputeIndirect:
-    mov __blue_glCore_glDispatchComputeIndirect@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4bOES
-.type glMultiTexCoord4bOES, %function
-glMultiTexCoord4bOES:
-    mov __blue_glCore_glMultiTexCoord4bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameter4dARB
-.type glProgramEnvParameter4dARB, %function
-glProgramEnvParameter4dARB:
-    mov __blue_glCore_glProgramEnvParameter4dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferRange
-.type glBindBufferRange, %function
-glBindBufferRange:
-    mov __blue_glCore_glBindBufferRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformi64vNV
-.type glGetUniformi64vNV, %function
-glGetUniformi64vNV:
-    mov __blue_glCore_glGetUniformi64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformdv
-.type glGetUniformdv, %function
-glGetUniformdv:
-    mov __blue_glCore_glGetUniformdv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexLevelParameterfvEXT
-.type glGetMultiTexLevelParameterfvEXT, %function
-glGetMultiTexLevelParameterfvEXT:
-    mov __blue_glCore_glGetMultiTexLevelParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFinalCombinerInputNV
-.type glFinalCombinerInputNV, %function
-glFinalCombinerInputNV:
-    mov __blue_glCore_glFinalCombinerInputNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCullParameterdvEXT
-.type glCullParameterdvEXT, %function
-glCullParameterdvEXT:
-    mov __blue_glCore_glCullParameterdvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4s
-.type glMultiTexCoord4s, %function
-glMultiTexCoord4s:
-    mov __blue_glCore_glMultiTexCoord4s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapVertexAttrib1fAPPLE
-.type glMapVertexAttrib1fAPPLE, %function
-glMapVertexAttrib1fAPPLE:
-    mov __blue_glCore_glMapVertexAttrib1fAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3fvEXT
-.type glTangent3fvEXT, %function
-glTangent3fvEXT:
-    mov __blue_glCore_glTangent3fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3fvEXT
-.type glProgramUniform3fvEXT, %function
-glProgramUniform3fvEXT:
-    mov __blue_glCore_glProgramUniform3fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2bOES
-.type glTexCoord2bOES, %function
-glTexCoord2bOES:
-    mov __blue_glCore_glTexCoord2bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexArrayPointervEXT
-.type glGetVertexArrayPointervEXT, %function
-glGetVertexArrayPointervEXT:
-    mov __blue_glCore_glGetVertexArrayPointervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactorubSUN
-.type glGlobalAlphaFactorubSUN, %function
-glGlobalAlphaFactorubSUN:
-    mov __blue_glCore_glGlobalAlphaFactorubSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1ui64NV
-.type glVertexAttribL1ui64NV, %function
-glVertexAttribL1ui64NV:
-    mov __blue_glCore_glVertexAttribL1ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterfSGIS
-.type glPointParameterfSGIS, %function
-glPointParameterfSGIS:
-    mov __blue_glCore_glPointParameterfSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetImageTransformParameterivHP
-.type glGetImageTransformParameterivHP, %function
-glGetImageTransformParameterivHP:
-    mov __blue_glCore_glGetImageTransformParameterivHP@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorSubTableEXT
-.type glColorSubTableEXT, %function
-glColorSubTableEXT:
-    mov __blue_glCore_glColorSubTableEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTexGenParameterfvSGIS
-.type glPixelTexGenParameterfvSGIS, %function
-glPixelTexGenParameterfvSGIS:
-    mov __blue_glCore_glPixelTexGenParameterfvSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClientWaitSync
-.type glClientWaitSync, %function
-glClientWaitSync:
-    mov __blue_glCore_glClientWaitSync@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glQueryObjectParameteruiAMD
-.type glQueryObjectParameteruiAMD, %function
-glQueryObjectParameteruiAMD:
-    mov __blue_glCore_glQueryObjectParameteruiAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs1fvNV
-.type glVertexAttribs1fvNV, %function
-glVertexAttribs1fvNV:
-    mov __blue_glCore_glVertexAttribs1fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4NusvARB
-.type glVertexAttrib4NusvARB, %function
-glVertexAttrib4NusvARB:
-    mov __blue_glCore_glVertexAttrib4NusvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantPointerEXT
-.type glVariantPointerEXT, %function
-glVariantPointerEXT:
-    mov __blue_glCore_glVariantPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferParameteriEXT
-.type glNamedFramebufferParameteriEXT, %function
-glNamedFramebufferParameteriEXT:
-    mov __blue_glCore_glNamedFramebufferParameteriEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFunciARB
-.type glBlendFunciARB, %function
-glBlendFunciARB:
-    mov __blue_glCore_glBlendFunciARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateTexImage
-.type glInvalidateTexImage, %function
-glInvalidateTexImage:
-    mov __blue_glCore_glInvalidateTexImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParametersI4ivNV
-.type glProgramEnvParametersI4ivNV, %function
-glProgramEnvParametersI4ivNV:
-    mov __blue_glCore_glProgramEnvParametersI4ivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathGlyphIndexArrayNV
-.type glPathGlyphIndexArrayNV, %function
-glPathGlyphIndexArrayNV:
-    mov __blue_glCore_glPathGlyphIndexArrayNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyImageSubData
-.type glCopyImageSubData, %function
-glCopyImageSubData:
-    mov __blue_glCore_glCopyImageSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformSubroutineuiv
-.type glGetUniformSubroutineuiv, %function
-glGetUniformSubroutineuiv:
-    mov __blue_glCore_glGetUniformSubroutineuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindVertexBuffer
-.type glBindVertexBuffer, %function
-glBindVertexBuffer:
-    mov __blue_glCore_glBindVertexBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1iARB
-.type glMultiTexCoord1iARB, %function
-glMultiTexCoord1iARB:
-    mov __blue_glCore_glMultiTexCoord1iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageInsert
-.type glDebugMessageInsert, %function
-glDebugMessageInsert:
-    mov __blue_glCore_glDebugMessageInsert@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginVertexShaderEXT
-.type glBeginVertexShaderEXT, %function
-glBeginVertexShaderEXT:
-    mov __blue_glCore_glBeginVertexShaderEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsVariantEnabledEXT
-.type glIsVariantEnabledEXT, %function
-glIsVariantEnabledEXT:
-    mov __blue_glCore_glIsVariantEnabledEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPassThroughxOES
-.type glPassThroughxOES, %function
-glPassThroughxOES:
-    mov __blue_glCore_glPassThroughxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsSampler
-.type glIsSampler, %function
-glIsSampler:
-    mov __blue_glCore_glIsSampler@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConservativeRasterParameterfNV
-.type glConservativeRasterParameterfNV, %function
-glConservativeRasterParameterfNV:
-    mov __blue_glCore_glConservativeRasterParameterfNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexGenivEXT
-.type glMultiTexGenivEXT, %function
-glMultiTexGenivEXT:
-    mov __blue_glCore_glMultiTexGenivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTexture2DEXT
-.type glNamedFramebufferTexture2DEXT, %function
-glNamedFramebufferTexture2DEXT:
-    mov __blue_glCore_glNamedFramebufferTexture2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameterxvOES
-.type glGetTexParameterxvOES, %function
-glGetTexParameterxvOES:
-    mov __blue_glCore_glGetTexParameterxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCheckFramebufferStatus
-.type glCheckFramebufferStatus, %function
-glCheckFramebufferStatus:
-    mov __blue_glCore_glCheckFramebufferStatus@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementArrayAPPLE
-.type glDrawElementArrayAPPLE, %function
-glDrawElementArrayAPPLE:
-    mov __blue_glCore_glDrawElementArrayAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightivSGIX
-.type glFragmentLightivSGIX, %function
-glFragmentLightivSGIX:
-    mov __blue_glCore_glFragmentLightivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedBufferStorageEXT
-.type glNamedBufferStorageEXT, %function
-glNamedBufferStorageEXT:
-    mov __blue_glCore_glNamedBufferStorageEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindImageTexture
-.type glBindImageTexture, %function
-glBindImageTexture:
-    mov __blue_glCore_glBindImageTexture@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsPathNV
-.type glIsPathNV, %function
-glIsPathNV:
-    mov __blue_glCore_glIsPathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawRangeElements
-.type glDrawRangeElements, %function
-glDrawRangeElements:
-    mov __blue_glCore_glDrawRangeElements@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordPointerEXT
-.type glMultiTexCoordPointerEXT, %function
-glMultiTexCoordPointerEXT:
-    mov __blue_glCore_glMultiTexCoordPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSamplerParameterIiv
-.type glSamplerParameterIiv, %function
-glSamplerParameterIiv:
-    mov __blue_glCore_glSamplerParameterIiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSyncTextureINTEL
-.type glSyncTextureINTEL, %function
-glSyncTextureINTEL:
-    mov __blue_glCore_glSyncTextureINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateSamplers
-.type glCreateSamplers, %function
-glCreateSamplers:
-    mov __blue_glCore_glCreateSamplers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCombinerParameterfNV
-.type glCombinerParameterfNV, %function
-glCombinerParameterfNV:
-    mov __blue_glCore_glCombinerParameterfNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetArrayObjectivATI
-.type glGetArrayObjectivATI, %function
-glGetArrayObjectivATI:
-    mov __blue_glCore_glGetArrayObjectivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3fvATI
-.type glVertexStream3fvATI, %function
-glVertexStream3fvATI:
-    mov __blue_glCore_glVertexStream3fvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4i
-.type glMultiTexCoord4i, %function
-glMultiTexCoord4i:
-    mov __blue_glCore_glMultiTexCoord4i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSampleMapATI
-.type glSampleMapATI, %function
-glSampleMapATI:
-    mov __blue_glCore_glSampleMapATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4bvARB
-.type glVertexAttrib4bvARB, %function
-glVertexAttrib4bvARB:
-    mov __blue_glCore_glVertexAttrib4bvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3ivEXT
-.type glBinormal3ivEXT, %function
-glBinormal3ivEXT:
-    mov __blue_glCore_glBinormal3ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawArraysIndirectCountARB
-.type glMultiDrawArraysIndirectCountARB, %function
-glMultiDrawArraysIndirectCountARB:
-    mov __blue_glCore_glMultiDrawArraysIndirectCountARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformBufferEXT
-.type glUniformBufferEXT, %function
-glUniformBufferEXT:
-    mov __blue_glCore_glUniformBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2ivMESA
-.type glWindowPos2ivMESA, %function
-glWindowPos2ivMESA:
-    mov __blue_glCore_glWindowPos2ivMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1d
-.type glVertexAttribL1d, %function
-glVertexAttribL1d:
-    mov __blue_glCore_glVertexAttribL1d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexSubImage1DEXT
-.type glMultiTexSubImage1DEXT, %function
-glMultiTexSubImage1DEXT:
-    mov __blue_glCore_glMultiTexSubImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3uiv
-.type glVertexAttribI3uiv, %function
-glVertexAttribI3uiv:
-    mov __blue_glCore_glVertexAttribI3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferDataARB
-.type glBufferDataARB, %function
-glBufferDataARB:
-    mov __blue_glCore_glBufferDataARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribIFormat
-.type glVertexAttribIFormat, %function
-glVertexAttribIFormat:
-    mov __blue_glCore_glVertexAttribIFormat@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateFramebuffers
-.type glCreateFramebuffers, %function
-glCreateFramebuffers:
-    mov __blue_glCore_glCreateFramebuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2i64vNV
-.type glVertexAttribL2i64vNV, %function
-glVertexAttribL2i64vNV:
-    mov __blue_glCore_glVertexAttribL2i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3dvATI
-.type glNormalStream3dvATI, %function
-glNormalStream3dvATI:
-    mov __blue_glCore_glNormalStream3dvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs4dvNV
-.type glVertexAttribs4dvNV, %function
-glVertexAttribs4dvNV:
-    mov __blue_glCore_glVertexAttribs4dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3i64vNV
-.type glUniform3i64vNV, %function
-glUniform3i64vNV:
-    mov __blue_glCore_glUniform3i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathTexGenNV
-.type glPathTexGenNV, %function
-glPathTexGenNV:
-    mov __blue_glCore_glPathTexGenNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2uivEXT
-.type glUniform2uivEXT, %function
-glUniform2uivEXT:
-    mov __blue_glCore_glUniform2uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawElementsIndirect
-.type glMultiDrawElementsIndirect, %function
-glMultiDrawElementsIndirect:
-    mov __blue_glCore_glMultiDrawElementsIndirect@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilThenCoverStrokePathInstancedNV
-.type glStencilThenCoverStrokePathInstancedNV, %function
-glStencilThenCoverStrokePathInstancedNV:
-    mov __blue_glCore_glStencilThenCoverStrokePathInstancedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBuffer
-.type glBindBuffer, %function
-glBindBuffer:
-    mov __blue_glCore_glBindBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeImageHandleResidentNV
-.type glMakeImageHandleResidentNV, %function
-glMakeImageHandleResidentNV:
-    mov __blue_glCore_glMakeImageHandleResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix2x4fv
-.type glUniformMatrix2x4fv, %function
-glUniformMatrix2x4fv:
-    mov __blue_glCore_glUniformMatrix2x4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexParameterfvEXT
-.type glGetMultiTexParameterfvEXT, %function
-glGetMultiTexParameterfvEXT:
-    mov __blue_glCore_glGetMultiTexParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthRangeIndexed
-.type glDepthRangeIndexed, %function
-glDepthRangeIndexed:
-    mov __blue_glCore_glDepthRangeIndexed@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1s
-.type glMultiTexCoord1s, %function
-glMultiTexCoord1s:
-    mov __blue_glCore_glMultiTexCoord1s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixScalefEXT
-.type glMatrixScalefEXT, %function
-glMatrixScalefEXT:
-    mov __blue_glCore_glMatrixScalefEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetError
-.type glGetError, %function
-glGetError:
-    mov __blue_glCore_glGetError@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindTextureUnitParameterEXT
-.type glBindTextureUnitParameterEXT, %function
-glBindTextureUnitParameterEXT:
-    mov __blue_glCore_glBindTextureUnitParameterEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawCommandsStatesNV
-.type glDrawCommandsStatesNV, %function
-glDrawCommandsStatesNV:
-    mov __blue_glCore_glDrawCommandsStatesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiNormal3fVertex3fvSUN
-.type glReplacementCodeuiNormal3fVertex3fvSUN, %function
-glReplacementCodeuiNormal3fVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeletePerfQueryINTEL
-.type glDeletePerfQueryINTEL, %function
-glDeletePerfQueryINTEL:
-    mov __blue_glCore_glDeletePerfQueryINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformivARB
-.type glGetUniformivARB, %function
-glGetUniformivARB:
-    mov __blue_glCore_glGetUniformivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveUniformARB
-.type glGetActiveUniformARB, %function
-glGetActiveUniformARB:
-    mov __blue_glCore_glGetActiveUniformARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteOcclusionQueriesNV
-.type glDeleteOcclusionQueriesNV, %function
-glDeleteOcclusionQueriesNV:
-    mov __blue_glCore_glDeleteOcclusionQueriesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3ivEXT
-.type glVertexAttribI3ivEXT, %function
-glVertexAttribI3ivEXT:
-    mov __blue_glCore_glVertexAttribI3ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexLevelParameterfv
-.type glGetTexLevelParameterfv, %function
-glGetTexLevelParameterfv:
-    mov __blue_glCore_glGetTexLevelParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI1ivEXT
-.type glVertexAttribI1ivEXT, %function
-glVertexAttribI1ivEXT:
-    mov __blue_glCore_glVertexAttribI1ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateSyncFromCLeventARB
-.type glCreateSyncFromCLeventARB, %function
-glCreateSyncFromCLeventARB:
-    mov __blue_glCore_glCreateSyncFromCLeventARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnColorTableARB
-.type glGetnColorTableARB, %function
-glGetnColorTableARB:
-    mov __blue_glCore_glGetnColorTableARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4i64ARB
-.type glUniform4i64ARB, %function
-glUniform4i64ARB:
-    mov __blue_glCore_glUniform4i64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformui64vARB
-.type glGetnUniformui64vARB, %function
-glGetnUniformui64vARB:
-    mov __blue_glCore_glGetnUniformui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI1uiEXT
-.type glVertexAttribI1uiEXT, %function
-glVertexAttribI1uiEXT:
-    mov __blue_glCore_glVertexAttribI1uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadTransposeMatrixdARB
-.type glLoadTransposeMatrixdARB, %function
-glLoadTransposeMatrixdARB:
-    mov __blue_glCore_glLoadTransposeMatrixdARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2ui
-.type glProgramUniform2ui, %function
-glProgramUniform2ui:
-    mov __blue_glCore_glProgramUniform2ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4ui
-.type glProgramUniform4ui, %function
-glProgramUniform4ui:
-    mov __blue_glCore_glProgramUniform4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilMask
-.type glStencilMask, %function
-glStencilMask:
-    mov __blue_glCore_glStencilMask@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResetHistogramEXT
-.type glResetHistogramEXT, %function
-glResetHistogramEXT:
-    mov __blue_glCore_glResetHistogramEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLightxOES
-.type glLightxOES, %function
-glLightxOES:
-    mov __blue_glCore_glLightxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedBufferData
-.type glNamedBufferData, %function
-glNamedBufferData:
-    mov __blue_glCore_glNamedBufferData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3sATI
-.type glVertexStream3sATI, %function
-glVertexStream3sATI:
-    mov __blue_glCore_glVertexStream3sATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3fvARB
-.type glVertexAttrib3fvARB, %function
-glVertexAttrib3fvARB:
-    mov __blue_glCore_glVertexAttrib3fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedBufferSubData
-.type glClearNamedBufferSubData, %function
-glClearNamedBufferSubData:
-    mov __blue_glCore_glClearNamedBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformHandleui64ARB
-.type glProgramUniformHandleui64ARB, %function
-glProgramUniformHandleui64ARB:
-    mov __blue_glCore_glProgramUniformHandleui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3iARB
-.type glUniform3iARB, %function
-glUniform3iARB:
-    mov __blue_glCore_glUniform3iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateProgramObjectARB
-.type glCreateProgramObjectARB, %function
-glCreateProgramObjectARB:
-    mov __blue_glCore_glCreateProgramObjectARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1dvARB
-.type glMultiTexCoord1dvARB, %function
-glMultiTexCoord1dvARB:
-    mov __blue_glCore_glMultiTexCoord1dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetObjectParameterfvARB
-.type glGetObjectParameterfvARB, %function
-glGetObjectParameterfvARB:
-    mov __blue_glCore_glGetObjectParameterfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glListDrawCommandsStatesClientNV
-.type glListDrawCommandsStatesClientNV, %function
-glListDrawCommandsStatesClientNV:
-    mov __blue_glCore_glListDrawCommandsStatesClientNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexImage2DEXT
-.type glMultiTexImage2DEXT, %function
-glMultiTexImage2DEXT:
-    mov __blue_glCore_glMultiTexImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1i64NV
-.type glProgramUniform1i64NV, %function
-glProgramUniform1i64NV:
-    mov __blue_glCore_glProgramUniform1i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetObjectBufferivATI
-.type glGetObjectBufferivATI, %function
-glGetObjectBufferivATI:
-    mov __blue_glCore_glGetObjectBufferivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1fvARB
-.type glMultiTexCoord1fvARB, %function
-glMultiTexCoord1fvARB:
-    mov __blue_glCore_glMultiTexCoord1fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiColor4ubVertex3fvSUN
-.type glReplacementCodeuiColor4ubVertex3fvSUN, %function
-glReplacementCodeuiColor4ubVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiColor4ubVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFuncSeparateINGR
-.type glBlendFuncSeparateINGR, %function
-glBlendFuncSeparateINGR:
-    mov __blue_glCore_glBlendFuncSeparateINGR@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVideoCaptureStreamfvNV
-.type glGetVideoCaptureStreamfvNV, %function
-glGetVideoCaptureStreamfvNV:
-    mov __blue_glCore_glGetVideoCaptureStreamfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2fARB
-.type glVertexAttrib2fARB, %function
-glVertexAttrib2fARB:
-    mov __blue_glCore_glVertexAttrib2fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCompressedTextureSubImage
-.type glGetCompressedTextureSubImage, %function
-glGetCompressedTextureSubImage:
-    mov __blue_glCore_glGetCompressedTextureSubImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyImageSubDataNV
-.type glCopyImageSubDataNV, %function
-glCopyImageSubDataNV:
-    mov __blue_glCore_glCopyImageSubDataNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelStoref
-.type glPixelStoref, %function
-glPixelStoref:
-    mov __blue_glCore_glPixelStoref@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1iATI
-.type glVertexStream1iATI, %function
-glVertexStream1iATI:
-    mov __blue_glCore_glVertexStream1iATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPatchParameterfv
-.type glPatchParameterfv, %function
-glPatchParameterfv:
-    mov __blue_glCore_glPatchParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsFramebufferEXT
-.type glIsFramebufferEXT, %function
-glIsFramebufferEXT:
-    mov __blue_glCore_glIsFramebufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage2D
-.type glTextureStorage2D, %function
-glTextureStorage2D:
-    mov __blue_glCore_glTextureStorage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1ui64ARB
-.type glProgramUniform1ui64ARB, %function
-glProgramUniform1ui64ARB:
-    mov __blue_glCore_glProgramUniform1ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexBufferRange
-.type glTexBufferRange, %function
-glTexBufferRange:
-    mov __blue_glCore_glTexBufferRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPixelTexGenParameterivSGIS
-.type glGetPixelTexGenParameterivSGIS, %function
-glGetPixelTexGenParameterivSGIS:
-    mov __blue_glCore_glGetPixelTexGenParameterivSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureSubImage3DEXT
-.type glTextureSubImage3DEXT, %function
-glTextureSubImage3DEXT:
-    mov __blue_glCore_glTextureSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1uiEXT
-.type glProgramUniform1uiEXT, %function
-glProgramUniform1uiEXT:
-    mov __blue_glCore_glProgramUniform1uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2i64NV
-.type glUniform2i64NV, %function
-glUniform2i64NV:
-    mov __blue_glCore_glUniform2i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3ui
-.type glVertexAttribI3ui, %function
-glVertexAttribI3ui:
-    mov __blue_glCore_glVertexAttribI3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSampleMaskSGIS
-.type glSampleMaskSGIS, %function
-glSampleMaskSGIS:
-    mov __blue_glCore_glSampleMaskSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4NivARB
-.type glVertexAttrib4NivARB, %function
-glVertexAttrib4NivARB:
-    mov __blue_glCore_glVertexAttrib4NivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactorfSUN
-.type glGlobalAlphaFactorfSUN, %function
-glGlobalAlphaFactorfSUN:
-    mov __blue_glCore_glGlobalAlphaFactorfSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationSeparateIndexedAMD
-.type glBlendEquationSeparateIndexedAMD, %function
-glBlendEquationSeparateIndexedAMD:
-    mov __blue_glCore_glBlendEquationSeparateIndexedAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfCounterInfoINTEL
-.type glGetPerfCounterInfoINTEL, %function
-glGetPerfCounterInfoINTEL:
-    mov __blue_glCore_glGetPerfCounterInfoINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameterI4uiNV
-.type glProgramLocalParameterI4uiNV, %function
-glProgramLocalParameterI4uiNV:
-    mov __blue_glCore_glProgramLocalParameterI4uiNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelZoomxOES
-.type glPixelZoomxOES, %function
-glPixelZoomxOES:
-    mov __blue_glCore_glPixelZoomxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCombinerOutputParameterivNV
-.type glGetCombinerOutputParameterivNV, %function
-glGetCombinerOutputParameterivNV:
-    mov __blue_glCore_glGetCombinerOutputParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRasterPos2xvOES
-.type glRasterPos2xvOES, %function
-glRasterPos2xvOES:
-    mov __blue_glCore_glRasterPos2xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParametersI4ivNV
-.type glProgramLocalParametersI4ivNV, %function
-glProgramLocalParametersI4ivNV:
-    mov __blue_glCore_glProgramLocalParametersI4ivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexBuffers
-.type glVertexArrayVertexBuffers, %function
-glVertexArrayVertexBuffers:
-    mov __blue_glCore_glVertexArrayVertexBuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1ui64NV
-.type glUniform1ui64NV, %function
-glUniform1ui64NV:
-    mov __blue_glCore_glUniform1ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameteri
-.type glProgramParameteri, %function
-glProgramParameteri:
-    mov __blue_glCore_glProgramParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramParameterdvNV
-.type glGetProgramParameterdvNV, %function
-glGetProgramParameterdvNV:
-    mov __blue_glCore_glGetProgramParameterdvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2dvATI
-.type glVertexStream2dvATI, %function
-glVertexStream2dvATI:
-    mov __blue_glCore_glVertexStream2dvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathStencilDepthOffsetNV
-.type glPathStencilDepthOffsetNV, %function
-glPathStencilDepthOffsetNV:
-    mov __blue_glCore_glPathStencilDepthOffsetNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsStateNV
-.type glIsStateNV, %function
-glIsStateNV:
-    mov __blue_glCore_glIsStateNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2dEXT
-.type glVertexAttribL2dEXT, %function
-glVertexAttribL2dEXT:
-    mov __blue_glCore_glVertexAttribL2dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetImageTransformParameterfvHP
-.type glGetImageTransformParameterfvHP, %function
-glGetImageTransformParameterfvHP:
-    mov __blue_glCore_glGetImageTransformParameterfvHP@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex3xOES
-.type glVertex3xOES, %function
-glVertex3xOES:
-    mov __blue_glCore_glVertex3xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogFuncSGIS
-.type glFogFuncSGIS, %function
-glFogFuncSGIS:
-    mov __blue_glCore_glFogFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightPointerARB
-.type glWeightPointerARB, %function
-glWeightPointerARB:
-    mov __blue_glCore_glWeightPointerARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFinishFenceNV
-.type glFinishFenceNV, %function
-glFinishFenceNV:
-    mov __blue_glCore_glFinishFenceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthRangexOES
-.type glDepthRangexOES, %function
-glDepthRangexOES:
-    mov __blue_glCore_glDepthRangexOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableVertexArrayAttribEXT
-.type glEnableVertexArrayAttribEXT, %function
-glEnableVertexArrayAttribEXT:
-    mov __blue_glCore_glEnableVertexArrayAttribEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2uivEXT
-.type glProgramUniform2uivEXT, %function
-glProgramUniform2uivEXT:
-    mov __blue_glCore_glProgramUniform2uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetDoubleIndexedvEXT
-.type glGetDoubleIndexedvEXT, %function
-glGetDoubleIndexedvEXT:
-    mov __blue_glCore_glGetDoubleIndexedvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3fvNV
-.type glVertexAttrib3fvNV, %function
-glVertexAttrib3fvNV:
-    mov __blue_glCore_glVertexAttrib3fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1ui64vNV
-.type glVertexAttribL1ui64vNV, %function
-glVertexAttribL1ui64vNV:
-    mov __blue_glCore_glVertexAttribL1ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2fMESA
-.type glWindowPos2fMESA, %function
-glWindowPos2fMESA:
-    mov __blue_glCore_glWindowPos2fMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyConvolutionFilter1DEXT
-.type glCopyConvolutionFilter1DEXT, %function
-glCopyConvolutionFilter1DEXT:
-    mov __blue_glCore_glCopyConvolutionFilter1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2sv
-.type glWindowPos2sv, %function
-glWindowPos2sv:
-    mov __blue_glCore_glWindowPos2sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindFramebufferEXT
-.type glBindFramebufferEXT, %function
-glBindFramebufferEXT:
-    mov __blue_glCore_glBindFramebufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateShader
-.type glCreateShader, %function
-glCreateShader:
-    mov __blue_glCore_glCreateShader@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableParameterfvEXT
-.type glGetColorTableParameterfvEXT, %function
-glGetColorTableParameterfvEXT:
-    mov __blue_glCore_glGetColorTableParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenRenderbuffers
-.type glGenRenderbuffers, %function
-glGenRenderbuffers:
-    mov __blue_glCore_glGenRenderbuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexSubImage2D
-.type glCopyTexSubImage2D, %function
-glCopyTexSubImage2D:
-    mov __blue_glCore_glCopyTexSubImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4ubvARB
-.type glVertexAttrib4ubvARB, %function
-glVertexAttrib4ubvARB:
-    mov __blue_glCore_glVertexAttrib4ubvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawTextureNV
-.type glDrawTextureNV, %function
-glDrawTextureNV:
-    mov __blue_glCore_glDrawTextureNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2dATI
-.type glVertexStream2dATI, %function
-glVertexStream2dATI:
-    mov __blue_glCore_glVertexStream2dATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCombinerInputParameterfvNV
-.type glGetCombinerInputParameterfvNV, %function
-glGetCombinerInputParameterfvNV:
-    mov __blue_glCore_glGetCombinerInputParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFuncSeparate
-.type glBlendFuncSeparate, %function
-glBlendFuncSeparate:
-    mov __blue_glCore_glBlendFuncSeparate@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterfARB
-.type glPointParameterfARB, %function
-glPointParameterfARB:
-    mov __blue_glCore_glPointParameterfARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1fvARB
-.type glUniform1fvARB, %function
-glUniform1fvARB:
-    mov __blue_glCore_glUniform1fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexSubImage1D
-.type glCopyTexSubImage1D, %function
-glCopyTexSubImage1D:
-    mov __blue_glCore_glCopyTexSubImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVariantFloatvEXT
-.type glGetVariantFloatvEXT, %function
-glGetVariantFloatvEXT:
-    mov __blue_glCore_glGetVariantFloatvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexP2ui
-.type glVertexP2ui, %function
-glVertexP2ui:
-    mov __blue_glCore_glVertexP2ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2dMESA
-.type glWindowPos2dMESA, %function
-glWindowPos2dMESA:
-    mov __blue_glCore_glWindowPos2dMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexSubImage1DARB
-.type glCompressedTexSubImage1DARB, %function
-glCompressedTexSubImage1DARB:
-    mov __blue_glCore_glCompressedTexSubImage1DARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureImageEXT
-.type glGetTextureImageEXT, %function
-glGetTextureImageEXT:
-    mov __blue_glCore_glGetTextureImageEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointSize
-.type glPointSize, %function
-glPointSize:
-    mov __blue_glCore_glPointSize@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindTextureUnit
-.type glBindTextureUnit, %function
-glBindTextureUnit:
-    mov __blue_glCore_glBindTextureUnit@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameterI4uiNV
-.type glProgramEnvParameterI4uiNV, %function
-glProgramEnvParameterI4uiNV:
-    mov __blue_glCore_glProgramEnvParameterI4uiNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramPipelineInfoLog
-.type glGetProgramPipelineInfoLog, %function
-glGetProgramPipelineInfoLog:
-    mov __blue_glCore_glGetProgramPipelineInfoLog@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4i64vARB
-.type glProgramUniform4i64vARB, %function
-glProgramUniform4i64vARB:
-    mov __blue_glCore_glProgramUniform4i64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4Nuiv
-.type glVertexAttrib4Nuiv, %function
-glVertexAttrib4Nuiv:
-    mov __blue_glCore_glVertexAttrib4Nuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRenderbufferStorage
-.type glRenderbufferStorage, %function
-glRenderbufferStorage:
-    mov __blue_glCore_glRenderbufferStorage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWaitSync
-.type glWaitSync, %function
-glWaitSync:
-    mov __blue_glCore_glWaitSync@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3i
-.type glUniform3i, %function
-glUniform3i:
-    mov __blue_glCore_glUniform3i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationSeparatei
-.type glBlendEquationSeparatei, %function
-glBlendEquationSeparatei:
-    mov __blue_glCore_glBlendEquationSeparatei@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2hvNV
-.type glVertexAttrib2hvNV, %function
-glVertexAttrib2hvNV:
-    mov __blue_glCore_glVertexAttrib2hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterivEXT
-.type glTextureParameterivEXT, %function
-glTextureParameterivEXT:
-    mov __blue_glCore_glTextureParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3d
-.type glUniform3d, %function
-glUniform3d:
-    mov __blue_glCore_glUniform3d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3f
-.type glUniform3f, %function
-glUniform3f:
-    mov __blue_glCore_glUniform3f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glActiveProgramEXT
-.type glActiveProgramEXT, %function
-glActiveProgramEXT:
-    mov __blue_glCore_glActiveProgramEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3uiv
-.type glProgramUniform3uiv, %function
-glProgramUniform3uiv:
-    mov __blue_glCore_glProgramUniform3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3ui64vARB
-.type glUniform3ui64vARB, %function
-glUniform3ui64vARB:
-    mov __blue_glCore_glUniform3ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1ui64vARB
-.type glProgramUniform1ui64vARB, %function
-glProgramUniform1ui64vARB:
-    mov __blue_glCore_glProgramUniform1ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterfEXT
-.type glTextureParameterfEXT, %function
-glTextureParameterfEXT:
-    mov __blue_glCore_glTextureParameterfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeformationMap3dSGIX
-.type glDeformationMap3dSGIX, %function
-glDeformationMap3dSGIX:
-    mov __blue_glCore_glDeformationMap3dSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSetFragmentShaderConstantATI
-.type glSetFragmentShaderConstantATI, %function
-glSetFragmentShaderConstantATI:
-    mov __blue_glCore_glSetFragmentShaderConstantATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTextureLayerEXT
-.type glNamedFramebufferTextureLayerEXT, %function
-glNamedFramebufferTextureLayerEXT:
-    mov __blue_glCore_glNamedFramebufferTextureLayerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiSUN
-.type glReplacementCodeuiSUN, %function
-glReplacementCodeuiSUN:
-    mov __blue_glCore_glReplacementCodeuiSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4sARB
-.type glVertexAttrib4sARB, %function
-glVertexAttrib4sARB:
-    mov __blue_glCore_glVertexAttrib4sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightusvARB
-.type glWeightusvARB, %function
-glWeightusvARB:
-    mov __blue_glCore_glWeightusvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFragDataIndex
-.type glGetFragDataIndex, %function
-glGetFragDataIndex:
-    mov __blue_glCore_glGetFragDataIndex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiNormal3fVertex3fSUN
-.type glReplacementCodeuiNormal3fVertex3fSUN, %function
-glReplacementCodeuiNormal3fVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2xOES
-.type glMultiTexCoord2xOES, %function
-glMultiTexCoord2xOES:
-    mov __blue_glCore_glMultiTexCoord2xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fVertex3fSUN
-.type glTexCoord2fVertex3fSUN, %function
-glTexCoord2fVertex3fSUN:
-    mov __blue_glCore_glTexCoord2fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPolygonOffsetEXT
-.type glPolygonOffsetEXT, %function
-glPolygonOffsetEXT:
-    mov __blue_glCore_glPolygonOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightPathsNV
-.type glWeightPathsNV, %function
-glWeightPathsNV:
-    mov __blue_glCore_glWeightPathsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCombinerStageParameterfvNV
-.type glCombinerStageParameterfvNV, %function
-glCombinerStageParameterfvNV:
-    mov __blue_glCore_glCombinerStageParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterfEXT
-.type glPointParameterfEXT, %function
-glPointParameterfEXT:
-    mov __blue_glCore_glPointParameterfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexImage1DEXT
-.type glCopyTexImage1DEXT, %function
-glCopyTexImage1DEXT:
-    mov __blue_glCore_glCopyTexImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixMultfEXT
-.type glMatrixMultfEXT, %function
-glMatrixMultfEXT:
-    mov __blue_glCore_glMatrixMultfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureSubImage3DEXT
-.type glCompressedTextureSubImage3DEXT, %function
-glCompressedTextureSubImage3DEXT:
-    mov __blue_glCore_glCompressedTextureSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexLevelParameterxvOES
-.type glGetTexLevelParameterxvOES, %function
-glGetTexLevelParameterxvOES:
-    mov __blue_glCore_glGetTexLevelParameterxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3dvEXT
-.type glVertexAttribL3dvEXT, %function
-glVertexAttribL3dvEXT:
-    mov __blue_glCore_glVertexAttribL3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP4ui
-.type glMultiTexCoordP4ui, %function
-glMultiTexCoordP4ui:
-    mov __blue_glCore_glMultiTexCoordP4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureLevelParameterivEXT
-.type glGetTextureLevelParameterivEXT, %function
-glGetTextureLevelParameterivEXT:
-    mov __blue_glCore_glGetTextureLevelParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAlphaFragmentOp2ATI
-.type glAlphaFragmentOp2ATI, %function
-glAlphaFragmentOp2ATI:
-    mov __blue_glCore_glAlphaFragmentOp2ATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteFramebuffers
-.type glDeleteFramebuffers, %function
-glDeleteFramebuffers:
-    mov __blue_glCore_glDeleteFramebuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawArrays
-.type glDrawArrays, %function
-glDrawArrays:
-    mov __blue_glCore_glDrawArrays@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnTexImageARB
-.type glGetnTexImageARB, %function
-glGetnTexImageARB:
-    mov __blue_glCore_glGetnTexImageARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClear
-.type glClear, %function
-glClear:
-    mov __blue_glCore_glClear@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayParameteriAPPLE
-.type glVertexArrayParameteriAPPLE, %function
-glVertexArrayParameteriAPPLE:
-    mov __blue_glCore_glVertexArrayParameteriAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFuncSeparateiARB
-.type glBlendFuncSeparateiARB, %function
-glBlendFuncSeparateiARB:
-    mov __blue_glCore_glBlendFuncSeparateiARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2iARB
-.type glWindowPos2iARB, %function
-glWindowPos2iARB:
-    mov __blue_glCore_glWindowPos2iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightModelivSGIX
-.type glFragmentLightModelivSGIX, %function
-glFragmentLightModelivSGIX:
-    mov __blue_glCore_glFragmentLightModelivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP2ui
-.type glVertexAttribP2ui, %function
-glVertexAttribP2ui:
-    mov __blue_glCore_glVertexAttribP2ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3hNV
-.type glSecondaryColor3hNV, %function
-glSecondaryColor3hNV:
-    mov __blue_glCore_glSecondaryColor3hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3iEXT
-.type glProgramUniform3iEXT, %function
-glProgramUniform3iEXT:
-    mov __blue_glCore_glProgramUniform3iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4Nub
-.type glVertexAttrib4Nub, %function
-glVertexAttrib4Nub:
-    mov __blue_glCore_glVertexAttrib4Nub@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferBase
-.type glBindBufferBase, %function
-glBindBufferBase:
-    mov __blue_glCore_glBindBufferBase@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4hNV
-.type glTexCoord4hNV, %function
-glTexCoord4hNV:
-    mov __blue_glCore_glTexCoord4hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexImage1D
-.type glTexImage1D, %function
-glTexImage1D:
-    mov __blue_glCore_glTexImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeletePerfMonitorsAMD
-.type glDeletePerfMonitorsAMD, %function
-glDeletePerfMonitorsAMD:
-    mov __blue_glCore_glDeletePerfMonitorsAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsRenderbufferEXT
-.type glIsRenderbufferEXT, %function
-glIsRenderbufferEXT:
-    mov __blue_glCore_glIsRenderbufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawCommandsNV
-.type glDrawCommandsNV, %function
-glDrawCommandsNV:
-    mov __blue_glCore_glDrawCommandsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3ivARB
-.type glUniform3ivARB, %function
-glUniform3ivARB:
-    mov __blue_glCore_glUniform3ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferSubData
-.type glBufferSubData, %function
-glBufferSubData:
-    mov __blue_glCore_glBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3bv
-.type glSecondaryColor3bv, %function
-glSecondaryColor3bv:
-    mov __blue_glCore_glSecondaryColor3bv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexPointervINTEL
-.type glVertexPointervINTEL, %function
-glVertexPointervINTEL:
-    mov __blue_glCore_glVertexPointervINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixMultTransposedEXT
-.type glMatrixMultTransposedEXT, %function
-glMatrixMultTransposedEXT:
-    mov __blue_glCore_glMatrixMultTransposedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRequestResidentProgramsNV
-.type glRequestResidentProgramsNV, %function
-glRequestResidentProgramsNV:
-    mov __blue_glCore_glRequestResidentProgramsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjecti64v
-.type glGetQueryObjecti64v, %function
-glGetQueryObjecti64v:
-    mov __blue_glCore_glGetQueryObjecti64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixMult3x3fNV
-.type glMatrixMult3x3fNV, %function
-glMatrixMult3x3fNV:
-    mov __blue_glCore_glMatrixMult3x3fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4iARB
-.type glUniform4iARB, %function
-glUniform4iARB:
-    mov __blue_glCore_glUniform4iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathSubCommandsNV
-.type glPathSubCommandsNV, %function
-glPathSubCommandsNV:
-    mov __blue_glCore_glPathSubCommandsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFinalCombinerInputParameterivNV
-.type glGetFinalCombinerInputParameterivNV, %function
-glGetFinalCombinerInputParameterivNV:
-    mov __blue_glCore_glGetFinalCombinerInputParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsRenderbuffer
-.type glIsRenderbuffer, %function
-glIsRenderbuffer:
-    mov __blue_glCore_glIsRenderbuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFrustumfOES
-.type glFrustumfOES, %function
-glFrustumfOES:
-    mov __blue_glCore_glFrustumfOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindVertexBuffers
-.type glBindVertexBuffers, %function
-glBindVertexBuffers:
-    mov __blue_glCore_glBindVertexBuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsVertexArray
-.type glIsVertexArray, %function
-glIsVertexArray:
-    mov __blue_glCore_glIsVertexArray@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableVertexAttribArray
-.type glDisableVertexAttribArray, %function
-glDisableVertexAttribArray:
-    mov __blue_glCore_glDisableVertexAttribArray@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3ivARB
-.type glWindowPos3ivARB, %function
-glWindowPos3ivARB:
-    mov __blue_glCore_glWindowPos3ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordFormatNV
-.type glTexCoordFormatNV, %function
-glTexCoordFormatNV:
-    mov __blue_glCore_glTexCoordFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlitNamedFramebuffer
-.type glBlitNamedFramebuffer, %function
-glBlitNamedFramebuffer:
-    mov __blue_glCore_glBlitNamedFramebuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoadTransposefEXT
-.type glMatrixLoadTransposefEXT, %function
-glMatrixLoadTransposefEXT:
-    mov __blue_glCore_glMatrixLoadTransposefEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexGenfEXT
-.type glMultiTexGenfEXT, %function
-glMultiTexGenfEXT:
-    mov __blue_glCore_glMultiTexGenfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glShaderStorageBlockBinding
-.type glShaderStorageBlockBinding, %function
-glShaderStorageBlockBinding:
-    mov __blue_glCore_glShaderStorageBlockBinding@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiColor4fNormal3fVertex3fSUN
-.type glReplacementCodeuiColor4fNormal3fVertex3fSUN, %function
-glReplacementCodeuiColor4fNormal3fVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4ubv
-.type glVertexAttribI4ubv, %function
-glVertexAttribI4ubv:
-    mov __blue_glCore_glVertexAttribI4ubv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribFormatEXT
-.type glVertexArrayVertexAttribFormatEXT, %function
-glVertexArrayVertexAttribFormatEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribFormatEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex2hNV
-.type glVertex2hNV, %function
-glVertex2hNV:
-    mov __blue_glCore_glVertex2hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteVertexShaderEXT
-.type glDeleteVertexShaderEXT, %function
-glDeleteVertexShaderEXT:
-    mov __blue_glCore_glDeleteVertexShaderEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexImage3DEXT
-.type glTexImage3DEXT, %function
-glTexImage3DEXT:
-    mov __blue_glCore_glTexImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameterI4ivNV
-.type glProgramLocalParameterI4ivNV, %function
-glProgramLocalParameterI4ivNV:
-    mov __blue_glCore_glProgramLocalParameterI4ivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactoriSUN
-.type glGlobalAlphaFactoriSUN, %function
-glGlobalAlphaFactoriSUN:
-    mov __blue_glCore_glGlobalAlphaFactoriSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage1D
-.type glTextureStorage1D, %function
-glTextureStorage1D:
-    mov __blue_glCore_glTextureStorage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathCommandsNV
-.type glPathCommandsNV, %function
-glPathCommandsNV:
-    mov __blue_glCore_glPathCommandsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3sEXT
-.type glBinormal3sEXT, %function
-glBinormal3sEXT:
-    mov __blue_glCore_glBinormal3sEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramInterfaceiv
-.type glGetProgramInterfaceiv, %function
-glGetProgramInterfaceiv:
-    mov __blue_glCore_glGetProgramInterfaceiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixIndexPointerARB
-.type glMatrixIndexPointerARB, %function
-glMatrixIndexPointerARB:
-    mov __blue_glCore_glMatrixIndexPointerARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordPointerEXT
-.type glTexCoordPointerEXT, %function
-glTexCoordPointerEXT:
-    mov __blue_glCore_glTexCoordPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexGeniEXT
-.type glMultiTexGeniEXT, %function
-glMultiTexGeniEXT:
-    mov __blue_glCore_glMultiTexGeniEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2fNV
-.type glVertexAttrib2fNV, %function
-glVertexAttrib2fNV:
-    mov __blue_glCore_glVertexAttrib2fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawArrays
-.type glMultiDrawArrays, %function
-glMultiDrawArrays:
-    mov __blue_glCore_glMultiDrawArrays@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapNamedBuffer
-.type glMapNamedBuffer, %function
-glMapNamedBuffer:
-    mov __blue_glCore_glMapNamedBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMinmaxParameteriv
-.type glGetMinmaxParameteriv, %function
-glGetMinmaxParameteriv:
-    mov __blue_glCore_glGetMinmaxParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformdv
-.type glGetnUniformdv, %function
-glGetnUniformdv:
-    mov __blue_glCore_glGetnUniformdv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureSubImage
-.type glGetTextureSubImage, %function
-glGetTextureSubImage:
-    mov __blue_glCore_glGetTextureSubImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3fEXT
-.type glBinormal3fEXT, %function
-glBinormal3fEXT:
-    mov __blue_glCore_glBinormal3fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3iATI
-.type glNormalStream3iATI, %function
-glNormalStream3iATI:
-    mov __blue_glCore_glNormalStream3iATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramBufferParametersIivNV
-.type glProgramBufferParametersIivNV, %function
-glProgramBufferParametersIivNV:
-    mov __blue_glCore_glProgramBufferParametersIivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPolygonOffset
-.type glPolygonOffset, %function
-glPolygonOffset:
-    mov __blue_glCore_glPolygonOffset@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBuffersBase
-.type glBindBuffersBase, %function
-glBindBuffersBase:
-    mov __blue_glCore_glBindBuffersBase@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushMappedNamedBufferRangeEXT
-.type glFlushMappedNamedBufferRangeEXT, %function
-glFlushMappedNamedBufferRangeEXT:
-    mov __blue_glCore_glFlushMappedNamedBufferRangeEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribIiv
-.type glGetVertexAttribIiv, %function
-glGetVertexAttribIiv:
-    mov __blue_glCore_glGetVertexAttribIiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramSubroutineParameteruivNV
-.type glGetProgramSubroutineParameteruivNV, %function
-glGetProgramSubroutineParameteruivNV:
-    mov __blue_glCore_glGetProgramSubroutineParameteruivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformui64NV
-.type glUniformui64NV, %function
-glUniformui64NV:
-    mov __blue_glCore_glUniformui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2fvNV
-.type glVertexAttrib2fvNV, %function
-glVertexAttrib2fvNV:
-    mov __blue_glCore_glVertexAttrib2fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterxvOES
-.type glTexParameterxvOES, %function
-glTexParameterxvOES:
-    mov __blue_glCore_glTexParameterxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPatchParameteri
-.type glPatchParameteri, %function
-glPatchParameteri:
-    mov __blue_glCore_glPatchParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexFilterFuncSGIS
-.type glGetTexFilterFuncSGIS, %function
-glGetTexFilterFuncSGIS:
-    mov __blue_glCore_glGetTexFilterFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3dATI
-.type glVertexStream3dATI, %function
-glVertexStream3dATI:
-    mov __blue_glCore_glVertexStream3dATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexBindingDivisorEXT
-.type glVertexArrayVertexBindingDivisorEXT, %function
-glVertexArrayVertexBindingDivisorEXT:
-    mov __blue_glCore_glVertexArrayVertexBindingDivisorEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3svARB
-.type glMultiTexCoord3svARB, %function
-glMultiTexCoord3svARB:
-    mov __blue_glCore_glMultiTexCoord3svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindProgramNV
-.type glBindProgramNV, %function
-glBindProgramNV:
-    mov __blue_glCore_glBindProgramNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetConvolutionParameteriv
-.type glGetConvolutionParameteriv, %function
-glGetConvolutionParameteriv:
-    mov __blue_glCore_glGetConvolutionParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramLocalParameterfvARB
-.type glGetProgramLocalParameterfvARB, %function
-glGetProgramLocalParameterfvARB:
-    mov __blue_glCore_glGetProgramLocalParameterfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenFragmentShadersATI
-.type glGenFragmentShadersATI, %function
-glGenFragmentShadersATI:
-    mov __blue_glCore_glGenFragmentShadersATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexBumpParameterivATI
-.type glTexBumpParameterivATI, %function
-glTexBumpParameterivATI:
-    mov __blue_glCore_glTexBumpParameterivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedFramebufferAttachmentParameteriv
-.type glGetNamedFramebufferAttachmentParameteriv, %function
-glGetNamedFramebufferAttachmentParameteriv:
-    mov __blue_glCore_glGetNamedFramebufferAttachmentParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenVertexArraysAPPLE
-.type glGenVertexArraysAPPLE, %function
-glGenVertexArraysAPPLE:
-    mov __blue_glCore_glGenVertexArraysAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4x3dvEXT
-.type glProgramUniformMatrix4x3dvEXT, %function
-glProgramUniformMatrix4x3dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix4x3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPassTexCoordATI
-.type glPassTexCoordATI, %function
-glPassTexCoordATI:
-    mov __blue_glCore_glPassTexCoordATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureFaceARB
-.type glFramebufferTextureFaceARB, %function
-glFramebufferTextureFaceARB:
-    mov __blue_glCore_glFramebufferTextureFaceARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage2DEXT
-.type glTextureStorage2DEXT, %function
-glTextureStorage2DEXT:
-    mov __blue_glCore_glTextureStorage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayFogCoordOffsetEXT
-.type glVertexArrayFogCoordOffsetEXT, %function
-glVertexArrayFogCoordOffsetEXT:
-    mov __blue_glCore_glVertexArrayFogCoordOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteNamedStringARB
-.type glDeleteNamedStringARB, %function
-glDeleteNamedStringARB:
-    mov __blue_glCore_glDeleteNamedStringARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenOcclusionQueriesNV
-.type glGenOcclusionQueriesNV, %function
-glGenOcclusionQueriesNV:
-    mov __blue_glCore_glGenOcclusionQueriesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClientAttribDefaultEXT
-.type glClientAttribDefaultEXT, %function
-glClientAttribDefaultEXT:
-    mov __blue_glCore_glClientAttribDefaultEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2i64ARB
-.type glProgramUniform2i64ARB, %function
-glProgramUniform2i64ARB:
-    mov __blue_glCore_glProgramUniform2i64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribIFormatNV
-.type glVertexAttribIFormatNV, %function
-glVertexAttribIFormatNV:
-    mov __blue_glCore_glVertexAttribIFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilFuncSeparate
-.type glStencilFuncSeparate, %function
-glStencilFuncSeparate:
-    mov __blue_glCore_glStencilFuncSeparate@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribfvARB
-.type glGetVertexAttribfvARB, %function
-glGetVertexAttribfvARB:
-    mov __blue_glCore_glGetVertexAttribfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2dNV
-.type glVertexAttrib2dNV, %function
-glVertexAttrib2dNV:
-    mov __blue_glCore_glVertexAttrib2dNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2iEXT
-.type glProgramUniform2iEXT, %function
-glProgramUniform2iEXT:
-    mov __blue_glCore_glProgramUniform2iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClientActiveVertexStreamATI
-.type glClientActiveVertexStreamATI, %function
-glClientActiveVertexStreamATI:
-    mov __blue_glCore_glClientActiveVertexStreamATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRasterPos3xOES
-.type glRasterPos3xOES, %function
-glRasterPos3xOES:
-    mov __blue_glCore_glRasterPos3xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapVertexAttrib2fAPPLE
-.type glMapVertexAttrib2fAPPLE, %function
-glMapVertexAttrib2fAPPLE:
-    mov __blue_glCore_glMapVertexAttrib2fAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearDepthxOES
-.type glClearDepthxOES, %function
-glClearDepthxOES:
-    mov __blue_glCore_glClearDepthxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fNormal3fVertex3fvSUN
-.type glTexCoord2fNormal3fVertex3fvSUN, %function
-glTexCoord2fNormal3fVertex3fvSUN:
-    mov __blue_glCore_glTexCoord2fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFirstPerfQueryIdINTEL
-.type glGetFirstPerfQueryIdINTEL, %function
-glGetFirstPerfQueryIdINTEL:
-    mov __blue_glCore_glGetFirstPerfQueryIdINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUnmapNamedBufferEXT
-.type glUnmapNamedBufferEXT, %function
-glUnmapNamedBufferEXT:
-    mov __blue_glCore_glUnmapNamedBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTransformFeedbacki_v
-.type glGetTransformFeedbacki_v, %function
-glGetTransformFeedbacki_v:
-    mov __blue_glCore_glGetTransformFeedbacki_v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4fvARB
-.type glUniform4fvARB, %function
-glUniform4fvARB:
-    mov __blue_glCore_glUniform4fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRenderbufferStorageMultisampleCoverageNV
-.type glRenderbufferStorageMultisampleCoverageNV, %function
-glRenderbufferStorageMultisampleCoverageNV:
-    mov __blue_glCore_glRenderbufferStorageMultisampleCoverageNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFloati_vEXT
-.type glGetFloati_vEXT, %function
-glGetFloati_vEXT:
-    mov __blue_glCore_glGetFloati_vEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindAttribLocationARB
-.type glBindAttribLocationARB, %function
-glBindAttribLocationARB:
-    mov __blue_glCore_glBindAttribLocationARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferAddressRangeNV
-.type glBufferAddressRangeNV, %function
-glBufferAddressRangeNV:
-    mov __blue_glCore_glBufferAddressRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenProgramsARB
-.type glGenProgramsARB, %function
-glGenProgramsARB:
-    mov __blue_glCore_glGenProgramsARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexEnvivEXT
-.type glMultiTexEnvivEXT, %function
-glMultiTexEnvivEXT:
-    mov __blue_glCore_glMultiTexEnvivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3uiEXT
-.type glSecondaryColor3uiEXT, %function
-glSecondaryColor3uiEXT:
-    mov __blue_glCore_glSecondaryColor3uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureImage2DEXT
-.type glCompressedTextureImage2DEXT, %function
-glCompressedTextureImage2DEXT:
-    mov __blue_glCore_glCompressedTextureImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2i
-.type glUniform2i, %function
-glUniform2i:
-    mov __blue_glCore_glUniform2i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2f
-.type glUniform2f, %function
-glUniform2f:
-    mov __blue_glCore_glUniform2f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2d
-.type glUniform2d, %function
-glUniform2d:
-    mov __blue_glCore_glUniform2d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordP4ui
-.type glTexCoordP4ui, %function
-glTexCoordP4ui:
-    mov __blue_glCore_glTexCoordP4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureFaceEXT
-.type glFramebufferTextureFaceEXT, %function
-glFramebufferTextureFaceEXT:
-    mov __blue_glCore_glFramebufferTextureFaceEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureLayer
-.type glFramebufferTextureLayer, %function
-glFramebufferTextureLayer:
-    mov __blue_glCore_glFramebufferTextureLayer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4bvOES
-.type glMultiTexCoord4bvOES, %function
-glMultiTexCoord4bvOES:
-    mov __blue_glCore_glMultiTexCoord4bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexArrayPointeri_vEXT
-.type glGetVertexArrayPointeri_vEXT, %function
-glGetVertexArrayPointeri_vEXT:
-    mov __blue_glCore_glGetVertexArrayPointeri_vEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x3fvEXT
-.type glProgramUniformMatrix2x3fvEXT, %function
-glProgramUniformMatrix2x3fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix2x3fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3bEXT
-.type glBinormal3bEXT, %function
-glBinormal3bEXT:
-    mov __blue_glCore_glBinormal3bEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2fv
-.type glProgramUniform2fv, %function
-glProgramUniform2fv:
-    mov __blue_glCore_glProgramUniform2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor3fVertex3fSUN
-.type glColor3fVertex3fSUN, %function
-glColor3fVertex3fSUN:
-    mov __blue_glCore_glColor3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormal3fVertex3fvSUN
-.type glNormal3fVertex3fvSUN, %function
-glNormal3fVertex3fvSUN:
-    mov __blue_glCore_glNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyMultiTexSubImage3DEXT
-.type glCopyMultiTexSubImage3DEXT, %function
-glCopyMultiTexSubImage3DEXT:
-    mov __blue_glCore_glCopyMultiTexSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameterI4iNV
-.type glProgramLocalParameterI4iNV, %function
-glProgramLocalParameterI4iNV:
-    mov __blue_glCore_glProgramLocalParameterI4iNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x4dv
-.type glProgramUniformMatrix2x4dv, %function
-glProgramUniformMatrix2x4dv:
-    mov __blue_glCore_glProgramUniformMatrix2x4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathMemoryGlyphIndexArrayNV
-.type glPathMemoryGlyphIndexArrayNV, %function
-glPathMemoryGlyphIndexArrayNV:
-    mov __blue_glCore_glPathMemoryGlyphIndexArrayNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawArraysEXT
-.type glDrawArraysEXT, %function
-glDrawArraysEXT:
-    mov __blue_glCore_glDrawArraysEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationEXT
-.type glBlendEquationEXT, %function
-glBlendEquationEXT:
-    mov __blue_glCore_glBlendEquationEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTextureSubImage2DEXT
-.type glCopyTextureSubImage2DEXT, %function
-glCopyTextureSubImage2DEXT:
-    mov __blue_glCore_glCopyTextureSubImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2dvNV
-.type glVertexAttrib2dvNV, %function
-glVertexAttrib2dvNV:
-    mov __blue_glCore_glVertexAttrib2dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenPerfMonitorsAMD
-.type glGenPerfMonitorsAMD, %function
-glGenPerfMonitorsAMD:
-    mov __blue_glCore_glGenPerfMonitorsAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInteger64i_v
-.type glGetInteger64i_v, %function
-glGetInteger64i_v:
-    mov __blue_glCore_glGetInteger64i_v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetHistogramParameterfv
-.type glGetHistogramParameterfv, %function
-glGetHistogramParameterfv:
-    mov __blue_glCore_glGetHistogramParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexFormatNV
-.type glVertexFormatNV, %function
-glVertexFormatNV:
-    mov __blue_glCore_glVertexFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFuncIndexedAMD
-.type glBlendFuncIndexedAMD, %function
-glBlendFuncIndexedAMD:
-    mov __blue_glCore_glBlendFuncIndexedAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1iv
-.type glMultiTexCoord1iv, %function
-glMultiTexCoord1iv:
-    mov __blue_glCore_glMultiTexCoord1iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsEnabledi
-.type glIsEnabledi, %function
-glIsEnabledi:
-    mov __blue_glCore_glIsEnabledi@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2ui64vNV
-.type glVertexAttribL2ui64vNV, %function
-glVertexAttribL2ui64vNV:
-    mov __blue_glCore_glVertexAttribL2ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4i64NV
-.type glVertexAttribL4i64NV, %function
-glVertexAttribL4i64NV:
-    mov __blue_glCore_glVertexAttribL4i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixTranslatedEXT
-.type glMatrixTranslatedEXT, %function
-glMatrixTranslatedEXT:
-    mov __blue_glCore_glMatrixTranslatedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1ui64vARB
-.type glUniform1ui64vARB, %function
-glUniform1ui64vARB:
-    mov __blue_glCore_glUniform1ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixMultdEXT
-.type glMatrixMultdEXT, %function
-glMatrixMultdEXT:
-    mov __blue_glCore_glMatrixMultdEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3dvEXT
-.type glBinormal3dvEXT, %function
-glBinormal3dvEXT:
-    mov __blue_glCore_glBinormal3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glImportSyncEXT
-.type glImportSyncEXT, %function
-glImportSyncEXT:
-    mov __blue_glCore_glImportSyncEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetListParameterfvSGIX
-.type glGetListParameterfvSGIX, %function
-glGetListParameterfvSGIX:
-    mov __blue_glCore_glGetListParameterfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4sv
-.type glMultiTexCoord4sv, %function
-glMultiTexCoord4sv:
-    mov __blue_glCore_glMultiTexCoord4sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3fv
-.type glProgramUniformMatrix3fv, %function
-glProgramUniformMatrix3fv:
-    mov __blue_glCore_glProgramUniformMatrix3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindVertexArrayAPPLE
-.type glBindVertexArrayAPPLE, %function
-glBindVertexArrayAPPLE:
-    mov __blue_glCore_glBindVertexArrayAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glObjectPtrLabel
-.type glObjectPtrLabel, %function
-glObjectPtrLabel:
-    mov __blue_glCore_glObjectPtrLabel@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetDebugMessageLog
-.type glGetDebugMessageLog, %function
-glGetDebugMessageLog:
-    mov __blue_glCore_glGetDebugMessageLog@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTrackMatrixNV
-.type glTrackMatrixNV, %function
-glTrackMatrixNV:
-    mov __blue_glCore_glTrackMatrixNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindFragDataLocation
-.type glBindFragDataLocation, %function
-glBindFragDataLocation:
-    mov __blue_glCore_glBindFragDataLocation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3ivEXT
-.type glTangent3ivEXT, %function
-glTangent3ivEXT:
-    mov __blue_glCore_glTangent3ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3ubv
-.type glSecondaryColor3ubv, %function
-glSecondaryColor3ubv:
-    mov __blue_glCore_glSecondaryColor3ubv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeTextureHandleNonResidentNV
-.type glMakeTextureHandleNonResidentNV, %function
-glMakeTextureHandleNonResidentNV:
-    mov __blue_glCore_glMakeTextureHandleNonResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs4ubvNV
-.type glVertexAttribs4ubvNV, %function
-glVertexAttribs4ubvNV:
-    mov __blue_glCore_glVertexAttribs4ubvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClipPlanexOES
-.type glClipPlanexOES, %function
-glClipPlanexOES:
-    mov __blue_glCore_glClipPlanexOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3iv
-.type glMultiTexCoord3iv, %function
-glMultiTexCoord3iv:
-    mov __blue_glCore_glMultiTexCoord3iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnPolygonStippleARB
-.type glGetnPolygonStippleARB, %function
-glGetnPolygonStippleARB:
-    mov __blue_glCore_glGetnPolygonStippleARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2i64vNV
-.type glUniform2i64vNV, %function
-glUniform2i64vNV:
-    mov __blue_glCore_glUniform2i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexSubImage2DEXT
-.type glMultiTexSubImage2DEXT, %function
-glMultiTexSubImage2DEXT:
-    mov __blue_glCore_glMultiTexSubImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiColor3fVertex3fSUN
-.type glReplacementCodeuiColor3fVertex3fSUN, %function
-glReplacementCodeuiColor3fVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiColor3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3dvEXT
-.type glTangent3dvEXT, %function
-glTangent3dvEXT:
-    mov __blue_glCore_glTangent3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexWeighthvNV
-.type glVertexWeighthvNV, %function
-glVertexWeighthvNV:
-    mov __blue_glCore_glVertexWeighthvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3iv
-.type glWindowPos3iv, %function
-glWindowPos3iv:
-    mov __blue_glCore_glWindowPos3iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1xvOES
-.type glMultiTexCoord1xvOES, %function
-glMultiTexCoord1xvOES:
-    mov __blue_glCore_glMultiTexCoord1xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformPathNV
-.type glTransformPathNV, %function
-glTransformPathNV:
-    mov __blue_glCore_glTransformPathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramNamedParameter4dNV
-.type glProgramNamedParameter4dNV, %function
-glProgramNamedParameter4dNV:
-    mov __blue_glCore_glProgramNamedParameter4dNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginQuery
-.type glBeginQuery, %function
-glBeginQuery:
-    mov __blue_glCore_glBeginQuery@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1dEXT
-.type glProgramUniform1dEXT, %function
-glProgramUniform1dEXT:
-    mov __blue_glCore_glProgramUniform1dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormal3hvNV
-.type glNormal3hvNV, %function
-glNormal3hvNV:
-    mov __blue_glCore_glNormal3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCombinerOutputParameterfvNV
-.type glGetCombinerOutputParameterfvNV, %function
-glGetCombinerOutputParameterfvNV:
-    mov __blue_glCore_glGetCombinerOutputParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPushDebugGroup
-.type glPushDebugGroup, %function
-glPushDebugGroup:
-    mov __blue_glCore_glPushDebugGroup@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexSubImage3D
-.type glCopyTexSubImage3D, %function
-glCopyTexSubImage3D:
-    mov __blue_glCore_glCopyTexSubImage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateShaderObjectARB
-.type glCreateShaderObjectARB, %function
-glCreateShaderObjectARB:
-    mov __blue_glCore_glCreateShaderObjectARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetStageIndexNV
-.type glGetStageIndexNV, %function
-glGetStageIndexNV:
-    mov __blue_glCore_glGetStageIndexNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableParameterfv
-.type glGetColorTableParameterfv, %function
-glGetColorTableParameterfv:
-    mov __blue_glCore_glGetColorTableParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferPointervEXT
-.type glGetNamedBufferPointervEXT, %function
-glGetNamedBufferPointervEXT:
-    mov __blue_glCore_glGetNamedBufferPointervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureBarrierNV
-.type glTextureBarrierNV, %function
-glTextureBarrierNV:
-    mov __blue_glCore_glTextureBarrierNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4ubVertex3fvSUN
-.type glColor4ubVertex3fvSUN, %function
-glColor4ubVertex3fvSUN:
-    mov __blue_glCore_glColor4ubVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCommandHeaderNV
-.type glGetCommandHeaderNV, %function
-glGetCommandHeaderNV:
-    mov __blue_glCore_glGetCommandHeaderNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfMonitorCounterInfoAMD
-.type glGetPerfMonitorCounterInfoAMD, %function
-glGetPerfMonitorCounterInfoAMD:
-    mov __blue_glCore_glGetPerfMonitorCounterInfoAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1svARB
-.type glVertexAttrib1svARB, %function
-glVertexAttrib1svARB:
-    mov __blue_glCore_glVertexAttrib1svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayBindingDivisor
-.type glVertexArrayBindingDivisor, %function
-glVertexArrayBindingDivisor:
-    mov __blue_glCore_glVertexArrayBindingDivisor@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixMultTransposefEXT
-.type glMatrixMultTransposefEXT, %function
-glMatrixMultTransposefEXT:
-    mov __blue_glCore_glMatrixMultTransposefEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveUniformBlockiv
-.type glGetActiveUniformBlockiv, %function
-glGetActiveUniformBlockiv:
-    mov __blue_glCore_glGetActiveUniformBlockiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIndexPointerListIBM
-.type glIndexPointerListIBM, %function
-glIndexPointerListIBM:
-    mov __blue_glCore_glIndexPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4iEXT
-.type glVertexAttribI4iEXT, %function
-glVertexAttribI4iEXT:
-    mov __blue_glCore_glVertexAttribI4iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginTransformFeedbackNV
-.type glBeginTransformFeedbackNV, %function
-glBeginTransformFeedbackNV:
-    mov __blue_glCore_glBeginTransformFeedbackNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorFragmentOp3ATI
-.type glColorFragmentOp3ATI, %function
-glColorFragmentOp3ATI:
-    mov __blue_glCore_glColorFragmentOp3ATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapGrid1xOES
-.type glMapGrid1xOES, %function
-glMapGrid1xOES:
-    mov __blue_glCore_glMapGrid1xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResizeBuffersMESA
-.type glResizeBuffersMESA, %function
-glResizeBuffersMESA:
-    mov __blue_glCore_glResizeBuffersMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMinmaxParameterfv
-.type glGetMinmaxParameterfv, %function
-glGetMinmaxParameterfv:
-    mov __blue_glCore_glGetMinmaxParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClientActiveTextureARB
-.type glClientActiveTextureARB, %function
-glClientActiveTextureARB:
-    mov __blue_glCore_glClientActiveTextureARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindVertexArray
-.type glBindVertexArray, %function
-glBindVertexArray:
-    mov __blue_glCore_glBindVertexArray@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
 .global glProgramUniform1dvEXT
 .type glProgramUniform1dvEXT, %function
 glProgramUniform1dvEXT:
     mov __blue_glCore_glProgramUniform1dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedBufferSubData
-.type glNamedBufferSubData, %function
-glNamedBufferSubData:
-    mov __blue_glCore_glNamedBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexParameterIivEXT
-.type glGetMultiTexParameterIivEXT, %function
-glGetMultiTexParameterIivEXT:
-    mov __blue_glCore_glGetMultiTexParameterIivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableVertexArrayAttribEXT
-.type glDisableVertexArrayAttribEXT, %function
-glDisableVertexArrayAttribEXT:
-    mov __blue_glCore_glDisableVertexArrayAttribEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glObjectUnpurgeableAPPLE
-.type glObjectUnpurgeableAPPLE, %function
-glObjectUnpurgeableAPPLE:
-    mov __blue_glCore_glObjectUnpurgeableAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs2dvNV
-.type glVertexAttribs2dvNV, %function
-glVertexAttribs2dvNV:
-    mov __blue_glCore_glVertexAttribs2dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiTexCoord2fVertex3fSUN
-.type glReplacementCodeuiTexCoord2fVertex3fSUN, %function
-glReplacementCodeuiTexCoord2fVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiTexCoord2fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMapParameterfvNV
-.type glGetMapParameterfvNV, %function
-glGetMapParameterfvNV:
-    mov __blue_glCore_glGetMapParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4ivEXT
-.type glProgramUniform4ivEXT, %function
-glProgramUniform4ivEXT:
-    mov __blue_glCore_glProgramUniform4ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3ui64vNV
-.type glProgramUniform3ui64vNV, %function
-glProgramUniform3ui64vNV:
-    mov __blue_glCore_glProgramUniform3ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexFilterFuncSGIS
-.type glTexFilterFuncSGIS, %function
-glTexFilterFuncSGIS:
-    mov __blue_glCore_glTexFilterFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSpriteParameterfvSGIX
-.type glSpriteParameterfvSGIX, %function
-glSpriteParameterfvSGIX:
-    mov __blue_glCore_glSpriteParameterfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyMultiTexImage1DEXT
-.type glCopyMultiTexImage1DEXT, %function
-glCopyMultiTexImage1DEXT:
-    mov __blue_glCore_glCopyMultiTexImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorMaskIndexedEXT
-.type glColorMaskIndexedEXT, %function
-glColorMaskIndexedEXT:
-    mov __blue_glCore_glColorMaskIndexedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix2x4dv
-.type glUniformMatrix2x4dv, %function
-glUniformMatrix2x4dv:
-    mov __blue_glCore_glUniformMatrix2x4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramResourceLocationIndex
-.type glGetProgramResourceLocationIndex, %function
-glGetProgramResourceLocationIndex:
-    mov __blue_glCore_glGetProgramResourceLocationIndex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor3hNV
-.type glColor3hNV, %function
-glColor3hNV:
-    mov __blue_glCore_glColor3hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glViewport
-.type glViewport, %function
-glViewport:
-    mov __blue_glCore_glViewport@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramNamedParameter4fNV
-.type glProgramNamedParameter4fNV, %function
-glProgramNamedParameter4fNV:
-    mov __blue_glCore_glProgramNamedParameter4fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInvariantBooleanvEXT
-.type glGetInvariantBooleanvEXT, %function
-glGetInvariantBooleanvEXT:
-    mov __blue_glCore_glGetInvariantBooleanvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexStorage2DMultisample
-.type glTexStorage2DMultisample, %function
-glTexStorage2DMultisample:
-    mov __blue_glCore_glTexStorage2DMultisample@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelStorex
-.type glPixelStorex, %function
-glPixelStorex:
-    mov __blue_glCore_glPixelStorex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1dvEXT
-.type glVertexAttribL1dvEXT, %function
-glVertexAttribL1dvEXT:
-    mov __blue_glCore_glVertexAttribL1dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveSubroutineUniformiv
-.type glGetActiveSubroutineUniformiv, %function
-glGetActiveSubroutineUniformiv:
-    mov __blue_glCore_glGetActiveSubroutineUniformiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexSubImage2DARB
-.type glCompressedTexSubImage2DARB, %function
-glCompressedTexSubImage2DARB:
-    mov __blue_glCore_glCompressedTexSubImage2DARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex2hvNV
-.type glVertex2hvNV, %function
-glVertex2hvNV:
-    mov __blue_glCore_glVertex2hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexBuffer
-.type glTexBuffer, %function
-glTexBuffer:
-    mov __blue_glCore_glTexBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelStorei
-.type glPixelStorei, %function
-glPixelStorei:
-    mov __blue_glCore_glPixelStorei@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glValidateProgram
-.type glValidateProgram, %function
-glValidateProgram:
-    mov __blue_glCore_glValidateProgram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glActiveShaderProgram
-.type glActiveShaderProgram, %function
-glActiveShaderProgram:
-    mov __blue_glCore_glActiveShaderProgram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3dARB
-.type glWindowPos3dARB, %function
-glWindowPos3dARB:
-    mov __blue_glCore_glWindowPos3dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClipControl
-.type glClipControl, %function
-glClipControl:
-    mov __blue_glCore_glClipControl@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP2uiv
-.type glMultiTexCoordP2uiv, %function
-glMultiTexCoordP2uiv:
-    mov __blue_glCore_glMultiTexCoordP2uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN
-.type glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN, %function
-glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord1bOES
-.type glTexCoord1bOES, %function
-glTexCoord1bOES:
-    mov __blue_glCore_glTexCoord1bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2i64vARB
-.type glProgramUniform2i64vARB, %function
-glProgramUniform2i64vARB:
-    mov __blue_glCore_glProgramUniform2i64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2dARB
-.type glWindowPos2dARB, %function
-glWindowPos2dARB:
-    mov __blue_glCore_glWindowPos2dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormal3xOES
-.type glNormal3xOES, %function
-glNormal3xOES:
-    mov __blue_glCore_glNormal3xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMap1xOES
-.type glMap1xOES, %function
-glMap1xOES:
-    mov __blue_glCore_glMap1xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4fVertex4fvSUN
-.type glTexCoord4fVertex4fvSUN, %function
-glTexCoord4fVertex4fvSUN:
-    mov __blue_glCore_glTexCoord4fVertex4fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glActiveVaryingNV
-.type glActiveVaryingNV, %function
-glActiveVaryingNV:
-    mov __blue_glCore_glActiveVaryingNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReferencePlaneSGIX
-.type glReferencePlaneSGIX, %function
-glReferencePlaneSGIX:
-    mov __blue_glCore_glReferencePlaneSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexGendvEXT
-.type glGetMultiTexGendvEXT, %function
-glGetMultiTexGendvEXT:
-    mov __blue_glCore_glGetMultiTexGendvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedBufferSubDataEXT
-.type glClearNamedBufferSubDataEXT, %function
-glClearNamedBufferSubDataEXT:
-    mov __blue_glCore_glClearNamedBufferSubDataEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureSamplerHandleARB
-.type glGetTextureSamplerHandleARB, %function
-glGetTextureSamplerHandleARB:
-    mov __blue_glCore_glGetTextureSamplerHandleARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindTexture
-.type glBindTexture, %function
-glBindTexture:
-    mov __blue_glCore_glBindTexture@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveAttribARB
-.type glGetActiveAttribARB, %function
-glGetActiveAttribARB:
-    mov __blue_glCore_glGetActiveAttribARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glHistogramEXT
-.type glHistogramEXT, %function
-glHistogramEXT:
-    mov __blue_glCore_glHistogramEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTransformParameteriEXT
-.type glPixelTransformParameteriEXT, %function
-glPixelTransformParameteriEXT:
-    mov __blue_glCore_glPixelTransformParameteriEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDetachShader
-.type glDetachShader, %function
-glDetachShader:
-    mov __blue_glCore_glDetachShader@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFinishTextureSUNX
-.type glFinishTextureSUNX, %function
-glFinishTextureSUNX:
-    mov __blue_glCore_glFinishTextureSUNX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix3x4dv
-.type glUniformMatrix3x4dv, %function
-glUniformMatrix3x4dv:
-    mov __blue_glCore_glUniformMatrix3x4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4fARB
-.type glVertexAttrib4fARB, %function
-glVertexAttrib4fARB:
-    mov __blue_glCore_glVertexAttrib4fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathColorGenivNV
-.type glGetPathColorGenivNV, %function
-glGetPathColorGenivNV:
-    mov __blue_glCore_glGetPathColorGenivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramResourceLocation
-.type glGetProgramResourceLocation, %function
-glGetProgramResourceLocation:
-    mov __blue_glCore_glGetProgramResourceLocation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayAttribLFormat
-.type glVertexArrayAttribLFormat, %function
-glVertexArrayAttribLFormat:
-    mov __blue_glCore_glVertexArrayAttribLFormat@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedCopyBufferSubDataEXT
-.type glNamedCopyBufferSubDataEXT, %function
-glNamedCopyBufferSubDataEXT:
-    mov __blue_glCore_glNamedCopyBufferSubDataEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribOffsetEXT
-.type glVertexArrayVertexAttribOffsetEXT, %function
-glVertexArrayVertexAttribOffsetEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIndexFormatNV
-.type glIndexFormatNV, %function
-glIndexFormatNV:
-    mov __blue_glCore_glIndexFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiVertex3fvSUN
-.type glReplacementCodeuiVertex3fvSUN, %function
-glReplacementCodeuiVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glViewportIndexedfv
-.type glViewportIndexedfv, %function
-glViewportIndexedfv:
-    mov __blue_glCore_glViewportIndexedfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribPointervARB
-.type glGetVertexAttribPointervARB, %function
-glGetVertexAttribPointervARB:
-    mov __blue_glCore_glGetVertexAttribPointervARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexBumpParameterfvATI
-.type glTexBumpParameterfvATI, %function
-glTexBumpParameterfvATI:
-    mov __blue_glCore_glTexBumpParameterfvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixIndexuivARB
-.type glMatrixIndexuivARB, %function
-glMatrixIndexuivARB:
-    mov __blue_glCore_glMatrixIndexuivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1hNV
-.type glVertexAttrib1hNV, %function
-glVertexAttrib1hNV:
-    mov __blue_glCore_glVertexAttrib1hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3svMESA
-.type glWindowPos3svMESA, %function
-glWindowPos3svMESA:
-    mov __blue_glCore_glWindowPos3svMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilOpSeparateATI
-.type glStencilOpSeparateATI, %function
-glStencilOpSeparateATI:
-    mov __blue_glCore_glStencilOpSeparateATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementsBaseVertex
-.type glDrawElementsBaseVertex, %function
-glDrawElementsBaseVertex:
-    mov __blue_glCore_glDrawElementsBaseVertex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationSeparateiARB
-.type glBlendEquationSeparateiARB, %function
-glBlendEquationSeparateiARB:
-    mov __blue_glCore_glBlendEquationSeparateiARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1fNV
-.type glVertexAttrib1fNV, %function
-glVertexAttrib1fNV:
-    mov __blue_glCore_glVertexAttrib1fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSampleCoverage
-.type glSampleCoverage, %function
-glSampleCoverage:
-    mov __blue_glCore_glSampleCoverage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearBufferSubData
-.type glClearBufferSubData, %function
-glClearBufferSubData:
-    mov __blue_glCore_glClearBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexStorage1D
-.type glTexStorage1D, %function
-glTexStorage1D:
-    mov __blue_glCore_glTexStorage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3iEXT
-.type glVertexAttribI3iEXT, %function
-glVertexAttribI3iEXT:
-    mov __blue_glCore_glVertexAttribI3iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeTextureHandleNonResidentARB
-.type glMakeTextureHandleNonResidentARB, %function
-glMakeTextureHandleNonResidentARB:
-    mov __blue_glCore_glMakeTextureHandleNonResidentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4dATI
-.type glVertexStream4dATI, %function
-glVertexStream4dATI:
-    mov __blue_glCore_glVertexStream4dATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2dvEXT
-.type glProgramUniformMatrix2dvEXT, %function
-glProgramUniformMatrix2dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix2dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs2hvNV
-.type glVertexAttribs2hvNV, %function
-glVertexAttribs2hvNV:
-    mov __blue_glCore_glVertexAttribs2hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformiv
-.type glGetUniformiv, %function
-glGetUniformiv:
-    mov __blue_glCore_glGetUniformiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2fvMESA
-.type glWindowPos2fvMESA, %function
-glWindowPos2fvMESA:
-    mov __blue_glCore_glWindowPos2fvMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4ui
-.type glUniform4ui, %function
-glUniform4ui:
-    mov __blue_glCore_glUniform4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindFramebuffer
-.type glBindFramebuffer, %function
-glBindFramebuffer:
-    mov __blue_glCore_glBindFramebuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glValidateProgramARB
-.type glValidateProgramARB, %function
-glValidateProgramARB:
-    mov __blue_glCore_glValidateProgramARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribPointerARB
-.type glVertexAttribPointerARB, %function
-glVertexAttribPointerARB:
-    mov __blue_glCore_glVertexAttribPointerARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteFramebuffersEXT
-.type glDeleteFramebuffersEXT, %function
-glDeleteFramebuffersEXT:
-    mov __blue_glCore_glDeleteFramebuffersEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResetMinmaxEXT
-.type glResetMinmaxEXT, %function
-glResetMinmaxEXT:
-    mov __blue_glCore_glResetMinmaxEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1fvNV
-.type glVertexAttrib1fvNV, %function
-glVertexAttrib1fvNV:
-    mov __blue_glCore_glVertexAttrib1fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsQueryARB
-.type glIsQueryARB, %function
-glIsQueryARB:
-    mov __blue_glCore_glIsQueryARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableVariantClientStateEXT
-.type glEnableVariantClientStateEXT, %function
-glEnableVariantClientStateEXT:
-    mov __blue_glCore_glEnableVariantClientStateEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glScissorIndexed
-.type glScissorIndexed, %function
-glScissorIndexed:
-    mov __blue_glCore_glScissorIndexed@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInvariantIntegervEXT
-.type glGetInvariantIntegervEXT, %function
-glGetInvariantIntegervEXT:
-    mov __blue_glCore_glGetInvariantIntegervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameterxvOES
-.type glConvolutionParameterxvOES, %function
-glConvolutionParameterxvOES:
-    mov __blue_glCore_glConvolutionParameterxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenFramebuffersEXT
-.type glGenFramebuffersEXT, %function
-glGenFramebuffersEXT:
-    mov __blue_glCore_glGenFramebuffersEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayColorOffsetEXT
-.type glVertexArrayColorOffsetEXT, %function
-glVertexArrayColorOffsetEXT:
-    mov __blue_glCore_glVertexArrayColorOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3ivARB
-.type glMultiTexCoord3ivARB, %function
-glMultiTexCoord3ivARB:
-    mov __blue_glCore_glMultiTexCoord3ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexWeightfEXT
-.type glVertexWeightfEXT, %function
-glVertexWeightfEXT:
-    mov __blue_glCore_glVertexWeightfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsTextureHandleResidentARB
-.type glIsTextureHandleResidentARB, %function
-glIsTextureHandleResidentARB:
-    mov __blue_glCore_glIsTextureHandleResidentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4ivMESA
-.type glWindowPos4ivMESA, %function
-glWindowPos4ivMESA:
-    mov __blue_glCore_glWindowPos4ivMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVariantPointervEXT
-.type glGetVariantPointervEXT, %function
-glGetVariantPointervEXT:
-    mov __blue_glCore_glGetVariantPointervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapNamedBufferRangeEXT
-.type glMapNamedBufferRangeEXT, %function
-glMapNamedBufferRangeEXT:
-    mov __blue_glCore_glMapNamedBufferRangeEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateShaderProgramv
-.type glCreateShaderProgramv, %function
-glCreateShaderProgramv:
-    mov __blue_glCore_glCreateShaderProgramv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjectiv
-.type glGetQueryObjectiv, %function
-glGetQueryObjectiv:
-    mov __blue_glCore_glGetQueryObjectiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPNTrianglesfATI
-.type glPNTrianglesfATI, %function
-glPNTrianglesfATI:
-    mov __blue_glCore_glPNTrianglesfATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactorusSUN
-.type glGlobalAlphaFactorusSUN, %function
-glGlobalAlphaFactorusSUN:
-    mov __blue_glCore_glGlobalAlphaFactorusSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3dvNV
-.type glVertexAttrib3dvNV, %function
-glVertexAttrib3dvNV:
-    mov __blue_glCore_glVertexAttrib3dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3sARB
-.type glMultiTexCoord3sARB, %function
-glMultiTexCoord3sARB:
-    mov __blue_glCore_glMultiTexCoord3sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenerateMipmap
-.type glGenerateMipmap, %function
-glGenerateMipmap:
-    mov __blue_glCore_glGenerateMipmap@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureSubImage2D
-.type glCompressedTextureSubImage2D, %function
-glCompressedTextureSubImage2D:
-    mov __blue_glCore_glCompressedTextureSubImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedRenderbufferStorageMultisampleEXT
-.type glNamedRenderbufferStorageMultisampleEXT, %function
-glNamedRenderbufferStorageMultisampleEXT:
-    mov __blue_glCore_glNamedRenderbufferStorageMultisampleEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPolygonOffsetClampEXT
-.type glPolygonOffsetClampEXT, %function
-glPolygonOffsetClampEXT:
-    mov __blue_glCore_glPolygonOffsetClampEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureRangeAPPLE
-.type glTextureRangeAPPLE, %function
-glTextureRangeAPPLE:
-    mov __blue_glCore_glTextureRangeAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationIndexedAMD
-.type glBlendEquationIndexedAMD, %function
-glBlendEquationIndexedAMD:
-    mov __blue_glCore_glBlendEquationIndexedAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3i64vARB
-.type glProgramUniform3i64vARB, %function
-glProgramUniform3i64vARB:
-    mov __blue_glCore_glProgramUniform3i64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameteri
-.type glPointParameteri, %function
-glPointParameteri:
-    mov __blue_glCore_glPointParameteri@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUnmapBuffer
-.type glUnmapBuffer, %function
-glUnmapBuffer:
-    mov __blue_glCore_glUnmapBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSampleMaskEXT
-.type glSampleMaskEXT, %function
-glSampleMaskEXT:
-    mov __blue_glCore_glSampleMaskEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2fvEXT
-.type glProgramUniform2fvEXT, %function
-glProgramUniform2fvEXT:
-    mov __blue_glCore_glProgramUniform2fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord1xvOES
-.type glTexCoord1xvOES, %function
-glTexCoord1xvOES:
-    mov __blue_glCore_glTexCoord1xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1sARB
-.type glVertexAttrib1sARB, %function
-glVertexAttrib1sARB:
-    mov __blue_glCore_glVertexAttrib1sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4sv
-.type glVertexAttrib4sv, %function
-glVertexAttrib4sv:
-    mov __blue_glCore_glVertexAttrib4sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameter4dvNV
-.type glProgramParameter4dvNV, %function
-glProgramParameter4dvNV:
-    mov __blue_glCore_glProgramParameter4dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterIuivEXT
-.type glTextureParameterIuivEXT, %function
-glTextureParameterIuivEXT:
-    mov __blue_glCore_glTextureParameterIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableParameterfvSGI
-.type glGetColorTableParameterfvSGI, %function
-glGetColorTableParameterfvSGI:
-    mov __blue_glCore_glGetColorTableParameterfvSGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteRenderbuffersEXT
-.type glDeleteRenderbuffersEXT, %function
-glDeleteRenderbuffersEXT:
-    mov __blue_glCore_glDeleteRenderbuffersEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1svNV
-.type glVertexAttrib1svNV, %function
-glVertexAttrib1svNV:
-    mov __blue_glCore_glVertexAttrib1svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP4uiv
-.type glVertexAttribP4uiv, %function
-glVertexAttribP4uiv:
-    mov __blue_glCore_glVertexAttribP4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2ui64vNV
-.type glProgramUniform2ui64vNV, %function
-glProgramUniform2ui64vNV:
-    mov __blue_glCore_glProgramUniform2ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReleaseShaderCompiler
-.type glReleaseShaderCompiler, %function
-glReleaseShaderCompiler:
-    mov __blue_glCore_glReleaseShaderCompiler@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord3bvOES
-.type glTexCoord3bvOES, %function
-glTexCoord3bvOES:
-    mov __blue_glCore_glTexCoord3bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsVertexAttribEnabledAPPLE
-.type glIsVertexAttribEnabledAPPLE, %function
-glIsVertexAttribEnabledAPPLE:
-    mov __blue_glCore_glIsVertexAttribEnabledAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReadPixels
-.type glReadPixels, %function
-glReadPixels:
-    mov __blue_glCore_glReadPixels@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3iv
-.type glVertexAttribI3iv, %function
-glVertexAttribI3iv:
-    mov __blue_glCore_glVertexAttribI3iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSetFenceAPPLE
-.type glSetFenceAPPLE, %function
-glSetFenceAPPLE:
-    mov __blue_glCore_glSetFenceAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStateCaptureNV
-.type glStateCaptureNV, %function
-glStateCaptureNV:
-    mov __blue_glCore_glStateCaptureNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightsvARB
-.type glWeightsvARB, %function
-glWeightsvARB:
-    mov __blue_glCore_glWeightsvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetHistogramParameterivEXT
-.type glGetHistogramParameterivEXT, %function
-glGetHistogramParameterivEXT:
-    mov __blue_glCore_glGetHistogramParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI1iEXT
-.type glVertexAttribI1iEXT, %function
-glVertexAttribI1iEXT:
-    mov __blue_glCore_glVertexAttribI1iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetDoublei_vEXT
-.type glGetDoublei_vEXT, %function
-glGetDoublei_vEXT:
-    mov __blue_glCore_glGetDoublei_vEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordfEXT
-.type glFogCoordfEXT, %function
-glFogCoordfEXT:
-    mov __blue_glCore_glFogCoordfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2dARB
-.type glVertexAttrib2dARB, %function
-glVertexAttrib2dARB:
-    mov __blue_glCore_glVertexAttrib2dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4dARB
-.type glMultiTexCoord4dARB, %function
-glMultiTexCoord4dARB:
-    mov __blue_glCore_glMultiTexCoord4dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReadnPixelsARB
-.type glReadnPixelsARB, %function
-glReadnPixelsARB:
-    mov __blue_glCore_glReadnPixelsARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexBufferEXT
-.type glMultiTexBufferEXT, %function
-glMultiTexBufferEXT:
-    mov __blue_glCore_glMultiTexBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4dvMESA
-.type glWindowPos4dvMESA, %function
-glWindowPos4dvMESA:
-    mov __blue_glCore_glWindowPos4dvMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateNamedFramebufferData
-.type glInvalidateNamedFramebufferData, %function
-glInvalidateNamedFramebufferData:
-    mov __blue_glCore_glInvalidateNamedFramebufferData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorP4ui
-.type glColorP4ui, %function
-glColorP4ui:
-    mov __blue_glCore_glColorP4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUseProgramStages
-.type glUseProgramStages, %function
-glUseProgramStages:
-    mov __blue_glCore_glUseProgramStages@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexBlendEnviATI
-.type glVertexBlendEnviATI, %function
-glVertexBlendEnviATI:
-    mov __blue_glCore_glVertexBlendEnviATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3i64ARB
-.type glUniform3i64ARB, %function
-glUniform3i64ARB:
-    mov __blue_glCore_glUniform3i64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2dEXT
-.type glProgramUniform2dEXT, %function
-glProgramUniform2dEXT:
-    mov __blue_glCore_glProgramUniform2dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReadBuffer
-.type glReadBuffer, %function
-glReadBuffer:
-    mov __blue_glCore_glReadBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationiARB
-.type glBlendEquationiARB, %function
-glBlendEquationiARB:
-    mov __blue_glCore_glBlendEquationiARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor3hvNV
-.type glColor3hvNV, %function
-glColor3hvNV:
-    mov __blue_glCore_glColor3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMapAttribParameterfvNV
-.type glGetMapAttribParameterfvNV, %function
-glGetMapAttribParameterfvNV:
-    mov __blue_glCore_glGetMapAttribParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBufferSubData
-.type glGetBufferSubData, %function
-glGetBufferSubData:
-    mov __blue_glCore_glGetBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribLdv
-.type glGetVertexAttribLdv, %function
-glGetVertexAttribLdv:
-    mov __blue_glCore_glGetVertexAttribLdv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformuiv
-.type glGetnUniformuiv, %function
-glGetnUniformuiv:
-    mov __blue_glCore_glGetnUniformuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformui64vNV
-.type glGetUniformui64vNV, %function
-glGetUniformui64vNV:
-    mov __blue_glCore_glGetUniformui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedRenderbufferStorageEXT
-.type glNamedRenderbufferStorageEXT, %function
-glNamedRenderbufferStorageEXT:
-    mov __blue_glCore_glNamedRenderbufferStorageEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetArrayObjectfvATI
-.type glGetArrayObjectfvATI, %function
-glGetArrayObjectfvATI:
-    mov __blue_glCore_glGetArrayObjectfvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3dNV
-.type glVertexAttrib3dNV, %function
-glVertexAttrib3dNV:
-    mov __blue_glCore_glVertexAttrib3dNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage1DEXT
-.type glTextureStorage1DEXT, %function
-glTextureStorage1DEXT:
-    mov __blue_glCore_glTextureStorage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTexGenParameteriSGIS
-.type glPixelTexGenParameteriSGIS, %function
-glPixelTexGenParameteriSGIS:
-    mov __blue_glCore_glPixelTexGenParameteriSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorTableEXT
-.type glColorTableEXT, %function
-glColorTableEXT:
-    mov __blue_glCore_glColorTableEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenBuffers
-.type glGenBuffers, %function
-glGenBuffers:
-    mov __blue_glCore_glGenBuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3xvOES
-.type glMultiTexCoord3xvOES, %function
-glMultiTexCoord3xvOES:
-    mov __blue_glCore_glMultiTexCoord3xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glExecuteProgramNV
-.type glExecuteProgramNV, %function
-glExecuteProgramNV:
-    mov __blue_glCore_glExecuteProgramNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantArrayObjectATI
-.type glVariantArrayObjectATI, %function
-glVariantArrayObjectATI:
-    mov __blue_glCore_glVariantArrayObjectATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor3xvOES
-.type glColor3xvOES, %function
-glColor3xvOES:
-    mov __blue_glCore_glColor3xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordP1uiv
-.type glTexCoordP1uiv, %function
-glTexCoordP1uiv:
-    mov __blue_glCore_glTexCoordP1uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteProgramsNV
-.type glDeleteProgramsNV, %function
-glDeleteProgramsNV:
-    mov __blue_glCore_glDeleteProgramsNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glNormalFormatNV
@@ -6613,1924 +31,10 @@ glNormalFormatNV:
     mov __blue_glCore_glNormalFormatNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetInvariantFloatvEXT
-.type glGetInvariantFloatvEXT, %function
-glGetInvariantFloatvEXT:
-    mov __blue_glCore_glGetInvariantFloatvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedFramebufferiv
-.type glClearNamedFramebufferiv, %function
-glClearNamedFramebufferiv:
-    mov __blue_glCore_glClearNamedFramebufferiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glHistogram
-.type glHistogram, %function
-glHistogram:
-    mov __blue_glCore_glHistogram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1ivATI
-.type glVertexStream1ivATI, %function
-glVertexStream1ivATI:
-    mov __blue_glCore_glVertexStream1ivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsFramebuffer
-.type glIsFramebuffer, %function
-glIsFramebuffer:
-    mov __blue_glCore_glIsFramebuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3dvEXT
-.type glProgramUniform3dvEXT, %function
-glProgramUniform3dvEXT:
-    mov __blue_glCore_glProgramUniform3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindVideoCaptureStreamBufferNV
-.type glBindVideoCaptureStreamBufferNV, %function
-glBindVideoCaptureStreamBufferNV:
-    mov __blue_glCore_glBindVideoCaptureStreamBufferNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribfvNV
-.type glGetVertexAttribfvNV, %function
-glGetVertexAttribfvNV:
-    mov __blue_glCore_glGetVertexAttribfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawRangeElementArrayAPPLE
-.type glDrawRangeElementArrayAPPLE, %function
-glDrawRangeElementArrayAPPLE:
-    mov __blue_glCore_glDrawRangeElementArrayAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameterPointervAPPLE
-.type glGetTexParameterPointervAPPLE, %function
-glGetTexParameterPointervAPPLE:
-    mov __blue_glCore_glGetTexParameterPointervAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixPopEXT
-.type glMatrixPopEXT, %function
-glMatrixPopEXT:
-    mov __blue_glCore_glMatrixPopEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1sATI
-.type glVertexStream1sATI, %function
-glVertexStream1sATI:
-    mov __blue_glCore_glVertexStream1sATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnPixelMapuivARB
-.type glGetnPixelMapuivARB, %function
-glGetnPixelMapuivARB:
-    mov __blue_glCore_glGetnPixelMapuivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexEnviEXT
-.type glMultiTexEnviEXT, %function
-glMultiTexEnviEXT:
-    mov __blue_glCore_glMultiTexEnviEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI2iEXT
-.type glVertexAttribI2iEXT, %function
-glVertexAttribI2iEXT:
-    mov __blue_glCore_glVertexAttribI2iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameter4fvNV
-.type glProgramParameter4fvNV, %function
-glProgramParameter4fvNV:
-    mov __blue_glCore_glProgramParameter4fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferSampleLocationsfvNV
-.type glNamedFramebufferSampleLocationsfvNV, %function
-glNamedFramebufferSampleLocationsfvNV:
-    mov __blue_glCore_glNamedFramebufferSampleLocationsfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordP4uiv
-.type glTexCoordP4uiv, %function
-glTexCoordP4uiv:
-    mov __blue_glCore_glTexCoordP4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRectxvOES
-.type glRectxvOES, %function
-glRectxvOES:
-    mov __blue_glCore_glRectxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVariantIntegervEXT
-.type glGetVariantIntegervEXT, %function
-glGetVariantIntegervEXT:
-    mov __blue_glCore_glGetVariantIntegervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentCoverageColorNV
-.type glFragmentCoverageColorNV, %function
-glFragmentCoverageColorNV:
-    mov __blue_glCore_glFragmentCoverageColorNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexP2uiv
-.type glVertexP2uiv, %function
-glVertexP2uiv:
-    mov __blue_glCore_glVertexP2uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfMonitorGroupsAMD
-.type glGetPerfMonitorGroupsAMD, %function
-glGetPerfMonitorGroupsAMD:
-    mov __blue_glCore_glGetPerfMonitorGroupsAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultTransposeMatrixfARB
-.type glMultTransposeMatrixfARB, %function
-glMultTransposeMatrixfARB:
-    mov __blue_glCore_glMultTransposeMatrixfARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI2ivEXT
-.type glVertexAttribI2ivEXT, %function
-glVertexAttribI2ivEXT:
-    mov __blue_glCore_glVertexAttribI2ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiColor4fNormal3fVertex3fvSUN
-.type glReplacementCodeuiColor4fNormal3fVertex3fvSUN, %function
-glReplacementCodeuiColor4fNormal3fVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteStatesNV
-.type glDeleteStatesNV, %function
-glDeleteStatesNV:
-    mov __blue_glCore_glDeleteStatesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBufferParameteri64v
-.type glGetBufferParameteri64v, %function
-glGetBufferParameteri64v:
-    mov __blue_glCore_glGetBufferParameteri64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4dv
-.type glProgramUniform4dv, %function
-glProgramUniform4dv:
-    mov __blue_glCore_glProgramUniform4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEdgeFlagPointerEXT
-.type glEdgeFlagPointerEXT, %function
-glEdgeFlagPointerEXT:
-    mov __blue_glCore_glEdgeFlagPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVideoCaptureStreamParameterivNV
-.type glVideoCaptureStreamParameterivNV, %function
-glVideoCaptureStreamParameterivNV:
-    mov __blue_glCore_glVideoCaptureStreamParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4iATI
-.type glVertexStream4iATI, %function
-glVertexStream4iATI:
-    mov __blue_glCore_glVertexStream4iATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUFiniNV
-.type glVDPAUFiniNV, %function
-glVDPAUFiniNV:
-    mov __blue_glCore_glVDPAUFiniNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeBufferNonResidentNV
-.type glMakeBufferNonResidentNV, %function
-glMakeBufferNonResidentNV:
-    mov __blue_glCore_glMakeBufferNonResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2fvARB
-.type glMultiTexCoord2fvARB, %function
-glMultiTexCoord2fvARB:
-    mov __blue_glCore_glMultiTexCoord2fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilStrokePathNV
-.type glStencilStrokePathNV, %function
-glStencilStrokePathNV:
-    mov __blue_glCore_glStencilStrokePathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantuivEXT
-.type glVariantuivEXT, %function
-glVariantuivEXT:
-    mov __blue_glCore_glVariantuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexSubImage3DEXT
-.type glCopyTexSubImage3DEXT, %function
-glCopyTexSubImage3DEXT:
-    mov __blue_glCore_glCopyTexSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColorPointerListIBM
-.type glSecondaryColorPointerListIBM, %function
-glSecondaryColorPointerListIBM:
-    mov __blue_glCore_glSecondaryColorPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1sARB
-.type glMultiTexCoord1sARB, %function
-glMultiTexCoord1sARB:
-    mov __blue_glCore_glMultiTexCoord1sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameterfv
-.type glConvolutionParameterfv, %function
-glConvolutionParameterfv:
-    mov __blue_glCore_glConvolutionParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeTextureHandleResidentNV
-.type glMakeTextureHandleResidentNV, %function
-glMakeTextureHandleResidentNV:
-    mov __blue_glCore_glMakeTextureHandleResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultMatrixxOES
-.type glMultMatrixxOES, %function
-glMultMatrixxOES:
-    mov __blue_glCore_glMultMatrixxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureNormalEXT
-.type glTextureNormalEXT, %function
-glTextureNormalEXT:
-    mov __blue_glCore_glTextureNormalEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryivARB
-.type glGetQueryivARB, %function
-glGetQueryivARB:
-    mov __blue_glCore_glGetQueryivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedMultiTexImage3DEXT
-.type glCompressedMultiTexImage3DEXT, %function
-glCompressedMultiTexImage3DEXT:
-    mov __blue_glCore_glCompressedMultiTexImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParameter4dEXT
-.type glNamedProgramLocalParameter4dEXT, %function
-glNamedProgramLocalParameter4dEXT:
-    mov __blue_glCore_glNamedProgramLocalParameter4dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4x3fvEXT
-.type glProgramUniformMatrix4x3fvEXT, %function
-glProgramUniformMatrix4x3fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix4x3fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterf
-.type glPointParameterf, %function
-glPointParameterf:
-    mov __blue_glCore_glPointParameterf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3dEXT
-.type glProgramUniform3dEXT, %function
-glProgramUniform3dEXT:
-    mov __blue_glCore_glProgramUniform3dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2hNV
-.type glMultiTexCoord2hNV, %function
-glMultiTexCoord2hNV:
-    mov __blue_glCore_glMultiTexCoord2hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetConvolutionFilterEXT
-.type glGetConvolutionFilterEXT, %function
-glGetConvolutionFilterEXT:
-    mov __blue_glCore_glGetConvolutionFilterEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2hNV
-.type glVertexAttrib2hNV, %function
-glVertexAttrib2hNV:
-    mov __blue_glCore_glVertexAttrib2hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCurrentPaletteMatrixARB
-.type glCurrentPaletteMatrixARB, %function
-glCurrentPaletteMatrixARB:
-    mov __blue_glCore_glCurrentPaletteMatrixARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogxvOES
-.type glFogxvOES, %function
-glFogxvOES:
-    mov __blue_glCore_glFogxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateRenderbuffers
-.type glCreateRenderbuffers, %function
-glCreateRenderbuffers:
-    mov __blue_glCore_glCreateRenderbuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4Nusv
-.type glVertexAttrib4Nusv, %function
-glVertexAttrib4Nusv:
-    mov __blue_glCore_glVertexAttrib4Nusv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBufferParameterui64vNV
-.type glGetBufferParameterui64vNV, %function
-glGetBufferParameterui64vNV:
-    mov __blue_glCore_glGetBufferParameterui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthFunc
-.type glDepthFunc, %function
-glDepthFunc:
-    mov __blue_glCore_glDepthFunc@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4bvEXT
-.type glVertexAttribI4bvEXT, %function
-glVertexAttribI4bvEXT:
-    mov __blue_glCore_glVertexAttribI4bvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableClientStateIndexedEXT
-.type glEnableClientStateIndexedEXT, %function
-glEnableClientStateIndexedEXT:
-    mov __blue_glCore_glEnableClientStateIndexedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4i64ARB
-.type glProgramUniform4i64ARB, %function
-glProgramUniform4i64ARB:
-    mov __blue_glCore_glProgramUniform4i64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFunci
-.type glBlendFunci, %function
-glBlendFunci:
-    mov __blue_glCore_glBlendFunci@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoadIdentityEXT
-.type glMatrixLoadIdentityEXT, %function
-glMatrixLoadIdentityEXT:
-    mov __blue_glCore_glMatrixLoadIdentityEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureColorMaskSGIS
-.type glTextureColorMaskSGIS, %function
-glTextureColorMaskSGIS:
-    mov __blue_glCore_glTextureColorMaskSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateShaderProgramEXT
-.type glCreateShaderProgramEXT, %function
-glCreateShaderProgramEXT:
-    mov __blue_glCore_glCreateShaderProgramEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferStorage
-.type glBufferStorage, %function
-glBufferStorage:
-    mov __blue_glCore_glBufferStorage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeNamedBufferNonResidentNV
-.type glMakeNamedBufferNonResidentNV, %function
-glMakeNamedBufferNonResidentNV:
-    mov __blue_glCore_glMakeNamedBufferNonResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRenderbufferStorageMultisampleEXT
-.type glRenderbufferStorageMultisampleEXT, %function
-glRenderbufferStorageMultisampleEXT:
-    mov __blue_glCore_glRenderbufferStorageMultisampleEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFloati_v
-.type glGetFloati_v, %function
-glGetFloati_v:
-    mov __blue_glCore_glGetFloati_v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2ui64ARB
-.type glUniform2ui64ARB, %function
-glUniform2ui64ARB:
-    mov __blue_glCore_glUniform2ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindVertexShaderEXT
-.type glBindVertexShaderEXT, %function
-glBindVertexShaderEXT:
-    mov __blue_glCore_glBindVertexShaderEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformLocation
-.type glGetUniformLocation, %function
-glGetUniformLocation:
-    mov __blue_glCore_glGetUniformLocation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1svATI
-.type glVertexStream1svATI, %function
-glVertexStream1svATI:
-    mov __blue_glCore_glVertexStream1svATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3fATI
-.type glVertexStream3fATI, %function
-glVertexStream3fATI:
-    mov __blue_glCore_glVertexStream3fATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferDrawBuffers
-.type glNamedFramebufferDrawBuffers, %function
-glNamedFramebufferDrawBuffers:
-    mov __blue_glCore_glNamedFramebufferDrawBuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2ui64vNV
-.type glUniform2ui64vNV, %function
-glUniform2ui64vNV:
-    mov __blue_glCore_glUniform2ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordPointervINTEL
-.type glTexCoordPointervINTEL, %function
-glTexCoordPointervINTEL:
-    mov __blue_glCore_glTexCoordPointervINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4fv
-.type glUniform4fv, %function
-glUniform4fv:
-    mov __blue_glCore_glUniform4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalPointerEXT
-.type glNormalPointerEXT, %function
-glNormalPointerEXT:
-    mov __blue_glCore_glNormalPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureSamplerHandleNV
-.type glGetTextureSamplerHandleNV, %function
-glGetTextureSamplerHandleNV:
-    mov __blue_glCore_glGetTextureSamplerHandleNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4hNV
-.type glVertexAttrib4hNV, %function
-glVertexAttrib4hNV:
-    mov __blue_glCore_glVertexAttrib4hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTextureFaceEXT
-.type glNamedFramebufferTextureFaceEXT, %function
-glNamedFramebufferTextureFaceEXT:
-    mov __blue_glCore_glNamedFramebufferTextureFaceEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureSubImage3D
-.type glCompressedTextureSubImage3D, %function
-glCompressedTextureSubImage3D:
-    mov __blue_glCore_glCompressedTextureSubImage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindSamplers
-.type glBindSamplers, %function
-glBindSamplers:
-    mov __blue_glCore_glBindSamplers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAsyncMarkerSGIX
-.type glAsyncMarkerSGIX, %function
-glAsyncMarkerSGIX:
-    mov __blue_glCore_glAsyncMarkerSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorageSparseAMD
-.type glTextureStorageSparseAMD, %function
-glTextureStorageSparseAMD:
-    mov __blue_glCore_glTextureStorageSparseAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetConvolutionParameterivEXT
-.type glGetConvolutionParameterivEXT, %function
-glGetConvolutionParameterivEXT:
-    mov __blue_glCore_glGetConvolutionParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndPerfQueryINTEL
-.type glEndPerfQueryINTEL, %function
-glEndPerfQueryINTEL:
-    mov __blue_glCore_glEndPerfQueryINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightModeliSGIX
-.type glFragmentLightModeliSGIX, %function
-glFragmentLightModeliSGIX:
-    mov __blue_glCore_glFragmentLightModeliSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPrioritizeTexturesEXT
-.type glPrioritizeTexturesEXT, %function
-glPrioritizeTexturesEXT:
-    mov __blue_glCore_glPrioritizeTexturesEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndConditionalRender
-.type glEndConditionalRender, %function
-glEndConditionalRender:
-    mov __blue_glCore_glEndConditionalRender@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResetHistogram
-.type glResetHistogram, %function
-glResetHistogram:
-    mov __blue_glCore_glResetHistogram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetOcclusionQueryivNV
-.type glGetOcclusionQueryivNV, %function
-glGetOcclusionQueryivNV:
-    mov __blue_glCore_glGetOcclusionQueryivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1uiEXT
-.type glUniform1uiEXT, %function
-glUniform1uiEXT:
-    mov __blue_glCore_glUniform1uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2sv
-.type glMultiTexCoord2sv, %function
-glMultiTexCoord2sv:
-    mov __blue_glCore_glMultiTexCoord2sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexSubImage2DEXT
-.type glTexSubImage2DEXT, %function
-glTexSubImage2DEXT:
-    mov __blue_glCore_glTexSubImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2uiv
-.type glProgramUniform2uiv, %function
-glProgramUniform2uiv:
-    mov __blue_glCore_glProgramUniform2uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2iARB
-.type glMultiTexCoord2iARB, %function
-glMultiTexCoord2iARB:
-    mov __blue_glCore_glMultiTexCoord2iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjectuiv
-.type glGetQueryObjectuiv, %function
-glGetQueryObjectuiv:
-    mov __blue_glCore_glGetQueryObjectuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenerateMultiTexMipmapEXT
-.type glGenerateMultiTexMipmapEXT, %function
-glGenerateMultiTexMipmapEXT:
-    mov __blue_glCore_glGenerateMultiTexMipmapEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4iv
-.type glVertexAttrib4iv, %function
-glVertexAttrib4iv:
-    mov __blue_glCore_glVertexAttrib4iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3dvMESA
-.type glWindowPos3dvMESA, %function
-glWindowPos3dvMESA:
-    mov __blue_glCore_glWindowPos3dvMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLabelObjectEXT
-.type glLabelObjectEXT, %function
-glLabelObjectEXT:
-    mov __blue_glCore_glLabelObjectEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1uiv
-.type glProgramUniform1uiv, %function
-glProgramUniform1uiv:
-    mov __blue_glCore_glProgramUniform1uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTexture
-.type glFramebufferTexture, %function
-glFramebufferTexture:
-    mov __blue_glCore_glFramebufferTexture@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexEnvfEXT
-.type glMultiTexEnvfEXT, %function
-glMultiTexEnvfEXT:
-    mov __blue_glCore_glMultiTexEnvfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex4xOES
-.type glVertex4xOES, %function
-glVertex4xOES:
-    mov __blue_glCore_glVertex4xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI2uivEXT
-.type glVertexAttribI2uivEXT, %function
-glVertexAttribI2uivEXT:
-    mov __blue_glCore_glVertexAttribI2uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnConvolutionFilterARB
-.type glGetnConvolutionFilterARB, %function
-glGetnConvolutionFilterARB:
-    mov __blue_glCore_glGetnConvolutionFilterARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterfvSGIS
-.type glPointParameterfvSGIS, %function
-glPointParameterfvSGIS:
-    mov __blue_glCore_glPointParameterfvSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPixelTransformParameterfvEXT
-.type glGetPixelTransformParameterfvEXT, %function
-glGetPixelTransformParameterfvEXT:
-    mov __blue_glCore_glGetPixelTransformParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIndexxvOES
-.type glIndexxvOES, %function
-glIndexxvOES:
-    mov __blue_glCore_glIndexxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthMask
-.type glDepthMask, %function
-glDepthMask:
-    mov __blue_glCore_glDepthMask@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x4fv
-.type glProgramUniformMatrix2x4fv, %function
-glProgramUniformMatrix2x4fv:
-    mov __blue_glCore_glProgramUniformMatrix2x4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAreProgramsResidentNV
-.type glAreProgramsResidentNV, %function
-glAreProgramsResidentNV:
-    mov __blue_glCore_glAreProgramsResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorTable
-.type glColorTable, %function
-glColorTable:
-    mov __blue_glCore_glColorTable@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3bvEXT
-.type glSecondaryColor3bvEXT, %function
-glSecondaryColor3bvEXT:
-    mov __blue_glCore_glSecondaryColor3bvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1dvATI
-.type glVertexStream1dvATI, %function
-glVertexStream1dvATI:
-    mov __blue_glCore_glVertexStream1dvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexEnvfvEXT
-.type glGetMultiTexEnvfvEXT, %function
-glGetMultiTexEnvfvEXT:
-    mov __blue_glCore_glGetMultiTexEnvfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushMappedBufferRangeAPPLE
-.type glFlushMappedBufferRangeAPPLE, %function
-glFlushMappedBufferRangeAPPLE:
-    mov __blue_glCore_glFlushMappedBufferRangeAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs1dvNV
-.type glVertexAttribs1dvNV, %function
-glVertexAttribs1dvNV:
-    mov __blue_glCore_glVertexAttribs1dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2sATI
-.type glVertexStream2sATI, %function
-glVertexStream2sATI:
-    mov __blue_glCore_glVertexStream2sATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnSeparableFilterARB
-.type glGetnSeparableFilterARB, %function
-glGetnSeparableFilterARB:
-    mov __blue_glCore_glGetnSeparableFilterARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2dv
-.type glProgramUniform2dv, %function
-glProgramUniform2dv:
-    mov __blue_glCore_glProgramUniform2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glActiveStencilFaceEXT
-.type glActiveStencilFaceEXT, %function
-glActiveStencilFaceEXT:
-    mov __blue_glCore_glActiveStencilFaceEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4dEXT
-.type glProgramUniform4dEXT, %function
-glProgramUniform4dEXT:
-    mov __blue_glCore_glProgramUniform4dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointSizexOES
-.type glPointSizexOES, %function
-glPointSizexOES:
-    mov __blue_glCore_glPointSizexOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix2fv
-.type glUniformMatrix2fv, %function
-glUniformMatrix2fv:
-    mov __blue_glCore_glUniformMatrix2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendParameteriNV
-.type glBlendParameteriNV, %function
-glBlendParameteriNV:
-    mov __blue_glCore_glBlendParameteriNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParameter4dvEXT
-.type glNamedProgramLocalParameter4dvEXT, %function
-glNamedProgramLocalParameter4dvEXT:
-    mov __blue_glCore_glNamedProgramLocalParameter4dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureParameterfvEXT
-.type glGetTextureParameterfvEXT, %function
-glGetTextureParameterfvEXT:
-    mov __blue_glCore_glGetTextureParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathMetricsNV
-.type glGetPathMetricsNV, %function
-glGetPathMetricsNV:
-    mov __blue_glCore_glGetPathMetricsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFloatv
-.type glGetFloatv, %function
-glGetFloatv:
-    mov __blue_glCore_glGetFloatv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoad3x3fNV
-.type glMatrixLoad3x3fNV, %function
-glMatrixLoad3x3fNV:
-    mov __blue_glCore_glMatrixLoad3x3fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2fARB
-.type glMultiTexCoord2fARB, %function
-glMultiTexCoord2fARB:
-    mov __blue_glCore_glMultiTexCoord2fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightdvARB
-.type glWeightdvARB, %function
-glWeightdvARB:
-    mov __blue_glCore_glWeightdvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsTransformFeedbackNV
-.type glIsTransformFeedbackNV, %function
-glIsTransformFeedbackNV:
-    mov __blue_glCore_glIsTransformFeedbackNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribDivisorARB
-.type glVertexAttribDivisorARB, %function
-glVertexAttribDivisorARB:
-    mov __blue_glCore_glVertexAttribDivisorARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColorP3uiv
-.type glSecondaryColorP3uiv, %function
-glSecondaryColorP3uiv:
-    mov __blue_glCore_glSecondaryColorP3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnCompressedTexImageARB
-.type glGetnCompressedTexImageARB, %function
-glGetnCompressedTexImageARB:
-    mov __blue_glCore_glGetnCompressedTexImageARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetIntegerv
-.type glGetIntegerv, %function
-glGetIntegerv:
-    mov __blue_glCore_glGetIntegerv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoaddEXT
-.type glMatrixLoaddEXT, %function
-glMatrixLoaddEXT:
-    mov __blue_glCore_glMatrixLoaddEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathLengthNV
-.type glGetPathLengthNV, %function
-glGetPathLengthNV:
-    mov __blue_glCore_glGetPathLengthNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3dv
-.type glProgramUniformMatrix3dv, %function
-glProgramUniformMatrix3dv:
-    mov __blue_glCore_glProgramUniformMatrix3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4i64NV
-.type glUniform4i64NV, %function
-glUniform4i64NV:
-    mov __blue_glCore_glUniform4i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetHistogramEXT
-.type glGetHistogramEXT, %function
-glGetHistogramEXT:
-    mov __blue_glCore_glGetHistogramEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4NuivARB
-.type glVertexAttrib4NuivARB, %function
-glVertexAttrib4NuivARB:
-    mov __blue_glCore_glVertexAttrib4NuivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapGrid2xOES
-.type glMapGrid2xOES, %function
-glMapGrid2xOES:
-    mov __blue_glCore_glMapGrid2xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexImage2D
-.type glTexImage2D, %function
-glTexImage2D:
-    mov __blue_glCore_glTexImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2fvARB
-.type glWindowPos2fvARB, %function
-glWindowPos2fvARB:
-    mov __blue_glCore_glWindowPos2fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableIndexedEXT
-.type glEnableIndexedEXT, %function
-glEnableIndexedEXT:
-    mov __blue_glCore_glEnableIndexedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord1bvOES
-.type glTexCoord1bvOES, %function
-glTexCoord1bvOES:
-    mov __blue_glCore_glTexCoord1bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2uiEXT
-.type glUniform2uiEXT, %function
-glUniform2uiEXT:
-    mov __blue_glCore_glUniform2uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodePointerSUN
-.type glReplacementCodePointerSUN, %function
-glReplacementCodePointerSUN:
-    mov __blue_glCore_glReplacementCodePointerSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1fARB
-.type glMultiTexCoord1fARB, %function
-glMultiTexCoord1fARB:
-    mov __blue_glCore_glMultiTexCoord1fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4Nubv
-.type glVertexAttrib4Nubv, %function
-glVertexAttrib4Nubv:
-    mov __blue_glCore_glVertexAttrib4Nubv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribIOffsetEXT
-.type glVertexArrayVertexAttribIOffsetEXT, %function
-glVertexArrayVertexAttribIOffsetEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribIOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompileShaderARB
-.type glCompileShaderARB, %function
-glCompileShaderARB:
-    mov __blue_glCore_glCompileShaderARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3dMESA
-.type glWindowPos3dMESA, %function
-glWindowPos3dMESA:
-    mov __blue_glCore_glWindowPos3dMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3fvATI
-.type glNormalStream3fvATI, %function
-glNormalStream3fvATI:
-    mov __blue_glCore_glNormalStream3fvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4ui64ARB
-.type glUniform4ui64ARB, %function
-glUniform4ui64ARB:
-    mov __blue_glCore_glUniform4ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureRenderbufferEXT
-.type glTextureRenderbufferEXT, %function
-glTextureRenderbufferEXT:
-    mov __blue_glCore_glTextureRenderbufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSubroutineUniformLocation
-.type glGetSubroutineUniformLocation, %function
-glGetSubroutineUniformLocation:
-    mov __blue_glCore_glGetSubroutineUniformLocation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFramebufferParameteriv
-.type glGetFramebufferParameteriv, %function
-glGetFramebufferParameteriv:
-    mov __blue_glCore_glGetFramebufferParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSamplerParameteriv
-.type glGetSamplerParameteriv, %function
-glGetSamplerParameteriv:
-    mov __blue_glCore_glGetSamplerParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2fvATI
-.type glVertexStream2fvATI, %function
-glVertexStream2fvATI:
-    mov __blue_glCore_glVertexStream2fvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3dvEXT
-.type glProgramUniformMatrix3dvEXT, %function
-glProgramUniformMatrix3dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSeparableFilter2D
-.type glSeparableFilter2D, %function
-glSeparableFilter2D:
-    mov __blue_glCore_glSeparableFilter2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI1uiv
-.type glVertexAttribI1uiv, %function
-glVertexAttribI1uiv:
-    mov __blue_glCore_glVertexAttribI1uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuivSUN
-.type glReplacementCodeuivSUN, %function
-glReplacementCodeuivSUN:
-    mov __blue_glCore_glReplacementCodeuivSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI3uiEXT
-.type glVertexAttribI3uiEXT, %function
-glVertexAttribI3uiEXT:
-    mov __blue_glCore_glVertexAttribI3uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4dvEXT
-.type glVertexAttribL4dvEXT, %function
-glVertexAttribL4dvEXT:
-    mov __blue_glCore_glVertexAttribL4dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveUniform
-.type glGetActiveUniform, %function
-glGetActiveUniform:
-    mov __blue_glCore_glGetActiveUniform@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2ui64vARB
-.type glUniform2ui64vARB, %function
-glUniform2ui64vARB:
-    mov __blue_glCore_glUniform2ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeNamedBufferResidentNV
-.type glMakeNamedBufferResidentNV, %function
-glMakeNamedBufferResidentNV:
-    mov __blue_glCore_glMakeNamedBufferResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathGlyphIndexRangeNV
-.type glPathGlyphIndexRangeNV, %function
-glPathGlyphIndexRangeNV:
-    mov __blue_glCore_glPathGlyphIndexRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableVertexAttribAPPLE
-.type glEnableVertexAttribAPPLE, %function
-glEnableVertexAttribAPPLE:
-    mov __blue_glCore_glEnableVertexAttribAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameterI4ivNV
-.type glProgramEnvParameterI4ivNV, %function
-glProgramEnvParameterI4ivNV:
-    mov __blue_glCore_glProgramEnvParameterI4ivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexParameterfEXT
-.type glMultiTexParameterfEXT, %function
-glMultiTexParameterfEXT:
-    mov __blue_glCore_glMultiTexParameterfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTextureLayer
-.type glNamedFramebufferTextureLayer, %function
-glNamedFramebufferTextureLayer:
-    mov __blue_glCore_glNamedFramebufferTextureLayer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexArrayIntegervEXT
-.type glGetVertexArrayIntegervEXT, %function
-glGetVertexArrayIntegervEXT:
-    mov __blue_glCore_glGetVertexArrayIntegervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3dARB
-.type glVertexAttrib3dARB, %function
-glVertexAttrib3dARB:
-    mov __blue_glCore_glVertexAttrib3dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUIsSurfaceNV
-.type glVDPAUIsSurfaceNV, %function
-glVDPAUIsSurfaceNV:
-    mov __blue_glCore_glVDPAUIsSurfaceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3sv
-.type glSecondaryColor3sv, %function
-glSecondaryColor3sv:
-    mov __blue_glCore_glSecondaryColor3sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsAsyncMarkerSGIX
-.type glIsAsyncMarkerSGIX, %function
-glIsAsyncMarkerSGIX:
-    mov __blue_glCore_glIsAsyncMarkerSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentMaterialfvSGIX
-.type glFragmentMaterialfvSGIX, %function
-glFragmentMaterialfvSGIX:
-    mov __blue_glCore_glFragmentMaterialfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreatePerfQueryINTEL
-.type glCreatePerfQueryINTEL, %function
-glCreatePerfQueryINTEL:
-    mov __blue_glCore_glCreatePerfQueryINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsCommandListNV
-.type glIsCommandListNV, %function
-glIsCommandListNV:
-    mov __blue_glCore_glIsCommandListNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameteriEXT
-.type glConvolutionParameteriEXT, %function
-glConvolutionParameteriEXT:
-    mov __blue_glCore_glConvolutionParameteriEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterIuivEXT
-.type glTexParameterIuivEXT, %function
-glTexParameterIuivEXT:
-    mov __blue_glCore_glTexParameterIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMinSampleShading
-.type glMinSampleShading, %function
-glMinSampleShading:
-    mov __blue_glCore_glMinSampleShading@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3dEXT
-.type glVertexAttribL3dEXT, %function
-glVertexAttribL3dEXT:
-    mov __blue_glCore_glVertexAttribL3dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferRenderbuffer
-.type glFramebufferRenderbuffer, %function
-glFramebufferRenderbuffer:
-    mov __blue_glCore_glFramebufferRenderbuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformLocationARB
-.type glGetUniformLocationARB, %function
-glGetUniformLocationARB:
-    mov __blue_glCore_glGetUniformLocationARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathParameterfvNV
-.type glPathParameterfvNV, %function
-glPathParameterfvNV:
-    mov __blue_glCore_glPathParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3sNV
-.type glVertexAttrib3sNV, %function
-glVertexAttrib3sNV:
-    mov __blue_glCore_glVertexAttrib3sNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetDoublei_v
-.type glGetDoublei_v, %function
-glGetDoublei_v:
-    mov __blue_glCore_glGetDoublei_v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1sv
-.type glVertexAttrib1sv, %function
-glVertexAttrib1sv:
-    mov __blue_glCore_glVertexAttrib1sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindSampler
-.type glBindSampler, %function
-glBindSampler:
-    mov __blue_glCore_glBindSampler@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLineWidth
-.type glLineWidth, %function
-glLineWidth:
-    mov __blue_glCore_glLineWidth@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayRangeAPPLE
-.type glVertexArrayRangeAPPLE, %function
-glVertexArrayRangeAPPLE:
-    mov __blue_glCore_glVertexArrayRangeAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferOffsetEXT
-.type glBindBufferOffsetEXT, %function
-glBindBufferOffsetEXT:
-    mov __blue_glCore_glBindBufferOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightfvARB
-.type glWeightfvARB, %function
-glWeightfvARB:
-    mov __blue_glCore_glWeightfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetIntegeri_v
-.type glGetIntegeri_v, %function
-glGetIntegeri_v:
-    mov __blue_glCore_glGetIntegeri_v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTransformFeedbackVarying
-.type glGetTransformFeedbackVarying, %function
-glGetTransformFeedbackVarying:
-    mov __blue_glCore_glGetTransformFeedbackVarying@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUMapSurfacesNV
-.type glVDPAUMapSurfacesNV, %function
-glVDPAUMapSurfacesNV:
-    mov __blue_glCore_glVDPAUMapSurfacesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameter4fvARB
-.type glProgramLocalParameter4fvARB, %function
-glProgramLocalParameter4fvARB:
-    mov __blue_glCore_glProgramLocalParameter4fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTransformFeedbackVaryingNV
-.type glGetTransformFeedbackVaryingNV, %function
-glGetTransformFeedbackVaryingNV:
-    mov __blue_glCore_glGetTransformFeedbackVaryingNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteNamesAMD
-.type glDeleteNamesAMD, %function
-glDeleteNamesAMD:
-    mov __blue_glCore_glDeleteNamesAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorFragmentOp2ATI
-.type glColorFragmentOp2ATI, %function
-glColorFragmentOp2ATI:
-    mov __blue_glCore_glColorFragmentOp2ATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureHandleNV
-.type glGetTextureHandleNV, %function
-glGetTextureHandleNV:
-    mov __blue_glCore_glGetTextureHandleNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthRangef
-.type glDepthRangef, %function
-glDepthRangef:
-    mov __blue_glCore_glDepthRangef@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFragmentMaterialivSGIX
-.type glGetFragmentMaterialivSGIX, %function
-glGetFragmentMaterialivSGIX:
-    mov __blue_glCore_glGetFragmentMaterialivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVideoCaptureStreamParameterfvNV
-.type glVideoCaptureStreamParameterfvNV, %function
-glVideoCaptureStreamParameterfvNV:
-    mov __blue_glCore_glVideoCaptureStreamParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteProgramsARB
-.type glDeleteProgramsARB, %function
-glDeleteProgramsARB:
-    mov __blue_glCore_glDeleteProgramsARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3fvARB
-.type glWindowPos3fvARB, %function
-glWindowPos3fvARB:
-    mov __blue_glCore_glWindowPos3fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFeedbackBufferxOES
-.type glFeedbackBufferxOES, %function
-glFeedbackBufferxOES:
-    mov __blue_glCore_glFeedbackBufferxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexBumpParameterfvATI
-.type glGetTexBumpParameterfvATI, %function
-glGetTexBumpParameterfvATI:
-    mov __blue_glCore_glGetTexBumpParameterfvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnablei
-.type glEnablei, %function
-glEnablei:
-    mov __blue_glCore_glEnablei@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindProgramARB
-.type glBindProgramARB, %function
-glBindProgramARB:
-    mov __blue_glCore_glBindProgramARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3ui64vARB
-.type glProgramUniform3ui64vARB, %function
-glProgramUniform3ui64vARB:
-    mov __blue_glCore_glProgramUniform3ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2dv
-.type glProgramUniformMatrix2dv, %function
-glProgramUniformMatrix2dv:
-    mov __blue_glCore_glProgramUniformMatrix2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2hvNV
-.type glMultiTexCoord2hvNV, %function
-glMultiTexCoord2hvNV:
-    mov __blue_glCore_glMultiTexCoord2hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSampleCoverageARB
-.type glSampleCoverageARB, %function
-glSampleCoverageARB:
-    mov __blue_glCore_glSampleCoverageARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2ui64vARB
-.type glProgramUniform2ui64vARB, %function
-glProgramUniform2ui64vARB:
-    mov __blue_glCore_glProgramUniform2ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelDataRangeNV
-.type glPixelDataRangeNV, %function
-glPixelDataRangeNV:
-    mov __blue_glCore_glPixelDataRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3svATI
-.type glVertexStream3svATI, %function
-glVertexStream3svATI:
-    mov __blue_glCore_glVertexStream3svATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN
-.type glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN, %function
-glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord3hvNV
-.type glTexCoord3hvNV, %function
-glTexCoord3hvNV:
-    mov __blue_glCore_glTexCoord3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSampleMaski
-.type glSampleMaski, %function
-glSampleMaski:
-    mov __blue_glCore_glSampleMaski@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIndexFuncEXT
-.type glIndexFuncEXT, %function
-glIndexFuncEXT:
-    mov __blue_glCore_glIndexFuncEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameteriNV
-.type glPointParameteriNV, %function
-glPointParameteriNV:
-    mov __blue_glCore_glPointParameteriNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix3x2fv
-.type glUniformMatrix3x2fv, %function
-glUniformMatrix3x2fv:
-    mov __blue_glCore_glUniformMatrix3x2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFramebufferParameterivEXT
-.type glGetFramebufferParameterivEXT, %function
-glGetFramebufferParameterivEXT:
-    mov __blue_glCore_glGetFramebufferParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexSubImage3D
-.type glTexSubImage3D, %function
-glTexSubImage3D:
-    mov __blue_glCore_glTexSubImage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInternalformativ
-.type glGetInternalformativ, %function
-glGetInternalformativ:
-    mov __blue_glCore_glGetInternalformativ@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTexture3DEXT
-.type glNamedFramebufferTexture3DEXT, %function
-glNamedFramebufferTexture3DEXT:
-    mov __blue_glCore_glNamedFramebufferTexture3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2dv
-.type glVertexAttrib2dv, %function
-glVertexAttrib2dv:
-    mov __blue_glCore_glVertexAttrib2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantubvEXT
-.type glVariantubvEXT, %function
-glVariantubvEXT:
-    mov __blue_glCore_glVariantubvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix3x4fv
-.type glUniformMatrix3x4fv, %function
-glUniformMatrix3x4fv:
-    mov __blue_glCore_glUniformMatrix3x4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3fvEXT
-.type glProgramUniformMatrix3fvEXT, %function
-glProgramUniformMatrix3fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix3fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableVertexArrayEXT
-.type glEnableVertexArrayEXT, %function
-glEnableVertexArrayEXT:
-    mov __blue_glCore_glEnableVertexArrayEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorTableParameterfvSGI
-.type glColorTableParameterfvSGI, %function
-glColorTableParameterfvSGI:
-    mov __blue_glCore_glColorTableParameterfvSGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordf
-.type glFogCoordf, %function
-glFogCoordf:
-    mov __blue_glCore_glFogCoordf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSpriteParameterivSGIX
-.type glSpriteParameterivSGIX, %function
-glSpriteParameterivSGIX:
-    mov __blue_glCore_glSpriteParameterivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTable
-.type glGetColorTable, %function
-glGetColorTable:
-    mov __blue_glCore_glGetColorTable@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4ivARB
-.type glMultiTexCoord4ivARB, %function
-glMultiTexCoord4ivARB:
-    mov __blue_glCore_glMultiTexCoord4ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordP2ui
-.type glTexCoordP2ui, %function
-glTexCoordP2ui:
-    mov __blue_glCore_glTexCoordP2ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorMaski
-.type glColorMaski, %function
-glColorMaski:
-    mov __blue_glCore_glColorMaski@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPrimitiveRestartIndexNV
-.type glPrimitiveRestartIndexNV, %function
-glPrimitiveRestartIndexNV:
-    mov __blue_glCore_glPrimitiveRestartIndexNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightfvSGIX
-.type glFragmentLightfvSGIX, %function
-glFragmentLightfvSGIX:
-    mov __blue_glCore_glFragmentLightfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordPointerListIBM
-.type glTexCoordPointerListIBM, %function
-glTexCoordPointerListIBM:
-    mov __blue_glCore_glTexCoordPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRectxOES
-.type glRectxOES, %function
-glRectxOES:
-    mov __blue_glCore_glRectxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyNamedBufferSubData
-.type glCopyNamedBufferSubData, %function
-glCopyNamedBufferSubData:
-    mov __blue_glCore_glCopyNamedBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenProgramsNV
-.type glGenProgramsNV, %function
-glGenProgramsNV:
-    mov __blue_glCore_glGenProgramsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightfSGIX
-.type glFragmentLightfSGIX, %function
-glFragmentLightfSGIX:
-    mov __blue_glCore_glFragmentLightfSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexStorage3D
-.type glTexStorage3D, %function
-glTexStorage3D:
-    mov __blue_glCore_glTexStorage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameteriv
-.type glTextureParameteriv, %function
-glTextureParameteriv:
-    mov __blue_glCore_glTextureParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedBufferDataEXT
-.type glNamedBufferDataEXT, %function
-glNamedBufferDataEXT:
-    mov __blue_glCore_glNamedBufferDataEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3fvARB
-.type glMultiTexCoord3fvARB, %function
-glMultiTexCoord3fvARB:
-    mov __blue_glCore_glMultiTexCoord3fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glImageTransformParameterivHP
-.type glImageTransformParameterivHP, %function
-glImageTransformParameterivHP:
-    mov __blue_glCore_glImageTransformParameterivHP@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSubpixelPrecisionBiasNV
-.type glSubpixelPrecisionBiasNV, %function
-glSubpixelPrecisionBiasNV:
-    mov __blue_glCore_glSubpixelPrecisionBiasNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTexture
-.type glNamedFramebufferTexture, %function
-glNamedFramebufferTexture:
-    mov __blue_glCore_glNamedFramebufferTexture@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4NsvARB
-.type glVertexAttrib4NsvARB, %function
-glVertexAttrib4NsvARB:
-    mov __blue_glCore_glVertexAttrib4NsvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawMeshArraysSUN
-.type glDrawMeshArraysSUN, %function
-glDrawMeshArraysSUN:
-    mov __blue_glCore_glDrawMeshArraysSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsImageHandleResidentARB
-.type glIsImageHandleResidentARB, %function
-glIsImageHandleResidentARB:
-    mov __blue_glCore_glIsImageHandleResidentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameterfEXT
-.type glConvolutionParameterfEXT, %function
-glConvolutionParameterfEXT:
-    mov __blue_glCore_glConvolutionParameterfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4x3fv
-.type glProgramUniformMatrix4x3fv, %function
-glProgramUniformMatrix4x3fv:
-    mov __blue_glCore_glProgramUniformMatrix4x3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4iv
-.type glVertexAttribI4iv, %function
-glVertexAttribI4iv:
-    mov __blue_glCore_glVertexAttribI4iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordfvEXT
-.type glFogCoordfvEXT, %function
-glFogCoordfvEXT:
-    mov __blue_glCore_glFogCoordfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexP3ui
-.type glVertexP3ui, %function
-glVertexP3ui:
-    mov __blue_glCore_glVertexP3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3i64NV
-.type glVertexAttribL3i64NV, %function
-glVertexAttribL3i64NV:
-    mov __blue_glCore_glVertexAttribL3i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilClearTagEXT
-.type glStencilClearTagEXT, %function
-glStencilClearTagEXT:
-    mov __blue_glCore_glStencilClearTagEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveUniformName
-.type glGetActiveUniformName, %function
-glGetActiveUniformName:
-    mov __blue_glCore_glGetActiveUniformName@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexGendEXT
-.type glMultiTexGendEXT, %function
-glMultiTexGendEXT:
-    mov __blue_glCore_glMultiTexGendEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4ui64vNV
-.type glUniform4ui64vNV, %function
-glUniform4ui64vNV:
-    mov __blue_glCore_glUniform4ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageEnableAMD
-.type glDebugMessageEnableAMD, %function
-glDebugMessageEnableAMD:
-    mov __blue_glCore_glDebugMessageEnableAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFramebufferAttachmentParameteriv
-.type glGetFramebufferAttachmentParameteriv, %function
-glGetFramebufferAttachmentParameteriv:
-    mov __blue_glCore_glGetFramebufferAttachmentParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTexSubImage2DEXT
-.type glCopyTexSubImage2DEXT, %function
-glCopyTexSubImage2DEXT:
-    mov __blue_glCore_glCopyTexSubImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenRenderbuffersEXT
-.type glGenRenderbuffersEXT, %function
-glGenRenderbuffersEXT:
-    mov __blue_glCore_glGenRenderbuffersEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParameterI4ivEXT
-.type glNamedProgramLocalParameterI4ivEXT, %function
-glNamedProgramLocalParameterI4ivEXT:
-    mov __blue_glCore_glNamedProgramLocalParameterI4ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexParameterIuivEXT
-.type glGetMultiTexParameterIuivEXT, %function
-glGetMultiTexParameterIuivEXT:
-    mov __blue_glCore_glGetMultiTexParameterIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferDrawBuffer
-.type glNamedFramebufferDrawBuffer, %function
-glNamedFramebufferDrawBuffer:
-    mov __blue_glCore_glNamedFramebufferDrawBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameteriv
-.type glTexParameteriv, %function
-glTexParameteriv:
-    mov __blue_glCore_glTexParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4ivARB
-.type glUniform4ivARB, %function
-glUniform4ivARB:
-    mov __blue_glCore_glUniform4ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixOrthoEXT
-.type glMatrixOrthoEXT, %function
-glMatrixOrthoEXT:
-    mov __blue_glCore_glMatrixOrthoEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexBuffer
-.type glVertexArrayVertexBuffer, %function
-glVertexArrayVertexBuffer:
-    mov __blue_glCore_glVertexArrayVertexBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexImage
-.type glGetTexImage, %function
-glGetTexImage:
-    mov __blue_glCore_glGetTexImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4ui64vNV
-.type glProgramUniform4ui64vNV, %function
-glProgramUniform4ui64vNV:
-    mov __blue_glCore_glProgramUniform4ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedStringivARB
-.type glGetNamedStringivARB, %function
-glGetNamedStringivARB:
-    mov __blue_glCore_glGetNamedStringivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1i64vNV
-.type glVertexAttribL1i64vNV, %function
-glVertexAttribL1i64vNV:
-    mov __blue_glCore_glVertexAttribL1i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformFeedbackBufferBase
-.type glTransformFeedbackBufferBase, %function
-glTransformFeedbackBufferBase:
-    mov __blue_glCore_glTransformFeedbackBufferBase@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterivNV
-.type glPointParameterivNV, %function
-glPointParameterivNV:
-    mov __blue_glCore_glPointParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetDetailTexFuncSGIS
-.type glGetDetailTexFuncSGIS, %function
-glGetDetailTexFuncSGIS:
-    mov __blue_glCore_glGetDetailTexFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiColor3fVertex3fvSUN
-.type glReplacementCodeuiColor3fVertex3fvSUN, %function
-glReplacementCodeuiColor3fVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiColor3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameter4fARB
-.type glProgramLocalParameter4fARB, %function
-glProgramLocalParameter4fARB:
-    mov __blue_glCore_glProgramLocalParameter4fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorSubTable
-.type glColorSubTable, %function
-glColorSubTable:
-    mov __blue_glCore_glColorSubTable@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexGenfvEXT
-.type glMultiTexGenfvEXT, %function
-glMultiTexGenfvEXT:
-    mov __blue_glCore_glMultiTexGenfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferSubData
-.type glGetNamedBufferSubData, %function
-glGetNamedBufferSubData:
-    mov __blue_glCore_glGetNamedBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilFuncSeparateATI
-.type glStencilFuncSeparateATI, %function
-glStencilFuncSeparateATI:
-    mov __blue_glCore_glStencilFuncSeparateATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2iv
-.type glProgramUniform2iv, %function
-glProgramUniform2iv:
-    mov __blue_glCore_glProgramUniform2iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryiv
-.type glGetQueryiv, %function
-glGetQueryiv:
-    mov __blue_glCore_glGetQueryiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTransformFeedbackiv
-.type glGetTransformFeedbackiv, %function
-glGetTransformFeedbackiv:
-    mov __blue_glCore_glGetTransformFeedbackiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glListParameterivSGIX
-.type glListParameterivSGIX, %function
-glListParameterivSGIX:
-    mov __blue_glCore_glListParameterivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateQueries
-.type glCreateQueries, %function
-glCreateQueries:
-    mov __blue_glCore_glCreateQueries@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSamplerParameterfv
-.type glGetSamplerParameterfv, %function
-glGetSamplerParameterfv:
-    mov __blue_glCore_glGetSamplerParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glObjectLabel
-.type glObjectLabel, %function
-glObjectLabel:
-    mov __blue_glCore_glObjectLabel@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3i64NV
-.type glProgramUniform3i64NV, %function
-glProgramUniform3i64NV:
-    mov __blue_glCore_glProgramUniform3i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureHandleARB
-.type glGetTextureHandleARB, %function
-glGetTextureHandleARB:
-    mov __blue_glCore_glGetTextureHandleARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAlphaFragmentOp1ATI
-.type glAlphaFragmentOp1ATI, %function
-glAlphaFragmentOp1ATI:
-    mov __blue_glCore_glAlphaFragmentOp1ATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorTableParameteriv
-.type glColorTableParameteriv, %function
-glColorTableParameteriv:
-    mov __blue_glCore_glColorTableParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformIndices
-.type glGetUniformIndices, %function
-glGetUniformIndices:
-    mov __blue_glCore_glGetUniformIndices@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexImage3DEXT
-.type glMultiTexImage3DEXT, %function
-glMultiTexImage3DEXT:
-    mov __blue_glCore_glMultiTexImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCoverageModulationTableNV
-.type glCoverageModulationTableNV, %function
-glCoverageModulationTableNV:
-    mov __blue_glCore_glCoverageModulationTableNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameteriv
-.type glPointParameteriv, %function
-glPointParameteriv:
-    mov __blue_glCore_glPointParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4svARB
-.type glMultiTexCoord4svARB, %function
-glMultiTexCoord4svARB:
-    mov __blue_glCore_glMultiTexCoord4svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x4dvEXT
-.type glProgramUniformMatrix3x4dvEXT, %function
-glProgramUniformMatrix3x4dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix3x4dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormal3xvOES
-.type glNormal3xvOES, %function
-glNormal3xvOES:
-    mov __blue_glCore_glNormal3xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveVaryingNV
-.type glGetActiveVaryingNV, %function
-glGetActiveVaryingNV:
-    mov __blue_glCore_glGetActiveVaryingNV@GOTPCREL(%rip), %r11
+.global glVertexAttribs4dvNV
+.type glVertexAttribs4dvNV, %function
+glVertexAttribs4dvNV:
+    mov __blue_glCore_glVertexAttribs4dvNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glUniform1i64vARB
@@ -8539,5188 +43,28 @@ glUniform1i64vARB:
     mov __blue_glCore_glUniform1i64vARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiTexCoord1dv
-.type glMultiTexCoord1dv, %function
-glMultiTexCoord1dv:
-    mov __blue_glCore_glMultiTexCoord1dv@GOTPCREL(%rip), %r11
+.global glVertexAttribs1fvNV
+.type glVertexAttribs1fvNV, %function
+glVertexAttribs1fvNV:
+    mov __blue_glCore_glVertexAttribs1fvNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glSecondaryColor3usv
-.type glSecondaryColor3usv, %function
-glSecondaryColor3usv:
-    mov __blue_glCore_glSecondaryColor3usv@GOTPCREL(%rip), %r11
+.global glMultiTexGenivEXT
+.type glMultiTexGenivEXT, %function
+glMultiTexGenivEXT:
+    mov __blue_glCore_glMultiTexGenivEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glProgramUniform1ui64vNV
-.type glProgramUniform1ui64vNV, %function
-glProgramUniform1ui64vNV:
-    mov __blue_glCore_glProgramUniform1ui64vNV@GOTPCREL(%rip), %r11
+.global glBeginQuery
+.type glBeginQuery, %function
+glBeginQuery:
+    mov __blue_glCore_glBeginQuery@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTextureMaterialEXT
-.type glTextureMaterialEXT, %function
-glTextureMaterialEXT:
-    mov __blue_glCore_glTextureMaterialEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP3uiv
-.type glMultiTexCoordP3uiv, %function
-glMultiTexCoordP3uiv:
-    mov __blue_glCore_glMultiTexCoordP3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP3ui
-.type glVertexAttribP3ui, %function
-glVertexAttribP3ui:
-    mov __blue_glCore_glVertexAttribP3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInterpolatePathsNV
-.type glInterpolatePathsNV, %function
-glInterpolatePathsNV:
-    mov __blue_glCore_glInterpolatePathsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureBufferRange
-.type glTextureBufferRange, %function
-glTextureBufferRange:
-    mov __blue_glCore_glTextureBufferRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetIntegerui64vNV
-.type glGetIntegerui64vNV, %function
-glGetIntegerui64vNV:
-    mov __blue_glCore_glGetIntegerui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPixelTransformParameterivEXT
-.type glGetPixelTransformParameterivEXT, %function
-glGetPixelTransformParameterivEXT:
-    mov __blue_glCore_glGetPixelTransformParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4xvOES
-.type glTexCoord4xvOES, %function
-glTexCoord4xvOES:
-    mov __blue_glCore_glTexCoord4xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVariantBooleanvEXT
-.type glGetVariantBooleanvEXT, %function
-glGetVariantBooleanvEXT:
-    mov __blue_glCore_glGetVariantBooleanvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthRange
-.type glDepthRange, %function
-glDepthRange:
-    mov __blue_glCore_glDepthRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribdvARB
-.type glGetVertexAttribdvARB, %function
-glGetVertexAttribdvARB:
-    mov __blue_glCore_glGetVertexAttribdvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4i64vNV
-.type glProgramUniform4i64vNV, %function
-glProgramUniform4i64vNV:
-    mov __blue_glCore_glProgramUniform4i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawArraysInstancedEXT
-.type glDrawArraysInstancedEXT, %function
-glDrawArraysInstancedEXT:
-    mov __blue_glCore_glDrawArraysInstancedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableClientStateIndexedEXT
-.type glDisableClientStateIndexedEXT, %function
-glDisableClientStateIndexedEXT:
-    mov __blue_glCore_glDisableClientStateIndexedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawBuffer
-.type glDrawBuffer, %function
-glDrawBuffer:
-    mov __blue_glCore_glDrawBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawArraysIndirectBindlessNV
-.type glMultiDrawArraysIndirectBindlessNV, %function
-glMultiDrawArraysIndirectBindlessNV:
-    mov __blue_glCore_glMultiDrawArraysIndirectBindlessNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnPixelMapusv
-.type glGetnPixelMapusv, %function
-glGetnPixelMapusv:
-    mov __blue_glCore_glGetnPixelMapusv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearBufferuiv
-.type glClearBufferuiv, %function
-glClearBufferuiv:
-    mov __blue_glCore_glClearBufferuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInternalformati64v
-.type glGetInternalformati64v, %function
-glGetInternalformati64v:
-    mov __blue_glCore_glGetInternalformati64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glShaderSourceARB
-.type glShaderSourceARB, %function
-glShaderSourceARB:
-    mov __blue_glCore_glShaderSourceARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glShaderOp3EXT
-.type glShaderOp3EXT, %function
-glShaderOp3EXT:
-    mov __blue_glCore_glShaderOp3EXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2dvMESA
-.type glWindowPos2dvMESA, %function
-glWindowPos2dvMESA:
-    mov __blue_glCore_glWindowPos2dvMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProvokingVertexEXT
-.type glProvokingVertexEXT, %function
-glProvokingVertexEXT:
-    mov __blue_glCore_glProvokingVertexEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3bvATI
-.type glNormalStream3bvATI, %function
-glNormalStream3bvATI:
-    mov __blue_glCore_glNormalStream3bvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlush
-.type glFlush, %function
-glFlush:
-    mov __blue_glCore_glFlush@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableParameterivEXT
-.type glGetColorTableParameterivEXT, %function
-glGetColorTableParameterivEXT:
-    mov __blue_glCore_glGetColorTableParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribIuivEXT
-.type glGetVertexAttribIuivEXT, %function
-glGetVertexAttribIuivEXT:
-    mov __blue_glCore_glGetVertexAttribIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPresentFrameDualFillNV
-.type glPresentFrameDualFillNV, %function
-glPresentFrameDualFillNV:
-    mov __blue_glCore_glPresentFrameDualFillNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenVertexShadersEXT
-.type glGenVertexShadersEXT, %function
-glGenVertexShadersEXT:
-    mov __blue_glCore_glGenVertexShadersEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformHandleui64vARB
-.type glProgramUniformHandleui64vARB, %function
-glProgramUniformHandleui64vARB:
-    mov __blue_glCore_glProgramUniformHandleui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthRangefOES
-.type glDepthRangefOES, %function
-glDepthRangefOES:
-    mov __blue_glCore_glDepthRangefOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementsInstancedBaseVertexBaseInstance
-.type glDrawElementsInstancedBaseVertexBaseInstance, %function
-glDrawElementsInstancedBaseVertexBaseInstance:
-    mov __blue_glCore_glDrawElementsInstancedBaseVertexBaseInstance@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexLevelParameteriv
-.type glGetTexLevelParameteriv, %function
-glGetTexLevelParameteriv:
-    mov __blue_glCore_glGetTexLevelParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilFillPathNV
-.type glStencilFillPathNV, %function
-glStencilFillPathNV:
-    mov __blue_glCore_glStencilFillPathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3usvEXT
-.type glSecondaryColor3usvEXT, %function
-glSecondaryColor3usvEXT:
-    mov __blue_glCore_glSecondaryColor3usvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3iARB
-.type glWindowPos3iARB, %function
-glWindowPos3iARB:
-    mov __blue_glCore_glWindowPos3iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFloatIndexedvEXT
-.type glGetFloatIndexedvEXT, %function
-glGetFloatIndexedvEXT:
-    mov __blue_glCore_glGetFloatIndexedvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3fvMESA
-.type glWindowPos3fvMESA, %function
-glWindowPos3fvMESA:
-    mov __blue_glCore_glWindowPos3fvMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x2dvEXT
-.type glProgramUniformMatrix3x2dvEXT, %function
-glProgramUniformMatrix3x2dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix3x2dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex4xvOES
-.type glVertex4xvOES, %function
-glVertex4xvOES:
-    mov __blue_glCore_glVertex4xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexStorage3DMultisample
-.type glTexStorage3DMultisample, %function
-glTexStorage3DMultisample:
-    mov __blue_glCore_glTexStorage3DMultisample@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedProgramLocalParameterfvEXT
-.type glGetNamedProgramLocalParameterfvEXT, %function
-glGetNamedProgramLocalParameterfvEXT:
-    mov __blue_glCore_glGetNamedProgramLocalParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilOpValueAMD
-.type glStencilOpValueAMD, %function
-glStencilOpValueAMD:
-    mov __blue_glCore_glStencilOpValueAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramVertexLimitNV
-.type glProgramVertexLimitNV, %function
-glProgramVertexLimitNV:
-    mov __blue_glCore_glProgramVertexLimitNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3i64NV
-.type glUniform3i64NV, %function
-glUniform3i64NV:
-    mov __blue_glCore_glUniform3i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3uivEXT
-.type glProgramUniform3uivEXT, %function
-glProgramUniform3uivEXT:
-    mov __blue_glCore_glProgramUniform3uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClampColor
-.type glClampColor, %function
-glClampColor:
-    mov __blue_glCore_glClampColor@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearStencil
-.type glClearStencil, %function
-glClearStencil:
-    mov __blue_glCore_glClearStencil@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs3svNV
-.type glVertexAttribs3svNV, %function
-glVertexAttribs3svNV:
-    mov __blue_glCore_glVertexAttribs3svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3fv
-.type glMultiTexCoord3fv, %function
-glMultiTexCoord3fv:
-    mov __blue_glCore_glMultiTexCoord3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexBlendEnvfATI
-.type glVertexBlendEnvfATI, %function
-glVertexBlendEnvfATI:
-    mov __blue_glCore_glVertexBlendEnvfATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsFenceAPPLE
-.type glIsFenceAPPLE, %function
-glIsFenceAPPLE:
-    mov __blue_glCore_glIsFenceAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCombinerInputNV
-.type glCombinerInputNV, %function
-glCombinerInputNV:
-    mov __blue_glCore_glCombinerInputNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4fMESA
-.type glWindowPos4fMESA, %function
-glWindowPos4fMESA:
-    mov __blue_glCore_glWindowPos4fMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2fARB
-.type glUniform2fARB, %function
-glUniform2fARB:
-    mov __blue_glCore_glUniform2fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeusvSUN
-.type glReplacementCodeusvSUN, %function
-glReplacementCodeusvSUN:
-    mov __blue_glCore_glReplacementCodeusvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStopInstrumentsSGIX
-.type glStopInstrumentsSGIX, %function
-glStopInstrumentsSGIX:
-    mov __blue_glCore_glStopInstrumentsSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3fNV
-.type glVertexAttrib3fNV, %function
-glVertexAttrib3fNV:
-    mov __blue_glCore_glVertexAttrib3fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapVertexAttrib2dAPPLE
-.type glMapVertexAttrib2dAPPLE, %function
-glMapVertexAttrib2dAPPLE:
-    mov __blue_glCore_glMapVertexAttrib2dAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsTexture
-.type glIsTexture, %function
-glIsTexture:
-    mov __blue_glCore_glIsTexture@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTextureImage2DEXT
-.type glCopyTextureImage2DEXT, %function
-glCopyTextureImage2DEXT:
-    mov __blue_glCore_glCopyTextureImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginQueryIndexed
-.type glBeginQueryIndexed, %function
-glBeginQueryIndexed:
-    mov __blue_glCore_glBeginQueryIndexed@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4fARB
-.type glMultiTexCoord4fARB, %function
-glMultiTexCoord4fARB:
-    mov __blue_glCore_glMultiTexCoord4fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3bvEXT
-.type glTangent3bvEXT, %function
-glTangent3bvEXT:
-    mov __blue_glCore_glTangent3bvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexImage3D
-.type glTexImage3D, %function
-glTexImage3D:
-    mov __blue_glCore_glTexImage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramiv
-.type glGetProgramiv, %function
-glGetProgramiv:
-    mov __blue_glCore_glGetProgramiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixIndexubvARB
-.type glMatrixIndexubvARB, %function
-glMatrixIndexubvARB:
-    mov __blue_glCore_glMatrixIndexubvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4fv
-.type glProgramUniform4fv, %function
-glProgramUniform4fv:
-    mov __blue_glCore_glProgramUniform4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribLui64vNV
-.type glGetVertexAttribLui64vNV, %function
-glGetVertexAttribLui64vNV:
-    mov __blue_glCore_glGetVertexAttribLui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapBufferARB
-.type glMapBufferARB, %function
-glMapBufferARB:
-    mov __blue_glCore_glMapBufferARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushMappedBufferRange
-.type glFlushMappedBufferRange, %function
-glFlushMappedBufferRange:
-    mov __blue_glCore_glFlushMappedBufferRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexStorage2D
-.type glTexStorage2D, %function
-glTexStorage2D:
-    mov __blue_glCore_glTexStorage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLineWidthxOES
-.type glLineWidthxOES, %function
-glLineWidthxOES:
-    mov __blue_glCore_glLineWidthxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2fvEXT
-.type glProgramUniformMatrix2fvEXT, %function
-glProgramUniformMatrix2fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix2fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureParameterIuivEXT
-.type glGetTextureParameterIuivEXT, %function
-glGetTextureParameterIuivEXT:
-    mov __blue_glCore_glGetTextureParameterIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexEnvivEXT
-.type glGetMultiTexEnvivEXT, %function
-glGetMultiTexEnvivEXT:
-    mov __blue_glCore_glGetMultiTexEnvivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTexGenParameterivSGIS
-.type glPixelTexGenParameterivSGIS, %function
-glPixelTexGenParameterivSGIS:
-    mov __blue_glCore_glPixelTexGenParameterivSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenQueries
-.type glGenQueries, %function
-glGenQueries:
-    mov __blue_glCore_glGenQueries@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureSubImage1DEXT
-.type glCompressedTextureSubImage1DEXT, %function
-glCompressedTextureSubImage1DEXT:
-    mov __blue_glCore_glCompressedTextureSubImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendColorEXT
-.type glBlendColorEXT, %function
-glBlendColorEXT:
-    mov __blue_glCore_glBlendColorEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResetMinmax
-.type glResetMinmax, %function
-glResetMinmax:
-    mov __blue_glCore_glResetMinmax@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformivARB
-.type glGetnUniformivARB, %function
-glGetnUniformivARB:
-    mov __blue_glCore_glGetnUniformivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexBlendARB
-.type glVertexBlendARB, %function
-glVertexBlendARB:
-    mov __blue_glCore_glVertexBlendARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVaryingLocationNV
-.type glGetVaryingLocationNV, %function
-glGetVaryingLocationNV:
-    mov __blue_glCore_glGetVaryingLocationNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMapAttribParameterivNV
-.type glGetMapAttribParameterivNV, %function
-glGetMapAttribParameterivNV:
-    mov __blue_glCore_glGetMapAttribParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2i64ARB
-.type glUniform2i64ARB, %function
-glUniform2i64ARB:
-    mov __blue_glCore_glUniform2i64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteSamplers
-.type glDeleteSamplers, %function
-glDeleteSamplers:
-    mov __blue_glCore_glDeleteSamplers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetLightxOES
-.type glGetLightxOES, %function
-glGetLightxOES:
-    mov __blue_glCore_glGetLightxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPrimitiveBoundingBoxARB
-.type glPrimitiveBoundingBoxARB, %function
-glPrimitiveBoundingBoxARB:
-    mov __blue_glCore_glPrimitiveBoundingBoxARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayNormalOffsetEXT
-.type glVertexArrayNormalOffsetEXT, %function
-glVertexArrayNormalOffsetEXT:
-    mov __blue_glCore_glVertexArrayNormalOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBufferParameterivARB
-.type glGetBufferParameterivARB, %function
-glGetBufferParameterivARB:
-    mov __blue_glCore_glGetBufferParameterivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureParameterfv
-.type glGetTextureParameterfv, %function
-glGetTextureParameterfv:
-    mov __blue_glCore_glGetTextureParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColorP3ui
-.type glSecondaryColorP3ui, %function
-glSecondaryColorP3ui:
-    mov __blue_glCore_glSecondaryColorP3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4dNV
-.type glVertexAttrib4dNV, %function
-glVertexAttrib4dNV:
-    mov __blue_glCore_glVertexAttrib4dNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultisamplefvNV
-.type glGetMultisamplefvNV, %function
-glGetMultisamplefvNV:
-    mov __blue_glCore_glGetMultisamplefvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapObjectBufferATI
-.type glMapObjectBufferATI, %function
-glMapObjectBufferATI:
-    mov __blue_glCore_glMapObjectBufferATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathCommandsNV
-.type glGetPathCommandsNV, %function
-glGetPathCommandsNV:
-    mov __blue_glCore_glGetPathCommandsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayTexCoordOffsetEXT
-.type glVertexArrayTexCoordOffsetEXT, %function
-glVertexArrayTexCoordOffsetEXT:
-    mov __blue_glCore_glVertexArrayTexCoordOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetHistogram
-.type glGetHistogram, %function
-glGetHistogram:
-    mov __blue_glCore_glGetHistogram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorFormatNV
-.type glColorFormatNV, %function
-glColorFormatNV:
-    mov __blue_glCore_glColorFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformui64NV
-.type glProgramUniformui64NV, %function
-glProgramUniformui64NV:
-    mov __blue_glCore_glProgramUniformui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4x2fvEXT
-.type glProgramUniformMatrix4x2fvEXT, %function
-glProgramUniformMatrix4x2fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix4x2fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadMatrixxOES
-.type glLoadMatrixxOES, %function
-glLoadMatrixxOES:
-    mov __blue_glCore_glLoadMatrixxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantbvEXT
-.type glVariantbvEXT, %function
-glVariantbvEXT:
-    mov __blue_glCore_glVariantbvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2i64NV
-.type glVertexAttribL2i64NV, %function
-glVertexAttribL2i64NV:
-    mov __blue_glCore_glVertexAttribL2i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindTextures
-.type glBindTextures, %function
-glBindTextures:
-    mov __blue_glCore_glBindTextures@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCombinerParameteriNV
-.type glCombinerParameteriNV, %function
-glCombinerParameteriNV:
-    mov __blue_glCore_glCombinerParameteriNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixRotatefEXT
-.type glMatrixRotatefEXT, %function
-glMatrixRotatefEXT:
-    mov __blue_glCore_glMatrixRotatefEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetClipPlanexOES
-.type glGetClipPlanexOES, %function
-glGetClipPlanexOES:
-    mov __blue_glCore_glGetClipPlanexOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3uivEXT
-.type glSecondaryColor3uivEXT, %function
-glSecondaryColor3uivEXT:
-    mov __blue_glCore_glSecondaryColor3uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfQueryInfoINTEL
-.type glGetPerfQueryInfoINTEL, %function
-glGetPerfQueryInfoINTEL:
-    mov __blue_glCore_glGetPerfQueryInfoINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetDoublev
-.type glGetDoublev, %function
-glGetDoublev:
-    mov __blue_glCore_glGetDoublev@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferRangeEXT
-.type glBindBufferRangeEXT, %function
-glBindBufferRangeEXT:
-    mov __blue_glCore_glBindBufferRangeEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1d
-.type glVertexAttrib1d, %function
-glVertexAttrib1d:
-    mov __blue_glCore_glVertexAttrib1d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramStringARB
-.type glGetProgramStringARB, %function
-glGetProgramStringARB:
-    mov __blue_glCore_glGetProgramStringARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathSpacingNV
-.type glGetPathSpacingNV, %function
-glGetPathSpacingNV:
-    mov __blue_glCore_glGetPathSpacingNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4dv
-.type glUniform4dv, %function
-glUniform4dv:
-    mov __blue_glCore_glUniform4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactordSUN
-.type glGlobalAlphaFactordSUN, %function
-glGlobalAlphaFactordSUN:
-    mov __blue_glCore_glGlobalAlphaFactordSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3dv
-.type glProgramUniform3dv, %function
-glProgramUniform3dv:
-    mov __blue_glCore_glProgramUniform3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetShaderSourceARB
-.type glGetShaderSourceARB, %function
-glGetShaderSourceARB:
-    mov __blue_glCore_glGetShaderSourceARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3dvARB
-.type glVertexAttrib3dvARB, %function
-glVertexAttrib3dvARB:
-    mov __blue_glCore_glVertexAttrib3dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateBufferData
-.type glInvalidateBufferData, %function
-glInvalidateBufferData:
-    mov __blue_glCore_glInvalidateBufferData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoad3x2fNV
-.type glMatrixLoad3x2fNV, %function
-glMatrixLoad3x2fNV:
-    mov __blue_glCore_glMatrixLoad3x2fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureSubImage1D
-.type glCompressedTextureSubImage1D, %function
-glCompressedTextureSubImage1D:
-    mov __blue_glCore_glCompressedTextureSubImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord3xvOES
-.type glTexCoord3xvOES, %function
-glTexCoord3xvOES:
-    mov __blue_glCore_glTexCoord3xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3fv
-.type glUniform3fv, %function
-glUniform3fv:
-    mov __blue_glCore_glUniform3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3iEXT
-.type glTangent3iEXT, %function
-glTangent3iEXT:
-    mov __blue_glCore_glTangent3iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearTexImage
-.type glClearTexImage, %function
-glClearTexImage:
-    mov __blue_glCore_glClearTexImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3bvEXT
-.type glBinormal3bvEXT, %function
-glBinormal3bvEXT:
-    mov __blue_glCore_glBinormal3bvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenTexturesEXT
-.type glGenTexturesEXT, %function
-glGenTexturesEXT:
-    mov __blue_glCore_glGenTexturesEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnPixelMapusvARB
-.type glGetnPixelMapusvARB, %function
-glGetnPixelMapusvARB:
-    mov __blue_glCore_glGetnPixelMapusvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP1ui
-.type glMultiTexCoordP1ui, %function
-glMultiTexCoordP1ui:
-    mov __blue_glCore_glMultiTexCoordP1ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTransformFeedbacki64_v
-.type glGetTransformFeedbacki64_v, %function
-glGetTransformFeedbacki64_v:
-    mov __blue_glCore_glGetTransformFeedbacki64_v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix4dv
-.type glUniformMatrix4dv, %function
-glUniformMatrix4dv:
-    mov __blue_glCore_glUniformMatrix4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3fMESA
-.type glWindowPos3fMESA, %function
-glWindowPos3fMESA:
-    mov __blue_glCore_glWindowPos3fMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteRenderbuffers
-.type glDeleteRenderbuffers, %function
-glDeleteRenderbuffers:
-    mov __blue_glCore_glDeleteRenderbuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameterxOES
-.type glConvolutionParameterxOES, %function
-glConvolutionParameterxOES:
-    mov __blue_glCore_glConvolutionParameterxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetHistogramParameterxvOES
-.type glGetHistogramParameterxvOES, %function
-glGetHistogramParameterxvOES:
-    mov __blue_glCore_glGetHistogramParameterxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawElements
-.type glMultiDrawElements, %function
-glMultiDrawElements:
-    mov __blue_glCore_glMultiDrawElements@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeImageHandleNonResidentNV
-.type glMakeImageHandleNonResidentNV, %function
-glMakeImageHandleNonResidentNV:
-    mov __blue_glCore_glMakeImageHandleNonResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexSubImage1DEXT
-.type glTexSubImage1DEXT, %function
-glTexSubImage1DEXT:
-    mov __blue_glCore_glTexSubImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3dATI
-.type glNormalStream3dATI, %function
-glNormalStream3dATI:
-    mov __blue_glCore_glNormalStream3dATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4i64vNV
-.type glVertexAttribL4i64vNV, %function
-glVertexAttribL4i64vNV:
-    mov __blue_glCore_glVertexAttribL4i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedFramebufferfv
-.type glClearNamedFramebufferfv, %function
-glClearNamedFramebufferfv:
-    mov __blue_glCore_glClearNamedFramebufferfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTextureSubImage1DEXT
-.type glCopyTextureSubImage1DEXT, %function
-glCopyTextureSubImage1DEXT:
-    mov __blue_glCore_glCopyTextureSubImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferReadBuffer
-.type glNamedFramebufferReadBuffer, %function
-glNamedFramebufferReadBuffer:
-    mov __blue_glCore_glNamedFramebufferReadBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2i64vARB
-.type glUniform2i64vARB, %function
-glUniform2i64vARB:
-    mov __blue_glCore_glUniform2i64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI1uivEXT
-.type glVertexAttribI1uivEXT, %function
-glVertexAttribI1uivEXT:
-    mov __blue_glCore_glVertexAttribI1uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginQueryARB
-.type glBeginQueryARB, %function
-glBeginQueryARB:
-    mov __blue_glCore_glBeginQueryARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1iARB
-.type glUniform1iARB, %function
-glUniform1iARB:
-    mov __blue_glCore_glUniform1iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex4bvOES
-.type glVertex4bvOES, %function
-glVertex4bvOES:
-    mov __blue_glCore_glVertex4bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateSubFramebuffer
-.type glInvalidateSubFramebuffer, %function
-glInvalidateSubFramebuffer:
-    mov __blue_glCore_glInvalidateSubFramebuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4xOES
-.type glMultiTexCoord4xOES, %function
-glMultiTexCoord4xOES:
-    mov __blue_glCore_glMultiTexCoord4xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindTransformFeedback
-.type glBindTransformFeedback, %function
-glBindTransformFeedback:
-    mov __blue_glCore_glBindTransformFeedback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2iv
-.type glMultiTexCoord2iv, %function
-glMultiTexCoord2iv:
-    mov __blue_glCore_glMultiTexCoord2iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyMultiTexSubImage1DEXT
-.type glCopyMultiTexSubImage1DEXT, %function
-glCopyMultiTexSubImage1DEXT:
-    mov __blue_glCore_glCopyMultiTexSubImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord1hNV
-.type glTexCoord1hNV, %function
-glTexCoord1hNV:
-    mov __blue_glCore_glTexCoord1hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenFencesNV
-.type glGenFencesNV, %function
-glGenFencesNV:
-    mov __blue_glCore_glGenFencesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL2ui64NV
-.type glVertexAttribL2ui64NV, %function
-glVertexAttribL2ui64NV:
-    mov __blue_glCore_glVertexAttribL2ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1hvNV
-.type glMultiTexCoord1hvNV, %function
-glMultiTexCoord1hvNV:
-    mov __blue_glCore_glMultiTexCoord1hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnConvolutionFilter
-.type glGetnConvolutionFilter, %function
-glGetnConvolutionFilter:
-    mov __blue_glCore_glGetnConvolutionFilter@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightbvARB
-.type glWeightbvARB, %function
-glWeightbvARB:
-    mov __blue_glCore_glWeightbvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2uiv
-.type glUniform2uiv, %function
-glUniform2uiv:
-    mov __blue_glCore_glUniform2uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginConditionalRenderNVX
-.type glBeginConditionalRenderNVX, %function
-glBeginConditionalRenderNVX:
-    mov __blue_glCore_glBeginConditionalRenderNVX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFinish
-.type glFinish, %function
-glFinish:
-    mov __blue_glCore_glFinish@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorTableParameterfv
-.type glColorTableParameterfv, %function
-glColorTableParameterfv:
-    mov __blue_glCore_glColorTableParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexOffsetEXT
-.type glVertexArrayVertexOffsetEXT, %function
-glVertexArrayVertexOffsetEXT:
-    mov __blue_glCore_glVertexArrayVertexOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFinishObjectAPPLE
-.type glFinishObjectAPPLE, %function
-glFinishObjectAPPLE:
-    mov __blue_glCore_glFinishObjectAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiTexCoord2fVertex3fvSUN
-.type glReplacementCodeuiTexCoord2fVertex3fvSUN, %function
-glReplacementCodeuiTexCoord2fVertex3fvSUN:
-    mov __blue_glCore_glReplacementCodeuiTexCoord2fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1uiv
-.type glUniform1uiv, %function
-glUniform1uiv:
-    mov __blue_glCore_glUniform1uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix2dv
-.type glUniformMatrix2dv, %function
-glUniformMatrix2dv:
-    mov __blue_glCore_glUniformMatrix2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3ivEXT
-.type glSecondaryColor3ivEXT, %function
-glSecondaryColor3ivEXT:
-    mov __blue_glCore_glSecondaryColor3ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream1dATI
-.type glVertexStream1dATI, %function
-glVertexStream1dATI:
-    mov __blue_glCore_glVertexStream1dATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeformationMap3fSGIX
-.type glDeformationMap3fSGIX, %function
-glDeformationMap3fSGIX:
-    mov __blue_glCore_glDeformationMap3fSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearDepth
-.type glClearDepth, %function
-glClearDepth:
-    mov __blue_glCore_glClearDepth@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenAsyncMarkersSGIX
-.type glGenAsyncMarkersSGIX, %function
-glGenAsyncMarkersSGIX:
-    mov __blue_glCore_glGenAsyncMarkersSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableIndexedEXT
-.type glDisableIndexedEXT, %function
-glDisableIndexedEXT:
-    mov __blue_glCore_glDisableIndexedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormal3fVertex3fSUN
-.type glNormal3fVertex3fSUN, %function
-glNormal3fVertex3fSUN:
-    mov __blue_glCore_glNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexWeightfvEXT
-.type glVertexWeightfvEXT, %function
-glVertexWeightfvEXT:
-    mov __blue_glCore_glVertexWeightfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramLocalParameterIivNV
-.type glGetProgramLocalParameterIivNV, %function
-glGetProgramLocalParameterIivNV:
-    mov __blue_glCore_glGetProgramLocalParameterIivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4fColor4fNormal3fVertex4fSUN
-.type glTexCoord4fColor4fNormal3fVertex4fSUN, %function
-glTexCoord4fColor4fNormal3fVertex4fSUN:
-    mov __blue_glCore_glTexCoord4fColor4fNormal3fVertex4fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexImage3DARB
-.type glCompressedTexImage3DARB, %function
-glCompressedTexImage3DARB:
-    mov __blue_glCore_glCompressedTexImage3DARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameter4fNV
-.type glProgramParameter4fNV, %function
-glProgramParameter4fNV:
-    mov __blue_glCore_glProgramParameter4fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureLevelParameterfvEXT
-.type glGetTextureLevelParameterfvEXT, %function
-glGetTextureLevelParameterfvEXT:
-    mov __blue_glCore_glGetTextureLevelParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInsertComponentEXT
-.type glInsertComponentEXT, %function
-glInsertComponentEXT:
-    mov __blue_glCore_glInsertComponentEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateTextures
-.type glCreateTextures, %function
-glCreateTextures:
-    mov __blue_glCore_glCreateTextures@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3uiv
-.type glUniform3uiv, %function
-glUniform3uiv:
-    mov __blue_glCore_glUniform3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateBuffers
-.type glCreateBuffers, %function
-glCreateBuffers:
-    mov __blue_glCore_glCreateBuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2xvOES
-.type glMultiTexCoord2xvOES, %function
-glMultiTexCoord2xvOES:
-    mov __blue_glCore_glMultiTexCoord2xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexGenxvOES
-.type glTexGenxvOES, %function
-glTexGenxvOES:
-    mov __blue_glCore_glTexGenxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor3fVertex3fvSUN
-.type glColor3fVertex3fvSUN, %function
-glColor3fVertex3fvSUN:
-    mov __blue_glCore_glColor3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnPixelMapfvARB
-.type glGetnPixelMapfvARB, %function
-glGetnPixelMapfvARB:
-    mov __blue_glCore_glGetnPixelMapfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexParameteriEXT
-.type glMultiTexParameteriEXT, %function
-glMultiTexParameteriEXT:
-    mov __blue_glCore_glMultiTexParameteriEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFreeObjectBufferATI
-.type glFreeObjectBufferATI, %function
-glFreeObjectBufferATI:
-    mov __blue_glCore_glFreeObjectBufferATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendBarrierNV
-.type glBlendBarrierNV, %function
-glBlendBarrierNV:
-    mov __blue_glCore_glBlendBarrierNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4i64vNV
-.type glUniform4i64vNV, %function
-glUniform4i64vNV:
-    mov __blue_glCore_glUniform4i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformuivARB
-.type glGetnUniformuivARB, %function
-glGetnUniformuivARB:
-    mov __blue_glCore_glGetnUniformuivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameters4fvEXT
-.type glProgramEnvParameters4fvEXT, %function
-glProgramEnvParameters4fvEXT:
-    mov __blue_glCore_glProgramEnvParameters4fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFuncSeparateEXT
-.type glBlendFuncSeparateEXT, %function
-glBlendFuncSeparateEXT:
-    mov __blue_glCore_glBlendFuncSeparateEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameterivEXT
-.type glConvolutionParameterivEXT, %function
-glConvolutionParameterivEXT:
-    mov __blue_glCore_glConvolutionParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTexGenSGIX
-.type glPixelTexGenSGIX, %function
-glPixelTexGenSGIX:
-    mov __blue_glCore_glPixelTexGenSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathTexGenivNV
-.type glGetPathTexGenivNV, %function
-glGetPathTexGenivNV:
-    mov __blue_glCore_glGetPathTexGenivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix4x3dv
-.type glUniformMatrix4x3dv, %function
-glUniformMatrix4x3dv:
-    mov __blue_glCore_glUniformMatrix4x3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVideoCaptureStreamivNV
-.type glGetVideoCaptureStreamivNV, %function
-glGetVideoCaptureStreamivNV:
-    mov __blue_glCore_glGetVideoCaptureStreamivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeImageHandleNonResidentARB
-.type glMakeImageHandleNonResidentARB, %function
-glMakeImageHandleNonResidentARB:
-    mov __blue_glCore_glMakeImageHandleNonResidentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3dEXT
-.type glSecondaryColor3dEXT, %function
-glSecondaryColor3dEXT:
-    mov __blue_glCore_glSecondaryColor3dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteQueries
-.type glDeleteQueries, %function
-glDeleteQueries:
-    mov __blue_glCore_glDeleteQueries@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalP3uiv
-.type glNormalP3uiv, %function
-glNormalP3uiv:
-    mov __blue_glCore_glNormalP3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformfvARB
-.type glGetUniformfvARB, %function
-glGetUniformfvARB:
-    mov __blue_glCore_glGetUniformfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3fvEXT
-.type glBinormal3fvEXT, %function
-glBinormal3fvEXT:
-    mov __blue_glCore_glBinormal3fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribDivisorEXT
-.type glVertexArrayVertexAttribDivisorEXT, %function
-glVertexArrayVertexAttribDivisorEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribDivisorEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glArrayElementEXT
-.type glArrayElementEXT, %function
-glArrayElementEXT:
-    mov __blue_glCore_glArrayElementEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMinmax
-.type glGetnMinmax, %function
-glGetnMinmax:
-    mov __blue_glCore_glGetnMinmax@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIndexxOES
-.type glIndexxOES, %function
-glIndexxOES:
-    mov __blue_glCore_glIndexxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3uivEXT
-.type glUniform3uivEXT, %function
-glUniform3uivEXT:
-    mov __blue_glCore_glUniform3uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPopGroupMarkerEXT
-.type glPopGroupMarkerEXT, %function
-glPopGroupMarkerEXT:
-    mov __blue_glCore_glPopGroupMarkerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedFramebufferuiv
-.type glClearNamedFramebufferuiv, %function
-glClearNamedFramebufferuiv:
-    mov __blue_glCore_glClearNamedFramebufferuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSetLocalConstantEXT
-.type glSetLocalConstantEXT, %function
-glSetLocalConstantEXT:
-    mov __blue_glCore_glSetLocalConstantEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1ui64NV
-.type glProgramUniform1ui64NV, %function
-glProgramUniform1ui64NV:
-    mov __blue_glCore_glProgramUniform1ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4hvNV
-.type glColor4hvNV, %function
-glColor4hvNV:
-    mov __blue_glCore_glColor4hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribfv
-.type glGetVertexAttribfv, %function
-glGetVertexAttribfv:
-    mov __blue_glCore_glGetVertexAttribfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDispatchCompute
-.type glDispatchCompute, %function
-glDispatchCompute:
-    mov __blue_glCore_glDispatchCompute@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveAttrib
-.type glGetActiveAttrib, %function
-glGetActiveAttrib:
-    mov __blue_glCore_glGetActiveAttrib@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentColorMaterialSGIX
-.type glFragmentColorMaterialSGIX, %function
-glFragmentColorMaterialSGIX:
-    mov __blue_glCore_glFragmentColorMaterialSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexSubImage2D
-.type glTexSubImage2D, %function
-glTexSubImage2D:
-    mov __blue_glCore_glTexSubImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMinmaxARB
-.type glGetnMinmaxARB, %function
-glGetnMinmaxARB:
-    mov __blue_glCore_glGetnMinmaxARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLogicOp
-.type glLogicOp, %function
-glLogicOp:
-    mov __blue_glCore_glLogicOp@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x4fv
-.type glProgramUniformMatrix3x4fv, %function
-glProgramUniformMatrix3x4fv:
-    mov __blue_glCore_glProgramUniformMatrix3x4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4iMESA
-.type glWindowPos4iMESA, %function
-glWindowPos4iMESA:
-    mov __blue_glCore_glWindowPos4iMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPollAsyncSGIX
-.type glPollAsyncSGIX, %function
-glPollAsyncSGIX:
-    mov __blue_glCore_glPollAsyncSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureParameterIuiv
-.type glGetTextureParameterIuiv, %function
-glGetTextureParameterIuiv:
-    mov __blue_glCore_glGetTextureParameterIuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1xOES
-.type glMultiTexCoord1xOES, %function
-glMultiTexCoord1xOES:
-    mov __blue_glCore_glMultiTexCoord1xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4dv
-.type glProgramUniformMatrix4dv, %function
-glProgramUniformMatrix4dv:
-    mov __blue_glCore_glProgramUniformMatrix4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTexture1DEXT
-.type glFramebufferTexture1DEXT, %function
-glFramebufferTexture1DEXT:
-    mov __blue_glCore_glFramebufferTexture1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1ui64ARB
-.type glUniform1ui64ARB, %function
-glUniform1ui64ARB:
-    mov __blue_glCore_glUniform1ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterIiv
-.type glTextureParameterIiv, %function
-glTextureParameterIiv:
-    mov __blue_glCore_glTextureParameterIiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSeparableFilterEXT
-.type glGetSeparableFilterEXT, %function
-glGetSeparableFilterEXT:
-    mov __blue_glCore_glGetSeparableFilterEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3iARB
-.type glMultiTexCoord3iARB, %function
-glMultiTexCoord3iARB:
-    mov __blue_glCore_glMultiTexCoord3iARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRasterPos4xvOES
-.type glRasterPos4xvOES, %function
-glRasterPos4xvOES:
-    mov __blue_glCore_glRasterPos4xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawTransformFeedbackStream
-.type glDrawTransformFeedbackStream, %function
-glDrawTransformFeedbackStream:
-    mov __blue_glCore_glDrawTransformFeedbackStream@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex3hvNV
-.type glVertex3hvNV, %function
-glVertex3hvNV:
-    mov __blue_glCore_glVertex3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayMultiTexCoordOffsetEXT
-.type glVertexArrayMultiTexCoordOffsetEXT, %function
-glVertexArrayMultiTexCoordOffsetEXT:
-    mov __blue_glCore_glVertexArrayMultiTexCoordOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProvokingVertex
-.type glProvokingVertex, %function
-glProvokingVertex:
-    mov __blue_glCore_glProvokingVertex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAccumxOES
-.type glAccumxOES, %function
-glAccumxOES:
-    mov __blue_glCore_glAccumxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glShaderBinary
-.type glShaderBinary, %function
-glShaderBinary:
-    mov __blue_glCore_glShaderBinary@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexGenivEXT
-.type glGetMultiTexGenivEXT, %function
-glGetMultiTexGenivEXT:
-    mov __blue_glCore_glGetMultiTexGenivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointParameterxvOES
-.type glPointParameterxvOES, %function
-glPointParameterxvOES:
-    mov __blue_glCore_glPointParameterxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateStatesNV
-.type glCreateStatesNV, %function
-glCreateStatesNV:
-    mov __blue_glCore_glCreateStatesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearDepthdNV
-.type glClearDepthdNV, %function
-glClearDepthdNV:
-    mov __blue_glCore_glClearDepthdNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearColorIuiEXT
-.type glClearColorIuiEXT, %function
-glClearColorIuiEXT:
-    mov __blue_glCore_glClearColorIuiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindMultiTextureEXT
-.type glBindMultiTextureEXT, %function
-glBindMultiTextureEXT:
-    mov __blue_glCore_glBindMultiTextureEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElements
-.type glDrawElements, %function
-glDrawElements:
-    mov __blue_glCore_glDrawElements@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionFilter1DEXT
-.type glConvolutionFilter1DEXT, %function
-glConvolutionFilter1DEXT:
-    mov __blue_glCore_glConvolutionFilter1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableVertexArrayEXT
-.type glDisableVertexArrayEXT, %function
-glDisableVertexArrayEXT:
-    mov __blue_glCore_glDisableVertexArrayEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3ui64NV
-.type glProgramUniform3ui64NV, %function
-glProgramUniform3ui64NV:
-    mov __blue_glCore_glProgramUniform3ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClientActiveTexture
-.type glClientActiveTexture, %function
-glClientActiveTexture:
-    mov __blue_glCore_glClientActiveTexture@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexParameterIivEXT
-.type glMultiTexParameterIivEXT, %function
-glMultiTexParameterIivEXT:
-    mov __blue_glCore_glMultiTexParameterIivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1iv
-.type glUniform1iv, %function
-glUniform1iv:
-    mov __blue_glCore_glUniform1iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribArrayObjectATI
-.type glVertexAttribArrayObjectATI, %function
-glVertexAttribArrayObjectATI:
-    mov __blue_glCore_glVertexAttribArrayObjectATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawArraysInstanced
-.type glDrawArraysInstanced, %function
-glDrawArraysInstanced:
-    mov __blue_glCore_glDrawArraysInstanced@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2sNV
-.type glVertexAttrib2sNV, %function
-glVertexAttrib2sNV:
-    mov __blue_glCore_glVertexAttrib2sNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexBufferEXT
-.type glTexBufferEXT, %function
-glTexBufferEXT:
-    mov __blue_glCore_glTexBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2fATI
-.type glVertexStream2fATI, %function
-glVertexStream2fATI:
-    mov __blue_glCore_glVertexStream2fATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageCallbackAMD
-.type glDebugMessageCallbackAMD, %function
-glDebugMessageCallbackAMD:
-    mov __blue_glCore_glDebugMessageCallbackAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2dARB
-.type glMultiTexCoord2dARB, %function
-glMultiTexCoord2dARB:
-    mov __blue_glCore_glMultiTexCoord2dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4uiv
-.type glVertexAttrib4uiv, %function
-glVertexAttrib4uiv:
-    mov __blue_glCore_glVertexAttrib4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndQueryIndexed
-.type glEndQueryIndexed, %function
-glEndQueryIndexed:
-    mov __blue_glCore_glEndQueryIndexed@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3sATI
-.type glNormalStream3sATI, %function
-glNormalStream3sATI:
-    mov __blue_glCore_glNormalStream3sATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameteriARB
-.type glProgramParameteriARB, %function
-glProgramParameteriARB:
-    mov __blue_glCore_glProgramParameteriARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexEnvxOES
-.type glTexEnvxOES, %function
-glTexEnvxOES:
-    mov __blue_glCore_glTexEnvxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1iv
-.type glProgramUniform1iv, %function
-glProgramUniform1iv:
-    mov __blue_glCore_glProgramUniform1iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableVertexAttribAPPLE
-.type glDisableVertexAttribAPPLE, %function
-glDisableVertexAttribAPPLE:
-    mov __blue_glCore_glDisableVertexAttribAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindRenderbuffer
-.type glBindRenderbuffer, %function
-glBindRenderbuffer:
-    mov __blue_glCore_glBindRenderbuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexSubImage3DEXT
-.type glMultiTexSubImage3DEXT, %function
-glMultiTexSubImage3DEXT:
-    mov __blue_glCore_glMultiTexSubImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsProgram
-.type glIsProgram, %function
-glIsProgram:
-    mov __blue_glCore_glIsProgram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawElementsIndirectAMD
-.type glMultiDrawElementsIndirectAMD, %function
-glMultiDrawElementsIndirectAMD:
-    mov __blue_glCore_glMultiDrawElementsIndirectAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4fvARB
-.type glMultiTexCoord4fvARB, %function
-glMultiTexCoord4fvARB:
-    mov __blue_glCore_glMultiTexCoord4fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetLocalConstantBooleanvEXT
-.type glGetLocalConstantBooleanvEXT, %function
-glGetLocalConstantBooleanvEXT:
-    mov __blue_glCore_glGetLocalConstantBooleanvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix3x2dv
-.type glUniformMatrix3x2dv, %function
-glUniformMatrix3x2dv:
-    mov __blue_glCore_glUniformMatrix3x2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4fv
-.type glVertexAttrib4fv, %function
-glVertexAttrib4fv:
-    mov __blue_glCore_glVertexAttrib4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x3dv
-.type glProgramUniformMatrix2x3dv, %function
-glProgramUniformMatrix2x3dv:
-    mov __blue_glCore_glProgramUniformMatrix2x3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnPixelMapfv
-.type glGetnPixelMapfv, %function
-glGetnPixelMapfv:
-    mov __blue_glCore_glGetnPixelMapfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord3xOES
-.type glTexCoord3xOES, %function
-glTexCoord3xOES:
-    mov __blue_glCore_glTexCoord3xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadTransposeMatrixfARB
-.type glLoadTransposeMatrixfARB, %function
-glLoadTransposeMatrixfARB:
-    mov __blue_glCore_glLoadTransposeMatrixfARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glImageTransformParameteriHP
-.type glImageTransformParameteriHP, %function
-glImageTransformParameteriHP:
-    mov __blue_glCore_glImageTransformParameteriHP@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTestFenceNV
-.type glTestFenceNV, %function
-glTestFenceNV:
-    mov __blue_glCore_glTestFenceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMapParameterivNV
-.type glGetMapParameterivNV, %function
-glGetMapParameterivNV:
-    mov __blue_glCore_glGetMapParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2fv
-.type glVertexAttrib2fv, %function
-glVertexAttrib2fv:
-    mov __blue_glCore_glVertexAttrib2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3ui64NV
-.type glUniform3ui64NV, %function
-glUniform3ui64NV:
-    mov __blue_glCore_glUniform3ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCombinerParameterfvNV
-.type glCombinerParameterfvNV, %function
-glCombinerParameterfvNV:
-    mov __blue_glCore_glCombinerParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyConvolutionFilter2D
-.type glCopyConvolutionFilter2D, %function
-glCopyConvolutionFilter2D:
-    mov __blue_glCore_glCopyConvolutionFilter2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramResourceIndex
-.type glGetProgramResourceIndex, %function
-glGetProgramResourceIndex:
-    mov __blue_glCore_glGetProgramResourceIndex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginConditionalRenderNV
-.type glBeginConditionalRenderNV, %function
-glBeginConditionalRenderNV:
-    mov __blue_glCore_glBeginConditionalRenderNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathFogGenNV
-.type glPathFogGenNV, %function
-glPathFogGenNV:
-    mov __blue_glCore_glPathFogGenNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilThenCoverFillPathNV
-.type glStencilThenCoverFillPathNV, %function
-glStencilThenCoverFillPathNV:
-    mov __blue_glCore_glStencilThenCoverFillPathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayIndexOffsetEXT
-.type glVertexArrayIndexOffsetEXT, %function
-glVertexArrayIndexOffsetEXT:
-    mov __blue_glCore_glVertexArrayIndexOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramBufferParametersIuivNV
-.type glProgramBufferParametersIuivNV, %function
-glProgramBufferParametersIuivNV:
-    mov __blue_glCore_glProgramBufferParametersIuivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTransformParameterivEXT
-.type glPixelTransformParameterivEXT, %function
-glPixelTransformParameterivEXT:
-    mov __blue_glCore_glPixelTransformParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableClientStateiEXT
-.type glDisableClientStateiEXT, %function
-glDisableClientStateiEXT:
-    mov __blue_glCore_glDisableClientStateiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexBufferARB
-.type glTexBufferARB, %function
-glTexBufferARB:
-    mov __blue_glCore_glTexBufferARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetLocalConstantIntegervEXT
-.type glGetLocalConstantIntegervEXT, %function
-glGetLocalConstantIntegervEXT:
-    mov __blue_glCore_glGetLocalConstantIntegervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathCoverDepthFuncNV
-.type glPathCoverDepthFuncNV, %function
-glPathCoverDepthFuncNV:
-    mov __blue_glCore_glPathCoverDepthFuncNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3i
-.type glProgramUniform3i, %function
-glProgramUniform3i:
-    mov __blue_glCore_glProgramUniform3i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawElementsIndirectBindlessCountNV
-.type glMultiDrawElementsIndirectBindlessCountNV, %function
-glMultiDrawElementsIndirectBindlessCountNV:
-    mov __blue_glCore_glMultiDrawElementsIndirectBindlessCountNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBufferPointervARB
-.type glGetBufferPointervARB, %function
-glGetBufferPointervARB:
-    mov __blue_glCore_glGetBufferPointervARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexParameterIuivEXT
-.type glMultiTexParameterIuivEXT, %function
-glMultiTexParameterIuivEXT:
-    mov __blue_glCore_glMultiTexParameterIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3f
-.type glProgramUniform3f, %function
-glProgramUniform3f:
-    mov __blue_glCore_glProgramUniform3f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilThenCoverFillPathInstancedNV
-.type glStencilThenCoverFillPathInstancedNV, %function
-glStencilThenCoverFillPathInstancedNV:
-    mov __blue_glCore_glStencilThenCoverFillPathInstancedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3d
-.type glProgramUniform3d, %function
-glProgramUniform3d:
-    mov __blue_glCore_glProgramUniform3d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapVertexAttrib1dAPPLE
-.type glMapVertexAttrib1dAPPLE, %function
-glMapVertexAttrib1dAPPLE:
-    mov __blue_glCore_glMapVertexAttrib1dAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadTransposeMatrixd
-.type glLoadTransposeMatrixd, %function
-glLoadTransposeMatrixd:
-    mov __blue_glCore_glLoadTransposeMatrixd@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadTransposeMatrixf
-.type glLoadTransposeMatrixf, %function
-glLoadTransposeMatrixf:
-    mov __blue_glCore_glLoadTransposeMatrixf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPointervEXT
-.type glGetPointervEXT, %function
-glGetPointervEXT:
-    mov __blue_glCore_glGetPointervEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndConditionalRenderNV
-.type glEndConditionalRenderNV, %function
-glEndConditionalRenderNV:
-    mov __blue_glCore_glEndConditionalRenderNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexImage1DEXT
-.type glMultiTexImage1DEXT, %function
-glMultiTexImage1DEXT:
-    mov __blue_glCore_glMultiTexImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteObjectARB
-.type glDeleteObjectARB, %function
-glDeleteObjectARB:
-    mov __blue_glCore_glDeleteObjectARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2uiEXT
-.type glProgramUniform2uiEXT, %function
-glProgramUniform2uiEXT:
-    mov __blue_glCore_glProgramUniform2uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI1ui
-.type glVertexAttribI1ui, %function
-glVertexAttribI1ui:
-    mov __blue_glCore_glVertexAttribI1ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramNamedParameter4dvNV
-.type glProgramNamedParameter4dvNV, %function
-glProgramNamedParameter4dvNV:
-    mov __blue_glCore_glProgramNamedParameter4dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompileCommandListNV
-.type glCompileCommandListNV, %function
-glCompileCommandListNV:
-    mov __blue_glCore_glCompileCommandListNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetRenderbufferParameterivEXT
-.type glGetRenderbufferParameterivEXT, %function
-glGetRenderbufferParameterivEXT:
-    mov __blue_glCore_glGetRenderbufferParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnPolygonStipple
-.type glGetnPolygonStipple, %function
-glGetnPolygonStipple:
-    mov __blue_glCore_glGetnPolygonStipple@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsBufferResidentNV
-.type glIsBufferResidentNV, %function
-glIsBufferResidentNV:
-    mov __blue_glCore_glIsBufferResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedRenderbufferParameterivEXT
-.type glGetNamedRenderbufferParameterivEXT, %function
-glGetNamedRenderbufferParameterivEXT:
-    mov __blue_glCore_glGetNamedRenderbufferParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferSampleLocationsfvARB
-.type glNamedFramebufferSampleLocationsfvARB, %function
-glNamedFramebufferSampleLocationsfvARB:
-    mov __blue_glCore_glNamedFramebufferSampleLocationsfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexGendvEXT
-.type glMultiTexGendvEXT, %function
-glMultiTexGendvEXT:
-    mov __blue_glCore_glMultiTexGendvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayRangeNV
-.type glVertexArrayRangeNV, %function
-glVertexArrayRangeNV:
-    mov __blue_glCore_glVertexArrayRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsTextureHandleResidentNV
-.type glIsTextureHandleResidentNV, %function
-glIsTextureHandleResidentNV:
-    mov __blue_glCore_glIsTextureHandleResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramEnvParameterdvARB
-.type glGetProgramEnvParameterdvARB, %function
-glGetProgramEnvParameterdvARB:
-    mov __blue_glCore_glGetProgramEnvParameterdvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsNamedStringARB
-.type glIsNamedStringARB, %function
-glIsNamedStringARB:
-    mov __blue_glCore_glIsNamedStringARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColorFormatNV
-.type glSecondaryColorFormatNV, %function
-glSecondaryColorFormatNV:
-    mov __blue_glCore_glSecondaryColorFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTransferxOES
-.type glPixelTransferxOES, %function
-glPixelTransferxOES:
-    mov __blue_glCore_glPixelTransferxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateTexSubImage
-.type glInvalidateTexSubImage, %function
-glInvalidateTexSubImage:
-    mov __blue_glCore_glInvalidateTexSubImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUUnregisterSurfaceNV
-.type glVDPAUUnregisterSurfaceNV, %function
-glVDPAUUnregisterSurfaceNV:
-    mov __blue_glCore_glVDPAUUnregisterSurfaceNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfQueryIdByNameINTEL
-.type glGetPerfQueryIdByNameINTEL, %function
-glGetPerfQueryIdByNameINTEL:
-    mov __blue_glCore_glGetPerfQueryIdByNameINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInteger64v
-.type glGetInteger64v, %function
-glGetInteger64v:
-    mov __blue_glCore_glGetInteger64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4ubVertex3fSUN
-.type glColor4ubVertex3fSUN, %function
-glColor4ubVertex3fSUN:
-    mov __blue_glCore_glColor4ubVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex2bOES
-.type glVertex2bOES, %function
-glVertex2bOES:
-    mov __blue_glCore_glVertex2bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramEnvParameterfvARB
-.type glGetProgramEnvParameterfvARB, %function
-glGetProgramEnvParameterfvARB:
-    mov __blue_glCore_glGetProgramEnvParameterfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4usvARB
-.type glVertexAttrib4usvARB, %function
-glVertexAttrib4usvARB:
-    mov __blue_glCore_glVertexAttrib4usvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferRenderbuffer
-.type glNamedFramebufferRenderbuffer, %function
-glNamedFramebufferRenderbuffer:
-    mov __blue_glCore_glNamedFramebufferRenderbuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetHandleARB
-.type glGetHandleARB, %function
-glGetHandleARB:
-    mov __blue_glCore_glGetHandleARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTestFenceAPPLE
-.type glTestFenceAPPLE, %function
-glTestFenceAPPLE:
-    mov __blue_glCore_glTestFenceAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4Niv
-.type glVertexAttrib4Niv, %function
-glVertexAttrib4Niv:
-    mov __blue_glCore_glVertexAttrib4Niv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearBufferiv
-.type glClearBufferiv, %function
-glClearBufferiv:
-    mov __blue_glCore_glClearBufferiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorP4uiv
-.type glColorP4uiv, %function
-glColorP4uiv:
-    mov __blue_glCore_glColorP4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix2x3fv
-.type glUniformMatrix2x3fv, %function
-glUniformMatrix2x3fv:
-    mov __blue_glCore_glUniformMatrix2x3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCallCommandListNV
-.type glCallCommandListNV, %function
-glCallCommandListNV:
-    mov __blue_glCore_glCallCommandListNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeBufferResidentNV
-.type glMakeBufferResidentNV, %function
-glMakeBufferResidentNV:
-    mov __blue_glCore_glMakeBufferResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedStringARB
-.type glNamedStringARB, %function
-glNamedStringARB:
-    mov __blue_glCore_glNamedStringARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUSurfaceAccessNV
-.type glVDPAUSurfaceAccessNV, %function
-glVDPAUSurfaceAccessNV:
-    mov __blue_glCore_glVDPAUSurfaceAccessNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixMult3x2fNV
-.type glMatrixMult3x2fNV, %function
-glMatrixMult3x2fNV:
-    mov __blue_glCore_glMatrixMult3x2fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveSubroutineUniformName
-.type glGetActiveSubroutineUniformName, %function
-glGetActiveSubroutineUniformName:
-    mov __blue_glCore_glGetActiveSubroutineUniformName@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnHistogramARB
-.type glGetnHistogramARB, %function
-glGetnHistogramARB:
-    mov __blue_glCore_glGetnHistogramARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureLevelParameterfv
-.type glGetTextureLevelParameterfv, %function
-glGetTextureLevelParameterfv:
-    mov __blue_glCore_glGetTextureLevelParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1fv
-.type glMultiTexCoord1fv, %function
-glMultiTexCoord1fv:
-    mov __blue_glCore_glMultiTexCoord1fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBitmapxOES
-.type glBitmapxOES, %function
-glBitmapxOES:
-    mov __blue_glCore_glBitmapxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSamplerParameterIuiv
-.type glGetSamplerParameterIuiv, %function
-glGetSamplerParameterIuiv:
-    mov __blue_glCore_glGetSamplerParameterIuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoordP3ui
-.type glTexCoordP3ui, %function
-glTexCoordP3ui:
-    mov __blue_glCore_glTexCoordP3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureSubImage1D
-.type glTextureSubImage1D, %function
-glTextureSubImage1D:
-    mov __blue_glCore_glTextureSubImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribLPointerEXT
-.type glVertexAttribLPointerEXT, %function
-glVertexAttribLPointerEXT:
-    mov __blue_glCore_glVertexAttribLPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordPointerEXT
-.type glFogCoordPointerEXT, %function
-glFogCoordPointerEXT:
-    mov __blue_glCore_glFogCoordPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3s
-.type glWindowPos3s, %function
-glWindowPos3s:
-    mov __blue_glCore_glWindowPos3s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs2svNV
-.type glVertexAttribs2svNV, %function
-glVertexAttribs2svNV:
-    mov __blue_glCore_glVertexAttribs2svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearDepthf
-.type glClearDepthf, %function
-glClearDepthf:
-    mov __blue_glCore_glClearDepthf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3i
-.type glWindowPos3i, %function
-glWindowPos3i:
-    mov __blue_glCore_glWindowPos3i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3d
-.type glWindowPos3d, %function
-glWindowPos3d:
-    mov __blue_glCore_glWindowPos3d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfMonitorCounterStringAMD
-.type glGetPerfMonitorCounterStringAMD, %function
-glGetPerfMonitorCounterStringAMD:
-    mov __blue_glCore_glGetPerfMonitorCounterStringAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsEnabledIndexedEXT
-.type glIsEnabledIndexedEXT, %function
-glIsEnabledIndexedEXT:
-    mov __blue_glCore_glIsEnabledIndexedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedProgramivEXT
-.type glGetNamedProgramivEXT, %function
-glGetNamedProgramivEXT:
-    mov __blue_glCore_glGetNamedProgramivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameterIuivEXT
-.type glGetTexParameterIuivEXT, %function
-glGetTexParameterIuivEXT:
-    mov __blue_glCore_glGetTexParameterIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginPerfMonitorAMD
-.type glBeginPerfMonitorAMD, %function
-glBeginPerfMonitorAMD:
-    mov __blue_glCore_glBeginPerfMonitorAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4x3dv
-.type glProgramUniformMatrix4x3dv, %function
-glProgramUniformMatrix4x3dv:
-    mov __blue_glCore_glProgramUniformMatrix4x3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedProgramLocalParameterIuivEXT
-.type glGetNamedProgramLocalParameterIuivEXT, %function
-glGetNamedProgramLocalParameterIuivEXT:
-    mov __blue_glCore_glGetNamedProgramLocalParameterIuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReadnPixels
-.type glReadnPixels, %function
-glReadnPixels:
-    mov __blue_glCore_glReadnPixels@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4f
-.type glMultiTexCoord4f, %function
-glMultiTexCoord4f:
-    mov __blue_glCore_glMultiTexCoord4f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4d
-.type glMultiTexCoord4d, %function
-glMultiTexCoord4d:
-    mov __blue_glCore_glMultiTexCoord4d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL3ui64NV
-.type glVertexAttribL3ui64NV, %function
-glVertexAttribL3ui64NV:
-    mov __blue_glCore_glVertexAttribL3ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4fvEXT
-.type glProgramUniform4fvEXT, %function
-glProgramUniform4fvEXT:
-    mov __blue_glCore_glProgramUniform4fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2sARB
-.type glVertexAttrib2sARB, %function
-glVertexAttrib2sARB:
-    mov __blue_glCore_glVertexAttrib2sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexImage2DARB
-.type glCompressedTexImage2DARB, %function
-glCompressedTexImage2DARB:
-    mov __blue_glCore_glCompressedTexImage2DARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCheckFramebufferStatusEXT
-.type glCheckFramebufferStatusEXT, %function
-glCheckFramebufferStatusEXT:
-    mov __blue_glCore_glCheckFramebufferStatusEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMapivARB
-.type glGetnMapivARB, %function
-glGetnMapivARB:
-    mov __blue_glCore_glGetnMapivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1ivARB
-.type glMultiTexCoord1ivARB, %function
-glMultiTexCoord1ivARB:
-    mov __blue_glCore_glMultiTexCoord1ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableVertexAttribArrayARB
-.type glDisableVertexAttribArrayARB, %function
-glDisableVertexAttribArrayARB:
-    mov __blue_glCore_glDisableVertexAttribArrayARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4ui
-.type glVertexAttribI4ui, %function
-glVertexAttribI4ui:
-    mov __blue_glCore_glVertexAttribI4ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathDashArrayNV
-.type glGetPathDashArrayNV, %function
-glGetPathDashArrayNV:
-    mov __blue_glCore_glGetPathDashArrayNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexRenderbufferEXT
-.type glMultiTexRenderbufferEXT, %function
-glMultiTexRenderbufferEXT:
-    mov __blue_glCore_glMultiTexRenderbufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4fVertex4fSUN
-.type glTexCoord4fVertex4fSUN, %function
-glTexCoord4fVertex4fSUN:
-    mov __blue_glCore_glTexCoord4fVertex4fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorMask
-.type glColorMask, %function
-glColorMask:
-    mov __blue_glCore_glColorMask@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex4hvNV
-.type glVertex4hvNV, %function
-glVertex4hvNV:
-    mov __blue_glCore_glVertex4hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnTexImage
-.type glGetnTexImage, %function
-glGetnTexImage:
-    mov __blue_glCore_glGetnTexImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameter4dARB
-.type glProgramLocalParameter4dARB, %function
-glProgramLocalParameter4dARB:
-    mov __blue_glCore_glProgramLocalParameter4dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquation
-.type glBlendEquation, %function
-glBlendEquation:
-    mov __blue_glCore_glBlendEquation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUnlockArraysEXT
-.type glUnlockArraysEXT, %function
-glUnlockArraysEXT:
-    mov __blue_glCore_glUnlockArraysEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjectui64vEXT
-.type glGetQueryObjectui64vEXT, %function
-glGetQueryObjectui64vEXT:
-    mov __blue_glCore_glGetQueryObjectui64vEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4uivEXT
-.type glVertexAttribI4uivEXT, %function
-glVertexAttribI4uivEXT:
-    mov __blue_glCore_glVertexAttribI4uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3dv
-.type glMultiTexCoord3dv, %function
-glMultiTexCoord3dv:
-    mov __blue_glCore_glMultiTexCoord3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4ivATI
-.type glVertexStream4ivATI, %function
-glVertexStream4ivATI:
-    mov __blue_glCore_glVertexStream4ivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramResourceiv
-.type glGetProgramResourceiv, %function
-glGetProgramResourceiv:
-    mov __blue_glCore_glGetProgramResourceiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearBufferData
-.type glClearBufferData, %function
-glClearBufferData:
-    mov __blue_glCore_glClearBufferData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramivNV
-.type glGetProgramivNV, %function
-glGetProgramivNV:
-    mov __blue_glCore_glGetProgramivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginTransformFeedback
-.type glBeginTransformFeedback, %function
-glBeginTransformFeedback:
-    mov __blue_glCore_glBeginTransformFeedback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformFeedbackAttribsNV
-.type glTransformFeedbackAttribsNV, %function
-glTransformFeedbackAttribsNV:
-    mov __blue_glCore_glTransformFeedbackAttribsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexImage1D
-.type glCompressedTexImage1D, %function
-glCompressedTexImage1D:
-    mov __blue_glCore_glCompressedTexImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteTransformFeedbacks
-.type glDeleteTransformFeedbacks, %function
-glDeleteTransformFeedbacks:
-    mov __blue_glCore_glDeleteTransformFeedbacks@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawRangeElementsBaseVertex
-.type glDrawRangeElementsBaseVertex, %function
-glDrawRangeElementsBaseVertex:
-    mov __blue_glCore_glDrawRangeElementsBaseVertex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4i64vARB
-.type glUniform4i64vARB, %function
-glUniform4i64vARB:
-    mov __blue_glCore_glUniform4i64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage3DMultisampleEXT
-.type glTextureStorage3DMultisampleEXT, %function
-glTextureStorage3DMultisampleEXT:
-    mov __blue_glCore_glTextureStorage3DMultisampleEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindAttribLocation
-.type glBindAttribLocation, %function
-glBindAttribLocation:
-    mov __blue_glCore_glBindAttribLocation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformui64vNV
-.type glProgramUniformui64vNV, %function
-glProgramUniformui64vNV:
-    mov __blue_glCore_glProgramUniformui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedMultiTexImage1DEXT
-.type glCompressedMultiTexImage1DEXT, %function
-glCompressedMultiTexImage1DEXT:
-    mov __blue_glCore_glCompressedMultiTexImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2ivEXT
-.type glProgramUniform2ivEXT, %function
-glProgramUniform2ivEXT:
-    mov __blue_glCore_glProgramUniform2ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPushGroupMarkerEXT
-.type glPushGroupMarkerEXT, %function
-glPushGroupMarkerEXT:
-    mov __blue_glCore_glPushGroupMarkerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1dv
-.type glVertexAttrib1dv, %function
-glVertexAttrib1dv:
-    mov __blue_glCore_glVertexAttrib1dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glResolveDepthValuesNV
-.type glResolveDepthValuesNV, %function
-glResolveDepthValuesNV:
-    mov __blue_glCore_glResolveDepthValuesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultTransposeMatrixxOES
-.type glMultTransposeMatrixxOES, %function
-glMultTransposeMatrixxOES:
-    mov __blue_glCore_glMultTransposeMatrixxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPixelMapxv
-.type glGetPixelMapxv, %function
-glGetPixelMapxv:
-    mov __blue_glCore_glGetPixelMapxv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN
-.type glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN, %function
-glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferSampleLocationsfvARB
-.type glFramebufferSampleLocationsfvARB, %function
-glFramebufferSampleLocationsfvARB:
-    mov __blue_glCore_glFramebufferSampleLocationsfvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFuncSeparatei
-.type glBlendFuncSeparatei, %function
-glBlendFuncSeparatei:
-    mov __blue_glCore_glBlendFuncSeparatei@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBooleanIndexedvEXT
-.type glGetBooleanIndexedvEXT, %function
-glGetBooleanIndexedvEXT:
-    mov __blue_glCore_glGetBooleanIndexedvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexP4uiv
-.type glVertexP4uiv, %function
-glVertexP4uiv:
-    mov __blue_glCore_glVertexP4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glApplyFramebufferAttachmentCMAAINTEL
-.type glApplyFramebufferAttachmentCMAAINTEL, %function
-glApplyFramebufferAttachmentCMAAINTEL:
-    mov __blue_glCore_glApplyFramebufferAttachmentCMAAINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2fv
-.type glWindowPos2fv, %function
-glWindowPos2fv:
-    mov __blue_glCore_glWindowPos2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisablei
-.type glDisablei, %function
-glDisablei:
-    mov __blue_glCore_glDisablei@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyBufferSubData
-.type glCopyBufferSubData, %function
-glCopyBufferSubData:
-    mov __blue_glCore_glCopyBufferSubData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSelectPerfMonitorCountersAMD
-.type glSelectPerfMonitorCountersAMD, %function
-glSelectPerfMonitorCountersAMD:
-    mov __blue_glCore_glSelectPerfMonitorCountersAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribLi64vNV
-.type glGetVertexAttribLi64vNV, %function
-glGetVertexAttribLi64vNV:
-    mov __blue_glCore_glGetVertexAttribLi64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2dvARB
-.type glMultiTexCoord2dvARB, %function
-glMultiTexCoord2dvARB:
-    mov __blue_glCore_glMultiTexCoord2dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightuivARB
-.type glWeightuivARB, %function
-glWeightuivARB:
-    mov __blue_glCore_glWeightuivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVideoCaptureStreamdvNV
-.type glGetVideoCaptureStreamdvNV, %function
-glGetVideoCaptureStreamdvNV:
-    mov __blue_glCore_glGetVideoCaptureStreamdvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramLocalParameterdvARB
-.type glGetProgramLocalParameterdvARB, %function
-glGetProgramLocalParameterdvARB:
-    mov __blue_glCore_glGetProgramLocalParameterdvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformui64vARB
-.type glGetUniformui64vARB, %function
-glGetUniformui64vARB:
-    mov __blue_glCore_glGetUniformui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4fvATI
-.type glVertexStream4fvATI, %function
-glVertexStream4fvATI:
-    mov __blue_glCore_glVertexStream4fvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSynciv
-.type glGetSynciv, %function
-glGetSynciv:
-    mov __blue_glCore_glGetSynciv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMakeImageHandleResidentARB
-.type glMakeImageHandleResidentARB, %function
-glMakeImageHandleResidentARB:
-    mov __blue_glCore_glMakeImageHandleResidentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramNamedParameterfvNV
-.type glGetProgramNamedParameterfvNV, %function
-glGetProgramNamedParameterfvNV:
-    mov __blue_glCore_glGetProgramNamedParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2i
-.type glProgramUniform2i, %function
-glProgramUniform2i:
-    mov __blue_glCore_glProgramUniform2i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2d
-.type glProgramUniform2d, %function
-glProgramUniform2d:
-    mov __blue_glCore_glProgramUniform2d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParametersI4uivNV
-.type glProgramLocalParametersI4uivNV, %function
-glProgramLocalParametersI4uivNV:
-    mov __blue_glCore_glProgramLocalParametersI4uivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2f
-.type glProgramUniform2f, %function
-glProgramUniform2f:
-    mov __blue_glCore_glProgramUniform2f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramBinary
-.type glGetProgramBinary, %function
-glGetProgramBinary:
-    mov __blue_glCore_glGetProgramBinary@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3iEXT
-.type glBinormal3iEXT, %function
-glBinormal3iEXT:
-    mov __blue_glCore_glBinormal3iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPauseTransformFeedback
-.type glPauseTransformFeedback, %function
-glPauseTransformFeedback:
-    mov __blue_glCore_glPauseTransformFeedback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2sMESA
-.type glWindowPos2sMESA, %function
-glWindowPos2sMESA:
-    mov __blue_glCore_glWindowPos2sMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactorbSUN
-.type glGlobalAlphaFactorbSUN, %function
-glGlobalAlphaFactorbSUN:
-    mov __blue_glCore_glGlobalAlphaFactorbSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateTransformFeedbacks
-.type glCreateTransformFeedbacks, %function
-glCreateTransformFeedbacks:
-    mov __blue_glCore_glCreateTransformFeedbacks@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexturePageCommitmentEXT
-.type glTexturePageCommitmentEXT, %function
-glTexturePageCommitmentEXT:
-    mov __blue_glCore_glTexturePageCommitmentEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformFeedbackVaryingsNV
-.type glTransformFeedbackVaryingsNV, %function
-glTransformFeedbackVaryingsNV:
-    mov __blue_glCore_glTransformFeedbackVaryingsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexSubImage1D
-.type glTexSubImage1D, %function
-glTexSubImage1D:
-    mov __blue_glCore_glTexSubImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameterfvEXT
-.type glConvolutionParameterfvEXT, %function
-glConvolutionParameterfvEXT:
-    mov __blue_glCore_glConvolutionParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlitFramebufferEXT
-.type glBlitFramebufferEXT, %function
-glBlitFramebufferEXT:
-    mov __blue_glCore_glBlitFramebufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix4fvARB
-.type glUniformMatrix4fvARB, %function
-glUniformMatrix4fvARB:
-    mov __blue_glCore_glUniformMatrix4fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameter4dvARB
-.type glProgramEnvParameter4dvARB, %function
-glProgramEnvParameter4dvARB:
-    mov __blue_glCore_glProgramEnvParameter4dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP3uiv
-.type glVertexAttribP3uiv, %function
-glVertexAttribP3uiv:
-    mov __blue_glCore_glVertexAttribP3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glElementPointerAPPLE
-.type glElementPointerAPPLE, %function
-glElementPointerAPPLE:
-    mov __blue_glCore_glElementPointerAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMultiTexLevelParameterivEXT
-.type glGetMultiTexLevelParameterivEXT, %function
-glGetMultiTexLevelParameterivEXT:
-    mov __blue_glCore_glGetMultiTexLevelParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsOcclusionQueryNV
-.type glIsOcclusionQueryNV, %function
-glIsOcclusionQueryNV:
-    mov __blue_glCore_glIsOcclusionQueryNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramEnvParameterIuivNV
-.type glGetProgramEnvParameterIuivNV, %function
-glGetProgramEnvParameterIuivNV:
-    mov __blue_glCore_glGetProgramEnvParameterIuivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexArrayiv
-.type glGetVertexArrayiv, %function
-glGetVertexArrayiv:
-    mov __blue_glCore_glGetVertexArrayiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4fvARB
-.type glVertexAttrib4fvARB, %function
-glVertexAttrib4fvARB:
-    mov __blue_glCore_glVertexAttrib4fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedProgramLocalParameterIivEXT
-.type glGetNamedProgramLocalParameterIivEXT, %function
-glGetNamedProgramLocalParameterIivEXT:
-    mov __blue_glCore_glGetNamedProgramLocalParameterIivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3uiEXT
-.type glProgramUniform3uiEXT, %function
-glProgramUniform3uiEXT:
-    mov __blue_glCore_glProgramUniform3uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4x2dvEXT
-.type glProgramUniformMatrix4x2dvEXT, %function
-glProgramUniformMatrix4x2dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix4x2dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord1hvNV
-.type glTexCoord1hvNV, %function
-glTexCoord1hvNV:
-    mov __blue_glCore_glTexCoord1hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterfv
-.type glTexParameterfv, %function
-glTexParameterfv:
-    mov __blue_glCore_glTexParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantdvEXT
-.type glVariantdvEXT, %function
-glVariantdvEXT:
-    mov __blue_glCore_glVariantdvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCullParameterfvEXT
-.type glCullParameterfvEXT, %function
-glCullParameterfvEXT:
-    mov __blue_glCore_glCullParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3dv
-.type glUniform3dv, %function
-glUniform3dv:
-    mov __blue_glCore_glUniform3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3fv
-.type glProgramUniform3fv, %function
-glProgramUniform3fv:
-    mov __blue_glCore_glProgramUniform3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsBufferARB
-.type glIsBufferARB, %function
-glIsBufferARB:
-    mov __blue_glCore_glIsBufferARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1bOES
-.type glMultiTexCoord1bOES, %function
-glMultiTexCoord1bOES:
-    mov __blue_glCore_glMultiTexCoord1bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordhNV
-.type glFogCoordhNV, %function
-glFogCoordhNV:
-    mov __blue_glCore_glFogCoordhNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4dvNV
-.type glVertexAttrib4dvNV, %function
-glVertexAttrib4dvNV:
-    mov __blue_glCore_glVertexAttrib4dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenSymbolsEXT
-.type glGenSymbolsEXT, %function
-glGenSymbolsEXT:
-    mov __blue_glCore_glGenSymbolsEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetConvolutionFilter
-.type glGetConvolutionFilter, %function
-glGetConvolutionFilter:
-    mov __blue_glCore_glGetConvolutionFilter@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1fvEXT
-.type glProgramUniform1fvEXT, %function
-glProgramUniform1fvEXT:
-    mov __blue_glCore_glProgramUniform1fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1dvNV
-.type glVertexAttrib1dvNV, %function
-glVertexAttrib1dvNV:
-    mov __blue_glCore_glVertexAttrib1dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexImage1DARB
-.type glCompressedTexImage1DARB, %function
-glCompressedTexImage1DARB:
-    mov __blue_glCore_glCompressedTexImage1DARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawElementsIndirect
-.type glDrawElementsIndirect, %function
-glDrawElementsIndirect:
-    mov __blue_glCore_glDrawElementsIndirect@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramEnvParameterIivNV
-.type glGetProgramEnvParameterIivNV, %function
-glGetProgramEnvParameterIivNV:
-    mov __blue_glCore_glGetProgramEnvParameterIivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjectui64v
-.type glGetQueryObjectui64v, %function
-glGetQueryObjectui64v:
-    mov __blue_glCore_glGetQueryObjectui64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4ui64vNV
-.type glVertexAttribL4ui64vNV, %function
-glVertexAttribL4ui64vNV:
-    mov __blue_glCore_glVertexAttribL4ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVideoivNV
-.type glGetVideoivNV, %function
-glGetVideoivNV:
-    mov __blue_glCore_glGetVideoivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureImage
-.type glGetTextureImage, %function
-glGetTextureImage:
-    mov __blue_glCore_glGetTextureImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1fv
-.type glProgramUniform1fv, %function
-glProgramUniform1fv:
-    mov __blue_glCore_glProgramUniform1fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix4fv
-.type glUniformMatrix4fv, %function
-glUniformMatrix4fv:
-    mov __blue_glCore_glUniformMatrix4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginFragmentShaderATI
-.type glBeginFragmentShaderATI, %function
-glBeginFragmentShaderATI:
-    mov __blue_glCore_glBeginFragmentShaderATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawArraysEXT
-.type glMultiDrawArraysEXT, %function
-glMultiDrawArraysEXT:
-    mov __blue_glCore_glMultiDrawArraysEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenNamesAMD
-.type glGenNamesAMD, %function
-glGenNamesAMD:
-    mov __blue_glCore_glGenNamesAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathParameteriNV
-.type glPathParameteriNV, %function
-glPathParameteriNV:
-    mov __blue_glCore_glPathParameteriNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateCommandListsNV
-.type glCreateCommandListsNV, %function
-glCreateCommandListsNV:
-    mov __blue_glCore_glCreateCommandListsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteProgramPipelines
-.type glDeleteProgramPipelines, %function
-glDeleteProgramPipelines:
-    mov __blue_glCore_glDeleteProgramPipelines@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyColorSubTableEXT
-.type glCopyColorSubTableEXT, %function
-glCopyColorSubTableEXT:
-    mov __blue_glCore_glCopyColorSubTableEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantsvEXT
-.type glVariantsvEXT, %function
-glVariantsvEXT:
-    mov __blue_glCore_glVariantsvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsNameAMD
-.type glIsNameAMD, %function
-glIsNameAMD:
-    mov __blue_glCore_glIsNameAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayEdgeFlagOffsetEXT
-.type glVertexArrayEdgeFlagOffsetEXT, %function
-glVertexArrayEdgeFlagOffsetEXT:
-    mov __blue_glCore_glVertexArrayEdgeFlagOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2s
-.type glWindowPos2s, %function
-glWindowPos2s:
-    mov __blue_glCore_glWindowPos2s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3iEXT
-.type glSecondaryColor3iEXT, %function
-glSecondaryColor3iEXT:
-    mov __blue_glCore_glSecondaryColor3iEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2i
-.type glWindowPos2i, %function
-glWindowPos2i:
-    mov __blue_glCore_glWindowPos2i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2f
-.type glWindowPos2f, %function
-glWindowPos2f:
-    mov __blue_glCore_glWindowPos2f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2d
-.type glWindowPos2d, %function
-glWindowPos2d:
-    mov __blue_glCore_glWindowPos2d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4uivEXT
-.type glUniform4uivEXT, %function
-glUniform4uivEXT:
-    mov __blue_glCore_glUniform4uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glOrthoxOES
-.type glOrthoxOES, %function
-glOrthoxOES:
-    mov __blue_glCore_glOrthoxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformSubroutinesuiv
-.type glUniformSubroutinesuiv, %function
-glUniformSubroutinesuiv:
-    mov __blue_glCore_glUniformSubroutinesuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2fColor3fVertex3fvSUN
-.type glTexCoord2fColor3fVertex3fvSUN, %function
-glTexCoord2fColor3fVertex3fvSUN:
-    mov __blue_glCore_glTexCoord2fColor3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1i64vNV
-.type glProgramUniform1i64vNV, %function
-glProgramUniform1i64vNV:
-    mov __blue_glCore_glProgramUniform1i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4uiEXT
-.type glVertexAttribI4uiEXT, %function
-glVertexAttribI4uiEXT:
-    mov __blue_glCore_glVertexAttribI4uiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3ubEXT
-.type glSecondaryColor3ubEXT, %function
-glSecondaryColor3ubEXT:
-    mov __blue_glCore_glSecondaryColor3ubEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedMultiTexSubImage1DEXT
-.type glCompressedMultiTexSubImage1DEXT, %function
-glCompressedMultiTexSubImage1DEXT:
-    mov __blue_glCore_glCompressedMultiTexSubImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangentPointerEXT
-.type glTangentPointerEXT, %function
-glTangentPointerEXT:
-    mov __blue_glCore_glTangentPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorP3uiv
-.type glColorP3uiv, %function
-glColorP3uiv:
-    mov __blue_glCore_glColorP3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoordfv
-.type glFogCoordfv, %function
-glFogCoordfv:
-    mov __blue_glCore_glFogCoordfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompileShader
-.type glCompileShader, %function
-glCompileShader:
-    mov __blue_glCore_glCompileShader@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2hNV
-.type glTexCoord2hNV, %function
-glTexCoord2hNV:
-    mov __blue_glCore_glTexCoord2hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1uivEXT
-.type glUniform1uivEXT, %function
-glUniform1uivEXT:
-    mov __blue_glCore_glUniform1uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixLoadTransposedEXT
-.type glMatrixLoadTransposedEXT, %function
-glMatrixLoadTransposedEXT:
-    mov __blue_glCore_glMatrixLoadTransposedEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixTranslatefEXT
-.type glMatrixTranslatefEXT, %function
-glMatrixTranslatefEXT:
-    mov __blue_glCore_glMatrixTranslatefEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformuivEXT
-.type glGetUniformuivEXT, %function
-glGetUniformuivEXT:
-    mov __blue_glCore_glGetUniformuivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginTransformFeedbackEXT
-.type glBeginTransformFeedbackEXT, %function
-glBeginTransformFeedbackEXT:
-    mov __blue_glCore_glBeginTransformFeedbackEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureEXT
-.type glFramebufferTextureEXT, %function
-glFramebufferTextureEXT:
-    mov __blue_glCore_glFramebufferTextureEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribIPointer
-.type glVertexAttribIPointer, %function
-glVertexAttribIPointer:
-    mov __blue_glCore_glVertexAttribIPointer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP3ui
-.type glMultiTexCoordP3ui, %function
-glMultiTexCoordP3ui:
-    mov __blue_glCore_glMultiTexCoordP3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEvaluateDepthValuesARB
-.type glEvaluateDepthValuesARB, %function
-glEvaluateDepthValuesARB:
-    mov __blue_glCore_glEvaluateDepthValuesARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2sARB
-.type glWindowPos2sARB, %function
-glWindowPos2sARB:
-    mov __blue_glCore_glWindowPos2sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4fNormal3fVertex3fvSUN
-.type glColor4fNormal3fVertex3fvSUN, %function
-glColor4fNormal3fVertex3fvSUN:
-    mov __blue_glCore_glColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSeparableFilter2DEXT
-.type glSeparableFilter2DEXT, %function
-glSeparableFilter2DEXT:
-    mov __blue_glCore_glSeparableFilter2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterxOES
-.type glTexParameterxOES, %function
-glTexParameterxOES:
-    mov __blue_glCore_glTexParameterxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearAccumxOES
-.type glClearAccumxOES, %function
-glClearAccumxOES:
-    mov __blue_glCore_glClearAccumxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glInvalidateFramebuffer
-.type glInvalidateFramebuffer, %function
-glInvalidateFramebuffer:
-    mov __blue_glCore_glInvalidateFramebuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightubvARB
-.type glWeightubvARB, %function
-glWeightubvARB:
-    mov __blue_glCore_glWeightubvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexImage2D
-.type glCompressedTexImage2D, %function
-glCompressedTexImage2D:
-    mov __blue_glCore_glCompressedTexImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1f
-.type glVertexAttrib1f, %function
-glVertexAttrib1f:
-    mov __blue_glCore_glVertexAttrib1f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedFramebufferfi
-.type glClearNamedFramebufferfi, %function
-glClearNamedFramebufferfi:
-    mov __blue_glCore_glClearNamedFramebufferfi@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryBufferObjectuiv
-.type glGetQueryBufferObjectuiv, %function
-glGetQueryBufferObjectuiv:
-    mov __blue_glCore_glGetQueryBufferObjectuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawBuffers
-.type glDrawBuffers, %function
-glDrawBuffers:
-    mov __blue_glCore_glDrawBuffers@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndVertexShaderEXT
-.type glEndVertexShaderEXT, %function
-glEndVertexShaderEXT:
-    mov __blue_glCore_glEndVertexShaderEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1s
-.type glVertexAttrib1s, %function
-glVertexAttrib1s:
-    mov __blue_glCore_glVertexAttrib1s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4dvARB
-.type glMultiTexCoord4dvARB, %function
-glMultiTexCoord4dvARB:
-    mov __blue_glCore_glMultiTexCoord4dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1sv
-.type glMultiTexCoord1sv, %function
-glMultiTexCoord1sv:
-    mov __blue_glCore_glMultiTexCoord1sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1ui64vNV
-.type glUniform1ui64vNV, %function
-glUniform1ui64vNV:
-    mov __blue_glCore_glUniform1ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetClipPlanefOES
-.type glGetClipPlanefOES, %function
-glGetClipPlanefOES:
-    mov __blue_glCore_glGetClipPlanefOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3ivEXT
-.type glProgramUniform3ivEXT, %function
-glProgramUniform3ivEXT:
-    mov __blue_glCore_glProgramUniform3ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWeightivARB
-.type glWeightivARB, %function
-glWeightivARB:
-    mov __blue_glCore_glWeightivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4hvNV
-.type glMultiTexCoord4hvNV, %function
-glMultiTexCoord4hvNV:
-    mov __blue_glCore_glMultiTexCoord4hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormal3hNV
-.type glNormal3hNV, %function
-glNormal3hNV:
-    mov __blue_glCore_glNormal3hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSeparableFilter
-.type glGetSeparableFilter, %function
-glGetSeparableFilter:
-    mov __blue_glCore_glGetSeparableFilter@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteProgram
-.type glDeleteProgram, %function
-glDeleteProgram:
-    mov __blue_glCore_glDeleteProgram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedBufferPageCommitmentARB
-.type glNamedBufferPageCommitmentARB, %function
-glNamedBufferPageCommitmentARB:
-    mov __blue_glCore_glNamedBufferPageCommitmentARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4bOES
-.type glTexCoord4bOES, %function
-glTexCoord4bOES:
-    mov __blue_glCore_glTexCoord4bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameter4dNV
-.type glProgramParameter4dNV, %function
-glProgramParameter4dNV:
-    mov __blue_glCore_glProgramParameter4dNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix4x3fv
-.type glUniformMatrix4x3fv, %function
-glUniformMatrix4x3fv:
-    mov __blue_glCore_glUniformMatrix4x3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearBufferfv
-.type glClearBufferfv, %function
-glClearBufferfv:
-    mov __blue_glCore_glClearBufferfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPauseTransformFeedbackNV
-.type glPauseTransformFeedbackNV, %function
-glPauseTransformFeedbackNV:
-    mov __blue_glCore_glPauseTransformFeedbackNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4hNV
-.type glMultiTexCoord4hNV, %function
-glMultiTexCoord4hNV:
-    mov __blue_glCore_glMultiTexCoord4hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureBarrier
-.type glTextureBarrier, %function
-glTextureBarrier:
-    mov __blue_glCore_glTextureBarrier@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAlphaFragmentOp3ATI
-.type glAlphaFragmentOp3ATI, %function
-glAlphaFragmentOp3ATI:
-    mov __blue_glCore_glAlphaFragmentOp3ATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1i64ARB
-.type glUniform1i64ARB, %function
-glUniform1i64ARB:
-    mov __blue_glCore_glUniform1i64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2bvOES
-.type glTexCoord2bvOES, %function
-glTexCoord2bvOES:
-    mov __blue_glCore_glTexCoord2bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEvalCoord2xOES
-.type glEvalCoord2xOES, %function
-glEvalCoord2xOES:
-    mov __blue_glCore_glEvalCoord2xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSharpenTexFuncSGIS
-.type glGetSharpenTexFuncSGIS, %function
-glGetSharpenTexFuncSGIS:
-    mov __blue_glCore_glGetSharpenTexFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformHandleui64vNV
-.type glProgramUniformHandleui64vNV, %function
-glProgramUniformHandleui64vNV:
-    mov __blue_glCore_glProgramUniformHandleui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIglooInterfaceSGIX
-.type glIglooInterfaceSGIX, %function
-glIglooInterfaceSGIX:
-    mov __blue_glCore_glIglooInterfaceSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2dvARB
-.type glWindowPos2dvARB, %function
-glWindowPos2dvARB:
-    mov __blue_glCore_glWindowPos2dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearBufferfi
-.type glClearBufferfi, %function
-glClearBufferfi:
-    mov __blue_glCore_glClearBufferfi@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawArraysIndirect
-.type glDrawArraysIndirect, %function
-glDrawArraysIndirect:
-    mov __blue_glCore_glDrawArraysIndirect@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenVertexArrays
-.type glGenVertexArrays, %function
-glGenVertexArrays:
-    mov __blue_glCore_glGenVertexArrays@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableVertexArrayAttrib
-.type glEnableVertexArrayAttrib, %function
-glEnableVertexArrayAttrib:
-    mov __blue_glCore_glEnableVertexArrayAttrib@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x2dv
-.type glProgramUniformMatrix3x2dv, %function
-glProgramUniformMatrix3x2dv:
-    mov __blue_glCore_glProgramUniformMatrix3x2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4fATI
-.type glVertexStream4fATI, %function
-glVertexStream4fATI:
-    mov __blue_glCore_glVertexStream4fATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetSamplerParameterIiv
-.type glGetSamplerParameterIiv, %function
-glGetSamplerParameterIiv:
-    mov __blue_glCore_glGetSamplerParameterIiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCoverageModulationTableNV
-.type glGetCoverageModulationTableNV, %function
-glGetCoverageModulationTableNV:
-    mov __blue_glCore_glGetCoverageModulationTableNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthRangedNV
-.type glDepthRangedNV, %function
-glDepthRangedNV:
-    mov __blue_glCore_glDepthRangedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawRangeElementArrayAPPLE
-.type glMultiDrawRangeElementArrayAPPLE, %function
-glMultiDrawRangeElementArrayAPPLE:
-    mov __blue_glCore_glMultiDrawRangeElementArrayAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribFormatNV
-.type glVertexAttribFormatNV, %function
-glVertexAttribFormatNV:
-    mov __blue_glCore_glVertexAttribFormatNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryBufferObjecti64v
-.type glGetQueryBufferObjecti64v, %function
-glGetQueryBufferObjecti64v:
-    mov __blue_glCore_glGetQueryBufferObjecti64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribdv
-.type glGetVertexAttribdv, %function
-glGetVertexAttribdv:
-    mov __blue_glCore_glGetVertexAttribdv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStartInstrumentsSGIX
-.type glStartInstrumentsSGIX, %function
-glStartInstrumentsSGIX:
-    mov __blue_glCore_glStartInstrumentsSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glAreTexturesResidentEXT
-.type glAreTexturesResidentEXT, %function
-glAreTexturesResidentEXT:
-    mov __blue_glCore_glAreTexturesResidentEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x4dv
-.type glProgramUniformMatrix3x4dv, %function
-glProgramUniformMatrix3x4dv:
-    mov __blue_glCore_glProgramUniformMatrix3x4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVideoCaptureStreamParameterdvNV
-.type glVideoCaptureStreamParameterdvNV, %function
-glVideoCaptureStreamParameterdvNV:
-    mov __blue_glCore_glVideoCaptureStreamParameterdvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMapParameterivNV
-.type glMapParameterivNV, %function
-glMapParameterivNV:
-    mov __blue_glCore_glMapParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2svARB
-.type glMultiTexCoord2svARB, %function
-glMultiTexCoord2svARB:
-    mov __blue_glCore_glMultiTexCoord2svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3sEXT
-.type glSecondaryColor3sEXT, %function
-glSecondaryColor3sEXT:
-    mov __blue_glCore_glSecondaryColor3sEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameterIivEXT
-.type glGetTexParameterIivEXT, %function
-glGetTexParameterIivEXT:
-    mov __blue_glCore_glGetTexParameterIivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFrameTerminatorGREMEDY
-.type glFrameTerminatorGREMEDY, %function
-glFrameTerminatorGREMEDY:
-    mov __blue_glCore_glFrameTerminatorGREMEDY@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendBarrierKHR
-.type glBlendBarrierKHR, %function
-glBlendBarrierKHR:
-    mov __blue_glCore_glBlendBarrierKHR@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4NubARB
-.type glVertexAttrib4NubARB, %function
-glVertexAttrib4NubARB:
-    mov __blue_glCore_glVertexAttrib4NubARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPrimitiveRestartNV
-.type glPrimitiveRestartNV, %function
-glPrimitiveRestartNV:
-    mov __blue_glCore_glPrimitiveRestartNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL1ui64vARB
-.type glVertexAttribL1ui64vARB, %function
-glVertexAttribL1ui64vARB:
-    mov __blue_glCore_glVertexAttribL1ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1i64vNV
-.type glUniform1i64vNV, %function
-glUniform1i64vNV:
-    mov __blue_glCore_glUniform1i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs4svNV
-.type glVertexAttribs4svNV, %function
-glVertexAttribs4svNV:
-    mov __blue_glCore_glVertexAttribs4svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1ui
-.type glUniform1ui, %function
-glUniform1ui:
-    mov __blue_glCore_glUniform1ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2fvARB
-.type glVertexAttrib2fvARB, %function
-glVertexAttrib2fvARB:
-    mov __blue_glCore_glVertexAttrib2fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4svEXT
-.type glVertexAttribI4svEXT, %function
-glVertexAttribI4svEXT:
-    mov __blue_glCore_glVertexAttribI4svEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureImage3DMultisampleCoverageNV
-.type glTextureImage3DMultisampleCoverageNV, %function
-glTextureImage3DMultisampleCoverageNV:
-    mov __blue_glCore_glTextureImage3DMultisampleCoverageNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMemoryBarrier
-.type glMemoryBarrier, %function
-glMemoryBarrier:
-    mov __blue_glCore_glMemoryBarrier@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVariantArrayObjectfvATI
-.type glGetVariantArrayObjectfvATI, %function
-glGetVariantArrayObjectfvATI:
-    mov __blue_glCore_glGetVariantArrayObjectfvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4fColor4fNormal3fVertex4fvSUN
-.type glTexCoord4fColor4fNormal3fVertex4fvSUN, %function
-glTexCoord4fColor4fNormal3fVertex4fvSUN:
-    mov __blue_glCore_glTexCoord4fColor4fNormal3fVertex4fvSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsProgramARB
-.type glIsProgramARB, %function
-glIsProgramARB:
-    mov __blue_glCore_glIsProgramARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindImageTextureEXT
-.type glBindImageTextureEXT, %function
-glBindImageTextureEXT:
-    mov __blue_glCore_glBindImageTextureEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFragDataLocation
-.type glGetFragDataLocation, %function
-glGetFragDataLocation:
-    mov __blue_glCore_glGetFragDataLocation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1svARB
-.type glMultiTexCoord1svARB, %function
-glMultiTexCoord1svARB:
-    mov __blue_glCore_glMultiTexCoord1svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMapxvOES
-.type glGetMapxvOES, %function
-glGetMapxvOES:
-    mov __blue_glCore_glGetMapxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage2DMultisampleEXT
-.type glTextureStorage2DMultisampleEXT, %function
-glTextureStorage2DMultisampleEXT:
-    mov __blue_glCore_glTextureStorage2DMultisampleEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4svARB
-.type glVertexAttrib4svARB, %function
-glVertexAttrib4svARB:
-    mov __blue_glCore_glVertexAttrib4svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4NbvARB
-.type glVertexAttrib4NbvARB, %function
-glVertexAttrib4NbvARB:
-    mov __blue_glCore_glVertexAttrib4NbvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorPointerEXT
-.type glColorPointerEXT, %function
-glColorPointerEXT:
-    mov __blue_glCore_glColorPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableClientStateiEXT
-.type glEnableClientStateiEXT, %function
-glEnableClientStateiEXT:
-    mov __blue_glCore_glEnableClientStateiEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearTexSubImage
-.type glClearTexSubImage, %function
-glClearTexSubImage:
-    mov __blue_glCore_glClearTexSubImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEvalCoord1xvOES
-.type glEvalCoord1xvOES, %function
-glEvalCoord1xvOES:
-    mov __blue_glCore_glEvalCoord1xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDetachObjectARB
-.type glDetachObjectARB, %function
-glDetachObjectARB:
-    mov __blue_glCore_glDetachObjectARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureParameterIiv
-.type glGetTextureParameterIiv, %function
-glGetTextureParameterIiv:
-    mov __blue_glCore_glGetTextureParameterIiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantusvEXT
-.type glVariantusvEXT, %function
-glVariantusvEXT:
-    mov __blue_glCore_glVariantusvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTextureImage3DEXT
-.type glCompressedTextureImage3DEXT, %function
-glCompressedTextureImage3DEXT:
-    mov __blue_glCore_glCompressedTextureImage3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1dARB
-.type glMultiTexCoord1dARB, %function
-glMultiTexCoord1dARB:
-    mov __blue_glCore_glMultiTexCoord1dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexArrayIntegeri_vEXT
-.type glGetVertexArrayIntegeri_vEXT, %function
-glGetVertexArrayIntegeri_vEXT:
-    mov __blue_glCore_glGetVertexArrayIntegeri_vEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCheckNamedFramebufferStatusEXT
-.type glCheckNamedFramebufferStatusEXT, %function
-glCheckNamedFramebufferStatusEXT:
-    mov __blue_glCore_glCheckNamedFramebufferStatusEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTexGenParameterfSGIS
-.type glPixelTexGenParameterfSGIS, %function
-glPixelTexGenParameterfSGIS:
-    mov __blue_glCore_glPixelTexGenParameterfSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4x2dv
-.type glProgramUniformMatrix4x2dv, %function
-glProgramUniformMatrix4x2dv:
-    mov __blue_glCore_glProgramUniformMatrix4x2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3fARB
-.type glUniform3fARB, %function
-glUniform3fARB:
-    mov __blue_glCore_glUniform3fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsShader
-.type glIsShader, %function
-glIsShader:
-    mov __blue_glCore_glIsShader@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionParameteriv
-.type glConvolutionParameteriv, %function
-glConvolutionParameteriv:
-    mov __blue_glCore_glConvolutionParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyMultiTexSubImage2DEXT
-.type glCopyMultiTexSubImage2DEXT, %function
-glCopyMultiTexSubImage2DEXT:
-    mov __blue_glCore_glCopyMultiTexSubImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnableVertexAttribArrayARB
-.type glEnableVertexAttribArrayARB, %function
-glEnableVertexAttribArrayARB:
-    mov __blue_glCore_glEnableVertexAttribArrayARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEnable
-.type glEnable, %function
-glEnable:
-    mov __blue_glCore_glEnable@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveUniformsiv
-.type glGetActiveUniformsiv, %function
-glGetActiveUniformsiv:
-    mov __blue_glCore_glGetActiveUniformsiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribivARB
-.type glGetVertexAttribivARB, %function
-glGetVertexAttribivARB:
-    mov __blue_glCore_glGetVertexAttribivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4hvNV
-.type glTexCoord4hvNV, %function
-glTexCoord4hvNV:
-    mov __blue_glCore_glTexCoord4hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUseProgramObjectARB
-.type glUseProgramObjectARB, %function
-glUseProgramObjectARB:
-    mov __blue_glCore_glUseProgramObjectARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetAttribLocation
-.type glGetAttribLocation, %function
-glGetAttribLocation:
-    mov __blue_glCore_glGetAttribLocation@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4dv
-.type glVertexAttrib4dv, %function
-glVertexAttrib4dv:
-    mov __blue_glCore_glVertexAttrib4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTextureParameteriv
-.type glGetTextureParameteriv, %function
-glGetTextureParameteriv:
-    mov __blue_glCore_glGetTextureParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3ui64vNV
-.type glUniform3ui64vNV, %function
-glUniform3ui64vNV:
-    mov __blue_glCore_glUniform3ui64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixIndexusvARB
-.type glMatrixIndexusvARB, %function
-glMatrixIndexusvARB:
-    mov __blue_glCore_glMatrixIndexusvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4d
-.type glVertexAttrib4d, %function
-glVertexAttrib4d:
-    mov __blue_glCore_glVertexAttrib4d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVideoCaptureivNV
-.type glGetVideoCaptureivNV, %function
-glGetVideoCaptureivNV:
-    mov __blue_glCore_glGetVideoCaptureivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3ui
-.type glProgramUniform3ui, %function
-glProgramUniform3ui:
-    mov __blue_glCore_glProgramUniform3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3svARB
-.type glVertexAttrib3svARB, %function
-glVertexAttrib3svARB:
-    mov __blue_glCore_glVertexAttrib3svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferParameterivEXT
-.type glGetNamedBufferParameterivEXT, %function
-glGetNamedBufferParameterivEXT:
-    mov __blue_glCore_glGetNamedBufferParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixScaledEXT
-.type glMatrixScaledEXT, %function
-glMatrixScaledEXT:
-    mov __blue_glCore_glMatrixScaledEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x3fv
-.type glProgramUniformMatrix2x3fv, %function
-glProgramUniformMatrix2x3fv:
-    mov __blue_glCore_glProgramUniformMatrix2x3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFragmentLightivSGIX
-.type glGetFragmentLightivSGIX, %function
-glGetFragmentLightivSGIX:
-    mov __blue_glCore_glGetFragmentLightivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2svARB
-.type glWindowPos2svARB, %function
-glWindowPos2svARB:
-    mov __blue_glCore_glWindowPos2svARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2svNV
-.type glVertexAttrib2svNV, %function
-glVertexAttrib2svNV:
-    mov __blue_glCore_glVertexAttrib2svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2ivARB
-.type glWindowPos2ivARB, %function
-glWindowPos2ivARB:
-    mov __blue_glCore_glWindowPos2ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribPointervNV
-.type glGetVertexAttribPointervNV, %function
-glGetVertexAttribPointervNV:
-    mov __blue_glCore_glGetVertexAttribPointervNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEdgeFlagPointerListIBM
-.type glEdgeFlagPointerListIBM, %function
-glEdgeFlagPointerListIBM:
-    mov __blue_glCore_glEdgeFlagPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenerateMipmapEXT
-.type glGenerateMipmapEXT, %function
-glGenerateMipmapEXT:
-    mov __blue_glCore_glGenerateMipmapEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3sv
-.type glWindowPos3sv, %function
-glWindowPos3sv:
-    mov __blue_glCore_glWindowPos3sv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathCoordsNV
-.type glPathCoordsNV, %function
-glPathCoordsNV:
-    mov __blue_glCore_glPathCoordsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1i
-.type glProgramUniform1i, %function
-glProgramUniform1i:
-    mov __blue_glCore_glProgramUniform1i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1d
-.type glProgramUniform1d, %function
-glProgramUniform1d:
-    mov __blue_glCore_glProgramUniform1d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1f
-.type glProgramUniform1f, %function
-glProgramUniform1f:
-    mov __blue_glCore_glProgramUniform1f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameteriEXT
-.type glProgramParameteriEXT, %function
-glProgramParameteriEXT:
-    mov __blue_glCore_glProgramParameteriEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedMultiTexImage2DEXT
-.type glCompressedMultiTexImage2DEXT, %function
-glCompressedMultiTexImage2DEXT:
-    mov __blue_glCore_glCompressedMultiTexImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3iv
-.type glProgramUniform3iv, %function
-glProgramUniform3iv:
-    mov __blue_glCore_glProgramUniform3iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCombinerParameterivNV
-.type glCombinerParameterivNV, %function
-glCombinerParameterivNV:
-    mov __blue_glCore_glCombinerParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4xvOES
-.type glMultiTexCoord4xvOES, %function
-glMultiTexCoord4xvOES:
-    mov __blue_glCore_glMultiTexCoord4xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribPointerv
-.type glGetVertexAttribPointerv, %function
-glGetVertexAttribPointerv:
-    mov __blue_glCore_glGetVertexAttribPointerv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVideoCaptureNV
-.type glVideoCaptureNV, %function
-glVideoCaptureNV:
-    mov __blue_glCore_glVideoCaptureNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferReadBufferEXT
-.type glFramebufferReadBufferEXT, %function
-glFramebufferReadBufferEXT:
-    mov __blue_glCore_glFramebufferReadBufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glExtractComponentEXT
-.type glExtractComponentEXT, %function
-glExtractComponentEXT:
-    mov __blue_glCore_glExtractComponentEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParameter4fvEXT
-.type glNamedProgramLocalParameter4fvEXT, %function
-glNamedProgramLocalParameter4fvEXT:
-    mov __blue_glCore_glNamedProgramLocalParameter4fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMinmax
-.type glMinmax, %function
-glMinmax:
-    mov __blue_glCore_glMinmax@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorP3ui
-.type glColorP3ui, %function
-glColorP3ui:
-    mov __blue_glCore_glColorP3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendEquationi
-.type glBlendEquationi, %function
-glBlendEquationi:
-    mov __blue_glCore_glBlendEquationi@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4s
-.type glVertexAttrib4s, %function
-glVertexAttrib4s:
-    mov __blue_glCore_glVertexAttrib4s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4fvNV
-.type glVertexAttrib4fvNV, %function
-glVertexAttrib4fvNV:
-    mov __blue_glCore_glVertexAttrib4fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightiSGIX
-.type glFragmentLightiSGIX, %function
-glFragmentLightiSGIX:
-    mov __blue_glCore_glFragmentLightiSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord1bvOES
-.type glMultiTexCoord1bvOES, %function
-glMultiTexCoord1bvOES:
-    mov __blue_glCore_glMultiTexCoord1bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColorPointerEXT
-.type glSecondaryColorPointerEXT, %function
-glSecondaryColorPointerEXT:
-    mov __blue_glCore_glSecondaryColorPointerEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoordP4uiv
-.type glMultiTexCoordP4uiv, %function
-glMultiTexCoordP4uiv:
-    mov __blue_glCore_glMultiTexCoordP4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBufferSubDataARB
-.type glGetBufferSubDataARB, %function
-glGetBufferSubDataARB:
-    mov __blue_glCore_glGetBufferSubDataARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathParameterivNV
-.type glGetPathParameterivNV, %function
-glGetPathParameterivNV:
-    mov __blue_glCore_glGetPathParameterivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableVertexArrayAttrib
-.type glDisableVertexArrayAttrib, %function
-glDisableVertexArrayAttrib:
-    mov __blue_glCore_glDisableVertexArrayAttrib@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glElementPointerATI
-.type glElementPointerATI, %function
-glElementPointerATI:
-    mov __blue_glCore_glElementPointerATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetAttachedObjectsARB
-.type glGetAttachedObjectsARB, %function
-glGetAttachedObjectsARB:
-    mov __blue_glCore_glGetAttachedObjectsARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4iv
-.type glUniform4iv, %function
-glUniform4iv:
-    mov __blue_glCore_glUniform4iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogxOES
-.type glFogxOES, %function
-glFogxOES:
-    mov __blue_glCore_glFogxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSharpenTexFuncSGIS
-.type glSharpenTexFuncSGIS, %function
-glSharpenTexFuncSGIS:
-    mov __blue_glCore_glSharpenTexFuncSGIS@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearDepthfOES
-.type glClearDepthfOES, %function
-glClearDepthfOES:
-    mov __blue_glCore_glClearDepthfOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteCommandListsNV
-.type glDeleteCommandListsNV, %function
-glDeleteCommandListsNV:
-    mov __blue_glCore_glDeleteCommandListsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex4hNV
-.type glVertex4hNV, %function
-glVertex4hNV:
-    mov __blue_glCore_glVertex4hNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3dvEXT
-.type glSecondaryColor3dvEXT, %function
-glSecondaryColor3dvEXT:
-    mov __blue_glCore_glSecondaryColor3dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenTextures
-.type glGenTextures, %function
-glGenTextures:
-    mov __blue_glCore_glGenTextures@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureStorage2DMultisample
-.type glTextureStorage2DMultisample, %function
-glTextureStorage2DMultisample:
-    mov __blue_glCore_glTextureStorage2DMultisample@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathSubCoordsNV
-.type glPathSubCoordsNV, %function
-glPathSubCoordsNV:
-    mov __blue_glCore_glPathSubCoordsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFuncSeparateIndexedAMD
-.type glBlendFuncSeparateIndexedAMD, %function
-glBlendFuncSeparateIndexedAMD:
-    mov __blue_glCore_glBlendFuncSeparateIndexedAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramStringARB
-.type glProgramStringARB, %function
-glProgramStringARB:
-    mov __blue_glCore_glProgramStringARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glShaderOp2EXT
-.type glShaderOp2EXT, %function
-glShaderOp2EXT:
-    mov __blue_glCore_glShaderOp2EXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glActiveTextureARB
-.type glActiveTextureARB, %function
-glActiveTextureARB:
-    mov __blue_glCore_glActiveTextureARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterIivEXT
-.type glTexParameterIivEXT, %function
-glTexParameterIivEXT:
-    mov __blue_glCore_glTexParameterIivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfQueryDataINTEL
-.type glGetPerfQueryDataINTEL, %function
-glGetPerfQueryDataINTEL:
-    mov __blue_glCore_glGetPerfQueryDataINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramStringEXT
-.type glNamedProgramStringEXT, %function
-glNamedProgramStringEXT:
-    mov __blue_glCore_glNamedProgramStringEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4dvARB
-.type glVertexAttrib4dvARB, %function
-glVertexAttrib4dvARB:
-    mov __blue_glCore_glVertexAttrib4dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureSubImage1DEXT
-.type glTextureSubImage1DEXT, %function
-glTextureSubImage1DEXT:
-    mov __blue_glCore_glTextureSubImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDispatchComputeGroupSizeARB
-.type glDispatchComputeGroupSizeARB, %function
-glDispatchComputeGroupSizeARB:
-    mov __blue_glCore_glDispatchComputeGroupSizeARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib2dvARB
-.type glVertexAttrib2dvARB, %function
-glVertexAttrib2dvARB:
-    mov __blue_glCore_glVertexAttrib2dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribPointer
-.type glVertexAttribPointer, %function
-glVertexAttribPointer:
-    mov __blue_glCore_glVertexAttribPointer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthBoundsdNV
-.type glDepthBoundsdNV, %function
-glDepthBoundsdNV:
-    mov __blue_glCore_glDepthBoundsdNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteTexturesEXT
-.type glDeleteTexturesEXT, %function
-glDeleteTexturesEXT:
-    mov __blue_glCore_glDeleteTexturesEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVideouivNV
-.type glGetVideouivNV, %function
-glGetVideouivNV:
-    mov __blue_glCore_glGetVideouivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawBuffersATI
-.type glDrawBuffersATI, %function
-glDrawBuffersATI:
-    mov __blue_glCore_glDrawBuffersATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLightModelxvOES
-.type glLightModelxvOES, %function
-glLightModelxvOES:
-    mov __blue_glCore_glLightModelxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glApplyTextureEXT
-.type glApplyTextureEXT, %function
-glApplyTextureEXT:
-    mov __blue_glCore_glApplyTextureEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetImageHandleNV
-.type glGetImageHandleNV, %function
-glGetImageHandleNV:
-    mov __blue_glCore_glGetImageHandleNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMinmax
-.type glGetMinmax, %function
-glGetMinmax:
-    mov __blue_glCore_glGetMinmax@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFixedvOES
-.type glGetFixedvOES, %function
-glGetFixedvOES:
-    mov __blue_glCore_glGetFixedvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSamplePatternEXT
-.type glSamplePatternEXT, %function
-glSamplePatternEXT:
-    mov __blue_glCore_glSamplePatternEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4fNormal3fVertex3fSUN
-.type glColor4fNormal3fVertex3fSUN, %function
-glColor4fNormal3fVertex3fSUN:
-    mov __blue_glCore_glColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoorddvEXT
-.type glFogCoorddvEXT, %function
-glFogCoorddvEXT:
-    mov __blue_glCore_glFogCoorddvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyTextureImage1DEXT
-.type glCopyTextureImage1DEXT, %function
-glCopyTextureImage1DEXT:
-    mov __blue_glCore_glCopyTextureImage1DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteFencesNV
-.type glDeleteFencesNV, %function
-glDeleteFencesNV:
-    mov __blue_glCore_glDeleteFencesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1ivEXT
-.type glProgramUniform1ivEXT, %function
-glProgramUniform1ivEXT:
-    mov __blue_glCore_glProgramUniform1ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushStaticDataIBM
-.type glFlushStaticDataIBM, %function
-glFlushStaticDataIBM:
-    mov __blue_glCore_glFlushStaticDataIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4ui64NV
-.type glProgramUniform4ui64NV, %function
-glProgramUniform4ui64NV:
-    mov __blue_glCore_glProgramUniform4ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glRasterPos4xOES
-.type glRasterPos4xOES, %function
-glRasterPos4xOES:
-    mov __blue_glCore_glRasterPos4xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP1ui
-.type glVertexAttribP1ui, %function
-glVertexAttribP1ui:
-    mov __blue_glCore_glVertexAttribP1ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4dvEXT
-.type glProgramUniform4dvEXT, %function
-glProgramUniform4dvEXT:
-    mov __blue_glCore_glProgramUniform4dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndTransformFeedbackEXT
-.type glEndTransformFeedbackEXT, %function
-glEndTransformFeedbackEXT:
-    mov __blue_glCore_glEndTransformFeedbackEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBinormal3dEXT
-.type glBinormal3dEXT, %function
-glBinormal3dEXT:
-    mov __blue_glCore_glBinormal3dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndConditionalRenderNVX
-.type glEndConditionalRenderNVX, %function
-glEndConditionalRenderNVX:
-    mov __blue_glCore_glEndConditionalRenderNVX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedRenderbufferParameteriv
-.type glGetNamedRenderbufferParameteriv, %function
-glGetNamedRenderbufferParameteriv:
-    mov __blue_glCore_glGetNamedRenderbufferParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBuffersRange
-.type glBindBuffersRange, %function
-glBindBuffersRange:
-    mov __blue_glCore_glBindBuffersRange@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawCommandsAddressNV
-.type glDrawCommandsAddressNV, %function
-glDrawCommandsAddressNV:
-    mov __blue_glCore_glDrawCommandsAddressNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindFragDataLocationIndexed
-.type glBindFragDataLocationIndexed, %function
-glBindFragDataLocationIndexed:
-    mov __blue_glCore_glBindFragDataLocationIndexed@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2dv
-.type glMultiTexCoord2dv, %function
-glMultiTexCoord2dv:
-    mov __blue_glCore_glMultiTexCoord2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2iv
-.type glUniform2iv, %function
-glUniform2iv:
-    mov __blue_glCore_glUniform2iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2i64vNV
-.type glProgramUniform2i64vNV, %function
-glProgramUniform2i64vNV:
-    mov __blue_glCore_glProgramUniform2i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushVertexArrayRangeAPPLE
-.type glFlushVertexArrayRangeAPPLE, %function
-glFlushVertexArrayRangeAPPLE:
-    mov __blue_glCore_glFlushVertexArrayRangeAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3dvARB
-.type glMultiTexCoord3dvARB, %function
-glMultiTexCoord3dvARB:
-    mov __blue_glCore_glMultiTexCoord3dvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2s
-.type glMultiTexCoord2s, %function
-glMultiTexCoord2s:
-    mov __blue_glCore_glMultiTexCoord2s@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageInsertARB
-.type glDebugMessageInsertARB, %function
-glDebugMessageInsertARB:
-    mov __blue_glCore_glDebugMessageInsertARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2i
-.type glMultiTexCoord2i, %function
-glMultiTexCoord2i:
-    mov __blue_glCore_glMultiTexCoord2i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureSubImage3D
-.type glTextureSubImage3D, %function
-glTextureSubImage3D:
-    mov __blue_glCore_glTextureSubImage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTexture1D
-.type glFramebufferTexture1D, %function
-glFramebufferTexture1D:
-    mov __blue_glCore_glFramebufferTexture1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetShaderiv
-.type glGetShaderiv, %function
-glGetShaderiv:
-    mov __blue_glCore_glGetShaderiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2d
-.type glMultiTexCoord2d, %function
-glMultiTexCoord2d:
-    mov __blue_glCore_glMultiTexCoord2d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2f
-.type glMultiTexCoord2f, %function
-glMultiTexCoord2f:
-    mov __blue_glCore_glMultiTexCoord2f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPointeri_vEXT
-.type glGetPointeri_vEXT, %function
-glGetPointeri_vEXT:
-    mov __blue_glCore_glGetPointeri_vEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfMonitorCountersAMD
-.type glGetPerfMonitorCountersAMD, %function
-glGetPerfMonitorCountersAMD:
-    mov __blue_glCore_glGetPerfMonitorCountersAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedBufferStorage
-.type glNamedBufferStorage, %function
-glNamedBufferStorage:
-    mov __blue_glCore_glNamedBufferStorage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenQueriesARB
-.type glGenQueriesARB, %function
-glGenQueriesARB:
-    mov __blue_glCore_glGenQueriesARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2ui64NV
-.type glProgramUniform2ui64NV, %function
-glProgramUniform2ui64NV:
-    mov __blue_glCore_glProgramUniform2ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3bOES
-.type glMultiTexCoord3bOES, %function
-glMultiTexCoord3bOES:
-    mov __blue_glCore_glMultiTexCoord3bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1dv
-.type glUniform1dv, %function
-glUniform1dv:
-    mov __blue_glCore_glUniform1dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1fv
-.type glVertexAttrib1fv, %function
-glVertexAttrib1fv:
-    mov __blue_glCore_glVertexAttrib1fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameterI4uivNV
-.type glProgramEnvParameterI4uivNV, %function
-glProgramEnvParameterI4uivNV:
-    mov __blue_glCore_glProgramEnvParameterI4uivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4dMESA
-.type glWindowPos4dMESA, %function
-glWindowPos4dMESA:
-    mov __blue_glCore_glWindowPos4dMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageControlARB
-.type glDebugMessageControlARB, %function
-glDebugMessageControlARB:
-    mov __blue_glCore_glDebugMessageControlARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsTextureEXT
-.type glIsTextureEXT, %function
-glIsTextureEXT:
-    mov __blue_glCore_glIsTextureEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentMaterialivSGIX
-.type glFragmentMaterialivSGIX, %function
-glFragmentMaterialivSGIX:
-    mov __blue_glCore_glFragmentMaterialivSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLinkProgramARB
-.type glLinkProgramARB, %function
-glLinkProgramARB:
-    mov __blue_glCore_glLinkProgramARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFinishFenceAPPLE
-.type glFinishFenceAPPLE, %function
-glFinishFenceAPPLE:
-    mov __blue_glCore_glFinishFenceAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribBindingEXT
-.type glVertexArrayVertexAttribBindingEXT, %function
-glVertexArrayVertexAttribBindingEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribBindingEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4fv
-.type glMultiTexCoord4fv, %function
-glMultiTexCoord4fv:
-    mov __blue_glCore_glMultiTexCoord4fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexImage3D
-.type glCompressedTexImage3D, %function
-glCompressedTexImage3D:
-    mov __blue_glCore_glCompressedTexImage3D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVariantivEXT
-.type glVariantivEXT, %function
-glVariantivEXT:
-    mov __blue_glCore_glVariantivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUnmapTexture2DINTEL
-.type glUnmapTexture2DINTEL, %function
-glUnmapTexture2DINTEL:
-    mov __blue_glCore_glUnmapTexture2DINTEL@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribiv
-.type glGetVertexAttribiv, %function
-glGetVertexAttribiv:
-    mov __blue_glCore_glGetVertexAttribiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPointerIndexedvEXT
-.type glGetPointerIndexedvEXT, %function
-glGetPointerIndexedvEXT:
-    mov __blue_glCore_glGetPointerIndexedvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor4xvOES
-.type glColor4xvOES, %function
-glColor4xvOES:
-    mov __blue_glCore_glColor4xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3fv
-.type glVertexAttrib3fv, %function
-glVertexAttrib3fv:
-    mov __blue_glCore_glVertexAttrib3fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClampColorARB
-.type glClampColorARB, %function
-glClampColorARB:
-    mov __blue_glCore_glClampColorARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex4bOES
-.type glVertex4bOES, %function
-glVertex4bOES:
-    mov __blue_glCore_glVertex4bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnHistogram
-.type glGetnHistogram, %function
-glGetnHistogram:
-    mov __blue_glCore_glGetnHistogram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCombinerOutputNV
-.type glCombinerOutputNV, %function
-glCombinerOutputNV:
-    mov __blue_glCore_glCombinerOutputNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4sMESA
-.type glWindowPos4sMESA, %function
-glWindowPos4sMESA:
-    mov __blue_glCore_glWindowPos4sMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord2ivARB
-.type glMultiTexCoord2ivARB, %function
-glMultiTexCoord2ivARB:
-    mov __blue_glCore_glMultiTexCoord2ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFenceivNV
-.type glGetFenceivNV, %function
-glGetFenceivNV:
-    mov __blue_glCore_glGetFenceivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribivNV
-.type glGetVertexAttribivNV, %function
-glGetVertexAttribivNV:
-    mov __blue_glCore_glGetVertexAttribivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetInfoLogARB
-.type glGetInfoLogARB, %function
-glGetInfoLogARB:
-    mov __blue_glCore_glGetInfoLogARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindParameterEXT
-.type glBindParameterEXT, %function
-glBindParameterEXT:
-    mov __blue_glCore_glBindParameterEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs3dvNV
-.type glVertexAttribs3dvNV, %function
-glVertexAttribs3dvNV:
-    mov __blue_glCore_glVertexAttribs3dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactorsSUN
-.type glGlobalAlphaFactorsSUN, %function
-glGlobalAlphaFactorsSUN:
-    mov __blue_glCore_glGlobalAlphaFactorsSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTrackMatrixivNV
-.type glGetTrackMatrixivNV, %function
-glGetTrackMatrixivNV:
-    mov __blue_glCore_glGetTrackMatrixivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterfvEXT
-.type glTextureParameterfvEXT, %function
-glTextureParameterfvEXT:
-    mov __blue_glCore_glTextureParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsNamedBufferResidentNV
-.type glIsNamedBufferResidentNV, %function
-glIsNamedBufferResidentNV:
-    mov __blue_glCore_glIsNamedBufferResidentNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4ui64vARB
-.type glProgramUniform4ui64vARB, %function
-glProgramUniform4ui64vARB:
-    mov __blue_glCore_glProgramUniform4ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTbufferMask3DFX
-.type glTbufferMask3DFX, %function
-glTbufferMask3DFX:
-    mov __blue_glCore_glTbufferMask3DFX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCoverFillPathNV
-.type glCoverFillPathNV, %function
-glCoverFillPathNV:
-    mov __blue_glCore_glCoverFillPathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1fvARB
-.type glVertexAttrib1fvARB, %function
-glVertexAttrib1fvARB:
-    mov __blue_glCore_glVertexAttrib1fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenerateTextureMipmap
-.type glGenerateTextureMipmap, %function
-glGenerateTextureMipmap:
-    mov __blue_glCore_glGenerateTextureMipmap@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParameterI4uivEXT
-.type glNamedProgramLocalParameterI4uivEXT, %function
-glNamedProgramLocalParameterI4uivEXT:
-    mov __blue_glCore_glNamedProgramLocalParameterI4uivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawElementsBaseVertex
-.type glMultiDrawElementsBaseVertex, %function
-glMultiDrawElementsBaseVertex:
-    mov __blue_glCore_glMultiDrawElementsBaseVertex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramSubroutineParametersuivNV
-.type glProgramSubroutineParametersuivNV, %function
-glProgramSubroutineParametersuivNV:
-    mov __blue_glCore_glProgramSubroutineParametersuivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2x4dvEXT
-.type glProgramUniformMatrix2x4dvEXT, %function
-glProgramUniformMatrix2x4dvEXT:
-    mov __blue_glCore_glProgramUniformMatrix2x4dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferData
-.type glBufferData, %function
-glBufferData:
-    mov __blue_glCore_glBufferData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMemoryBarrierEXT
-.type glMemoryBarrierEXT, %function
-glMemoryBarrierEXT:
-    mov __blue_glCore_glMemoryBarrierEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3svNV
-.type glVertexAttrib3svNV, %function
-glVertexAttrib3svNV:
-    mov __blue_glCore_glVertexAttrib3svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3iATI
-.type glVertexStream3iATI, %function
-glVertexStream3iATI:
-    mov __blue_glCore_glVertexStream3iATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexSubImage1D
-.type glCompressedTexSubImage1D, %function
-glCompressedTexSubImage1D:
-    mov __blue_glCore_glCompressedTexSubImage1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameterIiv
-.type glGetTexParameterIiv, %function
-glGetTexParameterIiv:
-    mov __blue_glCore_glGetTexParameterIiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyConvolutionFilter1D
-.type glCopyConvolutionFilter1D, %function
-glCopyConvolutionFilter1D:
-    mov __blue_glCore_glCopyConvolutionFilter1D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeletePathsNV
-.type glDeletePathsNV, %function
-glDeletePathsNV:
-    mov __blue_glCore_glDeletePathsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameters4fvNV
-.type glProgramParameters4fvNV, %function
-glProgramParameters4fvNV:
-    mov __blue_glCore_glProgramParameters4fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureBuffer
-.type glTextureBuffer, %function
-glTextureBuffer:
-    mov __blue_glCore_glTextureBuffer@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4Nsv
-.type glVertexAttrib4Nsv, %function
-glVertexAttrib4Nsv:
-    mov __blue_glCore_glVertexAttrib4Nsv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4usvEXT
-.type glVertexAttribI4usvEXT, %function
-glVertexAttribI4usvEXT:
-    mov __blue_glCore_glVertexAttribI4usvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureBufferRangeEXT
-.type glTextureBufferRangeEXT, %function
-glTextureBufferRangeEXT:
-    mov __blue_glCore_glTextureBufferRangeEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexP3uiv
-.type glVertexP3uiv, %function
-glVertexP3uiv:
-    mov __blue_glCore_glVertexP3uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformFeedbackVaryings
-.type glTransformFeedbackVaryings, %function
-glTransformFeedbackVaryings:
-    mov __blue_glCore_glTransformFeedbackVaryings@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformi64vARB
-.type glGetnUniformi64vARB, %function
-glGetnUniformi64vARB:
-    mov __blue_glCore_glGetnUniformi64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureMultiviewOVR
-.type glFramebufferTextureMultiviewOVR, %function
-glFramebufferTextureMultiviewOVR:
-    mov __blue_glCore_glFramebufferTextureMultiviewOVR@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedMultiTexSubImage2DEXT
-.type glCompressedMultiTexSubImage2DEXT, %function
-glCompressedMultiTexSubImage2DEXT:
-    mov __blue_glCore_glCompressedMultiTexSubImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnMapdv
-.type glGetnMapdv, %function
-glGetnMapdv:
-    mov __blue_glCore_glGetnMapdv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDebugMessageCallback
-.type glDebugMessageCallback, %function
-glDebugMessageCallback:
-    mov __blue_glCore_glDebugMessageCallback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3svEXT
-.type glTangent3svEXT, %function
-glTangent3svEXT:
-    mov __blue_glCore_glTangent3svEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribParameteriAMD
-.type glVertexAttribParameteriAMD, %function
-glVertexAttribParameteriAMD:
-    mov __blue_glCore_glVertexAttribParameteriAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBufferSubDataARB
-.type glBufferSubDataARB, %function
-glBufferSubDataARB:
-    mov __blue_glCore_glBufferSubDataARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribLui64vARB
-.type glGetVertexAttribLui64vARB, %function
-glGetVertexAttribLui64vARB:
-    mov __blue_glCore_glGetVertexAttribLui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4ui64NV
-.type glVertexAttribL4ui64NV, %function
-glVertexAttribL4ui64NV:
-    mov __blue_glCore_glVertexAttribL4ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiColor4ubVertex3fSUN
-.type glReplacementCodeuiColor4ubVertex3fSUN, %function
-glReplacementCodeuiColor4ubVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiColor4ubVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glImageTransformParameterfHP
-.type glImageTransformParameterfHP, %function
-glImageTransformParameterfHP:
-    mov __blue_glCore_glImageTransformParameterfHP@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetBooleani_v
-.type glGetBooleani_v, %function
-glGetBooleani_v:
-    mov __blue_glCore_glGetBooleani_v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex2bvOES
-.type glVertex2bvOES, %function
-glVertex2bvOES:
-    mov __blue_glCore_glVertex2bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetMapControlPointsNV
-.type glGetMapControlPointsNV, %function
-glGetMapControlPointsNV:
-    mov __blue_glCore_glGetMapControlPointsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedProgramLocalParametersI4ivEXT
-.type glNamedProgramLocalParametersI4ivEXT, %function
-glNamedProgramLocalParametersI4ivEXT:
-    mov __blue_glCore_glNamedProgramLocalParametersI4ivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferRangeNV
-.type glBindBufferRangeNV, %function
-glBindBufferRangeNV:
-    mov __blue_glCore_glBindBufferRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream3dvATI
-.type glVertexStream3dvATI, %function
-glVertexStream3dvATI:
-    mov __blue_glCore_glVertexStream3dvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalPointerListIBM
-.type glNormalPointerListIBM, %function
-glNormalPointerListIBM:
-    mov __blue_glCore_glNormalPointerListIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2dvEXT
-.type glProgramUniform2dvEXT, %function
-glProgramUniform2dvEXT:
-    mov __blue_glCore_glProgramUniform2dvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiModeDrawArraysIBM
-.type glMultiModeDrawArraysIBM, %function
-glMultiModeDrawArraysIBM:
-    mov __blue_glCore_glMultiModeDrawArraysIBM@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedFramebufferAttachmentParameterivEXT
-.type glGetNamedFramebufferAttachmentParameterivEXT, %function
-glGetNamedFramebufferAttachmentParameterivEXT:
-    mov __blue_glCore_glGetNamedFramebufferAttachmentParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayVertexAttribIFormatEXT
-.type glVertexArrayVertexAttribIFormatEXT, %function
-glVertexArrayVertexAttribIFormatEXT:
-    mov __blue_glCore_glVertexArrayVertexAttribIFormatEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glHint
-.type glHint, %function
-glHint:
-    mov __blue_glCore_glHint@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPointAlongPathNV
-.type glPointAlongPathNV, %function
-glPointAlongPathNV:
-    mov __blue_glCore_glPointAlongPathNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream2svATI
-.type glVertexStream2svATI, %function
-glVertexStream2svATI:
-    mov __blue_glCore_glVertexStream2svATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawArraysIndirect
-.type glMultiDrawArraysIndirect, %function
-glMultiDrawArraysIndirect:
-    mov __blue_glCore_glMultiDrawArraysIndirect@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribP2uiv
-.type glVertexAttribP2uiv, %function
-glVertexAttribP2uiv:
-    mov __blue_glCore_glVertexAttribP2uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1i64vARB
-.type glProgramUniform1i64vARB, %function
-glProgramUniform1i64vARB:
-    mov __blue_glCore_glProgramUniform1i64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTextureARB
-.type glFramebufferTextureARB, %function
-glFramebufferTextureARB:
-    mov __blue_glCore_glFramebufferTextureARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPushClientAttribDefaultEXT
-.type glPushClientAttribDefaultEXT, %function
-glPushClientAttribDefaultEXT:
-    mov __blue_glCore_glPushClientAttribDefaultEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4svNV
-.type glVertexAttrib4svNV, %function
-glVertexAttrib4svNV:
-    mov __blue_glCore_glVertexAttrib4svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramResourceName
-.type glGetProgramResourceName, %function
-glGetProgramResourceName:
-    mov __blue_glCore_glGetProgramResourceName@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyColorTable
-.type glCopyColorTable, %function
-glCopyColorTable:
-    mov __blue_glCore_glCopyColorTable@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDepthRangeArrayv
-.type glDepthRangeArrayv, %function
-glDepthRangeArrayv:
-    mov __blue_glCore_glDepthRangeArrayv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCoverFillPathInstancedNV
-.type glCoverFillPathInstancedNV, %function
-glCoverFillPathInstancedNV:
-    mov __blue_glCore_glCoverFillPathInstancedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexParameterivEXT
-.type glMultiTexParameterivEXT, %function
-glMultiTexParameterivEXT:
-    mov __blue_glCore_glMultiTexParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveAtomicCounterBufferiv
-.type glGetActiveAtomicCounterBufferiv, %function
-glGetActiveAtomicCounterBufferiv:
-    mov __blue_glCore_glGetActiveAtomicCounterBufferiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilOpSeparate
-.type glStencilOpSeparate, %function
-glStencilOpSeparate:
-    mov __blue_glCore_glStencilOpSeparate@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4fNV
-.type glVertexAttrib4fNV, %function
-glVertexAttrib4fNV:
-    mov __blue_glCore_glVertexAttrib4fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableParameterivSGI
-.type glGetColorTableParameterivSGI, %function
-glGetColorTableParameterivSGI:
-    mov __blue_glCore_glGetColorTableParameterivSGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayAttribBinding
-.type glVertexArrayAttribBinding, %function
-glVertexArrayAttribBinding:
-    mov __blue_glCore_glVertexArrayAttribBinding@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramParameters4dvNV
-.type glProgramParameters4dvNV, %function
-glProgramParameters4dvNV:
-    mov __blue_glCore_glProgramParameters4dvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribL4dv
-.type glVertexAttribL4dv, %function
-glVertexAttribL4dv:
-    mov __blue_glCore_glVertexAttribL4dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameteriv
-.type glGetTexParameteriv, %function
-glGetTexParameteriv:
-    mov __blue_glCore_glGetTexParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformOffsetEXT
-.type glGetUniformOffsetEXT, %function
-glGetUniformOffsetEXT:
-    mov __blue_glCore_glGetUniformOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1dv
-.type glProgramUniform1dv, %function
-glProgramUniform1dv:
-    mov __blue_glCore_glProgramUniform1dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3i64vNV
-.type glProgramUniform3i64vNV, %function
-glProgramUniform3i64vNV:
-    mov __blue_glCore_glProgramUniform3i64vNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3fEXT
-.type glTangent3fEXT, %function
-glTangent3fEXT:
-    mov __blue_glCore_glTangent3fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPathMetricRangeNV
-.type glGetPathMetricRangeNV, %function
-glGetPathMetricRangeNV:
-    mov __blue_glCore_glGetPathMetricRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2iMESA
-.type glWindowPos2iMESA, %function
-glWindowPos2iMESA:
-    mov __blue_glCore_glWindowPos2iMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex2xvOES
-.type glVertex2xvOES, %function
-glVertex2xvOES:
-    mov __blue_glCore_glVertex2xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnCompressedTexImage
-.type glGetnCompressedTexImage, %function
-glGetnCompressedTexImage:
-    mov __blue_glCore_glGetnCompressedTexImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2dv
-.type glWindowPos2dv, %function
-glWindowPos2dv:
-    mov __blue_glCore_glWindowPos2dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glReplacementCodeuiVertex3fSUN
-.type glReplacementCodeuiVertex3fSUN, %function
-glReplacementCodeuiVertex3fSUN:
-    mov __blue_glCore_glReplacementCodeuiVertex3fSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTransformFeedbackVaryingEXT
-.type glGetTransformFeedbackVaryingEXT, %function
-glGetTransformFeedbackVaryingEXT:
-    mov __blue_glCore_glGetTransformFeedbackVaryingEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos3fARB
-.type glWindowPos3fARB, %function
-glWindowPos3fARB:
-    mov __blue_glCore_glWindowPos3fARB@GOTPCREL(%rip), %r11
+.global glSamplerParameterf
+.type glSamplerParameterf, %function
+glSamplerParameterf:
+    mov __blue_glCore_glSamplerParameterf@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glMapNamedBufferEXT
@@ -13729,280 +73,100 @@ glMapNamedBufferEXT:
     mov __blue_glCore_glMapNamedBufferEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glDisable
-.type glDisable, %function
-glDisable:
-    mov __blue_glCore_glDisable@GOTPCREL(%rip), %r11
+.global glTexImage3DMultisample
+.type glTexImage3DMultisample, %function
+glTexImage3DMultisample:
+    mov __blue_glCore_glTexImage3DMultisample@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glIsPointInFillPathNV
-.type glIsPointInFillPathNV, %function
-glIsPointInFillPathNV:
-    mov __blue_glCore_glIsPointInFillPathNV@GOTPCREL(%rip), %r11
+.global glVertexAttrib3fvNV
+.type glVertexAttrib3fvNV, %function
+glVertexAttrib3fvNV:
+    mov __blue_glCore_glVertexAttrib3fvNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttribI2uiEXT
-.type glVertexAttribI2uiEXT, %function
-glVertexAttribI2uiEXT:
-    mov __blue_glCore_glVertexAttribI2uiEXT@GOTPCREL(%rip), %r11
+.global glProgramUniform1i
+.type glProgramUniform1i, %function
+glProgramUniform1i:
+    mov __blue_glCore_glProgramUniform1i@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glProgramUniform4uiv
-.type glProgramUniform4uiv, %function
-glProgramUniform4uiv:
-    mov __blue_glCore_glProgramUniform4uiv@GOTPCREL(%rip), %r11
+.global glTexCoord4fVertex4fvSUN
+.type glTexCoord4fVertex4fvSUN, %function
+glTexCoord4fVertex4fvSUN:
+    mov __blue_glCore_glTexCoord4fVertex4fvSUN@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetConvolutionParameterfvEXT
-.type glGetConvolutionParameterfvEXT, %function
-glGetConvolutionParameterfvEXT:
-    mov __blue_glCore_glGetConvolutionParameterfvEXT@GOTPCREL(%rip), %r11
+.global glFramebufferTextureLayerARB
+.type glFramebufferTextureLayerARB, %function
+glFramebufferTextureLayerARB:
+    mov __blue_glCore_glFramebufferTextureLayerARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glFramebufferRenderbufferEXT
-.type glFramebufferRenderbufferEXT, %function
-glFramebufferRenderbufferEXT:
-    mov __blue_glCore_glFramebufferRenderbufferEXT@GOTPCREL(%rip), %r11
+.global glProgramUniform2i64NV
+.type glProgramUniform2i64NV, %function
+glProgramUniform2i64NV:
+    mov __blue_glCore_glProgramUniform2i64NV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glBinormal3svEXT
-.type glBinormal3svEXT, %function
-glBinormal3svEXT:
-    mov __blue_glCore_glBinormal3svEXT@GOTPCREL(%rip), %r11
+.global glGetMultiTexImageEXT
+.type glGetMultiTexImageEXT, %function
+glGetMultiTexImageEXT:
+    mov __blue_glCore_glGetMultiTexImageEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glBindBufferOffsetNV
-.type glBindBufferOffsetNV, %function
-glBindBufferOffsetNV:
-    mov __blue_glCore_glBindBufferOffsetNV@GOTPCREL(%rip), %r11
+.global glTexStorageSparseAMD
+.type glTexStorageSparseAMD, %function
+glTexStorageSparseAMD:
+    mov __blue_glCore_glTexStorageSparseAMD@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCopyTextureSubImage2D
-.type glCopyTextureSubImage2D, %function
-glCopyTextureSubImage2D:
-    mov __blue_glCore_glCopyTextureSubImage2D@GOTPCREL(%rip), %r11
+.global glVertexAttrib3fARB
+.type glVertexAttrib3fARB, %function
+glVertexAttrib3fARB:
+    mov __blue_glCore_glVertexAttrib3fARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetProgramResourcefvNV
-.type glGetProgramResourcefvNV, %function
-glGetProgramResourcefvNV:
-    mov __blue_glCore_glGetProgramResourcefvNV@GOTPCREL(%rip), %r11
+.global glGetPerfMonitorCounterDataAMD
+.type glGetPerfMonitorCounterDataAMD, %function
+glGetPerfMonitorCounterDataAMD:
+    mov __blue_glCore_glGetPerfMonitorCounterDataAMD@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glBinormalPointerEXT
-.type glBinormalPointerEXT, %function
-glBinormalPointerEXT:
-    mov __blue_glCore_glBinormalPointerEXT@GOTPCREL(%rip), %r11
+.global glGetCombinerStageParameterfvNV
+.type glGetCombinerStageParameterfvNV, %function
+glGetCombinerStageParameterfvNV:
+    mov __blue_glCore_glGetCombinerStageParameterfvNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glUniform2ivARB
-.type glUniform2ivARB, %function
-glUniform2ivARB:
-    mov __blue_glCore_glUniform2ivARB@GOTPCREL(%rip), %r11
+.global glTextureBarrier
+.type glTextureBarrier, %function
+glTextureBarrier:
+    mov __blue_glCore_glTextureBarrier@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiTexCoord3s
-.type glMultiTexCoord3s, %function
-glMultiTexCoord3s:
-    mov __blue_glCore_glMultiTexCoord3s@GOTPCREL(%rip), %r11
+.global glVertexAttrib1hNV
+.type glVertexAttrib1hNV, %function
+glVertexAttrib1hNV:
+    mov __blue_glCore_glVertexAttrib1hNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetHistogramParameterfvEXT
-.type glGetHistogramParameterfvEXT, %function
-glGetHistogramParameterfvEXT:
-    mov __blue_glCore_glGetHistogramParameterfvEXT@GOTPCREL(%rip), %r11
+.global glWindowPos3iv
+.type glWindowPos3iv, %function
+glWindowPos3iv:
+    mov __blue_glCore_glWindowPos3iv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetProgramStringNV
-.type glGetProgramStringNV, %function
-glGetProgramStringNV:
-    mov __blue_glCore_glGetProgramStringNV@GOTPCREL(%rip), %r11
+.global glFragmentLightModelfSGIX
+.type glFragmentLightModelfSGIX, %function
+glFragmentLightModelfSGIX:
+    mov __blue_glCore_glFragmentLightModelfSGIX@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetTexGenxvOES
-.type glGetTexGenxvOES, %function
-glGetTexGenxvOES:
-    mov __blue_glCore_glGetTexGenxvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureSubImage2D
-.type glTextureSubImage2D, %function
-glTextureSubImage2D:
-    mov __blue_glCore_glTextureSubImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glObjectPurgeableAPPLE
-.type glObjectPurgeableAPPLE, %function
-glObjectPurgeableAPPLE:
-    mov __blue_glCore_glObjectPurgeableAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColorTableSGI
-.type glColorTableSGI, %function
-glColorTableSGI:
-    mov __blue_glCore_glColorTableSGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3i
-.type glMultiTexCoord3i, %function
-glMultiTexCoord3i:
-    mov __blue_glCore_glMultiTexCoord3i@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3f
-.type glMultiTexCoord3f, %function
-glMultiTexCoord3f:
-    mov __blue_glCore_glMultiTexCoord3f@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3d
-.type glMultiTexCoord3d, %function
-glMultiTexCoord3d:
-    mov __blue_glCore_glMultiTexCoord3d@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoorddv
-.type glFogCoorddv, %function
-glFogCoorddv:
-    mov __blue_glCore_glFogCoorddv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyConvolutionFilter2DEXT
-.type glCopyConvolutionFilter2DEXT, %function
-glCopyConvolutionFilter2DEXT:
-    mov __blue_glCore_glCopyConvolutionFilter2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform1fEXT
-.type glProgramUniform1fEXT, %function
-glProgramUniform1fEXT:
-    mov __blue_glCore_glProgramUniform1fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClipPlanefOES
-.type glClipPlanefOES, %function
-glClipPlanefOES:
-    mov __blue_glCore_glClipPlanefOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPolygonOffsetxOES
-.type glPolygonOffsetxOES, %function
-glPolygonOffsetxOES:
-    mov __blue_glCore_glPolygonOffsetxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4dARB
-.type glVertexAttrib4dARB, %function
-glVertexAttrib4dARB:
-    mov __blue_glCore_glVertexAttrib4dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformHandleui64vARB
-.type glUniformHandleui64vARB, %function
-glUniformHandleui64vARB:
-    mov __blue_glCore_glUniformHandleui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFragmentLightModelfvSGIX
-.type glFragmentLightModelfvSGIX, %function
-glFragmentLightModelfvSGIX:
-    mov __blue_glCore_glFragmentLightModelfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSwizzleEXT
-.type glSwizzleEXT, %function
-glSwizzleEXT:
-    mov __blue_glCore_glSwizzleEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindFragmentShaderATI
-.type glBindFragmentShaderATI, %function
-glBindFragmentShaderATI:
-    mov __blue_glCore_glBindFragmentShaderATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs3hvNV
-.type glVertexAttribs3hvNV, %function
-glVertexAttribs3hvNV:
-    mov __blue_glCore_glVertexAttribs3hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenBuffersARB
-.type glGenBuffersARB, %function
-glGenBuffersARB:
-    mov __blue_glCore_glGenBuffersARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glListParameterfvSGIX
-.type glListParameterfvSGIX, %function
-glListParameterfvSGIX:
-    mov __blue_glCore_glListParameterfvSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedRenderbufferStorageMultisample
-.type glNamedRenderbufferStorageMultisample, %function
-glNamedRenderbufferStorageMultisample:
-    mov __blue_glCore_glNamedRenderbufferStorageMultisample@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearNamedBufferData
-.type glClearNamedBufferData, %function
-glClearNamedBufferData:
-    mov __blue_glCore_glClearNamedBufferData@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLightModelxOES
-.type glLightModelxOES, %function
-glLightModelxOES:
-    mov __blue_glCore_glLightModelxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glColor3xOES
-.type glColor3xOES, %function
-glColor3xOES:
-    mov __blue_glCore_glColor3xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiDrawElementArrayAPPLE
-.type glMultiDrawElementArrayAPPLE, %function
-glMultiDrawElementArrayAPPLE:
-    mov __blue_glCore_glMultiDrawElementArrayAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glStencilFillPathInstancedNV
-.type glStencilFillPathInstancedNV, %function
-glStencilFillPathInstancedNV:
-    mov __blue_glCore_glStencilFillPathInstancedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVDPAUUnmapSurfacesNV
-.type glVDPAUUnmapSurfacesNV, %function
-glVDPAUUnmapSurfacesNV:
-    mov __blue_glCore_glVDPAUUnmapSurfacesNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform4i64NV
-.type glProgramUniform4i64NV, %function
-glProgramUniform4i64NV:
-    mov __blue_glCore_glProgramUniform4i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexStream4dvATI
-.type glVertexStream4dvATI, %function
-glVertexStream4dvATI:
-    mov __blue_glCore_glVertexStream4dvATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIsQuery
-.type glIsQuery, %function
-glIsQuery:
-    mov __blue_glCore_glIsQuery@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix4fvEXT
-.type glProgramUniformMatrix4fvEXT, %function
-glProgramUniformMatrix4fvEXT:
-    mov __blue_glCore_glProgramUniformMatrix4fvEXT@GOTPCREL(%rip), %r11
+.global glProgramEnvParameterI4uiNV
+.type glProgramEnvParameterI4uiNV, %function
+glProgramEnvParameterI4uiNV:
+    mov __blue_glCore_glProgramEnvParameterI4uiNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glVertexAttrib3hNV
@@ -14011,928 +175,196 @@ glVertexAttrib3hNV:
     mov __blue_glCore_glVertexAttrib3hNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glFlushMappedNamedBufferRange
-.type glFlushMappedNamedBufferRange, %function
-glFlushMappedNamedBufferRange:
-    mov __blue_glCore_glFlushMappedNamedBufferRange@GOTPCREL(%rip), %r11
+.global glProgramUniform3i64vNV
+.type glProgramUniform3i64vNV, %function
+glProgramUniform3i64vNV:
+    mov __blue_glCore_glProgramUniform3i64vNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttrib3f
-.type glVertexAttrib3f, %function
-glVertexAttrib3f:
-    mov __blue_glCore_glVertexAttrib3f@GOTPCREL(%rip), %r11
+.global glVertexAttrib3sv
+.type glVertexAttrib3sv, %function
+glVertexAttrib3sv:
+    mov __blue_glCore_glVertexAttrib3sv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttrib3d
-.type glVertexAttrib3d, %function
-glVertexAttrib3d:
-    mov __blue_glCore_glVertexAttrib3d@GOTPCREL(%rip), %r11
+.global glMultiTexEnviEXT
+.type glMultiTexEnviEXT, %function
+glMultiTexEnviEXT:
+    mov __blue_glCore_glMultiTexEnviEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glBlendColor
-.type glBlendColor, %function
-glBlendColor:
-    mov __blue_glCore_glBlendColor@GOTPCREL(%rip), %r11
+.global glVertexStream4dATI
+.type glVertexStream4dATI, %function
+glVertexStream4dATI:
+    mov __blue_glCore_glVertexStream4dATI@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glBindTransformFeedbackNV
-.type glBindTransformFeedbackNV, %function
-glBindTransformFeedbackNV:
-    mov __blue_glCore_glBindTransformFeedbackNV@GOTPCREL(%rip), %r11
+.global glVertexAttribL3i64vNV
+.type glVertexAttribL3i64vNV, %function
+glVertexAttribL3i64vNV:
+    mov __blue_glCore_glVertexAttribL3i64vNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glSamplerParameterIuiv
-.type glSamplerParameterIuiv, %function
-glSamplerParameterIuiv:
-    mov __blue_glCore_glSamplerParameterIuiv@GOTPCREL(%rip), %r11
+.global glGetProgramResourceName
+.type glGetProgramResourceName, %function
+glGetProgramResourceName:
+    mov __blue_glCore_glGetProgramResourceName@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glNamedBufferPageCommitmentEXT
-.type glNamedBufferPageCommitmentEXT, %function
-glNamedBufferPageCommitmentEXT:
-    mov __blue_glCore_glNamedBufferPageCommitmentEXT@GOTPCREL(%rip), %r11
+.global glArrayObjectATI
+.type glArrayObjectATI, %function
+glArrayObjectATI:
+    mov __blue_glCore_glArrayObjectATI@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCheckNamedFramebufferStatus
-.type glCheckNamedFramebufferStatus, %function
-glCheckNamedFramebufferStatus:
-    mov __blue_glCore_glCheckNamedFramebufferStatus@GOTPCREL(%rip), %r11
+.global glTexCoordP3uiv
+.type glTexCoordP3uiv, %function
+glTexCoordP3uiv:
+    mov __blue_glCore_glTexCoordP3uiv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetObjectBufferfvATI
-.type glGetObjectBufferfvATI, %function
-glGetObjectBufferfvATI:
-    mov __blue_glCore_glGetObjectBufferfvATI@GOTPCREL(%rip), %r11
+.global glSetFenceNV
+.type glSetFenceNV, %function
+glSetFenceNV:
+    mov __blue_glCore_glSetFenceNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttrib3s
-.type glVertexAttrib3s, %function
-glVertexAttrib3s:
-    mov __blue_glCore_glVertexAttrib3s@GOTPCREL(%rip), %r11
+.global glTexCoord2fColor3fVertex3fvSUN
+.type glTexCoord2fColor3fVertex3fvSUN, %function
+glTexCoord2fColor3fVertex3fvSUN:
+    mov __blue_glCore_glTexCoord2fColor3fVertex3fvSUN@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glDrawElementsInstancedEXT
-.type glDrawElementsInstancedEXT, %function
-glDrawElementsInstancedEXT:
-    mov __blue_glCore_glDrawElementsInstancedEXT@GOTPCREL(%rip), %r11
+.global glClear
+.type glClear, %function
+glClear:
+    mov __blue_glCore_glClear@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glNamedProgramLocalParameterI4iEXT
-.type glNamedProgramLocalParameterI4iEXT, %function
-glNamedProgramLocalParameterI4iEXT:
-    mov __blue_glCore_glNamedProgramLocalParameterI4iEXT@GOTPCREL(%rip), %r11
+.global glUnmapTexture2DINTEL
+.type glUnmapTexture2DINTEL, %function
+glUnmapTexture2DINTEL:
+    mov __blue_glCore_glUnmapTexture2DINTEL@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetProgramStageiv
-.type glGetProgramStageiv, %function
-glGetProgramStageiv:
-    mov __blue_glCore_glGetProgramStageiv@GOTPCREL(%rip), %r11
+.global glFogCoordf
+.type glFogCoordf, %function
+glFogCoordf:
+    mov __blue_glCore_glFogCoordf@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetMaterialxOES
-.type glGetMaterialxOES, %function
-glGetMaterialxOES:
-    mov __blue_glCore_glGetMaterialxOES@GOTPCREL(%rip), %r11
+.global glDepthRangefOES
+.type glDepthRangefOES, %function
+glDepthRangefOES:
+    mov __blue_glCore_glDepthRangefOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetVideoui64vNV
-.type glGetVideoui64vNV, %function
-glGetVideoui64vNV:
-    mov __blue_glCore_glGetVideoui64vNV@GOTPCREL(%rip), %r11
+.global glReadPixels
+.type glReadPixels, %function
+glReadPixels:
+    mov __blue_glCore_glReadPixels@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTangent3bEXT
-.type glTangent3bEXT, %function
-glTangent3bEXT:
-    mov __blue_glCore_glTangent3bEXT@GOTPCREL(%rip), %r11
+.global glProgramUniform3i64NV
+.type glProgramUniform3i64NV, %function
+glProgramUniform3i64NV:
+    mov __blue_glCore_glProgramUniform3i64NV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetGraphicsResetStatusARB
-.type glGetGraphicsResetStatusARB, %function
-glGetGraphicsResetStatusARB:
-    mov __blue_glCore_glGetGraphicsResetStatusARB@GOTPCREL(%rip), %r11
+.global glTexCoordP4uiv
+.type glTexCoordP4uiv, %function
+glTexCoordP4uiv:
+    mov __blue_glCore_glTexCoordP4uiv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glUniform4i
-.type glUniform4i, %function
-glUniform4i:
-    mov __blue_glCore_glUniform4i@GOTPCREL(%rip), %r11
+.global glSecondaryColor3d
+.type glSecondaryColor3d, %function
+glSecondaryColor3d:
+    mov __blue_glCore_glSecondaryColor3d@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glActiveTexture
-.type glActiveTexture, %function
-glActiveTexture:
-    mov __blue_glCore_glActiveTexture@GOTPCREL(%rip), %r11
+.global glMaterialxvOES
+.type glMaterialxvOES, %function
+glMaterialxvOES:
+    mov __blue_glCore_glMaterialxvOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glEnableVertexAttribArray
-.type glEnableVertexAttribArray, %function
-glEnableVertexAttribArray:
-    mov __blue_glCore_glEnableVertexAttribArray@GOTPCREL(%rip), %r11
+.global glGetCompressedTextureSubImage
+.type glGetCompressedTextureSubImage, %function
+glGetCompressedTextureSubImage:
+    mov __blue_glCore_glGetCompressedTextureSubImage@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glProgramUniformHandleui64NV
-.type glProgramUniformHandleui64NV, %function
-glProgramUniformHandleui64NV:
-    mov __blue_glCore_glProgramUniformHandleui64NV@GOTPCREL(%rip), %r11
+.global glDisableVertexAttribArray
+.type glDisableVertexAttribArray, %function
+glDisableVertexAttribArray:
+    mov __blue_glCore_glDisableVertexAttribArray@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glUniform4d
-.type glUniform4d, %function
-glUniform4d:
-    mov __blue_glCore_glUniform4d@GOTPCREL(%rip), %r11
+.global glDeformationMap3dSGIX
+.type glDeformationMap3dSGIX, %function
+glDeformationMap3dSGIX:
+    mov __blue_glCore_glDeformationMap3dSGIX@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glUniform4f
-.type glUniform4f, %function
-glUniform4f:
-    mov __blue_glCore_glUniform4f@GOTPCREL(%rip), %r11
+.global glMultiTexCoord1f
+.type glMultiTexCoord1f, %function
+glMultiTexCoord1f:
+    mov __blue_glCore_glMultiTexCoord1f@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glRenderbufferStorageMultisample
-.type glRenderbufferStorageMultisample, %function
-glRenderbufferStorageMultisample:
-    mov __blue_glCore_glRenderbufferStorageMultisample@GOTPCREL(%rip), %r11
+.global glGetObjectPtrLabel
+.type glGetObjectPtrLabel, %function
+glGetObjectPtrLabel:
+    mov __blue_glCore_glGetObjectPtrLabel@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCreateProgramPipelines
-.type glCreateProgramPipelines, %function
-glCreateProgramPipelines:
-    mov __blue_glCore_glCreateProgramPipelines@GOTPCREL(%rip), %r11
+.global glGetMultiTexEnvivEXT
+.type glGetMultiTexEnvivEXT, %function
+glGetMultiTexEnvivEXT:
+    mov __blue_glCore_glGetMultiTexEnvivEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttribLPointer
-.type glVertexAttribLPointer, %function
-glVertexAttribLPointer:
-    mov __blue_glCore_glVertexAttribLPointer@GOTPCREL(%rip), %r11
+.global glTextureBufferEXT
+.type glTextureBufferEXT, %function
+glTextureBufferEXT:
+    mov __blue_glCore_glTextureBufferEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiTexCoord3sv
-.type glMultiTexCoord3sv, %function
-glMultiTexCoord3sv:
-    mov __blue_glCore_glMultiTexCoord3sv@GOTPCREL(%rip), %r11
+.global glVertexAttrib3hvNV
+.type glVertexAttrib3hvNV, %function
+glVertexAttrib3hvNV:
+    mov __blue_glCore_glVertexAttrib3hvNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glDrawElementsInstancedBaseVertex
-.type glDrawElementsInstancedBaseVertex, %function
-glDrawElementsInstancedBaseVertex:
-    mov __blue_glCore_glDrawElementsInstancedBaseVertex@GOTPCREL(%rip), %r11
+.global glGetnUniformuivARB
+.type glGetnUniformuivARB, %function
+glGetnUniformuivARB:
+    mov __blue_glCore_glGetnUniformuivARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glPixelTransformParameterfvEXT
-.type glPixelTransformParameterfvEXT, %function
-glPixelTransformParameterfvEXT:
-    mov __blue_glCore_glPixelTransformParameterfvEXT@GOTPCREL(%rip), %r11
+.global glUniformBufferEXT
+.type glUniformBufferEXT, %function
+glUniformBufferEXT:
+    mov __blue_glCore_glUniformBufferEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glDrawTransformFeedbackNV
-.type glDrawTransformFeedbackNV, %function
-glDrawTransformFeedbackNV:
-    mov __blue_glCore_glDrawTransformFeedbackNV@GOTPCREL(%rip), %r11
+.global glUseProgram
+.type glUseProgram, %function
+glUseProgram:
+    mov __blue_glCore_glUseProgram@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTextureImage2DMultisampleCoverageNV
-.type glTextureImage2DMultisampleCoverageNV, %function
-glTextureImage2DMultisampleCoverageNV:
-    mov __blue_glCore_glTextureImage2DMultisampleCoverageNV@GOTPCREL(%rip), %r11
+.global glBinormalPointerEXT
+.type glBinormalPointerEXT, %function
+glBinormalPointerEXT:
+    mov __blue_glCore_glBinormalPointerEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glNamedRenderbufferStorageMultisampleCoverageEXT
-.type glNamedRenderbufferStorageMultisampleCoverageEXT, %function
-glNamedRenderbufferStorageMultisampleCoverageEXT:
-    mov __blue_glCore_glNamedRenderbufferStorageMultisampleCoverageEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetActiveSubroutineName
-.type glGetActiveSubroutineName, %function
-glGetActiveSubroutineName:
-    mov __blue_glCore_glGetActiveSubroutineName@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4iv
-.type glMultiTexCoord4iv, %function
-glMultiTexCoord4iv:
-    mov __blue_glCore_glMultiTexCoord4iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPopDebugGroup
-.type glPopDebugGroup, %function
-glPopDebugGroup:
-    mov __blue_glCore_glPopDebugGroup@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformBlockBinding
-.type glUniformBlockBinding, %function
-glUniformBlockBinding:
-    mov __blue_glCore_glUniformBlockBinding@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2svMESA
-.type glWindowPos2svMESA, %function
-glWindowPos2svMESA:
-    mov __blue_glCore_glWindowPos2svMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenerateTextureMipmapEXT
-.type glGenerateTextureMipmapEXT, %function
-glGenerateTextureMipmapEXT:
-    mov __blue_glCore_glGenerateTextureMipmapEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindLightParameterEXT
-.type glBindLightParameterEXT, %function
-glBindLightParameterEXT:
-    mov __blue_glCore_glBindLightParameterEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord3bOES
-.type glTexCoord3bOES, %function
-glTexCoord3bOES:
-    mov __blue_glCore_glTexCoord3bOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix3x2fv
-.type glProgramUniformMatrix3x2fv, %function
-glProgramUniformMatrix3x2fv:
-    mov __blue_glCore_glProgramUniformMatrix3x2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform2fvARB
-.type glUniform2fvARB, %function
-glUniform2fvARB:
-    mov __blue_glCore_glUniform2fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramLocalParameterI4uivNV
-.type glProgramLocalParameterI4uivNV, %function
-glProgramLocalParameterI4uivNV:
-    mov __blue_glCore_glProgramLocalParameterI4uivNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushVertexArrayRangeNV
-.type glFlushVertexArrayRangeNV, %function
-glFlushVertexArrayRangeNV:
-    mov __blue_glCore_glFlushVertexArrayRangeNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3svEXT
-.type glSecondaryColor3svEXT, %function
-glSecondaryColor3svEXT:
-    mov __blue_glCore_glSecondaryColor3svEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryIndexediv
-.type glGetQueryIndexediv, %function
-glGetQueryIndexediv:
-    mov __blue_glCore_glGetQueryIndexediv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTexture3DEXT
-.type glFramebufferTexture3DEXT, %function
-glFramebufferTexture3DEXT:
-    mov __blue_glCore_glFramebufferTexture3DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLoadTransposeMatrixxOES
-.type glLoadTransposeMatrixxOES, %function
-glLoadTransposeMatrixxOES:
-    mov __blue_glCore_glLoadTransposeMatrixxOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteTransformFeedbacksNV
-.type glDeleteTransformFeedbacksNV, %function
-glDeleteTransformFeedbacksNV:
-    mov __blue_glCore_glDeleteTransformFeedbacksNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCompressedTextureImageEXT
-.type glGetCompressedTextureImageEXT, %function
-glGetCompressedTextureImageEXT:
-    mov __blue_glCore_glGetCompressedTextureImageEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glIndexMaterialEXT
-.type glIndexMaterialEXT, %function
-glIndexMaterialEXT:
-    mov __blue_glCore_glIndexMaterialEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFogCoorddEXT
-.type glFogCoorddEXT, %function
-glFogCoorddEXT:
-    mov __blue_glCore_glFogCoorddEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2hvNV
-.type glTexCoord2hvNV, %function
-glTexCoord2hvNV:
-    mov __blue_glCore_glTexCoord2hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFramebufferTexture2DEXT
-.type glFramebufferTexture2DEXT, %function
-glFramebufferTexture2DEXT:
-    mov __blue_glCore_glFramebufferTexture2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndTransformFeedbackNV
-.type glEndTransformFeedbackNV, %function
-glEndTransformFeedbackNV:
-    mov __blue_glCore_glEndTransformFeedbackNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGlobalAlphaFactoruiSUN
-.type glGlobalAlphaFactoruiSUN, %function
-glGlobalAlphaFactoruiSUN:
-    mov __blue_glCore_glGlobalAlphaFactoruiSUN@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform3fEXT
-.type glProgramUniform3fEXT, %function
-glProgramUniform3fEXT:
-    mov __blue_glCore_glProgramUniform3fEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedBufferSubDataEXT
-.type glNamedBufferSubDataEXT, %function
-glNamedBufferSubDataEXT:
-    mov __blue_glCore_glNamedBufferSubDataEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glFlushRasterSGIX
-.type glFlushRasterSGIX, %function
-glFlushRasterSGIX:
-    mov __blue_glCore_glFlushRasterSGIX@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBlendFunc
-.type glBlendFunc, %function
-glBlendFunc:
-    mov __blue_glCore_glBlendFunc@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCreateProgram
-.type glCreateProgram, %function
-glCreateProgram:
-    mov __blue_glCore_glCreateProgram@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4ui64vARB
-.type glUniform4ui64vARB, %function
-glUniform4ui64vARB:
-    mov __blue_glCore_glUniform4ui64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPrimitiveRestartIndex
-.type glPrimitiveRestartIndex, %function
-glPrimitiveRestartIndex:
-    mov __blue_glCore_glPrimitiveRestartIndex@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3fATI
-.type glNormalStream3fATI, %function
-glNormalStream3fATI:
-    mov __blue_glCore_glNormalStream3fATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniformMatrix2fv
-.type glProgramUniformMatrix2fv, %function
-glProgramUniformMatrix2fv:
-    mov __blue_glCore_glProgramUniformMatrix2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs1hvNV
-.type glVertexAttribs1hvNV, %function
-glVertexAttribs1hvNV:
-    mov __blue_glCore_glVertexAttribs1hvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos4svMESA
-.type glWindowPos4svMESA, %function
-glWindowPos4svMESA:
-    mov __blue_glCore_glWindowPos4svMESA@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDeleteFragmentShaderATI
-.type glDeleteFragmentShaderATI, %function
-glDeleteFragmentShaderATI:
-    mov __blue_glCore_glDeleteFragmentShaderATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindImageTextures
-.type glBindImageTextures, %function
-glBindImageTextures:
-    mov __blue_glCore_glBindImageTextures@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSamplerParameteriv
-.type glSamplerParameteriv, %function
-glSamplerParameteriv:
-    mov __blue_glCore_glSamplerParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1i64NV
-.type glUniform1i64NV, %function
-glUniform1i64NV:
-    mov __blue_glCore_glUniform1i64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathStringNV
-.type glPathStringNV, %function
-glPathStringNV:
-    mov __blue_glCore_glPathStringNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedFramebufferParameterivEXT
-.type glGetNamedFramebufferParameterivEXT, %function
-glGetNamedFramebufferParameterivEXT:
-    mov __blue_glCore_glGetNamedFramebufferParameterivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetProgramNamedParameterdvNV
-.type glGetProgramNamedParameterdvNV, %function
-glGetProgramNamedParameterdvNV:
-    mov __blue_glCore_glGetProgramNamedParameterdvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathDashArrayNV
-.type glPathDashArrayNV, %function
-glPathDashArrayNV:
-    mov __blue_glCore_glPathDashArrayNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3iv
-.type glSecondaryColor3iv, %function
-glSecondaryColor3iv:
-    mov __blue_glCore_glSecondaryColor3iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultTransposeMatrixf
-.type glMultTransposeMatrixf, %function
-glMultTransposeMatrixf:
-    mov __blue_glCore_glMultTransposeMatrixf@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultTransposeMatrixd
-.type glMultTransposeMatrixd, %function
-glMultTransposeMatrixd:
-    mov __blue_glCore_glMultTransposeMatrixd@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glClearColor
-.type glClearColor, %function
-glClearColor:
-    mov __blue_glCore_glClearColor@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetImageHandleARB
-.type glGetImageHandleARB, %function
-glGetImageHandleARB:
-    mov __blue_glCore_glGetImageHandleARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTangent3dEXT
-.type glTangent3dEXT, %function
-glTangent3dEXT:
-    mov __blue_glCore_glTangent3dEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryObjectivARB
-.type glGetQueryObjectivARB, %function
-glGetQueryObjectivARB:
-    mov __blue_glCore_glGetQueryObjectivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetLocalConstantFloatvEXT
-.type glGetLocalConstantFloatvEXT, %function
-glGetLocalConstantFloatvEXT:
-    mov __blue_glCore_glGetLocalConstantFloatvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUseShaderProgramEXT
-.type glUseShaderProgramEXT, %function
-glUseShaderProgramEXT:
-    mov __blue_glCore_glUseShaderProgramEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindRenderbufferEXT
-.type glBindRenderbufferEXT, %function
-glBindRenderbufferEXT:
-    mov __blue_glCore_glBindRenderbufferEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetnUniformiv
-.type glGetnUniformiv, %function
-glGetnUniformiv:
-    mov __blue_glCore_glGetnUniformiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetPerfMonitorGroupStringAMD
-.type glGetPerfMonitorGroupStringAMD, %function
-glGetPerfMonitorGroupStringAMD:
-    mov __blue_glCore_glGetPerfMonitorGroupStringAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform3ui
-.type glUniform3ui, %function
-glUniform3ui:
-    mov __blue_glCore_glUniform3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedProgramLocalParameterdvEXT
-.type glGetNamedProgramLocalParameterdvEXT, %function
-glGetNamedProgramLocalParameterdvEXT:
-    mov __blue_glCore_glGetNamedProgramLocalParameterdvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3us
-.type glSecondaryColor3us, %function
-glSecondaryColor3us:
-    mov __blue_glCore_glSecondaryColor3us@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4uiv
-.type glVertexAttribI4uiv, %function
-glVertexAttribI4uiv:
-    mov __blue_glCore_glVertexAttribI4uiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4bv
-.type glVertexAttrib4bv, %function
-glVertexAttrib4bv:
-    mov __blue_glCore_glVertexAttrib4bv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3xOES
-.type glMultiTexCoord3xOES, %function
-glMultiTexCoord3xOES:
-    mov __blue_glCore_glMultiTexCoord3xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3ub
-.type glSecondaryColor3ub, %function
-glSecondaryColor3ub:
-    mov __blue_glCore_glSecondaryColor3ub@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glConvolutionFilter2DEXT
-.type glConvolutionFilter2DEXT, %function
-glConvolutionFilter2DEXT:
-    mov __blue_glCore_glConvolutionFilter2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVariantArrayObjectivATI
-.type glGetVariantArrayObjectivATI, %function
-glGetVariantArrayObjectivATI:
-    mov __blue_glCore_glGetVariantArrayObjectivATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3ui
-.type glSecondaryColor3ui, %function
-glSecondaryColor3ui:
-    mov __blue_glCore_glSecondaryColor3ui@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1dARB
-.type glVertexAttrib1dARB, %function
-glVertexAttrib1dARB:
-    mov __blue_glCore_glVertexAttrib1dARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferPointerv
-.type glGetNamedBufferPointerv, %function
-glGetNamedBufferPointerv:
-    mov __blue_glCore_glGetNamedBufferPointerv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glLockArraysEXT
-.type glLockArraysEXT, %function
-glLockArraysEXT:
-    mov __blue_glCore_glLockArraysEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribPointerNV
-.type glVertexAttribPointerNV, %function
-glVertexAttribPointerNV:
-    mov __blue_glCore_glVertexAttribPointerNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferBaseEXT
-.type glBindBufferBaseEXT, %function
-glBindBufferBaseEXT:
-    mov __blue_glCore_glBindBufferBaseEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord2xvOES
-.type glTexCoord2xvOES, %function
-glTexCoord2xvOES:
-    mov __blue_glCore_glTexCoord2xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetQueryBufferObjectui64v
-.type glGetQueryBufferObjectui64v, %function
-glGetQueryBufferObjectui64v:
-    mov __blue_glCore_glGetQueryBufferObjectui64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSetMultisamplefvAMD
-.type glSetMultisamplefvAMD, %function
-glSetMultisamplefvAMD:
-    mov __blue_glCore_glSetMultisamplefvAMD@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPathColorGenNV
-.type glPathColorGenNV, %function
-glPathColorGenNV:
-    mov __blue_glCore_glPathColorGenNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1ivARB
-.type glUniform1ivARB, %function
-glUniform1ivARB:
-    mov __blue_glCore_glUniform1ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4ivARB
-.type glVertexAttrib4ivARB, %function
-glVertexAttrib4ivARB:
-    mov __blue_glCore_glVertexAttrib4ivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenTransformFeedbacks
-.type glGenTransformFeedbacks, %function
-glGenTransformFeedbacks:
-    mov __blue_glCore_glGenTransformFeedbacks@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexAttribIuiv
-.type glGetVertexAttribIuiv, %function
-glGetVertexAttribIuiv:
-    mov __blue_glCore_glGetVertexAttribIuiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPixelTransformParameterfEXT
-.type glPixelTransformParameterfEXT, %function
-glPixelTransformParameterfEXT:
-    mov __blue_glCore_glPixelTransformParameterfEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertex3xvOES
-.type glVertex3xvOES, %function
-glVertex3xvOES:
-    mov __blue_glCore_glVertex3xvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetObjectParameterivARB
-.type glGetObjectParameterivARB, %function
-glGetObjectParameterivARB:
-    mov __blue_glCore_glGetObjectParameterivARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArraySecondaryColorOffsetEXT
-.type glVertexArraySecondaryColorOffsetEXT, %function
-glVertexArraySecondaryColorOffsetEXT:
-    mov __blue_glCore_glVertexArraySecondaryColorOffsetEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glWindowPos2fARB
-.type glWindowPos2fARB, %function
-glWindowPos2fARB:
-    mov __blue_glCore_glWindowPos2fARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexSubImage2D
-.type glCompressedTexSubImage2D, %function
-glCompressedTexSubImage2D:
-    mov __blue_glCore_glCompressedTexSubImage2D@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCompressedTexSubImage3DARB
-.type glCompressedTexSubImage3DARB, %function
-glCompressedTexSubImage3DARB:
-    mov __blue_glCore_glCompressedTexSubImage3DARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramBinary
-.type glProgramBinary, %function
-glProgramBinary:
-    mov __blue_glCore_glProgramBinary@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glPresentFrameKeyedNV
-.type glPresentFrameKeyedNV, %function
-glPresentFrameKeyedNV:
-    mov __blue_glCore_glPresentFrameKeyedNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI4bv
-.type glVertexAttribI4bv, %function
-glVertexAttribI4bv:
-    mov __blue_glCore_glVertexAttribI4bv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetTexParameterfv
-.type glGetTexParameterfv, %function
-glGetTexParameterfv:
-    mov __blue_glCore_glGetTexParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTransformFeedbackStreamAttribsNV
-.type glTransformFeedbackStreamAttribsNV, %function
-glTransformFeedbackStreamAttribsNV:
-    mov __blue_glCore_glTransformFeedbackStreamAttribsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3usEXT
-.type glSecondaryColor3usEXT, %function
-glSecondaryColor3usEXT:
-    mov __blue_glCore_glSecondaryColor3usEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCopyColorTableSGI
-.type glCopyColorTableSGI, %function
-glCopyColorTableSGI:
-    mov __blue_glCore_glCopyColorTableSGI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramEnvParameter4fvARB
-.type glProgramEnvParameter4fvARB, %function
-glProgramEnvParameter4fvARB:
-    mov __blue_glCore_glProgramEnvParameter4fvARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord4sARB
-.type glMultiTexCoord4sARB, %function
-glMultiTexCoord4sARB:
-    mov __blue_glCore_glMultiTexCoord4sARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetVertexArrayIndexed64iv
-.type glGetVertexArrayIndexed64iv, %function
-glGetVertexArrayIndexed64iv:
-    mov __blue_glCore_glGetVertexArrayIndexed64iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMatrixMultTranspose3x3fNV
-.type glMatrixMultTranspose3x3fNV, %function
-glMatrixMultTranspose3x3fNV:
-    mov __blue_glCore_glMatrixMultTranspose3x3fNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexParameterIiv
-.type glTexParameterIiv, %function
-glTexParameterIiv:
-    mov __blue_glCore_glTexParameterIiv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexArrayAttribFormat
-.type glVertexArrayAttribFormat, %function
-glVertexArrayAttribFormat:
-    mov __blue_glCore_glVertexArrayAttribFormat@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndTransformFeedback
-.type glEndTransformFeedback, %function
-glEndTransformFeedback:
-    mov __blue_glCore_glEndTransformFeedback@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDrawCommandsStatesAddressNV
-.type glDrawCommandsStatesAddressNV, %function
-glDrawCommandsStatesAddressNV:
-    mov __blue_glCore_glDrawCommandsStatesAddressNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform4ui64NV
-.type glUniform4ui64NV, %function
-glUniform4ui64NV:
-    mov __blue_glCore_glUniform4ui64NV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib4usv
-.type glVertexAttrib4usv, %function
-glVertexAttrib4usv:
-    mov __blue_glCore_glVertexAttrib4usv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexImage2DMultisample
-.type glTexImage2DMultisample, %function
-glTexImage2DMultisample:
-    mov __blue_glCore_glTexImage2DMultisample@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindTextureEXT
-.type glBindTextureEXT, %function
-glBindTextureEXT:
-    mov __blue_glCore_glBindTextureEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribI1iv
-.type glVertexAttribI1iv, %function
-glVertexAttribI1iv:
-    mov __blue_glCore_glVertexAttribI1iv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetFinalCombinerInputParameterfvNV
-.type glGetFinalCombinerInputParameterfvNV, %function
-glGetFinalCombinerInputParameterfvNV:
-    mov __blue_glCore_glGetFinalCombinerInputParameterfvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexCoord3bvOES
-.type glMultiTexCoord3bvOES, %function
-glMultiTexCoord3bvOES:
-    mov __blue_glCore_glMultiTexCoord3bvOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribDivisor
-.type glVertexAttribDivisor, %function
-glVertexAttribDivisor:
-    mov __blue_glCore_glVertexAttribDivisor@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetCompressedTextureImage
-.type glGetCompressedTextureImage, %function
-glGetCompressedTextureImage:
-    mov __blue_glCore_glGetCompressedTextureImage@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindTexGenParameterEXT
-.type glBindTexGenParameterEXT, %function
-glBindTexGenParameterEXT:
-    mov __blue_glCore_glBindTexGenParameterEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalStream3bATI
-.type glNormalStream3bATI, %function
-glNormalStream3bATI:
-    mov __blue_glCore_glNormalStream3bATI@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttribs1svNV
-.type glVertexAttribs1svNV, %function
-glVertexAttribs1svNV:
-    mov __blue_glCore_glVertexAttribs1svNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureImage2DEXT
-.type glTextureImage2DEXT, %function
-glTextureImage2DEXT:
-    mov __blue_glCore_glTextureImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetColorTableParameteriv
-.type glGetColorTableParameteriv, %function
-glGetColorTableParameteriv:
-    mov __blue_glCore_glGetColorTableParameteriv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTexCoord4xOES
-.type glTexCoord4xOES, %function
-glTexCoord4xOES:
-    mov __blue_glCore_glTexCoord4xOES@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glSecondaryColor3fvEXT
-.type glSecondaryColor3fvEXT, %function
-glSecondaryColor3fvEXT:
-    mov __blue_glCore_glSecondaryColor3fvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniformMatrix4x2fv
-.type glUniformMatrix4x2fv, %function
-glUniformMatrix4x2fv:
-    mov __blue_glCore_glUniformMatrix4x2fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetUniformi64vARB
-.type glGetUniformi64vARB, %function
-glGetUniformi64vARB:
-    mov __blue_glCore_glGetUniformi64vARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramNamedParameter4fvNV
-.type glProgramNamedParameter4fvNV, %function
-glProgramNamedParameter4fvNV:
-    mov __blue_glCore_glProgramNamedParameter4fvNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glEndVideoCaptureNV
-.type glEndVideoCaptureNV, %function
-glEndVideoCaptureNV:
-    mov __blue_glCore_glEndVideoCaptureNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib3dv
-.type glVertexAttrib3dv, %function
-glVertexAttrib3dv:
-    mov __blue_glCore_glVertexAttrib3dv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNamedFramebufferTexture1DEXT
-.type glNamedFramebufferTexture1DEXT, %function
-glNamedFramebufferTexture1DEXT:
-    mov __blue_glCore_glNamedFramebufferTexture1DEXT@GOTPCREL(%rip), %r11
+.global glGetQueryivARB
+.type glGetQueryivARB, %function
+glGetQueryivARB:
+    mov __blue_glCore_glGetQueryivARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glMapBufferRange
@@ -14941,184 +373,148 @@ glMapBufferRange:
     mov __blue_glCore_glMapBufferRange@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiDrawElementsIndirectCountARB
-.type glMultiDrawElementsIndirectCountARB, %function
-glMultiDrawElementsIndirectCountARB:
-    mov __blue_glCore_glMultiDrawElementsIndirectCountARB@GOTPCREL(%rip), %r11
+.global glWindowPos3dARB
+.type glWindowPos3dARB, %function
+glWindowPos3dARB:
+    mov __blue_glCore_glWindowPos3dARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glProgramUniformMatrix4x2fv
-.type glProgramUniformMatrix4x2fv, %function
-glProgramUniformMatrix4x2fv:
-    mov __blue_glCore_glProgramUniformMatrix4x2fv@GOTPCREL(%rip), %r11
+.global glNamedProgramLocalParameterI4uivEXT
+.type glNamedProgramLocalParameterI4uivEXT, %function
+glNamedProgramLocalParameterI4uivEXT:
+    mov __blue_glCore_glNamedProgramLocalParameterI4uivEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetTextureParameterIivEXT
-.type glGetTextureParameterIivEXT, %function
-glGetTextureParameterIivEXT:
-    mov __blue_glCore_glGetTextureParameterIivEXT@GOTPCREL(%rip), %r11
+.global glDepthRangexOES
+.type glDepthRangexOES, %function
+glDepthRangexOES:
+    mov __blue_glCore_glDepthRangexOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiTexCoord3hNV
-.type glMultiTexCoord3hNV, %function
-glMultiTexCoord3hNV:
-    mov __blue_glCore_glMultiTexCoord3hNV@GOTPCREL(%rip), %r11
+.global glVertexAttribI4usvEXT
+.type glVertexAttribI4usvEXT, %function
+glVertexAttribI4usvEXT:
+    mov __blue_glCore_glVertexAttribI4usvEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glNamedProgramLocalParametersI4uivEXT
-.type glNamedProgramLocalParametersI4uivEXT, %function
-glNamedProgramLocalParametersI4uivEXT:
-    mov __blue_glCore_glNamedProgramLocalParametersI4uivEXT@GOTPCREL(%rip), %r11
+.global glGetVertexAttribIuiv
+.type glGetVertexAttribIuiv, %function
+glGetVertexAttribIuiv:
+    mov __blue_glCore_glGetVertexAttribIuiv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTexCoord2fColor4fNormal3fVertex3fSUN
-.type glTexCoord2fColor4fNormal3fVertex3fSUN, %function
-glTexCoord2fColor4fNormal3fVertex3fSUN:
-    mov __blue_glCore_glTexCoord2fColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+.global glGetnCompressedTexImage
+.type glGetnCompressedTexImage, %function
+glGetnCompressedTexImage:
+    mov __blue_glCore_glGetnCompressedTexImage@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGenTransformFeedbacksNV
-.type glGenTransformFeedbacksNV, %function
-glGenTransformFeedbacksNV:
-    mov __blue_glCore_glGenTransformFeedbacksNV@GOTPCREL(%rip), %r11
+.global glDrawArraysInstanced
+.type glDrawArraysInstanced, %function
+glDrawArraysInstanced:
+    mov __blue_glCore_glDrawArraysInstanced@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttribI2iv
-.type glVertexAttribI2iv, %function
-glVertexAttribI2iv:
-    mov __blue_glCore_glVertexAttribI2iv@GOTPCREL(%rip), %r11
+.global glProgramUniform2uivEXT
+.type glProgramUniform2uivEXT, %function
+glProgramUniform2uivEXT:
+    mov __blue_glCore_glProgramUniform2uivEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCopyMultiTexImage2DEXT
-.type glCopyMultiTexImage2DEXT, %function
-glCopyMultiTexImage2DEXT:
-    mov __blue_glCore_glCopyMultiTexImage2DEXT@GOTPCREL(%rip), %r11
+.global glBlendFuncSeparateiARB
+.type glBlendFuncSeparateiARB, %function
+glBlendFuncSeparateiARB:
+    mov __blue_glCore_glBlendFuncSeparateiARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertex3bvOES
-.type glVertex3bvOES, %function
-glVertex3bvOES:
-    mov __blue_glCore_glVertex3bvOES@GOTPCREL(%rip), %r11
+.global glNormalP3uiv
+.type glNormalP3uiv, %function
+glNormalP3uiv:
+    mov __blue_glCore_glNormalP3uiv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTexImage3DMultisampleCoverageNV
-.type glTexImage3DMultisampleCoverageNV, %function
-glTexImage3DMultisampleCoverageNV:
-    mov __blue_glCore_glTexImage3DMultisampleCoverageNV@GOTPCREL(%rip), %r11
+.global glGetTexEnvxvOES
+.type glGetTexEnvxvOES, %function
+glGetTexEnvxvOES:
+    mov __blue_glCore_glGetTexEnvxvOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetShaderPrecisionFormat
-.type glGetShaderPrecisionFormat, %function
-glGetShaderPrecisionFormat:
-    mov __blue_glCore_glGetShaderPrecisionFormat@GOTPCREL(%rip), %r11
+.global glBlendParameteriNV
+.type glBlendParameteriNV, %function
+glBlendParameteriNV:
+    mov __blue_glCore_glBlendParameteriNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTexSubImage4DSGIS
-.type glTexSubImage4DSGIS, %function
-glTexSubImage4DSGIS:
-    mov __blue_glCore_glTexSubImage4DSGIS@GOTPCREL(%rip), %r11
+.global glDrawElementsInstancedBaseInstance
+.type glDrawElementsInstancedBaseInstance, %function
+glDrawElementsInstancedBaseInstance:
+    mov __blue_glCore_glDrawElementsInstancedBaseInstance@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glRasterSamplesEXT
-.type glRasterSamplesEXT, %function
-glRasterSamplesEXT:
-    mov __blue_glCore_glRasterSamplesEXT@GOTPCREL(%rip), %r11
+.global glGetMinmaxParameteriv
+.type glGetMinmaxParameteriv, %function
+glGetMinmaxParameteriv:
+    mov __blue_glCore_glGetMinmaxParameteriv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTextureView
-.type glTextureView, %function
-glTextureView:
-    mov __blue_glCore_glTextureView@GOTPCREL(%rip), %r11
+.global glBufferParameteriAPPLE
+.type glBufferParameteriAPPLE, %function
+glBufferParameteriAPPLE:
+    mov __blue_glCore_glBufferParameteriAPPLE@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glEvalMapsNV
-.type glEvalMapsNV, %function
-glEvalMapsNV:
-    mov __blue_glCore_glEvalMapsNV@GOTPCREL(%rip), %r11
+.global glCompressedTextureSubImage2D
+.type glCompressedTextureSubImage2D, %function
+glCompressedTextureSubImage2D:
+    mov __blue_glCore_glCompressedTextureSubImage2D@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetFragDataLocationEXT
-.type glGetFragDataLocationEXT, %function
-glGetFragDataLocationEXT:
-    mov __blue_glCore_glGetFragDataLocationEXT@GOTPCREL(%rip), %r11
+.global glGetBufferSubData
+.type glGetBufferSubData, %function
+glGetBufferSubData:
+    mov __blue_glCore_glGetBufferSubData@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetCompressedMultiTexImageEXT
-.type glGetCompressedMultiTexImageEXT, %function
-glGetCompressedMultiTexImageEXT:
-    mov __blue_glCore_glGetCompressedMultiTexImageEXT@GOTPCREL(%rip), %r11
+.global glVertexAttribI1iEXT
+.type glVertexAttribI1iEXT, %function
+glVertexAttribI1iEXT:
+    mov __blue_glCore_glVertexAttribI1iEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glDrawBuffersARB
-.type glDrawBuffersARB, %function
-glDrawBuffersARB:
-    mov __blue_glCore_glDrawBuffersARB@GOTPCREL(%rip), %r11
+.global glGetTexImage
+.type glGetTexImage, %function
+glGetTexImage:
+    mov __blue_glCore_glGetTexImage@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glShaderSource
-.type glShaderSource, %function
-glShaderSource:
-    mov __blue_glCore_glShaderSource@GOTPCREL(%rip), %r11
+.global glDepthBoundsdNV
+.type glDepthBoundsdNV, %function
+glDepthBoundsdNV:
+    mov __blue_glCore_glDepthBoundsdNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetnSeparableFilter
-.type glGetnSeparableFilter, %function
-glGetnSeparableFilter:
-    mov __blue_glCore_glGetnSeparableFilter@GOTPCREL(%rip), %r11
+.global glLockArraysEXT
+.type glLockArraysEXT, %function
+glLockArraysEXT:
+    mov __blue_glCore_glLockArraysEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetActiveUniformBlockName
-.type glGetActiveUniformBlockName, %function
-glGetActiveUniformBlockName:
-    mov __blue_glCore_glGetActiveUniformBlockName@GOTPCREL(%rip), %r11
+.global glGetPixelTexGenParameterivSGIS
+.type glGetPixelTexGenParameterivSGIS, %function
+glGetPixelTexGenParameterivSGIS:
+    mov __blue_glCore_glGetPixelTexGenParameterivSGIS@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTexCoordP2uiv
-.type glTexCoordP2uiv, %function
-glTexCoordP2uiv:
-    mov __blue_glCore_glTexCoordP2uiv@GOTPCREL(%rip), %r11
+.global glVertexAttribL1ui64vNV
+.type glVertexAttribL1ui64vNV, %function
+glVertexAttribL1ui64vNV:
+    mov __blue_glCore_glVertexAttribL1ui64vNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCopyTexImage2DEXT
-.type glCopyTexImage2DEXT, %function
-glCopyTexImage2DEXT:
-    mov __blue_glCore_glCopyTexImage2DEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGetNamedBufferParameteri64v
-.type glGetNamedBufferParameteri64v, %function
-glGetNamedBufferParameteri64v:
-    mov __blue_glCore_glGetNamedBufferParameteri64v@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glCommandListSegmentsNV
-.type glCommandListSegmentsNV, %function
-glCommandListSegmentsNV:
-    mov __blue_glCore_glCommandListSegmentsNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glTextureParameterIivEXT
-.type glTextureParameterIivEXT, %function
-glTextureParameterIivEXT:
-    mov __blue_glCore_glTextureParameterIivEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMultiTexParameterfvEXT
-.type glMultiTexParameterfvEXT, %function
-glMultiTexParameterfvEXT:
-    mov __blue_glCore_glMultiTexParameterfvEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glProgramUniform2ui64ARB
-.type glProgramUniform2ui64ARB, %function
-glProgramUniform2ui64ARB:
-    mov __blue_glCore_glProgramUniform2ui64ARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNewObjectBufferATI
-.type glNewObjectBufferATI, %function
-glNewObjectBufferATI:
-    mov __blue_glCore_glNewObjectBufferATI@GOTPCREL(%rip), %r11
+.global glHistogramEXT
+.type glHistogramEXT, %function
+glHistogramEXT:
+    mov __blue_glCore_glHistogramEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glDeleteAsyncMarkersSGIX
@@ -15127,220 +523,166 @@ glDeleteAsyncMarkersSGIX:
     mov __blue_glCore_glDeleteAsyncMarkersSGIX@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glRotatexOES
-.type glRotatexOES, %function
-glRotatexOES:
-    mov __blue_glCore_glRotatexOES@GOTPCREL(%rip), %r11
+.global glGetnMinmax
+.type glGetnMinmax, %function
+glGetnMinmax:
+    mov __blue_glCore_glGetnMinmax@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTextureImage1DEXT
-.type glTextureImage1DEXT, %function
-glTextureImage1DEXT:
-    mov __blue_glCore_glTextureImage1DEXT@GOTPCREL(%rip), %r11
+.global glUniformMatrix2fvARB
+.type glUniformMatrix2fvARB, %function
+glUniformMatrix2fvARB:
+    mov __blue_glCore_glUniformMatrix2fvARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glAttachObjectARB
-.type glAttachObjectARB, %function
-glAttachObjectARB:
-    mov __blue_glCore_glAttachObjectARB@GOTPCREL(%rip), %r11
+.global glVDPAUSurfaceAccessNV
+.type glVDPAUSurfaceAccessNV, %function
+glVDPAUSurfaceAccessNV:
+    mov __blue_glCore_glVDPAUSurfaceAccessNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCopyTexSubImage1DEXT
-.type glCopyTexSubImage1DEXT, %function
-glCopyTexSubImage1DEXT:
-    mov __blue_glCore_glCopyTexSubImage1DEXT@GOTPCREL(%rip), %r11
+.global glGetnUniformdvARB
+.type glGetnUniformdvARB, %function
+glGetnUniformdvARB:
+    mov __blue_glCore_glGetnUniformdvARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glUniformMatrix3fvARB
-.type glUniformMatrix3fvARB, %function
-glUniformMatrix3fvARB:
-    mov __blue_glCore_glUniformMatrix3fvARB@GOTPCREL(%rip), %r11
+.global glVDPAUGetSurfaceivNV
+.type glVDPAUGetSurfaceivNV, %function
+glVDPAUGetSurfaceivNV:
+    mov __blue_glCore_glVDPAUGetSurfaceivNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTexCoordP1ui
-.type glTexCoordP1ui, %function
-glTexCoordP1ui:
-    mov __blue_glCore_glTexCoordP1ui@GOTPCREL(%rip), %r11
+.global glProgramParameter4dvNV
+.type glProgramParameter4dvNV, %function
+glProgramParameter4dvNV:
+    mov __blue_glCore_glProgramParameter4dvNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glPointParameterfvEXT
-.type glPointParameterfvEXT, %function
-glPointParameterfvEXT:
-    mov __blue_glCore_glPointParameterfvEXT@GOTPCREL(%rip), %r11
+.global glGetArrayObjectfvATI
+.type glGetArrayObjectfvATI, %function
+glGetArrayObjectfvATI:
+    mov __blue_glCore_glGetArrayObjectfvATI@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glUniform4fARB
-.type glUniform4fARB, %function
-glUniform4fARB:
-    mov __blue_glCore_glUniform4fARB@GOTPCREL(%rip), %r11
+.global glQueryObjectParameteruiAMD
+.type glQueryObjectParameteruiAMD, %function
+glQueryObjectParameteruiAMD:
+    mov __blue_glCore_glQueryObjectParameteruiAMD@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttribs3fvNV
-.type glVertexAttribs3fvNV, %function
-glVertexAttribs3fvNV:
-    mov __blue_glCore_glVertexAttribs3fvNV@GOTPCREL(%rip), %r11
+.global glNamedRenderbufferStorageEXT
+.type glNamedRenderbufferStorageEXT, %function
+glNamedRenderbufferStorageEXT:
+    mov __blue_glCore_glNamedRenderbufferStorageEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCopyTextureSubImage3D
-.type glCopyTextureSubImage3D, %function
-glCopyTextureSubImage3D:
-    mov __blue_glCore_glCopyTextureSubImage3D@GOTPCREL(%rip), %r11
+.global glIsTransformFeedback
+.type glIsTransformFeedback, %function
+glIsTransformFeedback:
+    mov __blue_glCore_glIsTransformFeedback@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiTexCoord2fv
-.type glMultiTexCoord2fv, %function
-glMultiTexCoord2fv:
-    mov __blue_glCore_glMultiTexCoord2fv@GOTPCREL(%rip), %r11
+.global glTexCoord3bOES
+.type glTexCoord3bOES, %function
+glTexCoord3bOES:
+    mov __blue_glCore_glTexCoord3bOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiTexEnvfvEXT
-.type glMultiTexEnvfvEXT, %function
-glMultiTexEnvfvEXT:
-    mov __blue_glCore_glMultiTexEnvfvEXT@GOTPCREL(%rip), %r11
+.global glGetTextureImageEXT
+.type glGetTextureImageEXT, %function
+glGetTextureImageEXT:
+    mov __blue_glCore_glGetTextureImageEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glNormalP3ui
-.type glNormalP3ui, %function
-glNormalP3ui:
-    mov __blue_glCore_glNormalP3ui@GOTPCREL(%rip), %r11
+.global glGetCommandHeaderNV
+.type glGetCommandHeaderNV, %function
+glGetCommandHeaderNV:
+    mov __blue_glCore_glGetCommandHeaderNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glDrawRangeElementArrayATI
-.type glDrawRangeElementArrayATI, %function
-glDrawRangeElementArrayATI:
-    mov __blue_glCore_glDrawRangeElementArrayATI@GOTPCREL(%rip), %r11
+.global glClearBufferfi
+.type glClearBufferfi, %function
+glClearBufferfi:
+    mov __blue_glCore_glClearBufferfi@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttribI1i
-.type glVertexAttribI1i, %function
-glVertexAttribI1i:
-    mov __blue_glCore_glVertexAttribI1i@GOTPCREL(%rip), %r11
+.global glTexBufferRange
+.type glTexBufferRange, %function
+glTexBufferRange:
+    mov __blue_glCore_glTexBufferRange@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glDrawArraysInstancedARB
-.type glDrawArraysInstancedARB, %function
-glDrawArraysInstancedARB:
-    mov __blue_glCore_glDrawArraysInstancedARB@GOTPCREL(%rip), %r11
+.global glGlobalAlphaFactorsSUN
+.type glGlobalAlphaFactorsSUN, %function
+glGlobalAlphaFactorsSUN:
+    mov __blue_glCore_glGlobalAlphaFactorsSUN@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetDebugMessageLogARB
-.type glGetDebugMessageLogARB, %function
-glGetDebugMessageLogARB:
-    mov __blue_glCore_glGetDebugMessageLogARB@GOTPCREL(%rip), %r11
+.global glGetHistogramParameteriv
+.type glGetHistogramParameteriv, %function
+glGetHistogramParameteriv:
+    mov __blue_glCore_glGetHistogramParameteriv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetPathTexGenfvNV
-.type glGetPathTexGenfvNV, %function
-glGetPathTexGenfvNV:
-    mov __blue_glCore_glGetPathTexGenfvNV@GOTPCREL(%rip), %r11
+.global glDrawElementsInstancedARB
+.type glDrawElementsInstancedARB, %function
+glDrawElementsInstancedARB:
+    mov __blue_glCore_glDrawElementsInstancedARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glNamedProgramLocalParameters4fvEXT
-.type glNamedProgramLocalParameters4fvEXT, %function
-glNamedProgramLocalParameters4fvEXT:
-    mov __blue_glCore_glNamedProgramLocalParameters4fvEXT@GOTPCREL(%rip), %r11
+.global glTextureBufferRange
+.type glTextureBufferRange, %function
+glTextureBufferRange:
+    mov __blue_glCore_glTextureBufferRange@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetBufferPointerv
-.type glGetBufferPointerv, %function
-glGetBufferPointerv:
-    mov __blue_glCore_glGetBufferPointerv@GOTPCREL(%rip), %r11
+.global glGetUniformui64vARB
+.type glGetUniformui64vARB, %function
+glGetUniformui64vARB:
+    mov __blue_glCore_glGetUniformui64vARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glFramebufferTexture3D
-.type glFramebufferTexture3D, %function
-glFramebufferTexture3D:
-    mov __blue_glCore_glFramebufferTexture3D@GOTPCREL(%rip), %r11
+.global glProgramUniform1i64vNV
+.type glProgramUniform1i64vNV, %function
+glProgramUniform1i64vNV:
+    mov __blue_glCore_glProgramUniform1i64vNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glCompressedTextureSubImage2DEXT
-.type glCompressedTextureSubImage2DEXT, %function
-glCompressedTextureSubImage2DEXT:
-    mov __blue_glCore_glCompressedTextureSubImage2DEXT@GOTPCREL(%rip), %r11
+.global glDrawElementArrayATI
+.type glDrawElementArrayATI, %function
+glDrawElementArrayATI:
+    mov __blue_glCore_glDrawElementArrayATI@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glReplacementCodeubSUN
-.type glReplacementCodeubSUN, %function
-glReplacementCodeubSUN:
-    mov __blue_glCore_glReplacementCodeubSUN@GOTPCREL(%rip), %r11
+.global glWindowPos3fvARB
+.type glWindowPos3fvARB, %function
+glWindowPos3fvARB:
+    mov __blue_glCore_glWindowPos3fvARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glWindowPos3dv
-.type glWindowPos3dv, %function
-glWindowPos3dv:
-    mov __blue_glCore_glWindowPos3dv@GOTPCREL(%rip), %r11
+.global glMultiTexCoord1s
+.type glMultiTexCoord1s, %function
+glMultiTexCoord1s:
+    mov __blue_glCore_glMultiTexCoord1s@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glFragmentMaterialiSGIX
-.type glFragmentMaterialiSGIX, %function
-glFragmentMaterialiSGIX:
-    mov __blue_glCore_glFragmentMaterialiSGIX@GOTPCREL(%rip), %r11
+.global glVertexP2uiv
+.type glVertexP2uiv, %function
+glVertexP2uiv:
+    mov __blue_glCore_glVertexP2uiv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glReadInstrumentsSGIX
-.type glReadInstrumentsSGIX, %function
-glReadInstrumentsSGIX:
-    mov __blue_glCore_glReadInstrumentsSGIX@GOTPCREL(%rip), %r11
+.global glFragmentLightModelfvSGIX
+.type glFragmentLightModelfvSGIX, %function
+glFragmentLightModelfvSGIX:
+    mov __blue_glCore_glFragmentLightModelfvSGIX@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glSamplerParameterfv
-.type glSamplerParameterfv, %function
-glSamplerParameterfv:
-    mov __blue_glCore_glSamplerParameterfv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBindBufferARB
-.type glBindBufferARB, %function
-glBindBufferARB:
-    mov __blue_glCore_glBindBufferARB@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glVertexAttrib1sNV
-.type glVertexAttrib1sNV, %function
-glVertexAttrib1sNV:
-    mov __blue_glCore_glVertexAttrib1sNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glUniform1fv
-.type glUniform1fv, %function
-glUniform1fv:
-    mov __blue_glCore_glUniform1fv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glBeginOcclusionQueryNV
-.type glBeginOcclusionQueryNV, %function
-glBeginOcclusionQueryNV:
-    mov __blue_glCore_glBeginOcclusionQueryNV@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glGenFencesAPPLE
-.type glGenFencesAPPLE, %function
-glGenFencesAPPLE:
-    mov __blue_glCore_glGenFencesAPPLE@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glScissorIndexedv
-.type glScissorIndexedv, %function
-glScissorIndexedv:
-    mov __blue_glCore_glScissorIndexedv@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glDisableVariantClientStateEXT
-.type glDisableVariantClientStateEXT, %function
-glDisableVariantClientStateEXT:
-    mov __blue_glCore_glDisableVariantClientStateEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glMinmaxEXT
-.type glMinmaxEXT, %function
-glMinmaxEXT:
-    mov __blue_glCore_glMinmaxEXT@GOTPCREL(%rip), %r11
-    jmp *(%r11)
-
-.global glNormalPointervINTEL
-.type glNormalPointervINTEL, %function
-glNormalPointervINTEL:
-    mov __blue_glCore_glNormalPointervINTEL@GOTPCREL(%rip), %r11
+.global glGetVertexArrayIndexediv
+.type glGetVertexArrayIndexediv, %function
+glGetVertexArrayIndexediv:
+    mov __blue_glCore_glGetVertexArrayIndexediv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glGetnPixelMapuiv
@@ -15349,34 +691,94 @@ glGetnPixelMapuiv:
     mov __blue_glCore_glGetnPixelMapuiv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glBindMaterialParameterEXT
-.type glBindMaterialParameterEXT, %function
-glBindMaterialParameterEXT:
-    mov __blue_glCore_glBindMaterialParameterEXT@GOTPCREL(%rip), %r11
+.global glVertexWeighthvNV
+.type glVertexWeighthvNV, %function
+glVertexWeighthvNV:
+    mov __blue_glCore_glVertexWeighthvNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetObjectParameterivAPPLE
-.type glGetObjectParameterivAPPLE, %function
-glGetObjectParameterivAPPLE:
-    mov __blue_glCore_glGetObjectParameterivAPPLE@GOTPCREL(%rip), %r11
+.global glWeightfvARB
+.type glWeightfvARB, %function
+glWeightfvARB:
+    mov __blue_glCore_glWeightfvARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttrib3sARB
-.type glVertexAttrib3sARB, %function
-glVertexAttrib3sARB:
-    mov __blue_glCore_glVertexAttrib3sARB@GOTPCREL(%rip), %r11
+.global glBindBuffersBase
+.type glBindBuffersBase, %function
+glBindBuffersBase:
+    mov __blue_glCore_glBindBuffersBase@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glUpdateObjectBufferATI
-.type glUpdateObjectBufferATI, %function
-glUpdateObjectBufferATI:
-    mov __blue_glCore_glUpdateObjectBufferATI@GOTPCREL(%rip), %r11
+.global glVertexAttrib3f
+.type glVertexAttrib3f, %function
+glVertexAttrib3f:
+    mov __blue_glCore_glVertexAttrib3f@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetUniformBufferSizeEXT
-.type glGetUniformBufferSizeEXT, %function
-glGetUniformBufferSizeEXT:
-    mov __blue_glCore_glGetUniformBufferSizeEXT@GOTPCREL(%rip), %r11
+.global glGetBooleanIndexedvEXT
+.type glGetBooleanIndexedvEXT, %function
+glGetBooleanIndexedvEXT:
+    mov __blue_glCore_glGetBooleanIndexedvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordP4ui
+.type glTexCoordP4ui, %function
+glTexCoordP4ui:
+    mov __blue_glCore_glTexCoordP4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4ui64vNV
+.type glVertexAttribL4ui64vNV, %function
+glVertexAttribL4ui64vNV:
+    mov __blue_glCore_glVertexAttribL4ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathColorGenivNV
+.type glGetPathColorGenivNV, %function
+glGetPathColorGenivNV:
+    mov __blue_glCore_glGetPathColorGenivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2dvARB
+.type glMultiTexCoord2dvARB, %function
+glMultiTexCoord2dvARB:
+    mov __blue_glCore_glMultiTexCoord2dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBooleani_v
+.type glGetBooleani_v, %function
+glGetBooleani_v:
+    mov __blue_glCore_glGetBooleani_v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindFragDataLocationIndexed
+.type glBindFragDataLocationIndexed, %function
+glBindFragDataLocationIndexed:
+    mov __blue_glCore_glBindFragDataLocationIndexed@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2dARB
+.type glMultiTexCoord2dARB, %function
+glMultiTexCoord2dARB:
+    mov __blue_glCore_glMultiTexCoord2dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantsvEXT
+.type glVariantsvEXT, %function
+glVariantsvEXT:
+    mov __blue_glCore_glVariantsvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexImage3DARB
+.type glCompressedTexImage3DARB, %function
+glCompressedTexImage3DARB:
+    mov __blue_glCore_glCompressedTexImage3DARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightPathsNV
+.type glWeightPathsNV, %function
+glWeightPathsNV:
+    mov __blue_glCore_glWeightPathsNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glMultiTexCoord4dv
@@ -15385,28 +787,910 @@ glMultiTexCoord4dv:
     mov __blue_glCore_glMultiTexCoord4dv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glProgramUniform3i64ARB
-.type glProgramUniform3i64ARB, %function
-glProgramUniform3i64ARB:
-    mov __blue_glCore_glProgramUniform3i64ARB@GOTPCREL(%rip), %r11
+.global glGetPathSpacingNV
+.type glGetPathSpacingNV, %function
+glGetPathSpacingNV:
+    mov __blue_glCore_glGetPathSpacingNV@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttrib2d
-.type glVertexAttrib2d, %function
-glVertexAttrib2d:
-    mov __blue_glCore_glVertexAttrib2d@GOTPCREL(%rip), %r11
+.global glCopyColorTableSGI
+.type glCopyColorTableSGI, %function
+glCopyColorTableSGI:
+    mov __blue_glCore_glCopyColorTableSGI@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttrib2f
-.type glVertexAttrib2f, %function
-glVertexAttrib2f:
-    mov __blue_glCore_glVertexAttrib2f@GOTPCREL(%rip), %r11
+.global glDrawBuffersARB
+.type glDrawBuffersARB, %function
+glDrawBuffersARB:
+    mov __blue_glCore_glDrawBuffersARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glMultiDrawElementsEXT
-.type glMultiDrawElementsEXT, %function
-glMultiDrawElementsEXT:
-    mov __blue_glCore_glMultiDrawElementsEXT@GOTPCREL(%rip), %r11
+.global glVertexAttrib1sARB
+.type glVertexAttrib1sARB, %function
+glVertexAttrib1sARB:
+    mov __blue_glCore_glVertexAttrib1sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawRangeElementsBaseVertex
+.type glDrawRangeElementsBaseVertex, %function
+glDrawRangeElementsBaseVertex:
+    mov __blue_glCore_glDrawRangeElementsBaseVertex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetHistogram
+.type glGetHistogram, %function
+glGetHistogram:
+    mov __blue_glCore_glGetHistogram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameterfEXT
+.type glConvolutionParameterfEXT, %function
+glConvolutionParameterfEXT:
+    mov __blue_glCore_glConvolutionParameterfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexGendEXT
+.type glMultiTexGendEXT, %function
+glMultiTexGendEXT:
+    mov __blue_glCore_glMultiTexGendEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glActiveStencilFaceEXT
+.type glActiveStencilFaceEXT, %function
+glActiveStencilFaceEXT:
+    mov __blue_glCore_glActiveStencilFaceEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUseProgramStages
+.type glUseProgramStages, %function
+glUseProgramStages:
+    mov __blue_glCore_glUseProgramStages@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndQueryIndexed
+.type glEndQueryIndexed, %function
+glEndQueryIndexed:
+    mov __blue_glCore_glEndQueryIndexed@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribiv
+.type glGetVertexAttribiv, %function
+glGetVertexAttribiv:
+    mov __blue_glCore_glGetVertexAttribiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMinmaxEXT
+.type glMinmaxEXT, %function
+glMinmaxEXT:
+    mov __blue_glCore_glMinmaxEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4dv
+.type glProgramUniform4dv, %function
+glProgramUniform4dv:
+    mov __blue_glCore_glProgramUniform4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureSubImage3DEXT
+.type glCopyTextureSubImage3DEXT, %function
+glCopyTextureSubImage3DEXT:
+    mov __blue_glCore_glCopyTextureSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexBindingDivisorEXT
+.type glVertexArrayVertexBindingDivisorEXT, %function
+glVertexArrayVertexBindingDivisorEXT:
+    mov __blue_glCore_glVertexArrayVertexBindingDivisorEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4hNV
+.type glColor4hNV, %function
+glColor4hNV:
+    mov __blue_glCore_glColor4hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3bvATI
+.type glNormalStream3bvATI, %function
+glNormalStream3bvATI:
+    mov __blue_glCore_glNormalStream3bvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2hNV
+.type glTexCoord2hNV, %function
+glTexCoord2hNV:
+    mov __blue_glCore_glTexCoord2hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFragmentMaterialivSGIX
+.type glGetFragmentMaterialivSGIX, %function
+glGetFragmentMaterialivSGIX:
+    mov __blue_glCore_glGetFragmentMaterialivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBitmapxOES
+.type glBitmapxOES, %function
+glBitmapxOES:
+    mov __blue_glCore_glBitmapxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1fARB
+.type glMultiTexCoord1fARB, %function
+glMultiTexCoord1fARB:
+    mov __blue_glCore_glMultiTexCoord1fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1fv
+.type glProgramUniform1fv, %function
+glProgramUniform1fv:
+    mov __blue_glCore_glProgramUniform1fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x2dv
+.type glProgramUniformMatrix3x2dv, %function
+glProgramUniformMatrix3x2dv:
+    mov __blue_glCore_glProgramUniformMatrix3x2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glScissorIndexed
+.type glScissorIndexed, %function
+glScissorIndexed:
+    mov __blue_glCore_glScissorIndexed@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPresentFrameKeyedNV
+.type glPresentFrameKeyedNV, %function
+glPresentFrameKeyedNV:
+    mov __blue_glCore_glPresentFrameKeyedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixTranslatefEXT
+.type glMatrixTranslatefEXT, %function
+glMatrixTranslatefEXT:
+    mov __blue_glCore_glMatrixTranslatefEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexImage1DEXT
+.type glCopyTexImage1DEXT, %function
+glCopyTexImage1DEXT:
+    mov __blue_glCore_glCopyTexImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3fv
+.type glProgramUniform3fv, %function
+glProgramUniform3fv:
+    mov __blue_glCore_glProgramUniform3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1svNV
+.type glVertexAttrib1svNV, %function
+glVertexAttrib1svNV:
+    mov __blue_glCore_glVertexAttrib1svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord1bvOES
+.type glTexCoord1bvOES, %function
+glTexCoord1bvOES:
+    mov __blue_glCore_glTexCoord1bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoadTransposedEXT
+.type glMatrixLoadTransposedEXT, %function
+glMatrixLoadTransposedEXT:
+    mov __blue_glCore_glMatrixLoadTransposedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnMapfv
+.type glGetnMapfv, %function
+glGetnMapfv:
+    mov __blue_glCore_glGetnMapfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4f
+.type glVertexAttrib4f, %function
+glVertexAttrib4f:
+    mov __blue_glCore_glVertexAttrib4f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3sv
+.type glMultiTexCoord3sv, %function
+glMultiTexCoord3sv:
+    mov __blue_glCore_glMultiTexCoord3sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixMultdEXT
+.type glMatrixMultdEXT, %function
+glMatrixMultdEXT:
+    mov __blue_glCore_glMatrixMultdEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableIndexedEXT
+.type glDisableIndexedEXT, %function
+glDisableIndexedEXT:
+    mov __blue_glCore_glDisableIndexedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1ui64ARB
+.type glVertexAttribL1ui64ARB, %function
+glVertexAttribL1ui64ARB:
+    mov __blue_glCore_glVertexAttribL1ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexArrayiv
+.type glGetVertexArrayiv, %function
+glGetVertexArrayiv:
+    mov __blue_glCore_glGetVertexArrayiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBufferParameterui64vNV
+.type glGetBufferParameterui64vNV, %function
+glGetBufferParameterui64vNV:
+    mov __blue_glCore_glGetBufferParameterui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x4fv
+.type glProgramUniformMatrix3x4fv, %function
+glProgramUniformMatrix3x4fv:
+    mov __blue_glCore_glProgramUniformMatrix3x4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramNamedParameter4fvNV
+.type glProgramNamedParameter4fvNV, %function
+glProgramNamedParameter4fvNV:
+    mov __blue_glCore_glProgramNamedParameter4fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCoverStrokePathInstancedNV
+.type glCoverStrokePathInstancedNV, %function
+glCoverStrokePathInstancedNV:
+    mov __blue_glCore_glCoverStrokePathInstancedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawTransformFeedbackStreamInstanced
+.type glDrawTransformFeedbackStreamInstanced, %function
+glDrawTransformFeedbackStreamInstanced:
+    mov __blue_glCore_glDrawTransformFeedbackStreamInstanced@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorPointerListIBM
+.type glColorPointerListIBM, %function
+glColorPointerListIBM:
+    mov __blue_glCore_glColorPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixIndexPointerARB
+.type glMatrixIndexPointerARB, %function
+glMatrixIndexPointerARB:
+    mov __blue_glCore_glMatrixIndexPointerARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage3DEXT
+.type glTextureStorage3DEXT, %function
+glTextureStorage3DEXT:
+    mov __blue_glCore_glTextureStorage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2fv
+.type glMultiTexCoord2fv, %function
+glMultiTexCoord2fv:
+    mov __blue_glCore_glMultiTexCoord2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1fvARB
+.type glVertexAttrib1fvARB, %function
+glVertexAttrib1fvARB:
+    mov __blue_glCore_glVertexAttrib1fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlitNamedFramebuffer
+.type glBlitNamedFramebuffer, %function
+glBlitNamedFramebuffer:
+    mov __blue_glCore_glBlitNamedFramebuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2xvOES
+.type glMultiTexCoord2xvOES, %function
+glMultiTexCoord2xvOES:
+    mov __blue_glCore_glMultiTexCoord2xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateNamedFramebufferSubData
+.type glInvalidateNamedFramebufferSubData, %function
+glInvalidateNamedFramebufferSubData:
+    mov __blue_glCore_glInvalidateNamedFramebufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFragmentLightfvSGIX
+.type glGetFragmentLightfvSGIX, %function
+glGetFragmentLightfvSGIX:
+    mov __blue_glCore_glGetFragmentLightfvSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableParameterivSGI
+.type glGetColorTableParameterivSGI, %function
+glGetColorTableParameterivSGI:
+    mov __blue_glCore_glGetColorTableParameterivSGI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP3uiv
+.type glVertexAttribP3uiv, %function
+glVertexAttribP3uiv:
+    mov __blue_glCore_glVertexAttribP3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1sv
+.type glMultiTexCoord1sv, %function
+glMultiTexCoord1sv:
+    mov __blue_glCore_glMultiTexCoord1sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSampleMaskIndexedNV
+.type glSampleMaskIndexedNV, %function
+glSampleMaskIndexedNV:
+    mov __blue_glCore_glSampleMaskIndexedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4dNV
+.type glVertexAttrib4dNV, %function
+glVertexAttrib4dNV:
+    mov __blue_glCore_glVertexAttrib4dNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformHandleui64NV
+.type glUniformHandleui64NV, %function
+glUniformHandleui64NV:
+    mov __blue_glCore_glUniformHandleui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterxOES
+.type glTexParameterxOES, %function
+glTexParameterxOES:
+    mov __blue_glCore_glTexParameterxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterxvOES
+.type glPointParameterxvOES, %function
+glPointParameterxvOES:
+    mov __blue_glCore_glPointParameterxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementsIndirectBindlessCountNV
+.type glMultiDrawElementsIndirectBindlessCountNV, %function
+glMultiDrawElementsIndirectBindlessCountNV:
+    mov __blue_glCore_glMultiDrawElementsIndirectBindlessCountNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage2DMultisample
+.type glTextureStorage2DMultisample, %function
+glTextureStorage2DMultisample:
+    mov __blue_glCore_glTextureStorage2DMultisample@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentLightfSGIX
+.type glFragmentLightfSGIX, %function
+glFragmentLightfSGIX:
+    mov __blue_glCore_glFragmentLightfSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTexture2D
+.type glFramebufferTexture2D, %function
+glFramebufferTexture2D:
+    mov __blue_glCore_glFramebufferTexture2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3d
+.type glUniform3d, %function
+glUniform3d:
+    mov __blue_glCore_glUniform3d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1ui64vARB
+.type glProgramUniform1ui64vARB, %function
+glProgramUniform1ui64vARB:
+    mov __blue_glCore_glProgramUniform1ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4iv
+.type glMultiTexCoord4iv, %function
+glMultiTexCoord4iv:
+    mov __blue_glCore_glMultiTexCoord4iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2uiEXT
+.type glUniform2uiEXT, %function
+glUniform2uiEXT:
+    mov __blue_glCore_glUniform2uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawArraysIndirectBindlessNV
+.type glMultiDrawArraysIndirectBindlessNV, %function
+glMultiDrawArraysIndirectBindlessNV:
+    mov __blue_glCore_glMultiDrawArraysIndirectBindlessNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPollAsyncSGIX
+.type glPollAsyncSGIX, %function
+glPollAsyncSGIX:
+    mov __blue_glCore_glPollAsyncSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFuncSeparateIndexedAMD
+.type glBlendFuncSeparateIndexedAMD, %function
+glBlendFuncSeparateIndexedAMD:
+    mov __blue_glCore_glBlendFuncSeparateIndexedAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2dv
+.type glVertexAttribL2dv, %function
+glVertexAttribL2dv:
+    mov __blue_glCore_glVertexAttribL2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParametersI4uivNV
+.type glProgramLocalParametersI4uivNV, %function
+glProgramLocalParametersI4uivNV:
+    mov __blue_glCore_glProgramLocalParametersI4uivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2fv
+.type glProgramUniform2fv, %function
+glProgramUniform2fv:
+    mov __blue_glCore_glProgramUniform2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexParameterIivEXT
+.type glGetMultiTexParameterIivEXT, %function
+glGetMultiTexParameterIivEXT:
+    mov __blue_glCore_glGetMultiTexParameterIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3dvATI
+.type glNormalStream3dvATI, %function
+glNormalStream3dvATI:
+    mov __blue_glCore_glNormalStream3dvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTextureFaceEXT
+.type glNamedFramebufferTextureFaceEXT, %function
+glNamedFramebufferTextureFaceEXT:
+    mov __blue_glCore_glNamedFramebufferTextureFaceEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3iMESA
+.type glWindowPos3iMESA, %function
+glWindowPos3iMESA:
+    mov __blue_glCore_glWindowPos3iMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord1bOES
+.type glTexCoord1bOES, %function
+glTexCoord1bOES:
+    mov __blue_glCore_glTexCoord1bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLinkProgram
+.type glLinkProgram, %function
+glLinkProgram:
+    mov __blue_glCore_glLinkProgram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawCommandsStatesNV
+.type glDrawCommandsStatesNV, %function
+glDrawCommandsStatesNV:
+    mov __blue_glCore_glDrawCommandsStatesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3f
+.type glProgramUniform3f, %function
+glProgramUniform3f:
+    mov __blue_glCore_glProgramUniform3f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1iARB
+.type glMultiTexCoord1iARB, %function
+glMultiTexCoord1iARB:
+    mov __blue_glCore_glMultiTexCoord1iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConservativeRasterParameterfNV
+.type glConservativeRasterParameterfNV, %function
+glConservativeRasterParameterfNV:
+    mov __blue_glCore_glConservativeRasterParameterfNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTransformFeedbacki64_v
+.type glGetTransformFeedbacki64_v, %function
+glGetTransformFeedbacki64_v:
+    mov __blue_glCore_glGetTransformFeedbacki64_v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDoublei_vEXT
+.type glGetDoublei_vEXT, %function
+glGetDoublei_vEXT:
+    mov __blue_glCore_glGetDoublei_vEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4Nbv
+.type glVertexAttrib4Nbv, %function
+glVertexAttrib4Nbv:
+    mov __blue_glCore_glVertexAttrib4Nbv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSamplerParameteriv
+.type glGetSamplerParameteriv, %function
+glGetSamplerParameteriv:
+    mov __blue_glCore_glGetSamplerParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAreProgramsResidentNV
+.type glAreProgramsResidentNV, %function
+glAreProgramsResidentNV:
+    mov __blue_glCore_glAreProgramsResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPolygonOffsetClampEXT
+.type glPolygonOffsetClampEXT, %function
+glPolygonOffsetClampEXT:
+    mov __blue_glCore_glPolygonOffsetClampEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameters4fvEXT
+.type glProgramEnvParameters4fvEXT, %function
+glProgramEnvParameters4fvEXT:
+    mov __blue_glCore_glProgramEnvParameters4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor3hvNV
+.type glColor3hvNV, %function
+glColor3hvNV:
+    mov __blue_glCore_glColor3hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadTransposeMatrixdARB
+.type glLoadTransposeMatrixdARB, %function
+glLoadTransposeMatrixdARB:
+    mov __blue_glCore_glLoadTransposeMatrixdARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoadIdentityEXT
+.type glMatrixLoadIdentityEXT, %function
+glMatrixLoadIdentityEXT:
+    mov __blue_glCore_glMatrixLoadIdentityEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginTransformFeedbackEXT
+.type glBeginTransformFeedbackEXT, %function
+glBeginTransformFeedbackEXT:
+    mov __blue_glCore_glBeginTransformFeedbackEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementsIndirectCountARB
+.type glMultiDrawElementsIndirectCountARB, %function
+glMultiDrawElementsIndirectCountARB:
+    mov __blue_glCore_glMultiDrawElementsIndirectCountARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferDataEXT
+.type glNamedBufferDataEXT, %function
+glNamedBufferDataEXT:
+    mov __blue_glCore_glNamedBufferDataEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedProgramLocalParameterfvEXT
+.type glGetNamedProgramLocalParameterfvEXT, %function
+glGetNamedProgramLocalParameterfvEXT:
+    mov __blue_glCore_glGetNamedProgramLocalParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1dv
+.type glVertexAttrib1dv, %function
+glVertexAttrib1dv:
+    mov __blue_glCore_glVertexAttrib1dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameter4dARB
+.type glProgramEnvParameter4dARB, %function
+glProgramEnvParameter4dARB:
+    mov __blue_glCore_glProgramEnvParameter4dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadTransposeMatrixd
+.type glLoadTransposeMatrixd, %function
+glLoadTransposeMatrixd:
+    mov __blue_glCore_glLoadTransposeMatrixd@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawArraysInstancedARB
+.type glDrawArraysInstancedARB, %function
+glDrawArraysInstancedARB:
+    mov __blue_glCore_glDrawArraysInstancedARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI1uivEXT
+.type glVertexAttribI1uivEXT, %function
+glVertexAttribI1uivEXT:
+    mov __blue_glCore_glVertexAttribI1uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawArraysIndirect
+.type glDrawArraysIndirect, %function
+glDrawArraysIndirect:
+    mov __blue_glCore_glDrawArraysIndirect@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathTexGenNV
+.type glPathTexGenNV, %function
+glPathTexGenNV:
+    mov __blue_glCore_glPathTexGenNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathCommandsNV
+.type glGetPathCommandsNV, %function
+glGetPathCommandsNV:
+    mov __blue_glCore_glGetPathCommandsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glScissorArrayv
+.type glScissorArrayv, %function
+glScissorArrayv:
+    mov __blue_glCore_glScissorArrayv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElementsInstancedBaseVertexBaseInstance
+.type glDrawElementsInstancedBaseVertexBaseInstance, %function
+glDrawElementsInstancedBaseVertexBaseInstance:
+    mov __blue_glCore_glDrawElementsInstancedBaseVertexBaseInstance@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexGendvEXT
+.type glGetMultiTexGendvEXT, %function
+glGetMultiTexGendvEXT:
+    mov __blue_glCore_glGetMultiTexGendvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAsyncMarkerSGIX
+.type glAsyncMarkerSGIX, %function
+glAsyncMarkerSGIX:
+    mov __blue_glCore_glAsyncMarkerSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiTexCoord2fVertex3fvSUN
+.type glReplacementCodeuiTexCoord2fVertex3fvSUN, %function
+glReplacementCodeuiTexCoord2fVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiTexCoord2fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsEnabledi
+.type glIsEnabledi, %function
+glIsEnabledi:
+    mov __blue_glCore_glIsEnabledi@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawBuffer
+.type glDrawBuffer, %function
+glDrawBuffer:
+    mov __blue_glCore_glDrawBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateCommandListsNV
+.type glCreateCommandListsNV, %function
+glCreateCommandListsNV:
+    mov __blue_glCore_glCreateCommandListsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureSubImage3DEXT
+.type glTextureSubImage3DEXT, %function
+glTextureSubImage3DEXT:
+    mov __blue_glCore_glTextureSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenNamesAMD
+.type glGenNamesAMD, %function
+glGenNamesAMD:
+    mov __blue_glCore_glGenNamesAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribPointerARB
+.type glVertexAttribPointerARB, %function
+glVertexAttribPointerARB:
+    mov __blue_glCore_glVertexAttribPointerARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPNTrianglesfATI
+.type glPNTrianglesfATI, %function
+glPNTrianglesfATI:
+    mov __blue_glCore_glPNTrianglesfATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetString
+.type glGetString, %function
+glGetString:
+    mov __blue_glCore_glGetString@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFloati_v
+.type glGetFloati_v, %function
+glGetFloati_v:
+    mov __blue_glCore_glGetFloati_v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramLocalParameterdvARB
+.type glGetProgramLocalParameterdvARB, %function
+glGetProgramLocalParameterdvARB:
+    mov __blue_glCore_glGetProgramLocalParameterdvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFinishTextureSUNX
+.type glFinishTextureSUNX, %function
+glFinishTextureSUNX:
+    mov __blue_glCore_glFinishTextureSUNX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexPointervINTEL
+.type glVertexPointervINTEL, %function
+glVertexPointervINTEL:
+    mov __blue_glCore_glVertexPointervINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisable
+.type glDisable, %function
+glDisable:
+    mov __blue_glCore_glDisable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTexGenSGIX
+.type glPixelTexGenSGIX, %function
+glPixelTexGenSGIX:
+    mov __blue_glCore_glPixelTexGenSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnablei
+.type glEnablei, %function
+glEnablei:
+    mov __blue_glCore_glEnablei@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsVariantEnabledEXT
+.type glIsVariantEnabledEXT, %function
+glIsVariantEnabledEXT:
+    mov __blue_glCore_glIsVariantEnabledEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexStorage1D
+.type glTexStorage1D, %function
+glTexStorage1D:
+    mov __blue_glCore_glTexStorage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMaterialxOES
+.type glMaterialxOES, %function
+glMaterialxOES:
+    mov __blue_glCore_glMaterialxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInsertEventMarkerEXT
+.type glInsertEventMarkerEXT, %function
+glInsertEventMarkerEXT:
+    mov __blue_glCore_glInsertEventMarkerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformui64vNV
+.type glGetUniformui64vNV, %function
+glGetUniformui64vNV:
+    mov __blue_glCore_glGetUniformui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramStringARB
+.type glGetProgramStringARB, %function
+glGetProgramStringARB:
+    mov __blue_glCore_glGetProgramStringARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexSubImage3DARB
+.type glCompressedTexSubImage3DARB, %function
+glCompressedTexSubImage3DARB:
+    mov __blue_glCore_glCompressedTexSubImage3DARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterfv
+.type glPointParameterfv, %function
+glPointParameterfv:
+    mov __blue_glCore_glPointParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformui64vNV
+.type glProgramUniformui64vNV, %function
+glProgramUniformui64vNV:
+    mov __blue_glCore_glProgramUniformui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3uiEXT
+.type glProgramUniform3uiEXT, %function
+glProgramUniform3uiEXT:
+    mov __blue_glCore_glProgramUniform3uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentColorMaterialSGIX
+.type glFragmentColorMaterialSGIX, %function
+glFragmentColorMaterialSGIX:
+    mov __blue_glCore_glFragmentColorMaterialSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fColor4fNormal3fVertex3fSUN
+.type glTexCoord2fColor4fNormal3fVertex3fSUN, %function
+glTexCoord2fColor4fNormal3fVertex3fSUN:
+    mov __blue_glCore_glTexCoord2fColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3ivATI
+.type glNormalStream3ivATI, %function
+glNormalStream3ivATI:
+    mov __blue_glCore_glNormalStream3ivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameteriEXT
+.type glProgramParameteriEXT, %function
+glProgramParameteriEXT:
+    mov __blue_glCore_glProgramParameteriEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPolygonMode
+.type glPolygonMode, %function
+glPolygonMode:
+    mov __blue_glCore_glPolygonMode@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCullFace
+.type glCullFace, %function
+glCullFace:
+    mov __blue_glCore_glCullFace@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex4bvOES
+.type glVertex4bvOES, %function
+glVertex4bvOES:
+    mov __blue_glCore_glVertex4bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlitFramebufferEXT
+.type glBlitFramebufferEXT, %function
+glBlitFramebufferEXT:
+    mov __blue_glCore_glBlitFramebufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4hvNV
+.type glMultiTexCoord4hvNV, %function
+glMultiTexCoord4hvNV:
+    mov __blue_glCore_glMultiTexCoord4hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3i
+.type glMultiTexCoord3i, %function
+glMultiTexCoord3i:
+    mov __blue_glCore_glMultiTexCoord3i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3sARB
+.type glMultiTexCoord3sARB, %function
+glMultiTexCoord3sARB:
+    mov __blue_glCore_glMultiTexCoord3sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureSubImage1D
+.type glTextureSubImage1D, %function
+glTextureSubImage1D:
+    mov __blue_glCore_glTextureSubImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferSubDataEXT
+.type glNamedBufferSubDataEXT, %function
+glNamedBufferSubDataEXT:
+    mov __blue_glCore_glNamedBufferSubDataEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2sMESA
+.type glWindowPos2sMESA, %function
+glWindowPos2sMESA:
+    mov __blue_glCore_glWindowPos2sMESA@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glUniform1fARB
@@ -15415,34 +1699,5104 @@ glUniform1fARB:
     mov __blue_glCore_glUniform1fARB@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
+.global glDeleteTexturesEXT
+.type glDeleteTexturesEXT, %function
+glDeleteTexturesEXT:
+    mov __blue_glCore_glDeleteTexturesEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateProgramObjectARB
+.type glCreateProgramObjectARB, %function
+glCreateProgramObjectARB:
+    mov __blue_glCore_glCreateProgramObjectARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3uivEXT
+.type glProgramUniform3uivEXT, %function
+glProgramUniform3uivEXT:
+    mov __blue_glCore_glProgramUniform3uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2dvEXT
+.type glProgramUniform2dvEXT, %function
+glProgramUniform2dvEXT:
+    mov __blue_glCore_glProgramUniform2dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetConvolutionFilter
+.type glGetConvolutionFilter, %function
+glGetConvolutionFilter:
+    mov __blue_glCore_glGetConvolutionFilter@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayElementBuffer
+.type glVertexArrayElementBuffer, %function
+glVertexArrayElementBuffer:
+    mov __blue_glCore_glVertexArrayElementBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSetInvariantEXT
+.type glSetInvariantEXT, %function
+glSetInvariantEXT:
+    mov __blue_glCore_glSetInvariantEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfQueryInfoINTEL
+.type glGetPerfQueryInfoINTEL, %function
+glGetPerfQueryInfoINTEL:
+    mov __blue_glCore_glGetPerfQueryInfoINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1fEXT
+.type glProgramUniform1fEXT, %function
+glProgramUniform1fEXT:
+    mov __blue_glCore_glProgramUniform1fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2fvARB
+.type glMultiTexCoord2fvARB, %function
+glMultiTexCoord2fvARB:
+    mov __blue_glCore_glMultiTexCoord2fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateTexImage
+.type glInvalidateTexImage, %function
+glInvalidateTexImage:
+    mov __blue_glCore_glInvalidateTexImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryBufferObjecti64v
+.type glGetQueryBufferObjecti64v, %function
+glGetQueryBufferObjecti64v:
+    mov __blue_glCore_glGetQueryBufferObjecti64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTranslatexOES
+.type glTranslatexOES, %function
+glTranslatexOES:
+    mov __blue_glCore_glTranslatexOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterivNV
+.type glPointParameterivNV, %function
+glPointParameterivNV:
+    mov __blue_glCore_glPointParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenTransformFeedbacksNV
+.type glGenTransformFeedbacksNV, %function
+glGenTransformFeedbacksNV:
+    mov __blue_glCore_glGenTransformFeedbacksNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryBufferObjectiv
+.type glGetQueryBufferObjectiv, %function
+glGetQueryBufferObjectiv:
+    mov __blue_glCore_glGetQueryBufferObjectiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameterxvOES
+.type glConvolutionParameterxvOES, %function
+glConvolutionParameterxvOES:
+    mov __blue_glCore_glConvolutionParameterxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenRenderbuffersEXT
+.type glGenRenderbuffersEXT, %function
+glGenRenderbuffersEXT:
+    mov __blue_glCore_glGenRenderbuffersEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSetFenceAPPLE
+.type glSetFenceAPPLE, %function
+glSetFenceAPPLE:
+    mov __blue_glCore_glSetFenceAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapNamedBuffer
+.type glMapNamedBuffer, %function
+glMapNamedBuffer:
+    mov __blue_glCore_glMapNamedBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendColorxOES
+.type glBlendColorxOES, %function
+glBlendColorxOES:
+    mov __blue_glCore_glBlendColorxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1ivEXT
+.type glProgramUniform1ivEXT, %function
+glProgramUniform1ivEXT:
+    mov __blue_glCore_glProgramUniform1ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2dvARB
+.type glVertexAttrib2dvARB, %function
+glVertexAttrib2dvARB:
+    mov __blue_glCore_glVertexAttrib2dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3fvEXT
+.type glProgramUniform3fvEXT, %function
+glProgramUniform3fvEXT:
+    mov __blue_glCore_glProgramUniform3fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPrioritizeTexturesEXT
+.type glPrioritizeTexturesEXT, %function
+glPrioritizeTexturesEXT:
+    mov __blue_glCore_glPrioritizeTexturesEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureSamplerHandleARB
+.type glGetTextureSamplerHandleARB, %function
+glGetTextureSamplerHandleARB:
+    mov __blue_glCore_glGetTextureSamplerHandleARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameter4dARB
+.type glProgramLocalParameter4dARB, %function
+glProgramLocalParameter4dARB:
+    mov __blue_glCore_glProgramLocalParameter4dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureSubImage2D
+.type glCopyTextureSubImage2D, %function
+glCopyTextureSubImage2D:
+    mov __blue_glCore_glCopyTextureSubImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAURegisterOutputSurfaceNV
+.type glVDPAURegisterOutputSurfaceNV, %function
+glVDPAURegisterOutputSurfaceNV:
+    mov __blue_glCore_glVDPAURegisterOutputSurfaceNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2d
+.type glProgramUniform2d, %function
+glProgramUniform2d:
+    mov __blue_glCore_glProgramUniform2d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2xOES
+.type glTexCoord2xOES, %function
+glTexCoord2xOES:
+    mov __blue_glCore_glTexCoord2xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP2ui
+.type glMultiTexCoordP2ui, %function
+glMultiTexCoordP2ui:
+    mov __blue_glCore_glMultiTexCoordP2ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fVertex3fvSUN
+.type glTexCoord2fVertex3fvSUN, %function
+glTexCoord2fVertex3fvSUN:
+    mov __blue_glCore_glTexCoord2fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glValidateProgramARB
+.type glValidateProgramARB, %function
+glValidateProgramARB:
+    mov __blue_glCore_glValidateProgramARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGlobalAlphaFactorfSUN
+.type glGlobalAlphaFactorfSUN, %function
+glGlobalAlphaFactorfSUN:
+    mov __blue_glCore_glGlobalAlphaFactorfSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4fv
+.type glMultiTexCoord4fv, %function
+glMultiTexCoord4fv:
+    mov __blue_glCore_glMultiTexCoord4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord1xvOES
+.type glTexCoord1xvOES, %function
+glTexCoord1xvOES:
+    mov __blue_glCore_glTexCoord1xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4iv
+.type glVertexAttrib4iv, %function
+glVertexAttrib4iv:
+    mov __blue_glCore_glVertexAttrib4iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeBufferResidentNV
+.type glMakeBufferResidentNV, %function
+glMakeBufferResidentNV:
+    mov __blue_glCore_glMakeBufferResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathParameterfNV
+.type glPathParameterfNV, %function
+glPathParameterfNV:
+    mov __blue_glCore_glPathParameterfNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3ui
+.type glUniform3ui, %function
+glUniform3ui:
+    mov __blue_glCore_glUniform3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2dvEXT
+.type glVertexAttribL2dvEXT, %function
+glVertexAttribL2dvEXT:
+    mov __blue_glCore_glVertexAttribL2dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x2fv
+.type glProgramUniformMatrix3x2fv, %function
+glProgramUniformMatrix3x2fv:
+    mov __blue_glCore_glProgramUniformMatrix3x2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateSyncFromCLeventARB
+.type glCreateSyncFromCLeventARB, %function
+glCreateSyncFromCLeventARB:
+    mov __blue_glCore_glCreateSyncFromCLeventARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeubvSUN
+.type glReplacementCodeubvSUN, %function
+glReplacementCodeubvSUN:
+    mov __blue_glCore_glReplacementCodeubvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3dv
+.type glMultiTexCoord3dv, %function
+glMultiTexCoord3dv:
+    mov __blue_glCore_glMultiTexCoord3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2sv
+.type glWindowPos2sv, %function
+glWindowPos2sv:
+    mov __blue_glCore_glWindowPos2sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetImageTransformParameterfvHP
+.type glGetImageTransformParameterfvHP, %function
+glGetImageTransformParameterfvHP:
+    mov __blue_glCore_glGetImageTransformParameterfvHP@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterxvOES
+.type glTexParameterxvOES, %function
+glTexParameterxvOES:
+    mov __blue_glCore_glTexParameterxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndConditionalRenderNV
+.type glEndConditionalRenderNV, %function
+glEndConditionalRenderNV:
+    mov __blue_glCore_glEndConditionalRenderNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2dv
+.type glUniform2dv, %function
+glUniform2dv:
+    mov __blue_glCore_glUniform2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantuivEXT
+.type glVariantuivEXT, %function
+glVariantuivEXT:
+    mov __blue_glCore_glVariantuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1sARB
+.type glMultiTexCoord1sARB, %function
+glMultiTexCoord1sARB:
+    mov __blue_glCore_glMultiTexCoord1sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2ui64vNV
+.type glUniform2ui64vNV, %function
+glUniform2ui64vNV:
+    mov __blue_glCore_glUniform2ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterfEXT
+.type glPointParameterfEXT, %function
+glPointParameterfEXT:
+    mov __blue_glCore_glPointParameterfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureSubImage1DEXT
+.type glCompressedTextureSubImage1DEXT, %function
+glCompressedTextureSubImage1DEXT:
+    mov __blue_glCore_glCompressedTextureSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUnmapObjectBufferATI
+.type glUnmapObjectBufferATI, %function
+glUnmapObjectBufferATI:
+    mov __blue_glCore_glUnmapObjectBufferATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIndexPointerListIBM
+.type glIndexPointerListIBM, %function
+glIndexPointerListIBM:
+    mov __blue_glCore_glIndexPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs4fvNV
+.type glVertexAttribs4fvNV, %function
+glVertexAttribs4fvNV:
+    mov __blue_glCore_glVertexAttribs4fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDebugMessageLogARB
+.type glGetDebugMessageLogARB, %function
+glGetDebugMessageLogARB:
+    mov __blue_glCore_glGetDebugMessageLogARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexWeightfEXT
+.type glVertexWeightfEXT, %function
+glVertexWeightfEXT:
+    mov __blue_glCore_glVertexWeightfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterfv
+.type glTextureParameterfv, %function
+glTextureParameterfv:
+    mov __blue_glCore_glTextureParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateBufferSubData
+.type glInvalidateBufferSubData, %function
+glInvalidateBufferSubData:
+    mov __blue_glCore_glInvalidateBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorSubTable
+.type glColorSubTable, %function
+glColorSubTable:
+    mov __blue_glCore_glColorSubTable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x3fvEXT
+.type glProgramUniformMatrix2x3fvEXT, %function
+glProgramUniformMatrix2x3fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix2x3fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogxvOES
+.type glFogxvOES, %function
+glFogxvOES:
+    mov __blue_glCore_glFogxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameterIuivEXT
+.type glGetTexParameterIuivEXT, %function
+glGetTexParameterIuivEXT:
+    mov __blue_glCore_glGetTexParameterIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1dv
+.type glProgramUniform1dv, %function
+glProgramUniform1dv:
+    mov __blue_glCore_glProgramUniform1dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexBumpParameterivATI
+.type glTexBumpParameterivATI, %function
+glTexBumpParameterivATI:
+    mov __blue_glCore_glTexBumpParameterivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferRenderbufferEXT
+.type glNamedFramebufferRenderbufferEXT, %function
+glNamedFramebufferRenderbufferEXT:
+    mov __blue_glCore_glNamedFramebufferRenderbufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramResourcefvNV
+.type glGetProgramResourcefvNV, %function
+glGetProgramResourcefvNV:
+    mov __blue_glCore_glGetProgramResourcefvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedFramebufferfv
+.type glClearNamedFramebufferfv, %function
+glClearNamedFramebufferfv:
+    mov __blue_glCore_glClearNamedFramebufferfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4i64vNV
+.type glUniform4i64vNV, %function
+glUniform4i64vNV:
+    mov __blue_glCore_glUniform4i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1i
+.type glMultiTexCoord1i, %function
+glMultiTexCoord1i:
+    mov __blue_glCore_glMultiTexCoord1i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor3fVertex3fvSUN
+.type glColor3fVertex3fvSUN, %function
+glColor3fVertex3fvSUN:
+    mov __blue_glCore_glColor3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteObjectARB
+.type glDeleteObjectARB, %function
+glDeleteObjectARB:
+    mov __blue_glCore_glDeleteObjectARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetLocalConstantFloatvEXT
+.type glGetLocalConstantFloatvEXT, %function
+glGetLocalConstantFloatvEXT:
+    mov __blue_glCore_glGetLocalConstantFloatvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1d
+.type glVertexAttrib1d, %function
+glVertexAttrib1d:
+    mov __blue_glCore_glVertexAttrib1d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1s
+.type glVertexAttrib1s, %function
+glVertexAttrib1s:
+    mov __blue_glCore_glVertexAttrib1s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureImage3DEXT
+.type glCompressedTextureImage3DEXT, %function
+glCompressedTextureImage3DEXT:
+    mov __blue_glCore_glCompressedTextureImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTessellationFactorAMD
+.type glTessellationFactorAMD, %function
+glTessellationFactorAMD:
+    mov __blue_glCore_glTessellationFactorAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedFramebufferParameterivEXT
+.type glGetNamedFramebufferParameterivEXT, %function
+glGetNamedFramebufferParameterivEXT:
+    mov __blue_glCore_glGetNamedFramebufferParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPointervEXT
+.type glGetPointervEXT, %function
+glGetPointervEXT:
+    mov __blue_glCore_glGetPointervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedRenderbufferStorageMultisample
+.type glNamedRenderbufferStorageMultisample, %function
+glNamedRenderbufferStorageMultisample:
+    mov __blue_glCore_glNamedRenderbufferStorageMultisample@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSubroutineUniformLocation
+.type glGetSubroutineUniformLocation, %function
+glGetSubroutineUniformLocation:
+    mov __blue_glCore_glGetSubroutineUniformLocation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnMapivARB
+.type glGetnMapivARB, %function
+glGetnMapivARB:
+    mov __blue_glCore_glGetnMapivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetIntegeri_v
+.type glGetIntegeri_v, %function
+glGetIntegeri_v:
+    mov __blue_glCore_glGetIntegeri_v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVariantIntegervEXT
+.type glGetVariantIntegervEXT, %function
+glGetVariantIntegervEXT:
+    mov __blue_glCore_glGetVariantIntegervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glActiveTexture
+.type glActiveTexture, %function
+glActiveTexture:
+    mov __blue_glCore_glActiveTexture@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4bOES
+.type glMultiTexCoord4bOES, %function
+glMultiTexCoord4bOES:
+    mov __blue_glCore_glMultiTexCoord4bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTextureMultiviewOVR
+.type glFramebufferTextureMultiviewOVR, %function
+glFramebufferTextureMultiviewOVR:
+    mov __blue_glCore_glFramebufferTextureMultiviewOVR@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPauseTransformFeedback
+.type glPauseTransformFeedback, %function
+glPauseTransformFeedback:
+    mov __blue_glCore_glPauseTransformFeedback@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1dvNV
+.type glVertexAttrib1dvNV, %function
+glVertexAttrib1dvNV:
+    mov __blue_glCore_glVertexAttrib1dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCombinerParameterfNV
+.type glCombinerParameterfNV, %function
+glCombinerParameterfNV:
+    mov __blue_glCore_glCombinerParameterfNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawBuffers
+.type glDrawBuffers, %function
+glDrawBuffers:
+    mov __blue_glCore_glDrawBuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedMultiTexSubImage3DEXT
+.type glCompressedMultiTexSubImage3DEXT, %function
+glCompressedMultiTexSubImage3DEXT:
+    mov __blue_glCore_glCompressedMultiTexSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fColor4fNormal3fVertex3fvSUN
+.type glTexCoord2fColor4fNormal3fVertex3fvSUN, %function
+glTexCoord2fColor4fNormal3fVertex3fvSUN:
+    mov __blue_glCore_glTexCoord2fColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferSubData
+.type glGetNamedBufferSubData, %function
+glGetNamedBufferSubData:
+    mov __blue_glCore_glGetNamedBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2dARB
+.type glVertexAttrib2dARB, %function
+glVertexAttrib2dARB:
+    mov __blue_glCore_glVertexAttrib2dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParametersI4uivEXT
+.type glNamedProgramLocalParametersI4uivEXT, %function
+glNamedProgramLocalParametersI4uivEXT:
+    mov __blue_glCore_glNamedProgramLocalParametersI4uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearDepthf
+.type glClearDepthf, %function
+glClearDepthf:
+    mov __blue_glCore_glClearDepthf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2i64vARB
+.type glUniform2i64vARB, %function
+glUniform2i64vARB:
+    mov __blue_glCore_glUniform2i64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBufferSubData
+.type glBufferSubData, %function
+glBufferSubData:
+    mov __blue_glCore_glBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearTexImage
+.type glClearTexImage, %function
+glClearTexImage:
+    mov __blue_glCore_glClearTexImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTextureLayer
+.type glFramebufferTextureLayer, %function
+glFramebufferTextureLayer:
+    mov __blue_glCore_glFramebufferTextureLayer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramParameterdvNV
+.type glGetProgramParameterdvNV, %function
+glGetProgramParameterdvNV:
+    mov __blue_glCore_glGetProgramParameterdvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawRangeElementArrayATI
+.type glDrawRangeElementArrayATI, %function
+glDrawRangeElementArrayATI:
+    mov __blue_glCore_glDrawRangeElementArrayATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2uiEXT
+.type glProgramUniform2uiEXT, %function
+glProgramUniform2uiEXT:
+    mov __blue_glCore_glProgramUniform2uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompileShaderIncludeARB
+.type glCompileShaderIncludeARB, %function
+glCompileShaderIncludeARB:
+    mov __blue_glCore_glCompileShaderIncludeARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4fARB
+.type glVertexAttrib4fARB, %function
+glVertexAttrib4fARB:
+    mov __blue_glCore_glVertexAttrib4fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMinSampleShadingARB
+.type glMinSampleShadingARB, %function
+glMinSampleShadingARB:
+    mov __blue_glCore_glMinSampleShadingARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSelectPerfMonitorCountersAMD
+.type glSelectPerfMonitorCountersAMD, %function
+glSelectPerfMonitorCountersAMD:
+    mov __blue_glCore_glSelectPerfMonitorCountersAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoorddvEXT
+.type glFogCoorddvEXT, %function
+glFogCoorddvEXT:
+    mov __blue_glCore_glFogCoorddvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPixelMapxv
+.type glGetPixelMapxv, %function
+glGetPixelMapxv:
+    mov __blue_glCore_glGetPixelMapxv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMinmaxEXT
+.type glGetMinmaxEXT, %function
+glGetMinmaxEXT:
+    mov __blue_glCore_glGetMinmaxEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameteri
+.type glProgramParameteri, %function
+glProgramParameteri:
+    mov __blue_glCore_glProgramParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiColor4ubVertex3fSUN
+.type glReplacementCodeuiColor4ubVertex3fSUN, %function
+glReplacementCodeuiColor4ubVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiColor4ubVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformfvARB
+.type glGetUniformfvARB, %function
+glGetUniformfvARB:
+    mov __blue_glCore_glGetUniformfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexBlendEnvfATI
+.type glVertexBlendEnvfATI, %function
+glVertexBlendEnvfATI:
+    mov __blue_glCore_glVertexBlendEnvfATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4uiv
+.type glVertexAttrib4uiv, %function
+glVertexAttrib4uiv:
+    mov __blue_glCore_glVertexAttrib4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawCommandsStatesAddressNV
+.type glDrawCommandsStatesAddressNV, %function
+glDrawCommandsStatesAddressNV:
+    mov __blue_glCore_glDrawCommandsStatesAddressNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glScalexOES
+.type glScalexOES, %function
+glScalexOES:
+    mov __blue_glCore_glScalexOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramEnvParameterfvARB
+.type glGetProgramEnvParameterfvARB, %function
+glGetProgramEnvParameterfvARB:
+    mov __blue_glCore_glGetProgramEnvParameterfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInternalformati64v
+.type glGetInternalformati64v, %function
+glGetInternalformati64v:
+    mov __blue_glCore_glGetInternalformati64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3iv
+.type glProgramUniform3iv, %function
+glProgramUniform3iv:
+    mov __blue_glCore_glProgramUniform3iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathTexGenivNV
+.type glGetPathTexGenivNV, %function
+glGetPathTexGenivNV:
+    mov __blue_glCore_glGetPathTexGenivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP1uiv
+.type glVertexAttribP1uiv, %function
+glVertexAttribP1uiv:
+    mov __blue_glCore_glVertexAttribP1uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3sATI
+.type glVertexStream3sATI, %function
+glVertexStream3sATI:
+    mov __blue_glCore_glVertexStream3sATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateVertexArrays
+.type glCreateVertexArrays, %function
+glCreateVertexArrays:
+    mov __blue_glCore_glCreateVertexArrays@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsPointInStrokePathNV
+.type glIsPointInStrokePathNV, %function
+glIsPointInStrokePathNV:
+    mov __blue_glCore_glIsPointInStrokePathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribivNV
+.type glGetVertexAttribivNV, %function
+glGetVertexAttribivNV:
+    mov __blue_glCore_glGetVertexAttribivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureImage2DEXT
+.type glTextureImage2DEXT, %function
+glTextureImage2DEXT:
+    mov __blue_glCore_glTextureImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayNormalOffsetEXT
+.type glVertexArrayNormalOffsetEXT, %function
+glVertexArrayNormalOffsetEXT:
+    mov __blue_glCore_glVertexArrayNormalOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3ui
+.type glProgramUniform3ui, %function
+glProgramUniform3ui:
+    mov __blue_glCore_glProgramUniform3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x4dv
+.type glProgramUniformMatrix3x4dv, %function
+glProgramUniformMatrix3x4dv:
+    mov __blue_glCore_glProgramUniformMatrix3x4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVaryingLocationNV
+.type glGetVaryingLocationNV, %function
+glGetVaryingLocationNV:
+    mov __blue_glCore_glGetVaryingLocationNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameterfvEXT
+.type glConvolutionParameterfvEXT, %function
+glConvolutionParameterfvEXT:
+    mov __blue_glCore_glConvolutionParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFramebufferAttachmentParameteriv
+.type glGetFramebufferAttachmentParameteriv, %function
+glGetFramebufferAttachmentParameteriv:
+    mov __blue_glCore_glGetFramebufferAttachmentParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3i64NV
+.type glUniform3i64NV, %function
+glUniform3i64NV:
+    mov __blue_glCore_glUniform3i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRectxvOES
+.type glRectxvOES, %function
+glRectxvOES:
+    mov __blue_glCore_glRectxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBooleanv
+.type glGetBooleanv, %function
+glGetBooleanv:
+    mov __blue_glCore_glGetBooleanv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuivSUN
+.type glReplacementCodeuivSUN, %function
+glReplacementCodeuivSUN:
+    mov __blue_glCore_glReplacementCodeuivSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageInsertARB
+.type glDebugMessageInsertARB, %function
+glDebugMessageInsertARB:
+    mov __blue_glCore_glDebugMessageInsertARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSpriteParameterfSGIX
+.type glSpriteParameterfSGIX, %function
+glSpriteParameterfSGIX:
+    mov __blue_glCore_glSpriteParameterfSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameter4dEXT
+.type glNamedProgramLocalParameter4dEXT, %function
+glNamedProgramLocalParameter4dEXT:
+    mov __blue_glCore_glNamedProgramLocalParameter4dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedFramebufferfi
+.type glClearNamedFramebufferfi, %function
+glClearNamedFramebufferfi:
+    mov __blue_glCore_glClearNamedFramebufferfi@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableVertexArrayEXT
+.type glDisableVertexArrayEXT, %function
+glDisableVertexArrayEXT:
+    mov __blue_glCore_glDisableVertexArrayEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenProgramPipelines
+.type glGenProgramPipelines, %function
+glGenProgramPipelines:
+    mov __blue_glCore_glGenProgramPipelines@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawTextureNV
+.type glDrawTextureNV, %function
+glDrawTextureNV:
+    mov __blue_glCore_glDrawTextureNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexFilterFuncSGIS
+.type glGetTexFilterFuncSGIS, %function
+glGetTexFilterFuncSGIS:
+    mov __blue_glCore_glGetTexFilterFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2uiv
+.type glUniform2uiv, %function
+glUniform2uiv:
+    mov __blue_glCore_glUniform2uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathCoordsNV
+.type glGetPathCoordsNV, %function
+glGetPathCoordsNV:
+    mov __blue_glCore_glGetPathCoordsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiColor3fVertex3fvSUN
+.type glReplacementCodeuiColor3fVertex3fvSUN, %function
+glReplacementCodeuiColor3fVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiColor3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReadBuffer
+.type glReadBuffer, %function
+glReadBuffer:
+    mov __blue_glCore_glReadBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisablei
+.type glDisablei, %function
+glDisablei:
+    mov __blue_glCore_glDisablei@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResetHistogram
+.type glResetHistogram, %function
+glResetHistogram:
+    mov __blue_glCore_glResetHistogram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterf
+.type glTextureParameterf, %function
+glTextureParameterf:
+    mov __blue_glCore_glTextureParameterf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameterivEXT
+.type glGetTextureParameterivEXT, %function
+glGetTextureParameterivEXT:
+    mov __blue_glCore_glGetTextureParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnMapiv
+.type glGetnMapiv, %function
+glGetnMapiv:
+    mov __blue_glCore_glGetnMapiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRectxOES
+.type glRectxOES, %function
+glRectxOES:
+    mov __blue_glCore_glRectxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawCommandsAddressNV
+.type glDrawCommandsAddressNV, %function
+glDrawCommandsAddressNV:
+    mov __blue_glCore_glDrawCommandsAddressNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindAttribLocationARB
+.type glBindAttribLocationARB, %function
+glBindAttribLocationARB:
+    mov __blue_glCore_glBindAttribLocationARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameteri
+.type glPointParameteri, %function
+glPointParameteri:
+    mov __blue_glCore_glPointParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix3x4fv
+.type glUniformMatrix3x4fv, %function
+glUniformMatrix3x4fv:
+    mov __blue_glCore_glUniformMatrix3x4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramInterfaceiv
+.type glGetProgramInterfaceiv, %function
+glGetProgramInterfaceiv:
+    mov __blue_glCore_glGetProgramInterfaceiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3sARB
+.type glVertexAttrib3sARB, %function
+glVertexAttrib3sARB:
+    mov __blue_glCore_glVertexAttrib3sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUseProgramObjectARB
+.type glUseProgramObjectARB, %function
+glUseProgramObjectARB:
+    mov __blue_glCore_glUseProgramObjectARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPixelTransformParameterfvEXT
+.type glGetPixelTransformParameterfvEXT, %function
+glGetPixelTransformParameterfvEXT:
+    mov __blue_glCore_glGetPixelTransformParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage1D
+.type glTextureStorage1D, %function
+glTextureStorage1D:
+    mov __blue_glCore_glTextureStorage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendColorEXT
+.type glBlendColorEXT, %function
+glBlendColorEXT:
+    mov __blue_glCore_glBlendColorEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTransformFeedback
+.type glBindTransformFeedback, %function
+glBindTransformFeedback:
+    mov __blue_glCore_glBindTransformFeedback@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformiv
+.type glGetnUniformiv, %function
+glGetnUniformiv:
+    mov __blue_glCore_glGetnUniformiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1dv
+.type glVertexAttribL1dv, %function
+glVertexAttribL1dv:
+    mov __blue_glCore_glVertexAttribL1dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix4x2fv
+.type glUniformMatrix4x2fv, %function
+glUniformMatrix4x2fv:
+    mov __blue_glCore_glUniformMatrix4x2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glApplyTextureEXT
+.type glApplyTextureEXT, %function
+glApplyTextureEXT:
+    mov __blue_glCore_glApplyTextureEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjectuivARB
+.type glGetQueryObjectuivARB, %function
+glGetQueryObjectuivARB:
+    mov __blue_glCore_glGetQueryObjectuivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTransformParameterivEXT
+.type glPixelTransformParameterivEXT, %function
+glPixelTransformParameterivEXT:
+    mov __blue_glCore_glPixelTransformParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodePointerSUN
+.type glReplacementCodePointerSUN, %function
+glReplacementCodePointerSUN:
+    mov __blue_glCore_glReplacementCodePointerSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribPointerv
+.type glGetVertexAttribPointerv, %function
+glGetVertexAttribPointerv:
+    mov __blue_glCore_glGetVertexAttribPointerv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSamplerParameterIiv
+.type glSamplerParameterIiv, %function
+glSamplerParameterIiv:
+    mov __blue_glCore_glSamplerParameterIiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4fvEXT
+.type glProgramUniformMatrix4fvEXT, %function
+glProgramUniformMatrix4fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4uiEXT
+.type glUniform4uiEXT, %function
+glUniform4uiEXT:
+    mov __blue_glCore_glUniform4uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1i64vNV
+.type glUniform1i64vNV, %function
+glUniform1i64vNV:
+    mov __blue_glCore_glUniform1i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordPointerListIBM
+.type glFogCoordPointerListIBM, %function
+glFogCoordPointerListIBM:
+    mov __blue_glCore_glFogCoordPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4NuivARB
+.type glVertexAttrib4NuivARB, %function
+glVertexAttrib4NuivARB:
+    mov __blue_glCore_glVertexAttrib4NuivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEvalCoord2xOES
+.type glEvalCoord2xOES, %function
+glEvalCoord2xOES:
+    mov __blue_glCore_glEvalCoord2xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x2dvEXT
+.type glProgramUniformMatrix3x2dvEXT, %function
+glProgramUniformMatrix3x2dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix3x2dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4ui
+.type glVertexAttribI4ui, %function
+glVertexAttribI4ui:
+    mov __blue_glCore_glVertexAttribI4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiVertex3fSUN
+.type glReplacementCodeuiVertex3fSUN, %function
+glReplacementCodeuiVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureLevelParameterfv
+.type glGetTextureLevelParameterfv, %function
+glGetTextureLevelParameterfv:
+    mov __blue_glCore_glGetTextureLevelParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElements
+.type glDrawElements, %function
+glDrawElements:
+    mov __blue_glCore_glDrawElements@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathDashArrayNV
+.type glGetPathDashArrayNV, %function
+glGetPathDashArrayNV:
+    mov __blue_glCore_glGetPathDashArrayNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetListParameterfvSGIX
+.type glGetListParameterfvSGIX, %function
+glGetListParameterfvSGIX:
+    mov __blue_glCore_glGetListParameterfvSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1dATI
+.type glVertexStream1dATI, %function
+glVertexStream1dATI:
+    mov __blue_glCore_glVertexStream1dATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreatePerfQueryINTEL
+.type glCreatePerfQueryINTEL, %function
+glCreatePerfQueryINTEL:
+    mov __blue_glCore_glCreatePerfQueryINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSubroutineIndex
+.type glGetSubroutineIndex, %function
+glGetSubroutineIndex:
+    mov __blue_glCore_glGetSubroutineIndex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionFilter2D
+.type glConvolutionFilter2D, %function
+glConvolutionFilter2D:
+    mov __blue_glCore_glConvolutionFilter2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformHandleui64ARB
+.type glProgramUniformHandleui64ARB, %function
+glProgramUniformHandleui64ARB:
+    mov __blue_glCore_glProgramUniformHandleui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN
+.type glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN, %function
+glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1uiv
+.type glUniform1uiv, %function
+glUniform1uiv:
+    mov __blue_glCore_glUniform1uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3i
+.type glSecondaryColor3i, %function
+glSecondaryColor3i:
+    mov __blue_glCore_glSecondaryColor3i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetHistogramParameterfv
+.type glGetHistogramParameterfv, %function
+glGetHistogramParameterfv:
+    mov __blue_glCore_glGetHistogramParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetListParameterivSGIX
+.type glGetListParameterivSGIX, %function
+glGetListParameterivSGIX:
+    mov __blue_glCore_glGetListParameterivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex3xvOES
+.type glVertex3xvOES, %function
+glVertex3xvOES:
+    mov __blue_glCore_glVertex3xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3dvMESA
+.type glWindowPos3dvMESA, %function
+glWindowPos3dvMESA:
+    mov __blue_glCore_glWindowPos3dvMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs1dvNV
+.type glVertexAttribs1dvNV, %function
+glVertexAttribs1dvNV:
+    mov __blue_glCore_glVertexAttribs1dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1sATI
+.type glVertexStream1sATI, %function
+glVertexStream1sATI:
+    mov __blue_glCore_glVertexStream1sATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenerateTextureMipmap
+.type glGenerateTextureMipmap, %function
+glGenerateTextureMipmap:
+    mov __blue_glCore_glGenerateTextureMipmap@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3ui64vNV
+.type glUniform3ui64vNV, %function
+glUniform3ui64vNV:
+    mov __blue_glCore_glUniform3ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyConvolutionFilter1DEXT
+.type glCopyConvolutionFilter1DEXT, %function
+glCopyConvolutionFilter1DEXT:
+    mov __blue_glCore_glCopyConvolutionFilter1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindLightParameterEXT
+.type glBindLightParameterEXT, %function
+glBindLightParameterEXT:
+    mov __blue_glCore_glBindLightParameterEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsNamedStringARB
+.type glIsNamedStringARB, %function
+glIsNamedStringARB:
+    mov __blue_glCore_glIsNamedStringARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1i64ARB
+.type glProgramUniform1i64ARB, %function
+glProgramUniform1i64ARB:
+    mov __blue_glCore_glProgramUniform1i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyColorSubTableEXT
+.type glCopyColorSubTableEXT, %function
+glCopyColorSubTableEXT:
+    mov __blue_glCore_glCopyColorSubTableEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryBufferObjectuiv
+.type glGetQueryBufferObjectuiv, %function
+glGetQueryBufferObjectuiv:
+    mov __blue_glCore_glGetQueryBufferObjectuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParametersI4ivNV
+.type glProgramLocalParametersI4ivNV, %function
+glProgramLocalParametersI4ivNV:
+    mov __blue_glCore_glProgramLocalParametersI4ivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSampleMapATI
+.type glSampleMapATI, %function
+glSampleMapATI:
+    mov __blue_glCore_glSampleMapATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4f
+.type glMultiTexCoord4f, %function
+glMultiTexCoord4f:
+    mov __blue_glCore_glMultiTexCoord4f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3ivEXT
+.type glVertexAttribI3ivEXT, %function
+glVertexAttribI3ivEXT:
+    mov __blue_glCore_glVertexAttribI3ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI1uiv
+.type glVertexAttribI1uiv, %function
+glVertexAttribI1uiv:
+    mov __blue_glCore_glVertexAttribI1uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndQueryARB
+.type glEndQueryARB, %function
+glEndQueryARB:
+    mov __blue_glCore_glEndQueryARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3ui64vNV
+.type glProgramUniform3ui64vNV, %function
+glProgramUniform3ui64vNV:
+    mov __blue_glCore_glProgramUniform3ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureImage2DEXT
+.type glCopyTextureImage2DEXT, %function
+glCopyTextureImage2DEXT:
+    mov __blue_glCore_glCopyTextureImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTextureUnit
+.type glBindTextureUnit, %function
+glBindTextureUnit:
+    mov __blue_glCore_glBindTextureUnit@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureLevelParameteriv
+.type glGetTextureLevelParameteriv, %function
+glGetTextureLevelParameteriv:
+    mov __blue_glCore_glGetTextureLevelParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4bOES
+.type glTexCoord4bOES, %function
+glTexCoord4bOES:
+    mov __blue_glCore_glTexCoord4bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentLightiSGIX
+.type glFragmentLightiSGIX, %function
+glFragmentLightiSGIX:
+    mov __blue_glCore_glFragmentLightiSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glElementPointerAPPLE
+.type glElementPointerAPPLE, %function
+glElementPointerAPPLE:
+    mov __blue_glCore_glElementPointerAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayTexCoordOffsetEXT
+.type glVertexArrayTexCoordOffsetEXT, %function
+glVertexArrayTexCoordOffsetEXT:
+    mov __blue_glCore_glVertexArrayTexCoordOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCheckFramebufferStatus
+.type glCheckFramebufferStatus, %function
+glCheckFramebufferStatus:
+    mov __blue_glCore_glCheckFramebufferStatus@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4ubVertex3fSUN
+.type glColor4ubVertex3fSUN, %function
+glColor4ubVertex3fSUN:
+    mov __blue_glCore_glColor4ubVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexSubImage3D
+.type glTexSubImage3D, %function
+glTexSubImage3D:
+    mov __blue_glCore_glTexSubImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3bEXT
+.type glSecondaryColor3bEXT, %function
+glSecondaryColor3bEXT:
+    mov __blue_glCore_glSecondaryColor3bEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightusvARB
+.type glWeightusvARB, %function
+glWeightusvARB:
+    mov __blue_glCore_glWeightusvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFunc
+.type glBlendFunc, %function
+glBlendFunc:
+    mov __blue_glCore_glBlendFunc@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadTransposeMatrixxOES
+.type glLoadTransposeMatrixxOES, %function
+glLoadTransposeMatrixxOES:
+    mov __blue_glCore_glLoadTransposeMatrixxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorP4ui
+.type glColorP4ui, %function
+glColorP4ui:
+    mov __blue_glCore_glColorP4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4ui64vARB
+.type glProgramUniform4ui64vARB, %function
+glProgramUniform4ui64vARB:
+    mov __blue_glCore_glProgramUniform4ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAccumxOES
+.type glAccumxOES, %function
+glAccumxOES:
+    mov __blue_glCore_glAccumxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3fvEXT
+.type glTangent3fvEXT, %function
+glTangent3fvEXT:
+    mov __blue_glCore_glTangent3fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4ui64NV
+.type glVertexAttribL4ui64NV, %function
+glVertexAttribL4ui64NV:
+    mov __blue_glCore_glVertexAttribL4ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameterIiv
+.type glGetTextureParameterIiv, %function
+glGetTextureParameterIiv:
+    mov __blue_glCore_glGetTextureParameterIiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedMultiTexSubImage1DEXT
+.type glCompressedMultiTexSubImage1DEXT, %function
+glCompressedMultiTexSubImage1DEXT:
+    mov __blue_glCore_glCompressedMultiTexSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4bvOES
+.type glMultiTexCoord4bvOES, %function
+glMultiTexCoord4bvOES:
+    mov __blue_glCore_glMultiTexCoord4bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateTransformFeedbacks
+.type glCreateTransformFeedbacks, %function
+glCreateTransformFeedbacks:
+    mov __blue_glCore_glCreateTransformFeedbacks@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4dARB
+.type glVertexAttrib4dARB, %function
+glVertexAttrib4dARB:
+    mov __blue_glCore_glVertexAttrib4dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureColorMaskSGIS
+.type glTextureColorMaskSGIS, %function
+glTextureColorMaskSGIS:
+    mov __blue_glCore_glTextureColorMaskSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4svEXT
+.type glVertexAttribI4svEXT, %function
+glVertexAttribI4svEXT:
+    mov __blue_glCore_glVertexAttribI4svEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3iEXT
+.type glSecondaryColor3iEXT, %function
+glSecondaryColor3iEXT:
+    mov __blue_glCore_glSecondaryColor3iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathFogGenNV
+.type glPathFogGenNV, %function
+glPathFogGenNV:
+    mov __blue_glCore_glPathFogGenNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4d
+.type glProgramUniform4d, %function
+glProgramUniform4d:
+    mov __blue_glCore_glProgramUniform4d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightdvARB
+.type glWeightdvARB, %function
+glWeightdvARB:
+    mov __blue_glCore_glWeightdvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformui64vARB
+.type glGetnUniformui64vARB, %function
+glGetnUniformui64vARB:
+    mov __blue_glCore_glGetnUniformui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramNamedParameterdvNV
+.type glGetProgramNamedParameterdvNV, %function
+glGetProgramNamedParameterdvNV:
+    mov __blue_glCore_glGetProgramNamedParameterdvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAUInitNV
+.type glVDPAUInitNV, %function
+glVDPAUInitNV:
+    mov __blue_glCore_glVDPAUInitNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3ubvEXT
+.type glSecondaryColor3ubvEXT, %function
+glSecondaryColor3ubvEXT:
+    mov __blue_glCore_glSecondaryColor3ubvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsTextureHandleResidentNV
+.type glIsTextureHandleResidentNV, %function
+glIsTextureHandleResidentNV:
+    mov __blue_glCore_glIsTextureHandleResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMapxvOES
+.type glGetMapxvOES, %function
+glGetMapxvOES:
+    mov __blue_glCore_glGetMapxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearTexSubImage
+.type glClearTexSubImage, %function
+glClearTexSubImage:
+    mov __blue_glCore_glClearTexSubImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexLevelParameteriv
+.type glGetTexLevelParameteriv, %function
+glGetTexLevelParameteriv:
+    mov __blue_glCore_glGetTexLevelParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColorP3ui
+.type glSecondaryColorP3ui, %function
+glSecondaryColorP3ui:
+    mov __blue_glCore_glSecondaryColorP3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2fv
+.type glVertexAttrib2fv, %function
+glVertexAttrib2fv:
+    mov __blue_glCore_glVertexAttrib2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3fvARB
+.type glMultiTexCoord3fvARB, %function
+glMultiTexCoord3fvARB:
+    mov __blue_glCore_glMultiTexCoord3fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawCommandsNV
+.type glDrawCommandsNV, %function
+glDrawCommandsNV:
+    mov __blue_glCore_glDrawCommandsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayBindingDivisor
+.type glVertexArrayBindingDivisor, %function
+glVertexArrayBindingDivisor:
+    mov __blue_glCore_glVertexArrayBindingDivisor@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushMappedNamedBufferRangeEXT
+.type glFlushMappedNamedBufferRangeEXT, %function
+glFlushMappedNamedBufferRangeEXT:
+    mov __blue_glCore_glFlushMappedNamedBufferRangeEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnPixelMapuivARB
+.type glGetnPixelMapuivARB, %function
+glGetnPixelMapuivARB:
+    mov __blue_glCore_glGetnPixelMapuivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4fARB
+.type glUniform4fARB, %function
+glUniform4fARB:
+    mov __blue_glCore_glUniform4fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1f
+.type glProgramUniform1f, %function
+glProgramUniform1f:
+    mov __blue_glCore_glProgramUniform1f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexSubImage3D
+.type glCopyTexSubImage3D, %function
+glCopyTexSubImage3D:
+    mov __blue_glCore_glCopyTexSubImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFuncSeparatei
+.type glBlendFuncSeparatei, %function
+glBlendFuncSeparatei:
+    mov __blue_glCore_glBlendFuncSeparatei@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4svMESA
+.type glWindowPos4svMESA, %function
+glWindowPos4svMESA:
+    mov __blue_glCore_glWindowPos4svMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsTransformFeedbackNV
+.type glIsTransformFeedbackNV, %function
+glIsTransformFeedbackNV:
+    mov __blue_glCore_glIsTransformFeedbackNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs1svNV
+.type glVertexAttribs1svNV, %function
+glVertexAttribs1svNV:
+    mov __blue_glCore_glVertexAttribs1svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVideoCaptureStreamParameterivNV
+.type glVideoCaptureStreamParameterivNV, %function
+glVideoCaptureStreamParameterivNV:
+    mov __blue_glCore_glVideoCaptureStreamParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage3DMultisampleCoverageNV
+.type glTexImage3DMultisampleCoverageNV, %function
+glTexImage3DMultisampleCoverageNV:
+    mov __blue_glCore_glTexImage3DMultisampleCoverageNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexBuffer
+.type glTexBuffer, %function
+glTexBuffer:
+    mov __blue_glCore_glTexBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateQueries
+.type glCreateQueries, %function
+glCreateQueries:
+    mov __blue_glCore_glCreateQueries@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1uiEXT
+.type glProgramUniform1uiEXT, %function
+glProgramUniform1uiEXT:
+    mov __blue_glCore_glProgramUniform1uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordPointerEXT
+.type glMultiTexCoordPointerEXT, %function
+glMultiTexCoordPointerEXT:
+    mov __blue_glCore_glMultiTexCoordPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTexture3DEXT
+.type glNamedFramebufferTexture3DEXT, %function
+glNamedFramebufferTexture3DEXT:
+    mov __blue_glCore_glNamedFramebufferTexture3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFinishAsyncSGIX
+.type glFinishAsyncSGIX, %function
+glFinishAsyncSGIX:
+    mov __blue_glCore_glFinishAsyncSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameter4fvARB
+.type glProgramEnvParameter4fvARB, %function
+glProgramEnvParameter4fvARB:
+    mov __blue_glCore_glProgramEnvParameter4fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorPointervINTEL
+.type glColorPointervINTEL, %function
+glColorPointervINTEL:
+    mov __blue_glCore_glColorPointervINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTextureFaceARB
+.type glFramebufferTextureFaceARB, %function
+glFramebufferTextureFaceARB:
+    mov __blue_glCore_glFramebufferTextureFaceARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointSizexOES
+.type glPointSizexOES, %function
+glPointSizexOES:
+    mov __blue_glCore_glPointSizexOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTexture2DEXT
+.type glFramebufferTexture2DEXT, %function
+glFramebufferTexture2DEXT:
+    mov __blue_glCore_glFramebufferTexture2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorTableParameterfvSGI
+.type glColorTableParameterfvSGI, %function
+glColorTableParameterfvSGI:
+    mov __blue_glCore_glColorTableParameterfvSGI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBuffer
+.type glBindBuffer, %function
+glBindBuffer:
+    mov __blue_glCore_glBindBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTexture
+.type glNamedFramebufferTexture, %function
+glNamedFramebufferTexture:
+    mov __blue_glCore_glNamedFramebufferTexture@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN
+.type glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN, %function
+glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP1uiv
+.type glMultiTexCoordP1uiv, %function
+glMultiTexCoordP1uiv:
+    mov __blue_glCore_glMultiTexCoordP1uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableVertexArrayAttribEXT
+.type glEnableVertexArrayAttribEXT, %function
+glEnableVertexArrayAttribEXT:
+    mov __blue_glCore_glEnableVertexArrayAttribEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexSubImage3DEXT
+.type glMultiTexSubImage3DEXT, %function
+glMultiTexSubImage3DEXT:
+    mov __blue_glCore_glMultiTexSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3f
+.type glMultiTexCoord3f, %function
+glMultiTexCoord3f:
+    mov __blue_glCore_glMultiTexCoord3f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexImage2DEXT
+.type glMultiTexImage2DEXT, %function
+glMultiTexImage2DEXT:
+    mov __blue_glCore_glMultiTexImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexImage2DARB
+.type glCompressedTexImage2DARB, %function
+glCompressedTexImage2DARB:
+    mov __blue_glCore_glCompressedTexImage2DARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexEnvivEXT
+.type glMultiTexEnvivEXT, %function
+glMultiTexEnvivEXT:
+    mov __blue_glCore_glMultiTexEnvivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateFramebuffers
+.type glCreateFramebuffers, %function
+glCreateFramebuffers:
+    mov __blue_glCore_glCreateFramebuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameter4fvNV
+.type glProgramParameter4fvNV, %function
+glProgramParameter4fvNV:
+    mov __blue_glCore_glProgramParameter4fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearDepthfOES
+.type glClearDepthfOES, %function
+glClearDepthfOES:
+    mov __blue_glCore_glClearDepthfOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4Nubv
+.type glVertexAttrib4Nubv, %function
+glVertexAttrib4Nubv:
+    mov __blue_glCore_glVertexAttrib4Nubv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayEdgeFlagOffsetEXT
+.type glVertexArrayEdgeFlagOffsetEXT, %function
+glVertexArrayEdgeFlagOffsetEXT:
+    mov __blue_glCore_glVertexArrayEdgeFlagOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1bOES
+.type glMultiTexCoord1bOES, %function
+glMultiTexCoord1bOES:
+    mov __blue_glCore_glMultiTexCoord1bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUnmapNamedBufferEXT
+.type glUnmapNamedBufferEXT, %function
+glUnmapNamedBufferEXT:
+    mov __blue_glCore_glUnmapNamedBufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearDepthdNV
+.type glClearDepthdNV, %function
+glClearDepthdNV:
+    mov __blue_glCore_glClearDepthdNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1dARB
+.type glVertexAttrib1dARB, %function
+glVertexAttrib1dARB:
+    mov __blue_glCore_glVertexAttrib1dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetConvolutionParameteriv
+.type glGetConvolutionParameteriv, %function
+glGetConvolutionParameteriv:
+    mov __blue_glCore_glGetConvolutionParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramPipelineInfoLog
+.type glGetProgramPipelineInfoLog, %function
+glGetProgramPipelineInfoLog:
+    mov __blue_glCore_glGetProgramPipelineInfoLog@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorTableEXT
+.type glColorTableEXT, %function
+glColorTableEXT:
+    mov __blue_glCore_glColorTableEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayFogCoordOffsetEXT
+.type glVertexArrayFogCoordOffsetEXT, %function
+glVertexArrayFogCoordOffsetEXT:
+    mov __blue_glCore_glVertexArrayFogCoordOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3s
+.type glSecondaryColor3s, %function
+glSecondaryColor3s:
+    mov __blue_glCore_glSecondaryColor3s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameterI4ivNV
+.type glProgramLocalParameterI4ivNV, %function
+glProgramLocalParameterI4ivNV:
+    mov __blue_glCore_glProgramLocalParameterI4ivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3usEXT
+.type glSecondaryColor3usEXT, %function
+glSecondaryColor3usEXT:
+    mov __blue_glCore_glSecondaryColor3usEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordPointervINTEL
+.type glTexCoordPointervINTEL, %function
+glTexCoordPointervINTEL:
+    mov __blue_glCore_glTexCoordPointervINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableVertexAttribArrayARB
+.type glDisableVertexAttribArrayARB, %function
+glDisableVertexAttribArrayARB:
+    mov __blue_glCore_glDisableVertexAttribArrayARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix4x3dv
+.type glUniformMatrix4x3dv, %function
+glUniformMatrix4x3dv:
+    mov __blue_glCore_glUniformMatrix4x3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformdv
+.type glGetnUniformdv, %function
+glGetnUniformdv:
+    mov __blue_glCore_glGetnUniformdv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSharpenTexFuncSGIS
+.type glSharpenTexFuncSGIS, %function
+glSharpenTexFuncSGIS:
+    mov __blue_glCore_glSharpenTexFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveUniformsiv
+.type glGetActiveUniformsiv, %function
+glGetActiveUniformsiv:
+    mov __blue_glCore_glGetActiveUniformsiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetHandleARB
+.type glGetHandleARB, %function
+glGetHandleARB:
+    mov __blue_glCore_glGetHandleARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3iARB
+.type glUniform3iARB, %function
+glUniform3iARB:
+    mov __blue_glCore_glUniform3iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenPerfMonitorsAMD
+.type glGenPerfMonitorsAMD, %function
+glGenPerfMonitorsAMD:
+    mov __blue_glCore_glGenPerfMonitorsAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMinmaxParameterivEXT
+.type glGetMinmaxParameterivEXT, %function
+glGetMinmaxParameterivEXT:
+    mov __blue_glCore_glGetMinmaxParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixRotatedEXT
+.type glMatrixRotatedEXT, %function
+glMatrixRotatedEXT:
+    mov __blue_glCore_glMatrixRotatedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjecti64v
+.type glGetQueryObjecti64v, %function
+glGetQueryObjecti64v:
+    mov __blue_glCore_glGetQueryObjecti64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnMinmaxARB
+.type glGetnMinmaxARB, %function
+glGetnMinmaxARB:
+    mov __blue_glCore_glGetnMinmaxARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix3x2fv
+.type glUniformMatrix3x2fv, %function
+glUniformMatrix3x2fv:
+    mov __blue_glCore_glUniformMatrix3x2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3fv
+.type glProgramUniformMatrix3fv, %function
+glProgramUniformMatrix3fv:
+    mov __blue_glCore_glProgramUniformMatrix3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix3dv
+.type glUniformMatrix3dv, %function
+glUniformMatrix3dv:
+    mov __blue_glCore_glUniformMatrix3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2fvEXT
+.type glProgramUniform2fvEXT, %function
+glProgramUniform2fvEXT:
+    mov __blue_glCore_glProgramUniform2fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixMultTranspose3x3fNV
+.type glMatrixMultTranspose3x3fNV, %function
+glMatrixMultTranspose3x3fNV:
+    mov __blue_glCore_glMatrixMultTranspose3x3fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4ubVertex2fvSUN
+.type glColor4ubVertex2fvSUN, %function
+glColor4ubVertex2fvSUN:
+    mov __blue_glCore_glColor4ubVertex2fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4sNV
+.type glVertexAttrib4sNV, %function
+glVertexAttrib4sNV:
+    mov __blue_glCore_glVertexAttrib4sNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP4uiv
+.type glVertexAttribP4uiv, %function
+glVertexAttribP4uiv:
+    mov __blue_glCore_glVertexAttribP4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUnlockArraysEXT
+.type glUnlockArraysEXT, %function
+glUnlockArraysEXT:
+    mov __blue_glCore_glUnlockArraysEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3ivEXT
+.type glSecondaryColor3ivEXT, %function
+glSecondaryColor3ivEXT:
+    mov __blue_glCore_glSecondaryColor3ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexStorage2D
+.type glTexStorage2D, %function
+glTexStorage2D:
+    mov __blue_glCore_glTexStorage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTransformParameteriEXT
+.type glPixelTransformParameteriEXT, %function
+glPixelTransformParameteriEXT:
+    mov __blue_glCore_glPixelTransformParameteriEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPollInstrumentsSGIX
+.type glPollInstrumentsSGIX, %function
+glPollInstrumentsSGIX:
+    mov __blue_glCore_glPollInstrumentsSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordfvEXT
+.type glFogCoordfvEXT, %function
+glFogCoordfvEXT:
+    mov __blue_glCore_glFogCoordfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjectui64v
+.type glGetQueryObjectui64v, %function
+glGetQueryObjectui64v:
+    mov __blue_glCore_glGetQueryObjectui64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquation
+.type glBlendEquation, %function
+glBlendEquation:
+    mov __blue_glCore_glBlendEquation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteQueriesARB
+.type glDeleteQueriesARB, %function
+glDeleteQueriesARB:
+    mov __blue_glCore_glDeleteQueriesARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTexture3DEXT
+.type glFramebufferTexture3DEXT, %function
+glFramebufferTexture3DEXT:
+    mov __blue_glCore_glFramebufferTexture3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1ui64NV
+.type glUniform1ui64NV, %function
+glUniform1ui64NV:
+    mov __blue_glCore_glUniform1ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetAttachedShaders
+.type glGetAttachedShaders, %function
+glGetAttachedShaders:
+    mov __blue_glCore_glGetAttachedShaders@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyImageSubDataNV
+.type glCopyImageSubDataNV, %function
+glCopyImageSubDataNV:
+    mov __blue_glCore_glCopyImageSubDataNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glExecuteProgramNV
+.type glExecuteProgramNV, %function
+glExecuteProgramNV:
+    mov __blue_glCore_glExecuteProgramNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVideoCaptureStreamParameterdvNV
+.type glVideoCaptureStreamParameterdvNV, %function
+glVideoCaptureStreamParameterdvNV:
+    mov __blue_glCore_glVideoCaptureStreamParameterdvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribLOffsetEXT
+.type glVertexArrayVertexAttribLOffsetEXT, %function
+glVertexArrayVertexAttribLOffsetEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribLOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogxOES
+.type glFogxOES, %function
+glFogxOES:
+    mov __blue_glCore_glFogxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1ivATI
+.type glVertexStream1ivATI, %function
+glVertexStream1ivATI:
+    mov __blue_glCore_glVertexStream1ivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResizeBuffersMESA
+.type glResizeBuffersMESA, %function
+glResizeBuffersMESA:
+    mov __blue_glCore_glResizeBuffersMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPopDebugGroup
+.type glPopDebugGroup, %function
+glPopDebugGroup:
+    mov __blue_glCore_glPopDebugGroup@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2uivEXT
+.type glUniform2uivEXT, %function
+glUniform2uivEXT:
+    mov __blue_glCore_glUniform2uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCoverFillPathInstancedNV
+.type glCoverFillPathInstancedNV, %function
+glCoverFillPathInstancedNV:
+    mov __blue_glCore_glCoverFillPathInstancedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP2uiv
+.type glMultiTexCoordP2uiv, %function
+glMultiTexCoordP2uiv:
+    mov __blue_glCore_glMultiTexCoordP2uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateShaderProgramv
+.type glCreateShaderProgramv, %function
+glCreateShaderProgramv:
+    mov __blue_glCore_glCreateShaderProgramv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameter4dvARB
+.type glProgramLocalParameter4dvARB, %function
+glProgramLocalParameter4dvARB:
+    mov __blue_glCore_glProgramLocalParameter4dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsTexture
+.type glIsTexture, %function
+glIsTexture:
+    mov __blue_glCore_glIsTexture@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearColor
+.type glClearColor, %function
+glClearColor:
+    mov __blue_glCore_glClearColor@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureBuffer
+.type glTextureBuffer, %function
+glTextureBuffer:
+    mov __blue_glCore_glTextureBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenTexturesEXT
+.type glGenTexturesEXT, %function
+glGenTexturesEXT:
+    mov __blue_glCore_glGenTexturesEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIndexxOES
+.type glIndexxOES, %function
+glIndexxOES:
+    mov __blue_glCore_glIndexxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterIuiv
+.type glTextureParameterIuiv, %function
+glTextureParameterIuiv:
+    mov __blue_glCore_glTextureParameterIuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribFormatEXT
+.type glVertexArrayVertexAttribFormatEXT, %function
+glVertexArrayVertexAttribFormatEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribFormatEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationiARB
+.type glBlendEquationiARB, %function
+glBlendEquationiARB:
+    mov __blue_glCore_glBlendEquationiARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1uivEXT
+.type glProgramUniform1uivEXT, %function
+glProgramUniform1uivEXT:
+    mov __blue_glCore_glProgramUniform1uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetConvolutionParameterfvEXT
+.type glGetConvolutionParameterfvEXT, %function
+glGetConvolutionParameterfvEXT:
+    mov __blue_glCore_glGetConvolutionParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageCallback
+.type glDebugMessageCallback, %function
+glDebugMessageCallback:
+    mov __blue_glCore_glDebugMessageCallback@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPatchParameteri
+.type glPatchParameteri, %function
+glPatchParameteri:
+    mov __blue_glCore_glPatchParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferRangeNV
+.type glBindBufferRangeNV, %function
+glBindBufferRangeNV:
+    mov __blue_glCore_glBindBufferRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableVertexArrayAttrib
+.type glDisableVertexArrayAttrib, %function
+glDisableVertexArrayAttrib:
+    mov __blue_glCore_glDisableVertexArrayAttrib@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFunciARB
+.type glBlendFunciARB, %function
+glBlendFunciARB:
+    mov __blue_glCore_glBlendFunciARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4ui64NV
+.type glUniform4ui64NV, %function
+glUniform4ui64NV:
+    mov __blue_glCore_glUniform4ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCompressedTexImageARB
+.type glGetCompressedTexImageARB, %function
+glGetCompressedTexImageARB:
+    mov __blue_glCore_glGetCompressedTexImageARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4uiEXT
+.type glVertexAttribI4uiEXT, %function
+glVertexAttribI4uiEXT:
+    mov __blue_glCore_glVertexAttribI4uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2i64vNV
+.type glVertexAttribL2i64vNV, %function
+glVertexAttribL2i64vNV:
+    mov __blue_glCore_glVertexAttribL2i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordhNV
+.type glFogCoordhNV, %function
+glFogCoordhNV:
+    mov __blue_glCore_glFogCoordhNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribLui64vNV
+.type glGetVertexAttribLui64vNV, %function
+glGetVertexAttribLui64vNV:
+    mov __blue_glCore_glGetVertexAttribLui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glHintPGI
+.type glHintPGI, %function
+glHintPGI:
+    mov __blue_glCore_glHintPGI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateShaderProgramEXT
+.type glCreateShaderProgramEXT, %function
+glCreateShaderProgramEXT:
+    mov __blue_glCore_glCreateShaderProgramEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferDrawBuffersEXT
+.type glFramebufferDrawBuffersEXT, %function
+glFramebufferDrawBuffersEXT:
+    mov __blue_glCore_glFramebufferDrawBuffersEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3dvEXT
+.type glBinormal3dvEXT, %function
+glBinormal3dvEXT:
+    mov __blue_glCore_glBinormal3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnPixelMapusv
+.type glGetnPixelMapusv, %function
+glGetnPixelMapusv:
+    mov __blue_glCore_glGetnPixelMapusv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP3uiv
+.type glMultiTexCoordP3uiv, %function
+glMultiTexCoordP3uiv:
+    mov __blue_glCore_glMultiTexCoordP3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLightxOES
+.type glLightxOES, %function
+glLightxOES:
+    mov __blue_glCore_glLightxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMapControlPointsNV
+.type glGetMapControlPointsNV, %function
+glGetMapControlPointsNV:
+    mov __blue_glCore_glGetMapControlPointsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexEnvfvEXT
+.type glGetMultiTexEnvfvEXT, %function
+glGetMultiTexEnvfvEXT:
+    mov __blue_glCore_glGetMultiTexEnvfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFirstPerfQueryIdINTEL
+.type glGetFirstPerfQueryIdINTEL, %function
+glGetFirstPerfQueryIdINTEL:
+    mov __blue_glCore_glGetFirstPerfQueryIdINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenSamplers
+.type glGenSamplers, %function
+glGenSamplers:
+    mov __blue_glCore_glGenSamplers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3svEXT
+.type glTangent3svEXT, %function
+glTangent3svEXT:
+    mov __blue_glCore_glTangent3svEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenAsyncMarkersSGIX
+.type glGenAsyncMarkersSGIX, %function
+glGenAsyncMarkersSGIX:
+    mov __blue_glCore_glGenAsyncMarkersSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream4ivATI
+.type glVertexStream4ivATI, %function
+glVertexStream4ivATI:
+    mov __blue_glCore_glVertexStream4ivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x4fv
+.type glProgramUniformMatrix2x4fv, %function
+glProgramUniformMatrix2x4fv:
+    mov __blue_glCore_glProgramUniformMatrix2x4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2f
+.type glMultiTexCoord2f, %function
+glMultiTexCoord2f:
+    mov __blue_glCore_glMultiTexCoord2f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramResourceiv
+.type glGetProgramResourceiv, %function
+glGetProgramResourceiv:
+    mov __blue_glCore_glGetProgramResourceiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFuncIndexedAMD
+.type glBlendFuncIndexedAMD, %function
+glBlendFuncIndexedAMD:
+    mov __blue_glCore_glBlendFuncIndexedAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexImage2D
+.type glCompressedTexImage2D, %function
+glCompressedTexImage2D:
+    mov __blue_glCore_glCompressedTexImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4iMESA
+.type glWindowPos4iMESA, %function
+glWindowPos4iMESA:
+    mov __blue_glCore_glWindowPos4iMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilMaskSeparate
+.type glStencilMaskSeparate, %function
+glStencilMaskSeparate:
+    mov __blue_glCore_glStencilMaskSeparate@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4xOES
+.type glMultiTexCoord4xOES, %function
+glMultiTexCoord4xOES:
+    mov __blue_glCore_glMultiTexCoord4xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs4svNV
+.type glVertexAttribs4svNV, %function
+glVertexAttribs4svNV:
+    mov __blue_glCore_glVertexAttribs4svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribPointer
+.type glVertexAttribPointer, %function
+glVertexAttribPointer:
+    mov __blue_glCore_glVertexAttribPointer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage3DEXT
+.type glTexImage3DEXT, %function
+glTexImage3DEXT:
+    mov __blue_glCore_glTexImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribPointervNV
+.type glGetVertexAttribPointervNV, %function
+glGetVertexAttribPointervNV:
+    mov __blue_glCore_glGetVertexAttribPointervNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2svMESA
+.type glWindowPos2svMESA, %function
+glWindowPos2svMESA:
+    mov __blue_glCore_glWindowPos2svMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetShaderSourceARB
+.type glGetShaderSourceARB, %function
+glGetShaderSourceARB:
+    mov __blue_glCore_glGetShaderSourceARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindVertexArray
+.type glBindVertexArray, %function
+glBindVertexArray:
+    mov __blue_glCore_glBindVertexArray@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexArrayPointeri_vEXT
+.type glGetVertexArrayPointeri_vEXT, %function
+glGetVertexArrayPointeri_vEXT:
+    mov __blue_glCore_glGetVertexArrayPointeri_vEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4dvEXT
+.type glProgramUniformMatrix4dvEXT, %function
+glProgramUniformMatrix4dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix4dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSynciv
+.type glGetSynciv, %function
+glGetSynciv:
+    mov __blue_glCore_glGetSynciv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveUniformARB
+.type glGetActiveUniformARB, %function
+glGetActiveUniformARB:
+    mov __blue_glCore_glGetActiveUniformARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI1iv
+.type glVertexAttribI1iv, %function
+glVertexAttribI1iv:
+    mov __blue_glCore_glVertexAttribI1iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteRenderbuffers
+.type glDeleteRenderbuffers, %function
+glDeleteRenderbuffers:
+    mov __blue_glCore_glDeleteRenderbuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindProgramPipeline
+.type glBindProgramPipeline, %function
+glBindProgramPipeline:
+    mov __blue_glCore_glBindProgramPipeline@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteShader
+.type glDeleteShader, %function
+glDeleteShader:
+    mov __blue_glCore_glDeleteShader@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferDrawBuffers
+.type glNamedFramebufferDrawBuffers, %function
+glNamedFramebufferDrawBuffers:
+    mov __blue_glCore_glNamedFramebufferDrawBuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSetMultisamplefvAMD
+.type glSetMultisamplefvAMD, %function
+glSetMultisamplefvAMD:
+    mov __blue_glCore_glSetMultisamplefvAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexArrayIndexed64iv
+.type glGetVertexArrayIndexed64iv, %function
+glGetVertexArrayIndexed64iv:
+    mov __blue_glCore_glGetVertexArrayIndexed64iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawArraysInstancedEXT
+.type glDrawArraysInstancedEXT, %function
+glDrawArraysInstancedEXT:
+    mov __blue_glCore_glDrawArraysInstancedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindRenderbufferEXT
+.type glBindRenderbufferEXT, %function
+glBindRenderbufferEXT:
+    mov __blue_glCore_glBindRenderbufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3ivATI
+.type glVertexStream3ivATI, %function
+glVertexStream3ivATI:
+    mov __blue_glCore_glVertexStream3ivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4bvARB
+.type glVertexAttrib4bvARB, %function
+glVertexAttrib4bvARB:
+    mov __blue_glCore_glVertexAttrib4bvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3f
+.type glWindowPos3f, %function
+glWindowPos3f:
+    mov __blue_glCore_glWindowPos3f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferBaseNV
+.type glBindBufferBaseNV, %function
+glBindBufferBaseNV:
+    mov __blue_glCore_glBindBufferBaseNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTransformFeedbackiv
+.type glGetTransformFeedbackiv, %function
+glGetTransformFeedbackiv:
+    mov __blue_glCore_glGetTransformFeedbackiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteFramebuffers
+.type glDeleteFramebuffers, %function
+glDeleteFramebuffers:
+    mov __blue_glCore_glDeleteFramebuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFrameTerminatorGREMEDY
+.type glFrameTerminatorGREMEDY, %function
+glFrameTerminatorGREMEDY:
+    mov __blue_glCore_glFrameTerminatorGREMEDY@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResetMinmax
+.type glResetMinmax, %function
+glResetMinmax:
+    mov __blue_glCore_glResetMinmax@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetLocalConstantIntegervEXT
+.type glGetLocalConstantIntegervEXT, %function
+glGetLocalConstantIntegervEXT:
+    mov __blue_glCore_glGetLocalConstantIntegervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfMonitorCountersAMD
+.type glGetPerfMonitorCountersAMD, %function
+glGetPerfMonitorCountersAMD:
+    mov __blue_glCore_glGetPerfMonitorCountersAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexArrayPointervEXT
+.type glGetVertexArrayPointervEXT, %function
+glGetVertexArrayPointervEXT:
+    mov __blue_glCore_glGetVertexArrayPointervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelStoref
+.type glPixelStoref, %function
+glPixelStoref:
+    mov __blue_glCore_glPixelStoref@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribLi64vNV
+.type glGetVertexAttribLi64vNV, %function
+glGetVertexAttribLi64vNV:
+    mov __blue_glCore_glGetVertexAttribLi64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFinalCombinerInputNV
+.type glFinalCombinerInputNV, %function
+glFinalCombinerInputNV:
+    mov __blue_glCore_glFinalCombinerInputNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2iEXT
+.type glProgramUniform2iEXT, %function
+glProgramUniform2iEXT:
+    mov __blue_glCore_glProgramUniform2iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2dARB
+.type glWindowPos2dARB, %function
+glWindowPos2dARB:
+    mov __blue_glCore_glWindowPos2dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixScalefEXT
+.type glMatrixScalefEXT, %function
+glMatrixScalefEXT:
+    mov __blue_glCore_glMatrixScalefEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveSubroutineUniformiv
+.type glGetActiveSubroutineUniformiv, %function
+glGetActiveSubroutineUniformiv:
+    mov __blue_glCore_glGetActiveSubroutineUniformiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x3dvEXT
+.type glProgramUniformMatrix4x3dvEXT, %function
+glProgramUniformMatrix4x3dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix4x3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAttachShader
+.type glAttachShader, %function
+glAttachShader:
+    mov __blue_glCore_glAttachShader@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearDepthxOES
+.type glClearDepthxOES, %function
+glClearDepthxOES:
+    mov __blue_glCore_glClearDepthxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeletePerfMonitorsAMD
+.type glDeletePerfMonitorsAMD, %function
+glDeletePerfMonitorsAMD:
+    mov __blue_glCore_glDeletePerfMonitorsAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetRenderbufferParameteriv
+.type glGetRenderbufferParameteriv, %function
+glGetRenderbufferParameteriv:
+    mov __blue_glCore_glGetRenderbufferParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexBuffer
+.type glVertexArrayVertexBuffer, %function
+glVertexArrayVertexBuffer:
+    mov __blue_glCore_glVertexArrayVertexBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3iEXT
+.type glBinormal3iEXT, %function
+glBinormal3iEXT:
+    mov __blue_glCore_glBinormal3iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix3x2dv
+.type glUniformMatrix3x2dv, %function
+glUniformMatrix3x2dv:
+    mov __blue_glCore_glUniformMatrix3x2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameterI4ivEXT
+.type glNamedProgramLocalParameterI4ivEXT, %function
+glNamedProgramLocalParameterI4ivEXT:
+    mov __blue_glCore_glNamedProgramLocalParameterI4ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSeparableFilterEXT
+.type glGetSeparableFilterEXT, %function
+glGetSeparableFilterEXT:
+    mov __blue_glCore_glGetSeparableFilterEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTexGenParameterEXT
+.type glBindTexGenParameterEXT, %function
+glBindTexGenParameterEXT:
+    mov __blue_glCore_glBindTexGenParameterEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glImportSyncEXT
+.type glImportSyncEXT, %function
+glImportSyncEXT:
+    mov __blue_glCore_glImportSyncEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnConvolutionFilter
+.type glGetnConvolutionFilter, %function
+glGetnConvolutionFilter:
+    mov __blue_glCore_glGetnConvolutionFilter@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateShaderObjectARB
+.type glCreateShaderObjectARB, %function
+glCreateShaderObjectARB:
+    mov __blue_glCore_glCreateShaderObjectARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP4ui
+.type glVertexAttribP4ui, %function
+glVertexAttribP4ui:
+    mov __blue_glCore_glVertexAttribP4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawArraysIndirectCountARB
+.type glMultiDrawArraysIndirectCountARB, %function
+glMultiDrawArraysIndirectCountARB:
+    mov __blue_glCore_glMultiDrawArraysIndirectCountARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeTextureHandleNonResidentNV
+.type glMakeTextureHandleNonResidentNV, %function
+glMakeTextureHandleNonResidentNV:
+    mov __blue_glCore_glMakeTextureHandleNonResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteSync
+.type glDeleteSync, %function
+glDeleteSync:
+    mov __blue_glCore_glDeleteSync@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawRangeElementsEXT
+.type glDrawRangeElementsEXT, %function
+glDrawRangeElementsEXT:
+    mov __blue_glCore_glDrawRangeElementsEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenFencesNV
+.type glGenFencesNV, %function
+glGenFencesNV:
+    mov __blue_glCore_glGenFencesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyConvolutionFilter2D
+.type glCopyConvolutionFilter2D, %function
+glCopyConvolutionFilter2D:
+    mov __blue_glCore_glCopyConvolutionFilter2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCompressedMultiTexImageEXT
+.type glGetCompressedMultiTexImageEXT, %function
+glGetCompressedMultiTexImageEXT:
+    mov __blue_glCore_glGetCompressedMultiTexImageEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3fATI
+.type glNormalStream3fATI, %function
+glNormalStream3fATI:
+    mov __blue_glCore_glNormalStream3fATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetIntegerIndexedvEXT
+.type glGetIntegerIndexedvEXT, %function
+glGetIntegerIndexedvEXT:
+    mov __blue_glCore_glGetIntegerIndexedvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x3fvEXT
+.type glProgramUniformMatrix4x3fvEXT, %function
+glProgramUniformMatrix4x3fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix4x3fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnMapdv
+.type glGetnMapdv, %function
+glGetnMapdv:
+    mov __blue_glCore_glGetnMapdv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveSubroutineName
+.type glGetActiveSubroutineName, %function
+glGetActiveSubroutineName:
+    mov __blue_glCore_glGetActiveSubroutineName@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveAttribARB
+.type glGetActiveAttribARB, %function
+glGetActiveAttribARB:
+    mov __blue_glCore_glGetActiveAttribARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribIuivEXT
+.type glGetVertexAttribIuivEXT, %function
+glGetVertexAttribIuivEXT:
+    mov __blue_glCore_glGetVertexAttribIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexEnvxOES
+.type glTexEnvxOES, %function
+glTexEnvxOES:
+    mov __blue_glCore_glTexEnvxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsNamedBufferResidentNV
+.type glIsNamedBufferResidentNV, %function
+glIsNamedBufferResidentNV:
+    mov __blue_glCore_glIsNamedBufferResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSeparableFilter2D
+.type glSeparableFilter2D, %function
+glSeparableFilter2D:
+    mov __blue_glCore_glSeparableFilter2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix4x3fv
+.type glUniformMatrix4x3fv, %function
+glUniformMatrix4x3fv:
+    mov __blue_glCore_glUniformMatrix4x3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL3dv
+.type glVertexAttribL3dv, %function
+glVertexAttribL3dv:
+    mov __blue_glCore_glVertexAttribL3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1dNV
+.type glVertexAttrib1dNV, %function
+glVertexAttrib1dNV:
+    mov __blue_glCore_glVertexAttrib1dNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformuiv
+.type glGetUniformuiv, %function
+glGetUniformuiv:
+    mov __blue_glCore_glGetUniformuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2ivARB
+.type glWindowPos2ivARB, %function
+glWindowPos2ivARB:
+    mov __blue_glCore_glWindowPos2ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBuffersRange
+.type glBindBuffersRange, %function
+glBindBuffersRange:
+    mov __blue_glCore_glBindBuffersRange@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixScaledEXT
+.type glMatrixScaledEXT, %function
+glMatrixScaledEXT:
+    mov __blue_glCore_glMatrixScaledEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetIntegerui64vNV
+.type glGetIntegerui64vNV, %function
+glGetIntegerui64vNV:
+    mov __blue_glCore_glGetIntegerui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3dEXT
+.type glSecondaryColor3dEXT, %function
+glSecondaryColor3dEXT:
+    mov __blue_glCore_glSecondaryColor3dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateProgram
+.type glCreateProgram, %function
+glCreateProgram:
+    mov __blue_glCore_glCreateProgram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4bv
+.type glVertexAttrib4bv, %function
+glVertexAttrib4bv:
+    mov __blue_glCore_glVertexAttrib4bv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1i64ARB
+.type glUniform1i64ARB, %function
+glUniform1i64ARB:
+    mov __blue_glCore_glUniform1i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathCoverDepthFuncNV
+.type glPathCoverDepthFuncNV, %function
+glPathCoverDepthFuncNV:
+    mov __blue_glCore_glPathCoverDepthFuncNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4uiEXT
+.type glProgramUniform4uiEXT, %function
+glProgramUniform4uiEXT:
+    mov __blue_glCore_glProgramUniform4uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexSubImage2D
+.type glTexSubImage2D, %function
+glTexSubImage2D:
+    mov __blue_glCore_glTexSubImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInternalformativ
+.type glGetInternalformativ, %function
+glGetInternalformativ:
+    mov __blue_glCore_glGetInternalformativ@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathMetricRangeNV
+.type glGetPathMetricRangeNV, %function
+glGetPathMetricRangeNV:
+    mov __blue_glCore_glGetPathMetricRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1ivARB
+.type glUniform1ivARB, %function
+glUniform1ivARB:
+    mov __blue_glCore_glUniform1ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFragDataLocation
+.type glGetFragDataLocation, %function
+glGetFragDataLocation:
+    mov __blue_glCore_glGetFragDataLocation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSeparableFilter2DEXT
+.type glSeparableFilter2DEXT, %function
+glSeparableFilter2DEXT:
+    mov __blue_glCore_glSeparableFilter2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFuncSeparate
+.type glBlendFuncSeparate, %function
+glBlendFuncSeparate:
+    mov __blue_glCore_glBlendFuncSeparate@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultTransposeMatrixd
+.type glMultTransposeMatrixd, %function
+glMultTransposeMatrixd:
+    mov __blue_glCore_glMultTransposeMatrixd@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantPointerEXT
+.type glVariantPointerEXT, %function
+glVariantPointerEXT:
+    mov __blue_glCore_glVariantPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3dATI
+.type glNormalStream3dATI, %function
+glNormalStream3dATI:
+    mov __blue_glCore_glNormalStream3dATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4i64NV
+.type glVertexAttribL4i64NV, %function
+glVertexAttribL4i64NV:
+    mov __blue_glCore_glVertexAttribL4i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayParameteriAPPLE
+.type glVertexArrayParameteriAPPLE, %function
+glVertexArrayParameteriAPPLE:
+    mov __blue_glCore_glVertexArrayParameteriAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4uiv
+.type glVertexAttribI4uiv, %function
+glVertexAttribI4uiv:
+    mov __blue_glCore_glVertexAttribI4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureImage3DEXT
+.type glTextureImage3DEXT, %function
+glTextureImage3DEXT:
+    mov __blue_glCore_glTextureImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFragDataLocationEXT
+.type glGetFragDataLocationEXT, %function
+glGetFragDataLocationEXT:
+    mov __blue_glCore_glGetFragDataLocationEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3dv
+.type glUniform3dv, %function
+glUniform3dv:
+    mov __blue_glCore_glUniform3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetObjectBufferivATI
+.type glGetObjectBufferivATI, %function
+glGetObjectBufferivATI:
+    mov __blue_glCore_glGetObjectBufferivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3sMESA
+.type glWindowPos3sMESA, %function
+glWindowPos3sMESA:
+    mov __blue_glCore_glWindowPos3sMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP3ui
+.type glMultiTexCoordP3ui, %function
+glMultiTexCoordP3ui:
+    mov __blue_glCore_glMultiTexCoordP3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathTexGenfvNV
+.type glGetPathTexGenfvNV, %function
+glGetPathTexGenfvNV:
+    mov __blue_glCore_glGetPathTexGenfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3i64vARB
+.type glUniform3i64vARB, %function
+glUniform3i64vARB:
+    mov __blue_glCore_glUniform3i64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2iv
+.type glMultiTexCoord2iv, %function
+glMultiTexCoord2iv:
+    mov __blue_glCore_glMultiTexCoord2iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glImageTransformParameterfHP
+.type glImageTransformParameterfHP, %function
+glImageTransformParameterfHP:
+    mov __blue_glCore_glImageTransformParameterfHP@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex4bOES
+.type glVertex4bOES, %function
+glVertex4bOES:
+    mov __blue_glCore_glVertex4bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiModeDrawArraysIBM
+.type glMultiModeDrawArraysIBM, %function
+glMultiModeDrawArraysIBM:
+    mov __blue_glCore_glMultiModeDrawArraysIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetImageTransformParameterivHP
+.type glGetImageTransformParameterivHP, %function
+glGetImageTransformParameterivHP:
+    mov __blue_glCore_glGetImageTransformParameterivHP@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glActiveShaderProgram
+.type glActiveShaderProgram, %function
+glActiveShaderProgram:
+    mov __blue_glCore_glActiveShaderProgram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2fARB
+.type glMultiTexCoord2fARB, %function
+glMultiTexCoord2fARB:
+    mov __blue_glCore_glMultiTexCoord2fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4dvMESA
+.type glWindowPos4dvMESA, %function
+glWindowPos4dvMESA:
+    mov __blue_glCore_glWindowPos4dvMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2iv
+.type glVertexAttribI2iv, %function
+glVertexAttribI2iv:
+    mov __blue_glCore_glVertexAttribI2iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteBuffersARB
+.type glDeleteBuffersARB, %function
+glDeleteBuffersARB:
+    mov __blue_glCore_glDeleteBuffersARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2hNV
+.type glVertexAttrib2hNV, %function
+glVertexAttrib2hNV:
+    mov __blue_glCore_glVertexAttrib2hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream4dvATI
+.type glVertexStream4dvATI, %function
+glVertexStream4dvATI:
+    mov __blue_glCore_glVertexStream4dvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteProgram
+.type glDeleteProgram, %function
+glDeleteProgram:
+    mov __blue_glCore_glDeleteProgram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3fv
+.type glMultiTexCoord3fv, %function
+glMultiTexCoord3fv:
+    mov __blue_glCore_glMultiTexCoord3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3dEXT
+.type glProgramUniform3dEXT, %function
+glProgramUniform3dEXT:
+    mov __blue_glCore_glProgramUniform3dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4s
+.type glMultiTexCoord4s, %function
+glMultiTexCoord4s:
+    mov __blue_glCore_glMultiTexCoord4s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3iARB
+.type glWindowPos3iARB, %function
+glWindowPos3iARB:
+    mov __blue_glCore_glWindowPos3iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3uiEXT
+.type glVertexAttribI3uiEXT, %function
+glVertexAttribI3uiEXT:
+    mov __blue_glCore_glVertexAttribI3uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathGlyphRangeNV
+.type glPathGlyphRangeNV, %function
+glPathGlyphRangeNV:
+    mov __blue_glCore_glPathGlyphRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenTransformFeedbacks
+.type glGenTransformFeedbacks, %function
+glGenTransformFeedbacks:
+    mov __blue_glCore_glGenTransformFeedbacks@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferSampleLocationsfvNV
+.type glNamedFramebufferSampleLocationsfvNV, %function
+glNamedFramebufferSampleLocationsfvNV:
+    mov __blue_glCore_glNamedFramebufferSampleLocationsfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameter4fARB
+.type glProgramLocalParameter4fARB, %function
+glProgramLocalParameter4fARB:
+    mov __blue_glCore_glProgramLocalParameter4fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGlobalAlphaFactorusSUN
+.type glGlobalAlphaFactorusSUN, %function
+glGlobalAlphaFactorusSUN:
+    mov __blue_glCore_glGlobalAlphaFactorusSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthRangeArrayv
+.type glDepthRangeArrayv, %function
+glDepthRangeArrayv:
+    mov __blue_glCore_glDepthRangeArrayv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribdv
+.type glGetVertexAttribdv, %function
+glGetVertexAttribdv:
+    mov __blue_glCore_glGetVertexAttribdv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4NusvARB
+.type glVertexAttrib4NusvARB, %function
+glVertexAttrib4NusvARB:
+    mov __blue_glCore_glVertexAttrib4NusvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathMetricsNV
+.type glGetPathMetricsNV, %function
+glGetPathMetricsNV:
+    mov __blue_glCore_glGetPathMetricsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginTransformFeedbackNV
+.type glBeginTransformFeedbackNV, %function
+glBeginTransformFeedbackNV:
+    mov __blue_glCore_glBeginTransformFeedbackNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorP4uiv
+.type glColorP4uiv, %function
+glColorP4uiv:
+    mov __blue_glCore_glColorP4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureSamplerHandleNV
+.type glGetTextureSamplerHandleNV, %function
+glGetTextureSamplerHandleNV:
+    mov __blue_glCore_glGetTextureSamplerHandleNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMaxShaderCompilerThreadsARB
+.type glMaxShaderCompilerThreadsARB, %function
+glMaxShaderCompilerThreadsARB:
+    mov __blue_glCore_glMaxShaderCompilerThreadsARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedCopyBufferSubDataEXT
+.type glNamedCopyBufferSubDataEXT, %function
+glNamedCopyBufferSubDataEXT:
+    mov __blue_glCore_glNamedCopyBufferSubDataEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateTextures
+.type glCreateTextures, %function
+glCreateTextures:
+    mov __blue_glCore_glCreateTextures@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnMapfvARB
+.type glGetnMapfvARB, %function
+glGetnMapfvARB:
+    mov __blue_glCore_glGetnMapfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord3bvOES
+.type glTexCoord3bvOES, %function
+glTexCoord3bvOES:
+    mov __blue_glCore_glTexCoord3bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenOcclusionQueriesNV
+.type glGenOcclusionQueriesNV, %function
+glGenOcclusionQueriesNV:
+    mov __blue_glCore_glGenOcclusionQueriesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPrimitiveRestartIndex
+.type glPrimitiveRestartIndex, %function
+glPrimitiveRestartIndex:
+    mov __blue_glCore_glPrimitiveRestartIndex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMemoryBarrierByRegion
+.type glMemoryBarrierByRegion, %function
+glMemoryBarrierByRegion:
+    mov __blue_glCore_glMemoryBarrierByRegion@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix2fv
+.type glUniformMatrix2fv, %function
+glUniformMatrix2fv:
+    mov __blue_glCore_glUniformMatrix2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2dvNV
+.type glVertexAttrib2dvNV, %function
+glVertexAttrib2dvNV:
+    mov __blue_glCore_glVertexAttrib2dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexImage2DEXT
+.type glCopyTexImage2DEXT, %function
+glCopyTexImage2DEXT:
+    mov __blue_glCore_glCopyTexImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferOffsetNV
+.type glBindBufferOffsetNV, %function
+glBindBufferOffsetNV:
+    mov __blue_glCore_glBindBufferOffsetNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBufferSubDataARB
+.type glBufferSubDataARB, %function
+glBufferSubDataARB:
+    mov __blue_glCore_glBufferSubDataARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2svARB
+.type glVertexAttrib2svARB, %function
+glVertexAttrib2svARB:
+    mov __blue_glCore_glVertexAttrib2svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2ui64vNV
+.type glVertexAttribL2ui64vNV, %function
+glVertexAttribL2ui64vNV:
+    mov __blue_glCore_glVertexAttribL2ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSubpixelPrecisionBiasNV
+.type glSubpixelPrecisionBiasNV, %function
+glSubpixelPrecisionBiasNV:
+    mov __blue_glCore_glSubpixelPrecisionBiasNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2sv
+.type glVertexAttrib2sv, %function
+glVertexAttrib2sv:
+    mov __blue_glCore_glVertexAttrib2sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexParameteriEXT
+.type glMultiTexParameteriEXT, %function
+glMultiTexParameteriEXT:
+    mov __blue_glCore_glMultiTexParameteriEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureSubImage3DEXT
+.type glCompressedTextureSubImage3DEXT, %function
+glCompressedTextureSubImage3DEXT:
+    mov __blue_glCore_glCompressedTextureSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexParameterivEXT
+.type glMultiTexParameterivEXT, %function
+glMultiTexParameterivEXT:
+    mov __blue_glCore_glMultiTexParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1fv
+.type glVertexAttrib1fv, %function
+glVertexAttrib1fv:
+    mov __blue_glCore_glVertexAttrib1fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexSubImage2DEXT
+.type glCopyTexSubImage2DEXT, %function
+glCopyTexSubImage2DEXT:
+    mov __blue_glCore_glCopyTexSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnColorTableARB
+.type glGetnColorTableARB, %function
+glGetnColorTableARB:
+    mov __blue_glCore_glGetnColorTableARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPrimitiveRestartNV
+.type glPrimitiveRestartNV, %function
+glPrimitiveRestartNV:
+    mov __blue_glCore_glPrimitiveRestartNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTransformFeedbackVarying
+.type glGetTransformFeedbackVarying, %function
+glGetTransformFeedbackVarying:
+    mov __blue_glCore_glGetTransformFeedbackVarying@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStringMarkerGREMEDY
+.type glStringMarkerGREMEDY, %function
+glStringMarkerGREMEDY:
+    mov __blue_glCore_glStringMarkerGREMEDY@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3iEXT
+.type glVertexAttribI3iEXT, %function
+glVertexAttribI3iEXT:
+    mov __blue_glCore_glVertexAttribI3iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixTranslatedEXT
+.type glMatrixTranslatedEXT, %function
+glMatrixTranslatedEXT:
+    mov __blue_glCore_glMatrixTranslatedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLightEnviSGIX
+.type glLightEnviSGIX, %function
+glLightEnviSGIX:
+    mov __blue_glCore_glLightEnviSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenFragmentShadersATI
+.type glGenFragmentShadersATI, %function
+glGenFragmentShadersATI:
+    mov __blue_glCore_glGenFragmentShadersATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompileShaderARB
+.type glCompileShaderARB, %function
+glCompileShaderARB:
+    mov __blue_glCore_glCompileShaderARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFinishFenceAPPLE
+.type glFinishFenceAPPLE, %function
+glFinishFenceAPPLE:
+    mov __blue_glCore_glFinishFenceAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDebugMessageLogAMD
+.type glGetDebugMessageLogAMD, %function
+glGetDebugMessageLogAMD:
+    mov __blue_glCore_glGetDebugMessageLogAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteFragmentShaderATI
+.type glDeleteFragmentShaderATI, %function
+glDeleteFragmentShaderATI:
+    mov __blue_glCore_glDeleteFragmentShaderATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformfvARB
+.type glGetnUniformfvARB, %function
+glGetnUniformfvARB:
+    mov __blue_glCore_glGetnUniformfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorFragmentOp1ATI
+.type glColorFragmentOp1ATI, %function
+glColorFragmentOp1ATI:
+    mov __blue_glCore_glColorFragmentOp1ATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameterIuiv
+.type glGetTexParameterIuiv, %function
+glGetTexParameterIuiv:
+    mov __blue_glCore_glGetTexParameterIuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureView
+.type glTextureView, %function
+glTextureView:
+    mov __blue_glCore_glTextureView@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3ivARB
+.type glWindowPos3ivARB, %function
+glWindowPos3ivARB:
+    mov __blue_glCore_glWindowPos3ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTexture1D
+.type glFramebufferTexture1D, %function
+glFramebufferTexture1D:
+    mov __blue_glCore_glFramebufferTexture1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramivARB
+.type glGetProgramivARB, %function
+glGetProgramivARB:
+    mov __blue_glCore_glGetProgramivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameteri
+.type glTexParameteri, %function
+glTexParameteri:
+    mov __blue_glCore_glTexParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsAsyncMarkerSGIX
+.type glIsAsyncMarkerSGIX, %function
+glIsAsyncMarkerSGIX:
+    mov __blue_glCore_glIsAsyncMarkerSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorMaskIndexedEXT
+.type glColorMaskIndexedEXT, %function
+glColorMaskIndexedEXT:
+    mov __blue_glCore_glColorMaskIndexedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInsertComponentEXT
+.type glInsertComponentEXT, %function
+glInsertComponentEXT:
+    mov __blue_glCore_glInsertComponentEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElementArrayAPPLE
+.type glDrawElementArrayAPPLE, %function
+glDrawElementArrayAPPLE:
+    mov __blue_glCore_glDrawElementArrayAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribFormat
+.type glVertexAttribFormat, %function
+glVertexAttribFormat:
+    mov __blue_glCore_glVertexAttribFormat@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4xvOES
+.type glColor4xvOES, %function
+glColor4xvOES:
+    mov __blue_glCore_glColor4xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordPointerEXT
+.type glTexCoordPointerEXT, %function
+glTexCoordPointerEXT:
+    mov __blue_glCore_glTexCoordPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4Niv
+.type glVertexAttrib4Niv, %function
+glVertexAttrib4Niv:
+    mov __blue_glCore_glVertexAttrib4Niv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInstrumentsBufferSGIX
+.type glInstrumentsBufferSGIX, %function
+glInstrumentsBufferSGIX:
+    mov __blue_glCore_glInstrumentsBufferSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2dv
+.type glProgramUniformMatrix2dv, %function
+glProgramUniformMatrix2dv:
+    mov __blue_glCore_glProgramUniformMatrix2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4fEXT
+.type glProgramUniform4fEXT, %function
+glProgramUniform4fEXT:
+    mov __blue_glCore_glProgramUniform4fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameterPointervAPPLE
+.type glGetTexParameterPointervAPPLE, %function
+glGetTexParameterPointervAPPLE:
+    mov __blue_glCore_glGetTexParameterPointervAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsBufferARB
+.type glIsBufferARB, %function
+glIsBufferARB:
+    mov __blue_glCore_glIsBufferARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4ivARB
+.type glMultiTexCoord4ivARB, %function
+glMultiTexCoord4ivARB:
+    mov __blue_glCore_glMultiTexCoord4ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2sv
+.type glMultiTexCoord2sv, %function
+glMultiTexCoord2sv:
+    mov __blue_glCore_glMultiTexCoord2sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColorP3uiv
+.type glSecondaryColorP3uiv, %function
+glSecondaryColorP3uiv:
+    mov __blue_glCore_glSecondaryColorP3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3sEXT
+.type glTangent3sEXT, %function
+glTangent3sEXT:
+    mov __blue_glCore_glTangent3sEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlush
+.type glFlush, %function
+glFlush:
+    mov __blue_glCore_glFlush@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawTransformFeedbackInstanced
+.type glDrawTransformFeedbackInstanced, %function
+glDrawTransformFeedbackInstanced:
+    mov __blue_glCore_glDrawTransformFeedbackInstanced@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfMonitorCounterStringAMD
+.type glGetPerfMonitorCounterStringAMD, %function
+glGetPerfMonitorCounterStringAMD:
+    mov __blue_glCore_glGetPerfMonitorCounterStringAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4i64vNV
+.type glVertexAttribL4i64vNV, %function
+glVertexAttribL4i64vNV:
+    mov __blue_glCore_glVertexAttribL4i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathCoordsNV
+.type glPathCoordsNV, %function
+glPathCoordsNV:
+    mov __blue_glCore_glPathCoordsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorMaski
+.type glColorMaski, %function
+glColorMaski:
+    mov __blue_glCore_glColorMaski@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteRenderbuffersEXT
+.type glDeleteRenderbuffersEXT, %function
+glDeleteRenderbuffersEXT:
+    mov __blue_glCore_glDeleteRenderbuffersEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProvokingVertexEXT
+.type glProvokingVertexEXT, %function
+glProvokingVertexEXT:
+    mov __blue_glCore_glProvokingVertexEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3ui64NV
+.type glUniform3ui64NV, %function
+glUniform3ui64NV:
+    mov __blue_glCore_glUniform3ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPushDebugGroup
+.type glPushDebugGroup, %function
+glPushDebugGroup:
+    mov __blue_glCore_glPushDebugGroup@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawArrays
+.type glDrawArrays, %function
+glDrawArrays:
+    mov __blue_glCore_glDrawArrays@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementsIndirect
+.type glMultiDrawElementsIndirect, %function
+glMultiDrawElementsIndirect:
+    mov __blue_glCore_glMultiDrawElementsIndirect@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsFenceAPPLE
+.type glIsFenceAPPLE, %function
+glIsFenceAPPLE:
+    mov __blue_glCore_glIsFenceAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorTableParameteriv
+.type glColorTableParameteriv, %function
+glColorTableParameteriv:
+    mov __blue_glCore_glColorTableParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1ui64vARB
+.type glVertexAttribL1ui64vARB, %function
+glVertexAttribL1ui64vARB:
+    mov __blue_glCore_glVertexAttribL1ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjectuiv
+.type glGetQueryObjectuiv, %function
+glGetQueryObjectuiv:
+    mov __blue_glCore_glGetQueryObjectuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorFragmentOp2ATI
+.type glColorFragmentOp2ATI, %function
+glColorFragmentOp2ATI:
+    mov __blue_glCore_glColorFragmentOp2ATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3us
+.type glSecondaryColor3us, %function
+glSecondaryColor3us:
+    mov __blue_glCore_glSecondaryColor3us@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAURegisterVideoSurfaceNV
+.type glVDPAURegisterVideoSurfaceNV, %function
+glVDPAURegisterVideoSurfaceNV:
+    mov __blue_glCore_glVDPAURegisterVideoSurfaceNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4fvMESA
+.type glWindowPos4fvMESA, %function
+glWindowPos4fvMESA:
+    mov __blue_glCore_glWindowPos4fvMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4ubv
+.type glVertexAttribI4ubv, %function
+glVertexAttribI4ubv:
+    mov __blue_glCore_glVertexAttribI4ubv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnSeparableFilterARB
+.type glGetnSeparableFilterARB, %function
+glGetnSeparableFilterARB:
+    mov __blue_glCore_glGetnSeparableFilterARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4fvNV
+.type glVertexAttrib4fvNV, %function
+glVertexAttrib4fvNV:
+    mov __blue_glCore_glVertexAttrib4fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDispatchComputeIndirect
+.type glDispatchComputeIndirect, %function
+glDispatchComputeIndirect:
+    mov __blue_glCore_glDispatchComputeIndirect@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBufferParameteriv
+.type glGetBufferParameteriv, %function
+glGetBufferParameteriv:
+    mov __blue_glCore_glGetBufferParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedMultiTexSubImage2DEXT
+.type glCompressedMultiTexSubImage2DEXT, %function
+glCompressedMultiTexSubImage2DEXT:
+    mov __blue_glCore_glCompressedMultiTexSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3dARB
+.type glVertexAttrib3dARB, %function
+glVertexAttrib3dARB:
+    mov __blue_glCore_glVertexAttrib3dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndConditionalRender
+.type glEndConditionalRender, %function
+glEndConditionalRender:
+    mov __blue_glCore_glEndConditionalRender@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameterfvEXT
+.type glGetTextureParameterfvEXT, %function
+glGetTextureParameterfvEXT:
+    mov __blue_glCore_glGetTextureParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI1ivEXT
+.type glVertexAttribI1ivEXT, %function
+glVertexAttribI1ivEXT:
+    mov __blue_glCore_glVertexAttribI1ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramEnvParameterIuivNV
+.type glGetProgramEnvParameterIuivNV, %function
+glGetProgramEnvParameterIuivNV:
+    mov __blue_glCore_glGetProgramEnvParameterIuivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribParameteriAMD
+.type glVertexAttribParameteriAMD, %function
+glVertexAttribParameteriAMD:
+    mov __blue_glCore_glVertexAttribParameteriAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenerateTextureMipmapEXT
+.type glGenerateTextureMipmapEXT, %function
+glGenerateTextureMipmapEXT:
+    mov __blue_glCore_glGenerateTextureMipmapEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramEnvParameterIivNV
+.type glGetProgramEnvParameterIivNV, %function
+glGetProgramEnvParameterIivNV:
+    mov __blue_glCore_glGetProgramEnvParameterIivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsOcclusionQueryNV
+.type glIsOcclusionQueryNV, %function
+glIsOcclusionQueryNV:
+    mov __blue_glCore_glIsOcclusionQueryNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3iv
+.type glUniform3iv, %function
+glUniform3iv:
+    mov __blue_glCore_glUniform3iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjectiv
+.type glGetQueryObjectiv, %function
+glGetQueryObjectiv:
+    mov __blue_glCore_glGetQueryObjectiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fVertex3fSUN
+.type glTexCoord2fVertex3fSUN, %function
+glTexCoord2fVertex3fSUN:
+    mov __blue_glCore_glTexCoord2fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsStateNV
+.type glIsStateNV, %function
+glIsStateNV:
+    mov __blue_glCore_glIsStateNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryBufferObjectui64v
+.type glGetQueryBufferObjectui64v, %function
+glGetQueryBufferObjectui64v:
+    mov __blue_glCore_glGetQueryBufferObjectui64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginOcclusionQueryNV
+.type glBeginOcclusionQueryNV, %function
+glBeginOcclusionQueryNV:
+    mov __blue_glCore_glBeginOcclusionQueryNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterf
+.type glPointParameterf, %function
+glPointParameterf:
+    mov __blue_glCore_glPointParameterf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1ui
+.type glUniform1ui, %function
+glUniform1ui:
+    mov __blue_glCore_glUniform1ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormal3xOES
+.type glNormal3xOES, %function
+glNormal3xOES:
+    mov __blue_glCore_glNormal3xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteVertexArraysAPPLE
+.type glDeleteVertexArraysAPPLE, %function
+glDeleteVertexArraysAPPLE:
+    mov __blue_glCore_glDeleteVertexArraysAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2dMESA
+.type glWindowPos2dMESA, %function
+glWindowPos2dMESA:
+    mov __blue_glCore_glWindowPos2dMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathDashArrayNV
+.type glPathDashArrayNV, %function
+glPathDashArrayNV:
+    mov __blue_glCore_glPathDashArrayNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginConditionalRenderNV
+.type glBeginConditionalRenderNV, %function
+glBeginConditionalRenderNV:
+    mov __blue_glCore_glBeginConditionalRenderNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x3dv
+.type glProgramUniformMatrix2x3dv, %function
+glProgramUniformMatrix2x3dv:
+    mov __blue_glCore_glProgramUniformMatrix2x3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetIntegerv
+.type glGetIntegerv, %function
+glGetIntegerv:
+    mov __blue_glCore_glGetIntegerv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPointerIndexedvEXT
+.type glGetPointerIndexedvEXT, %function
+glGetPointerIndexedvEXT:
+    mov __blue_glCore_glGetPointerIndexedvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSetLocalConstantEXT
+.type glSetLocalConstantEXT, %function
+glSetLocalConstantEXT:
+    mov __blue_glCore_glSetLocalConstantEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBufferData
+.type glBufferData, %function
+glBufferData:
+    mov __blue_glCore_glBufferData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathSubCoordsNV
+.type glPathSubCoordsNV, %function
+glPathSubCoordsNV:
+    mov __blue_glCore_glPathSubCoordsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexImage1DEXT
+.type glMultiTexImage1DEXT, %function
+glMultiTexImage1DEXT:
+    mov __blue_glCore_glMultiTexImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteQueries
+.type glDeleteQueries, %function
+glDeleteQueries:
+    mov __blue_glCore_glDeleteQueries@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
 .global glMultiTexCoord2bOES
 .type glMultiTexCoord2bOES, %function
 glMultiTexCoord2bOES:
     mov __blue_glCore_glMultiTexCoord2bOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glVertexAttrib2s
-.type glVertexAttrib2s, %function
-glVertexAttrib2s:
-    mov __blue_glCore_glVertexAttrib2s@GOTPCREL(%rip), %r11
+.global glGetUniformfv
+.type glGetUniformfv, %function
+glGetUniformfv:
+    mov __blue_glCore_glGetUniformfv@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glTexImage3DMultisample
-.type glTexImage3DMultisample, %function
-glTexImage3DMultisample:
-    mov __blue_glCore_glTexImage3DMultisample@GOTPCREL(%rip), %r11
+.global glColor3xOES
+.type glColor3xOES, %function
+glColor3xOES:
+    mov __blue_glCore_glColor3xOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glGetUniformBlockIndex
-.type glGetUniformBlockIndex, %function
-glGetUniformBlockIndex:
-    mov __blue_glCore_glGetUniformBlockIndex@GOTPCREL(%rip), %r11
+.global glGetVariantBooleanvEXT
+.type glGetVariantBooleanvEXT, %function
+glGetVariantBooleanvEXT:
+    mov __blue_glCore_glGetVariantBooleanvEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glFrontFace
-.type glFrontFace, %function
-glFrontFace:
-    mov __blue_glCore_glFrontFace@GOTPCREL(%rip), %r11
+.global glCopyNamedBufferSubData
+.type glCopyNamedBufferSubData, %function
+glCopyNamedBufferSubData:
+    mov __blue_glCore_glCopyNamedBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexSubImage1DARB
+.type glCompressedTexSubImage1DARB, %function
+glCompressedTexSubImage1DARB:
+    mov __blue_glCore_glCompressedTexSubImage1DARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2xOES
+.type glMultiTexCoord2xOES, %function
+glMultiTexCoord2xOES:
+    mov __blue_glCore_glMultiTexCoord2xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyPathNV
+.type glCopyPathNV, %function
+glCopyPathNV:
+    mov __blue_glCore_glCopyPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramPipelineiv
+.type glGetProgramPipelineiv, %function
+glGetProgramPipelineiv:
+    mov __blue_glCore_glGetProgramPipelineiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParametersI4ivEXT
+.type glNamedProgramLocalParametersI4ivEXT, %function
+glNamedProgramLocalParametersI4ivEXT:
+    mov __blue_glCore_glNamedProgramLocalParametersI4ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL3i64NV
+.type glVertexAttribL3i64NV, %function
+glVertexAttribL3i64NV:
+    mov __blue_glCore_glVertexAttribL3i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedProgramLocalParameterIuivEXT
+.type glGetNamedProgramLocalParameterIuivEXT, %function
+glGetNamedProgramLocalParameterIuivEXT:
+    mov __blue_glCore_glGetNamedProgramLocalParameterIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnCompressedTexImageARB
+.type glGetnCompressedTexImageARB, %function
+glGetnCompressedTexImageARB:
+    mov __blue_glCore_glGetnCompressedTexImageARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawBuffersATI
+.type glDrawBuffersATI, %function
+glDrawBuffersATI:
+    mov __blue_glCore_glDrawBuffersATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathParameterivNV
+.type glPathParameterivNV, %function
+glPathParameterivNV:
+    mov __blue_glCore_glPathParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentMaterialfvSGIX
+.type glFragmentMaterialfvSGIX, %function
+glFragmentMaterialfvSGIX:
+    mov __blue_glCore_glFragmentMaterialfvSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexP3ui
+.type glVertexP3ui, %function
+glVertexP3ui:
+    mov __blue_glCore_glVertexP3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilOpValueAMD
+.type glStencilOpValueAMD, %function
+glStencilOpValueAMD:
+    mov __blue_glCore_glStencilOpValueAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord3hvNV
+.type glTexCoord3hvNV, %function
+glTexCoord3hvNV:
+    mov __blue_glCore_glTexCoord3hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementsEXT
+.type glMultiDrawElementsEXT, %function
+glMultiDrawElementsEXT:
+    mov __blue_glCore_glMultiDrawElementsEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateStatesNV
+.type glCreateStatesNV, %function
+glCreateStatesNV:
+    mov __blue_glCore_glCreateStatesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexEnvfvEXT
+.type glMultiTexEnvfvEXT, %function
+glMultiTexEnvfvEXT:
+    mov __blue_glCore_glMultiTexEnvfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexSubImage1D
+.type glCompressedTexSubImage1D, %function
+glCompressedTexSubImage1D:
+    mov __blue_glCore_glCompressedTexSubImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureSubImage2D
+.type glTextureSubImage2D, %function
+glTextureSubImage2D:
+    mov __blue_glCore_glTextureSubImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultTransposeMatrixxOES
+.type glMultTransposeMatrixxOES, %function
+glMultTransposeMatrixxOES:
+    mov __blue_glCore_glMultTransposeMatrixxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex4xOES
+.type glVertex4xOES, %function
+glVertex4xOES:
+    mov __blue_glCore_glVertex4xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveVaryingNV
+.type glGetActiveVaryingNV, %function
+glGetActiveVaryingNV:
+    mov __blue_glCore_glGetActiveVaryingNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexSubImage3DEXT
+.type glTexSubImage3DEXT, %function
+glTexSubImage3DEXT:
+    mov __blue_glCore_glTexSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3dEXT
+.type glBinormal3dEXT, %function
+glBinormal3dEXT:
+    mov __blue_glCore_glBinormal3dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVariantArrayObjectivATI
+.type glGetVariantArrayObjectivATI, %function
+glGetVariantArrayObjectivATI:
+    mov __blue_glCore_glGetVariantArrayObjectivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexSubImage2DEXT
+.type glMultiTexSubImage2DEXT, %function
+glMultiTexSubImage2DEXT:
+    mov __blue_glCore_glMultiTexSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4fvEXT
+.type glProgramUniform4fvEXT, %function
+glProgramUniform4fvEXT:
+    mov __blue_glCore_glProgramUniform4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferDrawBuffer
+.type glNamedFramebufferDrawBuffer, %function
+glNamedFramebufferDrawBuffer:
+    mov __blue_glCore_glNamedFramebufferDrawBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginConditionalRenderNVX
+.type glBeginConditionalRenderNVX, %function
+glBeginConditionalRenderNVX:
+    mov __blue_glCore_glBeginConditionalRenderNVX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlitFramebuffer
+.type glBlitFramebuffer, %function
+glBlitFramebuffer:
+    mov __blue_glCore_glBlitFramebuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3dvNV
+.type glVertexAttrib3dvNV, %function
+glVertexAttrib3dvNV:
+    mov __blue_glCore_glVertexAttrib3dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFragDataIndex
+.type glGetFragDataIndex, %function
+glGetFragDataIndex:
+    mov __blue_glCore_glGetFragDataIndex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColorPointer
+.type glSecondaryColorPointer, %function
+glSecondaryColorPointer:
+    mov __blue_glCore_glSecondaryColorPointer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordP1uiv
+.type glTexCoordP1uiv, %function
+glTexCoordP1uiv:
+    mov __blue_glCore_glTexCoordP1uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenQueries
+.type glGenQueries, %function
+glGenQueries:
+    mov __blue_glCore_glGenQueries@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormal3fVertex3fSUN
+.type glNormal3fVertex3fSUN, %function
+glNormal3fVertex3fSUN:
+    mov __blue_glCore_glNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix2x3fv
+.type glUniformMatrix2x3fv, %function
+glUniformMatrix2x3fv:
+    mov __blue_glCore_glUniformMatrix2x3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix3fv
+.type glUniformMatrix3fv, %function
+glUniformMatrix3fv:
+    mov __blue_glCore_glUniformMatrix3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2ui64ARB
+.type glUniform2ui64ARB, %function
+glUniform2ui64ARB:
+    mov __blue_glCore_glUniform2ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3fvATI
+.type glNormalStream3fvATI, %function
+glNormalStream3fvATI:
+    mov __blue_glCore_glNormalStream3fvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3fv
+.type glVertexAttrib3fv, %function
+glVertexAttrib3fv:
+    mov __blue_glCore_glVertexAttrib3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjectui64vEXT
+.type glGetQueryObjectui64vEXT, %function
+glGetQueryObjectui64vEXT:
+    mov __blue_glCore_glGetQueryObjectui64vEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSpriteParameterfvSGIX
+.type glSpriteParameterfvSGIX, %function
+glSpriteParameterfvSGIX:
+    mov __blue_glCore_glSpriteParameterfvSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiColor3fVertex3fSUN
+.type glReplacementCodeuiColor3fVertex3fSUN, %function
+glReplacementCodeuiColor3fVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiColor3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3dv
+.type glSecondaryColor3dv, %function
+glSecondaryColor3dv:
+    mov __blue_glCore_glSecondaryColor3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1dEXT
+.type glVertexAttribL1dEXT, %function
+glVertexAttribL1dEXT:
+    mov __blue_glCore_glVertexAttribL1dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3dATI
+.type glVertexStream3dATI, %function
+glVertexStream3dATI:
+    mov __blue_glCore_glVertexStream3dATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableClientStateIndexedEXT
+.type glDisableClientStateIndexedEXT, %function
+glDisableClientStateIndexedEXT:
+    mov __blue_glCore_glDisableClientStateIndexedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream4iATI
+.type glVertexStream4iATI, %function
+glVertexStream4iATI:
+    mov __blue_glCore_glVertexStream4iATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferReadBufferEXT
+.type glFramebufferReadBufferEXT, %function
+glFramebufferReadBufferEXT:
+    mov __blue_glCore_glFramebufferReadBufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferRenderbuffer
+.type glFramebufferRenderbuffer, %function
+glFramebufferRenderbuffer:
+    mov __blue_glCore_glFramebufferRenderbuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetShaderInfoLog
+.type glGetShaderInfoLog, %function
+glGetShaderInfoLog:
+    mov __blue_glCore_glGetShaderInfoLog@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthRangeIndexed
+.type glDepthRangeIndexed, %function
+glDepthRangeIndexed:
+    mov __blue_glCore_glDepthRangeIndexed@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTrackMatrixivNV
+.type glGetTrackMatrixivNV, %function
+glGetTrackMatrixivNV:
+    mov __blue_glCore_glGetTrackMatrixivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSamplerParameteriv
+.type glSamplerParameteriv, %function
+glSamplerParameteriv:
+    mov __blue_glCore_glSamplerParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs2hvNV
+.type glVertexAttribs2hvNV, %function
+glVertexAttribs2hvNV:
+    mov __blue_glCore_glVertexAttribs2hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3uiv
+.type glProgramUniform3uiv, %function
+glProgramUniform3uiv:
+    mov __blue_glCore_glProgramUniform3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexP4uiv
+.type glVertexP4uiv, %function
+glVertexP4uiv:
+    mov __blue_glCore_glVertexP4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureSubImage2DEXT
+.type glCompressedTextureSubImage2DEXT, %function
+glCompressedTextureSubImage2DEXT:
+    mov __blue_glCore_glCompressedTextureSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsFramebufferEXT
+.type glIsFramebufferEXT, %function
+glIsFramebufferEXT:
+    mov __blue_glCore_glIsFramebufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1ui64vNV
+.type glProgramUniform1ui64vNV, %function
+glProgramUniform1ui64vNV:
+    mov __blue_glCore_glProgramUniform1ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteNamedStringARB
+.type glDeleteNamedStringARB, %function
+glDeleteNamedStringARB:
+    mov __blue_glCore_glDeleteNamedStringARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGlobalAlphaFactorbSUN
+.type glGlobalAlphaFactorbSUN, %function
+glGlobalAlphaFactorbSUN:
+    mov __blue_glCore_glGlobalAlphaFactorbSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilClearTagEXT
+.type glStencilClearTagEXT, %function
+glStencilClearTagEXT:
+    mov __blue_glCore_glStencilClearTagEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearAccumxOES
+.type glClearAccumxOES, %function
+glClearAccumxOES:
+    mov __blue_glCore_glClearAccumxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferPointerv
+.type glGetNamedBufferPointerv, %function
+glGetNamedBufferPointerv:
+    mov __blue_glCore_glGetNamedBufferPointerv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenVertexArraysAPPLE
+.type glGenVertexArraysAPPLE, %function
+glGenVertexArraysAPPLE:
+    mov __blue_glCore_glGenVertexArraysAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsProgram
+.type glIsProgram, %function
+glIsProgram:
+    mov __blue_glCore_glIsProgram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawArraysEXT
+.type glDrawArraysEXT, %function
+glDrawArraysEXT:
+    mov __blue_glCore_glDrawArraysEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glViewportIndexedf
+.type glViewportIndexedf, %function
+glViewportIndexedf:
+    mov __blue_glCore_glViewportIndexedf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCombinerParameterivNV
+.type glCombinerParameterivNV, %function
+glCombinerParameterivNV:
+    mov __blue_glCore_glCombinerParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4sv
+.type glMultiTexCoord4sv, %function
+glMultiTexCoord4sv:
+    mov __blue_glCore_glMultiTexCoord4sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4NbvARB
+.type glVertexAttrib4NbvARB, %function
+glVertexAttrib4NbvARB:
+    mov __blue_glCore_glVertexAttrib4NbvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapVertexAttrib2fAPPLE
+.type glMapVertexAttrib2fAPPLE, %function
+glMapVertexAttrib2fAPPLE:
+    mov __blue_glCore_glMapVertexAttrib2fAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindMaterialParameterEXT
+.type glBindMaterialParameterEXT, %function
+glBindMaterialParameterEXT:
+    mov __blue_glCore_glBindMaterialParameterEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMap2xOES
+.type glMap2xOES, %function
+glMap2xOES:
+    mov __blue_glCore_glMap2xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnPolygonStippleARB
+.type glGetnPolygonStippleARB, %function
+glGetnPolygonStippleARB:
+    mov __blue_glCore_glGetnPolygonStippleARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixMultTransposedEXT
+.type glMatrixMultTransposedEXT, %function
+glMatrixMultTransposedEXT:
+    mov __blue_glCore_glMatrixMultTransposedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4fv
+.type glProgramUniform4fv, %function
+glProgramUniform4fv:
+    mov __blue_glCore_glProgramUniform4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetObjectParameterfvARB
+.type glGetObjectParameterfvARB, %function
+glGetObjectParameterfvARB:
+    mov __blue_glCore_glGetObjectParameterfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindVertexShaderEXT
+.type glBindVertexShaderEXT, %function
+glBindVertexShaderEXT:
+    mov __blue_glCore_glBindVertexShaderEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFloatIndexedvEXT
+.type glGetFloatIndexedvEXT, %function
+glGetFloatIndexedvEXT:
+    mov __blue_glCore_glGetFloatIndexedvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformHandleui64NV
+.type glProgramUniformHandleui64NV, %function
+glProgramUniformHandleui64NV:
+    mov __blue_glCore_glProgramUniformHandleui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameterIiv
+.type glGetTexParameterIiv, %function
+glGetTexParameterIiv:
+    mov __blue_glCore_glGetTexParameterIiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3svARB
+.type glWindowPos3svARB, %function
+glWindowPos3svARB:
+    mov __blue_glCore_glWindowPos3svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearColorxOES
+.type glClearColorxOES, %function
+glClearColorxOES:
+    mov __blue_glCore_glClearColorxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexBlendARB
+.type glVertexBlendARB, %function
+glVertexBlendARB:
+    mov __blue_glCore_glVertexBlendARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyMultiTexSubImage3DEXT
+.type glCopyMultiTexSubImage3DEXT, %function
+glCopyMultiTexSubImage3DEXT:
+    mov __blue_glCore_glCopyMultiTexSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexPointerListIBM
+.type glVertexPointerListIBM, %function
+glVertexPointerListIBM:
+    mov __blue_glCore_glVertexPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterIivEXT
+.type glTexParameterIivEXT, %function
+glTexParameterIivEXT:
+    mov __blue_glCore_glTexParameterIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAUMapSurfacesNV
+.type glVDPAUMapSurfacesNV, %function
+glVDPAUMapSurfacesNV:
+    mov __blue_glCore_glVDPAUMapSurfacesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureSubImage3D
+.type glTextureSubImage3D, %function
+glTextureSubImage3D:
+    mov __blue_glCore_glTextureSubImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1fNV
+.type glVertexAttrib1fNV, %function
+glVertexAttrib1fNV:
+    mov __blue_glCore_glVertexAttrib1fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedBufferDataEXT
+.type glClearNamedBufferDataEXT, %function
+glClearNamedBufferDataEXT:
+    mov __blue_glCore_glClearNamedBufferDataEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4dEXT
+.type glProgramUniform4dEXT, %function
+glProgramUniform4dEXT:
+    mov __blue_glCore_glProgramUniform4dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureSubImage2DEXT
+.type glCopyTextureSubImage2DEXT, %function
+glCopyTextureSubImage2DEXT:
+    mov __blue_glCore_glCopyTextureSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3uivEXT
+.type glVertexAttribI3uivEXT, %function
+glVertexAttribI3uivEXT:
+    mov __blue_glCore_glVertexAttribI3uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindImageTextureEXT
+.type glBindImageTextureEXT, %function
+glBindImageTextureEXT:
+    mov __blue_glCore_glBindImageTextureEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4ui
+.type glUniform4ui, %function
+glUniform4ui:
+    mov __blue_glCore_glUniform4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4i
+.type glUniform4i, %function
+glUniform4i:
+    mov __blue_glCore_glUniform4i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3hNV
+.type glSecondaryColor3hNV, %function
+glSecondaryColor3hNV:
+    mov __blue_glCore_glSecondaryColor3hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage3DMultisampleEXT
+.type glTextureStorage3DMultisampleEXT, %function
+glTextureStorage3DMultisampleEXT:
+    mov __blue_glCore_glTextureStorage3DMultisampleEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexGenxvOES
+.type glTexGenxvOES, %function
+glTexGenxvOES:
+    mov __blue_glCore_glTexGenxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSampleMaskEXT
+.type glSampleMaskEXT, %function
+glSampleMaskEXT:
+    mov __blue_glCore_glSampleMaskEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadProgramNV
+.type glLoadProgramNV, %function
+glLoadProgramNV:
+    mov __blue_glCore_glLoadProgramNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3dv
+.type glVertexAttrib3dv, %function
+glVertexAttrib3dv:
+    mov __blue_glCore_glVertexAttrib3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferParameteriv
+.type glGetNamedBufferParameteriv, %function
+glGetNamedBufferParameteriv:
+    mov __blue_glCore_glGetNamedBufferParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3sEXT
+.type glBinormal3sEXT, %function
+glBinormal3sEXT:
+    mov __blue_glCore_glBinormal3sEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribLPointerEXT
+.type glVertexAttribLPointerEXT, %function
+glVertexAttribLPointerEXT:
+    mov __blue_glCore_glVertexAttribLPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawTransformFeedbackStream
+.type glDrawTransformFeedbackStream, %function
+glDrawTransformFeedbackStream:
+    mov __blue_glCore_glDrawTransformFeedbackStream@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapBuffer
+.type glMapBuffer, %function
+glMapBuffer:
+    mov __blue_glCore_glMapBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferRenderbuffer
+.type glNamedFramebufferRenderbuffer, %function
+glNamedFramebufferRenderbuffer:
+    mov __blue_glCore_glNamedFramebufferRenderbuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexBlendEnviATI
+.type glVertexBlendEnviATI, %function
+glVertexBlendEnviATI:
+    mov __blue_glCore_glVertexBlendEnviATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageControl
+.type glDebugMessageControl, %function
+glDebugMessageControl:
+    mov __blue_glCore_glDebugMessageControl@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4uiv
+.type glProgramUniform4uiv, %function
+glProgramUniform4uiv:
+    mov __blue_glCore_glProgramUniform4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTransformParameterfvEXT
+.type glPixelTransformParameterfvEXT, %function
+glPixelTransformParameterfvEXT:
+    mov __blue_glCore_glPixelTransformParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramiv
+.type glGetProgramiv, %function
+glGetProgramiv:
+    mov __blue_glCore_glGetProgramiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAUUnregisterSurfaceNV
+.type glVDPAUUnregisterSurfaceNV, %function
+glVDPAUUnregisterSurfaceNV:
+    mov __blue_glCore_glVDPAUUnregisterSurfaceNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix2x3dv
+.type glUniformMatrix2x3dv, %function
+glUniformMatrix2x3dv:
+    mov __blue_glCore_glUniformMatrix2x3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterfARB
+.type glPointParameterfARB, %function
+glPointParameterfARB:
+    mov __blue_glCore_glPointParameterfARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord1hNV
+.type glTexCoord1hNV, %function
+glTexCoord1hNV:
+    mov __blue_glCore_glTexCoord1hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteVertexArrays
+.type glDeleteVertexArrays, %function
+glDeleteVertexArrays:
+    mov __blue_glCore_glDeleteVertexArrays@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferSubData
+.type glNamedBufferSubData, %function
+glNamedBufferSubData:
+    mov __blue_glCore_glNamedBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2fARB
+.type glVertexAttrib2fARB, %function
+glVertexAttrib2fARB:
+    mov __blue_glCore_glVertexAttrib2fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetHistogramParameterfvEXT
+.type glGetHistogramParameterfvEXT, %function
+glGetHistogramParameterfvEXT:
+    mov __blue_glCore_glGetHistogramParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4sMESA
+.type glWindowPos4sMESA, %function
+glWindowPos4sMESA:
+    mov __blue_glCore_glWindowPos4sMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationSeparate
+.type glBlendEquationSeparate, %function
+glBlendEquationSeparate:
+    mov __blue_glCore_glBlendEquationSeparate@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1bvOES
+.type glMultiTexCoord1bvOES, %function
+glMultiTexCoord1bvOES:
+    mov __blue_glCore_glMultiTexCoord1bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream4fvATI
+.type glVertexStream4fvATI, %function
+glVertexStream4fvATI:
+    mov __blue_glCore_glVertexStream4fvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTransformFeedbackVaryingEXT
+.type glGetTransformFeedbackVaryingEXT, %function
+glGetTransformFeedbackVaryingEXT:
+    mov __blue_glCore_glGetTransformFeedbackVaryingEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3ivARB
+.type glMultiTexCoord3ivARB, %function
+glMultiTexCoord3ivARB:
+    mov __blue_glCore_glMultiTexCoord3ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathLengthNV
+.type glGetPathLengthNV, %function
+glGetPathLengthNV:
+    mov __blue_glCore_glGetPathLengthNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1ui64vNV
+.type glUniform1ui64vNV, %function
+glUniform1ui64vNV:
+    mov __blue_glCore_glUniform1ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1i
+.type glUniform1i, %function
+glUniform1i:
+    mov __blue_glCore_glUniform1i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3d
+.type glWindowPos3d, %function
+glWindowPos3d:
+    mov __blue_glCore_glWindowPos3d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2fvMESA
+.type glWindowPos2fvMESA, %function
+glWindowPos2fvMESA:
+    mov __blue_glCore_glWindowPos2fvMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2iMESA
+.type glWindowPos2iMESA, %function
+glWindowPos2iMESA:
+    mov __blue_glCore_glWindowPos2iMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiModeDrawElementsIBM
+.type glMultiModeDrawElementsIBM, %function
+glMultiModeDrawElementsIBM:
+    mov __blue_glCore_glMultiModeDrawElementsIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveUniformBlockName
+.type glGetActiveUniformBlockName, %function
+glGetActiveUniformBlockName:
+    mov __blue_glCore_glGetActiveUniformBlockName@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3hvNV
+.type glMultiTexCoord3hvNV, %function
+glMultiTexCoord3hvNV:
+    mov __blue_glCore_glMultiTexCoord3hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveUniformName
+.type glGetActiveUniformName, %function
+glGetActiveUniformName:
+    mov __blue_glCore_glGetActiveUniformName@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableVariantClientStateEXT
+.type glEnableVariantClientStateEXT, %function
+glEnableVariantClientStateEXT:
+    mov __blue_glCore_glEnableVariantClientStateEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIndexFormatNV
+.type glIndexFormatNV, %function
+glIndexFormatNV:
+    mov __blue_glCore_glIndexFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2f
+.type glWindowPos2f, %function
+glWindowPos2f:
+    mov __blue_glCore_glWindowPos2f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenBuffersARB
+.type glGenBuffersARB, %function
+glGenBuffersARB:
+    mov __blue_glCore_glGenBuffersARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedFramebufferiv
+.type glClearNamedFramebufferiv, %function
+glClearNamedFramebufferiv:
+    mov __blue_glCore_glClearNamedFramebufferiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFinalCombinerInputParameterivNV
+.type glGetFinalCombinerInputParameterivNV, %function
+glGetFinalCombinerInputParameterivNV:
+    mov __blue_glCore_glGetFinalCombinerInputParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformuiv
+.type glGetnUniformuiv, %function
+glGetnUniformuiv:
+    mov __blue_glCore_glGetnUniformuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformui64NV
+.type glProgramUniformui64NV, %function
+glProgramUniformui64NV:
+    mov __blue_glCore_glProgramUniformui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2i
+.type glWindowPos2i, %function
+glWindowPos2i:
+    mov __blue_glCore_glWindowPos2i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTestObjectAPPLE
+.type glTestObjectAPPLE, %function
+glTestObjectAPPLE:
+    mov __blue_glCore_glTestObjectAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterivEXT
+.type glTextureParameterivEXT, %function
+glTextureParameterivEXT:
+    mov __blue_glCore_glTextureParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapObjectBufferATI
+.type glMapObjectBufferATI, %function
+glMapObjectBufferATI:
+    mov __blue_glCore_glMapObjectBufferATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVariantFloatvEXT
+.type glGetVariantFloatvEXT, %function
+glGetVariantFloatvEXT:
+    mov __blue_glCore_glGetVariantFloatvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameteriv
+.type glPointParameteriv, %function
+glPointParameteriv:
+    mov __blue_glCore_glPointParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glObjectLabel
+.type glObjectLabel, %function
+glObjectLabel:
+    mov __blue_glCore_glObjectLabel@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4usvARB
+.type glVertexAttrib4usvARB, %function
+glVertexAttrib4usvARB:
+    mov __blue_glCore_glVertexAttrib4usvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInvariantIntegervEXT
+.type glGetInvariantIntegervEXT, %function
+glGetInvariantIntegervEXT:
+    mov __blue_glCore_glGetInvariantIntegervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathColorGenNV
+.type glPathColorGenNV, %function
+glPathColorGenNV:
+    mov __blue_glCore_glPathColorGenNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIndexFuncEXT
+.type glIndexFuncEXT, %function
+glIndexFuncEXT:
+    mov __blue_glCore_glIndexFuncEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTexGenParameterfvSGIS
+.type glPixelTexGenParameterfvSGIS, %function
+glPixelTexGenParameterfvSGIS:
+    mov __blue_glCore_glPixelTexGenParameterfvSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor3hNV
+.type glColor3hNV, %function
+glColor3hNV:
+    mov __blue_glCore_glColor3hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathGlyphIndexArrayNV
+.type glPathGlyphIndexArrayNV, %function
+glPathGlyphIndexArrayNV:
+    mov __blue_glCore_glPathGlyphIndexArrayNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexParameterivEXT
+.type glGetMultiTexParameterivEXT, %function
+glGetMultiTexParameterivEXT:
+    mov __blue_glCore_glGetMultiTexParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAlphaFuncxOES
+.type glAlphaFuncxOES, %function
+glAlphaFuncxOES:
+    mov __blue_glCore_glAlphaFuncxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTagSampleBufferSGIX
+.type glTagSampleBufferSGIX, %function
+glTagSampleBufferSGIX:
+    mov __blue_glCore_glTagSampleBufferSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1fv
+.type glMultiTexCoord1fv, %function
+glMultiTexCoord1fv:
+    mov __blue_glCore_glMultiTexCoord1fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableVariantClientStateEXT
+.type glDisableVariantClientStateEXT, %function
+glDisableVariantClientStateEXT:
+    mov __blue_glCore_glDisableVariantClientStateEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathStencilFuncNV
+.type glPathStencilFuncNV, %function
+glPathStencilFuncNV:
+    mov __blue_glCore_glPathStencilFuncNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4hvNV
+.type glColor4hvNV, %function
+glColor4hvNV:
+    mov __blue_glCore_glColor4hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1f
+.type glVertexAttrib1f, %function
+glVertexAttrib1f:
+    mov __blue_glCore_glVertexAttrib1f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribIFormat
+.type glVertexAttribIFormat, %function
+glVertexAttribIFormat:
+    mov __blue_glCore_glVertexAttribIFormat@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathStringNV
+.type glPathStringNV, %function
+glPathStringNV:
+    mov __blue_glCore_glPathStringNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentLightModelivSGIX
+.type glFragmentLightModelivSGIX, %function
+glFragmentLightModelivSGIX:
+    mov __blue_glCore_glFragmentLightModelivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClientWaitSync
+.type glClientWaitSync, %function
+glClientWaitSync:
+    mov __blue_glCore_glClientWaitSync@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayAttribBinding
+.type glVertexArrayAttribBinding, %function
+glVertexArrayAttribBinding:
+    mov __blue_glCore_glVertexArrayAttribBinding@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureSubImage3D
+.type glCopyTextureSubImage3D, %function
+glCopyTextureSubImage3D:
+    mov __blue_glCore_glCopyTextureSubImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathMemoryGlyphIndexArrayNV
+.type glPathMemoryGlyphIndexArrayNV, %function
+glPathMemoryGlyphIndexArrayNV:
+    mov __blue_glCore_glPathMemoryGlyphIndexArrayNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameterIuiv
+.type glGetTextureParameterIuiv, %function
+glGetTextureParameterIuiv:
+    mov __blue_glCore_glGetTextureParameterIuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1i64NV
+.type glUniform1i64NV, %function
+glUniform1i64NV:
+    mov __blue_glCore_glUniform1i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3dEXT
+.type glTangent3dEXT, %function
+glTangent3dEXT:
+    mov __blue_glCore_glTangent3dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3fv
+.type glWindowPos3fv, %function
+glWindowPos3fv:
+    mov __blue_glCore_glWindowPos3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPolygonOffsetxOES
+.type glPolygonOffsetxOES, %function
+glPolygonOffsetxOES:
+    mov __blue_glCore_glPolygonOffsetxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribIivEXT
+.type glGetVertexAttribIivEXT, %function
+glGetVertexAttribIivEXT:
+    mov __blue_glCore_glGetVertexAttribIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixMultfEXT
+.type glMatrixMultfEXT, %function
+glMatrixMultfEXT:
+    mov __blue_glCore_glMatrixMultfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCoverageModulationTableNV
+.type glGetCoverageModulationTableNV, %function
+glGetCoverageModulationTableNV:
+    mov __blue_glCore_glGetCoverageModulationTableNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndOcclusionQueryNV
+.type glEndOcclusionQueryNV, %function
+glEndOcclusionQueryNV:
+    mov __blue_glCore_glEndOcclusionQueryNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTexture1DEXT
+.type glNamedFramebufferTexture1DEXT, %function
+glNamedFramebufferTexture1DEXT:
+    mov __blue_glCore_glNamedFramebufferTexture1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformdv
+.type glGetUniformdv, %function
+glGetUniformdv:
+    mov __blue_glCore_glGetUniformdv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4i64NV
+.type glUniform4i64NV, %function
+glUniform4i64NV:
+    mov __blue_glCore_glUniform4i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEdgeFlagPointerEXT
+.type glEdgeFlagPointerEXT, %function
+glEdgeFlagPointerEXT:
+    mov __blue_glCore_glEdgeFlagPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x4dvEXT
+.type glProgramUniformMatrix2x4dvEXT, %function
+glProgramUniformMatrix2x4dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix2x4dvEXT@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
 .global glEvalCoord1xOES
@@ -15451,14 +6805,8660 @@ glEvalCoord1xOES:
     mov __blue_glCore_glEvalCoord1xOES@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
+.global glTestFenceNV
+.type glTestFenceNV, %function
+glTestFenceNV:
+    mov __blue_glCore_glTestFenceNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glImageTransformParameterivHP
+.type glImageTransformParameterivHP, %function
+glImageTransformParameterivHP:
+    mov __blue_glCore_glImageTransformParameterivHP@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCombinerOutputNV
+.type glCombinerOutputNV, %function
+glCombinerOutputNV:
+    mov __blue_glCore_glCombinerOutputNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableVertexArrayAttribEXT
+.type glDisableVertexArrayAttribEXT, %function
+glDisableVertexArrayAttribEXT:
+    mov __blue_glCore_glDisableVertexArrayAttribEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelStorex
+.type glPixelStorex, %function
+glPixelStorex:
+    mov __blue_glCore_glPixelStorex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribOffsetEXT
+.type glVertexArrayVertexAttribOffsetEXT, %function
+glVertexArrayVertexAttribOffsetEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2dvEXT
+.type glProgramUniformMatrix2dvEXT, %function
+glProgramUniformMatrix2dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix2dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribLFormat
+.type glVertexAttribLFormat, %function
+glVertexAttribLFormat:
+    mov __blue_glCore_glVertexAttribLFormat@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayBindVertexBufferEXT
+.type glVertexArrayBindVertexBufferEXT, %function
+glVertexArrayBindVertexBufferEXT:
+    mov __blue_glCore_glVertexArrayBindVertexBufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClientActiveTextureARB
+.type glClientActiveTextureARB, %function
+glClientActiveTextureARB:
+    mov __blue_glCore_glClientActiveTextureARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterIuivEXT
+.type glTextureParameterIuivEXT, %function
+glTextureParameterIuivEXT:
+    mov __blue_glCore_glTextureParameterIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfQueryDataINTEL
+.type glGetPerfQueryDataINTEL, %function
+glGetPerfQueryDataINTEL:
+    mov __blue_glCore_glGetPerfQueryDataINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedProgramLocalParameterdvEXT
+.type glGetNamedProgramLocalParameterdvEXT, %function
+glGetNamedProgramLocalParameterdvEXT:
+    mov __blue_glCore_glGetNamedProgramLocalParameterdvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterfSGIS
+.type glPointParameterfSGIS, %function
+glPointParameterfSGIS:
+    mov __blue_glCore_glPointParameterfSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3dvEXT
+.type glSecondaryColor3dvEXT, %function
+glSecondaryColor3dvEXT:
+    mov __blue_glCore_glSecondaryColor3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetConvolutionFilterEXT
+.type glGetConvolutionFilterEXT, %function
+glGetConvolutionFilterEXT:
+    mov __blue_glCore_glGetConvolutionFilterEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawArraysIndirectBindlessCountNV
+.type glMultiDrawArraysIndirectBindlessCountNV, %function
+glMultiDrawArraysIndirectBindlessCountNV:
+    mov __blue_glCore_glMultiDrawArraysIndirectBindlessCountNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFinalCombinerInputParameterfvNV
+.type glGetFinalCombinerInputParameterfvNV, %function
+glGetFinalCombinerInputParameterfvNV:
+    mov __blue_glCore_glGetFinalCombinerInputParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetImageHandleARB
+.type glGetImageHandleARB, %function
+glGetImageHandleARB:
+    mov __blue_glCore_glGetImageHandleARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribIFormatEXT
+.type glVertexArrayVertexAttribIFormatEXT, %function
+glVertexArrayVertexAttribIFormatEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribIFormatEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexGenxvOES
+.type glGetTexGenxvOES, %function
+glGetTexGenxvOES:
+    mov __blue_glCore_glGetTexGenxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawRangeElementArrayAPPLE
+.type glMultiDrawRangeElementArrayAPPLE, %function
+glMultiDrawRangeElementArrayAPPLE:
+    mov __blue_glCore_glMultiDrawRangeElementArrayAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1ivARB
+.type glMultiTexCoord1ivARB, %function
+glMultiTexCoord1ivARB:
+    mov __blue_glCore_glMultiTexCoord1ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSetFragmentShaderConstantATI
+.type glSetFragmentShaderConstantATI, %function
+glSetFragmentShaderConstantATI:
+    mov __blue_glCore_glSetFragmentShaderConstantATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4NivARB
+.type glVertexAttrib4NivARB, %function
+glVertexAttrib4NivARB:
+    mov __blue_glCore_glVertexAttrib4NivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1fvEXT
+.type glProgramUniform1fvEXT, %function
+glProgramUniform1fvEXT:
+    mov __blue_glCore_glProgramUniform1fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexParameterIivEXT
+.type glMultiTexParameterIivEXT, %function
+glMultiTexParameterIivEXT:
+    mov __blue_glCore_glMultiTexParameterIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetLightxOES
+.type glGetLightxOES, %function
+glGetLightxOES:
+    mov __blue_glCore_glGetLightxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexParameterfEXT
+.type glMultiTexParameterfEXT, %function
+glMultiTexParameterfEXT:
+    mov __blue_glCore_glMultiTexParameterfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4f
+.type glProgramUniform4f, %function
+glProgramUniform4f:
+    mov __blue_glCore_glProgramUniform4f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribDivisor
+.type glVertexAttribDivisor, %function
+glVertexAttribDivisor:
+    mov __blue_glCore_glVertexAttribDivisor@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3b
+.type glSecondaryColor3b, %function
+glSecondaryColor3b:
+    mov __blue_glCore_glSecondaryColor3b@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCombinerOutputParameterfvNV
+.type glGetCombinerOutputParameterfvNV, %function
+glGetCombinerOutputParameterfvNV:
+    mov __blue_glCore_glGetCombinerOutputParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2ivATI
+.type glVertexStream2ivATI, %function
+glVertexStream2ivATI:
+    mov __blue_glCore_glVertexStream2ivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferSampleLocationsfvNV
+.type glFramebufferSampleLocationsfvNV, %function
+glFramebufferSampleLocationsfvNV:
+    mov __blue_glCore_glFramebufferSampleLocationsfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPushClientAttribDefaultEXT
+.type glPushClientAttribDefaultEXT, %function
+glPushClientAttribDefaultEXT:
+    mov __blue_glCore_glPushClientAttribDefaultEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x3dv
+.type glProgramUniformMatrix4x3dv, %function
+glProgramUniformMatrix4x3dv:
+    mov __blue_glCore_glProgramUniformMatrix4x3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEdgeFlagFormatNV
+.type glEdgeFlagFormatNV, %function
+glEdgeFlagFormatNV:
+    mov __blue_glCore_glEdgeFlagFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTable
+.type glGetColorTable, %function
+glGetColorTable:
+    mov __blue_glCore_glGetColorTable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformSubroutinesuiv
+.type glUniformSubroutinesuiv, %function
+glUniformSubroutinesuiv:
+    mov __blue_glCore_glUniformSubroutinesuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4xvOES
+.type glTexCoord4xvOES, %function
+glTexCoord4xvOES:
+    mov __blue_glCore_glTexCoord4xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyConvolutionFilter1D
+.type glCopyConvolutionFilter1D, %function
+glCopyConvolutionFilter1D:
+    mov __blue_glCore_glCopyConvolutionFilter1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterfv
+.type glTexParameterfv, %function
+glTexParameterfv:
+    mov __blue_glCore_glTexParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDispatchComputeGroupSizeARB
+.type glDispatchComputeGroupSizeARB, %function
+glDispatchComputeGroupSizeARB:
+    mov __blue_glCore_glDispatchComputeGroupSizeARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResolveDepthValuesNV
+.type glResolveDepthValuesNV, %function
+glResolveDepthValuesNV:
+    mov __blue_glCore_glResolveDepthValuesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4fVertex4fSUN
+.type glTexCoord4fVertex4fSUN, %function
+glTexCoord4fVertex4fSUN:
+    mov __blue_glCore_glTexCoord4fVertex4fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTexture2DEXT
+.type glNamedFramebufferTexture2DEXT, %function
+glNamedFramebufferTexture2DEXT:
+    mov __blue_glCore_glNamedFramebufferTexture2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4i64vARB
+.type glProgramUniform4i64vARB, %function
+glProgramUniform4i64vARB:
+    mov __blue_glCore_glProgramUniform4i64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameter4fARB
+.type glProgramEnvParameter4fARB, %function
+glProgramEnvParameter4fARB:
+    mov __blue_glCore_glProgramEnvParameter4fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAlphaFragmentOp2ATI
+.type glAlphaFragmentOp2ATI, %function
+glAlphaFragmentOp2ATI:
+    mov __blue_glCore_glAlphaFragmentOp2ATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetRenderbufferParameterivEXT
+.type glGetRenderbufferParameterivEXT, %function
+glGetRenderbufferParameterivEXT:
+    mov __blue_glCore_glGetRenderbufferParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginQueryARB
+.type glBeginQueryARB, %function
+glBeginQueryARB:
+    mov __blue_glCore_glBeginQueryARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyMultiTexImage1DEXT
+.type glCopyMultiTexImage1DEXT, %function
+glCopyMultiTexImage1DEXT:
+    mov __blue_glCore_glCopyMultiTexImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEvalCoord1xvOES
+.type glEvalCoord1xvOES, %function
+glEvalCoord1xvOES:
+    mov __blue_glCore_glEvalCoord1xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVariantArrayObjectfvATI
+.type glGetVariantArrayObjectfvATI, %function
+glGetVariantArrayObjectfvATI:
+    mov __blue_glCore_glGetVariantArrayObjectfvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayAttribIFormat
+.type glVertexArrayAttribIFormat, %function
+glVertexArrayAttribIFormat:
+    mov __blue_glCore_glVertexArrayAttribIFormat@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3i64ARB
+.type glProgramUniform3i64ARB, %function
+glProgramUniform3i64ARB:
+    mov __blue_glCore_glProgramUniform3i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelDataRangeNV
+.type glPixelDataRangeNV, %function
+glPixelDataRangeNV:
+    mov __blue_glCore_glPixelDataRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeletePathsNV
+.type glDeletePathsNV, %function
+glDeletePathsNV:
+    mov __blue_glCore_glDeletePathsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glShaderOp2EXT
+.type glShaderOp2EXT, %function
+glShaderOp2EXT:
+    mov __blue_glCore_glShaderOp2EXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureImage
+.type glGetTextureImage, %function
+glGetTextureImage:
+    mov __blue_glCore_glGetTextureImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoaddEXT
+.type glMatrixLoaddEXT, %function
+glMatrixLoaddEXT:
+    mov __blue_glCore_glMatrixLoaddEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjectivARB
+.type glGetQueryObjectivARB, %function
+glGetQueryObjectivARB:
+    mov __blue_glCore_glGetQueryObjectivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1dv
+.type glMultiTexCoord1dv, %function
+glMultiTexCoord1dv:
+    mov __blue_glCore_glMultiTexCoord1dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLogicOp
+.type glLogicOp, %function
+glLogicOp:
+    mov __blue_glCore_glLogicOp@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureHandleARB
+.type glGetTextureHandleARB, %function
+glGetTextureHandleARB:
+    mov __blue_glCore_glGetTextureHandleARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindVertexArrayAPPLE
+.type glBindVertexArrayAPPLE, %function
+glBindVertexArrayAPPLE:
+    mov __blue_glCore_glBindVertexArrayAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1fv
+.type glUniform1fv, %function
+glUniform1fv:
+    mov __blue_glCore_glUniform1fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1dvARB
+.type glMultiTexCoord1dvARB, %function
+glMultiTexCoord1dvARB:
+    mov __blue_glCore_glMultiTexCoord1dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindImageTexture
+.type glBindImageTexture, %function
+glBindImageTexture:
+    mov __blue_glCore_glBindImageTexture@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage2D
+.type glTextureStorage2D, %function
+glTextureStorage2D:
+    mov __blue_glCore_glTextureStorage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3ivEXT
+.type glBinormal3ivEXT, %function
+glBinormal3ivEXT:
+    mov __blue_glCore_glBinormal3ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameter4fNV
+.type glProgramParameter4fNV, %function
+glProgramParameter4fNV:
+    mov __blue_glCore_glProgramParameter4fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramResourceLocationIndex
+.type glGetProgramResourceLocationIndex, %function
+glGetProgramResourceLocationIndex:
+    mov __blue_glCore_glGetProgramResourceLocationIndex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDoublev
+.type glGetDoublev, %function
+glGetDoublev:
+    mov __blue_glCore_glGetDoublev@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3bvEXT
+.type glTangent3bvEXT, %function
+glTangent3bvEXT:
+    mov __blue_glCore_glTangent3bvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangentPointerEXT
+.type glTangentPointerEXT, %function
+glTangentPointerEXT:
+    mov __blue_glCore_glTangentPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4sARB
+.type glMultiTexCoord4sARB, %function
+glMultiTexCoord4sARB:
+    mov __blue_glCore_glMultiTexCoord4sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glListParameterfvSGIX
+.type glListParameterfvSGIX, %function
+glListParameterfvSGIX:
+    mov __blue_glCore_glListParameterfvSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenerateMipmapEXT
+.type glGenerateMipmapEXT, %function
+glGenerateMipmapEXT:
+    mov __blue_glCore_glGenerateMipmapEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3fEXT
+.type glBinormal3fEXT, %function
+glBinormal3fEXT:
+    mov __blue_glCore_glBinormal3fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndPerfQueryINTEL
+.type glEndPerfQueryINTEL, %function
+glEndPerfQueryINTEL:
+    mov __blue_glCore_glEndPerfQueryINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramStringARB
+.type glProgramStringARB, %function
+glProgramStringARB:
+    mov __blue_glCore_glProgramStringARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramStringNV
+.type glGetProgramStringNV, %function
+glGetProgramStringNV:
+    mov __blue_glCore_glGetProgramStringNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadTransposeMatrixf
+.type glLoadTransposeMatrixf, %function
+glLoadTransposeMatrixf:
+    mov __blue_glCore_glLoadTransposeMatrixf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantArrayObjectATI
+.type glVariantArrayObjectATI, %function
+glVariantArrayObjectATI:
+    mov __blue_glCore_glVariantArrayObjectATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameterfv
+.type glGetTextureParameterfv, %function
+glGetTextureParameterfv:
+    mov __blue_glCore_glGetTextureParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiNormal3fVertex3fvSUN
+.type glReplacementCodeuiNormal3fVertex3fvSUN, %function
+glReplacementCodeuiNormal3fVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2i
+.type glVertexAttribI2i, %function
+glVertexAttribI2i:
+    mov __blue_glCore_glVertexAttribI2i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAttachObjectARB
+.type glAttachObjectARB, %function
+glAttachObjectARB:
+    mov __blue_glCore_glAttachObjectARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1hNV
+.type glMultiTexCoord1hNV, %function
+glMultiTexCoord1hNV:
+    mov __blue_glCore_glMultiTexCoord1hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4fNV
+.type glVertexAttrib4fNV, %function
+glVertexAttrib4fNV:
+    mov __blue_glCore_glVertexAttrib4fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4ubvARB
+.type glVertexAttrib4ubvARB, %function
+glVertexAttrib4ubvARB:
+    mov __blue_glCore_glVertexAttrib4ubvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginTransformFeedback
+.type glBeginTransformFeedback, %function
+glBeginTransformFeedback:
+    mov __blue_glCore_glBeginTransformFeedback@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsEnabledIndexedEXT
+.type glIsEnabledIndexedEXT, %function
+glIsEnabledIndexedEXT:
+    mov __blue_glCore_glIsEnabledIndexedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexLevelParameterxvOES
+.type glGetTexLevelParameterxvOES, %function
+glGetTexLevelParameterxvOES:
+    mov __blue_glCore_glGetTexLevelParameterxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x3fv
+.type glProgramUniformMatrix2x3fv, %function
+glProgramUniformMatrix2x3fv:
+    mov __blue_glCore_glProgramUniformMatrix2x3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3iATI
+.type glNormalStream3iATI, %function
+glNormalStream3iATI:
+    mov __blue_glCore_glNormalStream3iATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferParameterui64vNV
+.type glGetNamedBufferParameterui64vNV, %function
+glGetNamedBufferParameterui64vNV:
+    mov __blue_glCore_glGetNamedBufferParameterui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBufferPointervARB
+.type glGetBufferPointervARB, %function
+glGetBufferPointervARB:
+    mov __blue_glCore_glGetBufferPointervARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorPointerEXT
+.type glColorPointerEXT, %function
+glColorPointerEXT:
+    mov __blue_glCore_glColorPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsCommandListNV
+.type glIsCommandListNV, %function
+glIsCommandListNV:
+    mov __blue_glCore_glIsCommandListNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1hvNV
+.type glMultiTexCoord1hvNV, %function
+glMultiTexCoord1hvNV:
+    mov __blue_glCore_glMultiTexCoord1hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformHandleui64vNV
+.type glUniformHandleui64vNV, %function
+glUniformHandleui64vNV:
+    mov __blue_glCore_glUniformHandleui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorTableSGI
+.type glColorTableSGI, %function
+glColorTableSGI:
+    mov __blue_glCore_glColorTableSGI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionFilter2DEXT
+.type glConvolutionFilter2DEXT, %function
+glConvolutionFilter2DEXT:
+    mov __blue_glCore_glConvolutionFilter2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1dvEXT
+.type glVertexAttribL1dvEXT, %function
+glVertexAttribL1dvEXT:
+    mov __blue_glCore_glVertexAttribL1dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3svATI
+.type glVertexStream3svATI, %function
+glVertexStream3svATI:
+    mov __blue_glCore_glVertexStream3svATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3iATI
+.type glVertexStream3iATI, %function
+glVertexStream3iATI:
+    mov __blue_glCore_glVertexStream3iATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableParameterfvSGI
+.type glGetColorTableParameterfvSGI, %function
+glGetColorTableParameterfvSGI:
+    mov __blue_glCore_glGetColorTableParameterfvSGI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTestFenceAPPLE
+.type glTestFenceAPPLE, %function
+glTestFenceAPPLE:
+    mov __blue_glCore_glTestFenceAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindParameterEXT
+.type glBindParameterEXT, %function
+glBindParameterEXT:
+    mov __blue_glCore_glBindParameterEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordP1ui
+.type glTexCoordP1ui, %function
+glTexCoordP1ui:
+    mov __blue_glCore_glTexCoordP1ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEvalCoord2xvOES
+.type glEvalCoord2xvOES, %function
+glEvalCoord2xvOES:
+    mov __blue_glCore_glEvalCoord2xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindVertexBuffers
+.type glBindVertexBuffers, %function
+glBindVertexBuffers:
+    mov __blue_glCore_glBindVertexBuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenBuffers
+.type glGenBuffers, %function
+glGenBuffers:
+    mov __blue_glCore_glGenBuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex3bOES
+.type glVertex3bOES, %function
+glVertex3bOES:
+    mov __blue_glCore_glVertex3bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawArraysEXT
+.type glMultiDrawArraysEXT, %function
+glMultiDrawArraysEXT:
+    mov __blue_glCore_glMultiDrawArraysEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSamplerParameterIuiv
+.type glSamplerParameterIuiv, %function
+glSamplerParameterIuiv:
+    mov __blue_glCore_glSamplerParameterIuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSamplerParameterIuiv
+.type glGetSamplerParameterIuiv, %function
+glGetSamplerParameterIuiv:
+    mov __blue_glCore_glGetSamplerParameterIuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2sARB
+.type glWindowPos2sARB, %function
+glWindowPos2sARB:
+    mov __blue_glCore_glWindowPos2sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteStatesNV
+.type glDeleteStatesNV, %function
+glDeleteStatesNV:
+    mov __blue_glCore_glDeleteStatesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexSubImage3DEXT
+.type glCopyTexSubImage3DEXT, %function
+glCopyTexSubImage3DEXT:
+    mov __blue_glCore_glCopyTexSubImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3dvARB
+.type glVertexAttrib3dvARB, %function
+glVertexAttrib3dvARB:
+    mov __blue_glCore_glVertexAttrib3dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordPointerEXT
+.type glFogCoordPointerEXT, %function
+glFogCoordPointerEXT:
+    mov __blue_glCore_glFogCoordPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4fColor4fNormal3fVertex4fvSUN
+.type glTexCoord4fColor4fNormal3fVertex4fvSUN, %function
+glTexCoord4fColor4fNormal3fVertex4fvSUN:
+    mov __blue_glCore_glTexCoord4fColor4fNormal3fVertex4fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClipPlanexOES
+.type glClipPlanexOES, %function
+glClipPlanexOES:
+    mov __blue_glCore_glClipPlanexOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureSubImage
+.type glGetTextureSubImage, %function
+glGetTextureSubImage:
+    mov __blue_glCore_glGetTextureSubImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableVertexAttribArray
+.type glEnableVertexAttribArray, %function
+glEnableVertexAttribArray:
+    mov __blue_glCore_glEnableVertexAttribArray@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameteriEXT
+.type glConvolutionParameteriEXT, %function
+glConvolutionParameteriEXT:
+    mov __blue_glCore_glConvolutionParameteriEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLineWidth
+.type glLineWidth, %function
+glLineWidth:
+    mov __blue_glCore_glLineWidth@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexImage2D
+.type glCopyTexImage2D, %function
+glCopyTexImage2D:
+    mov __blue_glCore_glCopyTexImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexBufferARB
+.type glTexBufferARB, %function
+glTexBufferARB:
+    mov __blue_glCore_glTexBufferARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribLFormatEXT
+.type glVertexArrayVertexAttribLFormatEXT, %function
+glVertexArrayVertexAttribLFormatEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribLFormatEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2dvMESA
+.type glWindowPos2dvMESA, %function
+glWindowPos2dvMESA:
+    mov __blue_glCore_glWindowPos2dvMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColorPointerListIBM
+.type glSecondaryColorPointerListIBM, %function
+glSecondaryColorPointerListIBM:
+    mov __blue_glCore_glSecondaryColorPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenProgramsARB
+.type glGenProgramsARB, %function
+glGenProgramsARB:
+    mov __blue_glCore_glGenProgramsARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInternalformatSampleivNV
+.type glGetInternalformatSampleivNV, %function
+glGetInternalformatSampleivNV:
+    mov __blue_glCore_glGetInternalformatSampleivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureImage2DMultisampleCoverageNV
+.type glTextureImage2DMultisampleCoverageNV, %function
+glTextureImage2DMultisampleCoverageNV:
+    mov __blue_glCore_glTextureImage2DMultisampleCoverageNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightubvARB
+.type glWeightubvARB, %function
+glWeightubvARB:
+    mov __blue_glCore_glWeightubvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3dvARB
+.type glWindowPos3dvARB, %function
+glWindowPos3dvARB:
+    mov __blue_glCore_glWindowPos3dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapNamedBufferRangeEXT
+.type glMapNamedBufferRangeEXT, %function
+glMapNamedBufferRangeEXT:
+    mov __blue_glCore_glMapNamedBufferRangeEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3dMESA
+.type glWindowPos3dMESA, %function
+glWindowPos3dMESA:
+    mov __blue_glCore_glWindowPos3dMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribDivisorARB
+.type glVertexAttribDivisorARB, %function
+glVertexAttribDivisorARB:
+    mov __blue_glCore_glVertexAttribDivisorARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x2fv
+.type glProgramUniformMatrix4x2fv, %function
+glProgramUniformMatrix4x2fv:
+    mov __blue_glCore_glProgramUniformMatrix4x2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryObjecti64vEXT
+.type glGetQueryObjecti64vEXT, %function
+glGetQueryObjecti64vEXT:
+    mov __blue_glCore_glGetQueryObjecti64vEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsProgramNV
+.type glIsProgramNV, %function
+glIsProgramNV:
+    mov __blue_glCore_glIsProgramNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2dvATI
+.type glVertexStream2dvATI, %function
+glVertexStream2dvATI:
+    mov __blue_glCore_glVertexStream2dvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTextureUnitParameterEXT
+.type glBindTextureUnitParameterEXT, %function
+glBindTextureUnitParameterEXT:
+    mov __blue_glCore_glBindTextureUnitParameterEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTexture1DEXT
+.type glFramebufferTexture1DEXT, %function
+glFramebufferTexture1DEXT:
+    mov __blue_glCore_glFramebufferTexture1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformHandleui64vARB
+.type glProgramUniformHandleui64vARB, %function
+glProgramUniformHandleui64vARB:
+    mov __blue_glCore_glProgramUniformHandleui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexStorage3D
+.type glTexStorage3D, %function
+glTexStorage3D:
+    mov __blue_glCore_glTexStorage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRenderbufferStorageMultisampleEXT
+.type glRenderbufferStorageMultisampleEXT, %function
+glRenderbufferStorageMultisampleEXT:
+    mov __blue_glCore_glRenderbufferStorageMultisampleEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearBufferData
+.type glClearBufferData, %function
+glClearBufferData:
+    mov __blue_glCore_glClearBufferData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBufferPageCommitmentARB
+.type glBufferPageCommitmentARB, %function
+glBufferPageCommitmentARB:
+    mov __blue_glCore_glBufferPageCommitmentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeNamedBufferNonResidentNV
+.type glMakeNamedBufferNonResidentNV, %function
+glMakeNamedBufferNonResidentNV:
+    mov __blue_glCore_glMakeNamedBufferNonResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointSize
+.type glPointSize, %function
+glPointSize:
+    mov __blue_glCore_glPointSize@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMinSampleShading
+.type glMinSampleShading, %function
+glMinSampleShading:
+    mov __blue_glCore_glMinSampleShading@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4xOES
+.type glColor4xOES, %function
+glColor4xOES:
+    mov __blue_glCore_glColor4xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream4svATI
+.type glVertexStream4svATI, %function
+glVertexStream4svATI:
+    mov __blue_glCore_glVertexStream4svATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementsBaseVertex
+.type glMultiDrawElementsBaseVertex, %function
+glMultiDrawElementsBaseVertex:
+    mov __blue_glCore_glMultiDrawElementsBaseVertex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteFramebuffersEXT
+.type glDeleteFramebuffersEXT, %function
+glDeleteFramebuffersEXT:
+    mov __blue_glCore_glDeleteFramebuffersEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4dvARB
+.type glMultiTexCoord4dvARB, %function
+glMultiTexCoord4dvARB:
+    mov __blue_glCore_glMultiTexCoord4dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenerateMultiTexMipmapEXT
+.type glGenerateMultiTexMipmapEXT, %function
+glGenerateMultiTexMipmapEXT:
+    mov __blue_glCore_glGenerateMultiTexMipmapEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTextureEXT
+.type glFramebufferTextureEXT, %function
+glFramebufferTextureEXT:
+    mov __blue_glCore_glFramebufferTextureEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x4fvEXT
+.type glProgramUniformMatrix2x4fvEXT, %function
+glProgramUniformMatrix2x4fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix2x4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFinish
+.type glFinish, %function
+glFinish:
+    mov __blue_glCore_glFinish@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexP2ui
+.type glVertexP2ui, %function
+glVertexP2ui:
+    mov __blue_glCore_glVertexP2ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3ui
+.type glSecondaryColor3ui, %function
+glSecondaryColor3ui:
+    mov __blue_glCore_glSecondaryColor3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndVideoCaptureNV
+.type glEndVideoCaptureNV, %function
+glEndVideoCaptureNV:
+    mov __blue_glCore_glEndVideoCaptureNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentMaterialfSGIX
+.type glFragmentMaterialfSGIX, %function
+glFragmentMaterialfSGIX:
+    mov __blue_glCore_glFragmentMaterialfSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnPixelMapfv
+.type glGetnPixelMapfv, %function
+glGetnPixelMapfv:
+    mov __blue_glCore_glGetnPixelMapfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4Nsv
+.type glVertexAttrib4Nsv, %function
+glVertexAttrib4Nsv:
+    mov __blue_glCore_glVertexAttrib4Nsv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTransformFeedbackVaryingNV
+.type glGetTransformFeedbackVaryingNV, %function
+glGetTransformFeedbackVaryingNV:
+    mov __blue_glCore_glGetTransformFeedbackVaryingNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPassTexCoordATI
+.type glPassTexCoordATI, %function
+glPassTexCoordATI:
+    mov __blue_glCore_glPassTexCoordATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glShaderSource
+.type glShaderSource, %function
+glShaderSource:
+    mov __blue_glCore_glShaderSource@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribdvARB
+.type glGetVertexAttribdvARB, %function
+glGetVertexAttribdvARB:
+    mov __blue_glCore_glGetVertexAttribdvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3svARB
+.type glMultiTexCoord3svARB, %function
+glMultiTexCoord3svARB:
+    mov __blue_glCore_glMultiTexCoord3svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1fvARB
+.type glMultiTexCoord1fvARB, %function
+glMultiTexCoord1fvARB:
+    mov __blue_glCore_glMultiTexCoord1fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream4sATI
+.type glVertexStream4sATI, %function
+glVertexStream4sATI:
+    mov __blue_glCore_glVertexStream4sATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameters4fvNV
+.type glProgramParameters4fvNV, %function
+glProgramParameters4fvNV:
+    mov __blue_glCore_glProgramParameters4fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureSubImage2DEXT
+.type glTextureSubImage2DEXT, %function
+glTextureSubImage2DEXT:
+    mov __blue_glCore_glTextureSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushMappedBufferRange
+.type glFlushMappedBufferRange, %function
+glFlushMappedBufferRange:
+    mov __blue_glCore_glFlushMappedBufferRange@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyImageSubData
+.type glCopyImageSubData, %function
+glCopyImageSubData:
+    mov __blue_glCore_glCopyImageSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4i
+.type glProgramUniform4i, %function
+glProgramUniform4i:
+    mov __blue_glCore_glProgramUniform4i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDoublei_v
+.type glGetDoublei_v, %function
+glGetDoublei_v:
+    mov __blue_glCore_glGetDoublei_v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterIuiv
+.type glTexParameterIuiv, %function
+glTexParameterIuiv:
+    mov __blue_glCore_glTexParameterIuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementsIndirectAMD
+.type glMultiDrawElementsIndirectAMD, %function
+glMultiDrawElementsIndirectAMD:
+    mov __blue_glCore_glMultiDrawElementsIndirectAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureBarrierNV
+.type glTextureBarrierNV, %function
+glTextureBarrierNV:
+    mov __blue_glCore_glTextureBarrierNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndVertexShaderEXT
+.type glEndVertexShaderEXT, %function
+glEndVertexShaderEXT:
+    mov __blue_glCore_glEndVertexShaderEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantivEXT
+.type glVariantivEXT, %function
+glVariantivEXT:
+    mov __blue_glCore_glVariantivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3uivEXT
+.type glSecondaryColor3uivEXT, %function
+glSecondaryColor3uivEXT:
+    mov __blue_glCore_glSecondaryColor3uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetConvolutionParameterxvOES
+.type glGetConvolutionParameterxvOES, %function
+glGetConvolutionParameterxvOES:
+    mov __blue_glCore_glGetConvolutionParameterxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP3ui
+.type glVertexAttribP3ui, %function
+glVertexAttribP3ui:
+    mov __blue_glCore_glVertexAttribP3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1iATI
+.type glVertexStream1iATI, %function
+glVertexStream1iATI:
+    mov __blue_glCore_glVertexStream1iATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableClientStateIndexedEXT
+.type glEnableClientStateIndexedEXT, %function
+glEnableClientStateIndexedEXT:
+    mov __blue_glCore_glEnableClientStateIndexedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformPathNV
+.type glTransformPathNV, %function
+glTransformPathNV:
+    mov __blue_glCore_glTransformPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedFramebufferParameteriv
+.type glGetNamedFramebufferParameteriv, %function
+glGetNamedFramebufferParameteriv:
+    mov __blue_glCore_glGetNamedFramebufferParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginVideoCaptureNV
+.type glBeginVideoCaptureNV, %function
+glBeginVideoCaptureNV:
+    mov __blue_glCore_glBeginVideoCaptureNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameterI4iEXT
+.type glNamedProgramLocalParameterI4iEXT, %function
+glNamedProgramLocalParameterI4iEXT:
+    mov __blue_glCore_glNamedProgramLocalParameterI4iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAlphaFragmentOp1ATI
+.type glAlphaFragmentOp1ATI, %function
+glAlphaFragmentOp1ATI:
+    mov __blue_glCore_glAlphaFragmentOp1ATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4Nuiv
+.type glVertexAttrib4Nuiv, %function
+glVertexAttrib4Nuiv:
+    mov __blue_glCore_glVertexAttrib4Nuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameterI4uivNV
+.type glProgramEnvParameterI4uivNV, %function
+glProgramEnvParameterI4uivNV:
+    mov __blue_glCore_glProgramEnvParameterI4uivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoorddv
+.type glFogCoorddv, %function
+glFogCoorddv:
+    mov __blue_glCore_glFogCoorddv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultisamplefvNV
+.type glGetMultisamplefvNV, %function
+glGetMultisamplefvNV:
+    mov __blue_glCore_glGetMultisamplefvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4Nub
+.type glVertexAttrib4Nub, %function
+glVertexAttrib4Nub:
+    mov __blue_glCore_glVertexAttrib4Nub@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindSampler
+.type glBindSampler, %function
+glBindSampler:
+    mov __blue_glCore_glBindSampler@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4uiv
+.type glUniform4uiv, %function
+glUniform4uiv:
+    mov __blue_glCore_glUniform4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexStorage2DMultisample
+.type glTexStorage2DMultisample, %function
+glTexStorage2DMultisample:
+    mov __blue_glCore_glTexStorage2DMultisample@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthMask
+.type glDepthMask, %function
+glDepthMask:
+    mov __blue_glCore_glDepthMask@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushRasterSGIX
+.type glFlushRasterSGIX, %function
+glFlushRasterSGIX:
+    mov __blue_glCore_glFlushRasterSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElementsBaseVertex
+.type glDrawElementsBaseVertex, %function
+glDrawElementsBaseVertex:
+    mov __blue_glCore_glDrawElementsBaseVertex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultTransposeMatrixfARB
+.type glMultTransposeMatrixfARB, %function
+glMultTransposeMatrixfARB:
+    mov __blue_glCore_glMultTransposeMatrixfARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapTexture2DINTEL
+.type glMapTexture2DINTEL, %function
+glMapTexture2DINTEL:
+    mov __blue_glCore_glMapTexture2DINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndConditionalRenderNVX
+.type glEndConditionalRenderNVX, %function
+glEndConditionalRenderNVX:
+    mov __blue_glCore_glEndConditionalRenderNVX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushPixelDataRangeNV
+.type glFlushPixelDataRangeNV, %function
+glFlushPixelDataRangeNV:
+    mov __blue_glCore_glFlushPixelDataRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2svNV
+.type glVertexAttrib2svNV, %function
+glVertexAttrib2svNV:
+    mov __blue_glCore_glVertexAttrib2svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformui64vNV
+.type glUniformui64vNV, %function
+glUniformui64vNV:
+    mov __blue_glCore_glUniformui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTextureARB
+.type glFramebufferTextureARB, %function
+glFramebufferTextureARB:
+    mov __blue_glCore_glFramebufferTextureARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI1i
+.type glVertexAttribI1i, %function
+glVertexAttribI1i:
+    mov __blue_glCore_glVertexAttribI1i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetObjectParameterivAPPLE
+.type glGetObjectParameterivAPPLE, %function
+glGetObjectParameterivAPPLE:
+    mov __blue_glCore_glGetObjectParameterivAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedProgramStringEXT
+.type glGetNamedProgramStringEXT, %function
+glGetNamedProgramStringEXT:
+    mov __blue_glCore_glGetNamedProgramStringEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfQueryIdByNameINTEL
+.type glGetPerfQueryIdByNameINTEL, %function
+glGetPerfQueryIdByNameINTEL:
+    mov __blue_glCore_glGetPerfQueryIdByNameINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glArrayElementEXT
+.type glArrayElementEXT, %function
+glArrayElementEXT:
+    mov __blue_glCore_glArrayElementEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathGlyphsNV
+.type glPathGlyphsNV, %function
+glPathGlyphsNV:
+    mov __blue_glCore_glPathGlyphsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4dARB
+.type glMultiTexCoord4dARB, %function
+glMultiTexCoord4dARB:
+    mov __blue_glCore_glMultiTexCoord4dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3dNV
+.type glVertexAttrib3dNV, %function
+glVertexAttrib3dNV:
+    mov __blue_glCore_glVertexAttrib3dNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRasterPos4xvOES
+.type glRasterPos4xvOES, %function
+glRasterPos4xvOES:
+    mov __blue_glCore_glRasterPos4xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2uiv
+.type glProgramUniform2uiv, %function
+glProgramUniform2uiv:
+    mov __blue_glCore_glProgramUniform2uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3svMESA
+.type glWindowPos3svMESA, %function
+glWindowPos3svMESA:
+    mov __blue_glCore_glWindowPos3svMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexSubImage2D
+.type glCompressedTexSubImage2D, %function
+glCompressedTexSubImage2D:
+    mov __blue_glCore_glCompressedTexSubImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetIntegerui64i_vNV
+.type glGetIntegerui64i_vNV, %function
+glGetIntegerui64i_vNV:
+    mov __blue_glCore_glGetIntegerui64i_vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFenceivNV
+.type glGetFenceivNV, %function
+glGetFenceivNV:
+    mov __blue_glCore_glGetFenceivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2iv
+.type glUniform2iv, %function
+glUniform2iv:
+    mov __blue_glCore_glUniform2iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3f
+.type glSecondaryColor3f, %function
+glSecondaryColor3f:
+    mov __blue_glCore_glSecondaryColor3f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1svATI
+.type glVertexStream1svATI, %function
+glVertexStream1svATI:
+    mov __blue_glCore_glVertexStream1svATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMapParameterivNV
+.type glGetMapParameterivNV, %function
+glGetMapParameterivNV:
+    mov __blue_glCore_glGetMapParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageEnableAMD
+.type glDebugMessageEnableAMD, %function
+glDebugMessageEnableAMD:
+    mov __blue_glCore_glDebugMessageEnableAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayRangeAPPLE
+.type glVertexArrayRangeAPPLE, %function
+glVertexArrayRangeAPPLE:
+    mov __blue_glCore_glVertexArrayRangeAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetLocalConstantBooleanvEXT
+.type glGetLocalConstantBooleanvEXT, %function
+glGetLocalConstantBooleanvEXT:
+    mov __blue_glCore_glGetLocalConstantBooleanvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMapAttribParameterivNV
+.type glGetMapAttribParameterivNV, %function
+glGetMapAttribParameterivNV:
+    mov __blue_glCore_glGetMapAttribParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGlobalAlphaFactoruiSUN
+.type glGlobalAlphaFactoruiSUN, %function
+glGlobalAlphaFactoruiSUN:
+    mov __blue_glCore_glGlobalAlphaFactoruiSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathParameterfvNV
+.type glGetPathParameterfvNV, %function
+glGetPathParameterfvNV:
+    mov __blue_glCore_glGetPathParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeTextureHandleResidentNV
+.type glMakeTextureHandleResidentNV, %function
+glMakeTextureHandleResidentNV:
+    mov __blue_glCore_glMakeTextureHandleResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glElementPointerATI
+.type glElementPointerATI, %function
+glElementPointerATI:
+    mov __blue_glCore_glElementPointerATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateShader
+.type glCreateShader, %function
+glCreateShader:
+    mov __blue_glCore_glCreateShader@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexImage1D
+.type glCompressedTexImage1D, %function
+glCompressedTexImage1D:
+    mov __blue_glCore_glCompressedTexImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateBuffers
+.type glCreateBuffers, %function
+glCreateBuffers:
+    mov __blue_glCore_glCreateBuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogFuncSGIS
+.type glFogFuncSGIS, %function
+glFogFuncSGIS:
+    mov __blue_glCore_glFogFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3uiEXT
+.type glUniform3uiEXT, %function
+glUniform3uiEXT:
+    mov __blue_glCore_glUniform3uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsVertexAttribEnabledAPPLE
+.type glIsVertexAttribEnabledAPPLE, %function
+glIsVertexAttribEnabledAPPLE:
+    mov __blue_glCore_glIsVertexAttribEnabledAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4d
+.type glMultiTexCoord4d, %function
+glMultiTexCoord4d:
+    mov __blue_glCore_glMultiTexCoord4d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReferencePlaneSGIX
+.type glReferencePlaneSGIX, %function
+glReferencePlaneSGIX:
+    mov __blue_glCore_glReferencePlaneSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1d
+.type glVertexAttribL1d, %function
+glVertexAttribL1d:
+    mov __blue_glCore_glVertexAttribL1d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4usv
+.type glVertexAttrib4usv, %function
+glVertexAttrib4usv:
+    mov __blue_glCore_glVertexAttrib4usv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFinishObjectAPPLE
+.type glFinishObjectAPPLE, %function
+glFinishObjectAPPLE:
+    mov __blue_glCore_glFinishObjectAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionFilter1DEXT
+.type glConvolutionFilter1DEXT, %function
+glConvolutionFilter1DEXT:
+    mov __blue_glCore_glConvolutionFilter1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCombinerOutputParameterivNV
+.type glGetCombinerOutputParameterivNV, %function
+glGetCombinerOutputParameterivNV:
+    mov __blue_glCore_glGetCombinerOutputParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMinmax
+.type glGetMinmax, %function
+glGetMinmax:
+    mov __blue_glCore_glGetMinmax@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1ui64ARB
+.type glProgramUniform1ui64ARB, %function
+glProgramUniform1ui64ARB:
+    mov __blue_glCore_glProgramUniform1ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage2DMultisampleEXT
+.type glTextureStorage2DMultisampleEXT, %function
+glTextureStorage2DMultisampleEXT:
+    mov __blue_glCore_glTextureStorage2DMultisampleEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3dv
+.type glWindowPos3dv, %function
+glWindowPos3dv:
+    mov __blue_glCore_glWindowPos3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4i64ARB
+.type glProgramUniform4i64ARB, %function
+glProgramUniform4i64ARB:
+    mov __blue_glCore_glProgramUniform4i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2fvEXT
+.type glProgramUniformMatrix2fvEXT, %function
+glProgramUniformMatrix2fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix2fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage1DEXT
+.type glTextureStorage1DEXT, %function
+glTextureStorage1DEXT:
+    mov __blue_glCore_glTextureStorage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGlobalAlphaFactoriSUN
+.type glGlobalAlphaFactoriSUN, %function
+glGlobalAlphaFactoriSUN:
+    mov __blue_glCore_glGlobalAlphaFactoriSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2iARB
+.type glMultiTexCoord2iARB, %function
+glMultiTexCoord2iARB:
+    mov __blue_glCore_glMultiTexCoord2iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationIndexedAMD
+.type glBlendEquationIndexedAMD, %function
+glBlendEquationIndexedAMD:
+    mov __blue_glCore_glBlendEquationIndexedAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindFragmentShaderATI
+.type glBindFragmentShaderATI, %function
+glBindFragmentShaderATI:
+    mov __blue_glCore_glBindFragmentShaderATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteTextures
+.type glDeleteTextures, %function
+glDeleteTextures:
+    mov __blue_glCore_glDeleteTextures@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordfv
+.type glFogCoordfv, %function
+glFogCoordfv:
+    mov __blue_glCore_glFogCoordfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIndexPointerEXT
+.type glIndexPointerEXT, %function
+glIndexPointerEXT:
+    mov __blue_glCore_glIndexPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveSubroutineUniformName
+.type glGetActiveSubroutineUniformName, %function
+glGetActiveSubroutineUniformName:
+    mov __blue_glCore_glGetActiveSubroutineUniformName@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex2hvNV
+.type glVertex2hvNV, %function
+glVertex2hvNV:
+    mov __blue_glCore_glVertex2hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRenderbufferStorageMultisample
+.type glRenderbufferStorageMultisample, %function
+glRenderbufferStorageMultisample:
+    mov __blue_glCore_glRenderbufferStorageMultisample@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterIiv
+.type glTextureParameterIiv, %function
+glTextureParameterIiv:
+    mov __blue_glCore_glTextureParameterIiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameterfv
+.type glGetTexParameterfv, %function
+glGetTexParameterfv:
+    mov __blue_glCore_glGetTexParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureLightEXT
+.type glTextureLightEXT, %function
+glTextureLightEXT:
+    mov __blue_glCore_glTextureLightEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSharpenTexFuncSGIS
+.type glGetSharpenTexFuncSGIS, %function
+glGetSharpenTexFuncSGIS:
+    mov __blue_glCore_glGetSharpenTexFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementArrayAPPLE
+.type glMultiDrawElementArrayAPPLE, %function
+glMultiDrawElementArrayAPPLE:
+    mov __blue_glCore_glMultiDrawElementArrayAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeImageHandleResidentNV
+.type glMakeImageHandleResidentNV, %function
+glMakeImageHandleResidentNV:
+    mov __blue_glCore_glMakeImageHandleResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixIndexubvARB
+.type glMatrixIndexubvARB, %function
+glMatrixIndexubvARB:
+    mov __blue_glCore_glMatrixIndexubvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformfv
+.type glGetnUniformfv, %function
+glGetnUniformfv:
+    mov __blue_glCore_glGetnUniformfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableClientStateiEXT
+.type glEnableClientStateiEXT, %function
+glEnableClientStateiEXT:
+    mov __blue_glCore_glEnableClientStateiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexPointerEXT
+.type glVertexPointerEXT, %function
+glVertexPointerEXT:
+    mov __blue_glCore_glVertexPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMaterialxOES
+.type glGetMaterialxOES, %function
+glGetMaterialxOES:
+    mov __blue_glCore_glGetMaterialxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3fvEXT
+.type glSecondaryColor3fvEXT, %function
+glSecondaryColor3fvEXT:
+    mov __blue_glCore_glSecondaryColor3fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexBumpParameterfvATI
+.type glTexBumpParameterfvATI, %function
+glTexBumpParameterfvATI:
+    mov __blue_glCore_glTexBumpParameterfvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryIndexediv
+.type glGetQueryIndexediv, %function
+glGetQueryIndexediv:
+    mov __blue_glCore_glGetQueryIndexediv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4svNV
+.type glVertexAttrib4svNV, %function
+glVertexAttrib4svNV:
+    mov __blue_glCore_glVertexAttrib4svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformHandleui64vNV
+.type glProgramUniformHandleui64vNV, %function
+glProgramUniformHandleui64vNV:
+    mov __blue_glCore_glProgramUniformHandleui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFrameZoomSGIX
+.type glFrameZoomSGIX, %function
+glFrameZoomSGIX:
+    mov __blue_glCore_glFrameZoomSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiTexCoord2fVertex3fSUN
+.type glReplacementCodeuiTexCoord2fVertex3fSUN, %function
+glReplacementCodeuiTexCoord2fVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiTexCoord2fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexGeniEXT
+.type glMultiTexGeniEXT, %function
+glMultiTexGeniEXT:
+    mov __blue_glCore_glMultiTexGeniEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramResourceLocation
+.type glGetProgramResourceLocation, %function
+glGetProgramResourceLocation:
+    mov __blue_glCore_glGetProgramResourceLocation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableEXT
+.type glGetColorTableEXT, %function
+glGetColorTableEXT:
+    mov __blue_glCore_glGetColorTableEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVideoCaptureNV
+.type glVideoCaptureNV, %function
+glVideoCaptureNV:
+    mov __blue_glCore_glVideoCaptureNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3ui64vARB
+.type glProgramUniform3ui64vARB, %function
+glProgramUniform3ui64vARB:
+    mov __blue_glCore_glProgramUniform3ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1iv
+.type glMultiTexCoord1iv, %function
+glMultiTexCoord1iv:
+    mov __blue_glCore_glMultiTexCoord1iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterfvSGIS
+.type glPointParameterfvSGIS, %function
+glPointParameterfvSGIS:
+    mov __blue_glCore_glPointParameterfvSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3d
+.type glMultiTexCoord3d, %function
+glMultiTexCoord3d:
+    mov __blue_glCore_glMultiTexCoord3d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexSubImage1DEXT
+.type glMultiTexSubImage1DEXT, %function
+glMultiTexSubImage1DEXT:
+    mov __blue_glCore_glMultiTexSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3bv
+.type glSecondaryColor3bv, %function
+glSecondaryColor3bv:
+    mov __blue_glCore_glSecondaryColor3bv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformivARB
+.type glGetnUniformivARB, %function
+glGetnUniformivARB:
+    mov __blue_glCore_glGetnUniformivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3fARB
+.type glUniform3fARB, %function
+glUniform3fARB:
+    mov __blue_glCore_glUniform3fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameter4dNV
+.type glProgramParameter4dNV, %function
+glProgramParameter4dNV:
+    mov __blue_glCore_glProgramParameter4dNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixOrthoEXT
+.type glMatrixOrthoEXT, %function
+glMatrixOrthoEXT:
+    mov __blue_glCore_glMatrixOrthoEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4ui
+.type glProgramUniform4ui, %function
+glProgramUniform4ui:
+    mov __blue_glCore_glProgramUniform4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapBufferARB
+.type glMapBufferARB, %function
+glMapBufferARB:
+    mov __blue_glCore_glMapBufferARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferParameterivEXT
+.type glGetNamedBufferParameterivEXT, %function
+glGetNamedBufferParameterivEXT:
+    mov __blue_glCore_glGetNamedBufferParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3svEXT
+.type glSecondaryColor3svEXT, %function
+glSecondaryColor3svEXT:
+    mov __blue_glCore_glSecondaryColor3svEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeBufferNonResidentNV
+.type glMakeBufferNonResidentNV, %function
+glMakeBufferNonResidentNV:
+    mov __blue_glCore_glMakeBufferNonResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedRenderbufferStorageMultisampleEXT
+.type glNamedRenderbufferStorageMultisampleEXT, %function
+glNamedRenderbufferStorageMultisampleEXT:
+    mov __blue_glCore_glNamedRenderbufferStorageMultisampleEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2sNV
+.type glVertexAttrib2sNV, %function
+glVertexAttrib2sNV:
+    mov __blue_glCore_glVertexAttrib2sNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexGenivEXT
+.type glGetMultiTexGenivEXT, %function
+glGetMultiTexGenivEXT:
+    mov __blue_glCore_glGetMultiTexGenivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProvokingVertex
+.type glProvokingVertex, %function
+glProvokingVertex:
+    mov __blue_glCore_glProvokingVertex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationi
+.type glBlendEquationi, %function
+glBlendEquationi:
+    mov __blue_glCore_glBlendEquationi@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPrimitiveBoundingBoxARB
+.type glPrimitiveBoundingBoxARB, %function
+glPrimitiveBoundingBoxARB:
+    mov __blue_glCore_glPrimitiveBoundingBoxARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormal3hvNV
+.type glNormal3hvNV, %function
+glNormal3hvNV:
+    mov __blue_glCore_glNormal3hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramSubroutineParameteruivNV
+.type glGetProgramSubroutineParameteruivNV, %function
+glGetProgramSubroutineParameteruivNV:
+    mov __blue_glCore_glGetProgramSubroutineParameteruivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix4dv
+.type glUniformMatrix4dv, %function
+glUniformMatrix4dv:
+    mov __blue_glCore_glUniformMatrix4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantusvEXT
+.type glVariantusvEXT, %function
+glVariantusvEXT:
+    mov __blue_glCore_glVariantusvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFunci
+.type glBlendFunci, %function
+glBlendFunci:
+    mov __blue_glCore_glBlendFunci@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCheckFramebufferStatusEXT
+.type glCheckFramebufferStatusEXT, %function
+glCheckFramebufferStatusEXT:
+    mov __blue_glCore_glCheckFramebufferStatusEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP2ui
+.type glVertexAttribP2ui, %function
+glVertexAttribP2ui:
+    mov __blue_glCore_glVertexAttribP2ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiSUN
+.type glReplacementCodeuiSUN, %function
+glReplacementCodeuiSUN:
+    mov __blue_glCore_glReplacementCodeuiSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenRenderbuffers
+.type glGenRenderbuffers, %function
+glGenRenderbuffers:
+    mov __blue_glCore_glGenRenderbuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNextPerfQueryIdINTEL
+.type glGetNextPerfQueryIdINTEL, %function
+glGetNextPerfQueryIdINTEL:
+    mov __blue_glCore_glGetNextPerfQueryIdINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResetMinmaxEXT
+.type glResetMinmaxEXT, %function
+glResetMinmaxEXT:
+    mov __blue_glCore_glResetMinmaxEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnConvolutionFilterARB
+.type glGetnConvolutionFilterARB, %function
+glGetnConvolutionFilterARB:
+    mov __blue_glCore_glGetnConvolutionFilterARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilMask
+.type glStencilMask, %function
+glStencilMask:
+    mov __blue_glCore_glStencilMask@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glImageTransformParameterfvHP
+.type glImageTransformParameterfvHP, %function
+glImageTransformParameterfvHP:
+    mov __blue_glCore_glImageTransformParameterfvHP@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3sARB
+.type glWindowPos3sARB, %function
+glWindowPos3sARB:
+    mov __blue_glCore_glWindowPos3sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideoui64vNV
+.type glGetVideoui64vNV, %function
+glGetVideoui64vNV:
+    mov __blue_glCore_glGetVideoui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramLocalParameterIivNV
+.type glGetProgramLocalParameterIivNV, %function
+glGetProgramLocalParameterIivNV:
+    mov __blue_glCore_glGetProgramLocalParameterIivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformFeedbackAttribsNV
+.type glTransformFeedbackAttribsNV, %function
+glTransformFeedbackAttribsNV:
+    mov __blue_glCore_glTransformFeedbackAttribsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayAttribLFormat
+.type glVertexArrayAttribLFormat, %function
+glVertexArrayAttribLFormat:
+    mov __blue_glCore_glVertexArrayAttribLFormat@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureNormalEXT
+.type glTextureNormalEXT, %function
+glTextureNormalEXT:
+    mov __blue_glCore_glTextureNormalEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord3xvOES
+.type glTexCoord3xvOES, %function
+glTexCoord3xvOES:
+    mov __blue_glCore_glTexCoord3xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2bOES
+.type glTexCoord2bOES, %function
+glTexCoord2bOES:
+    mov __blue_glCore_glTexCoord2bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3ivEXT
+.type glTangent3ivEXT, %function
+glTangent3ivEXT:
+    mov __blue_glCore_glTangent3ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndPerfMonitorAMD
+.type glEndPerfMonitorAMD, %function
+glEndPerfMonitorAMD:
+    mov __blue_glCore_glEndPerfMonitorAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGlobalAlphaFactordSUN
+.type glGlobalAlphaFactordSUN, %function
+glGlobalAlphaFactordSUN:
+    mov __blue_glCore_glGlobalAlphaFactordSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteBuffers
+.type glDeleteBuffers, %function
+glDeleteBuffers:
+    mov __blue_glCore_glDeleteBuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClampColorARB
+.type glClampColorARB, %function
+glClampColorARB:
+    mov __blue_glCore_glClampColorARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateTexSubImage
+.type glInvalidateTexSubImage, %function
+glInvalidateTexSubImage:
+    mov __blue_glCore_glInvalidateTexSubImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4uivEXT
+.type glProgramUniform4uivEXT, %function
+glProgramUniform4uivEXT:
+    mov __blue_glCore_glProgramUniform4uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParametersI4uivNV
+.type glProgramEnvParametersI4uivNV, %function
+glProgramEnvParametersI4uivNV:
+    mov __blue_glCore_glProgramEnvParametersI4uivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glValidateProgramPipeline
+.type glValidateProgramPipeline, %function
+glValidateProgramPipeline:
+    mov __blue_glCore_glValidateProgramPipeline@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSeparableFilter
+.type glGetSeparableFilter, %function
+glGetSeparableFilter:
+    mov __blue_glCore_glGetSeparableFilter@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableVertexAttribAPPLE
+.type glDisableVertexAttribAPPLE, %function
+glDisableVertexAttribAPPLE:
+    mov __blue_glCore_glDisableVertexAttribAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2ui64vARB
+.type glUniform2ui64vARB, %function
+glUniform2ui64vARB:
+    mov __blue_glCore_glUniform2ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3bEXT
+.type glTangent3bEXT, %function
+glTangent3bEXT:
+    mov __blue_glCore_glTangent3bEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexArrayIntegeri_vEXT
+.type glGetVertexArrayIntegeri_vEXT, %function
+glGetVertexArrayIntegeri_vEXT:
+    mov __blue_glCore_glGetVertexArrayIntegeri_vEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsSync
+.type glIsSync, %function
+glIsSync:
+    mov __blue_glCore_glIsSync@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorP3uiv
+.type glColorP3uiv, %function
+glColorP3uiv:
+    mov __blue_glCore_glColorP3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDetachShader
+.type glDetachShader, %function
+glDetachShader:
+    mov __blue_glCore_glDetachShader@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTexture3D
+.type glFramebufferTexture3D, %function
+glFramebufferTexture3D:
+    mov __blue_glCore_glFramebufferTexture3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameterf
+.type glConvolutionParameterf, %function
+glConvolutionParameterf:
+    mov __blue_glCore_glConvolutionParameterf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideouivNV
+.type glGetVideouivNV, %function
+glGetVideouivNV:
+    mov __blue_glCore_glGetVideouivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndTransformFeedback
+.type glEndTransformFeedback, %function
+glEndTransformFeedback:
+    mov __blue_glCore_glEndTransformFeedback@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4d
+.type glUniform4d, %function
+glUniform4d:
+    mov __blue_glCore_glUniform4d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2uiv
+.type glVertexAttribI2uiv, %function
+glVertexAttribI2uiv:
+    mov __blue_glCore_glVertexAttribI2uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameterivEXT
+.type glConvolutionParameterivEXT, %function
+glConvolutionParameterivEXT:
+    mov __blue_glCore_glConvolutionParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1ui64NV
+.type glProgramUniform1ui64NV, %function
+glProgramUniform1ui64NV:
+    mov __blue_glCore_glProgramUniform1ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3dv
+.type glProgramUniform3dv, %function
+glProgramUniform3dv:
+    mov __blue_glCore_glProgramUniform3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2uiEXT
+.type glVertexAttribI2uiEXT, %function
+glVertexAttribI2uiEXT:
+    mov __blue_glCore_glVertexAttribI2uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVariantPointervEXT
+.type glGetVariantPointervEXT, %function
+glGetVariantPointervEXT:
+    mov __blue_glCore_glGetVariantPointervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameterI4uivNV
+.type glProgramLocalParameterI4uivNV, %function
+glProgramLocalParameterI4uivNV:
+    mov __blue_glCore_glProgramLocalParameterI4uivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSwizzleEXT
+.type glSwizzleEXT, %function
+glSwizzleEXT:
+    mov __blue_glCore_glSwizzleEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3i64vNV
+.type glUniform3i64vNV, %function
+glUniform3i64vNV:
+    mov __blue_glCore_glUniform3i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4ubv
+.type glVertexAttrib4ubv, %function
+glVertexAttrib4ubv:
+    mov __blue_glCore_glVertexAttrib4ubv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4i64ARB
+.type glUniform4i64ARB, %function
+glUniform4i64ARB:
+    mov __blue_glCore_glUniform4i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReadnPixels
+.type glReadnPixels, %function
+glReadnPixels:
+    mov __blue_glCore_glReadnPixels@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterfvARB
+.type glPointParameterfvARB, %function
+glPointParameterfvARB:
+    mov __blue_glCore_glPointParameterfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribFormatNV
+.type glVertexAttribFormatNV, %function
+glVertexAttribFormatNV:
+    mov __blue_glCore_glVertexAttribFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPatchParameterfv
+.type glPatchParameterfv, %function
+glPatchParameterfv:
+    mov __blue_glCore_glPatchParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2svATI
+.type glVertexStream2svATI, %function
+glVertexStream2svATI:
+    mov __blue_glCore_glVertexStream2svATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSyncTextureINTEL
+.type glSyncTextureINTEL, %function
+glSyncTextureINTEL:
+    mov __blue_glCore_glSyncTextureINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixMult3x3fNV
+.type glMatrixMult3x3fNV, %function
+glMatrixMult3x3fNV:
+    mov __blue_glCore_glMatrixMult3x3fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2bvOES
+.type glMultiTexCoord2bvOES, %function
+glMultiTexCoord2bvOES:
+    mov __blue_glCore_glMultiTexCoord2bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsTextureEXT
+.type glIsTextureEXT, %function
+glIsTextureEXT:
+    mov __blue_glCore_glIsTextureEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRenderbufferStorage
+.type glRenderbufferStorage, %function
+glRenderbufferStorage:
+    mov __blue_glCore_glRenderbufferStorage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInteger64i_v
+.type glGetInteger64i_v, %function
+glGetInteger64i_v:
+    mov __blue_glCore_glGetInteger64i_v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeformationMap3fSGIX
+.type glDeformationMap3fSGIX, %function
+glDeformationMap3fSGIX:
+    mov __blue_glCore_glDeformationMap3fSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendColor
+.type glBlendColor, %function
+glBlendColor:
+    mov __blue_glCore_glBlendColor@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1i64vARB
+.type glProgramUniform1i64vARB, %function
+glProgramUniform1i64vARB:
+    mov __blue_glCore_glProgramUniform1i64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glObjectPtrLabel
+.type glObjectPtrLabel, %function
+glObjectPtrLabel:
+    mov __blue_glCore_glObjectPtrLabel@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnPolygonStipple
+.type glGetnPolygonStipple, %function
+glGetnPolygonStipple:
+    mov __blue_glCore_glGetnPolygonStipple@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3dvEXT
+.type glProgramUniformMatrix3dvEXT, %function
+glProgramUniformMatrix3dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3i
+.type glProgramUniform3i, %function
+glProgramUniform3i:
+    mov __blue_glCore_glProgramUniform3i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsRenderbuffer
+.type glIsRenderbuffer, %function
+glIsRenderbuffer:
+    mov __blue_glCore_glIsRenderbuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetAttribLocation
+.type glGetAttribLocation, %function
+glGetAttribLocation:
+    mov __blue_glCore_glGetAttribLocation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4iEXT
+.type glProgramUniform4iEXT, %function
+glProgramUniform4iEXT:
+    mov __blue_glCore_glProgramUniform4iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLinkProgramARB
+.type glLinkProgramARB, %function
+glLinkProgramARB:
+    mov __blue_glCore_glLinkProgramARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindVertexBuffer
+.type glBindVertexBuffer, %function
+glBindVertexBuffer:
+    mov __blue_glCore_glBindVertexBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexGenfvEXT
+.type glGetMultiTexGenfvEXT, %function
+glGetMultiTexGenfvEXT:
+    mov __blue_glCore_glGetMultiTexGenfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationSeparatei
+.type glBlendEquationSeparatei, %function
+glBlendEquationSeparatei:
+    mov __blue_glCore_glBlendEquationSeparatei@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteNamesAMD
+.type glDeleteNamesAMD, %function
+glDeleteNamesAMD:
+    mov __blue_glCore_glDeleteNamesAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3i64ARB
+.type glUniform3i64ARB, %function
+glUniform3i64ARB:
+    mov __blue_glCore_glUniform3i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
 .global glDrawArraysInstancedBaseInstance
 .type glDrawArraysInstancedBaseInstance, %function
 glDrawArraysInstancedBaseInstance:
     mov __blue_glCore_glDrawArraysInstancedBaseInstance@GOTPCREL(%rip), %r11
     jmp *(%r11)
 
-.global glIsPointInStrokePathNV
-.type glIsPointInStrokePathNV, %function
-glIsPointInStrokePathNV:
-    mov __blue_glCore_glIsPointInStrokePathNV@GOTPCREL(%rip), %r11
+.global glProgramUniform2fEXT
+.type glProgramUniform2fEXT, %function
+glProgramUniform2fEXT:
+    mov __blue_glCore_glProgramUniform2fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexEnvxvOES
+.type glTexEnvxvOES, %function
+glTexEnvxvOES:
+    mov __blue_glCore_glTexEnvxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2iv
+.type glWindowPos2iv, %function
+glWindowPos2iv:
+    mov __blue_glCore_glWindowPos2iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendBarrierKHR
+.type glBlendBarrierKHR, %function
+glBlendBarrierKHR:
+    mov __blue_glCore_glBlendBarrierKHR@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3uivEXT
+.type glUniform3uivEXT, %function
+glUniform3uivEXT:
+    mov __blue_glCore_glUniform3uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fColor3fVertex3fSUN
+.type glTexCoord2fColor3fVertex3fSUN, %function
+glTexCoord2fColor3fVertex3fSUN:
+    mov __blue_glCore_glTexCoord2fColor3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearStencil
+.type glClearStencil, %function
+glClearStencil:
+    mov __blue_glCore_glClearStencil@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMemoryBarrierEXT
+.type glMemoryBarrierEXT, %function
+glMemoryBarrierEXT:
+    mov __blue_glCore_glMemoryBarrierEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2ivMESA
+.type glWindowPos2ivMESA, %function
+glWindowPos2ivMESA:
+    mov __blue_glCore_glWindowPos2ivMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginFragmentShaderATI
+.type glBeginFragmentShaderATI, %function
+glBeginFragmentShaderATI:
+    mov __blue_glCore_glBeginFragmentShaderATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL3d
+.type glVertexAttribL3d, %function
+glVertexAttribL3d:
+    mov __blue_glCore_glVertexAttribL3d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferRange
+.type glBindBufferRange, %function
+glBindBufferRange:
+    mov __blue_glCore_glBindBufferRange@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPrioritizeTexturesxOES
+.type glPrioritizeTexturesxOES, %function
+glPrioritizeTexturesxOES:
+    mov __blue_glCore_glPrioritizeTexturesxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeImageHandleNonResidentARB
+.type glMakeImageHandleNonResidentARB, %function
+glMakeImageHandleNonResidentARB:
+    mov __blue_glCore_glMakeImageHandleNonResidentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3ub
+.type glSecondaryColor3ub, %function
+glSecondaryColor3ub:
+    mov __blue_glCore_glSecondaryColor3ub@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsQueryARB
+.type glIsQueryARB, %function
+glIsQueryARB:
+    mov __blue_glCore_glIsQueryARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL3dvEXT
+.type glVertexAttribL3dvEXT, %function
+glVertexAttribL3dvEXT:
+    mov __blue_glCore_glVertexAttribL3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4ui64vNV
+.type glUniform4ui64vNV, %function
+glUniform4ui64vNV:
+    mov __blue_glCore_glUniform4ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL3dEXT
+.type glVertexAttribL3dEXT, %function
+glVertexAttribL3dEXT:
+    mov __blue_glCore_glVertexAttribL3dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformivARB
+.type glGetUniformivARB, %function
+glGetUniformivARB:
+    mov __blue_glCore_glGetUniformivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2ui64NV
+.type glVertexAttribL2ui64NV, %function
+glVertexAttribL2ui64NV:
+    mov __blue_glCore_glVertexAttribL2ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x4dvEXT
+.type glProgramUniformMatrix3x4dvEXT, %function
+glProgramUniformMatrix3x4dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix3x4dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilThenCoverStrokePathInstancedNV
+.type glStencilThenCoverStrokePathInstancedNV, %function
+glStencilThenCoverStrokePathInstancedNV:
+    mov __blue_glCore_glStencilThenCoverStrokePathInstancedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3i
+.type glWindowPos3i, %function
+glWindowPos3i:
+    mov __blue_glCore_glWindowPos3i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameteriEXT
+.type glTextureParameteriEXT, %function
+glTextureParameteriEXT:
+    mov __blue_glCore_glTextureParameteriEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformFeedbackVaryingsEXT
+.type glTransformFeedbackVaryingsEXT, %function
+glTransformFeedbackVaryingsEXT:
+    mov __blue_glCore_glTransformFeedbackVaryingsEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2ui
+.type glVertexAttribI2ui, %function
+glVertexAttribI2ui:
+    mov __blue_glCore_glVertexAttribI2ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPrimitiveRestartIndexNV
+.type glPrimitiveRestartIndexNV, %function
+glPrimitiveRestartIndexNV:
+    mov __blue_glCore_glPrimitiveRestartIndexNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3uiv
+.type glVertexAttribI3uiv, %function
+glVertexAttribI3uiv:
+    mov __blue_glCore_glVertexAttribI3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathParameterfvNV
+.type glPathParameterfvNV, %function
+glPathParameterfvNV:
+    mov __blue_glCore_glPathParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2fv
+.type glWindowPos2fv, %function
+glWindowPos2fv:
+    mov __blue_glCore_glWindowPos2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightuivARB
+.type glWeightuivARB, %function
+glWeightuivARB:
+    mov __blue_glCore_glWeightuivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2fvNV
+.type glVertexAttrib2fvNV, %function
+glVertexAttrib2fvNV:
+    mov __blue_glCore_glVertexAttrib2fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayAttribFormat
+.type glVertexArrayAttribFormat, %function
+glVertexArrayAttribFormat:
+    mov __blue_glCore_glVertexArrayAttribFormat@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage2D
+.type glTexImage2D, %function
+glTexImage2D:
+    mov __blue_glCore_glTexImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix3fvARB
+.type glUniformMatrix3fvARB, %function
+glUniformMatrix3fvARB:
+    mov __blue_glCore_glUniformMatrix3fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformi64vNV
+.type glGetUniformi64vNV, %function
+glGetUniformi64vNV:
+    mov __blue_glCore_glGetUniformi64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2fvARB
+.type glWindowPos2fvARB, %function
+glWindowPos2fvARB:
+    mov __blue_glCore_glWindowPos2fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3dvATI
+.type glVertexStream3dvATI, %function
+glVertexStream3dvATI:
+    mov __blue_glCore_glVertexStream3dvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4ubvNV
+.type glVertexAttrib4ubvNV, %function
+glVertexAttrib4ubvNV:
+    mov __blue_glCore_glVertexAttrib4ubvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4fv
+.type glUniform4fv, %function
+glUniform4fv:
+    mov __blue_glCore_glUniform4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideoivNV
+.type glGetVideoivNV, %function
+glGetVideoivNV:
+    mov __blue_glCore_glGetVideoivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUpdateObjectBufferATI
+.type glUpdateObjectBufferATI, %function
+glUpdateObjectBufferATI:
+    mov __blue_glCore_glUpdateObjectBufferATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexParameterfvEXT
+.type glMultiTexParameterfvEXT, %function
+glMultiTexParameterfvEXT:
+    mov __blue_glCore_glMultiTexParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3fNV
+.type glVertexAttrib3fNV, %function
+glVertexAttrib3fNV:
+    mov __blue_glCore_glVertexAttrib3fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPixelTexGenParameterfvSGIS
+.type glGetPixelTexGenParameterfvSGIS, %function
+glGetPixelTexGenParameterfvSGIS:
+    mov __blue_glCore_glGetPixelTexGenParameterfvSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteCommandListsNV
+.type glDeleteCommandListsNV, %function
+glDeleteCommandListsNV:
+    mov __blue_glCore_glDeleteCommandListsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4fMESA
+.type glWindowPos4fMESA, %function
+glWindowPos4fMESA:
+    mov __blue_glCore_glWindowPos4fMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElementsIndirectBindlessNV
+.type glMultiDrawElementsIndirectBindlessNV, %function
+glMultiDrawElementsIndirectBindlessNV:
+    mov __blue_glCore_glMultiDrawElementsIndirectBindlessNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsEnabled
+.type glIsEnabled, %function
+glIsEnabled:
+    mov __blue_glCore_glIsEnabled@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathCommandsNV
+.type glPathCommandsNV, %function
+glPathCommandsNV:
+    mov __blue_glCore_glPathCommandsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLightxvOES
+.type glLightxvOES, %function
+glLightxvOES:
+    mov __blue_glCore_glLightxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramSubroutineParametersuivNV
+.type glProgramSubroutineParametersuivNV, %function
+glProgramSubroutineParametersuivNV:
+    mov __blue_glCore_glProgramSubroutineParametersuivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedBufferData
+.type glClearNamedBufferData, %function
+glClearNamedBufferData:
+    mov __blue_glCore_glClearNamedBufferData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4uivEXT
+.type glUniform4uivEXT, %function
+glUniform4uivEXT:
+    mov __blue_glCore_glUniform4uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4ivARB
+.type glVertexAttrib4ivARB, %function
+glVertexAttrib4ivARB:
+    mov __blue_glCore_glVertexAttrib4ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFuncSeparateINGR
+.type glBlendFuncSeparateINGR, %function
+glBlendFuncSeparateINGR:
+    mov __blue_glCore_glBlendFuncSeparateINGR@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord3xOES
+.type glTexCoord3xOES, %function
+glTexCoord3xOES:
+    mov __blue_glCore_glTexCoord3xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAUIsSurfaceNV
+.type glVDPAUIsSurfaceNV, %function
+glVDPAUIsSurfaceNV:
+    mov __blue_glCore_glVDPAUIsSurfaceNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedMultiTexImage2DEXT
+.type glCompressedMultiTexImage2DEXT, %function
+glCompressedMultiTexImage2DEXT:
+    mov __blue_glCore_glCompressedMultiTexImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginPerfQueryINTEL
+.type glBeginPerfQueryINTEL, %function
+glBeginPerfQueryINTEL:
+    mov __blue_glCore_glBeginPerfQueryINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformFeedbackBufferBase
+.type glTransformFeedbackBufferBase, %function
+glTransformFeedbackBufferBase:
+    mov __blue_glCore_glTransformFeedbackBufferBase@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearColorIiEXT
+.type glClearColorIiEXT, %function
+glClearColorIiEXT:
+    mov __blue_glCore_glClearColorIiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4svARB
+.type glMultiTexCoord4svARB, %function
+glMultiTexCoord4svARB:
+    mov __blue_glCore_glMultiTexCoord4svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapNamedBufferRange
+.type glMapNamedBufferRange, %function
+glMapNamedBufferRange:
+    mov __blue_glCore_glMapNamedBufferRange@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetOcclusionQueryuivNV
+.type glGetOcclusionQueryuivNV, %function
+glGetOcclusionQueryuivNV:
+    mov __blue_glCore_glGetOcclusionQueryuivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSamplePatternSGIS
+.type glSamplePatternSGIS, %function
+glSamplePatternSGIS:
+    mov __blue_glCore_glSamplePatternSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSpriteParameteriSGIX
+.type glSpriteParameteriSGIX, %function
+glSpriteParameteriSGIX:
+    mov __blue_glCore_glSpriteParameteriSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawTransformFeedback
+.type glDrawTransformFeedback, %function
+glDrawTransformFeedback:
+    mov __blue_glCore_glDrawTransformFeedback@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBufferParameterivARB
+.type glGetBufferParameterivARB, %function
+glGetBufferParameterivARB:
+    mov __blue_glCore_glGetBufferParameterivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3dARB
+.type glMultiTexCoord3dARB, %function
+glMultiTexCoord3dARB:
+    mov __blue_glCore_glMultiTexCoord3dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix2x4dv
+.type glUniformMatrix2x4dv, %function
+glUniformMatrix2x4dv:
+    mov __blue_glCore_glUniformMatrix2x4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2dv
+.type glWindowPos2dv, %function
+glWindowPos2dv:
+    mov __blue_glCore_glWindowPos2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeNamedBufferResidentNV
+.type glMakeNamedBufferResidentNV, %function
+glMakeNamedBufferResidentNV:
+    mov __blue_glCore_glMakeNamedBufferResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetQueryiv
+.type glGetQueryiv, %function
+glGetQueryiv:
+    mov __blue_glCore_glGetQueryiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordP2uiv
+.type glTexCoordP2uiv, %function
+glTexCoordP2uiv:
+    mov __blue_glCore_glTexCoordP2uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2svARB
+.type glMultiTexCoord2svARB, %function
+glMultiTexCoord2svARB:
+    mov __blue_glCore_glMultiTexCoord2svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferRangeEXT
+.type glBindBufferRangeEXT, %function
+glBindBufferRangeEXT:
+    mov __blue_glCore_glBindBufferRangeEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x2fvEXT
+.type glProgramUniformMatrix4x2fvEXT, %function
+glProgramUniformMatrix4x2fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix4x2fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3xOES
+.type glMultiTexCoord3xOES, %function
+glMultiTexCoord3xOES:
+    mov __blue_glCore_glMultiTexCoord3xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawArraysIndirectAMD
+.type glMultiDrawArraysIndirectAMD, %function
+glMultiDrawArraysIndirectAMD:
+    mov __blue_glCore_glMultiDrawArraysIndirectAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorSubTableEXT
+.type glColorSubTableEXT, %function
+glColorSubTableEXT:
+    mov __blue_glCore_glColorSubTableEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3s
+.type glWindowPos3s, %function
+glWindowPos3s:
+    mov __blue_glCore_glWindowPos3s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawArrays
+.type glMultiDrawArrays, %function
+glMultiDrawArrays:
+    mov __blue_glCore_glMultiDrawArrays@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayColorOffsetEXT
+.type glVertexArrayColorOffsetEXT, %function
+glVertexArrayColorOffsetEXT:
+    mov __blue_glCore_glVertexArrayColorOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3s
+.type glVertexAttrib3s, %function
+glVertexAttrib3s:
+    mov __blue_glCore_glVertexAttrib3s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix4x2dv
+.type glUniformMatrix4x2dv, %function
+glUniformMatrix4x2dv:
+    mov __blue_glCore_glUniformMatrix4x2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1xvOES
+.type glMultiTexCoord1xvOES, %function
+glMultiTexCoord1xvOES:
+    mov __blue_glCore_glMultiTexCoord1xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawArraysIndirect
+.type glMultiDrawArraysIndirect, %function
+glMultiDrawArraysIndirect:
+    mov __blue_glCore_glMultiDrawArraysIndirect@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3bvOES
+.type glMultiTexCoord3bvOES, %function
+glMultiTexCoord3bvOES:
+    mov __blue_glCore_glMultiTexCoord3bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexImage3D
+.type glCompressedTexImage3D, %function
+glCompressedTexImage3D:
+    mov __blue_glCore_glCompressedTexImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4iARB
+.type glMultiTexCoord4iARB, %function
+glMultiTexCoord4iARB:
+    mov __blue_glCore_glMultiTexCoord4iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTextureEXT
+.type glBindTextureEXT, %function
+glBindTextureEXT:
+    mov __blue_glCore_glBindTextureEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2i64vNV
+.type glProgramUniform2i64vNV, %function
+glProgramUniform2i64vNV:
+    mov __blue_glCore_glProgramUniform2i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4i64NV
+.type glProgramUniform4i64NV, %function
+glProgramUniform4i64NV:
+    mov __blue_glCore_glProgramUniform4i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEvaluateDepthValuesARB
+.type glEvaluateDepthValuesARB, %function
+glEvaluateDepthValuesARB:
+    mov __blue_glCore_glEvaluateDepthValuesARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCoverStrokePathNV
+.type glCoverStrokePathNV, %function
+glCoverStrokePathNV:
+    mov __blue_glCore_glCoverStrokePathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadMatrixxOES
+.type glLoadMatrixxOES, %function
+glLoadMatrixxOES:
+    mov __blue_glCore_glLoadMatrixxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage3D
+.type glTexImage3D, %function
+glTexImage3D:
+    mov __blue_glCore_glTexImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2dv
+.type glProgramUniform2dv, %function
+glProgramUniform2dv:
+    mov __blue_glCore_glProgramUniform2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI1uiEXT
+.type glVertexAttribI1uiEXT, %function
+glVertexAttribI1uiEXT:
+    mov __blue_glCore_glVertexAttribI1uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexWeightfvEXT
+.type glVertexWeightfvEXT, %function
+glVertexWeightfvEXT:
+    mov __blue_glCore_glVertexWeightfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3bOES
+.type glMultiTexCoord3bOES, %function
+glMultiTexCoord3bOES:
+    mov __blue_glCore_glMultiTexCoord3bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCombinerInputParameterfvNV
+.type glGetCombinerInputParameterfvNV, %function
+glGetCombinerInputParameterfvNV:
+    mov __blue_glCore_glGetCombinerInputParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageCallbackAMD
+.type glDebugMessageCallbackAMD, %function
+glDebugMessageCallbackAMD:
+    mov __blue_glCore_glDebugMessageCallbackAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramParameterfvNV
+.type glGetProgramParameterfvNV, %function
+glGetProgramParameterfvNV:
+    mov __blue_glCore_glGetProgramParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2d
+.type glWindowPos2d, %function
+glWindowPos2d:
+    mov __blue_glCore_glWindowPos2d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSamplerParameteri
+.type glSamplerParameteri, %function
+glSamplerParameteri:
+    mov __blue_glCore_glSamplerParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexFormatNV
+.type glVertexFormatNV, %function
+glVertexFormatNV:
+    mov __blue_glCore_glVertexFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginConditionalRender
+.type glBeginConditionalRender, %function
+glBeginConditionalRender:
+    mov __blue_glCore_glBeginConditionalRender@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribPointerNV
+.type glVertexAttribPointerNV, %function
+glVertexAttribPointerNV:
+    mov __blue_glCore_glVertexAttribPointerNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveAttrib
+.type glGetActiveAttrib, %function
+glGetActiveAttrib:
+    mov __blue_glCore_glGetActiveAttrib@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginQueryIndexed
+.type glBeginQueryIndexed, %function
+glBeginQueryIndexed:
+    mov __blue_glCore_glBeginQueryIndexed@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribLPointer
+.type glVertexAttribLPointer, %function
+glVertexAttribLPointer:
+    mov __blue_glCore_glVertexAttribLPointer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRasterPos3xvOES
+.type glRasterPos3xvOES, %function
+glRasterPos3xvOES:
+    mov __blue_glCore_glRasterPos3xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteTransformFeedbacks
+.type glDeleteTransformFeedbacks, %function
+glDeleteTransformFeedbacks:
+    mov __blue_glCore_glDeleteTransformFeedbacks@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3ui64ARB
+.type glUniform3ui64ARB, %function
+glUniform3ui64ARB:
+    mov __blue_glCore_glUniform3ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4dvEXT
+.type glProgramUniform4dvEXT, %function
+glProgramUniform4dvEXT:
+    mov __blue_glCore_glProgramUniform4dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetAttribLocationARB
+.type glGetAttribLocationARB, %function
+glGetAttribLocationARB:
+    mov __blue_glCore_glGetAttribLocationARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs3svNV
+.type glVertexAttribs3svNV, %function
+glVertexAttribs3svNV:
+    mov __blue_glCore_glVertexAttribs3svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSamplerParameterfv
+.type glGetSamplerParameterfv, %function
+glGetSamplerParameterfv:
+    mov __blue_glCore_glGetSamplerParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4dv
+.type glVertexAttribL4dv, %function
+glVertexAttribL4dv:
+    mov __blue_glCore_glVertexAttribL4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformFeedbackVaryingsNV
+.type glTransformFeedbackVaryingsNV, %function
+glTransformFeedbackVaryingsNV:
+    mov __blue_glCore_glTransformFeedbackVaryingsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2i64vNV
+.type glUniform2i64vNV, %function
+glUniform2i64vNV:
+    mov __blue_glCore_glUniform2i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4NsvARB
+.type glVertexAttrib4NsvARB, %function
+glVertexAttrib4NsvARB:
+    mov __blue_glCore_glVertexAttrib4NsvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3dv
+.type glProgramUniformMatrix3dv, %function
+glProgramUniformMatrix3dv:
+    mov __blue_glCore_glProgramUniformMatrix3dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteFencesAPPLE
+.type glDeleteFencesAPPLE, %function
+glDeleteFencesAPPLE:
+    mov __blue_glCore_glDeleteFencesAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorTableParameterfv
+.type glColorTableParameterfv, %function
+glColorTableParameterfv:
+    mov __blue_glCore_glColorTableParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformBufferSizeEXT
+.type glGetUniformBufferSizeEXT, %function
+glGetUniformBufferSizeEXT:
+    mov __blue_glCore_glGetUniformBufferSizeEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3s
+.type glMultiTexCoord3s, %function
+glMultiTexCoord3s:
+    mov __blue_glCore_glMultiTexCoord3s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex2xOES
+.type glVertex2xOES, %function
+glVertex2xOES:
+    mov __blue_glCore_glVertex2xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenQueriesARB
+.type glGenQueriesARB, %function
+glGenQueriesARB:
+    mov __blue_glCore_glGenQueriesARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameterxOES
+.type glConvolutionParameterxOES, %function
+glConvolutionParameterxOES:
+    mov __blue_glCore_glConvolutionParameterxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushVertexArrayRangeAPPLE
+.type glFlushVertexArrayRangeAPPLE, %function
+glFlushVertexArrayRangeAPPLE:
+    mov __blue_glCore_glFlushVertexArrayRangeAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTextureLayerEXT
+.type glFramebufferTextureLayerEXT, %function
+glFramebufferTextureLayerEXT:
+    mov __blue_glCore_glFramebufferTextureLayerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage2DMultisampleCoverageNV
+.type glTexImage2DMultisampleCoverageNV, %function
+glTexImage2DMultisampleCoverageNV:
+    mov __blue_glCore_glTexImage2DMultisampleCoverageNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferParameteri
+.type glNamedFramebufferParameteri, %function
+glNamedFramebufferParameteri:
+    mov __blue_glCore_glNamedFramebufferParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexRenderbufferNV
+.type glTexRenderbufferNV, %function
+glTexRenderbufferNV:
+    mov __blue_glCore_glTexRenderbufferNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex2hNV
+.type glVertex2hNV, %function
+glVertex2hNV:
+    mov __blue_glCore_glVertex2hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexEnvfEXT
+.type glMultiTexEnvfEXT, %function
+glMultiTexEnvfEXT:
+    mov __blue_glCore_glMultiTexEnvfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilThenCoverFillPathInstancedNV
+.type glStencilThenCoverFillPathInstancedNV, %function
+glStencilThenCoverFillPathInstancedNV:
+    mov __blue_glCore_glStencilThenCoverFillPathInstancedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearColorIuiEXT
+.type glClearColorIuiEXT, %function
+glClearColorIuiEXT:
+    mov __blue_glCore_glClearColorIuiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArraySecondaryColorOffsetEXT
+.type glVertexArraySecondaryColorOffsetEXT, %function
+glVertexArraySecondaryColorOffsetEXT:
+    mov __blue_glCore_glVertexArraySecondaryColorOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glListParameteriSGIX
+.type glListParameteriSGIX, %function
+glListParameteriSGIX:
+    mov __blue_glCore_glListParameteriSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateRenderbuffers
+.type glCreateRenderbuffers, %function
+glCreateRenderbuffers:
+    mov __blue_glCore_glCreateRenderbuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3ubv
+.type glSecondaryColor3ubv, %function
+glSecondaryColor3ubv:
+    mov __blue_glCore_glSecondaryColor3ubv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureSubImage1DEXT
+.type glCopyTextureSubImage1DEXT, %function
+glCopyTextureSubImage1DEXT:
+    mov __blue_glCore_glCopyTextureSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapVertexAttrib1fAPPLE
+.type glMapVertexAttrib1fAPPLE, %function
+glMapVertexAttrib1fAPPLE:
+    mov __blue_glCore_glMapVertexAttrib1fAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1dvARB
+.type glVertexAttrib1dvARB, %function
+glVertexAttrib1dvARB:
+    mov __blue_glCore_glVertexAttrib1dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClampColor
+.type glClampColor, %function
+glClampColor:
+    mov __blue_glCore_glClampColor@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2ui
+.type glUniform2ui, %function
+glUniform2ui:
+    mov __blue_glCore_glUniform2ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2fARB
+.type glUniform2fARB, %function
+glUniform2fARB:
+    mov __blue_glCore_glUniform2fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCoverageModulationNV
+.type glCoverageModulationNV, %function
+glCoverageModulationNV:
+    mov __blue_glCore_glCoverageModulationNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexP3uiv
+.type glVertexP3uiv, %function
+glVertexP3uiv:
+    mov __blue_glCore_glVertexP3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPixelTransformParameterivEXT
+.type glGetPixelTransformParameterivEXT, %function
+glGetPixelTransformParameterivEXT:
+    mov __blue_glCore_glGetPixelTransformParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameteriv
+.type glConvolutionParameteriv, %function
+glConvolutionParameteriv:
+    mov __blue_glCore_glConvolutionParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4iv
+.type glVertexAttribI4iv, %function
+glVertexAttribI4iv:
+    mov __blue_glCore_glVertexAttribI4iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetArrayObjectivATI
+.type glGetArrayObjectivATI, %function
+glGetArrayObjectivATI:
+    mov __blue_glCore_glGetArrayObjectivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureImage2DMultisampleNV
+.type glTextureImage2DMultisampleNV, %function
+glTextureImage2DMultisampleNV:
+    mov __blue_glCore_glTextureImage2DMultisampleNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageControlARB
+.type glDebugMessageControlARB, %function
+glDebugMessageControlARB:
+    mov __blue_glCore_glDebugMessageControlARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4dvEXT
+.type glVertexAttribL4dvEXT, %function
+glVertexAttribL4dvEXT:
+    mov __blue_glCore_glVertexAttribL4dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramLocalParameterfvARB
+.type glGetProgramLocalParameterfvARB, %function
+glGetProgramLocalParameterfvARB:
+    mov __blue_glCore_glGetProgramLocalParameterfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureBufferRangeEXT
+.type glTextureBufferRangeEXT, %function
+glTextureBufferRangeEXT:
+    mov __blue_glCore_glTextureBufferRangeEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3i64vARB
+.type glProgramUniform3i64vARB, %function
+glProgramUniform3i64vARB:
+    mov __blue_glCore_glProgramUniform3i64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeImageHandleNonResidentNV
+.type glMakeImageHandleNonResidentNV, %function
+glMakeImageHandleNonResidentNV:
+    mov __blue_glCore_glMakeImageHandleNonResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramBufferParametersIuivNV
+.type glProgramBufferParametersIuivNV, %function
+glProgramBufferParametersIuivNV:
+    mov __blue_glCore_glProgramBufferParametersIuivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1fvARB
+.type glUniform1fvARB, %function
+glUniform1fvARB:
+    mov __blue_glCore_glUniform1fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformSubroutineuiv
+.type glGetUniformSubroutineuiv, %function
+glGetUniformSubroutineuiv:
+    mov __blue_glCore_glGetUniformSubroutineuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsPointInFillPathNV
+.type glIsPointInFillPathNV, %function
+glIsPointInFillPathNV:
+    mov __blue_glCore_glIsPointInFillPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2sATI
+.type glVertexStream2sATI, %function
+glVertexStream2sATI:
+    mov __blue_glCore_glVertexStream2sATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexGenxOES
+.type glTexGenxOES, %function
+glTexGenxOES:
+    mov __blue_glCore_glTexGenxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL3ui64vNV
+.type glVertexAttribL3ui64vNV, %function
+glVertexAttribL3ui64vNV:
+    mov __blue_glCore_glVertexAttribL3ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordFormatNV
+.type glTexCoordFormatNV, %function
+glTexCoordFormatNV:
+    mov __blue_glCore_glTexCoordFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthRangedNV
+.type glDepthRangedNV, %function
+glDepthRangedNV:
+    mov __blue_glCore_glDepthRangedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferDrawBufferEXT
+.type glFramebufferDrawBufferEXT, %function
+glFramebufferDrawBufferEXT:
+    mov __blue_glCore_glFramebufferDrawBufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameterIuivEXT
+.type glGetTextureParameterIuivEXT, %function
+glGetTextureParameterIuivEXT:
+    mov __blue_glCore_glGetTextureParameterIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElementsInstanced
+.type glDrawElementsInstanced, %function
+glDrawElementsInstanced:
+    mov __blue_glCore_glDrawElementsInstanced@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1ui
+.type glProgramUniform1ui, %function
+glProgramUniform1ui:
+    mov __blue_glCore_glProgramUniform1ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormal3hNV
+.type glNormal3hNV, %function
+glNormal3hNV:
+    mov __blue_glCore_glNormal3hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRenderbufferStorageEXT
+.type glRenderbufferStorageEXT, %function
+glRenderbufferStorageEXT:
+    mov __blue_glCore_glRenderbufferStorageEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilStrokePathNV
+.type glStencilStrokePathNV, %function
+glStencilStrokePathNV:
+    mov __blue_glCore_glStencilStrokePathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCompressedTexImage
+.type glGetCompressedTexImage, %function
+glGetCompressedTexImage:
+    mov __blue_glCore_glGetCompressedTexImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureLevelParameterivEXT
+.type glGetTextureLevelParameterivEXT, %function
+glGetTextureLevelParameterivEXT:
+    mov __blue_glCore_glGetTextureLevelParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnPixelMapfvARB
+.type glGetnPixelMapfvARB, %function
+glGetnPixelMapfvARB:
+    mov __blue_glCore_glGetnPixelMapfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDispatchCompute
+.type glDispatchCompute, %function
+glDispatchCompute:
+    mov __blue_glCore_glDispatchCompute@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1dv
+.type glUniform1dv, %function
+glUniform1dv:
+    mov __blue_glCore_glUniform1dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2dEXT
+.type glVertexAttribL2dEXT, %function
+glVertexAttribL2dEXT:
+    mov __blue_glCore_glVertexAttribL2dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexParameterIuivEXT
+.type glGetMultiTexParameterIuivEXT, %function
+glGetMultiTexParameterIuivEXT:
+    mov __blue_glCore_glGetMultiTexParameterIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapGrid2xOES
+.type glMapGrid2xOES, %function
+glMapGrid2xOES:
+    mov __blue_glCore_glMapGrid2xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetObjectParameterivARB
+.type glGetObjectParameterivARB, %function
+glGetObjectParameterivARB:
+    mov __blue_glCore_glGetObjectParameterivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4iv
+.type glUniform4iv, %function
+glUniform4iv:
+    mov __blue_glCore_glUniform4iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureHandleNV
+.type glGetTextureHandleNV, %function
+glGetTextureHandleNV:
+    mov __blue_glCore_glGetTextureHandleNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4hNV
+.type glMultiTexCoord4hNV, %function
+glMultiTexCoord4hNV:
+    mov __blue_glCore_glMultiTexCoord4hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3uiv
+.type glUniform3uiv, %function
+glUniform3uiv:
+    mov __blue_glCore_glUniform3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBufferAddressRangeNV
+.type glBufferAddressRangeNV, %function
+glBufferAddressRangeNV:
+    mov __blue_glCore_glBufferAddressRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramBinary
+.type glProgramBinary, %function
+glProgramBinary:
+    mov __blue_glCore_glProgramBinary@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameterxvOES
+.type glGetTexParameterxvOES, %function
+glGetTexParameterxvOES:
+    mov __blue_glCore_glGetTexParameterxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4dEXT
+.type glVertexAttribL4dEXT, %function
+glVertexAttribL4dEXT:
+    mov __blue_glCore_glVertexAttribL4dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2fARB
+.type glWindowPos2fARB, %function
+glWindowPos2fARB:
+    mov __blue_glCore_glWindowPos2fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageInsert
+.type glDebugMessageInsert, %function
+glDebugMessageInsert:
+    mov __blue_glCore_glDebugMessageInsert@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4NubARB
+.type glVertexAttrib4NubARB, %function
+glVertexAttrib4NubARB:
+    mov __blue_glCore_glVertexAttrib4NubARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3iEXT
+.type glTangent3iEXT, %function
+glTangent3iEXT:
+    mov __blue_glCore_glTangent3iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4fARB
+.type glMultiTexCoord4fARB, %function
+glMultiTexCoord4fARB:
+    mov __blue_glCore_glMultiTexCoord4fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexParameterIuivEXT
+.type glMultiTexParameterIuivEXT, %function
+glMultiTexParameterIuivEXT:
+    mov __blue_glCore_glMultiTexParameterIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTransformParameterfEXT
+.type glPixelTransformParameterfEXT, %function
+glPixelTransformParameterfEXT:
+    mov __blue_glCore_glPixelTransformParameterfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindFramebuffer
+.type glBindFramebuffer, %function
+glBindFramebuffer:
+    mov __blue_glCore_glBindFramebuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateProgramPipelines
+.type glCreateProgramPipelines, %function
+glCreateProgramPipelines:
+    mov __blue_glCore_glCreateProgramPipelines@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3fvARB
+.type glVertexAttrib3fvARB, %function
+glVertexAttrib3fvARB:
+    mov __blue_glCore_glVertexAttrib3fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindVideoCaptureStreamTextureNV
+.type glBindVideoCaptureStreamTextureNV, %function
+glBindVideoCaptureStreamTextureNV:
+    mov __blue_glCore_glBindVideoCaptureStreamTextureNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiNormal3fVertex3fSUN
+.type glReplacementCodeuiNormal3fVertex3fSUN, %function
+glReplacementCodeuiNormal3fVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentMaterialivSGIX
+.type glFragmentMaterialivSGIX, %function
+glFragmentMaterialivSGIX:
+    mov __blue_glCore_glFragmentMaterialivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndTransformFeedbackNV
+.type glEndTransformFeedbackNV, %function
+glEndTransformFeedbackNV:
+    mov __blue_glCore_glEndTransformFeedbackNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClientActiveVertexStreamATI
+.type glClientActiveVertexStreamATI, %function
+glClientActiveVertexStreamATI:
+    mov __blue_glCore_glClientActiveVertexStreamATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1ui64ARB
+.type glUniform1ui64ARB, %function
+glUniform1ui64ARB:
+    mov __blue_glCore_glUniform1ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI1ui
+.type glVertexAttribI1ui, %function
+glVertexAttribI1ui:
+    mov __blue_glCore_glVertexAttribI1ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameter4fvARB
+.type glProgramLocalParameter4fvARB, %function
+glProgramLocalParameter4fvARB:
+    mov __blue_glCore_glProgramLocalParameter4fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3ivMESA
+.type glWindowPos3ivMESA, %function
+glWindowPos3ivMESA:
+    mov __blue_glCore_glWindowPos3ivMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenVertexArrays
+.type glGenVertexArrays, %function
+glGenVertexArrays:
+    mov __blue_glCore_glGenVertexArrays@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2d
+.type glVertexAttribL2d, %function
+glVertexAttribL2d:
+    mov __blue_glCore_glVertexAttribL2d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushStaticDataIBM
+.type glFlushStaticDataIBM, %function
+glFlushStaticDataIBM:
+    mov __blue_glCore_glFlushStaticDataIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCombinerInputParameterivNV
+.type glGetCombinerInputParameterivNV, %function
+glGetCombinerInputParameterivNV:
+    mov __blue_glCore_glGetCombinerInputParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramLocalParameterIuivNV
+.type glGetProgramLocalParameterIuivNV, %function
+glGetProgramLocalParameterIuivNV:
+    mov __blue_glCore_glGetProgramLocalParameterIuivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribIOffsetEXT
+.type glVertexArrayVertexAttribIOffsetEXT, %function
+glVertexArrayVertexAttribIOffsetEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribIOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordFormatNV
+.type glFogCoordFormatNV, %function
+glFogCoordFormatNV:
+    mov __blue_glCore_glFogCoordFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1iv
+.type glUniform1iv, %function
+glUniform1iv:
+    mov __blue_glCore_glUniform1iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordP2ui
+.type glTexCoordP2ui, %function
+glTexCoordP2ui:
+    mov __blue_glCore_glTexCoordP2ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeusSUN
+.type glReplacementCodeusSUN, %function
+glReplacementCodeusSUN:
+    mov __blue_glCore_glReplacementCodeusSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTransformFeedbackNV
+.type glBindTransformFeedbackNV, %function
+glBindTransformFeedbackNV:
+    mov __blue_glCore_glBindTransformFeedbackNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultisamplefv
+.type glGetMultisamplefv, %function
+glGetMultisamplefv:
+    mov __blue_glCore_glGetMultisamplefv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3ui64NV
+.type glProgramUniform3ui64NV, %function
+glProgramUniform3ui64NV:
+    mov __blue_glCore_glProgramUniform3ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindMultiTextureEXT
+.type glBindMultiTextureEXT, %function
+glBindMultiTextureEXT:
+    mov __blue_glCore_glBindMultiTextureEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInstrumentsSGIX
+.type glGetInstrumentsSGIX, %function
+glGetInstrumentsSGIX:
+    mov __blue_glCore_glGetInstrumentsSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRasterPos2xOES
+.type glRasterPos2xOES, %function
+glRasterPos2xOES:
+    mov __blue_glCore_glRasterPos2xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4fvARB
+.type glMultiTexCoord4fvARB, %function
+glMultiTexCoord4fvARB:
+    mov __blue_glCore_glMultiTexCoord4fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2i
+.type glProgramUniform2i, %function
+glProgramUniform2i:
+    mov __blue_glCore_glProgramUniform2i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixIndexuivARB
+.type glMatrixIndexuivARB, %function
+glMatrixIndexuivARB:
+    mov __blue_glCore_glMatrixIndexuivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearBufferSubData
+.type glClearBufferSubData, %function
+glClearBufferSubData:
+    mov __blue_glCore_glClearBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteSamplers
+.type glDeleteSamplers, %function
+glDeleteSamplers:
+    mov __blue_glCore_glDeleteSamplers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTransferxOES
+.type glPixelTransferxOES, %function
+glPixelTransferxOES:
+    mov __blue_glCore_glPixelTransferxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBufferDataARB
+.type glBufferDataARB, %function
+glBufferDataARB:
+    mov __blue_glCore_glBufferDataARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateBufferData
+.type glInvalidateBufferData, %function
+glInvalidateBufferData:
+    mov __blue_glCore_glInvalidateBufferData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSampleMaskSGIS
+.type glSampleMaskSGIS, %function
+glSampleMaskSGIS:
+    mov __blue_glCore_glSampleMaskSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexBumpParameterfvATI
+.type glGetTexBumpParameterfvATI, %function
+glGetTexBumpParameterfvATI:
+    mov __blue_glCore_glGetTexBumpParameterfvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2ivEXT
+.type glProgramUniform2ivEXT, %function
+glProgramUniform2ivEXT:
+    mov __blue_glCore_glProgramUniform2ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferBaseEXT
+.type glBindBufferBaseEXT, %function
+glBindBufferBaseEXT:
+    mov __blue_glCore_glBindBufferBaseEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glListParameterfSGIX
+.type glListParameterfSGIX, %function
+glListParameterfSGIX:
+    mov __blue_glCore_glListParameterfSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBufferSubDataARB
+.type glGetBufferSubDataARB, %function
+glGetBufferSubDataARB:
+    mov __blue_glCore_glGetBufferSubDataARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2ui64vNV
+.type glProgramUniform2ui64vNV, %function
+glProgramUniform2ui64vNV:
+    mov __blue_glCore_glProgramUniform2ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedRenderbufferStorageMultisampleCoverageEXT
+.type glNamedRenderbufferStorageMultisampleCoverageEXT, %function
+glNamedRenderbufferStorageMultisampleCoverageEXT:
+    mov __blue_glCore_glNamedRenderbufferStorageMultisampleCoverageEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1sv
+.type glVertexAttrib1sv, %function
+glVertexAttrib1sv:
+    mov __blue_glCore_glVertexAttrib1sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColorPointerEXT
+.type glSecondaryColorPointerEXT, %function
+glSecondaryColorPointerEXT:
+    mov __blue_glCore_glSecondaryColorPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCommandListSegmentsNV
+.type glCommandListSegmentsNV, %function
+glCommandListSegmentsNV:
+    mov __blue_glCore_glCommandListSegmentsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3sNV
+.type glVertexAttrib3sNV, %function
+glVertexAttrib3sNV:
+    mov __blue_glCore_glVertexAttrib3sNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferParameteri
+.type glFramebufferParameteri, %function
+glFramebufferParameteri:
+    mov __blue_glCore_glFramebufferParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayIndexOffsetEXT
+.type glVertexArrayIndexOffsetEXT, %function
+glVertexArrayIndexOffsetEXT:
+    mov __blue_glCore_glVertexArrayIndexOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glListDrawCommandsStatesClientNV
+.type glListDrawCommandsStatesClientNV, %function
+glListDrawCommandsStatesClientNV:
+    mov __blue_glCore_glListDrawCommandsStatesClientNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRasterSamplesEXT
+.type glRasterSamplesEXT, %function
+glRasterSamplesEXT:
+    mov __blue_glCore_glRasterSamplesEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramStageiv
+.type glGetProgramStageiv, %function
+glGetProgramStageiv:
+    mov __blue_glCore_glGetProgramStageiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3ubEXT
+.type glSecondaryColor3ubEXT, %function
+glSecondaryColor3ubEXT:
+    mov __blue_glCore_glSecondaryColor3ubEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramNamedParameterfvNV
+.type glGetProgramNamedParameterfvNV, %function
+glGetProgramNamedParameterfvNV:
+    mov __blue_glCore_glGetProgramNamedParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3fv
+.type glSecondaryColor3fv, %function
+glSecondaryColor3fv:
+    mov __blue_glCore_glSecondaryColor3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameterI4iNV
+.type glProgramEnvParameterI4iNV, %function
+glProgramEnvParameterI4iNV:
+    mov __blue_glCore_glProgramEnvParameterI4iNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilFunc
+.type glStencilFunc, %function
+glStencilFunc:
+    mov __blue_glCore_glStencilFunc@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearBufferuiv
+.type glClearBufferuiv, %function
+glClearBufferuiv:
+    mov __blue_glCore_glClearBufferuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glShaderOp3EXT
+.type glShaderOp3EXT, %function
+glShaderOp3EXT:
+    mov __blue_glCore_glShaderOp3EXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1fvATI
+.type glVertexStream1fvATI, %function
+glVertexStream1fvATI:
+    mov __blue_glCore_glVertexStream1fvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStateCaptureNV
+.type glStateCaptureNV, %function
+glStateCaptureNV:
+    mov __blue_glCore_glStateCaptureNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenProgramsNV
+.type glGenProgramsNV, %function
+glGenProgramsNV:
+    mov __blue_glCore_glGenProgramsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordhvNV
+.type glFogCoordhvNV, %function
+glFogCoordhvNV:
+    mov __blue_glCore_glFogCoordhvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsTextureHandleResidentARB
+.type glIsTextureHandleResidentARB, %function
+glIsTextureHandleResidentARB:
+    mov __blue_glCore_glIsTextureHandleResidentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs2svNV
+.type glVertexAttribs2svNV, %function
+glVertexAttribs2svNV:
+    mov __blue_glCore_glVertexAttribs2svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP4uiv
+.type glMultiTexCoordP4uiv, %function
+glMultiTexCoordP4uiv:
+    mov __blue_glCore_glMultiTexCoordP4uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalPointerEXT
+.type glNormalPointerEXT, %function
+glNormalPointerEXT:
+    mov __blue_glCore_glNormalPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4iEXT
+.type glVertexAttribI4iEXT, %function
+glVertexAttribI4iEXT:
+    mov __blue_glCore_glVertexAttribI4iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenFramebuffers
+.type glGenFramebuffers, %function
+glGenFramebuffers:
+    mov __blue_glCore_glGenFramebuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferPointervEXT
+.type glGetNamedBufferPointervEXT, %function
+glGetNamedBufferPointervEXT:
+    mov __blue_glCore_glGetNamedBufferPointervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoorddEXT
+.type glFogCoorddEXT, %function
+glFogCoorddEXT:
+    mov __blue_glCore_glFogCoorddEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTexGenParameterfSGIS
+.type glPixelTexGenParameterfSGIS, %function
+glPixelTexGenParameterfSGIS:
+    mov __blue_glCore_glPixelTexGenParameterfSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetError
+.type glGetError, %function
+glGetError:
+    mov __blue_glCore_glGetError@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexSubImage1D
+.type glTexSubImage1D, %function
+glTexSubImage1D:
+    mov __blue_glCore_glTexSubImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexturePageCommitmentEXT
+.type glTexturePageCommitmentEXT, %function
+glTexturePageCommitmentEXT:
+    mov __blue_glCore_glTexturePageCommitmentEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeTextureHandleNonResidentARB
+.type glMakeTextureHandleNonResidentARB, %function
+glMakeTextureHandleNonResidentARB:
+    mov __blue_glCore_glMakeTextureHandleNonResidentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteVertexShaderEXT
+.type glDeleteVertexShaderEXT, %function
+glDeleteVertexShaderEXT:
+    mov __blue_glCore_glDeleteVertexShaderEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexBuffers
+.type glVertexArrayVertexBuffers, %function
+glVertexArrayVertexBuffers:
+    mov __blue_glCore_glVertexArrayVertexBuffers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4dv
+.type glVertexAttrib4dv, %function
+glVertexAttrib4dv:
+    mov __blue_glCore_glVertexAttrib4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayMultiTexCoordOffsetEXT
+.type glVertexArrayMultiTexCoordOffsetEXT, %function
+glVertexArrayMultiTexCoordOffsetEXT:
+    mov __blue_glCore_glVertexArrayMultiTexCoordOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSpriteParameterivSGIX
+.type glSpriteParameterivSGIX, %function
+glSpriteParameterivSGIX:
+    mov __blue_glCore_glSpriteParameterivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3dvEXT
+.type glTangent3dvEXT, %function
+glTangent3dvEXT:
+    mov __blue_glCore_glTangent3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiDrawElements
+.type glMultiDrawElements, %function
+glMultiDrawElements:
+    mov __blue_glCore_glMultiDrawElements@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2sARB
+.type glMultiTexCoord2sARB, %function
+glMultiTexCoord2sARB:
+    mov __blue_glCore_glMultiTexCoord2sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompileCommandListNV
+.type glCompileCommandListNV, %function
+glCompileCommandListNV:
+    mov __blue_glCore_glCompileCommandListNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3iEXT
+.type glProgramUniform3iEXT, %function
+glProgramUniform3iEXT:
+    mov __blue_glCore_glProgramUniform3iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage4DSGIS
+.type glTexImage4DSGIS, %function
+glTexImage4DSGIS:
+    mov __blue_glCore_glTexImage4DSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3ivEXT
+.type glProgramUniform3ivEXT, %function
+glProgramUniform3ivEXT:
+    mov __blue_glCore_glProgramUniform3ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsVertexArrayAPPLE
+.type glIsVertexArrayAPPLE, %function
+glIsVertexArrayAPPLE:
+    mov __blue_glCore_glIsVertexArrayAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBufferPointerv
+.type glGetBufferPointerv, %function
+glGetBufferPointerv:
+    mov __blue_glCore_glGetBufferPointerv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageInsertAMD
+.type glDebugMessageInsertAMD, %function
+glDebugMessageInsertAMD:
+    mov __blue_glCore_glDebugMessageInsertAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsImageHandleResidentARB
+.type glIsImageHandleResidentARB, %function
+glIsImageHandleResidentARB:
+    mov __blue_glCore_glIsImageHandleResidentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glShaderBinary
+.type glShaderBinary, %function
+glShaderBinary:
+    mov __blue_glCore_glShaderBinary@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFreeObjectBufferATI
+.type glFreeObjectBufferATI, %function
+glFreeObjectBufferATI:
+    mov __blue_glCore_glFreeObjectBufferATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInvariantBooleanvEXT
+.type glGetInvariantBooleanvEXT, %function
+glGetInvariantBooleanvEXT:
+    mov __blue_glCore_glGetInvariantBooleanvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetGraphicsResetStatus
+.type glGetGraphicsResetStatus, %function
+glGetGraphicsResetStatus:
+    mov __blue_glCore_glGetGraphicsResetStatus@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiColor4fNormal3fVertex3fvSUN
+.type glReplacementCodeuiColor4fNormal3fVertex3fvSUN, %function
+glReplacementCodeuiColor4fNormal3fVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glOrthoxOES
+.type glOrthoxOES, %function
+glOrthoxOES:
+    mov __blue_glCore_glOrthoxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage3DMultisample
+.type glTextureStorage3DMultisample, %function
+glTextureStorage3DMultisample:
+    mov __blue_glCore_glTextureStorage3DMultisample@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureRenderbufferEXT
+.type glTextureRenderbufferEXT, %function
+glTextureRenderbufferEXT:
+    mov __blue_glCore_glTextureRenderbufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameters4dvNV
+.type glProgramParameters4dvNV, %function
+glProgramParameters4dvNV:
+    mov __blue_glCore_glProgramParameters4dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenTextures
+.type glGenTextures, %function
+glGenTextures:
+    mov __blue_glCore_glGenTextures@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthFunc
+.type glDepthFunc, %function
+glDepthFunc:
+    mov __blue_glCore_glDepthFunc@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3iARB
+.type glMultiTexCoord3iARB, %function
+glMultiTexCoord3iARB:
+    mov __blue_glCore_glMultiTexCoord3iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexLevelParameterivEXT
+.type glGetMultiTexLevelParameterivEXT, %function
+glGetMultiTexLevelParameterivEXT:
+    mov __blue_glCore_glGetMultiTexLevelParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3svEXT
+.type glBinormal3svEXT, %function
+glBinormal3svEXT:
+    mov __blue_glCore_glBinormal3svEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeformSGIX
+.type glDeformSGIX, %function
+glDeformSGIX:
+    mov __blue_glCore_glDeformSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4dvARB
+.type glVertexAttrib4dvARB, %function
+glVertexAttrib4dvARB:
+    mov __blue_glCore_glVertexAttrib4dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureSubImage3D
+.type glCompressedTextureSubImage3D, %function
+glCompressedTextureSubImage3D:
+    mov __blue_glCore_glCompressedTextureSubImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRasterPos3xOES
+.type glRasterPos3xOES, %function
+glRasterPos3xOES:
+    mov __blue_glCore_glRasterPos3xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnColorTable
+.type glGetnColorTable, %function
+glGetnColorTable:
+    mov __blue_glCore_glGetnColorTable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReleaseShaderCompiler
+.type glReleaseShaderCompiler, %function
+glReleaseShaderCompiler:
+    mov __blue_glCore_glReleaseShaderCompiler@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4hNV
+.type glTexCoord4hNV, %function
+glTexCoord4hNV:
+    mov __blue_glCore_glTexCoord4hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFloatv
+.type glGetFloatv, %function
+glGetFloatv:
+    mov __blue_glCore_glGetFloatv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAlphaFragmentOp3ATI
+.type glAlphaFragmentOp3ATI, %function
+glAlphaFragmentOp3ATI:
+    mov __blue_glCore_glAlphaFragmentOp3ATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureSubImage1D
+.type glCopyTextureSubImage1D, %function
+glCopyTextureSubImage1D:
+    mov __blue_glCore_glCopyTextureSubImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedRenderbufferParameteriv
+.type glGetNamedRenderbufferParameteriv, %function
+glGetNamedRenderbufferParameteriv:
+    mov __blue_glCore_glGetNamedRenderbufferParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramNamedParameter4fNV
+.type glProgramNamedParameter4fNV, %function
+glProgramNamedParameter4fNV:
+    mov __blue_glCore_glProgramNamedParameter4fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3bEXT
+.type glBinormal3bEXT, %function
+glBinormal3bEXT:
+    mov __blue_glCore_glBinormal3bEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformFeedbackBufferRange
+.type glTransformFeedbackBufferRange, %function
+glTransformFeedbackBufferRange:
+    mov __blue_glCore_glTransformFeedbackBufferRange@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferSampleLocationsfvARB
+.type glFramebufferSampleLocationsfvARB, %function
+glFramebufferSampleLocationsfvARB:
+    mov __blue_glCore_glFramebufferSampleLocationsfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramVertexLimitNV
+.type glProgramVertexLimitNV, %function
+glProgramVertexLimitNV:
+    mov __blue_glCore_glProgramVertexLimitNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs3dvNV
+.type glVertexAttribs3dvNV, %function
+glVertexAttribs3dvNV:
+    mov __blue_glCore_glVertexAttribs3dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4d
+.type glVertexAttrib4d, %function
+glVertexAttrib4d:
+    mov __blue_glCore_glVertexAttrib4d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathColorGenfvNV
+.type glGetPathColorGenfvNV, %function
+glGetPathColorGenfvNV:
+    mov __blue_glCore_glGetPathColorGenfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUnmapBufferARB
+.type glUnmapBufferARB, %function
+glUnmapBufferARB:
+    mov __blue_glCore_glUnmapBufferARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glImageTransformParameteriHP
+.type glImageTransformParameteriHP, %function
+glImageTransformParameteriHP:
+    mov __blue_glCore_glImageTransformParameteriHP@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexSubImage3D
+.type glCompressedTexSubImage3D, %function
+glCompressedTexSubImage3D:
+    mov __blue_glCore_glCompressedTexSubImage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedBufferSubDataEXT
+.type glClearNamedBufferSubDataEXT, %function
+glClearNamedBufferSubDataEXT:
+    mov __blue_glCore_glClearNamedBufferSubDataEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4Nusv
+.type glVertexAttrib4Nusv, %function
+glVertexAttrib4Nusv:
+    mov __blue_glCore_glVertexAttrib4Nusv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x2dv
+.type glProgramUniformMatrix4x2dv, %function
+glProgramUniformMatrix4x2dv:
+    mov __blue_glCore_glProgramUniformMatrix4x2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureRangeAPPLE
+.type glTextureRangeAPPLE, %function
+glTextureRangeAPPLE:
+    mov __blue_glCore_glTextureRangeAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2fv
+.type glUniform2fv, %function
+glUniform2fv:
+    mov __blue_glCore_glUniform2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4fColor4fNormal3fVertex4fSUN
+.type glTexCoord4fColor4fNormal3fVertex4fSUN, %function
+glTexCoord4fColor4fNormal3fVertex4fSUN:
+    mov __blue_glCore_glTexCoord4fColor4fNormal3fVertex4fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2s
+.type glVertexAttrib2s, %function
+glVertexAttrib2s:
+    mov __blue_glCore_glVertexAttrib2s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawRangeElementArrayAPPLE
+.type glDrawRangeElementArrayAPPLE, %function
+glDrawRangeElementArrayAPPLE:
+    mov __blue_glCore_glDrawRangeElementArrayAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFrustumxOES
+.type glFrustumxOES, %function
+glFrustumxOES:
+    mov __blue_glCore_glFrustumxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3xvOES
+.type glMultiTexCoord3xvOES, %function
+glMultiTexCoord3xvOES:
+    mov __blue_glCore_glMultiTexCoord3xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameter4fvEXT
+.type glNamedProgramLocalParameter4fvEXT, %function
+glNamedProgramLocalParameter4fvEXT:
+    mov __blue_glCore_glNamedProgramLocalParameter4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureSubImage1DEXT
+.type glTextureSubImage1DEXT, %function
+glTextureSubImage1DEXT:
+    mov __blue_glCore_glTextureSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetImageHandleNV
+.type glGetImageHandleNV, %function
+glGetImageHandleNV:
+    mov __blue_glCore_glGetImageHandleNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexImage3DEXT
+.type glMultiTexImage3DEXT, %function
+glMultiTexImage3DEXT:
+    mov __blue_glCore_glMultiTexImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3fvMESA
+.type glWindowPos3fvMESA, %function
+glWindowPos3fvMESA:
+    mov __blue_glCore_glWindowPos3fvMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRasterPos4xOES
+.type glRasterPos4xOES, %function
+glRasterPos4xOES:
+    mov __blue_glCore_glRasterPos4xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantdvEXT
+.type glVariantdvEXT, %function
+glVariantdvEXT:
+    mov __blue_glCore_glVariantdvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnUniformi64vARB
+.type glGetnUniformi64vARB, %function
+glGetnUniformi64vARB:
+    mov __blue_glCore_glGetnUniformi64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClientActiveTexture
+.type glClientActiveTexture, %function
+glClientActiveTexture:
+    mov __blue_glCore_glClientActiveTexture@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribivARB
+.type glGetVertexAttribivARB, %function
+glGetVertexAttribivARB:
+    mov __blue_glCore_glGetVertexAttribivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4ivEXT
+.type glProgramUniform4ivEXT, %function
+glProgramUniform4ivEXT:
+    mov __blue_glCore_glProgramUniform4ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteTransformFeedbacksNV
+.type glDeleteTransformFeedbacksNV, %function
+glDeleteTransformFeedbacksNV:
+    mov __blue_glCore_glDeleteTransformFeedbacksNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenFramebuffersEXT
+.type glGenFramebuffersEXT, %function
+glGenFramebuffersEXT:
+    mov __blue_glCore_glGenFramebuffersEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage3D
+.type glTextureStorage3D, %function
+glTextureStorage3D:
+    mov __blue_glCore_glTextureStorage3D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedStringARB
+.type glGetNamedStringARB, %function
+glGetNamedStringARB:
+    mov __blue_glCore_glGetNamedStringARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2dNV
+.type glVertexAttrib2dNV, %function
+glVertexAttrib2dNV:
+    mov __blue_glCore_glVertexAttrib2dNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSamplerParameterfv
+.type glSamplerParameterfv, %function
+glSamplerParameterfv:
+    mov __blue_glCore_glSamplerParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameter4dvARB
+.type glProgramEnvParameter4dvARB, %function
+glProgramEnvParameter4dvARB:
+    mov __blue_glCore_glProgramEnvParameter4dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsProgramARB
+.type glIsProgramARB, %function
+glIsProgramARB:
+    mov __blue_glCore_glIsProgramARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexSubImage2D
+.type glCopyTexSubImage2D, %function
+glCopyTexSubImage2D:
+    mov __blue_glCore_glCopyTexSubImage2D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4dvNV
+.type glVertexAttrib4dvNV, %function
+glVertexAttrib4dvNV:
+    mov __blue_glCore_glVertexAttrib4dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalPointervINTEL
+.type glNormalPointervINTEL, %function
+glNormalPointervINTEL:
+    mov __blue_glCore_glNormalPointervINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushVertexArrayRangeNV
+.type glFlushVertexArrayRangeNV, %function
+glFlushVertexArrayRangeNV:
+    mov __blue_glCore_glFlushVertexArrayRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4fv
+.type glProgramUniformMatrix4fv, %function
+glProgramUniformMatrix4fv:
+    mov __blue_glCore_glProgramUniformMatrix4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClientAttribDefaultEXT
+.type glClientAttribDefaultEXT, %function
+glClientAttribDefaultEXT:
+    mov __blue_glCore_glClientAttribDefaultEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormal3fVertex3fvSUN
+.type glNormal3fVertex3fvSUN, %function
+glNormal3fVertex3fvSUN:
+    mov __blue_glCore_glNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetClipPlanefOES
+.type glGetClipPlanefOES, %function
+glGetClipPlanefOES:
+    mov __blue_glCore_glGetClipPlanefOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x4dv
+.type glProgramUniformMatrix2x4dv, %function
+glProgramUniformMatrix2x4dv:
+    mov __blue_glCore_glProgramUniformMatrix2x4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedProgramivEXT
+.type glGetNamedProgramivEXT, %function
+glGetNamedProgramivEXT:
+    mov __blue_glCore_glGetNamedProgramivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFinishFenceNV
+.type glFinishFenceNV, %function
+glFinishFenceNV:
+    mov __blue_glCore_glFinishFenceNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCombinerParameterfvNV
+.type glCombinerParameterfvNV, %function
+glCombinerParameterfvNV:
+    mov __blue_glCore_glCombinerParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDetailTexFuncSGIS
+.type glGetDetailTexFuncSGIS, %function
+glGetDetailTexFuncSGIS:
+    mov __blue_glCore_glGetDetailTexFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFramebufferAttachmentParameterivEXT
+.type glGetFramebufferAttachmentParameterivEXT, %function
+glGetFramebufferAttachmentParameterivEXT:
+    mov __blue_glCore_glGetFramebufferAttachmentParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4i
+.type glVertexAttribI4i, %function
+glVertexAttribI4i:
+    mov __blue_glCore_glVertexAttribI4i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs3hvNV
+.type glVertexAttribs3hvNV, %function
+glVertexAttribs3hvNV:
+    mov __blue_glCore_glVertexAttribs3hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1fvNV
+.type glVertexAttrib1fvNV, %function
+glVertexAttrib1fvNV:
+    mov __blue_glCore_glVertexAttrib1fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCreateSamplers
+.type glCreateSamplers, %function
+glCreateSamplers:
+    mov __blue_glCore_glCreateSamplers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexFilterFuncSGIS
+.type glTexFilterFuncSGIS, %function
+glTexFilterFuncSGIS:
+    mov __blue_glCore_glTexFilterFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteProgramsARB
+.type glDeleteProgramsARB, %function
+glDeleteProgramsARB:
+    mov __blue_glCore_glDeleteProgramsARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsProgramPipeline
+.type glIsProgramPipeline, %function
+glIsProgramPipeline:
+    mov __blue_glCore_glIsProgramPipeline@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP2uiv
+.type glVertexAttribP2uiv, %function
+glVertexAttribP2uiv:
+    mov __blue_glCore_glVertexAttribP2uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWriteMaskEXT
+.type glWriteMaskEXT, %function
+glWriteMaskEXT:
+    mov __blue_glCore_glWriteMaskEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4s
+.type glVertexAttrib4s, %function
+glVertexAttrib4s:
+    mov __blue_glCore_glVertexAttrib4s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsRenderbufferEXT
+.type glIsRenderbufferEXT, %function
+glIsRenderbufferEXT:
+    mov __blue_glCore_glIsRenderbufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramNamedParameter4dvNV
+.type glProgramNamedParameter4dvNV, %function
+glProgramNamedParameter4dvNV:
+    mov __blue_glCore_glProgramNamedParameter4dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN
+.type glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN, %function
+glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4xOES
+.type glTexCoord4xOES, %function
+glTexCoord4xOES:
+    mov __blue_glCore_glTexCoord4xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribLdv
+.type glGetVertexAttribLdv, %function
+glGetVertexAttribLdv:
+    mov __blue_glCore_glGetVertexAttribLdv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetObjectBufferfvATI
+.type glGetObjectBufferfvATI, %function
+glGetObjectBufferfvATI:
+    mov __blue_glCore_glGetObjectBufferfvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPathParameterivNV
+.type glGetPathParameterivNV, %function
+glGetPathParameterivNV:
+    mov __blue_glCore_glGetPathParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramInfoLog
+.type glGetProgramInfoLog, %function
+glGetProgramInfoLog:
+    mov __blue_glCore_glGetProgramInfoLog@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribArrayObjectivATI
+.type glGetVertexAttribArrayObjectivATI, %function
+glGetVertexAttribArrayObjectivATI:
+    mov __blue_glCore_glGetVertexAttribArrayObjectivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsBufferResidentNV
+.type glIsBufferResidentNV, %function
+glIsBufferResidentNV:
+    mov __blue_glCore_glIsBufferResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3ui64vARB
+.type glUniform3ui64vARB, %function
+glUniform3ui64vARB:
+    mov __blue_glCore_glUniform3ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2fvARB
+.type glUniform2fvARB, %function
+glUniform2fvARB:
+    mov __blue_glCore_glUniform2fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveUniform
+.type glGetActiveUniform, %function
+glGetActiveUniform:
+    mov __blue_glCore_glGetActiveUniform@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2dvARB
+.type glWindowPos2dvARB, %function
+glWindowPos2dvARB:
+    mov __blue_glCore_glWindowPos2dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetStringi
+.type glGetStringi, %function
+glGetStringi:
+    mov __blue_glCore_glGetStringi@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4ui64vARB
+.type glUniform4ui64vARB, %function
+glUniform4ui64vARB:
+    mov __blue_glCore_glUniform4ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIndexxvOES
+.type glIndexxvOES, %function
+glIndexxvOES:
+    mov __blue_glCore_glIndexxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2d
+.type glUniform2d, %function
+glUniform2d:
+    mov __blue_glCore_glUniform2d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoadTranspose3x3fNV
+.type glMatrixLoadTranspose3x3fNV, %function
+glMatrixLoadTranspose3x3fNV:
+    mov __blue_glCore_glMatrixLoadTranspose3x3fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs2fvNV
+.type glVertexAttribs2fvNV, %function
+glVertexAttribs2fvNV:
+    mov __blue_glCore_glVertexAttribs2fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4iv
+.type glProgramUniform4iv, %function
+glProgramUniform4iv:
+    mov __blue_glCore_glProgramUniform4iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2f
+.type glUniform2f, %function
+glUniform2f:
+    mov __blue_glCore_glUniform2f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParameterI4ivNV
+.type glProgramEnvParameterI4ivNV, %function
+glProgramEnvParameterI4ivNV:
+    mov __blue_glCore_glProgramEnvParameterI4ivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferParameteri64v
+.type glGetNamedBufferParameteri64v, %function
+glGetNamedBufferParameteri64v:
+    mov __blue_glCore_glGetNamedBufferParameteri64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUseShaderProgramEXT
+.type glUseShaderProgramEXT, %function
+glUseShaderProgramEXT:
+    mov __blue_glCore_glUseShaderProgramEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveUniformBlockiv
+.type glGetActiveUniformBlockiv, %function
+glGetActiveUniformBlockiv:
+    mov __blue_glCore_glGetActiveUniformBlockiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glActiveVaryingNV
+.type glActiveVaryingNV, %function
+glActiveVaryingNV:
+    mov __blue_glCore_glActiveVaryingNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTessellationModeAMD
+.type glTessellationModeAMD, %function
+glTessellationModeAMD:
+    mov __blue_glCore_glTessellationModeAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4hNV
+.type glVertexAttrib4hNV, %function
+glVertexAttrib4hNV:
+    mov __blue_glCore_glVertexAttrib4hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathGlyphIndexRangeNV
+.type glPathGlyphIndexRangeNV, %function
+glPathGlyphIndexRangeNV:
+    mov __blue_glCore_glPathGlyphIndexRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glListParameterivSGIX
+.type glListParameterivSGIX, %function
+glListParameterivSGIX:
+    mov __blue_glCore_glListParameterivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2fvATI
+.type glVertexStream2fvATI, %function
+glVertexStream2fvATI:
+    mov __blue_glCore_glVertexStream2fvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLabelObjectEXT
+.type glLabelObjectEXT, %function
+glLabelObjectEXT:
+    mov __blue_glCore_glLabelObjectEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndTransformFeedbackEXT
+.type glEndTransformFeedbackEXT, %function
+glEndTransformFeedbackEXT:
+    mov __blue_glCore_glEndTransformFeedbackEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glShaderOp1EXT
+.type glShaderOp1EXT, %function
+glShaderOp1EXT:
+    mov __blue_glCore_glShaderOp1EXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFragmentLightivSGIX
+.type glGetFragmentLightivSGIX, %function
+glGetFragmentLightivSGIX:
+    mov __blue_glCore_glGetFragmentLightivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformiv
+.type glGetUniformiv, %function
+glGetUniformiv:
+    mov __blue_glCore_glGetUniformiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableParameterfv
+.type glGetColorTableParameterfv, %function
+glGetColorTableParameterfv:
+    mov __blue_glCore_glGetColorTableParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4ubNV
+.type glVertexAttrib4ubNV, %function
+glVertexAttrib4ubNV:
+    mov __blue_glCore_glVertexAttrib4ubNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4ivARB
+.type glUniform4ivARB, %function
+glUniform4ivARB:
+    mov __blue_glCore_glUniform4ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSampleMaski
+.type glSampleMaski, %function
+glSampleMaski:
+    mov __blue_glCore_glSampleMaski@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexSubImage1DEXT
+.type glTexSubImage1DEXT, %function
+glTexSubImage1DEXT:
+    mov __blue_glCore_glTexSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2i64ARB
+.type glProgramUniform2i64ARB, %function
+glProgramUniform2i64ARB:
+    mov __blue_glCore_glProgramUniform2i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetActiveAtomicCounterBufferiv
+.type glGetActiveAtomicCounterBufferiv, %function
+glGetActiveAtomicCounterBufferiv:
+    mov __blue_glCore_glGetActiveAtomicCounterBufferiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPointerv
+.type glGetPointerv, %function
+glGetPointerv:
+    mov __blue_glCore_glGetPointerv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameters4fvEXT
+.type glNamedProgramLocalParameters4fvEXT, %function
+glNamedProgramLocalParameters4fvEXT:
+    mov __blue_glCore_glNamedProgramLocalParameters4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3uiEXT
+.type glSecondaryColor3uiEXT, %function
+glSecondaryColor3uiEXT:
+    mov __blue_glCore_glSecondaryColor3uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedStringivARB
+.type glGetNamedStringivARB, %function
+glGetNamedStringivARB:
+    mov __blue_glCore_glGetNamedStringivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribBinding
+.type glVertexAttribBinding, %function
+glVertexAttribBinding:
+    mov __blue_glCore_glVertexAttribBinding@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix4fv
+.type glUniformMatrix4fv, %function
+glUniformMatrix4fv:
+    mov __blue_glCore_glUniformMatrix4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2i
+.type glUniform2i, %function
+glUniform2i:
+    mov __blue_glCore_glUniform2i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindImageTextures
+.type glBindImageTextures, %function
+glBindImageTextures:
+    mov __blue_glCore_glBindImageTextures@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetHistogramParameterivEXT
+.type glGetHistogramParameterivEXT, %function
+glGetHistogramParameterivEXT:
+    mov __blue_glCore_glGetHistogramParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4ui64NV
+.type glProgramUniform4ui64NV, %function
+glProgramUniform4ui64NV:
+    mov __blue_glCore_glProgramUniform4ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAUFiniNV
+.type glVDPAUFiniNV, %function
+glVDPAUFiniNV:
+    mov __blue_glCore_glVDPAUFiniNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferARB
+.type glBindBufferARB, %function
+glBindBufferARB:
+    mov __blue_glCore_glBindBufferARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4hvNV
+.type glTexCoord4hvNV, %function
+glTexCoord4hvNV:
+    mov __blue_glCore_glTexCoord4hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInteger64v
+.type glGetInteger64v, %function
+glGetInteger64v:
+    mov __blue_glCore_glGetInteger64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultTransposeMatrixdARB
+.type glMultTransposeMatrixdARB, %function
+glMultTransposeMatrixdARB:
+    mov __blue_glCore_glMultTransposeMatrixdARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoad3x3fNV
+.type glMatrixLoad3x3fNV, %function
+glMatrixLoad3x3fNV:
+    mov __blue_glCore_glMatrixLoad3x3fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP4ui
+.type glMultiTexCoordP4ui, %function
+glMultiTexCoordP4ui:
+    mov __blue_glCore_glMultiTexCoordP4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorTableParameterivSGI
+.type glColorTableParameterivSGI, %function
+glColorTableParameterivSGI:
+    mov __blue_glCore_glColorTableParameterivSGI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1i64NV
+.type glProgramUniform1i64NV, %function
+glProgramUniform1i64NV:
+    mov __blue_glCore_glProgramUniform1i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawTransformFeedbackNV
+.type glDrawTransformFeedbackNV, %function
+glDrawTransformFeedbackNV:
+    mov __blue_glCore_glDrawTransformFeedbackNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthBoundsEXT
+.type glDepthBoundsEXT, %function
+glDepthBoundsEXT:
+    mov __blue_glCore_glDepthBoundsEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInterpolatePathsNV
+.type glInterpolatePathsNV, %function
+glInterpolatePathsNV:
+    mov __blue_glCore_glInterpolatePathsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearDepth
+.type glClearDepth, %function
+glClearDepth:
+    mov __blue_glCore_glClearDepth@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3dvEXT
+.type glProgramUniform3dvEXT, %function
+glProgramUniform3dvEXT:
+    mov __blue_glCore_glProgramUniform3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEdgeFlagPointerListIBM
+.type glEdgeFlagPointerListIBM, %function
+glEdgeFlagPointerListIBM:
+    mov __blue_glCore_glEdgeFlagPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCurrentPaletteMatrixARB
+.type glCurrentPaletteMatrixARB, %function
+glCurrentPaletteMatrixARB:
+    mov __blue_glCore_glCurrentPaletteMatrixARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorage2DEXT
+.type glTextureStorage2DEXT, %function
+glTextureStorage2DEXT:
+    mov __blue_glCore_glTextureStorage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetConvolutionParameterfv
+.type glGetConvolutionParameterfv, %function
+glGetConvolutionParameterfv:
+    mov __blue_glCore_glGetConvolutionParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathSubCommandsNV
+.type glPathSubCommandsNV, %function
+glPathSubCommandsNV:
+    mov __blue_glCore_glPathSubCommandsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideoCaptureStreamdvNV
+.type glGetVideoCaptureStreamdvNV, %function
+glGetVideoCaptureStreamdvNV:
+    mov __blue_glCore_glGetVideoCaptureStreamdvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3d
+.type glProgramUniform3d, %function
+glProgramUniform3d:
+    mov __blue_glCore_glProgramUniform3d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalPointerListIBM
+.type glNormalPointerListIBM, %function
+glNormalPointerListIBM:
+    mov __blue_glCore_glNormalPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFloati_vEXT
+.type glGetFloati_vEXT, %function
+glGetFloati_vEXT:
+    mov __blue_glCore_glGetFloati_vEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordd
+.type glFogCoordd, %function
+glFogCoordd:
+    mov __blue_glCore_glFogCoordd@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStopInstrumentsSGIX
+.type glStopInstrumentsSGIX, %function
+glStopInstrumentsSGIX:
+    mov __blue_glCore_glStopInstrumentsSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilFuncSeparate
+.type glStencilFuncSeparate, %function
+glStencilFuncSeparate:
+    mov __blue_glCore_glStencilFuncSeparate@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInfoLogARB
+.type glGetInfoLogARB, %function
+glGetInfoLogARB:
+    mov __blue_glCore_glGetInfoLogARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4usv
+.type glVertexAttribI4usv, %function
+glVertexAttribI4usv:
+    mov __blue_glCore_glVertexAttribI4usv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoadfEXT
+.type glMatrixLoadfEXT, %function
+glMatrixLoadfEXT:
+    mov __blue_glCore_glMatrixLoadfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glScissor
+.type glScissor, %function
+glScissor:
+    mov __blue_glCore_glScissor@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2iATI
+.type glVertexStream2iATI, %function
+glVertexStream2iATI:
+    mov __blue_glCore_glVertexStream2iATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameter4fEXT
+.type glNamedProgramLocalParameter4fEXT, %function
+glNamedProgramLocalParameter4fEXT:
+    mov __blue_glCore_glNamedProgramLocalParameter4fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCombinerStageParameterfvNV
+.type glCombinerStageParameterfvNV, %function
+glCombinerStageParameterfvNV:
+    mov __blue_glCore_glCombinerStageParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferData
+.type glNamedBufferData, %function
+glNamedBufferData:
+    mov __blue_glCore_glNamedBufferData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3fARB
+.type glMultiTexCoord3fARB, %function
+glMultiTexCoord3fARB:
+    mov __blue_glCore_glMultiTexCoord3fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightsvARB
+.type glWeightsvARB, %function
+glWeightsvARB:
+    mov __blue_glCore_glWeightsvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glApplyFramebufferAttachmentCMAAINTEL
+.type glApplyFramebufferAttachmentCMAAINTEL, %function
+glApplyFramebufferAttachmentCMAAINTEL:
+    mov __blue_glCore_glApplyFramebufferAttachmentCMAAINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightivARB
+.type glWeightivARB, %function
+glWeightivARB:
+    mov __blue_glCore_glWeightivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2sARB
+.type glVertexAttrib2sARB, %function
+glVertexAttrib2sARB:
+    mov __blue_glCore_glVertexAttrib2sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2dATI
+.type glVertexStream2dATI, %function
+glVertexStream2dATI:
+    mov __blue_glCore_glVertexStream2dATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetBufferParameteri64v
+.type glGetBufferParameteri64v, %function
+glGetBufferParameteri64v:
+    mov __blue_glCore_glGetBufferParameteri64v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenPathsNV
+.type glGenPathsNV, %function
+glGenPathsNV:
+    mov __blue_glCore_glGenPathsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribIFormatNV
+.type glVertexAttribIFormatNV, %function
+glVertexAttribIFormatNV:
+    mov __blue_glCore_glVertexAttribIFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedFramebufferAttachmentParameteriv
+.type glGetNamedFramebufferAttachmentParameteriv, %function
+glGetNamedFramebufferAttachmentParameteriv:
+    mov __blue_glCore_glGetNamedFramebufferAttachmentParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3fATI
+.type glVertexStream3fATI, %function
+glVertexStream3fATI:
+    mov __blue_glCore_glVertexStream3fATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthRangef
+.type glDepthRangef, %function
+glDepthRangef:
+    mov __blue_glCore_glDepthRangef@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2dEXT
+.type glProgramUniform2dEXT, %function
+glProgramUniform2dEXT:
+    mov __blue_glCore_glProgramUniform2dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorMask
+.type glColorMask, %function
+glColorMask:
+    mov __blue_glCore_glColorMask@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3dvARB
+.type glMultiTexCoord3dvARB, %function
+glMultiTexCoord3dvARB:
+    mov __blue_glCore_glMultiTexCoord3dvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexBindingDivisor
+.type glVertexBindingDivisor, %function
+glVertexBindingDivisor:
+    mov __blue_glCore_glVertexBindingDivisor@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterIuivEXT
+.type glTexParameterIuivEXT, %function
+glTexParameterIuivEXT:
+    mov __blue_glCore_glTexParameterIuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResumeTransformFeedbackNV
+.type glResumeTransformFeedbackNV, %function
+glResumeTransformFeedbackNV:
+    mov __blue_glCore_glResumeTransformFeedbackNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantubvEXT
+.type glVariantubvEXT, %function
+glVariantubvEXT:
+    mov __blue_glCore_glVariantubvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformHandleui64ARB
+.type glUniformHandleui64ARB, %function
+glUniformHandleui64ARB:
+    mov __blue_glCore_glUniformHandleui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2dv
+.type glVertexAttrib2dv, %function
+glVertexAttrib2dv:
+    mov __blue_glCore_glVertexAttrib2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTextureFaceEXT
+.type glFramebufferTextureFaceEXT, %function
+glFramebufferTextureFaceEXT:
+    mov __blue_glCore_glFramebufferTextureFaceEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElementsInstancedEXT
+.type glDrawElementsInstancedEXT, %function
+glDrawElementsInstancedEXT:
+    mov __blue_glCore_glDrawElementsInstancedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetSamplerParameterIiv
+.type glGetSamplerParameterIiv, %function
+glGetSamplerParameterIiv:
+    mov __blue_glCore_glGetSamplerParameterIiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexImage1DARB
+.type glCompressedTexImage1DARB, %function
+glCompressedTexImage1DARB:
+    mov __blue_glCore_glCompressedTexImage1DARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4fv
+.type glVertexAttrib4fv, %function
+glVertexAttrib4fv:
+    mov __blue_glCore_glVertexAttrib4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexGenfEXT
+.type glMultiTexGenfEXT, %function
+glMultiTexGenfEXT:
+    mov __blue_glCore_glMultiTexGenfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTextureEXT
+.type glNamedFramebufferTextureEXT, %function
+glNamedFramebufferTextureEXT:
+    mov __blue_glCore_glNamedFramebufferTextureEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4xvOES
+.type glMultiTexCoord4xvOES, %function
+glMultiTexCoord4xvOES:
+    mov __blue_glCore_glMultiTexCoord4xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeletePerfQueryINTEL
+.type glDeletePerfQueryINTEL, %function
+glDeletePerfQueryINTEL:
+    mov __blue_glCore_glDeletePerfQueryINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramivNV
+.type glGetProgramivNV, %function
+glGetProgramivNV:
+    mov __blue_glCore_glGetProgramivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexSubImage1D
+.type glCopyTexSubImage1D, %function
+glCopyTexSubImage1D:
+    mov __blue_glCore_glCopyTexSubImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3bvEXT
+.type glBinormal3bvEXT, %function
+glBinormal3bvEXT:
+    mov __blue_glCore_glBinormal3bvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordfEXT
+.type glFogCoordfEXT, %function
+glFogCoordfEXT:
+    mov __blue_glCore_glFogCoordfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTrackMatrixNV
+.type glTrackMatrixNV, %function
+glTrackMatrixNV:
+    mov __blue_glCore_glTrackMatrixNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glScissorIndexedv
+.type glScissorIndexedv, %function
+glScissorIndexedv:
+    mov __blue_glCore_glScissorIndexedv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs2dvNV
+.type glVertexAttribs2dvNV, %function
+glVertexAttribs2dvNV:
+    mov __blue_glCore_glVertexAttribs2dvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushMappedBufferRangeAPPLE
+.type glFlushMappedBufferRangeAPPLE, %function
+glFlushMappedBufferRangeAPPLE:
+    mov __blue_glCore_glFlushMappedBufferRangeAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix4fvARB
+.type glUniformMatrix4fvARB, %function
+glUniformMatrix4fvARB:
+    mov __blue_glCore_glUniformMatrix4fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glHint
+.type glHint, %function
+glHint:
+    mov __blue_glCore_glHint@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTextures
+.type glBindTextures, %function
+glBindTextures:
+    mov __blue_glCore_glBindTextures@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3sv
+.type glSecondaryColor3sv, %function
+glSecondaryColor3sv:
+    mov __blue_glCore_glSecondaryColor3sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2ivEXT
+.type glVertexAttribI2ivEXT, %function
+glVertexAttribI2ivEXT:
+    mov __blue_glCore_glVertexAttribI2ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4NubvARB
+.type glVertexAttrib4NubvARB, %function
+glVertexAttrib4NubvARB:
+    mov __blue_glCore_glVertexAttrib4NubvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfMonitorGroupStringAMD
+.type glGetPerfMonitorGroupStringAMD, %function
+glGetPerfMonitorGroupStringAMD:
+    mov __blue_glCore_glGetPerfMonitorGroupStringAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDoubleIndexedvEXT
+.type glGetDoubleIndexedvEXT, %function
+glGetDoubleIndexedvEXT:
+    mov __blue_glCore_glGetDoubleIndexedvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4fNormal3fVertex3fSUN
+.type glColor4fNormal3fVertex3fSUN, %function
+glColor4fNormal3fVertex3fSUN:
+    mov __blue_glCore_glColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterIivEXT
+.type glTextureParameterIivEXT, %function
+glTextureParameterIivEXT:
+    mov __blue_glCore_glTextureParameterIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindVideoCaptureStreamBufferNV
+.type glBindVideoCaptureStreamBufferNV, %function
+glBindVideoCaptureStreamBufferNV:
+    mov __blue_glCore_glBindVideoCaptureStreamBufferNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferParameteriEXT
+.type glNamedFramebufferParameteriEXT, %function
+glNamedFramebufferParameteriEXT:
+    mov __blue_glCore_glNamedFramebufferParameteriEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorTable
+.type glColorTable, %function
+glColorTable:
+    mov __blue_glCore_glColorTable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFramebufferParameteriv
+.type glGetFramebufferParameteriv, %function
+glGetFramebufferParameteriv:
+    mov __blue_glCore_glGetFramebufferParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPointeri_vEXT
+.type glGetPointeri_vEXT, %function
+glGetPointeri_vEXT:
+    mov __blue_glCore_glGetPointeri_vEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameterfvEXT
+.type glPointParameterfvEXT, %function
+glPointParameterfvEXT:
+    mov __blue_glCore_glPointParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexSubImage1DEXT
+.type glCopyTexSubImage1DEXT, %function
+glCopyTexSubImage1DEXT:
+    mov __blue_glCore_glCopyTexSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawRangeElements
+.type glDrawRangeElements, %function
+glDrawRangeElements:
+    mov __blue_glCore_glDrawRangeElements@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3usvEXT
+.type glSecondaryColor3usvEXT, %function
+glSecondaryColor3usvEXT:
+    mov __blue_glCore_glSecondaryColor3usvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPushGroupMarkerEXT
+.type glPushGroupMarkerEXT, %function
+glPushGroupMarkerEXT:
+    mov __blue_glCore_glPushGroupMarkerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferPageCommitmentEXT
+.type glNamedBufferPageCommitmentEXT, %function
+glNamedBufferPageCommitmentEXT:
+    mov __blue_glCore_glNamedBufferPageCommitmentEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilFillPathInstancedNV
+.type glStencilFillPathInstancedNV, %function
+glStencilFillPathInstancedNV:
+    mov __blue_glCore_glStencilFillPathInstancedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2f
+.type glVertexAttrib2f, %function
+glVertexAttrib2f:
+    mov __blue_glCore_glVertexAttrib2f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClipControl
+.type glClipControl, %function
+glClipControl:
+    mov __blue_glCore_glClipControl@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1f
+.type glUniform1f, %function
+glUniform1f:
+    mov __blue_glCore_glUniform1f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetOcclusionQueryivNV
+.type glGetOcclusionQueryivNV, %function
+glGetOcclusionQueryivNV:
+    mov __blue_glCore_glGetOcclusionQueryivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetGraphicsResetStatusARB
+.type glGetGraphicsResetStatusARB, %function
+glGetGraphicsResetStatusARB:
+    mov __blue_glCore_glGetGraphicsResetStatusARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformui64NV
+.type glUniformui64NV, %function
+glUniformui64NV:
+    mov __blue_glCore_glUniformui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightbvARB
+.type glWeightbvARB, %function
+glWeightbvARB:
+    mov __blue_glCore_glWeightbvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetStageIndexNV
+.type glGetStageIndexNV, %function
+glGetStageIndexNV:
+    mov __blue_glCore_glGetStageIndexNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glOrthofOES
+.type glOrthofOES, %function
+glOrthofOES:
+    mov __blue_glCore_glOrthofOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilFuncSeparateATI
+.type glStencilFuncSeparateATI, %function
+glStencilFuncSeparateATI:
+    mov __blue_glCore_glStencilFuncSeparateATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyMultiTexSubImage2DEXT
+.type glCopyMultiTexSubImage2DEXT, %function
+glCopyMultiTexSubImage2DEXT:
+    mov __blue_glCore_glCopyMultiTexSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformHandleui64vARB
+.type glUniformHandleui64vARB, %function
+glUniformHandleui64vARB:
+    mov __blue_glCore_glUniformHandleui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindProgramARB
+.type glBindProgramARB, %function
+glBindProgramARB:
+    mov __blue_glCore_glBindProgramARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUnmapNamedBuffer
+.type glUnmapNamedBuffer, %function
+glUnmapNamedBuffer:
+    mov __blue_glCore_glUnmapNamedBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureImage2DEXT
+.type glCompressedTextureImage2DEXT, %function
+glCompressedTextureImage2DEXT:
+    mov __blue_glCore_glCompressedTextureImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4i64vARB
+.type glUniform4i64vARB, %function
+glUniform4i64vARB:
+    mov __blue_glCore_glUniform4i64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3usv
+.type glSecondaryColor3usv, %function
+glSecondaryColor3usv:
+    mov __blue_glCore_glSecondaryColor3usv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3fv
+.type glUniform3fv, %function
+glUniform3fv:
+    mov __blue_glCore_glUniform3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexGendvEXT
+.type glMultiTexGendvEXT, %function
+glMultiTexGendvEXT:
+    mov __blue_glCore_glMultiTexGendvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSamplePatternEXT
+.type glSamplePatternEXT, %function
+glSamplePatternEXT:
+    mov __blue_glCore_glSamplePatternEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x2fvEXT
+.type glProgramUniformMatrix3x2fvEXT, %function
+glProgramUniformMatrix3x2fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix3x2fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetDebugMessageLog
+.type glGetDebugMessageLog, %function
+glGetDebugMessageLog:
+    mov __blue_glCore_glGetDebugMessageLog@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCallCommandListNV
+.type glCallCommandListNV, %function
+glCallCommandListNV:
+    mov __blue_glCore_glCallCommandListNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsQuery
+.type glIsQuery, %function
+glIsQuery:
+    mov __blue_glCore_glIsQuery@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormal3xvOES
+.type glNormal3xvOES, %function
+glNormal3xvOES:
+    mov __blue_glCore_glNormal3xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayRangeNV
+.type glVertexArrayRangeNV, %function
+glVertexArrayRangeNV:
+    mov __blue_glCore_glVertexArrayRangeNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCompressedTextureImage
+.type glGetCompressedTextureImage, %function
+glGetCompressedTextureImage:
+    mov __blue_glCore_glGetCompressedTextureImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColorFormatNV
+.type glSecondaryColorFormatNV, %function
+glSecondaryColorFormatNV:
+    mov __blue_glCore_glSecondaryColorFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glViewportIndexedfv
+.type glViewportIndexedfv, %function
+glViewportIndexedfv:
+    mov __blue_glCore_glViewportIndexedfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribArrayObjectATI
+.type glVertexAttribArrayObjectATI, %function
+glVertexAttribArrayObjectATI:
+    mov __blue_glCore_glVertexAttribArrayObjectATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferPageCommitmentARB
+.type glNamedBufferPageCommitmentARB, %function
+glNamedBufferPageCommitmentARB:
+    mov __blue_glCore_glNamedBufferPageCommitmentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1i64vNV
+.type glVertexAttribL1i64vNV, %function
+glVertexAttribL1i64vNV:
+    mov __blue_glCore_glVertexAttribL1i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformOffsetEXT
+.type glGetUniformOffsetEXT, %function
+glGetUniformOffsetEXT:
+    mov __blue_glCore_glGetUniformOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4iARB
+.type glUniform4iARB, %function
+glUniform4iARB:
+    mov __blue_glCore_glUniform4iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3bvEXT
+.type glSecondaryColor3bvEXT, %function
+glSecondaryColor3bvEXT:
+    mov __blue_glCore_glSecondaryColor3bvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs3fvNV
+.type glVertexAttribs3fvNV, %function
+glVertexAttribs3fvNV:
+    mov __blue_glCore_glVertexAttribs3fvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex2xvOES
+.type glVertex2xvOES, %function
+glVertex2xvOES:
+    mov __blue_glCore_glVertex2xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixFrustumEXT
+.type glMatrixFrustumEXT, %function
+glMatrixFrustumEXT:
+    mov __blue_glCore_glMatrixFrustumEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeTextureHandleResidentARB
+.type glMakeTextureHandleResidentARB, %function
+glMakeTextureHandleResidentARB:
+    mov __blue_glCore_glMakeTextureHandleResidentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIglooInterfaceSGIX
+.type glIglooInterfaceSGIX, %function
+glIglooInterfaceSGIX:
+    mov __blue_glCore_glIglooInterfaceSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetConvolutionParameterivEXT
+.type glGetConvolutionParameterivEXT, %function
+glGetConvolutionParameterivEXT:
+    mov __blue_glCore_glGetConvolutionParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsNameAMD
+.type glIsNameAMD, %function
+glIsNameAMD:
+    mov __blue_glCore_glIsNameAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2uivEXT
+.type glVertexAttribI2uivEXT, %function
+glVertexAttribI2uivEXT:
+    mov __blue_glCore_glVertexAttribI2uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPNTrianglesiATI
+.type glPNTrianglesiATI, %function
+glPNTrianglesiATI:
+    mov __blue_glCore_glPNTrianglesiATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedMultiTexImage1DEXT
+.type glCompressedMultiTexImage1DEXT, %function
+glCompressedMultiTexImage1DEXT:
+    mov __blue_glCore_glCompressedMultiTexImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3svNV
+.type glVertexAttrib3svNV, %function
+glVertexAttrib3svNV:
+    mov __blue_glCore_glVertexAttrib3svNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentLightfvSGIX
+.type glFragmentLightfvSGIX, %function
+glFragmentLightfvSGIX:
+    mov __blue_glCore_glFragmentLightfvSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glQueryCounter
+.type glQueryCounter, %function
+glQueryCounter:
+    mov __blue_glCore_glQueryCounter@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFrustumfOES
+.type glFrustumfOES, %function
+glFrustumfOES:
+    mov __blue_glCore_glFrustumfOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDebugMessageCallbackARB
+.type glDebugMessageCallbackARB, %function
+glDebugMessageCallbackARB:
+    mov __blue_glCore_glDebugMessageCallbackARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMap1xOES
+.type glMap1xOES, %function
+glMap1xOES:
+    mov __blue_glCore_glMap1xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBinormal3fvEXT
+.type glBinormal3fvEXT, %function
+glBinormal3fvEXT:
+    mov __blue_glCore_glBinormal3fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMinmax
+.type glMinmax, %function
+glMinmax:
+    mov __blue_glCore_glMinmax@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1iv
+.type glProgramUniform1iv, %function
+glProgramUniform1iv:
+    mov __blue_glCore_glProgramUniform1iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTexSubImage2DARB
+.type glCompressedTexSubImage2DARB, %function
+glCompressedTexSubImage2DARB:
+    mov __blue_glCore_glCompressedTexSubImage2DARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorFormatNV
+.type glColorFormatNV, %function
+glColorFormatNV:
+    mov __blue_glCore_glColorFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateNamedFramebufferData
+.type glInvalidateNamedFramebufferData, %function
+glInvalidateNamedFramebufferData:
+    mov __blue_glCore_glInvalidateNamedFramebufferData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4dMESA
+.type glWindowPos4dMESA, %function
+glWindowPos4dMESA:
+    mov __blue_glCore_glWindowPos4dMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3fEXT
+.type glSecondaryColor3fEXT, %function
+glSecondaryColor3fEXT:
+    mov __blue_glCore_glSecondaryColor3fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetClipPlanexOES
+.type glGetClipPlanexOES, %function
+glGetClipPlanexOES:
+    mov __blue_glCore_glGetClipPlanexOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyConvolutionFilter2DEXT
+.type glCopyConvolutionFilter2DEXT, %function
+glCopyConvolutionFilter2DEXT:
+    mov __blue_glCore_glCopyConvolutionFilter2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2fv
+.type glProgramUniformMatrix2fv, %function
+glProgramUniformMatrix2fv:
+    mov __blue_glCore_glProgramUniformMatrix2fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureLevelParameterfvEXT
+.type glGetTextureLevelParameterfvEXT, %function
+glGetTextureLevelParameterfvEXT:
+    mov __blue_glCore_glGetTextureLevelParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameterI4uiEXT
+.type glNamedProgramLocalParameterI4uiEXT, %function
+glNamedProgramLocalParameterI4uiEXT:
+    mov __blue_glCore_glNamedProgramLocalParameterI4uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilOpSeparateATI
+.type glStencilOpSeparateATI, %function
+glStencilOpSeparateATI:
+    mov __blue_glCore_glStencilOpSeparateATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBufferStorage
+.type glBufferStorage, %function
+glBufferStorage:
+    mov __blue_glCore_glBufferStorage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnPixelMapusvARB
+.type glGetnPixelMapusvARB, %function
+glGetnPixelMapusvARB:
+    mov __blue_glCore_glGetnPixelMapusvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorFragmentOp3ATI
+.type glColorFragmentOp3ATI, %function
+glColorFragmentOp3ATI:
+    mov __blue_glCore_glColorFragmentOp3ATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3i
+.type glVertexAttribI3i, %function
+glVertexAttribI3i:
+    mov __blue_glCore_glVertexAttribI3i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeusvSUN
+.type glReplacementCodeusvSUN, %function
+glReplacementCodeusvSUN:
+    mov __blue_glCore_glReplacementCodeusvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenVertexShadersEXT
+.type glGenVertexShadersEXT, %function
+glGenVertexShadersEXT:
+    mov __blue_glCore_glGenVertexShadersEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDetachObjectARB
+.type glDetachObjectARB, %function
+glDetachObjectARB:
+    mov __blue_glCore_glDetachObjectARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream3fvATI
+.type glVertexStream3fvATI, %function
+glVertexStream3fvATI:
+    mov __blue_glCore_glVertexStream3fvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureImage3DMultisampleNV
+.type glTextureImage3DMultisampleNV, %function
+glTextureImage3DMultisampleNV:
+    mov __blue_glCore_glTextureImage3DMultisampleNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetObjectLabel
+.type glGetObjectLabel, %function
+glGetObjectLabel:
+    mov __blue_glCore_glGetObjectLabel@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindFragDataLocationEXT
+.type glBindFragDataLocationEXT, %function
+glBindFragDataLocationEXT:
+    mov __blue_glCore_glBindFragDataLocationEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentCoverageColorNV
+.type glFragmentCoverageColorNV, %function
+glFragmentCoverageColorNV:
+    mov __blue_glCore_glFragmentCoverageColorNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsObjectBufferATI
+.type glIsObjectBufferATI, %function
+glIsObjectBufferATI:
+    mov __blue_glCore_glIsObjectBufferATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2s
+.type glWindowPos2s, %function
+glWindowPos2s:
+    mov __blue_glCore_glWindowPos2s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixMult3x2fNV
+.type glMatrixMult3x2fNV, %function
+glMatrixMult3x2fNV:
+    mov __blue_glCore_glMatrixMult3x2fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPopGroupMarkerEXT
+.type glPopGroupMarkerEXT, %function
+glPopGroupMarkerEXT:
+    mov __blue_glCore_glPopGroupMarkerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideoi64vNV
+.type glGetVideoi64vNV, %function
+glGetVideoi64vNV:
+    mov __blue_glCore_glGetVideoi64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapControlPointsNV
+.type glMapControlPointsNV, %function
+glMapControlPointsNV:
+    mov __blue_glCore_glMapControlPointsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMapAttribParameterfvNV
+.type glGetMapAttribParameterfvNV, %function
+glGetMapAttribParameterfvNV:
+    mov __blue_glCore_glGetMapAttribParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2f
+.type glProgramUniform2f, %function
+glProgramUniform2f:
+    mov __blue_glCore_glProgramUniform2f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIndexMaterialEXT
+.type glIndexMaterialEXT, %function
+glIndexMaterialEXT:
+    mov __blue_glCore_glIndexMaterialEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexParameterfvEXT
+.type glGetMultiTexParameterfvEXT, %function
+glGetMultiTexParameterfvEXT:
+    mov __blue_glCore_glGetMultiTexParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearBufferiv
+.type glClearBufferiv, %function
+glClearBufferiv:
+    mov __blue_glCore_glClearBufferiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramParameteriARB
+.type glProgramParameteriARB, %function
+glProgramParameteriARB:
+    mov __blue_glCore_glProgramParameteriARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex4hvNV
+.type glVertex4hvNV, %function
+glVertex4hvNV:
+    mov __blue_glCore_glVertex4hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnTexImageARB
+.type glGetnTexImageARB, %function
+glGetnTexImageARB:
+    mov __blue_glCore_glGetnTexImageARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs4ubvNV
+.type glVertexAttribs4ubvNV, %function
+glVertexAttribs4ubvNV:
+    mov __blue_glCore_glVertexAttribs4ubvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFramebufferParameterivEXT
+.type glGetFramebufferParameterivEXT, %function
+glGetFramebufferParameterivEXT:
+    mov __blue_glCore_glGetFramebufferParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4hvNV
+.type glVertexAttrib4hvNV, %function
+glVertexAttrib4hvNV:
+    mov __blue_glCore_glVertexAttrib4hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1dEXT
+.type glProgramUniform1dEXT, %function
+glProgramUniform1dEXT:
+    mov __blue_glCore_glProgramUniform1dEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferSampleLocationsfvARB
+.type glNamedFramebufferSampleLocationsfvARB, %function
+glNamedFramebufferSampleLocationsfvARB:
+    mov __blue_glCore_glNamedFramebufferSampleLocationsfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3sEXT
+.type glSecondaryColor3sEXT, %function
+glSecondaryColor3sEXT:
+    mov __blue_glCore_glSecondaryColor3sEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexOffsetEXT
+.type glVertexArrayVertexOffsetEXT, %function
+glVertexArrayVertexOffsetEXT:
+    mov __blue_glCore_glVertexArrayVertexOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribLFormatNV
+.type glVertexAttribLFormatNV, %function
+glVertexAttribLFormatNV:
+    mov __blue_glCore_glVertexAttribLFormatNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4bvEXT
+.type glVertexAttribI4bvEXT, %function
+glVertexAttribI4bvEXT:
+    mov __blue_glCore_glVertexAttribI4bvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4ivEXT
+.type glVertexAttribI4ivEXT, %function
+glVertexAttribI4ivEXT:
+    mov __blue_glCore_glVertexAttribI4ivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3fMESA
+.type glWindowPos3fMESA, %function
+glWindowPos3fMESA:
+    mov __blue_glCore_glWindowPos3fMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCullParameterdvEXT
+.type glCullParameterdvEXT, %function
+glCullParameterdvEXT:
+    mov __blue_glCore_glCullParameterdvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeubSUN
+.type glReplacementCodeubSUN, %function
+glReplacementCodeubSUN:
+    mov __blue_glCore_glReplacementCodeubSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiColor4ubVertex3fvSUN
+.type glReplacementCodeuiColor4ubVertex3fvSUN, %function
+glReplacementCodeuiColor4ubVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiColor4ubVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramResourceIndex
+.type glGetProgramResourceIndex, %function
+glGetProgramResourceIndex:
+    mov __blue_glCore_glGetProgramResourceIndex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1hvNV
+.type glVertexAttrib1hvNV, %function
+glVertexAttrib1hvNV:
+    mov __blue_glCore_glVertexAttrib1hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSampleCoverageARB
+.type glSampleCoverageARB, %function
+glSampleCoverageARB:
+    mov __blue_glCore_glSampleCoverageARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN
+.type glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN, %function
+glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4ubVertex2fSUN
+.type glColor4ubVertex2fSUN, %function
+glColor4ubVertex2fSUN:
+    mov __blue_glCore_glColor4ubVertex2fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindTexture
+.type glBindTexture, %function
+glBindTexture:
+    mov __blue_glCore_glBindTexture@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixPushEXT
+.type glMatrixPushEXT, %function
+glMatrixPushEXT:
+    mov __blue_glCore_glMatrixPushEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableIndexedEXT
+.type glEnableIndexedEXT, %function
+glEnableIndexedEXT:
+    mov __blue_glCore_glEnableIndexedEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2fNV
+.type glVertexAttrib2fNV, %function
+glVertexAttrib2fNV:
+    mov __blue_glCore_glVertexAttrib2fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fColor4ubVertex3fSUN
+.type glTexCoord2fColor4ubVertex3fSUN, %function
+glTexCoord2fColor4ubVertex3fSUN:
+    mov __blue_glCore_glTexCoord2fColor4ubVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTransformFeedbacki_v
+.type glGetTransformFeedbacki_v, %function
+glGetTransformFeedbacki_v:
+    mov __blue_glCore_glGetTransformFeedbacki_v@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCombinerParameteriNV
+.type glCombinerParameteriNV, %function
+glCombinerParameteriNV:
+    mov __blue_glCore_glCombinerParameteriNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glAreTexturesResidentEXT
+.type glAreTexturesResidentEXT, %function
+glAreTexturesResidentEXT:
+    mov __blue_glCore_glAreTexturesResidentEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3fvARB
+.type glUniform3fvARB, %function
+glUniform3fvARB:
+    mov __blue_glCore_glUniform3fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3hNV
+.type glMultiTexCoord3hNV, %function
+glMultiTexCoord3hNV:
+    mov __blue_glCore_glMultiTexCoord3hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureImage1DEXT
+.type glCompressedTextureImage1DEXT, %function
+glCompressedTextureImage1DEXT:
+    mov __blue_glCore_glCompressedTextureImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilOp
+.type glStencilOp, %function
+glStencilOp:
+    mov __blue_glCore_glStencilOp@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetShaderSource
+.type glGetShaderSource, %function
+glGetShaderSource:
+    mov __blue_glCore_glGetShaderSource@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1uiv
+.type glProgramUniform1uiv, %function
+glProgramUniform1uiv:
+    mov __blue_glCore_glProgramUniform1uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexPageCommitmentARB
+.type glTexPageCommitmentARB, %function
+glTexPageCommitmentARB:
+    mov __blue_glCore_glTexPageCommitmentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteOcclusionQueriesNV
+.type glDeleteOcclusionQueriesNV, %function
+glDeleteOcclusionQueriesNV:
+    mov __blue_glCore_glDeleteOcclusionQueriesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3x4fvEXT
+.type glProgramUniformMatrix3x4fvEXT, %function
+glProgramUniformMatrix3x4fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix3x4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2dv
+.type glMultiTexCoord2dv, %function
+glMultiTexCoord2dv:
+    mov __blue_glCore_glMultiTexCoord2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2xvOES
+.type glTexCoord2xvOES, %function
+glTexCoord2xvOES:
+    mov __blue_glCore_glTexCoord2xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameteri
+.type glTextureParameteri, %function
+glTextureParameteri:
+    mov __blue_glCore_glTextureParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfMonitorGroupsAMD
+.type glGetPerfMonitorGroupsAMD, %function
+glGetPerfMonitorGroupsAMD:
+    mov __blue_glCore_glGetPerfMonitorGroupsAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElementsInstancedBaseVertex
+.type glDrawElementsInstancedBaseVertex, %function
+glDrawElementsInstancedBaseVertex:
+    mov __blue_glCore_glDrawElementsInstancedBaseVertex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFlushMappedNamedBufferRange
+.type glFlushMappedNamedBufferRange, %function
+glFlushMappedNamedBufferRange:
+    mov __blue_glCore_glFlushMappedNamedBufferRange@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapVertexAttrib1dAPPLE
+.type glMapVertexAttrib1dAPPLE, %function
+glMapVertexAttrib1dAPPLE:
+    mov __blue_glCore_glMapVertexAttrib1dAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedProgramLocalParameterIivEXT
+.type glGetNamedProgramLocalParameterIivEXT, %function
+glGetNamedProgramLocalParameterIivEXT:
+    mov __blue_glCore_glGetNamedProgramLocalParameterIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramPathFragmentInputGenNV
+.type glProgramPathFragmentInputGenNV, %function
+glProgramPathFragmentInputGenNV:
+    mov __blue_glCore_glProgramPathFragmentInputGenNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelZoomxOES
+.type glPixelZoomxOES, %function
+glPixelZoomxOES:
+    mov __blue_glCore_glPixelZoomxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameteriv
+.type glGetTextureParameteriv, %function
+glGetTextureParameteriv:
+    mov __blue_glCore_glGetTextureParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4ui64ARB
+.type glUniform4ui64ARB, %function
+glUniform4ui64ARB:
+    mov __blue_glCore_glUniform4ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix2x3dvEXT
+.type glProgramUniformMatrix2x3dvEXT, %function
+glProgramUniformMatrix2x3dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix2x3dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWaitSync
+.type glWaitSync, %function
+glWaitSync:
+    mov __blue_glCore_glWaitSync@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord3iv
+.type glMultiTexCoord3iv, %function
+glMultiTexCoord3iv:
+    mov __blue_glCore_glMultiTexCoord3iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3iv
+.type glSecondaryColor3iv, %function
+glSecondaryColor3iv:
+    mov __blue_glCore_glSecondaryColor3iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLineWidthxOES
+.type glLineWidthxOES, %function
+glLineWidthxOES:
+    mov __blue_glCore_glLineWidthxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterIiv
+.type glTexParameterIiv, %function
+glTexParameterIiv:
+    mov __blue_glCore_glTexParameterIiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4sv
+.type glVertexAttribI4sv, %function
+glVertexAttribI4sv:
+    mov __blue_glCore_glVertexAttribI4sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage2DMultisample
+.type glTexImage2DMultisample, %function
+glTexImage2DMultisample:
+    mov __blue_glCore_glTexImage2DMultisample@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationSeparateiARB
+.type glBlendEquationSeparateiARB, %function
+glBlendEquationSeparateiARB:
+    mov __blue_glCore_glBlendEquationSeparateiARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3uiv
+.type glSecondaryColor3uiv, %function
+glSecondaryColor3uiv:
+    mov __blue_glCore_glSecondaryColor3uiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexBufferEXT
+.type glMultiTexBufferEXT, %function
+glMultiTexBufferEXT:
+    mov __blue_glCore_glMultiTexBufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDisableClientStateiEXT
+.type glDisableClientStateiEXT, %function
+glDisableClientStateiEXT:
+    mov __blue_glCore_glDisableClientStateiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathParameteriNV
+.type glPathParameteriNV, %function
+glPathParameteriNV:
+    mov __blue_glCore_glPathParameteriNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVideoCaptureStreamParameterfvNV
+.type glVideoCaptureStreamParameterfvNV, %function
+glVideoCaptureStreamParameterfvNV:
+    mov __blue_glCore_glVideoCaptureStreamParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateSubFramebuffer
+.type glInvalidateSubFramebuffer, %function
+glInvalidateSubFramebuffer:
+    mov __blue_glCore_glInvalidateSubFramebuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribIPointerEXT
+.type glVertexAttribIPointerEXT, %function
+glVertexAttribIPointerEXT:
+    mov __blue_glCore_glVertexAttribIPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribLui64vARB
+.type glGetVertexAttribLui64vARB, %function
+glGetVertexAttribLui64vARB:
+    mov __blue_glCore_glGetVertexAttribLui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1svARB
+.type glMultiTexCoord1svARB, %function
+glMultiTexCoord1svARB:
+    mov __blue_glCore_glMultiTexCoord1svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTexImage1D
+.type glCopyTexImage1D, %function
+glCopyTexImage1D:
+    mov __blue_glCore_glCopyTexImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDepthRange
+.type glDepthRange, %function
+glDepthRange:
+    mov __blue_glCore_glDepthRange@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalP3ui
+.type glNormalP3ui, %function
+glNormalP3ui:
+    mov __blue_glCore_glNormalP3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1sNV
+.type glVertexAttrib1sNV, %function
+glVertexAttrib1sNV:
+    mov __blue_glCore_glVertexAttrib1sNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex3hvNV
+.type glVertex3hvNV, %function
+glVertex3hvNV:
+    mov __blue_glCore_glVertex3hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilOpSeparate
+.type glStencilOpSeparate, %function
+glStencilOpSeparate:
+    mov __blue_glCore_glStencilOpSeparate@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glValidateProgram
+.type glValidateProgram, %function
+glValidateProgram:
+    mov __blue_glCore_glValidateProgram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3fARB
+.type glWindowPos3fARB, %function
+glWindowPos3fARB:
+    mov __blue_glCore_glWindowPos3fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribIPointer
+.type glVertexAttribIPointer, %function
+glVertexAttribIPointer:
+    mov __blue_glCore_glVertexAttribIPointer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameterI4uiNV
+.type glProgramLocalParameterI4uiNV, %function
+glProgramLocalParameterI4uiNV:
+    mov __blue_glCore_glProgramLocalParameterI4uiNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4sv
+.type glVertexAttrib4sv, %function
+glVertexAttrib4sv:
+    mov __blue_glCore_glVertexAttrib4sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFixedvOES
+.type glGetFixedvOES, %function
+glGetFixedvOES:
+    mov __blue_glCore_glGetFixedvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterfEXT
+.type glTextureParameterfEXT, %function
+glTextureParameterfEXT:
+    mov __blue_glCore_glTextureParameterfEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream4fATI
+.type glVertexStream4fATI, %function
+glVertexStream4fATI:
+    mov __blue_glCore_glVertexStream4fATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1iARB
+.type glUniform1iARB, %function
+glUniform1iARB:
+    mov __blue_glCore_glUniform1iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glQueryMatrixxOES
+.type glQueryMatrixxOES, %function
+glQueryMatrixxOES:
+    mov __blue_glCore_glQueryMatrixxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2hvNV
+.type glTexCoord2hvNV, %function
+glTexCoord2hvNV:
+    mov __blue_glCore_glTexCoord2hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4uivEXT
+.type glVertexAttribI4uivEXT, %function
+glVertexAttribI4uivEXT:
+    mov __blue_glCore_glVertexAttribI4uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSampleCoverage
+.type glSampleCoverage, %function
+glSampleCoverage:
+    mov __blue_glCore_glSampleCoverage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableParameteriv
+.type glGetColorTableParameteriv, %function
+glGetColorTableParameteriv:
+    mov __blue_glCore_glGetColorTableParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTbufferMask3DFX
+.type glTbufferMask3DFX, %function
+glTbufferMask3DFX:
+    mov __blue_glCore_glTbufferMask3DFX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameteri
+.type glConvolutionParameteri, %function
+glConvolutionParameteri:
+    mov __blue_glCore_glConvolutionParameteri@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramLocalParameter4dvEXT
+.type glNamedProgramLocalParameter4dvEXT, %function
+glNamedProgramLocalParameter4dvEXT:
+    mov __blue_glCore_glNamedProgramLocalParameter4dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnSeparableFilter
+.type glGetnSeparableFilter, %function
+glGetnSeparableFilter:
+    mov __blue_glCore_glGetnSeparableFilter@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCheckNamedFramebufferStatus
+.type glCheckNamedFramebufferStatus, %function
+glCheckNamedFramebufferStatus:
+    mov __blue_glCore_glCheckNamedFramebufferStatus@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferStorage
+.type glNamedBufferStorage, %function
+glNamedBufferStorage:
+    mov __blue_glCore_glNamedBufferStorage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableParameterfvEXT
+.type glGetColorTableParameterfvEXT, %function
+glGetColorTableParameterfvEXT:
+    mov __blue_glCore_glGetColorTableParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEvalMapsNV
+.type glEvalMapsNV, %function
+glEvalMapsNV:
+    mov __blue_glCore_glEvalMapsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformBlockBinding
+.type glUniformBlockBinding, %function
+glUniformBlockBinding:
+    mov __blue_glCore_glUniformBlockBinding@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPresentFrameDualFillNV
+.type glPresentFrameDualFillNV, %function
+glPresentFrameDualFillNV:
+    mov __blue_glCore_glPresentFrameDualFillNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUnmapBuffer
+.type glUnmapBuffer, %function
+glUnmapBuffer:
+    mov __blue_glCore_glUnmapBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompileShader
+.type glCompileShader, %function
+glCompileShader:
+    mov __blue_glCore_glCompileShader@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMakeImageHandleResidentARB
+.type glMakeImageHandleResidentARB, %function
+glMakeImageHandleResidentARB:
+    mov __blue_glCore_glMakeImageHandleResidentARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix3fvEXT
+.type glProgramUniformMatrix3fvEXT, %function
+glProgramUniformMatrix3fvEXT:
+    mov __blue_glCore_glProgramUniformMatrix3fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fNormal3fVertex3fvSUN
+.type glTexCoord2fNormal3fVertex3fvSUN, %function
+glTexCoord2fNormal3fVertex3fvSUN:
+    mov __blue_glCore_glTexCoord2fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColorP3ui
+.type glColorP3ui, %function
+glColorP3ui:
+    mov __blue_glCore_glColorP3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glSecondaryColor3hvNV
+.type glSecondaryColor3hvNV, %function
+glSecondaryColor3hvNV:
+    mov __blue_glCore_glSecondaryColor3hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilThenCoverFillPathNV
+.type glStencilThenCoverFillPathNV, %function
+glStencilThenCoverFillPathNV:
+    mov __blue_glCore_glStencilThenCoverFillPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL2i64NV
+.type glVertexAttribL2i64NV, %function
+glVertexAttribL2i64NV:
+    mov __blue_glCore_glVertexAttribL2i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDetailTexFuncSGIS
+.type glDetailTexFuncSGIS, %function
+glDetailTexFuncSGIS:
+    mov __blue_glCore_glDetailTexFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedFramebufferuiv
+.type glClearNamedFramebufferuiv, %function
+glClearNamedFramebufferuiv:
+    mov __blue_glCore_glClearNamedFramebufferuiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3bATI
+.type glNormalStream3bATI, %function
+glNormalStream3bATI:
+    mov __blue_glCore_glNormalStream3bATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glViewport
+.type glViewport, %function
+glViewport:
+    mov __blue_glCore_glViewport@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindRenderbuffer
+.type glBindRenderbuffer, %function
+glBindRenderbuffer:
+    mov __blue_glCore_glBindRenderbuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2ui64ARB
+.type glProgramUniform2ui64ARB, %function
+glProgramUniform2ui64ARB:
+    mov __blue_glCore_glProgramUniform2ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferOffsetEXT
+.type glBindBufferOffsetEXT, %function
+glBindBufferOffsetEXT:
+    mov __blue_glCore_glBindBufferOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2i
+.type glMultiTexCoord2i, %function
+glMultiTexCoord2i:
+    mov __blue_glCore_glMultiTexCoord2i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetInvariantFloatvEXT
+.type glGetInvariantFloatvEXT, %function
+glGetInvariantFloatvEXT:
+    mov __blue_glCore_glGetInvariantFloatvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindFragDataLocation
+.type glBindFragDataLocation, %function
+glBindFragDataLocation:
+    mov __blue_glCore_glBindFragDataLocation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex4xvOES
+.type glVertex4xvOES, %function
+glVertex4xvOES:
+    mov __blue_glCore_glVertex4xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFrontFace
+.type glFrontFace, %function
+glFrontFace:
+    mov __blue_glCore_glFrontFace@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyColorSubTable
+.type glCopyColorSubTable, %function
+glCopyColorSubTable:
+    mov __blue_glCore_glCopyColorSubTable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2d
+.type glVertexAttrib2d, %function
+glVertexAttrib2d:
+    mov __blue_glCore_glVertexAttrib2d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearBufferfv
+.type glClearBufferfv, %function
+glClearBufferfv:
+    mov __blue_glCore_glClearBufferfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindProgramNV
+.type glBindProgramNV, %function
+glBindProgramNV:
+    mov __blue_glCore_glBindProgramNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixIndexusvARB
+.type glMatrixIndexusvARB, %function
+glMatrixIndexusvARB:
+    mov __blue_glCore_glMatrixIndexusvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedRenderbufferParameterivEXT
+.type glGetNamedRenderbufferParameterivEXT, %function
+glGetNamedRenderbufferParameterivEXT:
+    mov __blue_glCore_glGetNamedRenderbufferParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteProgramsNV
+.type glDeleteProgramsNV, %function
+glDeleteProgramsNV:
+    mov __blue_glCore_glDeleteProgramsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawMeshArraysSUN
+.type glDrawMeshArraysSUN, %function
+glDrawMeshArraysSUN:
+    mov __blue_glCore_glDrawMeshArraysSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMultiTexLevelParameterfvEXT
+.type glGetMultiTexLevelParameterfvEXT, %function
+glGetMultiTexLevelParameterfvEXT:
+    mov __blue_glCore_glGetMultiTexLevelParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramEnvParametersI4ivNV
+.type glProgramEnvParametersI4ivNV, %function
+glProgramEnvParametersI4ivNV:
+    mov __blue_glCore_glProgramEnvParametersI4ivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixMultTransposefEXT
+.type glMatrixMultTransposefEXT, %function
+glMatrixMultTransposefEXT:
+    mov __blue_glCore_glMatrixMultTransposefEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2fvARB
+.type glVertexAttrib2fvARB, %function
+glVertexAttrib2fvARB:
+    mov __blue_glCore_glVertexAttrib2fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3ui64ARB
+.type glProgramUniform3ui64ARB, %function
+glProgramUniform3ui64ARB:
+    mov __blue_glCore_glProgramUniform3ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPolygonOffset
+.type glPolygonOffset, %function
+glPolygonOffset:
+    mov __blue_glCore_glPolygonOffset@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantfvEXT
+.type glVariantfvEXT, %function
+glVariantfvEXT:
+    mov __blue_glCore_glVariantfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1svARB
+.type glVertexAttrib1svARB, %function
+glVertexAttrib1svARB:
+    mov __blue_glCore_glVertexAttrib1svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix2dv
+.type glUniformMatrix2dv, %function
+glUniformMatrix2dv:
+    mov __blue_glCore_glUniformMatrix2dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCoverageModulationTableNV
+.type glCoverageModulationTableNV, %function
+glCoverageModulationTableNV:
+    mov __blue_glCore_glCoverageModulationTableNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilThenCoverStrokePathNV
+.type glStencilThenCoverStrokePathNV, %function
+glStencilThenCoverStrokePathNV:
+    mov __blue_glCore_glStencilThenCoverStrokePathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribIiv
+.type glGetVertexAttribIiv, %function
+glGetVertexAttribIiv:
+    mov __blue_glCore_glGetVertexAttribIiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadTransposeMatrixfARB
+.type glLoadTransposeMatrixfARB, %function
+glLoadTransposeMatrixfARB:
+    mov __blue_glCore_glLoadTransposeMatrixfARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib1fARB
+.type glVertexAttrib1fARB, %function
+glVertexAttrib1fARB:
+    mov __blue_glCore_glVertexAttrib1fARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformLocation
+.type glGetUniformLocation, %function
+glGetUniformLocation:
+    mov __blue_glCore_glGetUniformLocation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMinmaxParameterfv
+.type glGetMinmaxParameterfv, %function
+glGetMinmaxParameterfv:
+    mov __blue_glCore_glGetMinmaxParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4f
+.type glUniform4f, %function
+glUniform4f:
+    mov __blue_glCore_glUniform4f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexBufferEXT
+.type glTexBufferEXT, %function
+glTexBufferEXT:
+    mov __blue_glCore_glTexBufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetHistogramParameterxvOES
+.type glGetHistogramParameterxvOES, %function
+glGetHistogramParameterxvOES:
+    mov __blue_glCore_glGetHistogramParameterxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1dARB
+.type glMultiTexCoord1dARB, %function
+glMultiTexCoord1dARB:
+    mov __blue_glCore_glMultiTexCoord1dARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsFramebuffer
+.type glIsFramebuffer, %function
+glIsFramebuffer:
+    mov __blue_glCore_glIsFramebuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVariantbvEXT
+.type glVariantbvEXT, %function
+glVariantbvEXT:
+    mov __blue_glCore_glVariantbvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3svARB
+.type glVertexAttrib3svARB, %function
+glVertexAttrib3svARB:
+    mov __blue_glCore_glVertexAttrib3svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableSGI
+.type glGetColorTableSGI, %function
+glGetColorTableSGI:
+    mov __blue_glCore_glGetColorTableSGI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4dv
+.type glProgramUniformMatrix4dv, %function
+glProgramUniformMatrix4dv:
+    mov __blue_glCore_glProgramUniformMatrix4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenFencesAPPLE
+.type glGenFencesAPPLE, %function
+glGenFencesAPPLE:
+    mov __blue_glCore_glGenFencesAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribDivisorEXT
+.type glVertexArrayVertexAttribDivisorEXT, %function
+glVertexArrayVertexAttribDivisorEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribDivisorEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2i64NV
+.type glUniform2i64NV, %function
+glUniform2i64NV:
+    mov __blue_glCore_glUniform2i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformuivEXT
+.type glGetUniformuivEXT, %function
+glGetUniformuivEXT:
+    mov __blue_glCore_glGetUniformuivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs1hvNV
+.type glVertexAttribs1hvNV, %function
+glVertexAttribs1hvNV:
+    mov __blue_glCore_glVertexAttribs1hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1iEXT
+.type glProgramUniform1iEXT, %function
+glProgramUniform1iEXT:
+    mov __blue_glCore_glProgramUniform1iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPauseTransformFeedbackNV
+.type glPauseTransformFeedbackNV, %function
+glPauseTransformFeedbackNV:
+    mov __blue_glCore_glPauseTransformFeedbackNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribArrayObjectfvATI
+.type glGetVertexAttribArrayObjectfvATI, %function
+glGetVertexAttribArrayObjectfvATI:
+    mov __blue_glCore_glGetVertexAttribArrayObjectfvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexWeighthNV
+.type glVertexWeighthNV, %function
+glVertexWeighthNV:
+    mov __blue_glCore_glVertexWeighthNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetCompressedTextureImageEXT
+.type glGetCompressedTextureImageEXT, %function
+glGetCompressedTextureImageEXT:
+    mov __blue_glCore_glGetCompressedTextureImageEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2fMESA
+.type glWindowPos2fMESA, %function
+glWindowPos2fMESA:
+    mov __blue_glCore_glWindowPos2fMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLightModelxvOES
+.type glLightModelxvOES, %function
+glLightModelxvOES:
+    mov __blue_glCore_glLightModelxvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPolygonOffsetEXT
+.type glPolygonOffsetEXT, %function
+glPolygonOffsetEXT:
+    mov __blue_glCore_glPolygonOffsetEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1d
+.type glUniform1d, %function
+glUniform1d:
+    mov __blue_glCore_glUniform1d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameterI4iNV
+.type glProgramLocalParameterI4iNV, %function
+glProgramLocalParameterI4iNV:
+    mov __blue_glCore_glProgramLocalParameterI4iNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnTexImage
+.type glGetnTexImage, %function
+glGetnTexImage:
+    mov __blue_glCore_glGetnTexImage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointParameteriNV
+.type glPointParameteriNV, %function
+glPointParameteriNV:
+    mov __blue_glCore_glPointParameteriNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformi64vARB
+.type glGetUniformi64vARB, %function
+glGetUniformi64vARB:
+    mov __blue_glCore_glGetUniformi64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndFragmentShaderATI
+.type glEndFragmentShaderATI, %function
+glEndFragmentShaderATI:
+    mov __blue_glCore_glEndFragmentShaderATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3sATI
+.type glNormalStream3sATI, %function
+glNormalStream3sATI:
+    mov __blue_glCore_glNormalStream3sATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex3xOES
+.type glVertex3xOES, %function
+glVertex3xOES:
+    mov __blue_glCore_glVertex3xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsImageHandleResidentNV
+.type glIsImageHandleResidentNV, %function
+glIsImageHandleResidentNV:
+    mov __blue_glCore_glIsImageHandleResidentNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2hNV
+.type glMultiTexCoord2hNV, %function
+glMultiTexCoord2hNV:
+    mov __blue_glCore_glMultiTexCoord2hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2s
+.type glMultiTexCoord2s, %function
+glMultiTexCoord2s:
+    mov __blue_glCore_glMultiTexCoord2s@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2bvOES
+.type glTexCoord2bvOES, %function
+glTexCoord2bvOES:
+    mov __blue_glCore_glTexCoord2bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStartInstrumentsSGIX
+.type glStartInstrumentsSGIX, %function
+glStartInstrumentsSGIX:
+    mov __blue_glCore_glStartInstrumentsSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedFramebufferAttachmentParameterivEXT
+.type glGetNamedFramebufferAttachmentParameterivEXT, %function
+glGetNamedFramebufferAttachmentParameterivEXT:
+    mov __blue_glCore_glGetNamedFramebufferAttachmentParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexSubImage2DEXT
+.type glTexSubImage2DEXT, %function
+glTexSubImage2DEXT:
+    mov __blue_glCore_glTexSubImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRenderbufferStorageMultisampleCoverageNV
+.type glRenderbufferStorageMultisampleCoverageNV, %function
+glRenderbufferStorageMultisampleCoverageNV:
+    mov __blue_glCore_glRenderbufferStorageMultisampleCoverageNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2d
+.type glMultiTexCoord2d, %function
+glMultiTexCoord2d:
+    mov __blue_glCore_glMultiTexCoord2d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x3fv
+.type glProgramUniformMatrix4x3fv, %function
+glProgramUniformMatrix4x3fv:
+    mov __blue_glCore_glProgramUniformMatrix4x3fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fNormal3fVertex3fSUN
+.type glTexCoord2fNormal3fVertex3fSUN, %function
+glTexCoord2fNormal3fVertex3fSUN:
+    mov __blue_glCore_glTexCoord2fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReadInstrumentsSGIX
+.type glReadInstrumentsSGIX, %function
+glReadInstrumentsSGIX:
+    mov __blue_glCore_glReadInstrumentsSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordP3ui
+.type glTexCoordP3ui, %function
+glTexCoordP3ui:
+    mov __blue_glCore_glTexCoordP3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetObjectLabelEXT
+.type glGetObjectLabelEXT, %function
+glGetObjectLabelEXT:
+    mov __blue_glCore_glGetObjectLabelEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord1hvNV
+.type glTexCoord1hvNV, %function
+glTexCoord1hvNV:
+    mov __blue_glCore_glTexCoord1hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnMapdvARB
+.type glGetnMapdvARB, %function
+glGetnMapdvARB:
+    mov __blue_glCore_glGetnMapdvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameteriv
+.type glTexParameteriv, %function
+glTexParameteriv:
+    mov __blue_glCore_glTexParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindAttribLocation
+.type glBindAttribLocation, %function
+glBindAttribLocation:
+    mov __blue_glCore_glBindAttribLocation@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream2fATI
+.type glVertexStream2fATI, %function
+glVertexStream2fATI:
+    mov __blue_glCore_glVertexStream2fATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3ui
+.type glVertexAttribI3ui, %function
+glVertexAttribI3ui:
+    mov __blue_glCore_glVertexAttribI3ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex4hNV
+.type glVertex4hNV, %function
+glVertex4hNV:
+    mov __blue_glCore_glVertex4hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultTransposeMatrixf
+.type glMultTransposeMatrixf, %function
+glMultTransposeMatrixf:
+    mov __blue_glCore_glMultTransposeMatrixf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixRotatefEXT
+.type glMatrixRotatefEXT, %function
+glMatrixRotatefEXT:
+    mov __blue_glCore_glMatrixRotatefEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameterIivEXT
+.type glGetTexParameterIivEXT, %function
+glGetTexParameterIivEXT:
+    mov __blue_glCore_glGetTexParameterIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsVertexArray
+.type glIsVertexArray, %function
+glIsVertexArray:
+    mov __blue_glCore_glIsVertexArray@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexBumpParameterivATI
+.type glGetTexBumpParameterivATI, %function
+glGetTexBumpParameterivATI:
+    mov __blue_glCore_glGetTexBumpParameterivATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationSeparateIndexedAMD
+.type glBlendEquationSeparateIndexedAMD, %function
+glBlendEquationSeparateIndexedAMD:
+    mov __blue_glCore_glBlendEquationSeparateIndexedAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2iv
+.type glProgramUniform2iv, %function
+glProgramUniform2iv:
+    mov __blue_glCore_glProgramUniform2iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex3bvOES
+.type glVertex3bvOES, %function
+glVertex3bvOES:
+    mov __blue_glCore_glVertex3bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4fNormal3fVertex3fvSUN
+.type glColor4fNormal3fVertex3fvSUN, %function
+glColor4fNormal3fVertex3fvSUN:
+    mov __blue_glCore_glColor4fNormal3fVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRasterPos2xvOES
+.type glRasterPos2xvOES, %function
+glRasterPos2xvOES:
+    mov __blue_glCore_glRasterPos2xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glActiveTextureARB
+.type glActiveTextureARB, %function
+glActiveTextureARB:
+    mov __blue_glCore_glActiveTextureARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glObjectUnpurgeableAPPLE
+.type glObjectUnpurgeableAPPLE, %function
+glObjectUnpurgeableAPPLE:
+    mov __blue_glCore_glObjectUnpurgeableAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2ui64NV
+.type glProgramUniform2ui64NV, %function
+glProgramUniform2ui64NV:
+    mov __blue_glCore_glProgramUniform2ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2i64ARB
+.type glUniform2i64ARB, %function
+glUniform2i64ARB:
+    mov __blue_glCore_glUniform2i64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4fvARB
+.type glVertexAttrib4fvARB, %function
+glVertexAttrib4fvARB:
+    mov __blue_glCore_glVertexAttrib4fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramBinary
+.type glGetProgramBinary, %function
+glGetProgramBinary:
+    mov __blue_glCore_glGetProgramBinary@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedStringARB
+.type glNamedStringARB, %function
+glNamedStringARB:
+    mov __blue_glCore_glNamedStringARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glHistogram
+.type glHistogram, %function
+glHistogram:
+    mov __blue_glCore_glHistogram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFeedbackBufferxOES
+.type glFeedbackBufferxOES, %function
+glFeedbackBufferxOES:
+    mov __blue_glCore_glFeedbackBufferxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameteriv
+.type glTextureParameteriv, %function
+glTextureParameteriv:
+    mov __blue_glCore_glTextureParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfMonitorCounterInfoAMD
+.type glGetPerfMonitorCounterInfoAMD, %function
+glGetPerfMonitorCounterInfoAMD:
+    mov __blue_glCore_glGetPerfMonitorCounterInfoAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos4ivMESA
+.type glWindowPos4ivMESA, %function
+glWindowPos4ivMESA:
+    mov __blue_glCore_glWindowPos4ivMESA@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor4ubVertex3fvSUN
+.type glColor4ubVertex3fvSUN, %function
+glColor4ubVertex3fvSUN:
+    mov __blue_glCore_glColor4ubVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapGrid1xOES
+.type glMapGrid1xOES, %function
+glMapGrid1xOES:
+    mov __blue_glCore_glMapGrid1xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribPointervARB
+.type glGetVertexAttribPointervARB, %function
+glGetVertexAttribPointervARB:
+    mov __blue_glCore_glGetVertexAttribPointervARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCullParameterfvEXT
+.type glCullParameterfvEXT, %function
+glCullParameterfvEXT:
+    mov __blue_glCore_glCullParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyMultiTexSubImage1DEXT
+.type glCopyMultiTexSubImage1DEXT, %function
+glCopyMultiTexSubImage1DEXT:
+    mov __blue_glCore_glCopyMultiTexSubImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsPathNV
+.type glIsPathNV, %function
+glIsPathNV:
+    mov __blue_glCore_glIsPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReadnPixelsARB
+.type glReadnPixelsARB, %function
+glReadnPixelsARB:
+    mov __blue_glCore_glReadnPixelsARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1xOES
+.type glMultiTexCoord1xOES, %function
+glMultiTexCoord1xOES:
+    mov __blue_glCore_glMultiTexCoord1xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyMultiTexImage2DEXT
+.type glCopyMultiTexImage2DEXT, %function
+glCopyMultiTexImage2DEXT:
+    mov __blue_glCore_glCopyMultiTexImage2DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix2x4fv
+.type glUniformMatrix2x4fv, %function
+glUniformMatrix2x4fv:
+    mov __blue_glCore_glUniformMatrix2x4fv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord2fColor4ubVertex3fvSUN
+.type glTexCoord2fColor4ubVertex3fvSUN, %function
+glTexCoord2fColor4ubVertex3fvSUN:
+    mov __blue_glCore_glTexCoord2fColor4ubVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexParameteriv
+.type glGetTexParameteriv, %function
+glGetTexParameteriv:
+    mov __blue_glCore_glGetTexParameteriv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindBufferBase
+.type glBindBufferBase, %function
+glBindBufferBase:
+    mov __blue_glCore_glBindBufferBase@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib2hvNV
+.type glVertexAttrib2hvNV, %function
+glVertexAttrib2hvNV:
+    mov __blue_glCore_glVertexAttrib2hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexP4ui
+.type glVertexP4ui, %function
+glVertexP4ui:
+    mov __blue_glCore_glVertexP4ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFragmentMaterialfvSGIX
+.type glGetFragmentMaterialfvSGIX, %function
+glGetFragmentMaterialfvSGIX:
+    mov __blue_glCore_glGetFragmentMaterialfvSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2iARB
+.type glWindowPos2iARB, %function
+glWindowPos2iARB:
+    mov __blue_glCore_glWindowPos2iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI3iv
+.type glVertexAttribI3iv, %function
+glVertexAttribI3iv:
+    mov __blue_glCore_glVertexAttribI3iv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMapParameterfvNV
+.type glGetMapParameterfvNV, %function
+glGetMapParameterfvNV:
+    mov __blue_glCore_glGetMapParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1ui64vARB
+.type glUniform1ui64vARB, %function
+glUniform1ui64vARB:
+    mov __blue_glCore_glUniform1ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyTextureImage1DEXT
+.type glCopyTextureImage1DEXT, %function
+glCopyTextureImage1DEXT:
+    mov __blue_glCore_glCopyTextureImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureMaterialEXT
+.type glTextureMaterialEXT, %function
+glTextureMaterialEXT:
+    mov __blue_glCore_glTextureMaterialEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4ubvEXT
+.type glVertexAttribI4ubvEXT, %function
+glVertexAttribI4ubvEXT:
+    mov __blue_glCore_glVertexAttribI4ubvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentLightivSGIX
+.type glFragmentLightivSGIX, %function
+glFragmentLightivSGIX:
+    mov __blue_glCore_glFragmentLightivSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsFenceNV
+.type glIsFenceNV, %function
+glIsFenceNV:
+    mov __blue_glCore_glIsFenceNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4ui64ARB
+.type glProgramUniform4ui64ARB, %function
+glProgramUniform4ui64ARB:
+    mov __blue_glCore_glProgramUniform4ui64ARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiVertex3fvSUN
+.type glReplacementCodeuiVertex3fvSUN, %function
+glReplacementCodeuiVertex3fvSUN:
+    mov __blue_glCore_glReplacementCodeuiVertex3fvSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPointAlongPathNV
+.type glPointAlongPathNV, %function
+glPointAlongPathNV:
+    mov __blue_glCore_glPointAlongPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyColorTable
+.type glCopyColorTable, %function
+glCopyColorTable:
+    mov __blue_glCore_glCopyColorTable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord4i
+.type glMultiTexCoord4i, %function
+glMultiTexCoord4i:
+    mov __blue_glCore_glMultiTexCoord4i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureStorageSparseAMD
+.type glTextureStorageSparseAMD, %function
+glTextureStorageSparseAMD:
+    mov __blue_glCore_glTextureStorageSparseAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableVertexAttribArrayARB
+.type glEnableVertexAttribArrayARB, %function
+glEnableVertexAttribArrayARB:
+    mov __blue_glCore_glEnableVertexAttribArrayARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCombinerInputNV
+.type glCombinerInputNV, %function
+glCombinerInputNV:
+    mov __blue_glCore_glCombinerInputNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableVertexArrayEXT
+.type glEnableVertexArrayEXT, %function
+glEnableVertexArrayEXT:
+    mov __blue_glCore_glEnableVertexArrayEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableVertexAttribAPPLE
+.type glEnableVertexAttribAPPLE, %function
+glEnableVertexAttribAPPLE:
+    mov __blue_glCore_glEnableVertexAttribAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4i64vNV
+.type glProgramUniform4i64vNV, %function
+glProgramUniform4i64vNV:
+    mov __blue_glCore_glProgramUniform4i64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendBarrierNV
+.type glBlendBarrierNV, %function
+glBlendBarrierNV:
+    mov __blue_glCore_glBlendBarrierNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribdvNV
+.type glGetVertexAttribdvNV, %function
+glGetVertexAttribdvNV:
+    mov __blue_glCore_glGetVertexAttribdvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoad3x2fNV
+.type glMatrixLoad3x2fNV, %function
+glMatrixLoad3x2fNV:
+    mov __blue_glCore_glMatrixLoad3x2fNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramLocalParameters4fvEXT
+.type glProgramLocalParameters4fvEXT, %function
+glProgramLocalParameters4fvEXT:
+    mov __blue_glCore_glProgramLocalParameters4fvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformBlockIndex
+.type glGetUniformBlockIndex, %function
+glGetUniformBlockIndex:
+    mov __blue_glCore_glGetUniformBlockIndex@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteProgramPipelines
+.type glDeleteProgramPipelines, %function
+glDeleteProgramPipelines:
+    mov __blue_glCore_glDeleteProgramPipelines@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribfvNV
+.type glGetVertexAttribfvNV, %function
+glGetVertexAttribfvNV:
+    mov __blue_glCore_glGetVertexAttribfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord1d
+.type glMultiTexCoord1d, %function
+glMultiTexCoord1d:
+    mov __blue_glCore_glMultiTexCoord1d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnable
+.type glEnable, %function
+glEnable:
+    mov __blue_glCore_glEnable@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex2bvOES
+.type glVertex2bvOES, %function
+glVertex2bvOES:
+    mov __blue_glCore_glVertex2bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixLoadTransposefEXT
+.type glMatrixLoadTransposefEXT, %function
+glMatrixLoadTransposefEXT:
+    mov __blue_glCore_glMatrixLoadTransposefEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1fATI
+.type glVertexStream1fATI, %function
+glVertexStream1fATI:
+    mov __blue_glCore_glVertexStream1fATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationEXT
+.type glBlendEquationEXT, %function
+glBlendEquationEXT:
+    mov __blue_glCore_glBlendEquationEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord1xOES
+.type glTexCoord1xOES, %function
+glTexCoord1xOES:
+    mov __blue_glCore_glTexCoord1xOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2hvNV
+.type glMultiTexCoord2hvNV, %function
+glMultiTexCoord2hvNV:
+    mov __blue_glCore_glMultiTexCoord2hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor3xvOES
+.type glColor3xvOES, %function
+glColor3xvOES:
+    mov __blue_glCore_glColor3xvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginVertexShaderEXT
+.type glBeginVertexShaderEXT, %function
+glBeginVertexShaderEXT:
+    mov __blue_glCore_glBeginVertexShaderEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCopyBufferSubData
+.type glCopyBufferSubData, %function
+glCopyBufferSubData:
+    mov __blue_glCore_glCopyBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexRenderbufferEXT
+.type glMultiTexRenderbufferEXT, %function
+glMultiTexRenderbufferEXT:
+    mov __blue_glCore_glMultiTexRenderbufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribLdvEXT
+.type glGetVertexAttribLdvEXT, %function
+glGetVertexAttribLdvEXT:
+    mov __blue_glCore_glGetVertexAttribLdvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedRenderbufferStorage
+.type glNamedRenderbufferStorage, %function
+glNamedRenderbufferStorage:
+    mov __blue_glCore_glNamedRenderbufferStorage@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexStorage3DMultisample
+.type glTexStorage3DMultisample, %function
+glTexStorage3DMultisample:
+    mov __blue_glCore_glTexStorage3DMultisample@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3ivARB
+.type glUniform3ivARB, %function
+glUniform3ivARB:
+    mov __blue_glCore_glUniform3ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelMapx
+.type glPixelMapx, %function
+glPixelMapx:
+    mov __blue_glCore_glPixelMapx@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRotatexOES
+.type glRotatexOES, %function
+glRotatexOES:
+    mov __blue_glCore_glRotatexOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentLightModeliSGIX
+.type glFragmentLightModeliSGIX, %function
+glFragmentLightModeliSGIX:
+    mov __blue_glCore_glFragmentLightModeliSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedTextureSubImage1D
+.type glCompressedTextureSubImage1D, %function
+glCompressedTextureSubImage1D:
+    mov __blue_glCore_glCompressedTextureSubImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex2bOES
+.type glVertex2bOES, %function
+glVertex2bOES:
+    mov __blue_glCore_glVertex2bOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniformMatrix4x2dvEXT
+.type glProgramUniformMatrix4x2dvEXT, %function
+glProgramUniformMatrix4x2dvEXT:
+    mov __blue_glCore_glProgramUniformMatrix4x2dvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform3fEXT
+.type glProgramUniform3fEXT, %function
+glProgramUniform3fEXT:
+    mov __blue_glCore_glProgramUniform3fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribs4hvNV
+.type glVertexAttribs4hvNV, %function
+glVertexAttribs4hvNV:
+    mov __blue_glCore_glVertexAttribs4hvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexArrayVertexAttribBindingEXT
+.type glVertexArrayVertexAttribBindingEXT, %function
+glVertexArrayVertexAttribBindingEXT:
+    mov __blue_glCore_glVertexArrayVertexAttribBindingEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glRequestResidentProgramsNV
+.type glRequestResidentProgramsNV, %function
+glRequestResidentProgramsNV:
+    mov __blue_glCore_glRequestResidentProgramsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideoCaptureStreamfvNV
+.type glGetVideoCaptureStreamfvNV, %function
+glGetVideoCaptureStreamfvNV:
+    mov __blue_glCore_glGetVideoCaptureStreamfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2ivARB
+.type glUniform2ivARB, %function
+glUniform2ivARB:
+    mov __blue_glCore_glUniform2ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNewObjectBufferATI
+.type glNewObjectBufferATI, %function
+glNewObjectBufferATI:
+    mov __blue_glCore_glNewObjectBufferATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformIndices
+.type glGetUniformIndices, %function
+glGetUniformIndices:
+    mov __blue_glCore_glGetUniformIndices@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureImage1DEXT
+.type glTextureImage1DEXT, %function
+glTextureImage1DEXT:
+    mov __blue_glCore_glTextureImage1DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetFogFuncSGIS
+.type glGetFogFuncSGIS, %function
+glGetFogFuncSGIS:
+    mov __blue_glCore_glGetFogFuncSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoord2ivARB
+.type glMultiTexCoord2ivARB, %function
+glMultiTexCoord2ivARB:
+    mov __blue_glCore_glMultiTexCoord2ivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendEquationSeparateEXT
+.type glBlendEquationSeparateEXT, %function
+glBlendEquationSeparateEXT:
+    mov __blue_glCore_glBlendEquationSeparateEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTextureLayerEXT
+.type glNamedFramebufferTextureLayerEXT, %function
+glNamedFramebufferTextureLayerEXT:
+    mov __blue_glCore_glNamedFramebufferTextureLayerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGlobalAlphaFactorubSUN
+.type glGlobalAlphaFactorubSUN, %function
+glGlobalAlphaFactorubSUN:
+    mov __blue_glCore_glGlobalAlphaFactorubSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI4bv
+.type glVertexAttribI4bv, %function
+glVertexAttribI4bv:
+    mov __blue_glCore_glVertexAttribI4bv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glShaderSourceARB
+.type glShaderSourceARB, %function
+glShaderSourceARB:
+    mov __blue_glCore_glShaderSourceARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2i64vARB
+.type glProgramUniform2i64vARB, %function
+glProgramUniform2i64vARB:
+    mov __blue_glCore_glProgramUniform2i64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionParameterfv
+.type glConvolutionParameterfv, %function
+glConvolutionParameterfv:
+    mov __blue_glCore_glConvolutionParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexStream1dvATI
+.type glVertexStream1dvATI, %function
+glVertexStream1dvATI:
+    mov __blue_glCore_glVertexStream1dvATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferTexture
+.type glFramebufferTexture, %function
+glFramebufferTexture:
+    mov __blue_glCore_glFramebufferTexture@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexArrayIntegervEXT
+.type glGetVertexArrayIntegervEXT, %function
+glGetVertexArrayIntegervEXT:
+    mov __blue_glCore_glGetVertexArrayIntegervEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBeginPerfMonitorAMD
+.type glBeginPerfMonitorAMD, %function
+glBeginPerfMonitorAMD:
+    mov __blue_glCore_glBeginPerfMonitorAMD@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4fvARB
+.type glUniform4fvARB, %function
+glUniform4fvARB:
+    mov __blue_glCore_glUniform4fvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glConvolutionFilter1D
+.type glConvolutionFilter1D, %function
+glConvolutionFilter1D:
+    mov __blue_glCore_glConvolutionFilter1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glActiveProgramEXT
+.type glActiveProgramEXT, %function
+glActiveProgramEXT:
+    mov __blue_glCore_glActiveProgramEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNormalStream3svATI
+.type glNormalStream3svATI, %function
+glNormalStream3svATI:
+    mov __blue_glCore_glNormalStream3svATI@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetAttachedObjectsARB
+.type glGetAttachedObjectsARB, %function
+glGetAttachedObjectsARB:
+    mov __blue_glCore_glGetAttachedObjectsARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilStrokePathInstancedNV
+.type glStencilStrokePathInstancedNV, %function
+glStencilStrokePathInstancedNV:
+    mov __blue_glCore_glStencilStrokePathInstancedNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniformMatrix3x4dv
+.type glUniformMatrix3x4dv, %function
+glUniformMatrix3x4dv:
+    mov __blue_glCore_glUniformMatrix3x4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4sARB
+.type glVertexAttrib4sARB, %function
+glVertexAttrib4sARB:
+    mov __blue_glCore_glVertexAttrib4sARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResetHistogramEXT
+.type glResetHistogramEXT, %function
+glResetHistogramEXT:
+    mov __blue_glCore_glResetHistogramEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetShaderiv
+.type glGetShaderiv, %function
+glGetShaderiv:
+    mov __blue_glCore_glGetShaderiv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBlendFuncSeparateEXT
+.type glBlendFuncSeparateEXT, %function
+glBlendFuncSeparateEXT:
+    mov __blue_glCore_glBlendFuncSeparateEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDeleteFencesNV
+.type glDeleteFencesNV, %function
+glDeleteFencesNV:
+    mov __blue_glCore_glDeleteFencesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMatrixPopEXT
+.type glMatrixPopEXT, %function
+glMatrixPopEXT:
+    mov __blue_glCore_glMatrixPopEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEnableVertexArrayAttrib
+.type glEnableVertexArrayAttrib, %function
+glEnableVertexArrayAttrib:
+    mov __blue_glCore_glEnableVertexArrayAttrib@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapParameterivNV
+.type glMapParameterivNV, %function
+glMapParameterivNV:
+    mov __blue_glCore_glMapParameterivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1uivEXT
+.type glUniform1uivEXT, %function
+glUniform1uivEXT:
+    mov __blue_glCore_glUniform1uivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelStorei
+.type glPixelStorei, %function
+glPixelStorei:
+    mov __blue_glCore_glPixelStorei@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapVertexAttrib2dAPPLE
+.type glMapVertexAttrib2dAPPLE, %function
+glMapVertexAttrib2dAPPLE:
+    mov __blue_glCore_glMapVertexAttrib2dAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetNamedBufferSubDataEXT
+.type glGetNamedBufferSubDataEXT, %function
+glGetNamedBufferSubDataEXT:
+    mov __blue_glCore_glGetNamedBufferSubDataEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glResumeTransformFeedback
+.type glResumeTransformFeedback, %function
+glResumeTransformFeedback:
+    mov __blue_glCore_glResumeTransformFeedback@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCompressedMultiTexImage3DEXT
+.type glCompressedMultiTexImage3DEXT, %function
+glCompressedMultiTexImage3DEXT:
+    mov __blue_glCore_glCompressedMultiTexImage3DEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedProgramStringEXT
+.type glNamedProgramStringEXT, %function
+glNamedProgramStringEXT:
+    mov __blue_glCore_glNamedProgramStringEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform1d
+.type glProgramUniform1d, %function
+glProgramUniform1d:
+    mov __blue_glCore_glProgramUniform1d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFogCoordPointer
+.type glFogCoordPointer, %function
+glFogCoordPointer:
+    mov __blue_glCore_glFogCoordPointer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWeightPointerARB
+.type glWeightPointerARB, %function
+glWeightPointerARB:
+    mov __blue_glCore_glWeightPointerARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL3ui64NV
+.type glVertexAttribL3ui64NV, %function
+glVertexAttribL3ui64NV:
+    mov __blue_glCore_glVertexAttribL3ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1ui64NV
+.type glVertexAttribL1ui64NV, %function
+glVertexAttribL1ui64NV:
+    mov __blue_glCore_glVertexAttribL1ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glInvalidateFramebuffer
+.type glInvalidateFramebuffer, %function
+glInvalidateFramebuffer:
+    mov __blue_glCore_glInvalidateFramebuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTexLevelParameterfv
+.type glGetTexLevelParameterfv, %function
+glGetTexLevelParameterfv:
+    mov __blue_glCore_glGetTexLevelParameterfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetPerfCounterInfoINTEL
+.type glGetPerfCounterInfoINTEL, %function
+glGetPerfCounterInfoINTEL:
+    mov __blue_glCore_glGetPerfCounterInfoINTEL@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glColor3fVertex3fSUN
+.type glColor3fVertex3fSUN, %function
+glColor3fVertex3fSUN:
+    mov __blue_glCore_glColor3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPassThroughxOES
+.type glPassThroughxOES, %function
+glPassThroughxOES:
+    mov __blue_glCore_glPassThroughxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform4dv
+.type glUniform4dv, %function
+glUniform4dv:
+    mov __blue_glCore_glUniform4dv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2ui
+.type glProgramUniform2ui, %function
+glProgramUniform2ui:
+    mov __blue_glCore_glProgramUniform2ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferReadBuffer
+.type glNamedFramebufferReadBuffer, %function
+glNamedFramebufferReadBuffer:
+    mov __blue_glCore_glNamedFramebufferReadBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform2ui64vARB
+.type glProgramUniform2ui64vARB, %function
+glProgramUniform2ui64vARB:
+    mov __blue_glCore_glProgramUniform2ui64vARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformFeedbackStreamAttribsNV
+.type glTransformFeedbackStreamAttribsNV, %function
+glTransformFeedbackStreamAttribsNV:
+    mov __blue_glCore_glTransformFeedbackStreamAttribsNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTransformFeedbackVaryings
+.type glTransformFeedbackVaryings, %function
+glTransformFeedbackVaryings:
+    mov __blue_glCore_glTransformFeedbackVaryings@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL4d
+.type glVertexAttribL4d, %function
+glVertexAttribL4d:
+    mov __blue_glCore_glVertexAttribL4d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glExtractComponentEXT
+.type glExtractComponentEXT, %function
+glExtractComponentEXT:
+    mov __blue_glCore_glExtractComponentEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFenceSync
+.type glFenceSync, %function
+glFenceSync:
+    mov __blue_glCore_glFenceSync@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glReplacementCodeuiColor4fNormal3fVertex3fSUN
+.type glReplacementCodeuiColor4fNormal3fVertex3fSUN, %function
+glReplacementCodeuiColor4fNormal3fVertex3fSUN:
+    mov __blue_glCore_glReplacementCodeuiColor4fNormal3fVertex3fSUN@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4uivARB
+.type glVertexAttrib4uivARB, %function
+glVertexAttrib4uivARB:
+    mov __blue_glCore_glVertexAttrib4uivARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedBufferStorageEXT
+.type glNamedBufferStorageEXT, %function
+glNamedBufferStorageEXT:
+    mov __blue_glCore_glNamedBufferStorageEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramUniform4ui64vNV
+.type glProgramUniform4ui64vNV, %function
+glProgramUniform4ui64vNV:
+    mov __blue_glCore_glProgramUniform4ui64vNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoordPointerListIBM
+.type glTexCoordPointerListIBM, %function
+glTexCoordPointerListIBM:
+    mov __blue_glCore_glTexCoordPointerListIBM@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexParameterf
+.type glTexParameterf, %function
+glTexParameterf:
+    mov __blue_glCore_glTexParameterf@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCoverFillPathNV
+.type glCoverFillPathNV, %function
+glCoverFillPathNV:
+    mov __blue_glCore_glCoverFillPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos3sv
+.type glWindowPos3sv, %function
+glWindowPos3sv:
+    mov __blue_glCore_glWindowPos3sv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultMatrixxOES
+.type glMultMatrixxOES, %function
+glMultMatrixxOES:
+    mov __blue_glCore_glMultMatrixxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2ui64NV
+.type glUniform2ui64NV, %function
+glUniform2ui64NV:
+    mov __blue_glCore_glUniform2ui64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenSymbolsEXT
+.type glGenSymbolsEXT, %function
+glGenSymbolsEXT:
+    mov __blue_glCore_glGenSymbolsEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribI2iEXT
+.type glVertexAttribI2iEXT, %function
+glVertexAttribI2iEXT:
+    mov __blue_glCore_glVertexAttribI2iEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTexGenParameteriSGIS
+.type glPixelTexGenParameteriSGIS, %function
+glPixelTexGenParameteriSGIS:
+    mov __blue_glCore_glPixelTexGenParameteriSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3f
+.type glUniform3f, %function
+glUniform3f:
+    mov __blue_glCore_glUniform3f@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glViewportArrayv
+.type glViewportArrayv, %function
+glViewportArrayv:
+    mov __blue_glCore_glViewportArrayv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexWeightPointerEXT
+.type glVertexWeightPointerEXT, %function
+glVertexWeightPointerEXT:
+    mov __blue_glCore_glVertexWeightPointerEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib3d
+.type glVertexAttrib3d, %function
+glVertexAttrib3d:
+    mov __blue_glCore_glVertexAttrib3d@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPathStencilDepthOffsetNV
+.type glPathStencilDepthOffsetNV, %function
+glPathStencilDepthOffsetNV:
+    mov __blue_glCore_glPathStencilDepthOffsetNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideoCaptureStreamivNV
+.type glGetVideoCaptureStreamivNV, %function
+glGetVideoCaptureStreamivNV:
+    mov __blue_glCore_glGetVideoCaptureStreamivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform2iARB
+.type glUniform2iARB, %function
+glUniform2iARB:
+    mov __blue_glCore_glUniform2iARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexGenfvEXT
+.type glMultiTexGenfvEXT, %function
+glMultiTexGenfvEXT:
+    mov __blue_glCore_glMultiTexGenfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribL1i64NV
+.type glVertexAttribL1i64NV, %function
+glVertexAttribL1i64NV:
+    mov __blue_glCore_glVertexAttribL1i64NV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertex3hNV
+.type glVertex3hNV, %function
+glVertex3hNV:
+    mov __blue_glCore_glVertex3hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform1uiEXT
+.type glUniform1uiEXT, %function
+glUniform1uiEXT:
+    mov __blue_glCore_glUniform1uiEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnHistogramARB
+.type glGetnHistogramARB, %function
+glGetnHistogramARB:
+    mov __blue_glCore_glGetnHistogramARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureImage3DMultisampleCoverageNV
+.type glTextureImage3DMultisampleCoverageNV, %function
+glTextureImage3DMultisampleCoverageNV:
+    mov __blue_glCore_glTextureImage3DMultisampleCoverageNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsShader
+.type glIsShader, %function
+glIsShader:
+    mov __blue_glCore_glIsShader@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsSampler
+.type glIsSampler, %function
+glIsSampler:
+    mov __blue_glCore_glIsSampler@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord4bvOES
+.type glTexCoord4bvOES, %function
+glTexCoord4bvOES:
+    mov __blue_glCore_glTexCoord4bvOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetProgramEnvParameterdvARB
+.type glGetProgramEnvParameterdvARB, %function
+glGetProgramEnvParameterdvARB:
+    mov __blue_glCore_glGetProgramEnvParameterdvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttrib4svARB
+.type glVertexAttrib4svARB, %function
+glVertexAttrib4svARB:
+    mov __blue_glCore_glVertexAttrib4svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glIsBuffer
+.type glIsBuffer, %function
+glIsBuffer:
+    mov __blue_glCore_glIsBuffer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glObjectPurgeableAPPLE
+.type glObjectPurgeableAPPLE, %function
+glObjectPurgeableAPPLE:
+    mov __blue_glCore_glObjectPurgeableAPPLE@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glPixelTexGenParameterivSGIS
+.type glPixelTexGenParameterivSGIS, %function
+glPixelTexGenParameterivSGIS:
+    mov __blue_glCore_glPixelTexGenParameterivSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetColorTableParameterivEXT
+.type glGetColorTableParameterivEXT, %function
+glGetColorTableParameterivEXT:
+    mov __blue_glCore_glGetColorTableParameterivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLightModelxOES
+.type glLightModelxOES, %function
+glLightModelxOES:
+    mov __blue_glCore_glLightModelxOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramNamedParameter4dNV
+.type glProgramNamedParameter4dNV, %function
+glProgramNamedParameter4dNV:
+    mov __blue_glCore_glProgramNamedParameter4dNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTextureParameterfvEXT
+.type glTextureParameterfvEXT, %function
+glTextureParameterfvEXT:
+    mov __blue_glCore_glTextureParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClipPlanefOES
+.type glClipPlanefOES, %function
+glClipPlanefOES:
+    mov __blue_glCore_glClipPlanefOES@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTangent3fEXT
+.type glTangent3fEXT, %function
+glTangent3fEXT:
+    mov __blue_glCore_glTangent3fEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glEndQuery
+.type glEndQuery, %function
+glEndQuery:
+    mov __blue_glCore_glEndQuery@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetShaderPrecisionFormat
+.type glGetShaderPrecisionFormat, %function
+glGetShaderPrecisionFormat:
+    mov __blue_glCore_glGetShaderPrecisionFormat@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetnHistogram
+.type glGetnHistogram, %function
+glGetnHistogram:
+    mov __blue_glCore_glGetnHistogram@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glLoadIdentityDeformationMapSGIX
+.type glLoadIdentityDeformationMapSGIX, %function
+glLoadIdentityDeformationMapSGIX:
+    mov __blue_glCore_glLoadIdentityDeformationMapSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glShaderStorageBlockBinding
+.type glShaderStorageBlockBinding, %function
+glShaderStorageBlockBinding:
+    mov __blue_glCore_glShaderStorageBlockBinding@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVertexAttribP1ui
+.type glVertexAttribP1ui, %function
+glVertexAttribP1ui:
+    mov __blue_glCore_glVertexAttribP1ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glNamedFramebufferTextureLayer
+.type glNamedFramebufferTextureLayer, %function
+glNamedFramebufferTextureLayer:
+    mov __blue_glCore_glNamedFramebufferTextureLayer@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexCoord3hNV
+.type glTexCoord3hNV, %function
+glTexCoord3hNV:
+    mov __blue_glCore_glTexCoord3hNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramBufferParametersfvNV
+.type glProgramBufferParametersfvNV, %function
+glProgramBufferParametersfvNV:
+    mov __blue_glCore_glProgramBufferParametersfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glVDPAUUnmapSurfacesNV
+.type glVDPAUUnmapSurfacesNV, %function
+glVDPAUUnmapSurfacesNV:
+    mov __blue_glCore_glVDPAUUnmapSurfacesNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFramebufferRenderbufferEXT
+.type glFramebufferRenderbufferEXT, %function
+glFramebufferRenderbufferEXT:
+    mov __blue_glCore_glFramebufferRenderbufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glUniform3i
+.type glUniform3i, %function
+glUniform3i:
+    mov __blue_glCore_glUniform3i@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glProgramBufferParametersIivNV
+.type glProgramBufferParametersIivNV, %function
+glProgramBufferParametersIivNV:
+    mov __blue_glCore_glProgramBufferParametersIivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetMinmaxParameterfvEXT
+.type glGetMinmaxParameterfvEXT, %function
+glGetMinmaxParameterfvEXT:
+    mov __blue_glCore_glGetMinmaxParameterfvEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexImage1D
+.type glTexImage1D, %function
+glTexImage1D:
+    mov __blue_glCore_glTexImage1D@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glCheckNamedFramebufferStatusEXT
+.type glCheckNamedFramebufferStatusEXT, %function
+glCheckNamedFramebufferStatusEXT:
+    mov __blue_glCore_glCheckNamedFramebufferStatusEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetUniformLocationARB
+.type glGetUniformLocationARB, %function
+glGetUniformLocationARB:
+    mov __blue_glCore_glGetUniformLocationARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGenerateMipmap
+.type glGenerateMipmap, %function
+glGenerateMipmap:
+    mov __blue_glCore_glGenerateMipmap@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMemoryBarrier
+.type glMemoryBarrier, %function
+glMemoryBarrier:
+    mov __blue_glCore_glMemoryBarrier@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribfvARB
+.type glGetVertexAttribfvARB, %function
+glGetVertexAttribfvARB:
+    mov __blue_glCore_glGetVertexAttribfvARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glFragmentMaterialiSGIX
+.type glFragmentMaterialiSGIX, %function
+glFragmentMaterialiSGIX:
+    mov __blue_glCore_glFragmentMaterialiSGIX@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMultiTexCoordP1ui
+.type glMultiTexCoordP1ui, %function
+glMultiTexCoordP1ui:
+    mov __blue_glCore_glMultiTexCoordP1ui@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVertexAttribfv
+.type glGetVertexAttribfv, %function
+glGetVertexAttribfv:
+    mov __blue_glCore_glGetVertexAttribfv@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindSamplers
+.type glBindSamplers, %function
+glBindSamplers:
+    mov __blue_glCore_glBindSamplers@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glStencilFillPathNV
+.type glStencilFillPathNV, %function
+glStencilFillPathNV:
+    mov __blue_glCore_glStencilFillPathNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glMapParameterfvNV
+.type glMapParameterfvNV, %function
+glMapParameterfvNV:
+    mov __blue_glCore_glMapParameterfvNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glWindowPos2svARB
+.type glWindowPos2svARB, %function
+glWindowPos2svARB:
+    mov __blue_glCore_glWindowPos2svARB@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glBindFramebufferEXT
+.type glBindFramebufferEXT, %function
+glBindFramebufferEXT:
+    mov __blue_glCore_glBindFramebufferEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetTextureParameterIivEXT
+.type glGetTextureParameterIivEXT, %function
+glGetTextureParameterIivEXT:
+    mov __blue_glCore_glGetTextureParameterIivEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glTexSubImage4DSGIS
+.type glTexSubImage4DSGIS, %function
+glTexSubImage4DSGIS:
+    mov __blue_glCore_glTexSubImage4DSGIS@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glClearNamedBufferSubData
+.type glClearNamedBufferSubData, %function
+glClearNamedBufferSubData:
+    mov __blue_glCore_glClearNamedBufferSubData@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetHistogramEXT
+.type glGetHistogramEXT, %function
+glGetHistogramEXT:
+    mov __blue_glCore_glGetHistogramEXT@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glGetVideoCaptureivNV
+.type glGetVideoCaptureivNV, %function
+glGetVideoCaptureivNV:
+    mov __blue_glCore_glGetVideoCaptureivNV@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+
+.global glDrawElementsIndirect
+.type glDrawElementsIndirect, %function
+glDrawElementsIndirect:
+    mov __blue_glCore_glDrawElementsIndirect@GOTPCREL(%rip), %r11
     jmp *(%r11)

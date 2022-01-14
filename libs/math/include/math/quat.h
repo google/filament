@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef MATH_QUAT_H_
-#define MATH_QUAT_H_
+#ifndef TNT_MATH_QUAT_H
+#define TNT_MATH_QUAT_H
 
-#include <math/half.h>
 #include <math/TQuatHelpers.h>
+#include <math/compiler.h>
+#include <math/half.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/compiler.h>
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -164,4 +164,4 @@ constexpr inline quat operator "" _k(unsigned long long v) {
 }  // namespace math
 }  // namespace filament
 
-#endif  // MATH_QUAT_H_
+#endif  // TNT_MATH_QUAT_H

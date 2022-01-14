@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_SSTREAM_H
-#define TNT_SSTREAM_H
+#ifndef TNT_UTILS_SSTREAM_H
+#define TNT_UTILS_SSTREAM_H
 
 #include <utils/ostream.h>
 
@@ -34,4 +34,4 @@ public:
 } // namespace io
 } // namespace utils
 
-#endif //TNT_SSTREAM_H
+#endif // TNT_UTILS_SSTREAM_H

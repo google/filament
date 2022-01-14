@@ -96,4 +96,4 @@ inline bool sphereConeIntersection(
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_INTERSECTIONS_H
+#endif // TNT_FILAMENT_INTERSECTIONS_H

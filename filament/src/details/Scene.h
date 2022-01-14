@@ -18,13 +18,13 @@
 #define TNT_FILAMENT_DETAILS_SCENE_H
 
 #include "upcast.h"
+
+#include "Allocators.h"
+#include "Culler.h"
+
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
-
-#include "details/Culler.h"
-
-#include "Allocators.h"
 
 #include <filament/Box.h>
 #include <filament/Scene.h>
@@ -36,7 +36,8 @@
 #include <utils/Range.h>
 #include <utils/debug.h>
 
-#include <cstddef>
+#include <stddef.h>
+
 #include <tsl/robin_set.h>
 
 namespace filament {
@@ -102,12 +103,11 @@ public:
     enum {
         RENDERABLE_INSTANCE,    //  4 | instance of the Renderable component
         WORLD_TRANSFORM,        // 16 | instance of the Transform component
-        REVERSED_WINDING_ORDER, //  1 | det(WORLD_TRANSFORM)<0
         VISIBILITY_STATE,       //  1 | visibility data of the component
         SKINNING_BUFFER,        //  8 | bones uniform buffer handle, count, offset
+        MORPHING_BUFFER,        //  8 | weights uniform buffer handle, count
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
-        VISIBLE_MASK,           //  1 | each bit represents a visibility in a pass
-        MORPH_WEIGHTS,          //  4 | floats for morphing
+        VISIBLE_MASK,           //  2 | each bit represents a visibility in a pass
         CHANNELS,               //  1 | currently light channels only
 
         // These are not needed anymore after culling
@@ -125,12 +125,11 @@ public:
     using RenderableSoa = utils::StructureOfArrays<
             utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
             math::mat4f,                                // WORLD_TRANSFORM
-            bool,                                       // REVERSED_WINDING_ORDER
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
+            FRenderableManager::MorphingBindingInfo,    // MORPHING_BUFFER
             math::float3,                               // WORLD_AABB_CENTER
             VisibleMaskType,                            // VISIBLE_MASK
-            math::float4,                               // MORPH_WEIGHTS
             uint8_t,                                    // CHANNELS
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT

@@ -31,7 +31,7 @@ NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver
 NoopDriver::~NoopDriver() noexcept = default;
 
 backend::ShaderModel NoopDriver::getShaderModel() const noexcept {
-#if defined(ANDROID) || defined(IOS) || defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
     return ShaderModel::GL_ES_30;
 #else
     return ShaderModel::GL_CORE_41;
@@ -117,8 +117,8 @@ Handle<HwStream> NoopDriver::createStreamAcquired() {
     return {};
 }
 
-void NoopDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
-        void* userData) {
+void NoopDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
+        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
 }
 
 void NoopDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
@@ -160,8 +160,16 @@ bool NoopDriver::isFrameBufferFetchSupported() {
     return false;
 }
 
+bool NoopDriver::isFrameBufferFetchMultiSampleSupported() {
+    return false; // TODO: add support for MS framebuffer_fetch
+}
+
 bool NoopDriver::isFrameTimeSupported() {
     return true;
+}
+
+bool NoopDriver::isWorkaroundNeeded(Workaround workaround) {
+    return false;
 }
 
 math::float2 NoopDriver::getClipSpaceParams() {

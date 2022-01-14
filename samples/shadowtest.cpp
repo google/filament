@@ -55,7 +55,7 @@ struct App {
 };
 
 static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
-static const char* IBL_FOLDER = "default_env";
+static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
 static constexpr bool ENABLE_SHADOWS = true;
 

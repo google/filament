@@ -51,7 +51,7 @@ bool loadLibrary() {
 
     module = dlopen(dylibPath.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (module == nullptr) {
-        printf("%s", dlerror());
+        printf("%s\n", dlerror());
     }
     return module != nullptr;
 }

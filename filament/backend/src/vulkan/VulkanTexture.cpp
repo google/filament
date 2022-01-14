@@ -16,6 +16,7 @@
 
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
+#include "VulkanUtility.h"
 
 #include <private/backend/BackendUtils.h>
 
@@ -27,66 +28,6 @@ using namespace bluevk;
 
 namespace filament {
 namespace backend {
-
-// Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
-// layout to a GPU-readable layout.
-static void transitionImageLayout(VkCommandBuffer cmd, VkImage image,
-        VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
-        uint32_t layerCount, uint32_t levelCount, VkImageAspectFlags aspect) {
-    if (oldLayout == newLayout) {
-        return;
-    }
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = aspect;
-    barrier.subresourceRange.baseMipLevel = miplevel;
-    barrier.subresourceRange.levelCount = levelCount;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = layerCount;
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-    switch (newLayout) {
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        case VK_IMAGE_LAYOUT_GENERAL:
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
-
-        // We support PRESENT as a target layout to allow blitting from the swap chain.
-        // See also makeSwapChainPresentable().
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            barrier.dstAccessMask = 0;
-            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            break;
-
-        default:
-           PANIC_POSTCONDITION("Unsupported layout transition.");
-    }
-    vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1,
-            &barrier);
-}
 
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
@@ -238,9 +179,18 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     // Transition the layout of each image slice.
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
         const uint32_t layers = mPrimaryViewRange.layerCount;
-        transitionImageLayout(mContext.commands->get().cmdbuffer, mTextureImage,
-                VK_IMAGE_LAYOUT_UNDEFINED,
-                mContext.getTextureLayout(usage), 0, layers, levels, mAspect);
+        transitionImageLayout(mContext.commands->get().cmdbuffer, textureTransitionHelper({
+                .image = mTextureImage,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = mContext.getTextureLayout(usage),
+                .subresources = {
+                        mAspect,
+                        0,
+                        levels,
+                        0,
+                        layers
+                }
+        }));
     }
 }
 
@@ -285,7 +235,7 @@ void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t wi
 }
 
 void VulkanTexture::updateWithCopyBuffer(const PixelBufferDescriptor& hostData, uint32_t width,
-        uint32_t height, uint32_t depth, int miplevel) {
+        uint32_t height, uint32_t depth, uint32_t miplevel) {
     void* mapped = nullptr;
     VulkanStage const* stage = mStagePool.acquireStage(hostData.size);
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
@@ -294,21 +244,41 @@ void VulkanTexture::updateWithCopyBuffer(const PixelBufferDescriptor& hostData, 
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, hostData.size);
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1, 1, mAspect);
+
+    // We can't blindly use LAYOUT_UNDEFINED because it may destroy the data, and because
+    // we're potentially updating only a sub-region it would be a problem.
+    VkImageLayout textureLayout = mContext.getTextureLayout(usage);
+    transitionImageLayout(cmdbuffer, textureTransitionHelper({
+            .image = mTextureImage,
+            .oldLayout = textureLayout,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .subresources = {
+                    mAspect,
+                    miplevel, 1,
+                    0,1
+            }
+    }));
 
     copyBufferToImage(cmdbuffer, stage->buffer, mTextureImage, width, height, depth,
             nullptr, miplevel);
 
-    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            mContext.getTextureLayout(usage), miplevel, 1, 1, mAspect);
+    transitionImageLayout(cmdbuffer, textureTransitionHelper({
+            .image = mTextureImage,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = textureLayout,
+            .subresources = {
+                    mAspect,
+                    miplevel, 1,
+                    0,1
+            }
+    }));
 }
 
 void VulkanTexture::updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
-        uint32_t height, uint32_t depth, int miplevel) {
+        uint32_t height, uint32_t depth, uint32_t miplevel) {
     void* mapped = nullptr;
-    VulkanStageImage const* stage = mStagePool.acquireImage(hostData.format, hostData.type,
-            width, height);
+    VulkanStageImage const* stage = mStagePool.acquireImage(
+            hostData.format, hostData.type, width, height);
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
     memcpy(mapped, hostData.buffer, hostData.size);
     vmaUnmapMemory(mContext.allocator, stage->memory);
@@ -328,21 +298,29 @@ void VulkanTexture::updateWithBlitImage(const PixelBufferDescriptor& hostData, u
         .dstOffsets = { rect[0], rect[1] }
     }};
 
-    transitionImageLayout(cmdbuffer, stage->image, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, miplevel, 1, 1, mAspect);
-
-    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1, 1, mAspect);
+    // We can't blindly use LAYOUT_UNDEFINED because it may destroy the data, and because
+    // we're potentially updating only a sub-region it would be a problem.
+    VkImageLayout textureLayout = mContext.getTextureLayout(usage);
+    transitionImageLayout(cmdbuffer, textureTransitionHelper({
+            .image = mTextureImage,
+            .oldLayout = textureLayout,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .subresources = { mAspect, miplevel, 1, 0, 1 }
+    }));
 
     vkCmdBlitImage(cmdbuffer, stage->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mTextureImage,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, VK_FILTER_NEAREST);
 
-    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            mContext.getTextureLayout(usage), miplevel, 1, 1, mAspect);
+    transitionImageLayout(cmdbuffer, textureTransitionHelper({
+            .image = mTextureImage,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = textureLayout,
+            .subresources = { mAspect, miplevel, 1, 0, 1 }
+    }));
 }
 
 void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
-        const FaceOffsets& faceOffsets, int miplevel) {
+        const FaceOffsets& faceOffsets, uint32_t miplevel) {
     assert_invariant(this->target == SamplerType::SAMPLER_CUBEMAP);
     const bool reshape = getBytesPerPixel(format) == 3;
     const void* cpuData = data.buffer;
@@ -361,19 +339,29 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
+
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     const uint32_t width = std::max(1u, this->width >> miplevel);
     const uint32_t height = std::max(1u, this->height >> miplevel);
 
-    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6, 1, mAspect);
+    // We can use LAYOUT_UNDEFINED here because we're always replacing the whole data, so it
+    // doesn't matter if the previous data is lost.
+    transitionImageLayout(cmdbuffer, textureTransitionHelper({
+            .image = mTextureImage,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .subresources = { mAspect, miplevel, 1, 0, 6 }
+    }));
 
     copyBufferToImage(cmdbuffer, stage->buffer, mTextureImage, width, height, 1,
             &faceOffsets, miplevel);
 
-    transitionImageLayout(cmdbuffer, mTextureImage,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mContext.getTextureLayout(usage), miplevel, 6,
-            1, mAspect);
+    transitionImageLayout(cmdbuffer, textureTransitionHelper({
+            .image = mTextureImage,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = mContext.getTextureLayout(usage),
+            .subresources = { mAspect, miplevel, 1, 0, 6 }
+    }));
 }
 
 void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {

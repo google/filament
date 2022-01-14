@@ -135,9 +135,13 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
     // backend should always be 1 or greater.
     samples = samples ? samples : uint8_t(1);
 
+    using TS = backend::TextureSwizzle;
+    constexpr const auto defaultSwizzle = std::array<backend::TextureSwizzle, 4>{
+        TS::CHANNEL_0, TS::CHANNEL_1, TS::CHANNEL_2, TS::CHANNEL_3};
+
     // do we have a suitable texture in the cache?
     TextureHandle handle;
-    if (mEnabled) {
+    if constexpr (mEnabled) {
         auto& textureCache = mTextureCache;
         const TextureKey key{ name, target, levels, format, samples, width, height, depth, usage, swizzle };
         auto it = textureCache.find(key);
@@ -148,9 +152,6 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
             textureCache.erase(it);
         } else {
             // we don't, allocate a new texture and populate the in-use list
-            using TS = backend::TextureSwizzle;
-            constexpr const auto defaultSwizzle = std::array<backend::TextureSwizzle, 4>{
-                TS::CHANNEL_0, TS::CHANNEL_1, TS::CHANNEL_2, TS::CHANNEL_3};
             if (swizzle == defaultSwizzle) {
                 handle = mBackend.createTexture(
                         target, levels, format, samples, width, height, depth, usage);
@@ -162,14 +163,20 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
         }
         mInUseTextures.emplace(handle, key);
     } else {
-        handle = mBackend.createTexture(
-                target, levels, format, samples, width, height, depth, usage);
+        if (swizzle == defaultSwizzle) {
+            handle = mBackend.createTexture(
+                    target, levels, format, samples, width, height, depth, usage);
+        } else {
+            handle = mBackend.createTextureSwizzled(
+                    target, levels, format, samples, width, height, depth, usage,
+                    swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+        }
     }
     return handle;
 }
 
 void ResourceAllocator::destroyTexture(TextureHandle h) noexcept {
-    if (mEnabled) {
+    if constexpr (mEnabled) {
         // find the texture in the in-use list (it must be there!)
         auto it = mInUseTextures.find(h);
         assert_invariant(it != mInUseTextures.end());

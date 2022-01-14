@@ -20,6 +20,8 @@
 #include <filament/FilamentAPI.h>
 #include <filament/Color.h>
 
+#include <filament/MaterialEnums.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
@@ -37,6 +39,7 @@ class UniformInterfaceBlock;
 class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
 public:
     using CullingMode = filament::backend::CullingMode;
+    using TransparencyMode = filament::TransparencyMode;
 
     template<typename T>
     using is_supported_parameter_t = typename std::enable_if<
@@ -196,6 +199,11 @@ public:
      * automatically disabled.
      */
     void setDoubleSided(bool doubleSided) noexcept;
+
+    /**
+     * Specifies how transparent objects should be rendered (default is DEFAULT).
+     */
+    void setTransparencyMode(TransparencyMode mode) noexcept;
 
     /**
      * Overrides the default triangle culling state that was set on the material.

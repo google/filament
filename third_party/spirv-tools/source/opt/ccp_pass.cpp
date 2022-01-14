@@ -291,6 +291,10 @@ bool CCPPass::ReplaceValues() {
 }
 
 bool CCPPass::PropagateConstants(Function* fp) {
+  if (fp->IsDeclaration()) {
+    return false;
+  }
+
   // Mark function parameters as varying.
   fp->ForEachParam([this](const Instruction* inst) {
     values_[inst->result_id()] = kVaryingSSAId;

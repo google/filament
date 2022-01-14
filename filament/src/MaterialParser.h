@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_MATERIAL_PARSER_H
-#define TNT_FILAMENT_MATERIAL_PARSER_H
+#ifndef TNT_FILAMENT_MATERIALPARSER_H
+#define TNT_FILAMENT_MATERIALPARSER_H
 
 #include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
@@ -85,6 +85,7 @@ public:
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool getRefractionMode(RefractionMode* value) const noexcept;
     bool getRefractionType(RefractionType* value) const noexcept;
+    bool getReflectionMode(ReflectionMode* value) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
     bool hasSpecularAntiAliasing(bool* value) const noexcept;
     bool getSpecularAntiAliasingVariance(float* value) const noexcept;
@@ -149,4 +150,4 @@ struct ChunkSubpassInterfaceBlock {
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_MATERIAL_PARSER_H
+#endif // TNT_FILAMENT_MATERIALPARSER_H

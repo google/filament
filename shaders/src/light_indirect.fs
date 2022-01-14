@@ -539,17 +539,30 @@ void applyRefraction(
     // which is not the case when we'll read from the screen-space buffer
     vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
-    // compute the point where the ray exits the medium, if needed
-    vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
-    p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
+    vec3 Ft;
+#if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
+    if (frameUniforms.ssrDistance > 0.0f) {
+        // if screen-space reflections is enabled, we can't read from the screen-space buffer, so
+        // fall back to cubemap refractions
+        Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
+    } else
+#endif
+    {
+        // compute the point where the ray exits the medium, if needed
+        vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
+        p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
-    // perceptualRoughness to LOD
-    // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
-    // cubemap and screen-space modes match at perceptualRoughness 0.125
-    float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
-    float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
+        // perceptualRoughness to LOD
+        // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
+        // cubemap and screen-space modes match at perceptualRoughness 0.125
+        // TODO: Remove this factor temporarily until we find a better solution
+        //       This overblurs many scenes and needs a more principled approach
+        // float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
+        float tweakedPerceptualRoughness = perceptualRoughness;
+        float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
 
-    vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
+        Ft = textureLod(light_ssr, p.xy, lod).rgb;
+    }
 #endif
 
     // base color changes the amount of light passing through the boundary
@@ -583,13 +596,39 @@ void combineDiffuseAndSpecular(
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // specular layer
     vec3 Fr;
+
+    // screen-space reflections
+#if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
+    vec4 ssr = vec4(0.0f);
+    // evaluateScreenSpaceReflections will set the value of ssr if there's a hit.
+    // ssr.a contains the reflection's contribution.
+    // TODO: do we want iblLuminance to control screen-space reflections?
+    if (pixel.roughness <= 0.01f && frameUniforms.ssrDistance > 0.0f) {
+        vec3 r = getReflectedVector(pixel, shading_view, shading_normal);
+        evaluateScreenSpaceReflections(r, ssr);
+    }
+#else
+    const vec4 ssr = vec4(0.0f);
+#endif
+
+    // If screen-space reflections are turned on and have full contribution (ssr.a == 1.0f), then we
+    // skip sampling the IBL down below.
+
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
     vec3 r = getReflectedVector(pixel, shading_normal);
-    Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
+    vec3 ibl = vec3(0.0f);
+    if (ssr.a < 1.0f) {
+        ibl = E * prefilteredRadiance(r, pixel.perceptualRoughness);
+    }
+    Fr = (1.0f - ssr.a) * ibl + ssr.rgb;
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
-    Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
+    vec3 ibl = vec3(0.0f);
+    if (ssr.a < 1.0f) {
+        ibl = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
+    }
+    Fr = (1.0f - ssr.a) * ibl + ssr.rgb;
 #endif
 
     SSAOInterpolationCache interpolationCache;

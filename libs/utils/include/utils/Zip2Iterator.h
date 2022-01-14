@@ -119,4 +119,4 @@ public:
 
 } // namespace utils
 
-#endif /* TNT_UTILS_ZIP2ITERATOR_H */
+#endif // TNT_UTILS_ZIP2ITERATOR_H

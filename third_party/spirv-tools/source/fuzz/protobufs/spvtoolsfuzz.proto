@@ -559,6 +559,7 @@ message Transformation {
     TransformationExpandVectorReduction expand_vector_reduction = 85;
     TransformationSwapFunctionVariables swap_function_variables = 86;
     TransformationSwapTwoFunctions swap_two_functions = 87;
+    TransformationWrapVectorSynonym wrap_vector_synonym = 88;
     // Add additional option using the next available number.
   }
 }
@@ -1568,17 +1569,26 @@ message TransformationInvertComparisonOperator {
 
 message TransformationLoad {
 
-  // Transformation that adds an OpLoad instruction from a pointer into an id.
+  // Transformation that adds an OpLoad or OpAtomicLoad instruction from a pointer into an id.
 
-  // The result of the load instruction
+  // The result of the load instruction.
   uint32 fresh_id = 1;
 
-  // The pointer to be loaded from
+  // The pointer to be loaded from.
   uint32 pointer_id = 2;
 
+  // True if and only if the load should be atomic.
+  bool is_atomic = 3;
+
+  // The memory scope for the atomic load. Ignored unless |is_atomic| is true.
+  uint32 memory_scope_id = 4;
+
+  // The memory semantics for the atomic load. Ignored unless |is_atomic| is true.
+  uint32 memory_semantics_id = 5;
+
   // A descriptor for an instruction in a block before which the new OpLoad
-  // instruction should be inserted
-  InstructionDescriptor instruction_to_insert_before = 3;
+  // instruction should be inserted.
+  InstructionDescriptor instruction_to_insert_before = 6;
 
 }
 
@@ -2235,17 +2245,26 @@ message TransformationSplitBlock {
 
 message TransformationStore {
 
-  // Transformation that adds an OpStore instruction of an id to a pointer.
+  // Transformation that adds an OpStore or OpAtomicStore instruction of an id to a pointer.
 
-  // The pointer to be stored to
+  // The pointer to be stored to.
   uint32 pointer_id = 1;
 
-  // The value to be stored
-  uint32 value_id = 2;
+  // True if and only if the load should be atomic.
+  bool is_atomic = 2;
+
+  // The memory scope for the atomic load. Ignored unless |is_atomic| is true.
+  uint32 memory_scope_id = 3;
+
+  // The memory semantics for the atomic load. Ignored unless |is_atomic| is true.
+  uint32 memory_semantics_id = 4;
+
+  // The value to be stored.
+  uint32 value_id = 5;
 
   // A descriptor for an instruction in a block before which the new OpStore
-  // instruction should be inserted
-  InstructionDescriptor instruction_to_insert_before = 3;
+  // instruction should be inserted.
+  InstructionDescriptor instruction_to_insert_before = 6;
 
 }
 
@@ -2369,5 +2388,41 @@ message TransformationWrapRegionInSelection {
 
   // Boolean value for the condition expression.
   bool branch_condition = 3;
+
+}
+
+message TransformationWrapVectorSynonym {
+  // A transformation that wraps an arithmetic operation into a vector operation
+  // and get the result of the original operation from the corresponding index.
+  // For instance, for this transformation, an scalar operation between two scalars:
+  // define op ∈ {+, -, *}
+  // c = a op b
+  //
+  // requires the availability of two vectors:
+  //
+  // va = vector(..., a, ...)
+  // vb = vector(..., b, ...)
+  //
+  // where a and b are in the same position i in each of their correponding vector
+  // and a is synonymous with va[i] and b is synonymous with vb[i].
+  //
+  // The transformation then add an instruction vc = va op vb where c is synonymous
+  // with vc[i].
+
+  // The result if of the original scalar operation instruction.
+  uint32 instruction_id = 1;
+
+  // The result id for the first vector that contains the first value of the scalar operation.
+  uint32 vector_operand1 = 2;
+
+  // The result id for the second vector that contains the second value of the scalar operation.
+  uint32 vector_operand2 = 3;
+
+  // A fresh id for the resulted vector from the addition of the first and second vector.
+  uint32 fresh_id = 4;
+
+  // The position in the vector where the value of original instruction is located. Must be in
+  // the corresponding vector range.
+  uint32 scalar_position = 5;
 
 }

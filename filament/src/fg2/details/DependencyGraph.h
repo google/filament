@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_GRAPH_H
-#define TNT_FILAMENT_FG2_GRAPH_H
+#ifndef TNT_FILAMENT_FG2_DETAILS_DEPENDENCYGRAPH_H
+#define TNT_FILAMENT_FG2_DETAILS_DEPENDENCYGRAPH_H
 
 #include <utils/ostream.h>
 #include <utils/CString.h>
@@ -195,4 +195,4 @@ inline DependencyGraph::Edge::Edge(DependencyGraph& graph,
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_GRAPH_H
+#endif // TNT_FILAMENT_FG2_DETAILS_DEPENDENCYGRAPH_H

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_CYCLIC_BARRIER_H_
-#define UTILS_CYCLIC_BARRIER_H_
+#ifndef TNT_UTILS_CYCLIC_BARRIER_H
+#define TNT_UTILS_CYCLIC_BARRIER_H
 
 #include <stddef.h>
 
@@ -81,4 +81,4 @@ private:
 
 } // namespace utils
 
-#endif // UTILS_CYCLIC_BARRIER_H_
+#endif // TNT_UTILS_CYCLIC_BARRIER_H

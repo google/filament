@@ -73,9 +73,10 @@ fragment {
 void dummy() {}
 
 precision highp float;
+precision highp int;
 
 mat3 tangentSpace(const vec3 N) {
-    const vec3 up = vec3(0, 0, 1);
+    vec3 up = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
     mat3 R;
     R[0] = normalize(cross(up, N));
     R[1] = cross(N, R[0]);

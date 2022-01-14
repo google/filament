@@ -14,24 +14,26 @@
  * limitations under the License.
  */
 
+#include "FrameSkipper.h"
+
+#include "details/Engine.h"
+
 #include <utils/Log.h>
 #include <utils/debug.h>
-
-#include "details/FrameSkipper.h"
-#include "details/Engine.h"
 
 namespace filament {
 
 using namespace utils;
 using namespace backend;
 
-FrameSkipper::FrameSkipper(FEngine& engine, size_t latency) noexcept
-        : mEngine(engine), mLast(latency) {
+FrameSkipper::FrameSkipper(size_t latency) noexcept
+        : mLast(latency) {
     assert_invariant(latency <= MAX_FRAME_LATENCY);
 }
 
-FrameSkipper::~FrameSkipper() noexcept {
-    auto& driver = mEngine.getDriverApi();
+FrameSkipper::~FrameSkipper() noexcept = default;
+
+void FrameSkipper::terminate(DriverApi& driver) noexcept {
     for (auto sync : mDelayedSyncs) {
         if (sync) {
             driver.destroySync(sync);
@@ -39,8 +41,7 @@ FrameSkipper::~FrameSkipper() noexcept {
     }
 }
 
-bool FrameSkipper::beginFrame() noexcept {
-    auto& driver = mEngine.getDriverApi();
+bool FrameSkipper::beginFrame(DriverApi& driver) noexcept {
     auto& syncs = mDelayedSyncs;
     auto sync = syncs.front();
     if (sync) {
@@ -57,11 +58,10 @@ bool FrameSkipper::beginFrame() noexcept {
     return true;
 }
 
-void FrameSkipper::endFrame() noexcept {
+void FrameSkipper::endFrame(DriverApi& driver) noexcept {
     // if the user produced a new frame despite the fact that the previous one wasn't finished
     // (i.e. FrameSkipper::beginFrame() returned false), we need to make sure to replace
     // a fence that might be here already)
-    auto& driver = mEngine.getDriverApi();
     auto& sync = mDelayedSyncs[mLast];
     if (sync) {
         driver.destroySync(sync);

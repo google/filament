@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_DRIVERAPIFORWARD_H
-#define TNT_FILAMENT_DRIVER_DRIVERAPIFORWARD_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPIFORWARD_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPIFORWARD_H
 
 
 namespace filament {
@@ -28,4 +28,4 @@ using DriverApi = CommandStream;
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_DRIVERAPIFORWARD_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPIFORWARD_H

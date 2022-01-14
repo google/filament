@@ -57,7 +57,7 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
         "base": {
         },
         "permute": {
-            "view.sampleCount": [1, 4],
+            "view.msaa.enabled": [false, true],
             "view.taa.enabled": [false, true],
             "view.antiAliasing": ["NONE", "FXAA"],
             "view.ssao.enabled": [false, true],

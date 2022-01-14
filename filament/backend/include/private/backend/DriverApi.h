@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_DRIVERAPI_H
-#define TNT_FILAMENT_DRIVER_DRIVERAPI_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H
 
 #include "private/backend/DriverApiForward.h"
 #include "private/backend/CommandStream.h"
 
-#endif // TNT_FILAMENT_DRIVER_DRIVERAPI_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H

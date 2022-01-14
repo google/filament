@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef MATH_MAT4_H_
-#define MATH_MAT4_H_
+#ifndef TNT_MATH_MAT4_H
+#define TNT_MATH_MAT4_H
 
+#include <math/TMatHelpers.h>
 #include <math/compiler.h>
 #include <math/mat3.h>
 #include <math/quat.h>
 #include <math/scalar.h>
-#include <math/TMatHelpers.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 
@@ -557,6 +557,26 @@ constexpr typename TMat44<T>::col_type MATH_PURE operator*(const TMat44<T>& lhs,
 typedef details::TMat44<double> mat4;
 typedef details::TMat44<float> mat4f;
 
+// mat4 * float4, with double precision intermediates
+constexpr float4 highPrecisionMultiply(mat4f const& lhs, float4 const& rhs) noexcept {
+    double4 result{};
+    result += lhs[0] * rhs[0];
+    result += lhs[1] * rhs[1];
+    result += lhs[2] * rhs[2];
+    result += lhs[3] * rhs[3];
+    return float4{ result };
+}
+
+// mat4 * mat4, with double precision intermediates
+constexpr mat4f highPrecisionMultiply(mat4f const& lhs, mat4f const& rhs) noexcept {
+    return {
+            highPrecisionMultiply(lhs, rhs[0]),
+            highPrecisionMultiply(lhs, rhs[1]),
+            highPrecisionMultiply(lhs, rhs[2]),
+            highPrecisionMultiply(lhs, rhs[3])
+    };
+}
+
 // ----------------------------------------------------------------------------------------
 }  // namespace math
 }  // namespace filament
@@ -628,4 +648,4 @@ constexpr void swap(filament::math::details::TMat44<T>& lhs,
 }
 }
 
-#endif  // MATH_MAT4_H_
+#endif  // TNT_MATH_MAT4_H

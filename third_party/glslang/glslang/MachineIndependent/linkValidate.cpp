@@ -316,6 +316,7 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     MERGE_TRUE(useUnknownFormat);
     MERGE_TRUE(hlslOffsets);
     MERGE_TRUE(useStorageBuffer);
+    MERGE_TRUE(invariantAll);
     MERGE_TRUE(hlslIoMapping);
 
     // TODO: sourceFile
@@ -953,10 +954,10 @@ void TIntermediate::mergeErrorCheck(TInfoSink& infoSink, const TIntermSymbol& sy
     //       current implementation only has one offset.
     if (symbol.getQualifier().layoutMatrix    != unitSymbol.getQualifier().layoutMatrix ||
         symbol.getQualifier().layoutPacking   != unitSymbol.getQualifier().layoutPacking ||
-        symbol.getQualifier().layoutLocation  != unitSymbol.getQualifier().layoutLocation ||
+        (symbol.getQualifier().hasLocation() && unitSymbol.getQualifier().hasLocation() && symbol.getQualifier().layoutLocation != unitSymbol.getQualifier().layoutLocation) ||
         symbol.getQualifier().layoutComponent != unitSymbol.getQualifier().layoutComponent ||
         symbol.getQualifier().layoutIndex     != unitSymbol.getQualifier().layoutIndex ||
-        symbol.getQualifier().layoutBinding   != unitSymbol.getQualifier().layoutBinding ||
+        (symbol.getQualifier().hasBinding() && unitSymbol.getQualifier().hasBinding() && symbol.getQualifier().layoutBinding != unitSymbol.getQualifier().layoutBinding) ||
         (symbol.getQualifier().hasBinding() && (symbol.getQualifier().layoutOffset != unitSymbol.getQualifier().layoutOffset))) {
         error(infoSink, "Layout qualification must match:");
         writeTypeComparison = true;
@@ -1933,7 +1934,7 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, T
     }
 
     // rule 9
-    if (type.getBasicType() == EbtStruct) {
+    if (type.getBasicType() == EbtStruct || type.getBasicType() == EbtBlock) {
         const TTypeList& memberList = *type.getStruct();
 
         size = 0;
@@ -2158,8 +2159,9 @@ int TIntermediate::computeBufferReferenceTypeSize(const TType& type)
 bool TIntermediate::isIoResizeArray(const TType& type, EShLanguage language) {
     return type.isArray() &&
             ((language == EShLangGeometry    && type.getQualifier().storage == EvqVaryingIn) ||
-            (language == EShLangTessControl && type.getQualifier().storage == EvqVaryingOut &&
+            (language == EShLangTessControl && (type.getQualifier().storage == EvqVaryingIn || type.getQualifier().storage == EvqVaryingOut) &&
                 ! type.getQualifier().patch) ||
+            (language == EShLangTessEvaluation && type.getQualifier().storage == EvqVaryingIn) ||
             (language == EShLangFragment && type.getQualifier().storage == EvqVaryingIn &&
                 type.getQualifier().pervertexNV) ||
             (language == EShLangMeshNV && type.getQualifier().storage == EvqVaryingOut &&

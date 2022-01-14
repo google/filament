@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DRIVER_PLATFORM_H
-#define TNT_FILAMENT_DRIVER_PLATFORM_H
+#ifndef TNT_FILAMENT_BACKEND_PLATFORM_H
+#define TNT_FILAMENT_BACKEND_PLATFORM_H
 
 #include <backend/DriverEnums.h>
 
@@ -100,4 +100,4 @@ public:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_PLATFORM_H
+#endif // TNT_FILAMENT_BACKEND_PLATFORM_H

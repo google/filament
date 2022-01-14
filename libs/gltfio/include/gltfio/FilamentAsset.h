@@ -204,6 +204,16 @@ public:
     Animator* getAnimator() noexcept;
 
     /**
+     * Updates the morphing weights in the given entity.
+     */
+    void setMorphWeights(utils::Entity entity, const float* weights, size_t count);
+
+    /**
+     * Gets the number of morphing in the given entity.
+     */
+    int getMorphTargetCount(utils::Entity entity) noexcept;
+
+    /**
      * Lazily creates a single LINES renderable that draws the transformed bounding-box hierarchy
      * for diagnostic purposes. The wireframe is owned by the asset so clients should not delete it.
      */

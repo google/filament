@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.11.2'
+    implementation 'com.google.android.filament:filament-android:1.16.0'
 }
 ```
 
@@ -52,7 +52,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.11.2'
+pod 'Filament', '~> 1.16.0'
 ```
 
 ### Snapshots
@@ -122,21 +122,22 @@ steps:
 - Specular anti-aliasing
 - Spot and directional light shadows
 - Cascaded shadows
-- EVSM or PCF shadows
+- EVSM, PCSS, DPCF, or PCF shadows
 - Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
 - Screen-space refraction
 - Global fog
-- Dynamic resolution
+- Dynamic resolution (with support for AMD FidelityFX FSR)
 
 ### Post processing
 
 - HDR bloom
 - Depth of field bokeh
-- Multiple tone mappers: ACES, filmic, etc.
-- Color grading: white balance, channel mixer, shadows/mid-tones/highlights, ASC CDL,
-  contrast, saturation, etc.
+- Multiple tone mappers: generic (customizable), ACES, filmic, etc.
+- Color and tone management: luminance scaling, gamut mapping
+- Color grading: exposure, night adaptation, white balance, channel mixer,
+  shadows/mid-tones/highlights, ASC CDL, contrast, saturation, etc.
 - TAA, FXAA, MSAA
 - Screen-space lens flares
 
@@ -150,9 +151,9 @@ steps:
   - [x] Points
   - [x] Lines
   - [ ] Line Loop
-  - [ ] Line Strip
+  - [x] Line Strip
   - [x] Triangles
-  - [ ] Triangle Strip
+  - [x] Triangle Strip
   - [ ] Triangle Fan
 
 - Animation

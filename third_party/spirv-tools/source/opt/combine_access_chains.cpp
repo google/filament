@@ -34,6 +34,10 @@ Pass::Status CombineAccessChains::Process() {
 }
 
 bool CombineAccessChains::ProcessFunction(Function& function) {
+  if (function.IsDeclaration()) {
+    return false;
+  }
+
   bool modified = false;
 
   cfg()->ForEachBlockInReversePostOrder(

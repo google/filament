@@ -30,4 +30,4 @@
 #define getcwd _getcwd
 
 #endif
-#endif
+#endif // TNT_UTILS_WIN32_STDTYPES_H

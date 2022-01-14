@@ -24,8 +24,8 @@ Viewport Viewport::scale(math::float2 s) const noexcept {
 
     // round to nearest to avoid overlapping viewports
     // this could result to empty viewport, though.
-    float l = std::floor(0.5f + s.x * left);
-    float b = std::floor(0.5f + s.y * bottom);
+    float l = std::floor(0.5f + s.x * float(left));
+    float b = std::floor(0.5f + s.y * float(bottom));
     float r = std::floor(0.5f + s.x * float(left + width));
     float t = std::floor(0.5f + s.y * float(bottom + height));
 

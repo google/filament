@@ -16,6 +16,7 @@ import("//build_overrides/build.gni")
 import("//build_overrides/spirv_tools.gni")
 if (build_with_chromium) {
   import("//testing/test.gni")
+  import("//third_party/protobuf/proto_library.gni")
 }
 
 spirv_headers = spirv_tools_spirv_headers_dir
@@ -275,6 +276,10 @@ spvtools_language_header("cldebuginfo100") {
   name = "OpenCLDebugInfo100"
   grammar_file = "${spirv_headers}/include/spirv/unified1/extinst.opencl.debuginfo.100.grammar.json"
 }
+spvtools_language_header("vkdebuginfo100") {
+  name = "NonSemanticShaderDebugInfo100"
+  grammar_file = "${spirv_headers}/include/spirv/unified1/extinst.nonsemantic.shader.debuginfo.100.grammar.json"
+}
 
 spvtools_vendor_tables = [
   [
@@ -305,6 +310,10 @@ spvtools_vendor_tables = [
     "nonsemantic.clspvreflection",
     "...nil...",
   ],
+  [
+    "nonsemantic.shader.debuginfo.100",
+    "SHDEBUG100_",
+  ],
 ]
 
 foreach(table_def, spvtools_vendor_tables) {
@@ -318,20 +327,28 @@ config("spvtools_public_config") {
   include_dirs = [ "include" ]
 }
 
+config("spvtools_include_gen_dirs") {
+  include_dirs = [ "$target_gen_dir" ]
+}
+
 config("spvtools_internal_config") {
   include_dirs = [
     ".",
-    "$target_gen_dir",
     "${spirv_headers}/include",
   ]
 
-  configs = [ ":spvtools_public_config" ]
+  configs = [
+    ":spvtools_public_config",
+    ":spvtools_include_gen_dirs",
+  ]
 
   cflags = []
   if (is_clang) {
     cflags += [
       "-Wno-implicit-fallthrough",
       "-Wno-newline-eof",
+      "-Wno-unreachable-code-break",
+      "-Wno-unreachable-code-return",
     ]
   } else if (!is_win) {
     # Work around a false-positive on a Skia GCC 10 builder.
@@ -351,6 +368,14 @@ source_set("spvtools_headers") {
   public_configs = [ ":spvtools_public_config" ]
 }
 
+group("spvtools_language_headers") {
+  public_deps = [
+    ":spvtools_language_header_cldebuginfo100",
+    ":spvtools_language_header_debuginfo",
+    ":spvtools_language_header_vkdebuginfo100",
+  ]
+}
+
 static_library("spvtools") {
   deps = [
     ":spvtools_core_tables_unified1",
@@ -358,6 +383,7 @@ static_library("spvtools") {
     ":spvtools_glsl_tables_glsl1-0",
     ":spvtools_language_header_cldebuginfo100",
     ":spvtools_language_header_debuginfo",
+    ":spvtools_language_header_vkdebuginfo100",
     ":spvtools_opencl_tables_opencl1-0",
   ]
   foreach(table_def, spvtools_vendor_tables) {
@@ -371,6 +397,7 @@ static_library("spvtools") {
     "source/binary.cpp",
     "source/binary.h",
     "source/cfa.h",
+    "source/common_debug_info.h",
     "source/diagnostic.cpp",
     "source/diagnostic.h",
     "source/disassemble.cpp",
@@ -402,8 +429,12 @@ static_library("spvtools") {
     "source/spirv_definition.h",
     "source/spirv_endian.cpp",
     "source/spirv_endian.h",
+    "source/spirv_fuzzer_options.cpp",
+    "source/spirv_fuzzer_options.h",
     "source/spirv_optimizer_options.cpp",
     "source/spirv_optimizer_options.h",
+    "source/spirv_reducer_options.cpp",
+    "source/spirv_reducer_options.h",
     "source/spirv_target_env.cpp",
     "source/spirv_target_env.h",
     "source/spirv_validator_options.cpp",
@@ -499,6 +530,7 @@ static_library("spvtools_val") {
     ":spvtools",
     ":spvtools_language_header_cldebuginfo100",
     ":spvtools_language_header_debuginfo",
+    ":spvtools_language_header_vkdebuginfo100",
   ]
   public_deps = [ ":spvtools_headers" ]
 
@@ -541,10 +573,16 @@ static_library("spvtools_opt") {
     "source/opt/const_folding_rules.h",
     "source/opt/constants.cpp",
     "source/opt/constants.h",
+    "source/opt/control_dependence.cpp",
+    "source/opt/control_dependence.h",
     "source/opt/convert_to_half_pass.cpp",
     "source/opt/convert_to_half_pass.h",
+    "source/opt/convert_to_sampled_image_pass.cpp",
+    "source/opt/convert_to_sampled_image_pass.h",
     "source/opt/copy_prop_arrays.cpp",
     "source/opt/copy_prop_arrays.h",
+    "source/opt/dataflow.cpp",
+    "source/opt/dataflow.h",
     "source/opt/dead_branch_elim_pass.cpp",
     "source/opt/dead_branch_elim_pass.h",
     "source/opt/dead_insert_elim_pass.cpp",
@@ -559,6 +597,8 @@ static_library("spvtools_opt") {
     "source/opt/def_use_manager.h",
     "source/opt/desc_sroa.cpp",
     "source/opt/desc_sroa.h",
+    "source/opt/desc_sroa_util.cpp",
+    "source/opt/desc_sroa_util.h",
     "source/opt/dominator_analysis.cpp",
     "source/opt/dominator_analysis.h",
     "source/opt/dominator_tree.cpp",
@@ -678,6 +718,8 @@ static_library("spvtools_opt") {
     "source/opt/remove_duplicates_pass.h",
     "source/opt/remove_unused_interface_variables_pass.cpp",
     "source/opt/remove_unused_interface_variables_pass.h",
+    "source/opt/replace_desc_array_access_using_var_index.cpp",
+    "source/opt/replace_desc_array_access_using_var_index.h",
     "source/opt/replace_invalid_opc.cpp",
     "source/opt/replace_invalid_opc.h",
     "source/opt/scalar_analysis.cpp",
@@ -721,11 +763,14 @@ static_library("spvtools_opt") {
 
   deps = [
     ":spvtools",
-    ":spvtools_language_header_cldebuginfo100",
     ":spvtools_language_header_debuginfo",
     ":spvtools_vendor_tables_spv-amd-shader-ballot",
   ]
-  public_deps = [ ":spvtools_headers" ]
+  public_deps = [
+    ":spvtools_headers",
+    ":spvtools_language_header_cldebuginfo100",
+    ":spvtools_language_header_vkdebuginfo100",
+  ]
 
   if (build_with_chromium) {
     configs -= [ "//build/config/compiler:chromium_code" ]
@@ -811,8 +856,6 @@ static_library("spvtools_reduce") {
     "source/reduce/structured_loop_to_selection_reduction_opportunity.h",
     "source/reduce/structured_loop_to_selection_reduction_opportunity_finder.cpp",
     "source/reduce/structured_loop_to_selection_reduction_opportunity_finder.h",
-    "source/spirv_reducer_options.cpp",
-    "source/spirv_reducer_options.h",
   ]
   deps = [
     ":spvtools",
@@ -824,6 +867,423 @@ static_library("spvtools_reduce") {
     configs += [ "//build/config/compiler:no_chromium_code" ]
   }
   configs += [ ":spvtools_internal_config" ]
+}
+
+if (build_with_chromium) {
+  # The spirv-fuzz library is only built when in a Chromium checkout
+  # due to its dependency on protobuf.
+
+  proto_library("spvtools_fuzz_proto") {
+    sources = [ "source/fuzz/protobufs/spvtoolsfuzz.proto" ]
+    generate_python = false
+    use_protobuf_full = true
+  }
+
+  static_library("spvtools_fuzz") {
+    sources = [
+      "source/fuzz/added_function_reducer.cpp",
+      "source/fuzz/added_function_reducer.h",
+      "source/fuzz/available_instructions.cpp",
+      "source/fuzz/available_instructions.h",
+      "source/fuzz/call_graph.cpp",
+      "source/fuzz/call_graph.h",
+      "source/fuzz/comparator_deep_blocks_first.h",
+      "source/fuzz/counter_overflow_id_source.cpp",
+      "source/fuzz/counter_overflow_id_source.h",
+      "source/fuzz/data_descriptor.cpp",
+      "source/fuzz/data_descriptor.h",
+      "source/fuzz/equivalence_relation.h",
+      "source/fuzz/fact_manager/constant_uniform_facts.cpp",
+      "source/fuzz/fact_manager/constant_uniform_facts.h",
+      "source/fuzz/fact_manager/data_synonym_and_id_equation_facts.cpp",
+      "source/fuzz/fact_manager/data_synonym_and_id_equation_facts.h",
+      "source/fuzz/fact_manager/dead_block_facts.cpp",
+      "source/fuzz/fact_manager/dead_block_facts.h",
+      "source/fuzz/fact_manager/fact_manager.cpp",
+      "source/fuzz/fact_manager/fact_manager.h",
+      "source/fuzz/fact_manager/irrelevant_value_facts.cpp",
+      "source/fuzz/fact_manager/irrelevant_value_facts.h",
+      "source/fuzz/fact_manager/livesafe_function_facts.cpp",
+      "source/fuzz/fact_manager/livesafe_function_facts.h",
+      "source/fuzz/force_render_red.cpp",
+      "source/fuzz/force_render_red.h",
+      "source/fuzz/fuzzer.cpp",
+      "source/fuzz/fuzzer.h",
+      "source/fuzz/fuzzer_context.cpp",
+      "source/fuzz/fuzzer_context.h",
+      "source/fuzz/fuzzer_pass.cpp",
+      "source/fuzz/fuzzer_pass.h",
+      "source/fuzz/fuzzer_pass_add_access_chains.cpp",
+      "source/fuzz/fuzzer_pass_add_access_chains.h",
+      "source/fuzz/fuzzer_pass_add_bit_instruction_synonyms.cpp",
+      "source/fuzz/fuzzer_pass_add_bit_instruction_synonyms.h",
+      "source/fuzz/fuzzer_pass_add_composite_extract.cpp",
+      "source/fuzz/fuzzer_pass_add_composite_extract.h",
+      "source/fuzz/fuzzer_pass_add_composite_inserts.cpp",
+      "source/fuzz/fuzzer_pass_add_composite_inserts.h",
+      "source/fuzz/fuzzer_pass_add_composite_types.cpp",
+      "source/fuzz/fuzzer_pass_add_composite_types.h",
+      "source/fuzz/fuzzer_pass_add_copy_memory.cpp",
+      "source/fuzz/fuzzer_pass_add_copy_memory.h",
+      "source/fuzz/fuzzer_pass_add_dead_blocks.cpp",
+      "source/fuzz/fuzzer_pass_add_dead_blocks.h",
+      "source/fuzz/fuzzer_pass_add_dead_breaks.cpp",
+      "source/fuzz/fuzzer_pass_add_dead_breaks.h",
+      "source/fuzz/fuzzer_pass_add_dead_continues.cpp",
+      "source/fuzz/fuzzer_pass_add_dead_continues.h",
+      "source/fuzz/fuzzer_pass_add_equation_instructions.cpp",
+      "source/fuzz/fuzzer_pass_add_equation_instructions.h",
+      "source/fuzz/fuzzer_pass_add_function_calls.cpp",
+      "source/fuzz/fuzzer_pass_add_function_calls.h",
+      "source/fuzz/fuzzer_pass_add_global_variables.cpp",
+      "source/fuzz/fuzzer_pass_add_global_variables.h",
+      "source/fuzz/fuzzer_pass_add_image_sample_unused_components.cpp",
+      "source/fuzz/fuzzer_pass_add_image_sample_unused_components.h",
+      "source/fuzz/fuzzer_pass_add_loads.cpp",
+      "source/fuzz/fuzzer_pass_add_loads.h",
+      "source/fuzz/fuzzer_pass_add_local_variables.cpp",
+      "source/fuzz/fuzzer_pass_add_local_variables.h",
+      "source/fuzz/fuzzer_pass_add_loop_preheaders.cpp",
+      "source/fuzz/fuzzer_pass_add_loop_preheaders.h",
+      "source/fuzz/fuzzer_pass_add_loops_to_create_int_constant_synonyms.cpp",
+      "source/fuzz/fuzzer_pass_add_loops_to_create_int_constant_synonyms.h",
+      "source/fuzz/fuzzer_pass_add_no_contraction_decorations.cpp",
+      "source/fuzz/fuzzer_pass_add_no_contraction_decorations.h",
+      "source/fuzz/fuzzer_pass_add_opphi_synonyms.cpp",
+      "source/fuzz/fuzzer_pass_add_opphi_synonyms.h",
+      "source/fuzz/fuzzer_pass_add_parameters.cpp",
+      "source/fuzz/fuzzer_pass_add_parameters.h",
+      "source/fuzz/fuzzer_pass_add_relaxed_decorations.cpp",
+      "source/fuzz/fuzzer_pass_add_relaxed_decorations.h",
+      "source/fuzz/fuzzer_pass_add_stores.cpp",
+      "source/fuzz/fuzzer_pass_add_stores.h",
+      "source/fuzz/fuzzer_pass_add_synonyms.cpp",
+      "source/fuzz/fuzzer_pass_add_synonyms.h",
+      "source/fuzz/fuzzer_pass_add_vector_shuffle_instructions.cpp",
+      "source/fuzz/fuzzer_pass_add_vector_shuffle_instructions.h",
+      "source/fuzz/fuzzer_pass_adjust_branch_weights.cpp",
+      "source/fuzz/fuzzer_pass_adjust_branch_weights.h",
+      "source/fuzz/fuzzer_pass_adjust_function_controls.cpp",
+      "source/fuzz/fuzzer_pass_adjust_function_controls.h",
+      "source/fuzz/fuzzer_pass_adjust_loop_controls.cpp",
+      "source/fuzz/fuzzer_pass_adjust_loop_controls.h",
+      "source/fuzz/fuzzer_pass_adjust_memory_operands_masks.cpp",
+      "source/fuzz/fuzzer_pass_adjust_memory_operands_masks.h",
+      "source/fuzz/fuzzer_pass_adjust_selection_controls.cpp",
+      "source/fuzz/fuzzer_pass_adjust_selection_controls.h",
+      "source/fuzz/fuzzer_pass_apply_id_synonyms.cpp",
+      "source/fuzz/fuzzer_pass_apply_id_synonyms.h",
+      "source/fuzz/fuzzer_pass_construct_composites.cpp",
+      "source/fuzz/fuzzer_pass_construct_composites.h",
+      "source/fuzz/fuzzer_pass_copy_objects.cpp",
+      "source/fuzz/fuzzer_pass_copy_objects.h",
+      "source/fuzz/fuzzer_pass_donate_modules.cpp",
+      "source/fuzz/fuzzer_pass_donate_modules.h",
+      "source/fuzz/fuzzer_pass_duplicate_regions_with_selections.cpp",
+      "source/fuzz/fuzzer_pass_duplicate_regions_with_selections.h",
+      "source/fuzz/fuzzer_pass_expand_vector_reductions.cpp",
+      "source/fuzz/fuzzer_pass_expand_vector_reductions.h",
+      "source/fuzz/fuzzer_pass_flatten_conditional_branches.cpp",
+      "source/fuzz/fuzzer_pass_flatten_conditional_branches.h",
+      "source/fuzz/fuzzer_pass_inline_functions.cpp",
+      "source/fuzz/fuzzer_pass_inline_functions.h",
+      "source/fuzz/fuzzer_pass_interchange_signedness_of_integer_operands.cpp",
+      "source/fuzz/fuzzer_pass_interchange_signedness_of_integer_operands.h",
+      "source/fuzz/fuzzer_pass_interchange_zero_like_constants.cpp",
+      "source/fuzz/fuzzer_pass_interchange_zero_like_constants.h",
+      "source/fuzz/fuzzer_pass_invert_comparison_operators.cpp",
+      "source/fuzz/fuzzer_pass_invert_comparison_operators.h",
+      "source/fuzz/fuzzer_pass_make_vector_operations_dynamic.cpp",
+      "source/fuzz/fuzzer_pass_make_vector_operations_dynamic.h",
+      "source/fuzz/fuzzer_pass_merge_blocks.cpp",
+      "source/fuzz/fuzzer_pass_merge_blocks.h",
+      "source/fuzz/fuzzer_pass_merge_function_returns.cpp",
+      "source/fuzz/fuzzer_pass_merge_function_returns.h",
+      "source/fuzz/fuzzer_pass_mutate_pointers.cpp",
+      "source/fuzz/fuzzer_pass_mutate_pointers.h",
+      "source/fuzz/fuzzer_pass_obfuscate_constants.cpp",
+      "source/fuzz/fuzzer_pass_obfuscate_constants.h",
+      "source/fuzz/fuzzer_pass_outline_functions.cpp",
+      "source/fuzz/fuzzer_pass_outline_functions.h",
+      "source/fuzz/fuzzer_pass_permute_blocks.cpp",
+      "source/fuzz/fuzzer_pass_permute_blocks.h",
+      "source/fuzz/fuzzer_pass_permute_function_parameters.cpp",
+      "source/fuzz/fuzzer_pass_permute_function_parameters.h",
+      "source/fuzz/fuzzer_pass_permute_function_variables.cpp",
+      "source/fuzz/fuzzer_pass_permute_function_variables.h",
+      "source/fuzz/fuzzer_pass_permute_instructions.cpp",
+      "source/fuzz/fuzzer_pass_permute_instructions.h",
+      "source/fuzz/fuzzer_pass_permute_phi_operands.cpp",
+      "source/fuzz/fuzzer_pass_permute_phi_operands.h",
+      "source/fuzz/fuzzer_pass_propagate_instructions_down.cpp",
+      "source/fuzz/fuzzer_pass_propagate_instructions_down.h",
+      "source/fuzz/fuzzer_pass_propagate_instructions_up.cpp",
+      "source/fuzz/fuzzer_pass_propagate_instructions_up.h",
+      "source/fuzz/fuzzer_pass_push_ids_through_variables.cpp",
+      "source/fuzz/fuzzer_pass_push_ids_through_variables.h",
+      "source/fuzz/fuzzer_pass_replace_adds_subs_muls_with_carrying_extended.cpp",
+      "source/fuzz/fuzzer_pass_replace_adds_subs_muls_with_carrying_extended.h",
+      "source/fuzz/fuzzer_pass_replace_branches_from_dead_blocks_with_exits.cpp",
+      "source/fuzz/fuzzer_pass_replace_branches_from_dead_blocks_with_exits.h",
+      "source/fuzz/fuzzer_pass_replace_copy_memories_with_loads_stores.cpp",
+      "source/fuzz/fuzzer_pass_replace_copy_memories_with_loads_stores.h",
+      "source/fuzz/fuzzer_pass_replace_copy_objects_with_stores_loads.cpp",
+      "source/fuzz/fuzzer_pass_replace_copy_objects_with_stores_loads.h",
+      "source/fuzz/fuzzer_pass_replace_irrelevant_ids.cpp",
+      "source/fuzz/fuzzer_pass_replace_irrelevant_ids.h",
+      "source/fuzz/fuzzer_pass_replace_linear_algebra_instructions.cpp",
+      "source/fuzz/fuzzer_pass_replace_linear_algebra_instructions.h",
+      "source/fuzz/fuzzer_pass_replace_loads_stores_with_copy_memories.cpp",
+      "source/fuzz/fuzzer_pass_replace_loads_stores_with_copy_memories.h",
+      "source/fuzz/fuzzer_pass_replace_opphi_ids_from_dead_predecessors.cpp",
+      "source/fuzz/fuzzer_pass_replace_opphi_ids_from_dead_predecessors.h",
+      "source/fuzz/fuzzer_pass_replace_opselects_with_conditional_branches.cpp",
+      "source/fuzz/fuzzer_pass_replace_opselects_with_conditional_branches.h",
+      "source/fuzz/fuzzer_pass_replace_parameter_with_global.cpp",
+      "source/fuzz/fuzzer_pass_replace_parameter_with_global.h",
+      "source/fuzz/fuzzer_pass_replace_params_with_struct.cpp",
+      "source/fuzz/fuzzer_pass_replace_params_with_struct.h",
+      "source/fuzz/fuzzer_pass_split_blocks.cpp",
+      "source/fuzz/fuzzer_pass_split_blocks.h",
+      "source/fuzz/fuzzer_pass_swap_commutable_operands.cpp",
+      "source/fuzz/fuzzer_pass_swap_commutable_operands.h",
+      "source/fuzz/fuzzer_pass_swap_conditional_branch_operands.cpp",
+      "source/fuzz/fuzzer_pass_swap_conditional_branch_operands.h",
+      "source/fuzz/fuzzer_pass_swap_functions.cpp",
+      "source/fuzz/fuzzer_pass_swap_functions.h",
+      "source/fuzz/fuzzer_pass_toggle_access_chain_instruction.cpp",
+      "source/fuzz/fuzzer_pass_toggle_access_chain_instruction.h",
+      "source/fuzz/fuzzer_pass_wrap_regions_in_selections.cpp",
+      "source/fuzz/fuzzer_pass_wrap_regions_in_selections.h",
+      "source/fuzz/fuzzer_pass_wrap_vector_synonym.cpp",
+      "source/fuzz/fuzzer_pass_wrap_vector_synonym.h",
+      "source/fuzz/fuzzer_util.cpp",
+      "source/fuzz/fuzzer_util.h",
+      "source/fuzz/id_use_descriptor.cpp",
+      "source/fuzz/id_use_descriptor.h",
+      "source/fuzz/instruction_descriptor.cpp",
+      "source/fuzz/instruction_descriptor.h",
+      "source/fuzz/instruction_message.cpp",
+      "source/fuzz/instruction_message.h",
+      "source/fuzz/overflow_id_source.cpp",
+      "source/fuzz/overflow_id_source.h",
+      "source/fuzz/pass_management/repeated_pass_instances.h",
+      "source/fuzz/pass_management/repeated_pass_manager.cpp",
+      "source/fuzz/pass_management/repeated_pass_manager.h",
+      "source/fuzz/pass_management/repeated_pass_manager_looped_with_recommendations.cpp",
+      "source/fuzz/pass_management/repeated_pass_manager_looped_with_recommendations.h",
+      "source/fuzz/pass_management/repeated_pass_manager_random_with_recommendations.cpp",
+      "source/fuzz/pass_management/repeated_pass_manager_random_with_recommendations.h",
+      "source/fuzz/pass_management/repeated_pass_manager_simple.cpp",
+      "source/fuzz/pass_management/repeated_pass_manager_simple.h",
+      "source/fuzz/pass_management/repeated_pass_recommender.cpp",
+      "source/fuzz/pass_management/repeated_pass_recommender.h",
+      "source/fuzz/pass_management/repeated_pass_recommender_standard.cpp",
+      "source/fuzz/pass_management/repeated_pass_recommender_standard.h",
+      "source/fuzz/protobufs/spirvfuzz_protobufs.h",
+      "source/fuzz/pseudo_random_generator.cpp",
+      "source/fuzz/pseudo_random_generator.h",
+      "source/fuzz/random_generator.cpp",
+      "source/fuzz/random_generator.h",
+      "source/fuzz/replayer.cpp",
+      "source/fuzz/replayer.h",
+      "source/fuzz/shrinker.cpp",
+      "source/fuzz/shrinker.h",
+      "source/fuzz/transformation.cpp",
+      "source/fuzz/transformation.h",
+      "source/fuzz/transformation_access_chain.cpp",
+      "source/fuzz/transformation_access_chain.h",
+      "source/fuzz/transformation_add_bit_instruction_synonym.cpp",
+      "source/fuzz/transformation_add_bit_instruction_synonym.h",
+      "source/fuzz/transformation_add_constant_boolean.cpp",
+      "source/fuzz/transformation_add_constant_boolean.h",
+      "source/fuzz/transformation_add_constant_composite.cpp",
+      "source/fuzz/transformation_add_constant_composite.h",
+      "source/fuzz/transformation_add_constant_null.cpp",
+      "source/fuzz/transformation_add_constant_null.h",
+      "source/fuzz/transformation_add_constant_scalar.cpp",
+      "source/fuzz/transformation_add_constant_scalar.h",
+      "source/fuzz/transformation_add_copy_memory.cpp",
+      "source/fuzz/transformation_add_copy_memory.h",
+      "source/fuzz/transformation_add_dead_block.cpp",
+      "source/fuzz/transformation_add_dead_block.h",
+      "source/fuzz/transformation_add_dead_break.cpp",
+      "source/fuzz/transformation_add_dead_break.h",
+      "source/fuzz/transformation_add_dead_continue.cpp",
+      "source/fuzz/transformation_add_dead_continue.h",
+      "source/fuzz/transformation_add_early_terminator_wrapper.cpp",
+      "source/fuzz/transformation_add_early_terminator_wrapper.h",
+      "source/fuzz/transformation_add_function.cpp",
+      "source/fuzz/transformation_add_function.h",
+      "source/fuzz/transformation_add_global_undef.cpp",
+      "source/fuzz/transformation_add_global_undef.h",
+      "source/fuzz/transformation_add_global_variable.cpp",
+      "source/fuzz/transformation_add_global_variable.h",
+      "source/fuzz/transformation_add_image_sample_unused_components.cpp",
+      "source/fuzz/transformation_add_image_sample_unused_components.h",
+      "source/fuzz/transformation_add_local_variable.cpp",
+      "source/fuzz/transformation_add_local_variable.h",
+      "source/fuzz/transformation_add_loop_preheader.cpp",
+      "source/fuzz/transformation_add_loop_preheader.h",
+      "source/fuzz/transformation_add_loop_to_create_int_constant_synonym.cpp",
+      "source/fuzz/transformation_add_loop_to_create_int_constant_synonym.h",
+      "source/fuzz/transformation_add_no_contraction_decoration.cpp",
+      "source/fuzz/transformation_add_no_contraction_decoration.h",
+      "source/fuzz/transformation_add_opphi_synonym.cpp",
+      "source/fuzz/transformation_add_opphi_synonym.h",
+      "source/fuzz/transformation_add_parameter.cpp",
+      "source/fuzz/transformation_add_parameter.h",
+      "source/fuzz/transformation_add_relaxed_decoration.cpp",
+      "source/fuzz/transformation_add_relaxed_decoration.h",
+      "source/fuzz/transformation_add_spec_constant_op.cpp",
+      "source/fuzz/transformation_add_spec_constant_op.h",
+      "source/fuzz/transformation_add_synonym.cpp",
+      "source/fuzz/transformation_add_synonym.h",
+      "source/fuzz/transformation_add_type_array.cpp",
+      "source/fuzz/transformation_add_type_array.h",
+      "source/fuzz/transformation_add_type_boolean.cpp",
+      "source/fuzz/transformation_add_type_boolean.h",
+      "source/fuzz/transformation_add_type_float.cpp",
+      "source/fuzz/transformation_add_type_float.h",
+      "source/fuzz/transformation_add_type_function.cpp",
+      "source/fuzz/transformation_add_type_function.h",
+      "source/fuzz/transformation_add_type_int.cpp",
+      "source/fuzz/transformation_add_type_int.h",
+      "source/fuzz/transformation_add_type_matrix.cpp",
+      "source/fuzz/transformation_add_type_matrix.h",
+      "source/fuzz/transformation_add_type_pointer.cpp",
+      "source/fuzz/transformation_add_type_pointer.h",
+      "source/fuzz/transformation_add_type_struct.cpp",
+      "source/fuzz/transformation_add_type_struct.h",
+      "source/fuzz/transformation_add_type_vector.cpp",
+      "source/fuzz/transformation_add_type_vector.h",
+      "source/fuzz/transformation_adjust_branch_weights.cpp",
+      "source/fuzz/transformation_adjust_branch_weights.h",
+      "source/fuzz/transformation_composite_construct.cpp",
+      "source/fuzz/transformation_composite_construct.h",
+      "source/fuzz/transformation_composite_extract.cpp",
+      "source/fuzz/transformation_composite_extract.h",
+      "source/fuzz/transformation_composite_insert.cpp",
+      "source/fuzz/transformation_composite_insert.h",
+      "source/fuzz/transformation_compute_data_synonym_fact_closure.cpp",
+      "source/fuzz/transformation_compute_data_synonym_fact_closure.h",
+      "source/fuzz/transformation_context.cpp",
+      "source/fuzz/transformation_context.h",
+      "source/fuzz/transformation_duplicate_region_with_selection.cpp",
+      "source/fuzz/transformation_duplicate_region_with_selection.h",
+      "source/fuzz/transformation_equation_instruction.cpp",
+      "source/fuzz/transformation_equation_instruction.h",
+      "source/fuzz/transformation_expand_vector_reduction.cpp",
+      "source/fuzz/transformation_expand_vector_reduction.h",
+      "source/fuzz/transformation_flatten_conditional_branch.cpp",
+      "source/fuzz/transformation_flatten_conditional_branch.h",
+      "source/fuzz/transformation_function_call.cpp",
+      "source/fuzz/transformation_function_call.h",
+      "source/fuzz/transformation_inline_function.cpp",
+      "source/fuzz/transformation_inline_function.h",
+      "source/fuzz/transformation_invert_comparison_operator.cpp",
+      "source/fuzz/transformation_invert_comparison_operator.h",
+      "source/fuzz/transformation_load.cpp",
+      "source/fuzz/transformation_load.h",
+      "source/fuzz/transformation_make_vector_operation_dynamic.cpp",
+      "source/fuzz/transformation_make_vector_operation_dynamic.h",
+      "source/fuzz/transformation_merge_blocks.cpp",
+      "source/fuzz/transformation_merge_blocks.h",
+      "source/fuzz/transformation_merge_function_returns.cpp",
+      "source/fuzz/transformation_merge_function_returns.h",
+      "source/fuzz/transformation_move_block_down.cpp",
+      "source/fuzz/transformation_move_block_down.h",
+      "source/fuzz/transformation_move_instruction_down.cpp",
+      "source/fuzz/transformation_move_instruction_down.h",
+      "source/fuzz/transformation_mutate_pointer.cpp",
+      "source/fuzz/transformation_mutate_pointer.h",
+      "source/fuzz/transformation_outline_function.cpp",
+      "source/fuzz/transformation_outline_function.h",
+      "source/fuzz/transformation_permute_function_parameters.cpp",
+      "source/fuzz/transformation_permute_function_parameters.h",
+      "source/fuzz/transformation_permute_phi_operands.cpp",
+      "source/fuzz/transformation_permute_phi_operands.h",
+      "source/fuzz/transformation_propagate_instruction_down.cpp",
+      "source/fuzz/transformation_propagate_instruction_down.h",
+      "source/fuzz/transformation_propagate_instruction_up.cpp",
+      "source/fuzz/transformation_propagate_instruction_up.h",
+      "source/fuzz/transformation_push_id_through_variable.cpp",
+      "source/fuzz/transformation_push_id_through_variable.h",
+      "source/fuzz/transformation_record_synonymous_constants.cpp",
+      "source/fuzz/transformation_record_synonymous_constants.h",
+      "source/fuzz/transformation_replace_add_sub_mul_with_carrying_extended.cpp",
+      "source/fuzz/transformation_replace_add_sub_mul_with_carrying_extended.h",
+      "source/fuzz/transformation_replace_boolean_constant_with_constant_binary.cpp",
+      "source/fuzz/transformation_replace_boolean_constant_with_constant_binary.h",
+      "source/fuzz/transformation_replace_branch_from_dead_block_with_exit.cpp",
+      "source/fuzz/transformation_replace_branch_from_dead_block_with_exit.h",
+      "source/fuzz/transformation_replace_constant_with_uniform.cpp",
+      "source/fuzz/transformation_replace_constant_with_uniform.h",
+      "source/fuzz/transformation_replace_copy_memory_with_load_store.cpp",
+      "source/fuzz/transformation_replace_copy_memory_with_load_store.h",
+      "source/fuzz/transformation_replace_copy_object_with_store_load.cpp",
+      "source/fuzz/transformation_replace_copy_object_with_store_load.h",
+      "source/fuzz/transformation_replace_id_with_synonym.cpp",
+      "source/fuzz/transformation_replace_id_with_synonym.h",
+      "source/fuzz/transformation_replace_irrelevant_id.cpp",
+      "source/fuzz/transformation_replace_irrelevant_id.h",
+      "source/fuzz/transformation_replace_linear_algebra_instruction.cpp",
+      "source/fuzz/transformation_replace_linear_algebra_instruction.h",
+      "source/fuzz/transformation_replace_load_store_with_copy_memory.cpp",
+      "source/fuzz/transformation_replace_load_store_with_copy_memory.h",
+      "source/fuzz/transformation_replace_opphi_id_from_dead_predecessor.cpp",
+      "source/fuzz/transformation_replace_opphi_id_from_dead_predecessor.h",
+      "source/fuzz/transformation_replace_opselect_with_conditional_branch.cpp",
+      "source/fuzz/transformation_replace_opselect_with_conditional_branch.h",
+      "source/fuzz/transformation_replace_parameter_with_global.cpp",
+      "source/fuzz/transformation_replace_parameter_with_global.h",
+      "source/fuzz/transformation_replace_params_with_struct.cpp",
+      "source/fuzz/transformation_replace_params_with_struct.h",
+      "source/fuzz/transformation_set_function_control.cpp",
+      "source/fuzz/transformation_set_function_control.h",
+      "source/fuzz/transformation_set_loop_control.cpp",
+      "source/fuzz/transformation_set_loop_control.h",
+      "source/fuzz/transformation_set_memory_operands_mask.cpp",
+      "source/fuzz/transformation_set_memory_operands_mask.h",
+      "source/fuzz/transformation_set_selection_control.cpp",
+      "source/fuzz/transformation_set_selection_control.h",
+      "source/fuzz/transformation_split_block.cpp",
+      "source/fuzz/transformation_split_block.h",
+      "source/fuzz/transformation_store.cpp",
+      "source/fuzz/transformation_store.h",
+      "source/fuzz/transformation_swap_commutable_operands.cpp",
+      "source/fuzz/transformation_swap_commutable_operands.h",
+      "source/fuzz/transformation_swap_conditional_branch_operands.cpp",
+      "source/fuzz/transformation_swap_conditional_branch_operands.h",
+      "source/fuzz/transformation_swap_function_variables.cpp",
+      "source/fuzz/transformation_swap_function_variables.h",
+      "source/fuzz/transformation_swap_two_functions.cpp",
+      "source/fuzz/transformation_swap_two_functions.h",
+      "source/fuzz/transformation_toggle_access_chain_instruction.cpp",
+      "source/fuzz/transformation_toggle_access_chain_instruction.h",
+      "source/fuzz/transformation_vector_shuffle.cpp",
+      "source/fuzz/transformation_vector_shuffle.h",
+      "source/fuzz/transformation_wrap_early_terminator_in_function.cpp",
+      "source/fuzz/transformation_wrap_early_terminator_in_function.h",
+      "source/fuzz/transformation_wrap_region_in_selection.cpp",
+      "source/fuzz/transformation_wrap_region_in_selection.h",
+      "source/fuzz/transformation_wrap_vector_synonym.cpp",
+      "source/fuzz/transformation_wrap_vector_synonym.h",
+      "source/fuzz/uniform_buffer_element_descriptor.cpp",
+      "source/fuzz/uniform_buffer_element_descriptor.h",
+    ]
+    deps = [
+      ":spvtools",
+      ":spvtools_fuzz_proto",
+      ":spvtools_opt",
+      ":spvtools_reduce",
+      "//third_party/protobuf:protobuf_full",
+    ]
+    public_deps = [ ":spvtools_headers" ]
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+    configs += [ ":spvtools_internal_config" ]
+  }
 }
 
 group("SPIRV-Tools") {
@@ -905,6 +1365,7 @@ if (build_with_chromium) {
       ":spvtools",
       ":spvtools_language_header_cldebuginfo100",
       ":spvtools_language_header_debuginfo",
+      ":spvtools_language_header_vkdebuginfo100",
       ":spvtools_val",
       "//testing/gmock",
       "//testing/gtest",
@@ -1012,8 +1473,31 @@ executable("spirv-link") {
   configs += [ ":spvtools_internal_config" ]
 }
 
+if (!is_ios && !spirv_is_winuwp && build_with_chromium) {
+  # iOS and UWP do not allow std::system calls which spirv-fuzz
+  # requires. Additionally, spirv-fuzz is only built when in a
+  # Chromium checkout due to its dependency on protobuf.
+
+  executable("spirv-fuzz") {
+    sources = [ "tools/fuzz/fuzz.cpp" ]
+    deps = [
+      ":spvtools",
+      ":spvtools_fuzz",
+      ":spvtools_opt",
+      ":spvtools_reduce",
+      ":spvtools_software_version",
+      ":spvtools_util_cli_consumer",
+      ":spvtools_val",
+      "//third_party/protobuf:protobuf_full",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
+}
+
 if (!is_ios && !spirv_is_winuwp) {
-  # iOS and UWP do not allow std::system calls which spirv-reduce requires
+  # iOS and UWP do not allow std::system calls which spirv-reduce
+  # requires.
+
   executable("spirv-reduce") {
     sources = [ "tools/reduce/reduce.cpp" ]
     deps = [
@@ -1037,6 +1521,9 @@ group("all_spirv_tools") {
     ":spirv-opt",
     ":spirv-val",
   ]
+  if (!is_ios && !spirv_is_winuwp && build_with_chromium) {
+    deps += [ ":spirv-fuzz" ]
+  }
   if (!is_ios && !spirv_is_winuwp) {
     deps += [ ":spirv-reduce" ]
   }

@@ -37,6 +37,7 @@ public:
     backend::Handle<backend::HwStream> getHandle() const noexcept { return mStreamHandle; }
 
     void setAcquiredImage(void* image, Callback callback, void* userdata) noexcept;
+    void setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept;
 
     void setDimensions(uint32_t width, uint32_t height) noexcept;
 

@@ -122,12 +122,16 @@ inline bool getPrimitiveType(cgltf_primitive_type in,
         case cgltf_primitive_type_lines:
             *out = filament::RenderableManager::PrimitiveType::LINES;
             return true;
+        case cgltf_primitive_type_line_strip:
+            *out = filament::RenderableManager::PrimitiveType::LINE_STRIP;
+            return true;
         case cgltf_primitive_type_triangles:
             *out = filament::RenderableManager::PrimitiveType::TRIANGLES;
             return true;
-        case cgltf_primitive_type_line_loop:
-        case cgltf_primitive_type_line_strip:
         case cgltf_primitive_type_triangle_strip:
+            *out = filament::RenderableManager::PrimitiveType::TRIANGLE_STRIP;
+            return true;
+        case cgltf_primitive_type_line_loop:
         case cgltf_primitive_type_triangle_fan:
             return false;
     }

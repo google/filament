@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_RENDERTARGET_H
-#define TNT_FILAMENT_FG2_RENDERTARGET_H
+#ifndef TNT_FILAMENT_FG2_FRAMEGRAPHRENDERPASS_H
+#define TNT_FILAMENT_FG2_FRAMEGRAPHRENDERPASS_H
 
 #include "fg2/FrameGraphTexture.h"
 
@@ -67,4 +67,4 @@ struct FrameGraphRenderPass {
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_RENDERTARGET_H
+#endif // TNT_FILAMENT_FG2_FRAMEGRAPHRENDERPASS_H

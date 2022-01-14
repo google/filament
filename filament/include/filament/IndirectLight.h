@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_INDIRECT_LIGHT_H
-#define TNT_FILAMENT_INDIRECT_LIGHT_H
+#ifndef TNT_FILAMENT_INDIRECTLIGHT_H
+#define TNT_FILAMENT_INDIRECTLIGHT_H
 
 #include <filament/FilamentAPI.h>
 
@@ -346,4 +346,4 @@ public:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_INDIRECT_LIGHT_H
+#endif // TNT_FILAMENT_INDIRECTLIGHT_H

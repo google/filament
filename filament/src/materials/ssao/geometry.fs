@@ -48,23 +48,22 @@ highp vec3 computeViewSpaceNormalLowQ(const highp vec3 position) {
 // depthTexture   : the depth texture in reversed-Z
 // uv             : normalized coordinates
 // position       : view space position at uv
-// resolution     : width, height, 1/width, 1/height
+// texel          : 1/depth_width, 1/depth_height
 // positionParams : invProjection[0][0] * 2, invProjection[1][1] * 2
-// depthParams    : projection[3][2] / 2
 //
 highp vec3 computeViewSpaceNormalMediumQ(
         const highp sampler2D depthTexture, const highp vec2 uv,
         const highp vec3 position,
-        highp vec4 resolution, highp vec2 positionParams, highp float depthParams) {
+        highp vec2 texel, highp vec2 positionParams) {
 
     precision highp float;
 
-    highp vec2 uvdx = uv + vec2(resolution.z, 0.0);
-    highp vec2 uvdy = uv + vec2(0.0, resolution.w);
+    highp vec2 uvdx = uv + vec2(texel.x, 0.0);
+    highp vec2 uvdy = uv + vec2(0.0, texel.y);
     vec3 px = computeViewSpacePositionFromDepth(uvdx,
-            sampleDepthLinear(depthTexture, uvdx, 0.0, depthParams), positionParams);
+            sampleDepthLinear(depthTexture, uvdx, 0.0), positionParams);
     vec3 py = computeViewSpacePositionFromDepth(uvdy,
-            sampleDepthLinear(depthTexture, uvdy, 0.0, depthParams), positionParams);
+            sampleDepthLinear(depthTexture, uvdy, 0.0), positionParams);
     vec3 dpdx = px - position;
     vec3 dpdy = py - position;
     return faceNormal(dpdx, dpdy);
@@ -78,20 +77,19 @@ highp vec3 computeViewSpaceNormalMediumQ(
 // uv             : normalized coordinates
 // depth          : linear depth at uv
 // position       : view space position at uv
-// resolution     : width, height, 1/width, 1/height
+// texel          : 1/depth_width, 1/depth_height
 // positionParams : invProjection[0][0] * 2, invProjection[1][1] * 2
-// depthParams    : projection[3][2] / 2
 //
 highp vec3 computeViewSpaceNormalHighQ(
         const highp sampler2D depthTexture, const highp vec2 uv,
         const highp float depth, const highp vec3 position,
-        highp vec4 resolution, highp vec2 positionParams, highp float depthParams) {
+        highp vec2 texel, highp vec2 positionParams) {
 
     precision highp float;
 
     vec3 pos_c = position;
-    highp vec2 dx = vec2(resolution.z, 0.0);
-    highp vec2 dy = vec2(0.0, resolution.w);
+    highp vec2 dx = vec2(texel.x, 0.0);
+    highp vec2 dy = vec2(0.0, texel.y);
 
     vec4 H;
     H.x = sampleDepth(depthTexture, uv - dx, 0.0);
@@ -100,9 +98,9 @@ highp vec3 computeViewSpaceNormalHighQ(
     H.w = sampleDepth(depthTexture, uv + dx * 2.0, 0.0);
     vec2 he = abs((2.0 * H.xy - H.zw) - depth);
     vec3 pos_l = computeViewSpacePositionFromDepth(uv - dx,
-            linearizeDepth(H.x, depthParams), positionParams);
+            linearizeDepth(H.x), positionParams);
     vec3 pos_r = computeViewSpacePositionFromDepth(uv + dx,
-            linearizeDepth(H.y, depthParams), positionParams);
+            linearizeDepth(H.y), positionParams);
     vec3 dpdx = (he.x < he.y) ? (pos_c - pos_l) : (pos_r - pos_c);
 
     vec4 V;
@@ -112,9 +110,9 @@ highp vec3 computeViewSpaceNormalHighQ(
     V.w = sampleDepth(depthTexture, uv + dy * 2.0, 0.0);
     vec2 ve = abs((2.0 * V.xy - V.zw) - depth);
     vec3 pos_d = computeViewSpacePositionFromDepth(uv - dy,
-            linearizeDepth(V.x, depthParams), positionParams);
+            linearizeDepth(V.x), positionParams);
     vec3 pos_u = computeViewSpacePositionFromDepth(uv + dy,
-            linearizeDepth(V.y, depthParams), positionParams);
+            linearizeDepth(V.y), positionParams);
     vec3 dpdy = (ve.x < ve.y) ? (pos_c - pos_d) : (pos_u - pos_c);
     return faceNormal(dpdx, dpdy);
 }
@@ -123,21 +121,20 @@ highp vec3 computeViewSpaceNormalHighQ(
 // uv             : normalized coordinates
 // depth          : linear depth at uv
 // position       : view space position at uv
-// resolution     : width, height, 1/width, 1/height
+// texel          : 1/depth_width, 1/depth_height
 // positionParams : invProjection[0][0] * 2, invProjection[1][1] * 2
-// depthParams    : projection[3][2] / 2
 //
 highp vec3 computeViewSpaceNormal(
         const highp sampler2D depthTexture, const highp vec2 uv,
         const highp float depth, const highp vec3 position,
-        highp vec4 resolution, highp vec2 positionParams, highp float depthParams) {
+        highp vec2 texel, highp vec2 positionParams) {
     // todo: maybe make this a quality parameter
 #if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH
     vec3 normal = computeViewSpaceNormalHighQ(materialParams_depth, uv, depth, position,
-            resolution, positionParams, depthParams);
+            texel, positionParams);
 #else
     vec3 normal = computeViewSpaceNormalMediumQ(materialParams_depth, uv, position,
-            resolution, positionParams, depthParams);
+            texel, positionParams);
 #endif
     return normal;
 }

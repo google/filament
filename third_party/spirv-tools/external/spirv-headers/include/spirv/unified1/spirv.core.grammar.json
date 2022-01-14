@@ -4754,6 +4754,52 @@
       "version" : "None"
     },
     {
+      "opname" : "OpTraceMotionNV",
+      "class"  : "Reserved",
+      "opcode" : 5338,
+      "operands" : [
+
+        { "kind" : "IdRef", "name" : "'Accel'" },
+        { "kind" : "IdRef", "name" : "'Ray Flags'" },
+        { "kind" : "IdRef", "name" : "'Cull Mask'" },
+        { "kind" : "IdRef", "name" : "'SBT Offset'" },
+        { "kind" : "IdRef", "name" : "'SBT Stride'" },
+        { "kind" : "IdRef", "name" : "'Miss Index'" },
+        { "kind" : "IdRef", "name" : "'Ray Origin'" },
+        { "kind" : "IdRef", "name" : "'Ray Tmin'" },
+        { "kind" : "IdRef", "name" : "'Ray Direction'" },
+        { "kind" : "IdRef", "name" : "'Ray Tmax'" },
+        { "kind" : "IdRef", "name" : "'Time'" },
+        { "kind" : "IdRef", "name" : "'PayloadId'" }
+      ],
+      "capabilities" : [ "RayTracingMotionBlurNV" ],
+      "extensions" : [ "SPV_NV_ray_tracing_motion_blur" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpTraceRayMotionNV",
+      "class"  : "Reserved",
+      "opcode" : 5339,
+      "operands" : [
+
+        { "kind" : "IdRef", "name" : "'Accel'" },
+        { "kind" : "IdRef", "name" : "'Ray Flags'" },
+        { "kind" : "IdRef", "name" : "'Cull Mask'" },
+        { "kind" : "IdRef", "name" : "'SBT Offset'" },
+        { "kind" : "IdRef", "name" : "'SBT Stride'" },
+        { "kind" : "IdRef", "name" : "'Miss Index'" },
+        { "kind" : "IdRef", "name" : "'Ray Origin'" },
+        { "kind" : "IdRef", "name" : "'Ray Tmin'" },
+        { "kind" : "IdRef", "name" : "'Ray Direction'" },
+        { "kind" : "IdRef", "name" : "'Ray Tmax'" },
+        { "kind" : "IdRef", "name" : "'Time'" },
+        { "kind" : "IdRef", "name" : "'Payload'" }
+      ],
+      "capabilities" : [ "RayTracingMotionBlurNV" ],
+      "extensions" : [ "SPV_NV_ray_tracing_motion_blur" ],
+      "version" : "None"
+    },
+    {
       "opname" : "OpTypeAccelerationStructureNV",
       "class"  : "Reserved",
       "opcode" : 5341,
@@ -4896,6 +4942,88 @@
       ],
       "capabilities" : [ "DemoteToHelperInvocationEXT" ],
       "extensions" : [ "SPV_EXT_demote_to_helper_invocation" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConvertUToImageNV",
+      "class"  : "Reserved",
+      "opcode" : 5391,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "'Operand'" }
+      ],
+      "capabilities" : [ "BindlessTextureNV" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConvertUToSamplerNV",
+      "class"  : "Reserved",
+      "opcode" : 5392,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "'Operand'" }
+      ],
+      "capabilities" : [ "BindlessTextureNV" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConvertImageToUNV",
+      "class"  : "Reserved",
+      "opcode" : 5393,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "'Operand'" }
+      ],
+      "capabilities" : [ "BindlessTextureNV" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConvertSamplerToUNV",
+      "class"  : "Reserved",
+      "opcode" : 5394,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "'Operand'" }
+      ],
+      "capabilities" : [ "BindlessTextureNV" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConvertUToSampledImageNV",
+      "class"  : "Reserved",
+      "opcode" : 5395,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "'Operand'" }
+      ],
+      "capabilities" : [ "BindlessTextureNV" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConvertSampledImageToUNV",
+      "class"  : "Reserved",
+      "opcode" : 5396,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "'Operand'" }
+      ],
+      "capabilities" : [ "BindlessTextureNV" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpSamplerImageAddressingModeNV",
+      "class"  : "Reserved",
+      "opcode" : 5397,
+      "operands" : [
+        { "kind" : "LiteralInteger", "name" : "'Bit Width'" }
+      ],
+      "capabilities" : [ "BindlessTextureNV" ],
       "version" : "None"
     },
     {
@@ -5210,7 +5338,7 @@
       "version" : "None"
     },
     {
-      "opname" : "OpConstFunctionPointerINTEL",
+      "opname" : "OpConstantFunctionPointerINTEL",
       "class"  : "@exclude",
       "opcode" : 5600,
       "operands" : [
@@ -7631,24 +7759,6 @@
       "version" : "None"
     },
     {
-      "opname" : "OpArbitraryFloatPowNINTEL",
-      "class"  : "@exclude",
-      "opcode" : 5882,
-      "operands" : [
-        { "kind" : "IdResultType" },
-        { "kind" : "IdResult" },
-        { "kind" : "IdRef", "name" : "'A'" },
-        { "kind" : "LiteralInteger", "name" : "'M1'" },
-        { "kind" : "IdRef", "name" : "'B'" },
-        { "kind" : "LiteralInteger", "name" : "'Mout'" },
-        { "kind" : "LiteralInteger", "name" : "'EnableSubnormals'" },
-        { "kind" : "LiteralInteger", "name" : "'RoundingMode'" },
-        { "kind" : "LiteralInteger", "name" : "'RoundingAccuracy'" }
-      ],
-      "capabilities" : [ "ArbitraryPrecisionFloatingPointINTEL" ],
-      "version" : "None"
-    },
-    {
       "opname" : "OpLoopControlINTEL",
       "class"  : "Reserved",
       "opcode" : 5887,
@@ -8447,6 +8557,13 @@
           "enumerant" : "ZeroExtend",
           "value" : "0x2000",
           "version" : "1.4"
+        },
+        {
+          "enumerant" : "Offsets",
+          "value" : "0x10000",
+          "parameters" : [
+            { "kind" : "IdRef" }
+          ]
         }
       ]
     },
@@ -8460,40 +8577,35 @@
         },
         {
           "enumerant" : "NotNaN",
-          "value" : "0x0001",
-          "capabilities" : [ "Kernel" ]
+          "value" : "0x0001"
         },
         {
           "enumerant" : "NotInf",
-          "value" : "0x0002",
-          "capabilities" : [ "Kernel" ]
+          "value" : "0x0002"
         },
         {
           "enumerant" : "NSZ",
-          "value" : "0x0004",
-          "capabilities" : [ "Kernel" ]
+          "value" : "0x0004"
         },
         {
           "enumerant" : "AllowRecip",
-          "value" : "0x0008",
-          "capabilities" : [ "Kernel" ]
+          "value" : "0x0008"
         },
         {
           "enumerant" : "Fast",
-          "value" : "0x0010",
-          "capabilities" : [ "Kernel" ]
+          "value" : "0x0010"
         },
         {
           "enumerant" : "AllowContractFastINTEL",
           "value" : "0x10000",
           "capabilities" : [ "FPFastMathModeINTEL" ],
-	  "version" : "None"
+          "version" : "None"
         },
         {
           "enumerant" : "AllowReassocINTEL",
           "value" : "0x20000",
           "capabilities" : [ "FPFastMathModeINTEL" ],
-	  "version" : "None"
+          "version" : "None"
         }
       ]
     },
@@ -8689,6 +8801,12 @@
         {
           "enumerant" : "Const",
           "value" : "0x0008"
+        },
+        {
+          "enumerant" : "OptNoneINTEL",
+          "value" : "0x10000",
+          "capabilities" : [  "OptNoneINTEL" ],
+          "version" : "None"
         }
       ]
     },
@@ -9445,7 +9563,9 @@
           "value" : 39,
           "capabilities" : [ "Kernel" ],
           "parameters" : [
-            { "kind" : "IdRef", "name" : "'Local Size Hint'" }
+            { "kind" : "IdRef", "name" : "'x size hint'" },
+            { "kind" : "IdRef", "name" : "'y size hint'" },
+            { "kind" : "IdRef", "name" : "'z size hint'" }
           ],
           "version" : "1.2"
         },
@@ -10433,35 +10553,51 @@
       "enumerants" : [
         {
           "enumerant" : "TRN",
-          "value" : 0
+          "value" : 0,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "TRN_ZERO",
-          "value" : 1
+          "value" : 1,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "RND",
-          "value" : 2
+          "value" : 2,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "RND_ZERO",
-          "value" : 3
+          "value" : 3,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "RND_INF",
-          "value" : 4
+          "value" : 4,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "RND_MIN_INF",
-          "value" : 5
+          "value" : 5,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "RND_CONV",
-          "value" : 6
+          "value" : 6,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "RND_CONV_ODD",
-          "value" : 7
+          "value" : 7,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         }
       ]
     },
@@ -10489,19 +10625,27 @@
       "enumerants" : [
         {
           "enumerant" : "WRAP",
-          "value" : 0
+          "value" : 0,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "SAT",
-          "value" : 1
+          "value" : 1,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "SAT_ZERO",
-          "value" : 2
+          "value" : 2,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         },
         {
           "enumerant" : "SAT_SYM",
-          "value" : 3
+          "value" : 3,
+          "capabilities" : [ "ArbitraryPrecisionFixedPointINTEL"],
+          "version" : "None"
         }
       ]
     },
@@ -11017,6 +11161,30 @@
           "capabilities" : [ "PhysicalStorageBufferAddresses" ],
           "extensions" : [ "SPV_EXT_physical_storage_buffer" ],
           "version" : "1.5"
+        },
+        {
+          "enumerant" : "BindlessSamplerNV",
+          "value" : 5398,
+          "capabilities" : [ "BindlessTextureNV" ],
+          "version" : "None"
+        },
+        {
+          "enumerant" : "BindlessImageNV",
+          "value" : 5399,
+          "capabilities" : [ "BindlessTextureNV" ],
+          "version" : "None"
+        },
+        {
+          "enumerant" : "BoundSamplerNV",
+          "value" : 5400,
+          "capabilities" : [ "BindlessTextureNV" ],
+          "version" : "None"
+        },
+        {
+          "enumerant" : "BoundImageNV",
+          "value" : 5401,
+          "capabilities" : [ "BindlessTextureNV" ],
+          "version" : "None"
         },
         {
           "enumerant" : "SIMTCallINTEL",
@@ -12020,6 +12188,13 @@
           "value" : 5333,
           "capabilities" : [ "RayTracingNV" , "RayTracingKHR" ],
           "extensions" : [ "SPV_NV_ray_tracing" , "SPV_KHR_ray_tracing" ],
+          "version" : "None"
+        },
+        {
+          "enumerant" : "CurrentRayTimeNV",
+          "value" : 5334,
+          "capabilities" : [ "RayTracingMotionBlurNV" ],
+          "extensions" : [ "SPV_NV_ray_tracing_motion_blur" ],
           "version" : "None"
         },
         {
@@ -13055,6 +13230,13 @@
           "version" : "None"
         },
         {
+          "enumerant" : "RayTracingMotionBlurNV",
+          "value" : 5341,
+          "capabilities" : [ "Shader" ],
+          "extensions" : [ "SPV_NV_ray_tracing_motion_blur" ],
+          "version" : "None"
+        },
+        {
           "enumerant" : "VulkanMemoryModel",
           "value" : 5345,
           "version" : "1.5"
@@ -13143,6 +13325,12 @@
           "value" : 5379,
           "capabilities" : [ "Shader" ],
           "extensions" : [ "SPV_EXT_demote_to_helper_invocation" ],
+          "version" : "None"
+        },
+        {
+          "enumerant" : "BindlessTextureNV",
+          "value" : 5390,
+          "extensions" : [ "SPV_NV_bindless_texture" ],
           "version" : "None"
         },
         {
@@ -13428,6 +13616,12 @@
           "version" : "None"
         },
         {
+          "enumerant" : "OptNoneINTEL",
+          "value" : 6094,
+          "extensions" : [ "SPV_INTEL_optnone" ],
+          "version" : "None"
+        },
+        {
           "enumerant" : "AtomicFloat16AddEXT",
           "value" : 6095,
           "capabilities" : [ "Shader" ],
@@ -13509,7 +13703,7 @@
         {
           "enumerant" : "PackedVectorFormat4x8BitKHR",
           "value" : 0,
-          "capabilities" : [ "DotProductInput4x8BitPackedKHR" ],
+          "extensions" : [ "SPV_KHR_integer_dot_product" ],
           "version" : "None"
         }
       ]

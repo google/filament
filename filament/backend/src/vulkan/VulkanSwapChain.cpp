@@ -304,7 +304,7 @@ void VulkanSwapChain::makePresentable() {
         //   subresources affected by the barrier
         //
         //   (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkImageMemoryBarrier-oldLayout-01197)
-#ifdef ANDROID
+#ifdef __ANDROID__
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 #else
         // If nothing was rendered, then the layout was never transitioned to COLOR_ATTACHMENT_OPTIMAL.

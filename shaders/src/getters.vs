@@ -20,46 +20,77 @@ mat3 getWorldFromModelNormalMatrix() {
 // Attributes access
 //------------------------------------------------------------------------------
 
+/** @public-api */
+int getVertexIndex() {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    return gl_VertexIndex;
+#else
+    return gl_VertexID;
+#endif
+}
+
 #if defined(HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
-    vec4 q  = bonesUniforms.bones[i + 0u];
-    vec3 is = bonesUniforms.bones[i + 3u].xyz;
 
-    // apply the inverse of the non-uniform scales
-    n *= is;
-    // apply the rigid transform (valid only for unit quaternions)
-    n += 2.0 * cross(q.xyz, cross(q.xyz, n) + q.w * n);
+    highp mat3 cof;
 
-    return n;
+    // the first 8 elements of the cofactor matrix are stored as fp16
+    highp vec2 zx = unpackHalf2x16(bonesUniforms.bones[i].cof[1]);
+    cof[0].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[0]);
+    cof[0].z = zx[0];
+    cof[1].x = zx[1];
+    cof[1].yz = unpackHalf2x16(bonesUniforms.bones[i].cof[2]);
+    cof[2].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[3]);
+
+    // the last element must be computed by hand
+    highp float a = bonesUniforms.bones[i].transform[0][0];
+    highp float b = bonesUniforms.bones[i].transform[0][1];
+    highp float d = bonesUniforms.bones[i].transform[1][0];
+    highp float e = bonesUniforms.bones[i].transform[1][1];
+
+    cof[2].z = a * e - b * d;
+
+    return normalize(cof * n);
 }
 
 vec3 mulBoneVertex(vec3 v, uint i) {
-    vec4 q = bonesUniforms.bones[i + 0u];
-    vec3 t = bonesUniforms.bones[i + 1u].xyz;
-    vec3 s = bonesUniforms.bones[i + 2u].xyz;
-
-    // apply the non-uniform scales
-    v *= s;
-    // apply the rigid transform (valid only for unit quaternions)
-    v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-    // apply the translation
-    v += t;
-
-    return v;
+    // last row of bonesUniforms.transform[i] (row major) is assumed to be [0,0,0,1]
+    highp mat4x3 m = transpose(bonesUniforms.bones[i].transform);
+    return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
 }
 
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
-    n =   mulBoneNormal(n, ids.x * 4u) * weights.x
-        + mulBoneNormal(n, ids.y * 4u) * weights.y
-        + mulBoneNormal(n, ids.z * 4u) * weights.z
-        + mulBoneNormal(n, ids.w * 4u) * weights.w;
+    n =   mulBoneNormal(n, ids.x) * weights.x
+        + mulBoneNormal(n, ids.y) * weights.y
+        + mulBoneNormal(n, ids.z) * weights.z
+        + mulBoneNormal(n, ids.w) * weights.w;
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
-    p =   mulBoneVertex(p, ids.x * 4u) * weights.x
-        + mulBoneVertex(p, ids.y * 4u) * weights.y
-        + mulBoneVertex(p, ids.z * 4u) * weights.z
-        + mulBoneVertex(p, ids.w * 4u) * weights.w;
+    p =   mulBoneVertex(p, ids.x) * weights.x
+        + mulBoneVertex(p, ids.y) * weights.y
+        + mulBoneVertex(p, ids.z) * weights.z
+        + mulBoneVertex(p, ids.w) * weights.w;
+}
+
+#define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
+
+void morphPosition(inout vec4 p) {
+    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
+        texcoord.z = int(i) * 2 + 0;
+        p += morphingUniforms.weights[i] * texelFetch(morphing_targets, texcoord, 0);
+    }
+}
+
+void morphNormal(inout vec3 n) {
+    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
+        texcoord.z = int(i) * 2 + 1;
+        vec3 normal;
+        toTangentFrame(texelFetch(morphing_targets, texcoord, 0), normal);
+        n += morphingUniforms.weights[i].xyz * normal;
+    }
 }
 #endif
 
@@ -70,10 +101,7 @@ vec4 getPosition() {
 #if defined(HAS_SKINNING_OR_MORPHING)
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
-        pos += objectUniforms.morphWeights.x * mesh_custom0;
-        pos += objectUniforms.morphWeights.y * mesh_custom1;
-        pos += objectUniforms.morphWeights.z * mesh_custom2;
-        pos += objectUniforms.morphWeights.w * mesh_custom3;
+        morphPosition(pos);
     }
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
@@ -110,15 +138,6 @@ vec4 getCustom6() { return mesh_custom6; }
 vec4 getCustom7() { return mesh_custom7; }
 #endif
 
-/** @public-api */
-int getVertexIndex() {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    return gl_VertexIndex;
-#else
-    return gl_VertexID;
-#endif
-}
-
 //------------------------------------------------------------------------------
 // Helpers
 //------------------------------------------------------------------------------
@@ -144,7 +163,10 @@ vec4 computeWorldPosition() {
     return mulMat4x4Float3(transform, position);
 #elif defined(VERTEX_DOMAIN_DEVICE)
     mat4 transform = getWorldFromClipMatrix();
-    vec4 position = transform * getPosition();
+    vec4 p = getPosition();
+    // GL convention to inverted DX convention
+    p.z = p.z * -0.5 + 0.5;
+    vec4 position = transform * p;
     if (abs(position.w) < MEDIUMP_FLT_MIN) {
         position.w = position.w < 0.0 ? -MEDIUMP_FLT_MIN : MEDIUMP_FLT_MIN;
     }

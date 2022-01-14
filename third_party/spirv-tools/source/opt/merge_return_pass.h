@@ -277,7 +277,7 @@ class MergeReturnPass : public MemPass {
   // current function where the switch and case value are both zero and the
   // default is the merge block. Returns after the switch is executed. Sets
   // |final_return_block_|.
-  void AddSingleCaseSwitchAroundFunction();
+  bool AddSingleCaseSwitchAroundFunction();
 
   // Creates a new basic block that branches to |header_label_id|.  Returns the
   // new basic block.  The block will be the second last basic block in the
@@ -286,7 +286,7 @@ class MergeReturnPass : public MemPass {
 
   // Creates a one case switch around the executable code of the function with
   // |merge_target| as the merge node.
-  void CreateSingleCaseSwitch(BasicBlock* merge_target);
+  bool CreateSingleCaseSwitch(BasicBlock* merge_target);
 
   // Returns true if |function| has an unreachable block that is not a continue
   // target that simply branches back to the header, or a merge block containing

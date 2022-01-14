@@ -14,10 +14,12 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/CallStack.h
         ${PUBLIC_HDR_DIR}/${TARGET}/debug.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Allocator.h
         ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
@@ -28,6 +30,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/ostream.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Panic.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
@@ -63,6 +66,7 @@ set(SRCS
         src/Path.cpp
         src/Profiler.cpp
         src/sstream.cpp
+        src/string.cpp
         src/Systrace.cpp
 )
 
@@ -133,6 +137,7 @@ set(TEST_SRCS
         test/test_JobSystem.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
+        test/test_string.cpp
         test/test_utils_main.cpp
         test/test_Zip2Iterator.cpp
         test/test_BinaryTreeArray.cpp

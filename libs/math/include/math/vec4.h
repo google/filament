@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef MATH_VEC4_H_
-#define MATH_VEC4_H_
+#ifndef TNT_MATH_VEC4_H
+#define TNT_MATH_VEC4_H
 
-#include <math/vec3.h>
 #include <math/half.h>
+#include <math/vec3.h>
+
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -129,4 +130,4 @@ using bool4 = vec4<bool>;
 }  // namespace math
 }  // namespace filament
 
-#endif  // MATH_VEC4_H_
+#endif  // TNT_MATH_VEC4_H

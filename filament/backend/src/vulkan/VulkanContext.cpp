@@ -54,8 +54,8 @@ void VulkanContext::selectPhysicalDevice() {
         }
 
         // Does the device have any command queues that support graphics?
-        // In theory we should also ensure that the device supports presentation of our
-        // particular VkSurface, but we don't have a VkSurface yet so we'll skip this requirement.
+        // In theory, we should also ensure that the device supports presentation of our
+        // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
         uint32_t queueFamiliesCount;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, nullptr);
         if (queueFamiliesCount == 0) {
@@ -131,7 +131,7 @@ void VulkanContext::selectPhysicalDevice() {
         // Print out some properties of the GPU for diagnostic purposes.
         //
         // Ideally, the vendors register their vendor ID's with Khronos so that apps can make an
-        // id => string mapping. However in practice this hasn't happened. At the time of this
+        // id => string mapping. However, in practice this hasn't happened. At the time of this
         // writing the gpuinfo database has the following ID's:
         //
         //     0x1002 - AMD

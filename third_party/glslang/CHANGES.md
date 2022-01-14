@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 11.6.0 2021-08-25
+
+### Other changes
+* Atomic memory function only for shader storage block member or shared variable
+* Add support for gl_MaxVaryingVectors for ogl
+* Fix loading bool arrays from interface blocks
+* Generate separate stores for partially swizzled memory stores
+* Allow layout(std430) uniform with GL_EXT_scalar_block_layout
+* Support for pragma STDGL invariant(all)
+* Support for GL_NV_ray_tracing_motion_blur
+
 ## 11.5.0 2021-06-23
 
 ### Other changes

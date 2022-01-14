@@ -61,15 +61,7 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("CUSTOM4", CUSTOM4)
     .value("CUSTOM5", CUSTOM5)
     .value("CUSTOM6", CUSTOM6)
-    .value("CUSTOM7", CUSTOM7)
-    .value("MORPH_POSITION_0", MORPH_POSITION_0)
-    .value("MORPH_POSITION_1", MORPH_POSITION_1)
-    .value("MORPH_POSITION_2", MORPH_POSITION_2)
-    .value("MORPH_POSITION_3", MORPH_POSITION_3)
-    .value("MORPH_TANGENTS_0", MORPH_TANGENTS_0)
-    .value("MORPH_TANGENTS_1", MORPH_TANGENTS_1)
-    .value("MORPH_TANGENTS_2", MORPH_TANGENTS_2)
-    .value("MORPH_TANGENTS_3", MORPH_TANGENTS_3);
+    .value("CUSTOM7", CUSTOM7);
 
 enum_<BufferObject::BindingType>("BufferObject$BindingType")
     .value("VERTEX", BufferObject::BindingType::VERTEX);
@@ -116,7 +108,9 @@ enum_<LightManager::Type>("LightManager$Type")
 enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("POINTS", RenderableManager::PrimitiveType::POINTS)
     .value("LINES", RenderableManager::PrimitiveType::LINES)
+    .value("LINE_STRIP", RenderableManager::PrimitiveType::LINE_STRIP)
     .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
+    .value("TRIANGLE_STRIP", RenderableManager::PrimitiveType::TRIANGLE_STRIP)
     .value("NONE", RenderableManager::PrimitiveType::NONE);
 
 enum_<View::QualityLevel>("View$QualityLevel")

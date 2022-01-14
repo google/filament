@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_UTILS_ENTITYINSTANCE_H
-#define TNT_FILAMENT_UTILS_ENTITYINSTANCE_H
+#ifndef TNT_UTILS_ENTITYINSTANCE_H
+#define TNT_UTILS_ENTITYINSTANCE_H
 
 #include <utils/compiler.h>
 
@@ -86,4 +86,4 @@ public:
 
 } // namespace utils
 
-#endif // TNT_FILAMENT_UTILS_ENTITYINSTANCE_H
+#endif // TNT_UTILS_ENTITYINSTANCE_H

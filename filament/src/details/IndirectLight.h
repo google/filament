@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_INDIRECT_LIGHT_H
-#define TNT_FILAMENT_DETAILS_INDIRECT_LIGHT_H
+#ifndef TNT_FILAMENT_DETAILS_INDIRECTLIGHT_H
+#define TNT_FILAMENT_DETAILS_INDIRECTLIGHT_H
 
 #include "upcast.h"
 
@@ -70,4 +70,4 @@ FILAMENT_UPCAST(IndirectLight)
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_INDIRECT_LIGHT_H
+#endif // TNT_FILAMENT_DETAILS_INDIRECTLIGHT_H

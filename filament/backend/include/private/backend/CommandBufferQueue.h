@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_COMMANDBUFFERQUEUE_H
-#define TNT_FILAMENT_DRIVER_COMMANDBUFFERQUEUE_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_COMMANDBUFFERQUEUE_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_COMMANDBUFFERQUEUE_H
 
 #include "private/backend/CircularBuffer.h"
 
@@ -82,4 +82,4 @@ public:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_COMMANDBUFFERQUEUE_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_COMMANDBUFFERQUEUE_H

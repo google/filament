@@ -217,7 +217,8 @@ Instruction* ConstantManager::BuildInstructionAndAddToModule(
   auto* new_inst_ptr = new_inst.get();
   *pos = pos->InsertBefore(std::move(new_inst));
   ++(*pos);
-  context()->get_def_use_mgr()->AnalyzeInstDefUse(new_inst_ptr);
+  if (context()->AreAnalysesValid(IRContext::Analysis::kAnalysisDefUse))
+    context()->get_def_use_mgr()->AnalyzeInstDefUse(new_inst_ptr);
   MapConstantToInst(new_const, new_inst_ptr);
   return new_inst_ptr;
 }
@@ -429,6 +430,12 @@ uint32_t ConstantManager::GetFloatConst(float val) {
 uint32_t ConstantManager::GetSIntConst(int32_t val) {
   Type* sint_type = context()->get_type_mgr()->GetSIntType();
   const Constant* c = GetConstant(sint_type, {static_cast<uint32_t>(val)});
+  return GetDefiningInstruction(c)->result_id();
+}
+
+uint32_t ConstantManager::GetUIntConst(uint32_t val) {
+  Type* uint_type = context()->get_type_mgr()->GetUIntType();
+  const Constant* c = GetConstant(uint_type, {val});
   return GetDefiningInstruction(c)->result_id();
 }
 

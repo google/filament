@@ -56,7 +56,8 @@ layout(location = LOCATION_CUSTOM6) in vec4 mesh_custom6;
 layout(location = LOCATION_CUSTOM7) in vec4 mesh_custom7;
 #endif
 
-LAYOUT_LOCATION(4) out highp vec3 vertex_worldPosition;
+LAYOUT_LOCATION(4) out highp vec4 vertex_worldPosition;
+
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 LAYOUT_LOCATION(5) SHADING_INTERPOLATION out mediump vec3 vertex_worldNormal;
 #if defined(MATERIAL_NEEDS_TBN)

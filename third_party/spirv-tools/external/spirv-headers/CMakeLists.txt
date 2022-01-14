@@ -29,7 +29,7 @@
 # https://www.khronos.org/registry/spir-v/
 #
 cmake_minimum_required(VERSION 3.0)
-project(SPIRV-Headers VERSION 1.5.1)
+project(SPIRV-Headers VERSION 1.5.5)
 
 # There are two ways to use this project.
 #
@@ -123,5 +123,11 @@ if (SPIRV_HEADERS_ENABLE_INSTALL)
         EXPORT "${TARGETS_EXPORT_NAME}"
         NAMESPACE "${namespace}"
         DESTINATION "${config_install_dir}"
+    )
+
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers.pc.in ${CMAKE_BINARY_DIR}/SPIRV-Headers.pc @ONLY)
+    install(
+        FILES "${CMAKE_BINARY_DIR}/SPIRV-Headers.pc"
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/pkgconfig
     )
 endif()

@@ -16,7 +16,7 @@
 
 #include <filament/Frustum.h>
 
-#include "details/Culler.h"
+#include "Culler.h"
 
 #include <utils/compiler.h>
 

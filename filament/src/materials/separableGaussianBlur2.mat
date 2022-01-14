@@ -1,0 +1,54 @@
+material {
+    name : separableGaussianBlur2,
+    parameters : [
+        {
+            type : sampler2d,
+            name : source,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+            type : float2,
+            name : axis
+        },
+        {
+            type : float,
+            name : level
+        },
+        {
+            type : int,
+            name : count
+        },
+        {
+            type : int,
+            name : reinhard
+        },
+        {
+            type : float2[32],
+            name : kernel
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+#include "separableGaussianBlur.vs"
+}
+
+fragment {
+
+#define BLUR_TYPE    vec2
+#define BLUR_SWIZZLE rg
+
+#include "separableGaussianBlur.fs"
+
+}

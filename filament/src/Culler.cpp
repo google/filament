@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/Culler.h"
+#include "Culler.h"
 
 #include <filament/Box.h>
 
@@ -22,7 +22,14 @@
 
 using namespace filament::math;
 
+// use 8 if Culler::result_type is 8-bits, on ARMv8 it allows the compiler to write eight
+// results in one go.
+#define FILAMENT_CULLER_VECTORIZE_HINT 4
+
 namespace filament {
+
+static_assert(Culler::MODULO % FILAMENT_CULLER_VECTORIZE_HINT == 0,
+        "MODULO m=must be a multiple of FILAMENT_CULLER_VECTORIZE_HINT");
 
 void Culler::intersects(
         result_type* UTILS_RESTRICT results,
@@ -32,11 +39,8 @@ void Culler::intersects(
 
     float4 const * const UTILS_RESTRICT planes = frustum.mPlanes;
 
-    // we use a vectorize width of 8 because, on ARMv8 it allow the compiler to write 8
-    // 8-bits results in one go. Without this it has to do 4 separate byte writes, which
-    // ends-up being slower.
-    count = round(count); // capacity guaranteed to be multiple of 8
-    #pragma clang loop vectorize_width(8)
+    count = round(count);
+    #pragma clang loop vectorize_width(FILAMENT_CULLER_VECTORIZE_HINT)
     for (size_t i = 0; i < count; i++) {
         int visible = ~0;
         float4 const sphere(b[i]);
@@ -64,11 +68,8 @@ void Culler::intersects(
 
     float4 const * UTILS_RESTRICT const planes = frustum.mPlanes;
 
-    // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
-    // 8-bits results in one go. Without this it has to do 4 separate byte writes, which
-    // ends-up being slower.
-    count = round(count); // capacity guaranteed to be multiple of 8
-    #pragma clang loop vectorize_width(8)
+    count = round(count);
+    #pragma clang loop vectorize_width(FILAMENT_CULLER_VECTORIZE_HINT)
     for (size_t i = 0; i < count; i++) {
         int visible = ~0;
 

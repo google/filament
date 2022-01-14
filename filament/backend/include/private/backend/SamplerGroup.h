@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_SAMPLERGROUP_H
-#define TNT_FILAMENT_SAMPLERGROUP_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 
 #include <array>
 #include <stddef.h>
@@ -154,4 +154,4 @@ private:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_SAMPLERGROUP_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H

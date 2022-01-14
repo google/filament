@@ -114,14 +114,14 @@ public class MaterialBuilder {
         BONE_INDICES,           // indices of 4 bones (uvec4)
         BONE_WEIGHTS,           // weights of the 4 bones (normalized float4)
         UNUSED,                 // reserved for future use
-        CUSTOM0,                // custom or MORPH_POSITION_0
-        CUSTOM1,                // custom or MORPH_POSITION_1
-        CUSTOM2,                // custom or MORPH_POSITION_2
-        CUSTOM3,                // custom or MORPH_POSITION_3
-        CUSTOM4,                // custom or MORPH_TANGENTS_0
-        CUSTOM5,                // custom or MORPH_TANGENTS_1
-        CUSTOM6,                // custom or MORPH_TANGENTS_2
-        CUSTOM7                 // custom or MORPH_TANGENTS_3
+        CUSTOM0,                // custom
+        CUSTOM1,                // custom
+        CUSTOM2,                // custom
+        CUSTOM3,                // custom
+        CUSTOM4,                // custom
+        CUSTOM5,                // custom
+        CUSTOM6,                // custom
+        CUSTOM7                 // custom
     }
 
     public enum BlendingMode {

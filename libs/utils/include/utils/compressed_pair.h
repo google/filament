@@ -65,4 +65,4 @@ struct compressed_pair : private T1, private T2 {
 
 } // namespace utils
 
-#endif //TNT_UTILS_COMPRESSED_PAIR_H
+#endif // TNT_UTILS_COMPRESSED_PAIR_H

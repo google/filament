@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef MATH_TMATHELPERS_H_
-#define MATH_TMATHELPERS_H_
+#ifndef TNT_MATH_TMATHELPERS_H
+#define TNT_MATH_TMATHELPERS_H
 
 #include <math/compiler.h>
 #include <math/quat.h>
@@ -804,4 +804,4 @@ public:
 }  // namespace math
 }  // namespace filament
 
-#endif  // MATH_TMATHELPERS_H_
+#endif  // TNT_MATH_TMATHELPERS_H

@@ -351,6 +351,12 @@ RepeatedPassRecommenderStandard::GetFuturePassRecommendations(
          pass_instances_->GetReplaceIrrelevantIds(),
          pass_instances_->GetFlattenConditionalBranches()});
   }
+  if (&pass == pass_instances_->GetWrapVectorSynonym()) {
+    // This transformation introduces synonym facts and irrelevant ids.
+    return RandomOrderAndNonNull({pass_instances_->GetApplyIdSynonyms(),
+                                  pass_instances_->GetReplaceIrrelevantIds()});
+  }
+
   assert(false && "Unreachable: every fuzzer pass should be dealt with.");
   return {};
 }

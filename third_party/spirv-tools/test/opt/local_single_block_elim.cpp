@@ -84,6 +84,56 @@ OpFunctionEnd
       predefs_before + before, predefs_before + after, true, true);
 }
 
+TEST_F(LocalSingleBlockLoadStoreElimTest, LSBElimForLinkage) {
+  const std::string predefs_before =
+      R"(OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %v "v"
+OpName %BaseColor "BaseColor"
+OpName %gl_FragColor "gl_FragColor"
+OpDecorate %main LinkageAttributes "main" Export
+%void = OpTypeVoid
+%7 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%BaseColor = OpVariable %_ptr_Input_v4float Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%gl_FragColor = OpVariable %_ptr_Output_v4float Output
+)";
+
+  const std::string before =
+      R"(%main = OpFunction %void None %7
+%13 = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%14 = OpLoad %v4float %BaseColor
+OpStore %v %14
+%15 = OpLoad %v4float %v
+OpStore %gl_FragColor %15
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string after =
+      R"(%main = OpFunction %void None %7
+%13 = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%14 = OpLoad %v4float %BaseColor
+OpStore %v %14
+OpStore %gl_FragColor %14
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<LocalSingleBlockLoadStoreElimPass>(
+      predefs_before + before, predefs_before + after, true, true);
+}
+
 TEST_F(LocalSingleBlockLoadStoreElimTest, SimpleLoadLoadElim) {
   // #version 140
   //

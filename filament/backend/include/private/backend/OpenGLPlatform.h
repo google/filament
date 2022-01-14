@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_H
-#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_OPENGLPLATFORM_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_OPENGLPLATFORM_H
 
 #include <backend/Platform.h>
 
@@ -117,4 +117,4 @@ public:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_OPENGLPLATFORM_H

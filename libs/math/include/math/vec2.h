@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef MATH_VEC2_H_
-#define MATH_VEC2_H_
+#ifndef TNT_MATH_VEC2_H
+#define TNT_MATH_VEC2_H
 
 #include <math/TVecHelpers.h>
 #include <math/half.h>
+
+#include <type_traits>
+
 #include <assert.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <type_traits>
-
 
 namespace filament {
 namespace math {
@@ -110,4 +111,4 @@ using bool2 = vec2<bool>;
 }  // namespace math
 }  // namespace filament
 
-#endif  // MATH_VEC2_H_
+#endif  // TNT_MATH_VEC2_H

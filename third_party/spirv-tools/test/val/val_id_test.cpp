@@ -5524,9 +5524,9 @@ OpFunctionEnd
   CompileSuccessfully(spirv.c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpDecorate SpecId decoration target <id> "
-                        "'1[%uint_3]' is not a scalar specialization "
-                        "constant."));
+              HasSubstr("SpecId decoration on target <id> "
+                        "'1[%uint_3]' must be a scalar specialization "
+                        "constant"));
 }
 
 TEST_F(ValidateIdWithMessage, SpecIdTargetOpSpecConstantOpBad) {
@@ -5546,8 +5546,8 @@ OpFunctionEnd
   CompileSuccessfully(spirv.c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpDecorate SpecId decoration target <id> '1[%1]' is "
-                        "not a scalar specialization constant."));
+              HasSubstr("SpecId decoration on target <id> '1[%1]' "
+                        "must be a scalar specialization constant"));
 }
 
 TEST_F(ValidateIdWithMessage, SpecIdTargetOpSpecConstantCompositeBad) {
@@ -5566,8 +5566,8 @@ OpFunctionEnd
   CompileSuccessfully(spirv.c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpDecorate SpecId decoration target <id> '1[%1]' is "
-                        "not a scalar specialization constant."));
+              HasSubstr("SpecId decoration on target <id> '1[%1]' "
+                        "must be a scalar specialization constant"));
 }
 
 TEST_F(ValidateIdWithMessage, SpecIdTargetGood) {

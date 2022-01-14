@@ -58,7 +58,9 @@ export interface Vector<T> {
 export function vectorToArray<T>(vector: Vector<T>): T[];
 
 export class SwapChain {}
-export class ColorGrading {}
+export class ColorGrading {
+    public static Builder(): ColorGrading$Builder;
+}
 
 export interface Box {
     center: float3;
@@ -525,6 +527,8 @@ export class View {
     public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;
     public getBlendMode(): View$BlendMode;
+    public setPostProcessingEnabled(enabled: boolean): void;
+    public setAntiAliasing(antialiasing: View$AntiAliasing): void;
 }
 
 export class TransformManager {
@@ -649,6 +653,8 @@ export class SurfaceOrientation$Builder {
 
 export class SurfaceOrientation {
     public getQuats(quatCount: number): Int16Array;
+    public getQuatsHalf4(quatCount: number): Uint16Array;
+    public getQuatsFloat4(quatCount: number): Float32Array;
     public delete(): void;
 }
 
@@ -818,7 +824,9 @@ export enum PixelDataType {
 export enum RenderableManager$PrimitiveType {
     POINTS,
     LINES,
+    LINE_STRIP,
     TRIANGLES,
+    TRIANGLE_STRIP,
     NONE,
 }
 
@@ -984,14 +992,6 @@ export enum VertexAttribute {
     CUSTOM5 = 13,
     CUSTOM6 = 14,
     CUSTOM7 = 15,
-    MORPH_POSITION_0 = CUSTOM0,
-    MORPH_POSITION_1 = CUSTOM1,
-    MORPH_POSITION_2 = CUSTOM2,
-    MORPH_POSITION_3 = CUSTOM3,
-    MORPH_TANGENTS_0 = CUSTOM4,
-    MORPH_TANGENTS_1 = CUSTOM5,
-    MORPH_TANGENTS_2 = CUSTOM6,
-    MORPH_TANGENTS_3 = CUSTOM7,
 }
 
 export enum VertexBuffer$AttributeType {

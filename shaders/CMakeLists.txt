@@ -22,7 +22,6 @@ set(SHADERS
         src/common_shadowing.fs
         src/common_types.fs
         src/depth_main.fs
-        src/depth_main.vs
         src/fog.fs
         src/getters.fs
         src/getters.vs
@@ -30,6 +29,7 @@ set(SHADERS
         src/inputs.vs
         src/light_directional.fs
         src/light_indirect.fs
+        src/light_reflections.fs
         src/light_punctual.fs
         src/main.fs
         src/main.vs

@@ -105,7 +105,11 @@ void FStream::terminate(FEngine& engine) noexcept {
 }
 
 void FStream::setAcquiredImage(void* image, Callback callback, void* userdata) noexcept {
-    mEngine.getDriverApi().setAcquiredImage(mStreamHandle, image, callback, userdata);
+    mEngine.getDriverApi().setAcquiredImage(mStreamHandle, image, nullptr, callback, userdata);
+}
+
+void FStream::setAcquiredImage(void* image, CallbackHandler* handler, Callback callback, void* userdata) noexcept {
+    mEngine.getDriverApi().setAcquiredImage(mStreamHandle, image, handler, callback, userdata);
 }
 
 void FStream::setDimensions(uint32_t width, uint32_t height) noexcept {
@@ -157,6 +161,10 @@ StreamType Stream::getStreamType() const noexcept {
 
 void Stream::setAcquiredImage(void* image, Callback callback, void* userdata) noexcept {
     upcast(this)->setAcquiredImage(image, callback, userdata);
+}
+
+void Stream::setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept {
+    upcast(this)->setAcquiredImage(image, handler, callback, userdata);
 }
 
 void Stream::setDimensions(uint32_t width, uint32_t height) noexcept {

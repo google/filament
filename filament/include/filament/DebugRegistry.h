@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DEBUG_H
-#define TNT_FILAMENT_DEBUG_H
+#ifndef TNT_FILAMENT_DEBUGREGISTRY_H
+#define TNT_FILAMENT_DEBUGREGISTRY_H
 
 #include <filament/FilamentAPI.h>
 
@@ -53,18 +53,6 @@ public:
         const char* name;   //!< property name
         Type type;          //!< property type
     };
-
-    struct PropertyArray {
-        Property const* array;
-        size_t size;
-    };
-
-    /**
-     * Queries the list of all available properties.
-     *
-     * @return A pair containing a pointer to a Property array and the size of this array.
-     */
-    PropertyArray getProperties() const noexcept;
 
     /**
      * Queries whether a property exists
@@ -123,9 +111,27 @@ public:
     bool getProperty(const char* name, math::float4* v) const noexcept;
     /** @}*/
 
+    struct DataSource {
+        void const* data;
+        size_t count;
+    };
+
+    DataSource getDataSource(const char* name) const noexcept;
+
+    struct FrameHistory {
+        using duration_ms = float;
+        duration_ms target{};
+        duration_ms targetWithHeadroom{};
+        duration_ms frameTime{};
+        duration_ms frameTimeDenoised{};
+        float scale = 1.0f;
+        float pid_e = 0.0f;
+        float pid_i = 0.0f;
+        float pid_d = 0.0f;
+    };
 };
 
 
 } // namespace filament
 
-#endif /* TNT_FILAMENT_DEBUG_H */
+#endif /* TNT_FILAMENT_DEBUGREGISTRY_H */

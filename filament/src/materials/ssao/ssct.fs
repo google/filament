@@ -41,7 +41,6 @@ struct ConeTraceSetup {
 
     // scene infos
     highp mat4 screenFromViewMatrix;
-    highp float depthParams;
     float projectionScale;
     vec4 resolution;
     float maxLevel;
@@ -112,7 +111,7 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const highp sampler2D depthTex
         highp vec2 ssSamplePos = perpConeDir * ssSliceRadius + ssConeVector * t + ssStartPos;
 
         float level = clamp(floor(log2(ssSliceRadius)) - kSSCTLog2LodRate, 0.0, float(setup.maxLevel));
-        float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, ssSamplePos * setup.resolution.zw, 0.0, setup.depthParams);
+        float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, ssSamplePos * setup.resolution.zw, 0.0);
 
         // calculate depth range of cone slice
         float vsSliceRadius = vsEndRadius * t;

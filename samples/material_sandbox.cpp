@@ -976,7 +976,10 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     view->setBloomOptions(g_params.bloomOptions);
     view->setFogOptions(g_params.fogOptions);
     view->setTemporalAntiAliasingOptions(g_params.taaOptions);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
+#pragma clang diagnostic pop
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 
     if (g_params.colorGrading) {

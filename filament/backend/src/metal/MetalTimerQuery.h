@@ -40,8 +40,8 @@ protected:
 };
 
 // Uses MTLSharedEvents to implement timer queries.
-// Only available on >= macOS 10.14, iOS 12.0.
-class API_AVAILABLE(macos(10.14), ios(12.0)) TimerQueryFence : public TimerQueryInterface {
+// Only available on >= iOS 12.0.
+class API_AVAILABLE(ios(12.0)) TimerQueryFence : public TimerQueryInterface {
 public:
     explicit TimerQueryFence(MetalContext& context) : mContext(context) {}
 

@@ -86,7 +86,7 @@ in table [standardProperties].
 **clearCoat**           | Strength of the clear coat layer
 **clearCoatRoughness**  | Perceived smoothness or roughness of the clear coat layer
 **anisotropy**          | Amount of anisotropy in either the tangent or bitangent direction
-**anisotropyDirection** | Local surface direction
+**anisotropyDirection** | Local surface direction in tangent space
 **ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
 **normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
 **bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
@@ -401,7 +401,8 @@ tangent direction and negative values in the bitangent direction.
 
 The `anisotropyDirection` property defines the direction of the surface at a given point and thus
 control the shape of the specular highlights. It is specified as vector of 3 values that usually
-come from a texture, encoding the directions local to the surface.
+come from a texture, encoding the directions local to the surface in tangent space. Because the
+direction is in tangent space, the Z component should be set to 0.
 
 The effect of `anisotropyDirection` on a metal is shown in figure [anisotropyDirectionProperty]
 (click on the image to see a larger version).

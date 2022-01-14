@@ -10,6 +10,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
+        include/backend/CallbackHandler.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
         include/backend/PipelineState.h
@@ -21,12 +22,14 @@ set(PUBLIC_HDRS
 set(SRCS
         src/BackendUtils.cpp
         src/Callable.cpp
+        src/CallbackHandler.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
         src/Driver.cpp
         src/Handle.cpp
         src/HandleAllocator.cpp
+        src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
         src/Platform.cpp
@@ -76,26 +79,32 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             include/private/backend/OpenGLPlatform.h
     )
     if (EGL)
-        list(APPEND SRCS src/opengl/PlatformEGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformEGL.cpp)
     endif()
     if (ANDROID)
-        list(APPEND SRCS src/android/ExternalStreamManagerAndroid.cpp)
+        # FIXME: this should be included when we build for JAVA (which is implied by ANDROID)
+        #        but is not specific to ANDROID
+        list(APPEND SRCS src/VirtualMachineEnv.cpp)
+    endif ()
+    if (ANDROID)
+        list(APPEND SRCS src/opengl/platforms/ExternalStreamManagerAndroid.cpp)
         list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
-        list(APPEND SRCS src/android/VirtualMachineEnv.cpp)
-        list(APPEND SRCS src/opengl/PlatformEGLAndroid.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformEGLAndroid.cpp)
     elseif (IOS)
-        list(APPEND SRCS src/opengl/PlatformCocoaTouchGL.mm)
-        list(APPEND SRCS src/opengl/CocoaTouchExternalImage.mm)
+        list(APPEND SRCS src/opengl/platforms/PlatformCocoaTouchGL.mm)
+        list(APPEND SRCS src/opengl/platforms/CocoaTouchExternalImage.mm)
     elseif (APPLE)
-        list(APPEND SRCS src/opengl/PlatformCocoaGL.mm)
+        list(APPEND SRCS src/opengl/platforms/PlatformCocoaGL.mm)
     elseif (WEBGL)
-        list(APPEND SRCS src/opengl/PlatformWebGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
-        list(APPEND SRCS src/opengl/PlatformGLX.cpp)
+        if (FILAMENT_SUPPORTS_X11)
+            list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
+        endif()
     elseif (WIN32)
-        list(APPEND SRCS src/opengl/PlatformWGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
     else()
-        list(APPEND SRCS src/opengl/PlatformDummyGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformDummyGL.cpp)
     endif()
 endif()
 
@@ -117,6 +126,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
             src/metal/MetalTimerQuery.mm
+            src/metal/MetalUtils.mm
     )
 
     list(APPEND SRCS ${METAL_SRCS})
@@ -125,9 +135,9 @@ if (FILAMENT_SUPPORTS_METAL)
         # Objective-C++ sources need an additional compiler flag on iOS to disable exceptions.
         set_property(SOURCE
             ${METAL_SRCS}
-            src/opengl/PlatformCocoaTouchGL.mm
-            src/opengl/CocoaTouchExternalImage.mm
-            src/opengl/PlatformCocoaGL.mm
+                src/opengl/platforms/PlatformCocoaTouchGL.mm
+                src/opengl/platforms/CocoaTouchExternalImage.mm
+                src/opengl/platforms/PlatformCocoaGL.mm
             PROPERTY COMPILE_FLAGS -fno-objc-exceptions)
     endif()
 
@@ -177,7 +187,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanUtility.h
     )
     if (LINUX)
-        list(APPEND SRCS src/vulkan/PlatformVkLinux.cpp)
+        if (FILAMENT_SUPPORTS_WAYLAND)
+            list(APPEND SRCS src/vulkan/PlatformVkLinuxWayland.cpp)
+        elseif (FILAMENT_SUPPORTS_X11)
+            list(APPEND SRCS src/vulkan/PlatformVkLinuxX11.cpp)
+        endif()
     elseif (APPLE AND NOT IOS)
         list(APPEND SRCS src/vulkan/PlatformVkCocoa.mm)
     elseif (IOS)
@@ -194,7 +208,6 @@ endif()
 # ==================================================================================================
 # "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
 add_definitions(-DSYSTRACE_TAG=2 )
-
 
 # ==================================================================================================
 # Includes & target definition
@@ -377,6 +390,7 @@ if (APPLE)
         test/test_BufferUpdates.cpp
         test/test_MRT.cpp
         test/test_LoadImage.cpp
+        test/test_RenderExternalImage.cpp
         )
 
     target_link_libraries(backend_test PRIVATE

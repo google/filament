@@ -59,6 +59,10 @@ import static com.google.android.filament.Colors.LinearColor;
  * @see RenderTarget
  */
 public class View {
+    private static final AntiAliasing[] sAntiAliasingValues = AntiAliasing.values();
+    private static final Dithering[] sDitheringValues = Dithering.values();
+    private static final AmbientOcclusion[] sAmbientOcclusionValues = AmbientOcclusion.values();
+
     private long mNativeObject;
     private String mName;
     private Scene mScene;
@@ -75,7 +79,9 @@ public class View {
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+    private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
+    private SoftShadowOptions mSoftShadowOptions;
 
     /**
      * Generic quality level.
@@ -131,8 +137,20 @@ public class View {
         public float maxScale = 1.0f;
 
         /**
-         * Upscaling quality. LOW: 1 bilinear tap, MEDIUM: 4 bilinear taps, HIGH: 9 bilinear taps.
-         * If minScale needs to be very low, it might help to use MEDIUM or HIGH here.
+         * Sharpness when QualityLevel.MEDIUM or higher is used [0, 1].
+         * 0 is disabled, 1 is the sharpest setting.
+         * The default is set to 0.9
+         */
+        public float sharpness = 0.9f;
+
+        /**
+         * Upscaling quality
+         * LOW: bilinear filtered blit. Fastest, poor quality
+         * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations no RCAS sharpening pass
+         * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations + RCAS
+         * ULTRA:  AMD FidelityFX FSR1
+         *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
+         *
          * The default upscaling quality is set to LOW.
          */
         @NonNull
@@ -278,6 +296,29 @@ public class View {
         */
        public boolean ssctEnabled = false;
     }
+
+    /**
+     * Options for Multi-sample Anti-aliasing (MSAA)
+     * @see View#setMultiSampleAntiAliasingOptions
+     */
+    public static class MultiSampleAntiAliasingOptions {
+        /** enables or disables temporal anti-aliasing */
+        public boolean enabled = false;
+
+        /**
+         * number of samples to use for multi-sampled anti-aliasing.\n
+         *      0: treated as 1
+         *      1: no anti-aliasing
+         *      n: sample count. Effective sample could be different depending on the
+         *         GPU capabilities.
+         */
+        public int sampleCount = 4;
+
+        /**
+         * custom resolve improves quality for HDR scenes, but may impact performance.
+         */
+        public boolean customResolve = false;
+    };
 
     /**
      * Options for Temporal Anti-aliasing (TAA)
@@ -696,7 +737,17 @@ public class View {
         /**
          * Variance shadows.
          */
-        VSM
+        VSM,
+
+        /**
+         * Percentage-closer filtered shadows, with contact hardening simulation.
+         */
+        DPCF,
+
+        /**
+         * Percentage-closer soft shadows
+         */
+        PCSS
     }
 
     /**
@@ -725,13 +776,6 @@ public class View {
         public boolean mipmapping = false;
 
         /**
-         * EVSM exponent
-         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
-         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
-         */
-        public float exponent = 5.54f;
-
-        /**
          * VSM minimum variance scale, must be positive.
          */
         public float minVarianceScale = 1.0f;
@@ -740,6 +784,29 @@ public class View {
          * VSM light bleeding reduction amount, between 0 and 1.
          */
         public float lightBleedReduction = 0.2f;
+    }
+
+    /**
+     * View-level options for DPCF and PCSS Shadowing.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @see View#setSoftShadowOptions
+     */
+    public static class SoftShadowOptions {
+        /**
+         * Globally scales the penumbra of all DPCF and PCSS shadows
+         * Acceptable values are greater than 0
+         */
+        public float penumbraScale = 1.0f;
+
+        /**
+         * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+         * This effectively controls the strength of contact hardening effect and is useful for
+         * artistic purposes. Higher values make the shadows become softer faster.
+         * Acceptable values are equal to or greater than 1.
+         */
+        public float penumbraRatioScale = 1.0f;
     }
 
     /**
@@ -1035,7 +1102,10 @@ public class View {
      * </p>
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.
+     *
+     * @deprecated use setMultiSampleAntiAliasingOptions instead
      */
+    @Deprecated
     public void setSampleCount(int count) {
         nSetSampleCount(getNativeObject(), count);
     }
@@ -1048,7 +1118,10 @@ public class View {
      * </p>
      *
      * @return value set by {@link #setSampleCount}
+     *
+     * @deprecated use getMultiSampleAntiAliasingOptions instead
      */
+    @Deprecated
     public int getSampleCount() {
         return nGetSampleCount(getNativeObject());
     }
@@ -1074,7 +1147,31 @@ public class View {
      */
     @NonNull
     public AntiAliasing getAntiAliasing() {
-        return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
+        return sAntiAliasingValues[nGetAntiAliasing(getNativeObject())];
+    }
+
+    /**
+     * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
+     *
+     * @param options multi-sample anti-aliasing options
+     */
+    public void setMultiSampleAntiAliasingOptions(@NonNull MultiSampleAntiAliasingOptions options) {
+        mMultiSampleAntiAliasingOptions = options;
+        nSetMultiSampleAntiAliasingOptions(getNativeObject(),
+                options.enabled, options.sampleCount, options.customResolve);
+    }
+
+    /**
+     * Returns multi-sample anti-aliasing options.
+     *
+     * @return multi-sample anti-aliasing options
+     */
+    @NonNull
+    public MultiSampleAntiAliasingOptions getMultiSampleAntiAliasingOptions() {
+        if (mMultiSampleAntiAliasingOptions == null) {
+            mMultiSampleAntiAliasingOptions = new MultiSampleAntiAliasingOptions();
+        }
+        return mMultiSampleAntiAliasingOptions;
     }
 
     /**
@@ -1163,7 +1260,7 @@ public class View {
      */
     @NonNull
     public Dithering getDithering() {
-        return Dithering.values()[nGetDithering(getNativeObject())];
+        return sDitheringValues[nGetDithering(getNativeObject())];
     }
 
     /**
@@ -1188,6 +1285,7 @@ public class View {
                 options.homogeneousScaling,
                 options.minScale,
                 options.maxScale,
+                options.sharpness,
                 options.quality.ordinal());
     }
 
@@ -1239,21 +1337,26 @@ public class View {
      *
      * <p>Post-processing includes:</p>
      * <ul>
-     * <li>Tone-mapping & gamma encoding</li>
+     * <li>Depth-of-field</li>
+     * <li>Bloom</li>
+     * <li>Vignetting</li>
+     * <li>Temporal Anti-aliasing (TAA)</li>
+     * <li>Color grading & gamma encoding</li>
      * <li>Dithering</li>
-     * <li>MSAA</li>
      * <li>FXAA</li>
      * <li>Dynamic scaling</li>
      * </ul>
      *
      * <p>
-     * Disabling post-processing forgoes color correctness as well as anti-aliasing and
-     * should only be used experimentally (e.g., for UI overlays).
+     * Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques
+     * and should only be used for debugging, UI overlays or when using custom render targets
+     * (see RenderTarget).
      * </p>
      *
      * @param enabled true enables post processing, false disables it
      *
-     * @see #setToneMapping
+     * @see #setBloomOptions
+     * @see #setColorGrading
      * @see #setAntiAliasing
      * @see #setDithering
      * @see #setSampleCount
@@ -1348,7 +1451,7 @@ public class View {
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
         nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
-                options.exponent, options.minVarianceScale, options.lightBleedReduction);
+                options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1362,6 +1465,37 @@ public class View {
             mVsmShadowOptions = new VsmShadowOptions();
         }
         return mVsmShadowOptions;
+    }
+
+    /**
+     * Sets soft shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with
+     * {@link LightManager.Builder#shadowOptions}.
+     *
+     * Only applicable when shadow type is set to ShadowType.DPCF.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @param options Options for shadowing.
+     * @see #setShadowType
+     */
+    public void setSoftShadowOptions(@NonNull SoftShadowOptions options) {
+        mSoftShadowOptions = options;
+        nSetSoftShadowOptions(getNativeObject(), options.penumbraScale, options.penumbraRatioScale);
+    }
+
+    /**
+     * Gets soft shadowing options associated with this View.
+     * @see #setSoftShadowOptions
+     * @return soft shadow options currently set.
+     */
+    @NonNull
+    public SoftShadowOptions getSoftShadowOptions() {
+        if (mSoftShadowOptions == null) {
+            mSoftShadowOptions = new SoftShadowOptions();
+        }
+        return mSoftShadowOptions;
     }
 
     /**
@@ -1382,7 +1516,7 @@ public class View {
     @Deprecated
     @NonNull
     public AmbientOcclusion getAmbientOcclusion() {
-        return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
+        return sAmbientOcclusionValues[nGetAmbientOcclusion(getNativeObject())];
     }
 
     /**
@@ -1535,6 +1669,71 @@ public class View {
         return mDepthOfFieldOptions;
     }
 
+    /**
+     * A class containing the result of a picking query
+     */
+    public static class PickingQueryResult {
+        /** The entity of the renderable at the picking query location */
+        @Entity public int renderable;
+        /** The value of the depth buffer at the picking query location */
+        public float depth;
+        /** The fragment coordinate in GL convention at the picking query location */
+        @NonNull public float[] fragCoords = new float[3];
+    };
+
+    /**
+     * An interface to implement a custom class to receive results of picking queries.
+     */
+    public interface OnPickCallback {
+        /**
+         * onPick() is called by the specified Handler in {@link View#pick} when the picking query
+         * result is available.
+         * @param result An instance of {@link PickingQueryResult}.
+         */
+        void onPick(@NonNull PickingQueryResult result);
+    }
+
+    /**
+     * Creates a picking query. Multiple queries can be created (e.g.: multi-touch).
+     * Picking queries are all executed when {@link Renderer#render} is called on this View.
+     * The provided callback is guaranteed to be called at some point in the future.
+     *
+     * Typically it takes a couple frames to receive the result of a picking query.
+     *
+     * @param x        Horizontal coordinate to query in the viewport with origin on the left.
+     * @param y        Vertical coordinate to query on the viewport with origin at the bottom.
+     * @param handler  An {@link java.util.concurrent.Executor Executor}.
+     *                 On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback User callback executed by <code>handler</code> when the picking query
+     *                 result is available.
+     */
+    public void pick(int x, int y,
+            @Nullable Object handler, @Nullable OnPickCallback callback) {
+        InternalOnPickCallback internalCallback = new InternalOnPickCallback(callback);
+        nPick(getNativeObject(), x, y, handler, internalCallback);
+    }
+
+    private static class InternalOnPickCallback implements Runnable {
+        public InternalOnPickCallback(OnPickCallback mUserCallback) {
+            this.mUserCallback = mUserCallback;
+        }
+        @Override
+        public void run() {
+            mPickingQueryResult.renderable = mRenderable;
+            mPickingQueryResult.depth = mDepth;
+            mPickingQueryResult.fragCoords[0] = mFragCoordsX;
+            mPickingQueryResult.fragCoords[1] = mFragCoordsY;
+            mPickingQueryResult.fragCoords[2] = mFragCoordsZ;
+            mUserCallback.onPick(mPickingQueryResult);
+        }
+        private final OnPickCallback mUserCallback;
+        private final PickingQueryResult mPickingQueryResult = new PickingQueryResult();
+        @Entity int mRenderable;
+        float mDepth;
+        float mFragCoordsX;
+        float mFragCoordsY;
+        float mFragCoordsZ;
+    }
 
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1560,11 +1759,12 @@ public class View {
     private static native int nGetAntiAliasing(long nativeView);
     private static native void nSetDithering(long nativeView, int dithering);
     private static native int nGetDithering(long nativeView);
-    private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
+    private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, float sharpness, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float exponent, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
@@ -1582,7 +1782,9 @@ public class View {
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
+    private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
+    private static native void nPick(long nativeView, int x, int y, Object handler, InternalOnPickCallback internalCallback);
 }

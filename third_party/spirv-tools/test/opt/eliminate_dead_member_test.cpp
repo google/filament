@@ -576,7 +576,6 @@ TEST_F(EliminateDeadMemberTest, RemoveMembersUpdateArrayLength) {
    %_Globals = OpVariable %_ptr_Uniform_type__Globals Uniform
        %main = OpFunction %void None %9
          %10 = OpLabel
-         %11 = OpLoad %type__Globals %_Globals
          %12 = OpArrayLength %uint %_Globals 2
                OpReturn
                OpFunctionEnd
@@ -618,6 +617,67 @@ TEST_F(EliminateDeadMemberTest, KeepMembersOpStore) {
          %10 = OpLabel
          %11 = OpLoad %type__Globals %_Globals
                OpStore %_Globals2 %11
+               OpReturn
+               OpFunctionEnd
+)";
+
+  auto result = SinglePassRunAndDisassemble<opt::EliminateDeadMembersPass>(
+      text, /* skip_nop = */ true, /* do_validation = */ true);
+  EXPECT_EQ(opt::Pass::Status::SuccessWithoutChange, std::get<1>(result));
+}
+
+TEST_F(EliminateDeadMemberTest, KeepStorageBufferMembers) {
+  // Test that all members of the storage buffer struct %S are kept.
+  // No change expected.
+  const std::string text = R"(
+               OpCapability Shader
+               OpExtension "SPV_GOOGLE_hlsl_functionality1"
+               OpExtension "SPV_GOOGLE_user_type"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %PSMain "PSMain" %out_var_SV_TARGET
+               OpExecutionMode %PSMain OriginUpperLeft
+               OpSource HLSL 600
+               OpName %type_StructuredBuffer_S "type.StructuredBuffer.S"
+               OpName %S "S"
+               OpMemberName %S 0 "A"
+               OpMemberName %S 1 "B"
+               OpName %Buf "Buf"
+               OpName %out_var_SV_TARGET "out.var.SV_TARGET"
+               OpName %PSMain "PSMain"
+               OpDecorateString %out_var_SV_TARGET UserSemantic "SV_TARGET"
+               OpDecorate %out_var_SV_TARGET Location 0
+               OpDecorate %Buf DescriptorSet 0
+               OpDecorate %Buf Binding 0
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %S 1 Offset 16
+               OpDecorate %_runtimearr_S ArrayStride 32
+               OpMemberDecorate %type_StructuredBuffer_S 0 Offset 0
+               OpMemberDecorate %type_StructuredBuffer_S 0 NonWritable
+               OpDecorate %type_StructuredBuffer_S BufferBlock
+               OpDecorateString %Buf UserTypeGOOGLE "structuredbuffer"
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+      %int_1 = OpConstant %int 1
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+          %S = OpTypeStruct %v4float %v4float
+%_runtimearr_S = OpTypeRuntimeArray %S
+%type_StructuredBuffer_S = OpTypeStruct %_runtimearr_S
+%_ptr_Uniform_type_StructuredBuffer_S = OpTypePointer Uniform %type_StructuredBuffer_S
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+        %Buf = OpVariable %_ptr_Uniform_type_StructuredBuffer_S Uniform
+%out_var_SV_TARGET = OpVariable %_ptr_Output_v4float Output
+     %PSMain = OpFunction %void None %18
+         %20 = OpLabel
+         %21 = OpAccessChain %_ptr_Uniform_v4float %Buf %int_0 %uint_0 %int_1
+         %22 = OpLoad %v4float %21
+               OpStore %out_var_SV_TARGET %22
                OpReturn
                OpFunctionEnd
 )";

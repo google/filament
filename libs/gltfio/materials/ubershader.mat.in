@@ -3,12 +3,13 @@ material {
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
     blending : ${BLENDING},
-    depthWrite : true,
     doubleSided : ${DOUBLESIDED},
+    transparency : ${TRANSPARENCY},
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
     clearCoatIorChange : false,
+    reflections : screenspace,
     parameters : [
 
         { type : float3, name : specularFactor },

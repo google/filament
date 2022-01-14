@@ -28,7 +28,7 @@ namespace filament {
 struct FrameHistoryEntry {
     FrameGraphTexture color;
     FrameGraphTexture::Descriptor colorDesc;
-    math::mat4f projection;
+    math::mat4f projection;     // world space to clip space
     math::float2 jitter{};
     uint32_t frameId = 0;
 
@@ -60,6 +60,10 @@ public:
         return mCurrentEntry;
     }
 
+    const T& getCurrent() const noexcept {
+        return mCurrentEntry;
+    }
+
     // This pushes the current frame info to the FIFO, effectively destroying
     // the oldest state (note: only the structure is destroyed, handles stored in it may
     // have to be destroyed prior to calling this).
@@ -81,4 +85,4 @@ using FrameHistory = TFrameHistory<FrameHistoryEntry, 1u>;
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FRAMEHISTORY_H
+#endif // TNT_FILAMENT_FRAMEHISTORY_H

@@ -359,4 +359,12 @@ void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslan
     }
 }
 
+void GLSLTools::textureLodBias(TShader& shader) {
+    TIntermediate* intermediate = shader.getIntermediate();
+    TIntermNode* root = intermediate->getTreeRoot();
+    ASTUtils::textureLodBias(intermediate, root,
+            "material(struct-MaterialInputs",
+            "filament_lodBias");
+}
+
 } // namespace filamat

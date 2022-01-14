@@ -43,11 +43,14 @@ namespace fuzz {
 FuzzerPass::FuzzerPass(opt::IRContext* ir_context,
                        TransformationContext* transformation_context,
                        FuzzerContext* fuzzer_context,
-                       protobufs::TransformationSequence* transformations)
+                       protobufs::TransformationSequence* transformations,
+                       bool ignore_inapplicable_transformations)
     : ir_context_(ir_context),
       transformation_context_(transformation_context),
       fuzzer_context_(fuzzer_context),
-      transformations_(transformations) {}
+      transformations_(transformations),
+      ignore_inapplicable_transformations_(
+          ignore_inapplicable_transformations) {}
 
 FuzzerPass::~FuzzerPass() = default;
 
@@ -183,9 +186,23 @@ void FuzzerPass::ForEachInstructionWithInstructionDescriptor(
 }
 
 void FuzzerPass::ApplyTransformation(const Transformation& transformation) {
-  assert(transformation.IsApplicable(GetIRContext(),
-                                     *GetTransformationContext()) &&
-         "Transformation should be applicable by construction.");
+  if (ignore_inapplicable_transformations_) {
+    // If an applicable-by-construction transformation turns out to be
+    // inapplicable, this is a bug in the fuzzer. However, when deploying the
+    // fuzzer at scale for finding bugs in SPIR-V processing tools it is
+    // desirable to silently ignore such bugs. This code path caters for that
+    // scenario.
+    if (!transformation.IsApplicable(GetIRContext(),
+                                     *GetTransformationContext())) {
+      return;
+    }
+  } else {
+    // This code path caters for debugging bugs in the fuzzer, where an
+    // applicable-by-construction transformation turns out to be inapplicable.
+    assert(transformation.IsApplicable(GetIRContext(),
+                                       *GetTransformationContext()) &&
+           "Transformation should be applicable by construction.");
+  }
   transformation.Apply(GetIRContext(), GetTransformationContext());
   auto transformation_message = transformation.ToMessage();
   assert(transformation_message.transformation_case() !=

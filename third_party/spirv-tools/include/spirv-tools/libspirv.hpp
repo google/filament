@@ -115,6 +115,12 @@ class ValidatorOptions {
     spvValidatorOptionsSetSkipBlockLayout(options_, val);
   }
 
+  // Enables LocalSizeId decorations where the environment would not otherwise
+  // allow them.
+  void SetAllowLocalSizeId(bool val) {
+    spvValidatorOptionsSetAllowLocalSizeId(options_, val);
+  }
+
   // Records whether or not the validator should relax the rules on pointer
   // usage in logical addressing mode.
   //

@@ -118,6 +118,7 @@ public:
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }
     RefractionMode getRefractionMode() const noexcept { return mRefractionMode; }
     RefractionType getRefractionType() const noexcept { return mRefractionType; }
+    ReflectionMode getReflectionMode() const noexcept { return mReflectionMode; }
 
     bool hasSpecularAntiAliasing() const noexcept { return mSpecularAntiAliasing; }
     float getSpecularAntiAliasingVariance() const noexcept { return mSpecularAntiAliasingVariance; }
@@ -150,8 +151,6 @@ public:
     /** Replaces the material package. */
     static void onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
             size_t packageSize);
-
-    using VariantList = utils::bitset<uint64_t, VARIANT_COUNT>;
 
     /**
      * Returns a list of "active" variants.
@@ -190,6 +189,7 @@ private:
     AttributeBitset mRequiredAttributes;
     RefractionMode mRefractionMode = RefractionMode::NONE;
     RefractionType mRefractionType = RefractionType::SOLID;
+    ReflectionMode mReflectionMode = ReflectionMode::DEFAULT;
     uint64_t mMaterialProperties = 0;
 
     float mMaskThreshold = 0.4f;

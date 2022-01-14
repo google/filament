@@ -35,14 +35,14 @@ bool TransformationAddConstantNull::IsApplicable(
   if (!fuzzerutil::IsFreshId(context, message_.fresh_id())) {
     return false;
   }
-  auto type = context->get_type_mgr()->GetType(message_.type_id());
+  auto type = context->get_def_use_mgr()->GetDef(message_.type_id());
   // The type must exist.
   if (!type) {
     return false;
   }
   // The type must be one of the types for which null constants are allowed,
   // according to the SPIR-V spec.
-  return fuzzerutil::IsNullConstantSupported(*type);
+  return fuzzerutil::IsNullConstantSupported(context, *type);
 }
 
 void TransformationAddConstantNull::Apply(

@@ -142,7 +142,7 @@ IBLPrefilterContext::IBLPrefilterContext(IBLPrefilterContext&& rhs) noexcept
     this->operator=(std::move(rhs));
 }
 
-IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) {
+IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) noexcept {
     using std::swap;
     if (this != & rhs) {
         swap(mRenderer, rhs.mRenderer);
@@ -182,7 +182,7 @@ IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
 
 IBLPrefilterContext::EquirectangularToCubemap&
 IBLPrefilterContext::EquirectangularToCubemap::operator=(
-        IBLPrefilterContext::EquirectangularToCubemap&& rhs) {
+        IBLPrefilterContext::EquirectangularToCubemap&& rhs) noexcept {
     using std::swap;
     if (this != &rhs) {
         swap(mEquirectMaterial, rhs.mEquirectMaterial);
@@ -332,7 +332,8 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(SpecularFilter&& rhs) noexce
     this->operator=(std::move(rhs));
 }
 
-IBLPrefilterContext::SpecularFilter& IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) {
+IBLPrefilterContext::SpecularFilter&
+IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) noexcept {
     using std::swap;
     if (this != & rhs) {
         swap(mKernelMaterial, rhs.mKernelMaterial);
@@ -443,7 +444,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
         mi->setParameter("attachmentLevel", uint32_t(lod));
 
         if (lod == levels - 1) {
-            // this is the last lod, use a more agressive filtering because this level is also
+            // this is the last lod, use a more aggressive filtering because this level is also
             // used for the diffuse brdf by filament, and we need it to be very smooth.
             // So we set the lod offset to at least 2.
             mi->setParameter("lodOffset", std::max(2.0f, options.lodOffset) - log4(omegaP));

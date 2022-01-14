@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_PATH_H_
-#define UTILS_PATH_H_
+#ifndef TNT_UTILS_PATH_H
+#define TNT_UTILS_PATH_H
 
 #include <utils/compiler.h>
 
@@ -287,4 +287,4 @@ private:
 
 } // namespace utils
 
-#endif // UTILS_PATH_H_
+#endif // TNT_UTILS_PATH_H

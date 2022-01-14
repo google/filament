@@ -71,6 +71,9 @@ import static com.google.android.filament.Texture.Type.COMPRESSED;
  * @see MaterialInstance#setParameter(String, Texture, TextureSampler)
  */
 public class Texture {
+    private static final Sampler[] sSamplerValues = Sampler.values();
+    private static final InternalFormat[] sInternalFormatValues = InternalFormat.values();
+
     private long mNativeObject;
 
     public Texture(long nativeTexture) {
@@ -216,7 +219,38 @@ public class Texture {
         ETC2_EAC_RGBA8, ETC2_EAC_SRGBA8,
 
         // Available everywhere except Android/iOS
-        DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA
+        DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA,
+        DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA,
+
+        // ASTC formats are available with a GLES extension
+        RGBA_ASTC_4x4,
+        RGBA_ASTC_5x4,
+        RGBA_ASTC_5x5,
+        RGBA_ASTC_6x5,
+        RGBA_ASTC_6x6,
+        RGBA_ASTC_8x5,
+        RGBA_ASTC_8x6,
+        RGBA_ASTC_8x8,
+        RGBA_ASTC_10x5,
+        RGBA_ASTC_10x6,
+        RGBA_ASTC_10x8,
+        RGBA_ASTC_10x10,
+        RGBA_ASTC_12x10,
+        RGBA_ASTC_12x12,
+        SRGB8_ALPHA8_ASTC_4x4,
+        SRGB8_ALPHA8_ASTC_5x4,
+        SRGB8_ALPHA8_ASTC_5x5,
+        SRGB8_ALPHA8_ASTC_6x5,
+        SRGB8_ALPHA8_ASTC_6x6,
+        SRGB8_ALPHA8_ASTC_8x5,
+        SRGB8_ALPHA8_ASTC_8x6,
+        SRGB8_ALPHA8_ASTC_8x8,
+        SRGB8_ALPHA8_ASTC_10x5,
+        SRGB8_ALPHA8_ASTC_10x6,
+        SRGB8_ALPHA8_ASTC_10x8,
+        SRGB8_ALPHA8_ASTC_10x10,
+        SRGB8_ALPHA8_ASTC_12x10,
+        SRGB8_ALPHA8_ASTC_12x12
     }
 
     /**
@@ -231,7 +265,38 @@ public class Texture {
         ETC2_EAC_RGBA8, ETC2_EAC_SRGBA8,
 
         // Available everywhere except Android/iOS
-        DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA
+        DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA,
+        DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA,
+
+        // ASTC formats are available with a GLES extension
+        RGBA_ASTC_4x4,
+        RGBA_ASTC_5x4,
+        RGBA_ASTC_5x5,
+        RGBA_ASTC_6x5,
+        RGBA_ASTC_6x6,
+        RGBA_ASTC_8x5,
+        RGBA_ASTC_8x6,
+        RGBA_ASTC_8x8,
+        RGBA_ASTC_10x5,
+        RGBA_ASTC_10x6,
+        RGBA_ASTC_10x8,
+        RGBA_ASTC_10x10,
+        RGBA_ASTC_12x10,
+        RGBA_ASTC_12x12,
+        SRGB8_ALPHA8_ASTC_4x4,
+        SRGB8_ALPHA8_ASTC_5x4,
+        SRGB8_ALPHA8_ASTC_5x5,
+        SRGB8_ALPHA8_ASTC_6x5,
+        SRGB8_ALPHA8_ASTC_6x6,
+        SRGB8_ALPHA8_ASTC_8x5,
+        SRGB8_ALPHA8_ASTC_8x6,
+        SRGB8_ALPHA8_ASTC_8x8,
+        SRGB8_ALPHA8_ASTC_10x5,
+        SRGB8_ALPHA8_ASTC_10x6,
+        SRGB8_ALPHA8_ASTC_10x8,
+        SRGB8_ALPHA8_ASTC_10x10,
+        SRGB8_ALPHA8_ASTC_12x10,
+        SRGB8_ALPHA8_ASTC_12x12
     }
 
     /**
@@ -805,7 +870,7 @@ public class Texture {
      */
     @NonNull
     public Sampler getTarget() {
-        return Sampler.values()[nGetTarget(getNativeObject())];
+        return sSamplerValues[nGetTarget(getNativeObject())];
     }
 
     /**
@@ -813,7 +878,7 @@ public class Texture {
      */
     @NonNull
     public InternalFormat getFormat() {
-        return InternalFormat.values()[nGetInternalFormat(getNativeObject())];
+        return sInternalFormatValues[nGetInternalFormat(getNativeObject())];
     }
 
     // TODO: add a setImage() version that takes an android Bitmap

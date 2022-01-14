@@ -28,6 +28,7 @@
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
+#include <filament/MorphTargetBuffer.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/TextureSampler.h>
@@ -131,7 +132,7 @@ struct FAssetLoader : public AssetLoader {
     void createRenderable(const cgltf_data* srcAsset, const cgltf_node* node, Entity entity,
             const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
-            const char* name);
+            const char* name, MaterialInstance* mi);
     void createLight(const cgltf_light* light, Entity entity);
     void createCamera(const cgltf_camera* camera, Entity entity);
     MaterialInstance* createMaterialInstance(const cgltf_data* srcAsset,
@@ -474,7 +475,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         builder.material(index, mi);
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap, name)) {
+        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap, name, mi)) {
             mError = true;
             continue;
         }
@@ -525,19 +526,20 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     // node weights are provided, they override the ones specified on the mesh.
     if (numMorphTargets > 0) {
         RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
-        float4 weights(0, 0, 0, 0);
-        for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, mesh->weights_count); ++i) {
+        const auto size = std::min(MAX_MORPH_TARGETS, std::max(mesh->weights_count, node->weights_count));
+        std::vector<float> weights(size);
+        for (cgltf_size i = 0, c = std::min(size, mesh->weights_count); i < c; ++i) {
             weights[i] = mesh->weights[i];
         }
-        for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, node->weights_count); ++i) {
+        for (cgltf_size i = 0, c = std::min(size, node->weights_count); i < c; ++i) {
             weights[i] = node->weights[i];
         }
-        mRenderableManager.setMorphWeights(renderable, weights);
+        mRenderableManager.setMorphWeights(renderable, weights.data(), size);
     }
 }
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
-        const UvMap& uvmap, const char* name) {
+        const UvMap& uvmap, const char* name, MaterialInstance* mi) {
     outPrim->uvmap = uvmap;
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
@@ -683,7 +685,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     // If the model is lit but does not have normals, we'll need to generate flat normals.
-    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+    auto const* const material = mi->getMaterial();
+    if (material->getRequiredAttributes().test(VertexAttribute::TANGENTS) && !hasNormals) {
         vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
         vbb.normalized(VertexAttribute::TANGENTS);
         cgltf_attribute_type atype = cgltf_attribute_type_normal;
@@ -692,14 +695,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     cgltf_size targetsCount = inPrim->targets_count;
 
-    // There is no need to emit a warning if there are more than 4 targets. This is only the base
-    // VertexBuffer and more might be created by MorphHelper.
     if (targetsCount > MAX_MORPH_TARGETS) {
+        utils::slog.w << "WARNING: Exceeded max morph target count of " << MAX_MORPH_TARGETS << utils::io::endl;
         targetsCount = MAX_MORPH_TARGETS;
     }
-
-    constexpr int baseTangentsAttr = (int) VertexAttribute::MORPH_TANGENTS_0;
-    constexpr int basePositionAttr = (int) VertexAttribute::MORPH_POSITION_0;
 
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
         const cgltf_morph_target& morphTarget = inPrim->targets[targetIndex];
@@ -709,17 +708,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             const cgltf_attribute_type atype = attribute.type;
             const int morphId = targetIndex + 1;
 
-            // The glTF tangent data is ignored here, but honored in ResourceLoader.
-            if (atype == cgltf_attribute_type_tangent) {
-                continue;
-            }
-
-            if (atype == cgltf_attribute_type_normal) {
-                VertexAttribute attr = (VertexAttribute) (baseTangentsAttr + targetIndex);
-                vbb.attribute(attr, slot, VertexBuffer::AttributeType::SHORT4);
-                vbb.normalized(attr);
-                outPrim->morphTangents[targetIndex] = slot;
-                addBufferSlot({&mResult->mGenerateTangents, atype, slot++, morphId});
+            // The glTF normal and tangent data are ignored here, but honored in ResourceLoader.
+            if (atype == cgltf_attribute_type_normal || atype == cgltf_attribute_type_tangent) {
                 continue;
             }
 
@@ -740,13 +730,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 slog.e << "Unsupported accessor type in " << name << io::endl;
                 return false;
             }
-            const int stride = (fatype == actualType) ? accessor->stride : 0;
-
-            VertexAttribute attr = (VertexAttribute) (basePositionAttr + targetIndex);
-            vbb.attribute(attr, slot, fatype, 0, stride);
-            vbb.normalized(attr, accessor->normalized);
-            outPrim->morphPositions[targetIndex] = slot;
-            addBufferSlot({accessor, atype, slot++, morphId});
         }
     }
 
@@ -1041,8 +1024,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setMaskThreshold(inputMat->alpha_cutoff);
     }
 
-    const float* e = inputMat->emissive_factor;
-    mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]));
+    float3 emissiveFactor(inputMat->emissive_factor[0], inputMat->emissive_factor[1], inputMat->emissive_factor[2]);
+    if (inputMat->has_emissive_strength) {
+        emissiveFactor *= inputMat->emissive_strength.emissive_strength;
+    }
+    mi->setParameter("emissiveFactor", emissiveFactor);
 
     const float* c = mrConfig.base_color_factor;
     mi->setParameter("baseColorFactor", float4(c[0], c[1], c[2], c[3]));

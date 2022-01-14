@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_PANIC_H_
-#define UTILS_PANIC_H_
+#ifndef TNT_UTILS_PANIC_H
+#define TNT_UTILS_PANIC_H
 
 #include <string>
 
@@ -558,4 +558,4 @@ class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
  */
 #define ASSERT_DESTRUCTOR(cond, format, ...) (!(cond) ? PANIC_LOG(format, ##__VA_ARGS__) : (void)0)
 
-#endif  // UTILS_PANIC_H_
+#endif  // TNT_UTILS_PANIC_H

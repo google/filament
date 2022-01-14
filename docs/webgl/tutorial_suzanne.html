@@ -104,11 +104,11 @@ with the following content.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #408080; font-style: italic">// TODO: declare asset URLs</span>
 
 Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () =&gt; {
-    <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> App(<span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>]);
+    <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> App(<span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>]);
 });
 
 <span style="color: #008000; font-weight: bold">class</span> App {
-    constructor(canvas) {
+    <span style="color: #008000; font-weight: bold">constructor</span>(canvas) {
         <span style="color: #008000; font-weight: bold">this</span>.canvas <span style="color: #666666">=</span> canvas;
         <span style="color: #008000; font-weight: bold">this</span>.engine <span style="color: #666666">=</span> Filament.Engine.create(canvas);
         <span style="color: #008000; font-weight: bold">this</span>.scene <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createScene();
@@ -172,7 +172,7 @@ string -- which might be empty.</p>
 <p>In our case, we know that our web server will have <code>astc</code> and <code>s3tc</code> variants for albedo, and <code>etc</code>
 variants for the other textures. The uncompressed variants (empty string) are always available as a
 last resort. Go ahead and replace the <strong>declare asset URLs</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> albedo_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;astc s3tc&#39;</span>);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> albedo_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;astc s3tc_srgb&#39;</span>);
 <span style="color: #008000; font-weight: bold">const</span> texture_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;etc&#39;</span>);
 
 <span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;venetian_crossroads_2k&#39;</span>
@@ -213,7 +213,7 @@ was created in the app constructor.</p>
     <span style="color: #008000; font-weight: bold">const</span> normal <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx(normal_url);
     <span style="color: #008000; font-weight: bold">const</span> ao <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx(ao_url);
 
-    <span style="color: #008000; font-weight: bold">const</span> sampler <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.TextureSampler(
+    <span style="color: #008000; font-weight: bold">const</span> sampler <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.TextureSampler(
         Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
         Filament.MagFilter.LINEAR,
         Filament.WrapMode.CLAMP_TO_EDGE);
@@ -241,13 +241,13 @@ listens for drag events and computes a rotation matrix.</p>
 
 <p>Next, replace the <strong>initialize gltumble</strong> and <strong>apply gltumble matrix</strong> comments with the following
 two code snippets.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.trackball <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Trackball(canvas, {startSpin<span style="color: #666666">:</span> <span style="color: #666666">0.035</span>});
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.trackball <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Trackball(canvas, {startSpin<span style="color: #666666">:</span> <span style="color: #666666">0.035</span>});
 </pre></div>
 
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> tcm <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.getTransformManager();
 <span style="color: #008000; font-weight: bold">const</span> inst <span style="color: #666666">=</span> tcm.getInstance(<span style="color: #008000; font-weight: bold">this</span>.suzanne);
 tcm.setTransform(inst, <span style="color: #008000; font-weight: bold">this</span>.trackball.getMatrix());
-inst.<span style="color: #008000; font-weight: bold">delete</span>();
+inst.<span style="color: #AA22FF; font-weight: bold">delete</span>();
 </pre></div>
 
 <p>That's it, we now have a fast-loading interactive demo. The complete JavaScript file is available

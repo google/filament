@@ -3,17 +3,161 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.1 (currently main branch)
+## v1.16.2 (currently main branch)
 
-- engine: `double` precision model (and view) matrix on `Camera`. This is only an
-  API change, internal precision is still `float` [⚠️ **API Change**].
+## v1.16.1
+
+- engine: add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
+  access this new feature**].
+
+## v1.16.0
+
+- engine: Fixes skinning calculations (#4887) [⚠️ **Material breakage**].
+- engine: Add support for the glTF extension KHR_materials_emissive_strength.
+- engine: Improvements and fixes to skinning calculations.
+- engine: Fix debug checks for compressed textures.
+- Metal: Fix `readPixels` when dimensions are greater than the render target's.
+
+## v1.15.2
+
+- engine: add support for PCSS (Percentage Closer Soft Shadows).
+- engine: fix spotlight shadow bias.
+- samples: avoid leaking IBLs in Android sample-gltf-viewer.
+- libs: fix `libibl` on mobile.
+
+## v1.15.1
+
+- engine: add support for DPCF (PCF shadows with contact hardening).
+- engine: add support for Wayland and Vulkan.
+- engine: Fade lights out when close to light far plane.
+- Java: Add missing `Engine#destroySkinningBuffer` method.
+
+## v1.15.0
+
+- engine: Fix spotlights normal bias calculation [⚠️ **Material breakage**].
+- libimage: Fix loading spherical harmonics on certain locals.
+
+## v1.14.2
+
+- Metal: Fix validation error when rendering to `RenderTarget` without depth attachment.
+- engine: Fix rendering glitch with zero-scale bone transforms.
+
+## v1.14.1
+
+- engine: Improvements to shadowing.
+
+## v1.14.0
+
+- engine: Internal materials can use structures as parameters [⚠️ **Material breakage**].
+- engine: `readPixels` on a `SwapChain` must be called within `beginFrame` / `endFrame` [⚠️ **API
+  Change**].
+- engine: Fix normal bias and improve spotlight quality.
+- Java: Fix shadow biases.
+
+## v1.13.0
+
+- Android: Gradle configuration caching is now enabled.
+- Android: Filament's Gradle properties have all been renamed to `com.google.android.filament.xxx`
+  where `xxx` is the property name. See `android/build.gradle` for a complete list [⚠️]
+- Android: The Gradle property `filament_tools_dir` (now called
+  `com.google.android.filament.tools-dir`) does not have a default value anymore. Please specify one
+  in your `gradle.properties` if you reuse the Gradle plugin in your projects [⚠️]
+- engine: Fix spotlights direction and falloff [⚠️ **Material breakage**].
+- engine: Improvements to VSM and spotlight shadows.
+
+## v1.12.11
+
+- Metal: Color grading performance improvement on M1 devices.
+- samples: Fix glitchy animation seen in gltf-viewer iOS sample.
+
+## v1.12.10
+
+- engine: rewrite dynamic resolution scaling controller for better accuracy and less jittering.
+- Java: fix missing ASTC texture enum.
+- tools: Fix normal map issues in mipgen.
+- WebGL: expose some `SurfaceOrientation` functions.
+
+## v1.12.9
+
+- engine: New API: `MultiSampleAntiAliasingOptions` and HDR-aware MSAA resolve. When `customResolve`
+  is enabled, improves anti-aliasing quality [**NEW API**].
+- engine: Fixes and improvements for FSR.
+- engine: All APIs that take a callback as argument now also take a `CallbackHandler*`, a new
+  interface that provides more flexibility around callback dispatch [**NEW API**].
+- Android: Fix JNI bindings for `DepthOfFieldOptions`.
+- Android: workarounds for Adreno-specific fraembuffer issue.
+- JavaScript: updates to JS bindings.
+
+## v1.12.8
+
+- engine: Added picking API to `View`  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: A new `Engine::pumpMessageQueues()` method can be used to trigger all pending user
+  callbacks right away [**NEW API**].
+- engine: new inline helpers to more easily use lambdas, functors and method callbacks with
+  `{Pixel}BufferDescriptor`.
+- Vulkan: fix vertical offset for `readPixels`.
+- Vulkan: various internal improvements.
+- Metal: support integer formats with `readPixels`.
+
+## v1.12.7
+
+- engine: Fix, apply emissive after shadowing.
+
+## v1.12.6
+
+- engine: Added concept of lod bias to materials.
+  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
+- engine: Use more sensible defaults for spot light inner outer cone angles.
+- engine: Fix potential race condition that caused stalls in `endFrame`.
+- gltfio: Improved handling of transparent materials.
+- Metal: Fix potential crash on earlier versions of iOS (<= 13.0).
+- Android: Fix `filament-utils-android` 'lite' flavor.
+- Java: Fix potential crash with `IBLPrefilter`.
+
+## v1.12.5
+
+- engine: work around a job scheduling issue in `endFrame` that caused stuttering on some Android
+devices.
+
+## v1.12.4
+
+- engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
+  that simulates color and brightness shifts in human vision in low-light conditions.
+- engine: improved performance of AMD FidelityFX FSR1 by 4.6x, it now runs in about 2ms in 4K.
+- engine: Dynamic resolution quality `MEDIUM`, `HIGH` and `ULTRA` now all use AMD FidelityFX FSR1.
+- engine: Fix crash when duplicating material instances.
+- gltfio: generate tangents if requested by the material.
+
+## v1.12.3
+
+- engine: Support AMD FidelityFX Super Resolution for dynamic resolution scaling
+
+## v1.12.2
+
+- engine: New API on `ColorGrading` to enable or disable gamut mapping at will [**New API**].
+- engine: Fix typo causing ShadowOptions::shadowFar to not work properly.
+- engine: Fix, CSM glitch when using shadowMultiplier materials.
+- engine: Improve precision when computing camera projection.
+- engine: Increase the number of supported spot shadows to 14 (from 6).
+- Metal: Add texture swizzling support for external textures.
+
+## v1.12.1
+
+- engine: `double` precision translation support in TransformManager. Disabled by default.
+  Augment model (and view) matrix on `Camera` to accept double precision matrices. When enabled,
+  double precision translations allow filament to handle a very large world space [**New API**].
+- engine: Fix, Views with custom render targets are now blendable.
 
 ## v1.12.0
 
 - engine: Option to automatically compute bent normals from SSAO & apply to specular AO
   [⚠️ **Material breakage**].
-- engine: New APIs: Light channels. Geometry and lights now have a channel associated to them, at 
+- engine: New APIs: Light channels. Geometry and lights now have a channel associated to them, at
   least one channel must match for lighting to occur [⚠️ **Material breakage**].
+- engine: Fix potential GPU crash with punctual lights near the far clipping plane.
+- materials: The `inverseTonemap` API is now an exact inverse of the Filmic tonemapper.
+- Metal: Better support for texture formats on M1 Macs.
 
 ## v1.11.2
 

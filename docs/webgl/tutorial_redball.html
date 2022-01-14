@@ -75,11 +75,11 @@ Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
 
   <span style="color: #408080; font-style: italic">// Obtain the canvas DOM object and pass it to the App.</span>
   <span style="color: #008000; font-weight: bold">const</span> canvas <span style="color: #666666">=</span> <span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>];
-  <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> App(canvas);
+  <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> App(canvas);
 } );
 
 <span style="color: #008000; font-weight: bold">class</span> App {
-  constructor(canvas) {
+  <span style="color: #008000; font-weight: bold">constructor</span>(canvas) {
     <span style="color: #008000; font-weight: bold">this</span>.canvas <span style="color: #666666">=</span> canvas;
     <span style="color: #008000; font-weight: bold">const</span> engine <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine <span style="color: #666666">=</span> Filament.Engine.create(canvas);
     <span style="color: #008000; font-weight: bold">const</span> scene <span style="color: #666666">=</span> engine.createScene();
@@ -150,7 +150,7 @@ sphere</strong> with the following snippet.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> renderable <span style="color: #666666">=</span> Filament.EntityManager.get().create();
 scene.addEntity(renderable);
 
-<span style="color: #008000; font-weight: bold">const</span> icosphere <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.IcoSphere(<span style="color: #666666">5</span>);
+<span style="color: #008000; font-weight: bold">const</span> icosphere <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.IcoSphere(<span style="color: #666666">5</span>);
 
 <span style="color: #008000; font-weight: bold">const</span> vb <span style="color: #666666">=</span> Filament.VertexBuffer.Builder()
   .vertexCount(icosphere.vertices.length <span style="color: #666666">/</span> <span style="color: #666666">3</span>)
@@ -211,7 +211,7 @@ following (don't type this out, there's an easier way).</p>
 
 <span style="color: #408080; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span>
 <span style="color: #008000; font-weight: bold">const</span> ibl_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[ibl_url]);
-<span style="color: #008000; font-weight: bold">const</span> iblktx <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.KtxBundle(ibl_package);
+<span style="color: #008000; font-weight: bold">const</span> iblktx <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.KtxBundle(ibl_package);
 
 <span style="color: #008000; font-weight: bold">const</span> ibltex <span style="color: #666666">=</span> Filament.Texture.Builder()
   .width(iblktx.info().pixelWidth)
@@ -253,7 +253,7 @@ scene.setIndirectLight(indirectLight);
 Without a skybox, the reflections on the ball are not representative of its surroundings.
 Here's one way to create a texture for the skybox:</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> sky_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[sky_url]);
-<span style="color: #008000; font-weight: bold">const</span> skyktx <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.KtxBundle(sky_package);
+<span style="color: #008000; font-weight: bold">const</span> skyktx <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.KtxBundle(sky_package);
 <span style="color: #008000; font-weight: bold">const</span> skytex <span style="color: #666666">=</span> Filament.Texture.Builder()
   .width(skyktx.info().pixelWidth)
   .height(skyktx.info().pixelHeight)

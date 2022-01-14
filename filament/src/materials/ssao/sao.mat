@@ -22,11 +22,6 @@ material {
         },
         {
             type : float,
-            name : depthParams,
-            precision: high
-        },
-        {
-            type : float,
             name : invRadiusSquared
         },
         {
@@ -149,13 +144,12 @@ fragment {
         highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
         highp float depth = sampleDepth(materialParams_depth, uv, 0.0);
-        highp float z = linearizeDepth(depth, materialParams.depthParams);
+        highp float z = linearizeDepth(depth);
         highp vec3 origin = computeViewSpacePositionFromDepth(uv, z, materialParams.positionParams);
 
         vec3 normal = computeViewSpaceNormal(materialParams_depth, uv, depth, origin,
-                materialParams.resolution,
-                materialParams.positionParams,
-                materialParams.depthParams);
+                materialParams.resolution.zw,
+                materialParams.positionParams);
 
         float occlusion = 0.0;
         vec3 bentNormal; // will be discarded

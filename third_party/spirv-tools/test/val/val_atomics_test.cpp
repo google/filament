@@ -2679,6 +2679,39 @@ OpFunctionEnd
                         "CooperativeMatrixNV capability is present"));
 }
 
+TEST_F(ValidateAtomics, IIncrementBadPointerDataType) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+%uint_538976288 = OpConstant %uint 538976288
+        %int = OpTypeInt 32 1
+%_runtimearr_int = OpTypeRuntimeArray %int
+  %_struct_5 = OpTypeStruct %_runtimearr_int
+%_ptr_Uniform__struct_5 = OpTypePointer Uniform %_struct_5
+          %3 = OpVariable %_ptr_Input_v3uint Input
+          %7 = OpVariable %_ptr_Uniform__struct_5 Uniform
+       %8224 = OpFunction %void None %16
+      %65312 = OpLabel
+         %25 = OpAccessChain %_ptr_Input_uint %3 %uint_538976288
+         %26 = OpLoad %uint %25
+    %2097184 = OpAtomicIIncrement %int %7 %uint_538976288 %26
+               OpUnreachable
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AtomicIIncrement: expected Pointer to point to a "
+                        "value of type Result Type"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

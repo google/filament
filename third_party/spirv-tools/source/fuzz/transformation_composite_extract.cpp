@@ -125,7 +125,7 @@ void TransformationCompositeExtract::AddDataSynonymFacts(
   // or if the result id into which we are extracting is irrelevant.
   if (!fuzzerutil::CanMakeSynonymOf(
           ir_context, *transformation_context,
-          ir_context->get_def_use_mgr()->GetDef(message_.composite_id())) ||
+          *ir_context->get_def_use_mgr()->GetDef(message_.composite_id())) ||
       transformation_context->GetFactManager()->IdIsIrrelevant(
           message_.fresh_id())) {
     return;

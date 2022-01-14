@@ -58,6 +58,10 @@ import java.util.Set;
  */
 public class RenderableManager {
     private static final String LOG_TAG = "Filament";
+
+    private static final VertexBuffer.VertexAttribute[] sVertexAttributeValues =
+            VertexBuffer.VertexAttribute.values();
+
     private long mNativeObject;
 
     RenderableManager(long nativeRenderableManager) {
@@ -92,7 +96,9 @@ public class RenderableManager {
     public enum PrimitiveType {
         POINTS(0),
         LINES(1),
-        TRIANGLES(4);
+        LINE_STRIP(3),
+        TRIANGLES(4),
+        TRIANGLE_STRIP(5);
 
         private final int mType;
         PrimitiveType(int value) { mType = value; }
@@ -396,9 +402,6 @@ public class RenderableManager {
         /**
          * Controls if the renderable has vertex morphing targets, false by default.
          *
-         * <p>This is required to enable GPU morphing for up to 4 attributes. The attached VertexBuffer
-         * must provide data in the appropriate VertexAttribute slots (<code>MORPH_POSITION_0</code> etc).</p>
-         *
          * <p>See also {@link RenderableManager#setMorphWeights}, which can be called on a per-frame basis
          * to advance the animation.</p>
          */
@@ -491,14 +494,11 @@ public class RenderableManager {
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * <p>This is specified using a 4-tuple, one float per morph target. If the renderable has fewer
-     * than 4 morph targets, then clients should fill the unused components with zeroes.</p>
-     *
      * <p>The renderable must be built with morphing enabled.</p>
      *
      * @see Builder#morphing
      */
-    public void setMorphWeights(@EntityInstance int i, @NonNull @Size(min = 4) float[] weights) {
+    public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights) {
         nSetMorphWeights(mNativeObject, i, weights);
     }
 
@@ -712,15 +712,19 @@ public class RenderableManager {
     /**
      * Retrieves the set of enabled attribute slots in the given primitive's VertexBuffer.
      */
-    public Set<VertexBuffer.VertexAttribute> getEnabledAttributesAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex) {
+    public Set<VertexBuffer.VertexAttribute> getEnabledAttributesAt(
+            @EntityInstance int i, @IntRange(from = 0) int primitiveIndex) {
         int bitSet = nGetEnabledAttributesAt(mNativeObject, i, primitiveIndex);
-        Set<VertexBuffer.VertexAttribute> requiredAttributes = EnumSet.noneOf(VertexBuffer.VertexAttribute.class);
-        VertexBuffer.VertexAttribute[] values = VertexBuffer.VertexAttribute.values();
+        Set<VertexBuffer.VertexAttribute> requiredAttributes =
+                EnumSet.noneOf(VertexBuffer.VertexAttribute.class);
+        VertexBuffer.VertexAttribute[] values = sVertexAttributeValues;
+
         for (int j = 0; j < values.length; j++) {
             if ((bitSet & (1 << j)) != 0) {
                 requiredAttributes.add(values[j]);
             }
         }
+
         requiredAttributes = Collections.unmodifiableSet(requiredAttributes);
         return requiredAttributes;
     }

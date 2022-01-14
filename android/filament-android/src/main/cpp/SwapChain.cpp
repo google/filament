@@ -27,5 +27,8 @@ Java_com_google_android_filament_SwapChain_nSetFrameCompletedCallback(JNIEnv* en
         jlong nativeSwapChain, jobject handler, jobject runnable) {
     SwapChain* swapChain = (SwapChain*) nativeSwapChain;
     auto *callback = JniCallback::make(env, handler, runnable);
-    swapChain->setFrameCompletedCallback(&JniCallback::invoke, callback);
+    swapChain->setFrameCompletedCallback([](void* user) {
+        JniCallback* callback = (JniCallback*)user;
+        JniCallback::postToJavaAndDestroy(callback);
+    }, callback);
 }

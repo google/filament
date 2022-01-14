@@ -291,6 +291,7 @@ public:
         numEntryPoints(0), numErrors(0), numPushConstants(0), recursive(false),
         invertY(false),
         useStorageBuffer(false),
+        invariantAll(false),
         nanMinMaxClamp(false),
         depthReplacing(false),
         uniqueId(0),
@@ -538,7 +539,7 @@ public:
     TIntermTyped* foldSwizzle(TIntermTyped* node, TSwizzleSelectors<TVectorSelector>& fields, const TSourceLoc&);
 
     // Tree ops
-    static const TIntermTyped* findLValueBase(const TIntermTyped*, bool swizzleOkay);
+    static const TIntermTyped* findLValueBase(const TIntermTyped*, bool swizzleOkay , bool BufferReferenceOk = false);
 
     // Linkage related
     void addSymbolLinkageNodes(TIntermAggregate*& linkage, EShLanguage, TSymbolTable&);
@@ -560,6 +561,8 @@ public:
 
     void setUseStorageBuffer() { useStorageBuffer = true; }
     bool usingStorageBuffer() const { return useStorageBuffer; }
+    void setInvariantAll() { invariantAll = true; }
+    bool isInvariantAll() const { return invariantAll; }
     void setDepthReplacing() { depthReplacing = true; }
     bool isDepthReplacing() const { return depthReplacing; }
     bool setLocalSize(int dim, int size)
@@ -926,6 +929,11 @@ public:
         return false;
     }
 
+    bool IsRequestedExtension(const char* extension) const
+    {
+        return (requestedExtensions.find(extension) != requestedExtensions.end());
+    }
+
     void addToCallGraph(TInfoSink&, const TString& caller, const TString& callee);
     void merge(TInfoSink&, TIntermediate&);
     void finalCheck(TInfoSink&, bool keepUncalled);
@@ -1063,6 +1071,7 @@ protected:
     bool recursive;
     bool invertY;
     bool useStorageBuffer;
+    bool invariantAll;
     bool nanMinMaxClamp;            // true if desiring min/max/clamp to favor non-NaN over NaN
     bool depthReplacing;
     int localSize[3];

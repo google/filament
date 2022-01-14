@@ -630,7 +630,7 @@ bool Fuzz(const spv_target_env& target_env,
       std::move(ir_context), std::move(transformation_context),
       std::move(fuzzer_context), message_consumer, donor_suppliers,
       fuzzer_options->all_passes_enabled, repeated_pass_strategy,
-      fuzzer_options->fuzzer_pass_validation_enabled, validator_options);
+      fuzzer_options->fuzzer_pass_validation_enabled, validator_options, false);
   auto fuzz_result = fuzzer.Run(0);
   if (fuzz_result.status ==
       spvtools::fuzz::Fuzzer::Status::kFuzzerPassLedToInvalidModule) {
@@ -673,6 +673,19 @@ void DumpTransformationsBinary(
   transformations_file.close();
 }
 
+// The Chromium project applies the following patch to the protobuf library:
+//
+// source.chromium.org/chromium/chromium/src/+/main:third_party/protobuf/patches/0003-remove-static-initializers.patch
+//
+// This affects how Status objects must be constructed. This method provides a
+// convenient way to get the OK status that works both with and without the
+// patch. With the patch OK is a StatusPod, from which a Status can be
+// constructed. Without the patch, OK is already a Status, and we harmlessly
+// copy-construct the result from it.
+google::protobuf::util::Status GetProtobufOkStatus() {
+  return google::protobuf::util::Status(google::protobuf::util::Status::OK);
+}
+
 // Dumps |transformations| to file |filename| in JSON format. Useful for
 // interactive debugging.
 void DumpTransformationsJson(
@@ -683,7 +696,7 @@ void DumpTransformationsJson(
   json_options.add_whitespace = true;
   auto json_generation_status = google::protobuf::util::MessageToJsonString(
       transformations, &json_string, json_options);
-  if (json_generation_status == google::protobuf::util::Status::OK) {
+  if (json_generation_status == GetProtobufOkStatus()) {
     std::ofstream transformations_json_file(filename);
     transformations_json_file << json_string;
     transformations_json_file.close();
@@ -734,9 +747,8 @@ int main(int argc, const char** argv) {
     std::string facts_json_string((std::istreambuf_iterator<char>(facts_input)),
                                   std::istreambuf_iterator<char>());
     facts_input.close();
-    if (google::protobuf::util::Status::OK !=
-        google::protobuf::util::JsonStringToMessage(facts_json_string,
-                                                    &initial_facts)) {
+    if (GetProtobufOkStatus() != google::protobuf::util::JsonStringToMessage(
+                                     facts_json_string, &initial_facts)) {
       spvtools::Error(FuzzDiagnostic, nullptr, {}, "Error reading facts data");
       return 1;
     }
@@ -816,7 +828,7 @@ int main(int argc, const char** argv) {
     json_options.add_whitespace = true;
     auto json_generation_status = google::protobuf::util::MessageToJsonString(
         transformations_applied, &json_string, json_options);
-    if (json_generation_status != google::protobuf::util::Status::OK) {
+    if (json_generation_status != GetProtobufOkStatus()) {
       spvtools::Error(FuzzDiagnostic, nullptr, {},
                       "Error writing out transformations in JSON format");
       return 1;

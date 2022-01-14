@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_COMMANDSTREAM_H
-#define TNT_FILAMENT_DRIVER_COMMANDSTREAM_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_COMMANDSTREAM_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_COMMANDSTREAM_H
 
 #include "private/backend/CircularBuffer.h"
 
@@ -343,4 +343,4 @@ PodType* CommandStream::allocatePod(size_t count, size_t alignment) noexcept {
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_COMMANDSTREAM_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_COMMANDSTREAM_H

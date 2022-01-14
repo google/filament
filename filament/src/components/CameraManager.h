@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_CAMERAMANAGER_H
-#define TNT_FILAMENT_CAMERAMANAGER_H
+#ifndef TNT_FILAMENT_COMPONENTS_CAMERAMANAGER_H
+#define TNT_FILAMENT_COMPONENTS_CAMERAMANAGER_H
 
 #include "upcast.h"
 
@@ -87,4 +87,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_CAMERAMANAGER_H
+#endif // TNT_FILAMENT_COMPONENTS_CAMERAMANAGER_H

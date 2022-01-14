@@ -204,6 +204,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
+
+    setTransparencyMode(material->getTransparencyMode());
 }
 
 FMaterialInstance* FMaterialInstance::duplicate(
@@ -253,6 +255,8 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
         setSpecularAntiAliasingVariance(material->getSpecularAntiAliasingVariance());
         setSpecularAntiAliasingThreshold(material->getSpecularAntiAliasingThreshold());
     }
+
+    setTransparencyMode(material->getTransparencyMode());
 }
 
 FMaterialInstance::~FMaterialInstance() noexcept = default;
@@ -327,6 +331,10 @@ void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
     }
 }
 
+void FMaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
+    mTransparencyMode = mode;
+}
+
 void FMaterialInstance::setDepthCulling(bool enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
 }
@@ -391,6 +399,10 @@ void MaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcep
 
 void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
     upcast(this)->setDoubleSided(doubleSided);
+}
+
+void MaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
+    upcast(this)->setTransparencyMode(mode);
 }
 
 void MaterialInstance::setCullingMode(CullingMode culling) noexcept {

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_LIGHTMANAGER_H
-#define TNT_FILAMENT_DETAILS_LIGHTMANAGER_H
+#ifndef TNT_FILAMENT_COMPONENTS_LIGHTMANAGER_H
+#define TNT_FILAMENT_COMPONENTS_LIGHTMANAGER_H
 
 #include "upcast.h"
 
@@ -90,7 +90,7 @@ public:
         CANDELA     // intensity specified in candela (only applicable to punctual lights)
     };
 
-    struct ShadowParams {
+    struct ShadowParams { // TODO: get rid of this struct
         LightManager::ShadowOptions options;
     };
 
@@ -239,7 +239,7 @@ private:
         DIRECTION,          // direction in local-space (i.e. pre-transform)
         COLOR,              // color
         SHADOW_PARAMS,      // state needed for shadowing
-        SPOT_PARAMS,        // state needed for spot lights
+        SPOT_PARAMS,        // state needed for spotlights
         SUN_ANGULAR_RADIUS, // state for the directional light sun
         SUN_HALO_SIZE,      // state for the directional light sun
         SUN_HALO_FALLOFF,   // state for the directional light sun
@@ -307,4 +307,4 @@ FILAMENT_UPCAST(LightManager)
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_LIGHTMANAGER_H
+#endif // TNT_FILAMENT_COMPONENTS_LIGHTMANAGER_H

@@ -62,7 +62,7 @@ public:
      * Creates an IBLPrefilter context.
      * @param engine filament engine to use
      */
-    IBLPrefilterContext(filament::Engine& engine);
+    explicit IBLPrefilterContext(filament::Engine& engine);
 
     /**
      * Destroys all GPU resources created during initialization.
@@ -75,7 +75,7 @@ public:
 
     // movable
     IBLPrefilterContext(IBLPrefilterContext&& rhs) noexcept;
-    IBLPrefilterContext& operator=(IBLPrefilterContext&& rhs);
+    IBLPrefilterContext& operator=(IBLPrefilterContext&& rhs) noexcept;
 
     // -------------------------------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ public:
         EquirectangularToCubemap(EquirectangularToCubemap const&) = delete;
         EquirectangularToCubemap& operator=(EquirectangularToCubemap const&) = delete;
         EquirectangularToCubemap(EquirectangularToCubemap&& rhs) noexcept;
-        EquirectangularToCubemap& operator=(EquirectangularToCubemap&& rhs);
+        EquirectangularToCubemap& operator=(EquirectangularToCubemap&& rhs) noexcept;
 
         /**
          * Converts an equirectangular image to a cubemap.
@@ -175,7 +175,7 @@ public:
         SpecularFilter(SpecularFilter const&) = delete;
         SpecularFilter& operator=(SpecularFilter const&) = delete;
         SpecularFilter(SpecularFilter&& rhs) noexcept;
-        SpecularFilter& operator=(SpecularFilter&& rhs);
+        SpecularFilter& operator=(SpecularFilter&& rhs) noexcept;
 
         /**
          * Generates a prefiltered cubemap.

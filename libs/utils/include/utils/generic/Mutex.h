@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_GENERIC_MUTEX_H
-#define UTILS_GENERIC_MUTEX_H
+#ifndef TNT_UTILS_GENERIC_MUTEX_H
+#define TNT_UTILS_GENERIC_MUTEX_H
 
 #include <mutex>
 
@@ -25,4 +25,4 @@ using Mutex = std::mutex;
 
 } // namespace utils
 
-#endif // UTILS_GENERIC_MUTEX_H
+#endif // TNT_UTILS_GENERIC_MUTEX_H

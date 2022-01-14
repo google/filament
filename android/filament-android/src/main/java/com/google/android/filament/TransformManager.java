@@ -84,6 +84,35 @@ import androidx.annotation.Size;
     }
 
     /**
+     * Enables or disable the accurate translation mode. Disabled by default.
+     *
+     * When accurate translation mode is active, the translation component of all transforms is
+     * maintained at double precision. This is only useful if the mat4 version of setTransform()
+     * is used, as well as getTransformAccurate().
+     *
+     * @param enable true to enable the accurate translation mode, false to disable.
+     *
+     * @see #isAccurateTranslationsEnabled
+     * @see #create(int, int, double[])
+     * @see #setTransform(int, double[])
+     * @see #getTransform(int, double[])
+     * @see #getWorldTransform(int, double[])
+     */
+    public void setAccurateTranslationsEnabled(boolean enable) {
+        nSetAccurateTranslationsEnabled(mNativeObject, enable);
+    }
+
+    /**
+     * Returns whether the high precision translation mode is active.
+     *
+     * @return true if accurate translations mode is active, false otherwise
+     * @see #setAccurateTranslationsEnabled
+     */
+    public boolean isAccurateTranslationsEnabled() {
+        return nIsAccurateTranslationsEnabled(mNativeObject);
+    }
+
+    /**
      * Creates a transform component and associates it with the given entity. The component is
      * initialized with the identity transform.
      * If this component already exists on the given entity, it is first
@@ -112,6 +141,23 @@ import androidx.annotation.Size;
     public int create(@Entity int entity, @EntityInstance int parent,
             @Nullable @Size(min = 16) float[] localTransform) {
         return nCreateArray(mNativeObject, entity, parent, localTransform);
+    }
+
+    /**
+     * Creates a transform component with a parent and associates it with the given entity.
+     * If this component already exists on the given entity, it is first
+     * destroyed as if {@link #destroy} was called.
+     *
+     * @param entity         an {@link Entity} to associate a transform component to.
+     * @param parent         the  {@link EntityInstance} of the parent transform
+     * @param localTransform the transform, relative to the parent, to initialize the transform
+     *                       component with.
+     * @see #destroy
+     */
+    @EntityInstance
+    public int create(@Entity int entity, @EntityInstance int parent,
+            @Nullable @Size(min = 16) double[] localTransform) {
+        return nCreateArrayFp64(mNativeObject, entity, parent, localTransform);
     }
 
     /**
@@ -171,6 +217,24 @@ import androidx.annotation.Size;
     }
 
     /**
+     * Sets a local transform of a transform component.
+     * <p>This operation can be slow if the hierarchy of transform is too deep, and this
+     * will be particularly bad when updating a lot of transforms. In that case,
+     * consider using {@link #openLocalTransformTransaction} / {@link #commitLocalTransformTransaction}.</p>
+     *
+     * @param i              the {@link EntityInstance} of the transform component to set the local
+     *                       transform to.
+     * @param localTransform the local transform (i.e. relative to the parent).
+     * @see #getTransform(int, double[])
+     * @see #getWorldTransform(int, double[])
+     */
+    public void setTransform(@EntityInstance int i,
+            @NonNull @Size(min = 16) double[] localTransform) {
+        Asserts.assertMat4In(localTransform);
+        nSetTransformFp64(mNativeObject, i, localTransform);
+    }
+
+    /**
      * Returns the local transform of a transform component.
      *
      * @param i                 the {@link EntityInstance} of the transform component to query the
@@ -191,6 +255,26 @@ import androidx.annotation.Size;
     }
 
     /**
+     * Returns the local transform of a transform component.
+     *
+     * @param i                 the {@link EntityInstance} of the transform component to query the
+     *                          local transform from.
+     * @param outLocalTransform a 16 <code>float</code> array to receive the result.
+     *                          If <code>null</code> is given,  a new suitable array is allocated.
+     * @return the local transform of the component (i.e. relative to the parent). This always
+     * returns the value set by setTransform().
+     * @see #setTransform
+     */
+    @NonNull
+    @Size(min = 16)
+    public double[] getTransform(@EntityInstance int i,
+            @Nullable @Size(min = 16) double[] outLocalTransform) {
+        outLocalTransform = Asserts.assertMat4(outLocalTransform);
+        nGetTransformFp64(mNativeObject, i, outLocalTransform);
+        return outLocalTransform;
+    }
+
+    /**
      * Returns the world transform of a transform component.
      *
      * @param i                 the {@link EntityInstance} of the transform component to query the
@@ -207,6 +291,26 @@ import androidx.annotation.Size;
             @Nullable @Size(min = 16) float[] outWorldTransform) {
         outWorldTransform = Asserts.assertMat4f(outWorldTransform);
         nGetWorldTransform(mNativeObject, i, outWorldTransform);
+        return outWorldTransform;
+    }
+
+    /**
+     * Returns the world transform of a transform component.
+     *
+     * @param i                 the {@link EntityInstance} of the transform component to query the
+     *                          world transform from.
+     * @param outWorldTransform a 16 <code>float</code> array to receive the result.
+     *                          If <code>null</code> is given,  a new suitable array is allocated
+     * @return The world transform of the component (i.e. relative to the root). This is the
+     * composition of this component's local transform with its parent's world transform.
+     * @see #setTransform
+     */
+    @NonNull
+    @Size(min = 16)
+    public double[] getWorldTransform(@EntityInstance int i,
+            @Nullable @Size(min = 16) double[] outWorldTransform) {
+        outWorldTransform = Asserts.assertMat4(outWorldTransform);
+        nGetWorldTransformFp64(mNativeObject, i, outWorldTransform);
         return outWorldTransform;
     }
 
@@ -252,12 +356,18 @@ import androidx.annotation.Size;
     private static native int nGetInstance(long nativeTransformManager, int entity);
     private static native int nCreate(long nativeTransformManager, int entity);
     private static native int nCreateArray(long mNativeObject, int entity, int parent, float[] localTransform);
+    private static native int nCreateArrayFp64(long mNativeObject, int entity, int parent, double[] localTransform);
     private static native void nDestroy(long nativeTransformManager, int entity);
     private static native void nSetParent(long nativeTransformManager, int i, int newParent);
     private static native int nGetParent(long nativeTransformManager, int i);
     private static native void nSetTransform(long nativeTransformManager, int i, float[] localTransform);
+    private static native void nSetTransformFp64(long nativeTransformManager, int i, double[] localTransform);
     private static native void nGetTransform(long nativeTransformManager, int i, float[] outLocalTransform);
+    private static native void nGetTransformFp64(long nativeTransformManager, int i, double[] outLocalTransform);
     private static native void nGetWorldTransform(long nativeTransformManager, int i, float[] outWorldTransform);
+    private static native void nGetWorldTransformFp64(long nativeTransformManager, int i, double[] outWorldTransform);
     private static native void nOpenLocalTransformTransaction(long nativeTransformManager);
     private static native void nCommitLocalTransformTransaction(long nativeTransformManager);
+    private static native void nSetAccurateTranslationsEnabled(long nativeTransformManager, boolean enable);
+    private static native boolean nIsAccurateTranslationsEnabled(long nativeTransformManager);
 }

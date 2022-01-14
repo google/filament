@@ -229,14 +229,7 @@ static void loadImage(App& app, Engine* engine, Path filename) {
 
     std::ifstream inputStream(filename, std::ios::binary);
     LinearImage* image = new LinearImage(ImageDecoder::decode(
-            inputStream, filename, ImageDecoder::ColorSpace::LINEAR));
-
-    uint32_t channels = image->getChannels();
-    if (channels != 3) {
-        std::cerr << "The input image is invalid: " << filename << std::endl;
-        app.showImage = false;
-        return;
-    }
+            inputStream, filename, ImageDecoder::ColorSpace::SRGB));
 
     if (!image->isValid()) {
         std::cerr << "The input image is invalid: " << filename << std::endl;
@@ -246,13 +239,15 @@ static void loadImage(App& app, Engine* engine, Path filename) {
 
     inputStream.close();
 
+    uint32_t channels = image->getChannels();
     uint32_t w = image->getWidth();
     uint32_t h = image->getHeight();
     Texture* texture = Texture::Builder()
             .width(w)
             .height(h)
             .levels(0xff)
-            .format(Texture::InternalFormat::RGB16F)
+            .format(channels == 3 ?
+                    Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA16F)
             .sampler(Texture::Sampler::SAMPLER_2D)
             .build(*engine);
 
@@ -263,7 +258,7 @@ static void loadImage(App& app, Engine* engine, Path filename) {
     Texture::PixelBufferDescriptor buffer(
             image->getPixelRef(),
             size_t(w * h * channels * sizeof(float)),
-            Texture::Format::RGB,
+            channels == 3 ? Texture::Format::RGB : Texture::Format::RGBA,
             Texture::Type::FLOAT,
             freeCallback
     );

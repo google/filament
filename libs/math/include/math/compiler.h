@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef TNT_MATH_COMPILER_H
+#define TNT_MATH_COMPILER_H
 
 #include <type_traits>
 
@@ -111,8 +112,7 @@
 
 #endif // _MSC_VER
 
-namespace filament {
-namespace math {
+namespace filament::math {
 
 // MSVC 2019 16.4 doesn't seem to like it when we specialize std::is_arithmetic for
 // filament::math::half, so we're forced to create our own is_arithmetic here and specialize it
@@ -122,5 +122,6 @@ struct is_arithmetic : std::integral_constant<bool,
         std::is_integral<T>::value || std::is_floating_point<T>::value> {
 };
 
-}
-}
+} // filament::math
+
+#endif // TNT_MATH_COMPILER_H

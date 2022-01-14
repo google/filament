@@ -45,7 +45,7 @@ struct LightManager::BuilderDetails {
     float mIntensity = 100000.0f;
     FLightManager::IntensityUnit mIntensityUnit = FLightManager::IntensityUnit::LUMEN_LUX;
     float3 mDirection = { 0.0f, -1.0f, 0.0f };
-    float2 mSpotInnerOuter = { f::PI, f::PI };
+    float2 mSpotInnerOuter = { f::PI_4 * 0.75f, f::PI_4 };
     float mSunAngle = 0.00951f; // 0.545° in radians
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
@@ -352,23 +352,23 @@ void FLightManager::setFalloff(Instance i, float falloff) noexcept {
 void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexcept {
     auto& manager = mManager;
     if (i && isSpotLight(i)) {
-        // clamp the inner/outer angles to pi
-        float innerClamped = std::min(std::abs(inner), f::PI_2);
-        float outerClamped = std::min(std::abs(outer), f::PI_2);
+        // clamp the inner/outer angles to [0.5 degrees, 90 degrees]
+        float innerClamped = std::clamp(std::abs(inner), 0.5f * f::DEG_TO_RAD, f::PI_2);
+        float outerClamped = std::clamp(std::abs(outer), 0.5f * f::DEG_TO_RAD, f::PI_2);
 
-        // outer must always be bigger than inner
-        outerClamped = std::max(innerClamped, outerClamped);
+        // inner must always be smaller than outer
+        innerClamped = std::min(innerClamped, outerClamped);
 
         float cosOuter = fast::cos(outerClamped);
         float cosInner = fast::cos(innerClamped);
         float cosOuterSquared = cosOuter * cosOuter;
-        float scale = 1 / std::max(1.0f / 1024.0f, cosInner - cosOuter);
+        float scale = 1.0f / std::max(1.0f / 1024.0f, cosInner - cosOuter);
         float offset = -cosOuter * scale;
 
         SpotParams& spotParams = manager[i].spotParams;
         spotParams.outerClamped = outerClamped;
         spotParams.cosOuterSquared = cosOuterSquared;
-        spotParams.sinInverse = 1 / std::sqrt(1 - cosOuterSquared);
+        spotParams.sinInverse = 1.0f / std::sin(outerClamped);
         spotParams.scaleOffset = { scale, offset };
 
         // we need to recompute the luminous intensity
