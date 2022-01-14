@@ -15,15 +15,10 @@ set(DIST_ARCH ${IOS_ARCH})
 
 add_definitions(-DIOS)
 
-set(IOS_MIN_TARGET "11.0")
+set(IOS_MIN_TARGET "13.0")
 
 if(PLATFORM_NAME STREQUAL "iphonesimulator")
     add_definitions(-DFILAMENT_IOS_SIMULATOR)
-    # The simulator only supports iOS >= 13.0
-    set(IOS_MIN_TARGET "13.0")
-elseif(PLATFORM_NAME STREQUAL "macosx")
-    # Mac Catalyst only supports iOS >= 13.0
-    set(IOS_MIN_TARGET "13.0")
 endif()
 
 SET(CMAKE_SYSTEM_NAME Darwin)
