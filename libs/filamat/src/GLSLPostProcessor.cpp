@@ -137,6 +137,8 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
 
     auto executionModel = mslCompiler.get_execution_model();
 
+    // The index will be used to remap and
+    // the result becomes a [[buffer(index)]], [[texture(index)]] or [[sampler(index)]].
     auto duplicateResourceBinding = [executionModel, &mslCompiler](const auto& resource, uint16_t index = UINT16_MAX) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
@@ -144,11 +146,9 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
         newBinding.stage = executionModel;
         newBinding.desc_set = set;
         newBinding.binding = binding;
-        if (index != UINT16_MAX) {
-            newBinding.msl_texture = newBinding.msl_sampler = newBinding.msl_buffer = index;
-        } else {
-            newBinding.msl_texture = newBinding.msl_sampler = newBinding.msl_buffer = binding;
-        }
+        newBinding.msl_texture =
+        newBinding.msl_sampler =
+        newBinding.msl_buffer = (index != UINT16_MAX) ? index : binding;
         mslCompiler.add_msl_resource_binding(newBinding);
     };
 
