@@ -8,6 +8,11 @@
 #define SHADOW_SAMPLING_RUNTIME_DPCF    2u
 #define SHADOW_SAMPLING_RUNTIME_PCSS    3u
 
+// TODO: this should be user-settable, maybe at the material level
+#define SHADOW_SAMPLING_PCF_HARD        0
+#define SHADOW_SAMPLING_PCF_LOW         1
+#define SHADOW_SAMPLING_METHOD          SHADOW_SAMPLING_PCF_LOW
+
 //------------------------------------------------------------------------------
 // PCF Shadow Sampling
 //------------------------------------------------------------------------------
@@ -20,30 +25,70 @@ float sampleDepth(const mediump sampler2DArrayShadow map, const uint layer,
     return texture(map, vec4(uv, layer, saturate(depth)));
 }
 
+#if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
 // use hardware assisted PCF
-float ShadowSample_PCF(const mediump sampler2DArrayShadow map,
+float ShadowSample_PCF_Hard(const mediump sampler2DArrayShadow map,
         const uint layer, const highp vec4 shadowPosition) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     return sampleDepth(map, layer, position.xy, position.z);
 }
+#endif
 
-// use manual PCF
-float ShadowSample_PCF(const mediump sampler2DArray shadowMap,
+#if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
+// use hardware assisted PCF + 3x3 gaussian filter
+float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map,
         const uint layer, const highp vec4 shadowPosition) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
-    highp vec2 size = vec2(textureSize(shadowMap, 0));
+    highp vec2 size = vec2(textureSize(map, 0));
+    highp vec2 texelSize = vec2(1.0) / size;
+
+    //  Castaño, 2013, "Shadow Mapping Summary Part 1"
+    float depth = position.z;
+
+    // clamp position to avoid overflows below, which cause some GPUs to abort
+    position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
+
+    vec2 offset = vec2(0.5);
+    highp vec2 uv = (position.xy * size) + offset;
+    highp vec2 base = (floor(uv) - offset) * texelSize;
+    highp vec2 st = fract(uv);
+
+    vec2 uw = vec2(3.0 - 2.0 * st.x, 1.0 + 2.0 * st.x);
+    vec2 vw = vec2(3.0 - 2.0 * st.y, 1.0 + 2.0 * st.y);
+
+    highp vec2 u = vec2((2.0 - st.x) / uw.x - 1.0, st.x / uw.y + 1.0);
+    highp vec2 v = vec2((2.0 - st.y) / vw.x - 1.0, st.y / vw.y + 1.0);
+
+    u *= texelSize.x;
+    v *= texelSize.y;
+
+    float sum = 0.0;
+    sum += uw.x * vw.x * sampleDepth(map, layer, base + vec2(u.x, v.x), depth);
+    sum += uw.y * vw.x * sampleDepth(map, layer, base + vec2(u.y, v.x), depth);
+    sum += uw.x * vw.y * sampleDepth(map, layer, base + vec2(u.x, v.y), depth);
+    sum += uw.y * vw.y * sampleDepth(map, layer, base + vec2(u.y, v.y), depth);
+    return sum * (1.0 / 16.0);
+}
+#endif
+
+// use manual PCF
+float ShadowSample_PCF(const mediump sampler2DArray map,
+        const uint layer, const highp vec4 shadowPosition) {
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+    // note: shadowPosition.z is in the [1, 0] range (reversed Z)
+    highp vec2 size = vec2(textureSize(map, 0));
     highp vec2 st = position.xy * size - 0.5;
     vec4 d;
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-    d = textureGather(shadowMap, vec3(position.xy, layer), 0); // 01, 11, 10, 00
+    d = textureGather(map, vec3(position.xy, layer), 0); // 01, 11, 10, 00
 #else
     highp ivec3 tc = ivec3(st, layer);
-    d[0] = texelFetchOffset(shadowMap, tc, 0, ivec2(0, 1)).r;
-    d[1] = texelFetchOffset(shadowMap, tc, 0, ivec2(1, 1)).r;
-    d[2] = texelFetchOffset(shadowMap, tc, 0, ivec2(1, 0)).r;
-    d[3] = texelFetchOffset(shadowMap, tc, 0, ivec2(0, 0)).r;
+    d[0] = texelFetchOffset(map, tc, 0, ivec2(0, 1)).r;
+    d[1] = texelFetchOffset(map, tc, 0, ivec2(1, 1)).r;
+    d[2] = texelFetchOffset(map, tc, 0, ivec2(1, 0)).r;
+    d[3] = texelFetchOffset(map, tc, 0, ivec2(0, 0)).r;
 #endif
     vec4 pcf = step(0.0, position.zzzz - d);
     highp vec2 grad = fract(st);
@@ -454,8 +499,11 @@ float shadow(const bool DIRECTIONAL,
         shadowPosition = getSpotLightSpacePosition(index, zLight);
 #endif
     }
-
-    return ShadowSample_PCF(shadowMap, layer, shadowPosition);
+#if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
+    return ShadowSample_PCF_Hard(shadowMap, layer, shadowPosition);
+#elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
+    return ShadowSample_PCF_Low(shadowMap, layer, shadowPosition);
+#endif
 }
 
 // Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
