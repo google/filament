@@ -187,7 +187,7 @@ namespace filament {
             }
             // if shadow receiver is disabled, turn off VSM
             if (!(variantKey & SHADOW_RECEIVER)) {
-                return variantKey & ~(VSM);
+                return variantKey & ~VSM;
             }
             // when the shading mode is unlit, remove all the lighting variants
             return isLit ? variantKey : (variantKey & UNLIT_MASK);
