@@ -480,6 +480,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->bias);
         } else if (compare(tok, jsonChunk, "maxDistance") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->maxDistance);
+        } else if (compare(tok, jsonChunk, "stride") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->stride);
         } else {
             slog.w << "Invalid screen-space reflections key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1351,6 +1353,7 @@ static std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsO
                << "\"thickness\": " << in.thickness << ",\n"
                << "\"bias\": " << in.bias << ",\n"
                << "\"maxDistance\": " << in.maxDistance << ",\n"
+               << "\"stride\": " << in.stride << ",\n"
                << "}";
 }
 
