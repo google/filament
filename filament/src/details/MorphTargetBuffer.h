@@ -55,6 +55,8 @@ private:
     void commit(FEngine& engine) const noexcept;
     void bind(backend::DriverApi& driver) const noexcept;
 
+    void updatePositionsAt(FEngine& engine, size_t targetIndex, void* data, size_t size);
+
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
     backend::Handle<backend::HwTexture> mPbHandle;
     backend::Handle<backend::HwTexture> mTbHandle;
