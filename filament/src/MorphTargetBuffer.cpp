@@ -41,8 +41,10 @@ BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
 BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
 BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder&
+BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder&
+BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::vertexCount(size_t vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
@@ -64,7 +66,8 @@ MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
 // When you change this value, you must change MAX_MORPH_TARGET_BUFFER_WIDTH at getters.vs
 constexpr size_t MAX_MORPH_TARGET_BUFFER_WIDTH = 2048;
 
-static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { ::free(mem); };
+static const auto FREE_CALLBACK =
+        [](void* mem, size_t, void*) { ::free(mem); };
 
 static inline size_t getWidth(size_t vertexCount) noexcept {
     return std::min(vertexCount, MAX_MORPH_TARGET_BUFFER_WIDTH);
@@ -122,7 +125,8 @@ void FMorphTargetBuffer::terminate(FEngine& engine) {
     driver.destroyTexture(mPbHandle);
 }
 
-void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
+void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
+        math::float3 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
     auto dstSize = getSize<VertexAttribute::POSITION>(mVertexCount);
@@ -137,7 +141,8 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, mat
     updatePositionsAt(engine, targetIndex, out, dstSize);
 }
 
-void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
+void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
+        math::float4 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
     auto size = getSize<VertexAttribute::POSITION>(mVertexCount);
@@ -152,7 +157,8 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, mat
     updatePositionsAt(engine, targetIndex, out, size);
 }
 
-void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
+void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
+        math::short4 const* tangents, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
     auto size = getSize<VertexAttribute::TANGENTS>(mVertexCount);
 
@@ -163,8 +169,8 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex, math
     auto* out = (short4*) malloc(size);
     memcpy(out, tangents, sizeof(short4) * count);
 
-    Texture::PixelBufferDescriptor buffer(out, size, Texture::Format::RG_INTEGER, Texture::Type::UINT,
-            FREE_CALLBACK);
+    Texture::PixelBufferDescriptor buffer(out, size,Texture::Format::RG_INTEGER,
+            Texture::Type::UINT, FREE_CALLBACK);
     FEngine::DriverApi& driver = engine.getDriverApi();
     driver.update3DImage(mTbHandle, 0, 0, 0, targetIndex,
             getWidth(mVertexCount), getHeight(mVertexCount), 1,
@@ -182,7 +188,8 @@ void FMorphTargetBuffer::bind(backend::DriverApi& driver) const noexcept {
     driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING, mSbHandle);
 }
 
-void FMorphTargetBuffer::updatePositionsAt(FEngine& engine, size_t targetIndex, void* data, size_t size) {
+void FMorphTargetBuffer::updatePositionsAt(FEngine& engine, size_t targetIndex,
+        void* data, size_t size) {
     Texture::PixelBufferDescriptor buffer(data, size, Texture::Format::RGB, Texture::Type::FLOAT,
             FREE_CALLBACK);
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -195,15 +202,18 @@ void FMorphTargetBuffer::updatePositionsAt(FEngine& engine, size_t targetIndex, 
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 
-void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
+void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex,
+        math::float3 const* positions, size_t count) {
     upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count);
 }
 
-void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex, math::float4 const* positions, size_t count) {
+void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex,
+        math::float4 const* positions, size_t count) {
     upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count);
 }
 
-void MorphTargetBuffer::setTangentsAt(Engine& engine, size_t targetIndex, math::short4 const* tangents, size_t count) {
+void MorphTargetBuffer::setTangentsAt(Engine& engine, size_t targetIndex,
+        math::short4 const* tangents, size_t count) {
     upcast(this)->setTangentsAt(upcast(engine), targetIndex, tangents, count);
 }
 
