@@ -87,9 +87,9 @@ void morphNormal(inout vec3 n) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
         texcoord.z = int(i);
-        uvec2 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0).rg;
+        ivec4 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0);
         vec3 normal;
-        toTangentFrame(vec4(unpackHalf2x16(tangent.x), unpackHalf2x16(tangent.y)), normal);
+        toTangentFrame(float4(tangent) / 32767.0, normal);
         n += morphingUniforms.weights[i].xyz * normal;
     }
 }

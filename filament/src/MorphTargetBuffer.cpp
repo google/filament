@@ -95,8 +95,8 @@ inline size_t getSize<VertexAttribute::TANGENTS>(size_t vertexCount) noexcept {
     const size_t stride = getWidth(vertexCount) * sizeof(short4);
     const size_t height = getHeight(vertexCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
-            Texture::PixelBufferDescriptor::PixelDataFormat::RG_INTEGER,
-            Texture::PixelBufferDescriptor::PixelDataType::UINT,
+            Texture::PixelBufferDescriptor::PixelDataFormat::RGBA_INTEGER,
+            Texture::PixelBufferDescriptor::PixelDataType::SHORT,
             stride, height, 1);
 }
 
@@ -108,7 +108,7 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
     mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
     mPbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RGBA16F, 1,
             getWidth(mVertexCount), getHeight(mVertexCount), mCount, TextureUsage::DEFAULT);
-    mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RG32UI, 1,
+    mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RGBA16I, 1,
             getWidth(mVertexCount), getHeight(mVertexCount), mCount,TextureUsage::DEFAULT);
 
     SamplerParams samplerParams{};
@@ -168,8 +168,8 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
     auto* out = (short4*) malloc(size);
     memcpy(out, tangents, sizeof(short4) * count);
 
-    Texture::PixelBufferDescriptor buffer(out, size,Texture::Format::RG_INTEGER,
-            Texture::Type::UINT, FREE_CALLBACK);
+    Texture::PixelBufferDescriptor buffer(out, size,Texture::Format::RGBA_INTEGER,
+            Texture::Type::SHORT, FREE_CALLBACK);
     FEngine::DriverApi& driver = engine.getDriverApi();
     driver.update3DImage(mTbHandle, 0, 0, 0, targetIndex,
             getWidth(mVertexCount), getHeight(mVertexCount), 1,
