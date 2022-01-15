@@ -47,18 +47,7 @@ void ExternalStreamManagerAndroid::destroy(ExternalStreamManagerAndroid* pExtern
 
 ExternalStreamManagerAndroid::ExternalStreamManagerAndroid() noexcept
         : mVm(VirtualMachineEnv::get()) {
-
-    // the following dlsym() calls don't work on API 19
-    if (api_level() >= 21) {
-        loadSymbol(ASurfaceTexture_fromSurfaceTexture, "ASurfaceTexture_fromSurfaceTexture");
-        loadSymbol(ASurfaceTexture_release, "ASurfaceTexture_release");
-        loadSymbol(ASurfaceTexture_attachToGLContext, "ASurfaceTexture_attachToGLContext");
-        loadSymbol(ASurfaceTexture_detachFromGLContext, "ASurfaceTexture_detachFromGLContext");
-        loadSymbol(ASurfaceTexture_updateTexImage, "ASurfaceTexture_updateTexImage");
-        loadSymbol(ASurfaceTexture_getTimestamp, "ASurfaceTexture_getTimestamp");
-    }
-
-    if (ASurfaceTexture_fromSurfaceTexture) {
+    if (__builtin_available(android 28, *)) {
         slog.d << "Using ASurfaceTexture" << io::endl;
     }
 }
@@ -95,7 +84,7 @@ Stream* ExternalStreamManagerAndroid::acquire(jobject surfaceTexture) noexcept {
     }
     EGLStream* stream = new EGLStream();
     stream->jSurfaceTexture = env->NewGlobalRef(surfaceTexture);
-    if (ASurfaceTexture_fromSurfaceTexture) {
+    if (__builtin_available(android 28, *)) {
         stream->nSurfaceTexture = ASurfaceTexture_fromSurfaceTexture(env, surfaceTexture);
     }
     return stream;
@@ -103,7 +92,7 @@ Stream* ExternalStreamManagerAndroid::acquire(jobject surfaceTexture) noexcept {
 
 void ExternalStreamManagerAndroid::release(Stream* handle) noexcept {
     EGLStream* stream = static_cast<EGLStream*>(handle);
-    if (ASurfaceTexture_fromSurfaceTexture) {
+    if (__builtin_available(android 28, *)) {
         ASurfaceTexture_release(stream->nSurfaceTexture);
     }
     JNIEnv* const env = getEnvironment();
@@ -114,7 +103,7 @@ void ExternalStreamManagerAndroid::release(Stream* handle) noexcept {
 
 void ExternalStreamManagerAndroid::attach(Stream* handle, intptr_t tname) noexcept {
     EGLStream* stream = static_cast<EGLStream*>(handle);
-    if (ASurfaceTexture_fromSurfaceTexture) {
+    if (__builtin_available(android 28, *)) {
         // associate our GL texture to the SurfaceTexture
         ASurfaceTexture* const aSurfaceTexture = stream->nSurfaceTexture;
         if (UTILS_UNLIKELY(ASurfaceTexture_attachToGLContext(aSurfaceTexture, (uint32_t)tname))) {
@@ -152,7 +141,7 @@ void ExternalStreamManagerAndroid::attach(Stream* handle, intptr_t tname) noexce
 
 void ExternalStreamManagerAndroid::detach(Stream* handle) noexcept {
     EGLStream* stream = static_cast<EGLStream*>(handle);
-    if (ASurfaceTexture_fromSurfaceTexture) {
+    if (__builtin_available(android 28, *)) {
         ASurfaceTexture_detachFromGLContext(stream->nSurfaceTexture);
     } else {
         JNIEnv* const env = mVm.getEnvironment();
@@ -164,14 +153,9 @@ void ExternalStreamManagerAndroid::detach(Stream* handle) noexcept {
 
 void ExternalStreamManagerAndroid::updateTexImage(Stream* handle, int64_t* timestamp) noexcept {
     EGLStream* stream = static_cast<EGLStream*>(handle);
-    if (ASurfaceTexture_fromSurfaceTexture) {
+    if (__builtin_available(android 28, *)) {
         ASurfaceTexture_updateTexImage(stream->nSurfaceTexture);
-        if (ASurfaceTexture_getTimestamp) {
-            *timestamp = ASurfaceTexture_getTimestamp(stream->nSurfaceTexture);
-        } else {
-            // if we're not at least on API 28, we may not have getTimestamp()
-            *timestamp = (std::chrono::steady_clock::now().time_since_epoch().count());
-        }
+        *timestamp = ASurfaceTexture_getTimestamp(stream->nSurfaceTexture);
     } else {
         JNIEnv* const env = mVm.getEnvironment();
         assert_invariant(env); // we should have called attach() by now

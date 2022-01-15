@@ -579,15 +579,18 @@ public:
      * Enables or disables post processing. Enabled by default.
      *
      * Post-processing includes:
+     *  - Depth-of-field
      *  - Bloom
-     *  - Tone-mapping & gamma encoding
+     *  - Vignetting
+     *  - Temporal Anti-aliasing (TAA)
+     *  - Color grading & gamma encoding
      *  - Dithering
-     *  - MSAA
      *  - FXAA
      *  - Dynamic scaling
      *
-     * Disabling post-processing forgoes color correctness as well as anti-aliasing and
-     * should only be used experimentally (e.g., for UI overlays).
+     * Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques
+     * and should only be used for debugging, UI overlays or when using custom render targets
+     * (see RenderTarget).
      *
      * @param enabled true enables post processing, false disables it.
      *
