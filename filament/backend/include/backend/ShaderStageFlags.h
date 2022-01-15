@@ -44,17 +44,14 @@ inline bool operator!=(ShaderStageFlags lhs, ShaderStageFlags rhs) {
 }
 
 inline utils::io::ostream& operator<<(utils::io::ostream& stream, ShaderStageFlags stageFlags) {
-    bool needVerticalBar = false;
     stream << "{ ";
     if (stageFlags.vertex) {
         stream << "vertex";
-        needVerticalBar = true;
     }
     if (stageFlags.fragment) {
-        if (needVerticalBar)
+        if (stageFlags.vertex)
             stream << " | ";
         stream << "fragment";
-        needVerticalBar = true;
     }
     stream << " }";
     return stream;
