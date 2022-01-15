@@ -85,7 +85,7 @@ inline size_t getSize<VertexAttribute::POSITION>(size_t vertexCount) noexcept {
     const size_t stride = getWidth(vertexCount) * sizeof(float3);
     const size_t height = getHeight(vertexCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
-            Texture::PixelBufferDescriptor::PixelDataFormat::RGB,
+            Texture::PixelBufferDescriptor::PixelDataFormat::RGBA,
             Texture::PixelBufferDescriptor::PixelDataType::FLOAT,
             stride, height, 1);
 }
@@ -106,7 +106,7 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
           mCount(builder->mCount) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
-    mPbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RGB32F, 1,
+    mPbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RGBA16F, 1,
             getWidth(mVertexCount), getHeight(mVertexCount), mCount, TextureUsage::DEFAULT);
     mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RG32UI, 1,
             getWidth(mVertexCount), getHeight(mVertexCount), mCount,TextureUsage::DEFAULT);
@@ -129,16 +129,16 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
         math::float3 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
-    auto dstSize = getSize<VertexAttribute::POSITION>(mVertexCount);
-    auto srcSize = sizeof(float3) * count;
+    auto size = getSize<VertexAttribute::POSITION>(mVertexCount);
 
-    ASSERT_PRECONDITION(srcSize <= dstSize,
-            "MorphTargetBuffer (size=%lu) overflow (size=%lu)", dstSize, srcSize);
+    ASSERT_PRECONDITION(count <= mVertexCount,
+            "MorphTargetBuffer (count=%lu) overflow (count=%lu)", mVertexCount, count);
 
     // We could use a pool instead of malloc() directly.
-    auto* out = (float3*) malloc(dstSize);
-    memcpy(out, positions, srcSize);
-    updatePositionsAt(engine, targetIndex, out, dstSize);
+    auto* out = (float4*) malloc(size);
+    std::transform(positions, positions + count, out,
+            [](const float3& p) { return float4(p, 1.0f); });
+    updatePositionsAt(engine, targetIndex, out, size);
 }
 
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
@@ -151,9 +151,8 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
             "MorphTargetBuffer (count=%lu) overflow (count=%lu)", mVertexCount, count);
 
     // We could use a pool instead of malloc() directly.
-    auto* out = (float3*) malloc(size);
-    std::transform(positions, positions + count, out,
-            [](const float4& p) { return float3(p.xyz); });
+    auto* out = (float4*) malloc(size);
+    memcpy(out, positions, sizeof(math::float4) * count);
     updatePositionsAt(engine, targetIndex, out, size);
 }
 
@@ -190,7 +189,7 @@ void FMorphTargetBuffer::bind(backend::DriverApi& driver) const noexcept {
 
 void FMorphTargetBuffer::updatePositionsAt(FEngine& engine, size_t targetIndex,
         void* data, size_t size) {
-    Texture::PixelBufferDescriptor buffer(data, size, Texture::Format::RGB, Texture::Type::FLOAT,
+    Texture::PixelBufferDescriptor buffer(data, size, Texture::Format::RGBA, Texture::Type::FLOAT,
             FREE_CALLBACK);
     FEngine::DriverApi& driver = engine.getDriverApi();
     driver.update3DImage(mPbHandle, 0, 0, 0, targetIndex,
