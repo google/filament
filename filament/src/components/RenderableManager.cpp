@@ -375,7 +375,7 @@ void FRenderableManager::create(
             }
         }
 
-        if (builder->mMorphingEnabled) {
+        if (UTILS_UNLIKELY(count > 0 || builder->mMorphingEnabled)) {
             // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
             // and use bindUniformBufferRange which might be more efficient.
             MorphWeights& morphWeights = manager[ci].morphWeights;

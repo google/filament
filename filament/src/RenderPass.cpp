@@ -581,15 +581,16 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
             }
 
-            auto morphTargetBuffer = info.morphTargetBuffer;
-            if (UTILS_UNLIKELY(morphTargetBuffer)) {
+            auto morphing = soaMorphing[info.index];
+            if (UTILS_UNLIKELY(morphing.handle)) {
                 // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
                 // and use bindUniformBufferRange which might be more efficient.
-                auto morphing = soaMorphing[info.index];
-                assert_invariant(morphing.handle);
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
-                assert_invariant(morphing.count <= morphTargetBuffer->getCount());
-                morphTargetBuffer->bind(driver);
+
+                if (info.morphTargetBuffer) {
+                    assert_invariant(morphing.count <= info.morphTargetBuffer->getCount());
+                    info.morphTargetBuffer->bind(driver);
+                }
             }
 
             driver.draw(pipeline, info.primitiveHandle);
