@@ -277,6 +277,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
+    auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
@@ -372,6 +373,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
+        const auto& morphing = soaMorphing[i];
 
         /*
          * This is our hot loop. It's written to avoid branches.
@@ -385,6 +387,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdColor.primitive.materialVariant = materialVariant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
 
+                cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 if (UTILS_UNLIKELY(morphTargetBuffer)) {
                     cmdColor.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
                 }
@@ -477,6 +480,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdDepth.primitive.mi = mi;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
+                cmdDepth.primitive.morphWeightBuffer = morphing.handle;
                 if (UTILS_UNLIKELY(morphTargetBuffer)) {
                     cmdDepth.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
                 }
@@ -538,7 +542,6 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
         SYSTRACE_VALUE32("commandCount", last - first);
 
         auto const* const UTILS_RESTRICT soaSkinning = soa.data<FScene::SKINNING_BUFFER>();
-        auto const* const UTILS_RESTRICT soaMorphing = soa.data<FScene::MORPHING_BUFFER>();
 
         PolygonOffset dummyPolyOffset;
         PipelineState pipeline{ .polygonOffset = mPolygonOffset };
@@ -588,11 +591,11 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
             }
 
-            auto morphing = soaMorphing[info.index];
-            if (UTILS_UNLIKELY(morphing.handle)) {
+            if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
                 // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
                 // and use bindUniformBufferRange which might be more efficient.
-                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
+                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
+                        info.morphWeightBuffer);
                 if (UTILS_UNLIKELY(info.morphTargetBuffer)) {
                     driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
                             info.morphTargetBuffer);
