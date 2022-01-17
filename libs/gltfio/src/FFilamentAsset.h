@@ -196,6 +196,8 @@ struct FFilamentAsset : public FilamentAsset {
 
     int getMorphTargetCount(utils::Entity entity) noexcept;
 
+    const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
+
     utils::Entity getWireframe() noexcept;
 
     filament::Engine* getEngine() const noexcept {

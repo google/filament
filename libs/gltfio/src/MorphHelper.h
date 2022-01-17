@@ -51,6 +51,7 @@ public:
 
     void setWeights(Entity entity, float const* weights, int count) noexcept;
     int getTargetCount(Entity entity) const noexcept;
+    const char* getTargetNameAt(Entity entity, size_t targetIndex) const noexcept;
 
 private:
     struct GltfPrimitive {
@@ -59,9 +60,11 @@ private:
 
     struct TableEntry {
         std::vector<GltfPrimitive> primitives; // TODO: flatten this?
+        utils::FixedCapacityVector<utils::CString> targetNames;
     };
 
     void addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entity entity);
+    void addTargetNames(cgltf_mesh const* mesh, Entity entity);
 
     tsl::robin_map<Entity, TableEntry> mMorphTable;
     const FFilamentAsset* mAsset;
