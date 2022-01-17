@@ -379,11 +379,15 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (auto const& primitive : primitives) {
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
+            FMorphTargetBuffer const* const morphTargetBuffer = primitive.getMorphTargetBuffer();
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.morphTargetBuffer = primitive.getMorphTargetBuffer();
                 cmdColor.primitive.materialVariant = materialVariant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
+
+                if (UTILS_UNLIKELY(morphTargetBuffer)) {
+                    cmdColor.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
+                }
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -471,8 +475,11 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdDepth.primitive.mi = mi;
-                cmdDepth.primitive.morphTargetBuffer = primitive.getMorphTargetBuffer();
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
+
+                if (UTILS_UNLIKELY(morphTargetBuffer)) {
+                    cmdDepth.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
+                }
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
@@ -586,10 +593,9 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                 // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
                 // and use bindUniformBufferRange which might be more efficient.
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
-
-                if (info.morphTargetBuffer) {
-                    assert_invariant(morphing.count <= info.morphTargetBuffer->getCount());
-                    info.morphTargetBuffer->bind(driver);
+                if (UTILS_UNLIKELY(info.morphTargetBuffer)) {
+                    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                            info.morphTargetBuffer);
                 }
             }
 

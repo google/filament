@@ -193,10 +193,6 @@ void FMorphTargetBuffer::commit(FEngine& engine) const noexcept {
     }
 }
 
-void FMorphTargetBuffer::bind(backend::DriverApi& driver) const noexcept {
-    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING, mSbHandle);
-}
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
