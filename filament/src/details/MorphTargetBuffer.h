@@ -53,7 +53,8 @@ private:
     friend class RenderPass;
 
     void commit(FEngine& engine) const noexcept;
-    void bind(backend::DriverApi& driver) const noexcept;
+
+    inline backend::Handle<backend::HwSamplerGroup> getHwHandle() const noexcept { return mSbHandle; }
 
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
     backend::Handle<backend::HwTexture> mTbHandle;
