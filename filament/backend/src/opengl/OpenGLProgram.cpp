@@ -273,10 +273,6 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
         BlockInfo blockInfo = blockInfos[i];
         HwSamplerGroup const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
         if (UTILS_UNLIKELY(!hwsb)) {
-#ifndef NDEBUG
-            slog.w << "In material " << name.c_str()
-                   << ": no sampler group to " << (uint32_t) blockInfo.binding << io::endl;
-#endif
             continue;
         }
         SamplerGroup const& UTILS_RESTRICT sb = *(hwsb->sb);
