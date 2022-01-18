@@ -72,7 +72,6 @@ struct VulkanContext {
     uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
     VkFormat findSupportedFormat(utils::Slice<VkFormat> candidates, VkImageTiling tiling,
             VkFormatFeatureFlags features);
-    VkImageLayout getTextureLayout(TextureUsage usage) const;
     void createEmptyTexture(VulkanStagePool& stagePool);
 
     VkInstance instance;

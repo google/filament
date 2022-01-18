@@ -1412,8 +1412,8 @@ void VulkanDriver::stopCapture(int) {
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
         uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
     const VkDevice device = mContext.device;
-    const VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget*>(src);
-    const VulkanTexture* srcTexture = srcTarget->getColor(mContext.currentSurface, 0).texture;
+    VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget*>(src);
+    VulkanTexture* srcTexture = srcTarget->getColor(mContext.currentSurface, 0).texture;
     const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() :
             mContext.currentSurface->surfaceFormat.format;
     const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
@@ -1458,11 +1458,10 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
-    // TODO: staging should just use the GENERAL layout
     transitionImageLayout(cmdbuffer, {
         .image = stagingImage,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
         .subresources = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
@@ -1502,6 +1501,9 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     // Transition the source image layout (which might be the swap chain)
 
+    // Since ReadPixels is always issued after at least one render pass, we know that the color
+    // attachment layout is COLOR_ATTACHMENT_OPTIMAL.
+
     const VkImageSubresourceRange srcRange = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
         .baseMipLevel = srcAttachment.level,
@@ -1510,11 +1512,10 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         .layerCount = 1,
     };
 
-    // FIXME: the content of the source may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
-    VkImage srcImage = srcTarget->getColor(mContext.currentSurface, 0).image;
+    VkImage srcImage = srcAttachment.image;
     transitionImageLayout(cmdbuffer, {
         .image = srcImage,
-        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         .subresources = srcRange,
         .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -1523,33 +1524,22 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
     });
 
-    // Perform the blit.
+    // Perform the into the staging area. At this point we know that the src layout is
+    // TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
 
     vkCmdCopyImage(cmdbuffer, srcTarget->getColor(mContext.currentSurface, 0).image,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_GENERAL,
             1, &imageCopyRegion);
 
-    // Restore the source image layout.
+    // Restore the source image layout back to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL.
 
-    if (srcTexture || mContext.currentSurface->presentQueue) {
-        const VkImageLayout present = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        // FIXME: the content of image we just blitted into may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
-        transitionImageLayout(cmdbuffer, {
-            .image = srcImage,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = srcTexture ? mContext.getTextureLayout(srcTexture->usage) : present,
-            .subresources = srcRange,
-            .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
-            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        });
+    if (UTILS_LIKELY(srcTexture)) {
+        srcTexture->transitionLayout(cmdbuffer, srcRange, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     } else {
-        // FIXME: the content of image we just blitted into may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
         transitionImageLayout(cmdbuffer, {
             .image = srcImage,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .subresources = srcRange,
             .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
             .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1557,30 +1547,6 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         });
     }
-
-    // Transition the staging image layout to GENERAL.
-
-    // TODO: why is this not using transitionImageLayout() ?
-    VkImageMemoryBarrier barrier = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = stagingImage,
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        }
-    };
-
-    vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     // TODO: don't flush/wait here -- we should do this asynchronously
 
@@ -1824,7 +1790,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             samplers[bindingPoint] = {
                 .sampler = vksampler,
                 .imageView = texture->getPrimaryImageView(),
-                .imageLayout = mContext.getTextureLayout(texture->usage)
+                .imageLayout = getDefaultImageLayout(texture->usage)
             };
 
             if (mContext.currentRenderPass.depthFeedback == texture) {

@@ -138,16 +138,13 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     // In Vulkan, the subpass desc specifies the layout to transition to at the start of the render
     // pass, and the attachment description specifies the layout to transition to at the end.
     // However we use render passes to cause layout transitions only when drawing directly into the
-    // swap chain. We keep our offscreen images in GENERAL layout, which is simple and prevents
-    // thrashing the layout. Note that pipeline barriers are more powerful than render passes for
-    // performing layout transitions, because they allow for per-miplevel transitions.
+    // swap chain.
     const bool discard = any(config.discardStart & TargetBufferFlags::COLOR);
     struct { VkImageLayout subpass, initial, final; } colorLayouts[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
     if (isSwapChain) {
         colorLayouts[0].subpass = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        // It is legal to always use UNDEFINED for "initial", but we wish to avoid warnings
-        // when the load op is LOAD.
+        // Specifying UNDEFINED for "initial" can discard the existing data.
         colorLayouts[0].initial = discard ? VK_IMAGE_LAYOUT_UNDEFINED :
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
