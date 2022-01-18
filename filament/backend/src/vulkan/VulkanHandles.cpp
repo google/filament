@@ -105,7 +105,7 @@ static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachmen
         .view = {},
         .memory = {},
         .texture = spec.texture,
-        .layout = context.getTextureLayout(spec.texture->usage),
+        .layout = spec.texture->getVkLayout(spec.layer, spec.level),
         .level = spec.level,
         .layer = spec.layer
     };
