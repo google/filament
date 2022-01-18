@@ -813,6 +813,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
         config.refractionLodOffset = refractionLodOffset;
         config.clearFlags = TargetBufferFlags::NONE;
+        config.hasScreenSpaceReflections = false;
         output = colorPass(fg, "Color Pass (transparent)",
                 desc, config, colorGradingConfig, translucentPass, view);
 
