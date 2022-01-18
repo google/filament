@@ -708,7 +708,7 @@ void SimpleViewer::saveTweaksToFile(TweakableMaterial* tweaks, const char* fileP
     }
     mLastSavedFileName = filePathStr;
     std::fstream outFile(filePathStr, std::ios::binary | std::ios::out);
-    outFile << js << std::endl;
+    outFile << std::setw(4) << js << std::endl;
     outFile.close();
 }
 
