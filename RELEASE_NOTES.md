@@ -3,7 +3,11 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.16.1 (currently main branch)
+## v1.16.2 (currently main branch)
+
+## v1.16.1
+
+- engine: Added line/triangle strip support.
 
 ## v1.16.0
 

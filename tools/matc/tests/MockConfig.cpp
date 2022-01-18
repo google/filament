@@ -61,5 +61,5 @@ matc::Config::Input* MockConfig::getInput() const noexcept {
 }
 
 std::string MockConfig::toString() const noexcept {
-    return nullptr;
+    return {};
 }
