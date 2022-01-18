@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.16.1
 
+- engine: Added line/triangle strip support.
+
 ## v1.16.0
 
 - engine: Fixes skinning calculations (#4887) [⚠️ **Material breakage**].
