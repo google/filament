@@ -42,6 +42,19 @@ vec3 getWorldViewVector() {
 }
 
 /** @public-api */
+vec3 getWorldViewVectorWithMagnitude() {
+    vec3 worldPosToEye = frameUniforms.cameraPosition - shading_position;
+    if (frameUniforms.clipFromViewMatrix[2].w != 0.0) {
+        // Perspective camera
+        return worldPosToEye;
+    } else {
+        // 'Magnitude' is the signed distance from plane: (orthoEyePos, -orthoViewDir)
+        float magnitude = dot(shading_view, worldPosToEye);
+        return magnitude * shading_view;
+    }
+}
+
+/** @public-api */
 vec3 getWorldNormalVector() {
     return shading_normal;
 }

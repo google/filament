@@ -45,13 +45,15 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // view
             .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // camera
+            .add("cameraForward",           1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
+            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("cameraPosition",          1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
             // time
             .add("time",                    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
             // directional light
             .add("lightColorIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                     1, UniformInterfaceBlock::Type::FLOAT4)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT3)
             .add("lightChannels",           1, UniformInterfaceBlock::Type::UINT)
             .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
             .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)
@@ -102,7 +104,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("aoReserved3",             1, UniformInterfaceBlock::Type::FLOAT)
 
             .add("clipControl",             1, UniformInterfaceBlock::Type::FLOAT2)
-            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("padding2",                1, UniformInterfaceBlock::Type::FLOAT2)
 
             .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
@@ -115,7 +117,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("reserved3",               1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring PerViewUib to 2 KiB
-            .add("padding2", 58, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding3", 57, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }
