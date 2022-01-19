@@ -175,7 +175,7 @@ void MorphHelper::addTargetNames(cgltf_mesh const* mesh, Entity entity) {
     auto& names = entry.targetNames;
 
     assert_invariant(names.empty());
-    names = utils::FixedCapacityVector<utils::CString>::with_capacity(count);
+    names.reserve(count);
 
     for (cgltf_size i = 0; i < count; ++i) {
         names.push_back(utils::StaticString::make(mesh->target_names[i]));
