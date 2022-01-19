@@ -461,7 +461,8 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                 }
             }
 
-            morpher->setWeights(channel.targetEntity, weights.data(), weights.size());
+            auto ci = renderableManager->getInstance(channel.targetEntity);
+            renderableManager->setMorphWeights(ci, weights.data(), weights.size());
             return;
         }
     }

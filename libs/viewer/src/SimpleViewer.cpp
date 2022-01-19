@@ -995,9 +995,11 @@ void SimpleViewer::updateUserInterface() {
                 std::string label = ss.str();
                 ImGui::SliderFloat(label.data(), &mMorphWeights[i], 0.0f, 1.0);
             }
+            auto& rcm = mEngine->getRenderableManager();
+            auto entities = mAsset->getEntities();
             for (size_t i = 0, c = mAsset->getEntityCount(); i != c; ++i) {
-                mAsset->setMorphWeights(mAsset->getEntities()[i],
-                        mMorphWeights.data(), mMorphWeights.size());
+                auto ci = rcm.getInstance(entities[i]);
+                rcm.setMorphWeights(ci, mMorphWeights.data(), mMorphWeights.size());
             }
         }
 
