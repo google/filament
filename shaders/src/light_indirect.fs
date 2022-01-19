@@ -540,29 +540,21 @@ void applyRefraction(
     vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
     vec3 Ft;
-#if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
-    if (frameUniforms.ssrDistance > 0.0f) {
-        // if screen-space reflections is enabled, we can't read from the screen-space buffer, so
-        // fall back to cubemap refractions
-        Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
-    } else
-#endif
-    {
-        // compute the point where the ray exits the medium, if needed
-        vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
-        p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
-        // perceptualRoughness to LOD
-        // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
-        // cubemap and screen-space modes match at perceptualRoughness 0.125
-        // TODO: Remove this factor temporarily until we find a better solution
-        //       This overblurs many scenes and needs a more principled approach
-        // float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
-        float tweakedPerceptualRoughness = perceptualRoughness;
-        float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
+    // compute the point where the ray exits the medium, if needed
+    vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
+    p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
-        Ft = textureLod(light_ssr, p.xy, lod).rgb;
-    }
+    // perceptualRoughness to LOD
+    // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
+    // cubemap and screen-space modes match at perceptualRoughness 0.125
+    // TODO: Remove this factor temporarily until we find a better solution
+    //       This overblurs many scenes and needs a more principled approach
+    // float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
+    float tweakedPerceptualRoughness = perceptualRoughness;
+    float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
+
+    Ft = textureLod(light_ssr, p.xy, lod).rgb;
 #endif
 
     // base color changes the amount of light passing through the boundary
