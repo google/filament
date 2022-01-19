@@ -123,6 +123,14 @@ export interface View$BloomOptions {
     // TODO: add support for dirt texture in BloomOptions.
 }
 
+export interface View$ScreenSpaceReflectionsOptions {
+    thickness?: number;
+    bias?: number;
+    maxDistance?: number;
+    stride?: number;
+    enabled?: boolean;
+}
+
 export interface View$FogOptions {
     distance?: number;
     maximumOpacity?: number;
@@ -521,6 +529,7 @@ export class View {
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
     public setDepthOfFieldOptions(options: View$DepthOfFieldOptions): void;
     public setBloomOptions(options: View$BloomOptions): void;
+    public setScreenSpaceReflectionsOptions(options: View$ScreenSpaceReflectionsOptions): void;
     public setFogOptions(options: View$FogOptions): void;
     public setVignetteOptions(options: View$VignetteOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
@@ -589,7 +598,7 @@ export class Engine {
     public getSupportedFormatSuffix(suffix: string): void;
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
-    public loadFilamesh(urlOrBuffer: BufferReference, definstance: MaterialInstance, matinstances: object): Filamesh;
+    public loadFilamesh(urlOrBuffer: BufferReference, definstance?: MaterialInstance, matinstances?: object): Filamesh;
 }
 
 export class gltfio$AssetLoader {
