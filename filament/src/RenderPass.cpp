@@ -373,7 +373,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
-        const auto& morphing = soaMorphing[i];
+        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
 
         /*
          * This is our hot loop. It's written to avoid branches.
@@ -596,6 +596,8 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                 // and use bindUniformBufferRange which might be more efficient.
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphWeightBuffer);
+
+                // When only skinning is enabled, morphTargetBuffer isn't created.
                 if (UTILS_UNLIKELY(info.morphTargetBuffer)) {
                     driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
                             info.morphTargetBuffer);
