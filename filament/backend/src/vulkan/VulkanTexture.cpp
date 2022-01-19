@@ -177,6 +177,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     getImageView(mPrimaryViewRange);
 
     // Transition the layout of each image slice.
+    // TODO: The potentially redundant transition for SAMPLEABLE images.
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE))) {
         const uint32_t layers = mPrimaryViewRange.layerCount;
         transitionImageLayout(mContext.commands->get().cmdbuffer, textureTransitionHelper({
