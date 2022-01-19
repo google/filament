@@ -412,8 +412,8 @@ void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instan
             auto entity = asset->getEntities()[i];
             auto count = asset->getMorphTargetCount(entity);
             if (count > 0) {
-                mMorphEntity = entity;
-                mMorphWeights.resize(count, 0);
+                mCurrentMorphEntity = entity;
+                mMorphWeights.resize(count, 0.0f);
                 break;
             }
         }
@@ -439,6 +439,7 @@ void SimpleViewer::removeAsset() {
     mAsset = nullptr;
     mAnimator = nullptr;
     mMorphWeights.clear();
+    mCurrentMorphEntity = utils::Entity();
 }
 
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
@@ -591,6 +592,17 @@ void SimpleViewer::updateUserInterface() {
         bool scaster = rm.isShadowCaster(instance);
         ImGui::Checkbox("casts shadows", &scaster);
         rm.setCastShadows(instance, scaster);
+        auto numMorphTargets = mAsset->getMorphTargetCount(entity);
+        if (numMorphTargets > 0) {
+            bool selected = entity == mCurrentMorphEntity;
+            ImGui::Checkbox("morphing", &selected);
+            if (selected) {
+                mCurrentMorphEntity = entity;
+                mMorphWeights.resize(numMorphTargets, 0.0f);
+            } else {
+                mCurrentMorphEntity = utils::Entity();
+            }
+        }
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
             const char* mname = rm.getMaterialInstanceAt(instance, prim)->getName();
@@ -988,12 +1000,13 @@ void SimpleViewer::updateUserInterface() {
             ImGui::Unindent();
         }
 
-        if (mMorphEntity && ImGui::CollapsingHeader("Morphing")) {
+        if (mCurrentMorphEntity && ImGui::CollapsingHeader("Morphing")) {
             for (int i = 0; i != mMorphWeights.size(); ++i) {
-                ImGui::SliderFloat(mAsset->getMorphTargetNameAt(mMorphEntity, i),
+                ImGui::SliderFloat(mAsset->getMorphTargetNameAt(mCurrentMorphEntity, i),
                         &mMorphWeights[i], 0.0f, 1.0);
             }
-            mAsset->setMorphWeights(mMorphEntity, mMorphWeights.data(), mMorphWeights.size());
+            auto ci = rm.getInstance(mCurrentMorphEntity);
+            rm.setMorphWeights(ci, mMorphWeights.data(), mMorphWeights.size());
         }
 
         if (mEnableWireframe) {
