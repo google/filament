@@ -171,10 +171,8 @@ public:
             ArenaScope& arena, Viewport const& viewport) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
-    void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
-    void disableSSReflections() const noexcept;
-    void prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
-            math::mat4f historyProjection, math::mat4f projectToPixelMatrix,
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
+            math::mat4f const& historyProjection, math::mat4f const& projectToPixelMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
