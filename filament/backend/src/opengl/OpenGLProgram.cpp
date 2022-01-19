@@ -272,6 +272,9 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
         BlockInfo blockInfo = blockInfos[i];
         HwSamplerGroup const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
+        if (UTILS_UNLIKELY(!hwsb)) {
+            continue;
+        }
         SamplerGroup const& UTILS_RESTRICT sb = *(hwsb->sb);
         SamplerGroup::Sampler const* const UTILS_RESTRICT samplers = sb.getSamplers();
         for (uint8_t j = 0, m = blockInfo.count ; j <= m; ++j, ++tmu) { // "<=" on purpose here
