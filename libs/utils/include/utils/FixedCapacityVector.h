@@ -20,12 +20,11 @@
 #include <utils/compressed_pair.h>
 #include <utils/Panic.h>
 
-#include <algorithm>
 #include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include <vector>
+#include <vector> // TODO: is this necessary?
 
 #include <stddef.h>
 #include <stdint.h>

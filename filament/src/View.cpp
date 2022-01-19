@@ -657,22 +657,11 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
-void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
-    // If screen-space refractions are enabled, make sure to disable screen-space reflections.
-    // disableSSReflections binds a dummy texture to light_ssr, but this is overridden by prepareSSR.
-    // TODO: support simultaneous screen-space refractions and reflections.
-    mPerViewUniforms.disableSSReflections();
-    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
-}
-
-void FView::disableSSReflections() const noexcept {
-    mPerViewUniforms.disableSSReflections();
-}
-
-void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
-        math::mat4f historyProjection, math::mat4f projectToPixelMatrix,
+void FView::prepareSSR(Handle <HwTexture> ssr, float refractionLodOffset,
+        mat4f const& historyProjection, mat4f const& projectToPixelMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, projectToPixelMatrix, ssrOptions);
+    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset,
+            historyProjection, projectToPixelMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {

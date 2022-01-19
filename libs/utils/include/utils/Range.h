@@ -17,12 +17,7 @@
 #ifndef TNT_UTILS_RANGE_H
 #define TNT_UTILS_RANGE_H
 
-#include <algorithm>
-
-#include <assert.h>
 #include <stddef.h>
-
-#include <utils/compiler.h>
 
 namespace utils {
 
