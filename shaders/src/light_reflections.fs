@@ -213,8 +213,11 @@ void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
     float vsZThickness = frameUniforms.ssrThickness;
     highp float nearPlaneZ = -frameUniforms.nearOverFarMinusNear / frameUniforms.oneOverFarMinusNear;
     float stride = frameUniforms.ssrStride;
-    // TODO: jitterFraction should be between 0 and 1, but anything < 1 gives banding artifacts.
-    const float jitterFraction = 1.0f;
+
+    highp vec2 fragCoord = gl_FragCoord.xy;
+    fragCoord += vec2(frameUniforms.temporalNoise); // 0 when TAA is not used
+    float jitterFraction = interleavedGradientNoise(fragCoord);
+
     float maxRayTraceDistance = frameUniforms.ssrDistance;
 
     highp vec2 res = vec2(textureSize(light_structure, 0).xy);
