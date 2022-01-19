@@ -126,6 +126,7 @@ steps:
 - Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
+- Screen-space reflections
 - Screen-space refraction
 - Global fog
 - Dynamic resolution (with support for AMD FidelityFX FSR)

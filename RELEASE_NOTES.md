@@ -7,7 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.17.0
 
-- engine: add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
+- engine: Add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
   access this new feature**].
 
 ## v1.16.1
@@ -24,10 +24,10 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.15.2
 
-- engine: add support for PCSS (Percentage Closer Soft Shadows).
-- engine: fix spotlight shadow bias.
-- samples: avoid leaking IBLs in Android sample-gltf-viewer.
-- libs: fix `libibl` on mobile.
+- engine: Add support for PCSS (Percentage Closer Soft Shadows).
+- engine: Fix spotlight shadow bias.
+- samples: Avoid leaking IBLs in Android sample-gltf-viewer.
+- libs: Fix `libibl` on mobile.
 
 ## v1.15.1
 
