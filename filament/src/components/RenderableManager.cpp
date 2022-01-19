@@ -321,20 +321,20 @@ void FRenderableManager::create(
         setMorphing(ci, builder->mMorphingEnabled);
         mManager[ci].channels = builder->mChannels;
 
-        const uint32_t count = builder->mSkinningBoneCount;
+        const uint32_t boneCount = builder->mSkinningBoneCount;
         if (builder->mSkinningBufferMode) {
             if (builder->mSkinningBuffer) {
-                setSkinning(ci, count > 0);
+                setSkinning(ci, boneCount > 0);
                 Bones& bones = manager[ci].bones;
                 bones = Bones{
                         .handle = builder->mSkinningBuffer->getHwHandle(),
-                        .count = (uint16_t)count,
+                        .count = (uint16_t)boneCount,
                         .offset = (uint16_t)builder->mSkinningBufferOffset,
                         .skinningBufferMode = true };
             }
         } else {
-            if (UTILS_UNLIKELY(count > 0 || builder->mMorphingEnabled)) {
-                setSkinning(ci, count > 0);
+            if (UTILS_UNLIKELY(boneCount > 0 || builder->mMorphingEnabled)) {
+                setSkinning(ci, boneCount > 0);
                 Bones& bones = manager[ci].bones;
                 // Note that we are sizing the bones UBO according to CONFIG_MAX_BONE_COUNT rather than
                 // mSkinningBoneCount. According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
@@ -353,29 +353,32 @@ void FRenderableManager::create(
                                 CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
                                 BufferObjectBinding::UNIFORM,
                                 backend::BufferUsage::DYNAMIC),
-                        .count = (uint16_t)count,
+                        .count = (uint16_t)boneCount,
                         .offset = 0,
                         .skinningBufferMode = false };
 
-                if (count) {
+                if (boneCount) {
                     if (builder->mUserBones) {
                         FSkinningBuffer::setBones(mEngine, bones.handle,
-                                builder->mUserBones, count, 0);
+                                builder->mUserBones, boneCount, 0);
                     } else if (builder->mUserBoneMatrices) {
                         FSkinningBuffer::setBones(mEngine, bones.handle,
-                                builder->mUserBoneMatrices, count, 0);
+                                builder->mUserBoneMatrices, boneCount, 0);
                     } else {
                         // initialize the bones to identity
-                        auto* out = driver.allocatePod<PerRenderableUibBone>(count);
-                        std::uninitialized_fill_n(out, count, PerRenderableUibBone{});
+                        auto* out = driver.allocatePod<PerRenderableUibBone>(boneCount);
+                        std::uninitialized_fill_n(out, boneCount, PerRenderableUibBone{});
                         driver.updateBufferObject(bones.handle, {
-                            out, count * sizeof(PerRenderableUibBone) }, 0);
+                                out, boneCount * sizeof(PerRenderableUibBone) }, 0);
                     }
                 }
             }
         }
 
-        if (UTILS_UNLIKELY(count > 0 || builder->mMorphingEnabled)) {
+        // Even morphing isn't enabled, we should create morphig resources.
+        // Because morphing shader code is generated when skinning is enabled.
+        // You can see more detail at Variant::SKINNING_OR_MORPHING.
+        if (UTILS_UNLIKELY(boneCount > 0 || builder->mMorphingEnabled)) {
             // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
             // and use bindUniformBufferRange which might be more efficient.
             MorphWeights& morphWeights = manager[ci].morphWeights;
