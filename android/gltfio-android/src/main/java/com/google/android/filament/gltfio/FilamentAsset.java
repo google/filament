@@ -217,13 +217,6 @@ public class FilamentAsset {
     }
 
     /**
-     * Updates the morphing weights in the given entity.
-     */
-    public void setMorphWeights(@Entity int entity, @NonNull float[] weights) {
-        nSetMorphWeights(mNativeObject, entity, weights);
-    }
-
-    /**
      * Gets the number of morphing in the given entity.
      */
     @IntRange(from = 0)
@@ -280,7 +273,6 @@ public class FilamentAsset {
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
-    private static native void nSetMorphWeights(long nativeAsset, int entity, float[] weights);
     private static native int nGetMorphTargetCount(long nativeAsset, int entity);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
