@@ -175,12 +175,8 @@ struct TweakableProperty {
         }
 
         std::string getFileExtension() const {
-            std::string result = "";
-
-            size_t lastDotPlusOne = mFilename.find_last_of(".") + 1;
-            if (lastDotPlusOne < mFilename.length()) {
-                result = mFilename.substr(lastDotPlusOne);
-            }
+            utils::Path path(mFilename);
+            std::string result = path.getExtension();
 
             for (auto& c : result) {
                 c = std::tolower(c);

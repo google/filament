@@ -86,16 +86,16 @@ public:
 
     TweakablePropertyTextured<filament::math::float4,true> mBaseColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
 
-    TweakablePropertyTextured<float, false> mNormal{};
+    TweakablePropertyTextured<float> mNormal{};
     TweakableProperty<float, false> mOcclusionIntensity{ 1.0f };
-    TweakablePropertyTextured<float, false> mOcclusion{1.0f};
+    TweakablePropertyTextured<float> mOcclusion{1.0f};
     TweakableProperty<float> mRoughnessScale{};
     TweakablePropertyTextured<float> mRoughness;
     TweakablePropertyTextured<float> mMetallic{};
 
     TweakableProperty<float> mClearCoat{};
     TweakableProperty<float> mClearCoatNormalIntensity{1.0f};
-    TweakablePropertyTextured<float, false> mClearCoatNormal{};
+    TweakablePropertyTextured<float> mClearCoatNormal{};
     TweakablePropertyTextured<float> mClearCoatRoughness{};
 
     std::vector< RequestedTexture > mRequestedTextures{};

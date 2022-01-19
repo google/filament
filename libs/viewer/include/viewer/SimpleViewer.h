@@ -22,6 +22,7 @@
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Scene.h>
+#include <filament/Texture.h>
 #include <filament/View.h>
 
 #include <gltfio/Animator.h>
@@ -230,6 +231,7 @@ private:
     void changeElementVisibility(utils::Entity entity, int elementIndex, bool newVisibility);
     void changeAllVisibility(utils::Entity entity, bool changeToVisible);
 
+    const char* formatToName(filament::Texture::InternalFormat format) const;
     std::string validateTweaks(const TweakableMaterial&);
 
     void quickLoad();
