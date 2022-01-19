@@ -438,14 +438,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // Currently it consists of a simple depth pass.
     // This is normally used by SSAO and contact-shadows
 
-    // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
-    RenderPass structurePass(pass);
-    structurePass.setRenderFlags(structureRenderFlags);
-    structurePass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
-    structurePass.sortCommands();
-
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, structurePass, svp.width, svp.height, {
+    ppm.structure(fg, pass, structureRenderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
@@ -510,7 +504,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Color passes
 
-    // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
+    // This one doesn't need to be a FrameGraph pass because it always happens by construction
+    // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     pass.setRenderFlags(colorRenderFlags);
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
@@ -549,7 +544,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
 
     if (colorGradingConfigForColor.asSubpass) {
-        // append colorgrading subpass after all other passes
+        // append color grading subpass after all other passes
         pass.appendCustomCommand(
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,

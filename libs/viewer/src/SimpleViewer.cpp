@@ -586,8 +586,11 @@ void SimpleViewer::updateUserInterface() {
         }
         auto instance = rm.getInstance(entity);
         bool scaster = rm.isShadowCaster(instance);
+        bool sreceiver = rm.isShadowReceiver(instance);
         ImGui::Checkbox("casts shadows", &scaster);
         rm.setCastShadows(instance, scaster);
+        ImGui::Checkbox("receives shadows", &sreceiver);
+        rm.setReceiveShadows(instance, sreceiver);
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
             const char* mname = rm.getMaterialInstanceAt(instance, prim)->getName();
