@@ -1001,6 +1001,8 @@ void SimpleViewer::updateUserInterface() {
         }
 
         if (mCurrentMorphEntity && ImGui::CollapsingHeader("Morphing")) {
+            ImGui::TextColored(ImVec4(1.0f,0.0f,0.0f,1.0f),
+                    "Morph weights aren't updated while playing an animation");
             for (int i = 0; i != mMorphWeights.size(); ++i) {
                 ImGui::SliderFloat(mAsset->getMorphTargetNameAt(mCurrentMorphEntity, i),
                         &mMorphWeights[i], 0.0f, 1.0);
