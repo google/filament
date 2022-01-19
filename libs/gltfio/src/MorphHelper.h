@@ -49,7 +49,6 @@ public:
     MorphHelper(FFilamentAsset* asset, FFilamentInstance* inst);
     ~MorphHelper();
 
-    void setWeights(Entity entity, float const* weights, int count) noexcept;
     int getTargetCount(Entity entity) const noexcept;
     const char* getTargetNameAt(Entity entity, size_t targetIndex) const noexcept;
 

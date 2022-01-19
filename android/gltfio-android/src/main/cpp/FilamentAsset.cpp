@@ -208,6 +208,14 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetAnimator(JNIEnv* , jcl
     return (jlong) asset->getAnimator();
 }
 
+extern "C" JNIEXPORT int JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetCount(JNIEnv* , jclass,
+        jlong nativeAsset, int entityId) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    Entity entity = Entity::import(entityId);
+    return asset->getMorphTargetCount(entity);
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUriCount(JNIEnv*, jclass,
                                                                            jlong nativeAsset) {
