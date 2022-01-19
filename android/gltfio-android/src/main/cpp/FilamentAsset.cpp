@@ -208,17 +208,6 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetAnimator(JNIEnv* , jcl
     return (jlong) asset->getAnimator();
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_FilamentAsset_nSetMorphWeights(JNIEnv* env, jclass,
-        jlong nativeAsset, int entityId, jfloatArray weights_) {
-    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
-    Entity entity = Entity::import(entityId);
-    jfloat* weights = env->GetFloatArrayElements(weights_, NULL);
-    jsize count = env->GetArrayLength(weights_);
-    asset->setMorphWeights(entity, weights, count);
-    env->ReleaseFloatArrayElements(weights_, weights, 0);
-}
-
 extern "C" JNIEXPORT int JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetCount(JNIEnv* , jclass,
         jlong nativeAsset, int entityId) {

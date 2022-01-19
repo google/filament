@@ -72,12 +72,6 @@ MorphHelper::~MorphHelper() {
     }
 }
 
-void MorphHelper::setWeights(Entity entity, float const* weights, int count) noexcept {
-    auto& engine = *mAsset->mEngine;
-    auto& rcm = engine.getRenderableManager();
-    rcm.setMorphWeights(rcm.getInstance(entity), weights, count);
-}
-
 int MorphHelper::getTargetCount(Entity entity) const noexcept {
     if (mMorphTable.count(entity)) {
         auto& primitive = mMorphTable.at(entity).primitives;
