@@ -3,12 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.16.2 (currently main branch)
+## v1.17.1 (currently main branch)
 
-## v1.16.1
+## v1.17.0
 
 - engine: add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
   access this new feature**].
+
+## v1.16.1
+
+- engine: Added line/triangle strip support.
 
 ## v1.16.0
 

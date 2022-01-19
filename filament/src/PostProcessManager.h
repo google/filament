@@ -70,7 +70,8 @@ public:
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
-    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
+    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg,
+            RenderPass const& pass, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
     // SSAO
