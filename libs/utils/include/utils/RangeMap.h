@@ -52,6 +52,7 @@ public:
                 if (existing.last < last) {
                     wipe(existing.last, last);
                     existing.last = last;
+                    merge_right(iter);
                 }
                 return;
             }
@@ -65,8 +66,12 @@ public:
             }
             // Clip the end of the existing range and potentially remove it.
             existing.last = first;
-            if (existing.empty()) {
-                mMap.erase(iter);
+            clean(iter);
+            // Check there is a range to the right that needs to be clipped.
+            iter = find(last);
+            if (iter != end()) {
+                get_range(iter).first = last;
+                clean(iter);
             }
             wipe(first, last);
             insert(first, last, value);
@@ -88,15 +93,14 @@ public:
             if (existing.first > first) {
                 wipe(first, existing.first);
                 existing.first = first;
+                merge_left(iter);
             }
             return;
         }
 
         // Clip the beginning of the existing range and potentially remove it.
         existing.first = last;
-        if (existing.empty()) {
-            mMap.erase(iter);
-        }
+        clean(iter);
         wipe(first, last);
         insert(first, last, value);
     }
@@ -142,9 +146,7 @@ public:
             }
             // Clip the end of the existing range and potentially remove it.
             existing.last = first;
-            if (existing.empty()) {
-                mMap.erase(iter);
-            }
+            clean(iter);
             wipe(first, last);
             return;
         }
@@ -160,9 +162,7 @@ public:
 
         // Clip the beginning of the existing range and potentially remove it.
         existing.first = last;
-        if (existing.empty()) {
-            mMap.erase(iter);
-        }
+        clean(iter);
         wipe(first, last);
     }
 
@@ -206,6 +206,7 @@ private:
         KeyType previous = first;
         if (iterator iter = find(--previous); iter != end() && get_value(iter) == value) {
             get_range(iter).last = last;
+            merge_right(iter);
             return;
         }
 
@@ -229,6 +230,45 @@ private:
                 break;
             }
             iter = mMap.erase(iter);
+        }
+    }
+
+    // Check if there is range to the right that touches the given range.
+    // If so, erase it, extend the given range rightwards, and return true.
+    bool merge_right(iterator iter) {
+        iterator next = iter;
+        if (++next == end() || get_value(next) != get_value(iter)) {
+            return false;
+        }
+        if (get_range(next).first != get_range(iter).last) {
+            return false;
+        }
+        get_range(iter).last = get_range(next).last;
+        mMap.erase(next);
+        return true;
+    }
+
+    // Check if there is range to left right that touches the given range.
+    // If so, erase it, extend the given range leftwards, and return true.
+    bool merge_left(iterator iter) {
+        iterator prev = iter;
+        if (--prev == end() || get_value(prev) != get_value(iter)) {
+            return false;
+        }
+        if (get_range(prev).last != get_range(iter).first) {
+            return false;
+        }
+        get_range(iter).first = get_range(prev).first;
+        mMap.erase(prev);
+        return true;
+    }
+
+    // Erase the given range if it contains no elements.
+    void clean(iterator iter) {
+        Range<KeyType>& range = get_range(iter);
+        assert_invariant(range.first <= range.last);
+        if (range.first == range.last) {
+            mMap.erase(iter);
         }
     }
 

@@ -22,6 +22,7 @@ using namespace utils;
 
 TEST(RangeMapTest, Simple) {
     RangeMap<int, char> map;
+
     map.add(45, 104, 'c');
     EXPECT_FALSE(map.has(104));
     EXPECT_EQ(map.get(45), 'c');
@@ -89,4 +90,32 @@ TEST(RangeMapTest, Simple) {
     EXPECT_TRUE(map.has(54));
     EXPECT_FALSE(map.has(55));
     EXPECT_TRUE(map.has(56));
+
+    map.clear(-100, 200);
+    map.add(0, 10, 'a');
+    map.add(12, 15, 'a');
+    map.add(20, 22, 'b');
+    map.add(23, 26, 'c');
+    EXPECT_EQ(map.range_count(), 4);
+
+    // Test a bunch of different ways that the first and second intervals can be merged.
+    map.add(10, 12, 'a');
+    EXPECT_EQ(map.range_count(), 3);
+    map.clear(10, 12);
+    EXPECT_EQ(map.range_count(), 4);
+    map.add(9, 12, 'a');
+    EXPECT_EQ(map.range_count(), 3);
+    map.clear(10, 12);
+    EXPECT_EQ(map.range_count(), 4);
+    map.add(10, 13, 'a');
+    EXPECT_EQ(map.range_count(), 3);
+    map.add(10, 12, 'b');
+    EXPECT_EQ(map.range_count(), 4);
+
+    map.add(0, 26, 'b');
+    EXPECT_EQ(map.range_count(), 1);
+    map.add(10, 12, 'c');
+    EXPECT_EQ(map.range_count(), 3);
+    map.add(9, 13, 'c');
+    EXPECT_EQ(map.range_count(), 3);
 }
