@@ -407,16 +407,6 @@ void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instan
         mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
-
-        for (size_t i = 0, c = asset->getEntityCount(); i < c; ++i) {
-            auto entity = asset->getEntities()[i];
-            auto count = asset->getMorphTargetCount(entity);
-            if (count > 0) {
-                mCurrentMorphEntity = entity;
-                mMorphWeights.resize(count, 0.0f);
-                break;
-            }
-        }
     }
 
     auto& tcm = mEngine->getRenderableManager();
@@ -438,8 +428,6 @@ void SimpleViewer::removeAsset() {
     }
     mAsset = nullptr;
     mAnimator = nullptr;
-    mMorphWeights.clear();
-    mCurrentMorphEntity = utils::Entity();
 }
 
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
@@ -595,17 +583,6 @@ void SimpleViewer::updateUserInterface() {
         rm.setCastShadows(instance, scaster);
         ImGui::Checkbox("receives shadows", &sreceiver);
         rm.setReceiveShadows(instance, sreceiver);
-        auto numMorphTargets = mAsset->getMorphTargetCount(entity);
-        if (numMorphTargets > 0) {
-            bool selected = entity == mCurrentMorphEntity;
-            ImGui::Checkbox("morphing", &selected);
-            if (selected) {
-                mCurrentMorphEntity = entity;
-                mMorphWeights.resize(numMorphTargets, 0.0f);
-            } else {
-                mCurrentMorphEntity = utils::Entity();
-            }
-        }
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
             const char* mname = rm.getMaterialInstanceAt(instance, prim)->getName();
@@ -1001,17 +978,6 @@ void SimpleViewer::updateUserInterface() {
                 mResetAnimation = true;
             }
             ImGui::Unindent();
-        }
-
-        if (mCurrentMorphEntity && ImGui::CollapsingHeader("Morphing")) {
-            ImGui::TextColored(ImVec4(1.0f,0.0f,0.0f,1.0f),
-                    "Morph weights aren't updated while playing an animation");
-            for (int i = 0; i != mMorphWeights.size(); ++i) {
-                ImGui::SliderFloat(mAsset->getMorphTargetNameAt(mCurrentMorphEntity, i),
-                        &mMorphWeights[i], 0.0f, 1.0);
-            }
-            auto ci = rm.getInstance(mCurrentMorphEntity);
-            rm.setMorphWeights(ci, mMorphWeights.data(), mMorphWeights.size());
         }
 
         if (mEnableWireframe) {
