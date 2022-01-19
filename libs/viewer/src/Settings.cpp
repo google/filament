@@ -1353,7 +1353,7 @@ static std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsO
                << "\"thickness\": " << in.thickness << ",\n"
                << "\"bias\": " << in.bias << ",\n"
                << "\"maxDistance\": " << in.maxDistance << ",\n"
-               << "\"stride\": " << in.stride << ",\n"
+               << "\"stride\": " << in.stride << "\n"
                << "}";
 }
 
