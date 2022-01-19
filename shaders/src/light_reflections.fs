@@ -191,17 +191,17 @@ highp mat4 scaleMatrix(const highp float x, const highp float y) {
 }
 
 /**
- * Evaluates screen-space reflections, storing a premultiplied color in Fr.rgb if there's a hit.
- * r is the desired reflected vector.
+ * Evaluates screen-space reflections, returning a color if there's a hit.
+ * wsRayDirection is the desired reflected vector.
  *
- * Fr.a is set to a value between [0, 1] representing the "opacity" of the reflection. 1.0f is full
- * screen-space reflection. Values < 1.0f should be blended with the scene's IBL. Fr.rgb is
- * premultiplied by Fr.a.
+ * The returned color's alpha is set to a value between [0, 1] representing the "opacity" of the
+ * reflection. 1.0f is full screen-space reflection. Values < 1.0f should be blended with the
+ * scene's IBL.
  *
- * If there is no hit, Fr is unmodified.
+ * If there is no hit, the return value is vec4(0).
  */
-void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
-    vec3 wsRayDirection = r;
+vec4 evaluateScreenSpaceReflections(const PixelParams pixel, const vec3 wsRayDirection) {
+    vec4 Fr = vec4(0.0f);
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 
     // ray start/end in view space
@@ -246,10 +246,11 @@ void evaluateScreenSpaceReflections(vec3 r, inout vec4 Fr) {
         float t = distance(vsOrigin, vsHitPoint) / maxRayTraceDistance;
         float distFactor = max(fadeRate * (t - 0.5f) - (fadeRate / 2.0f - 1.0f), 0.0f);
         float distanceFade = saturate(1.0 - (distFactor, distFactor));
-
         float fade = edgeFade * distanceFade;
-        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0f).rgb * fade, fade);
+
+        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0f).rgb, fade);
     }
+    return Fr;
 }
 
 #endif // screen-space reflections

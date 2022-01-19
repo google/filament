@@ -212,6 +212,8 @@ public:
 
     bool isScreenSpaceRefractionEnabled() const noexcept { return mScreenSpaceRefractionEnabled; }
 
+    bool isScreenSpaceReflectionEnabled() const noexcept { return mScreenSpaceReflectionsOptions.enabled; }
+
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
     }
