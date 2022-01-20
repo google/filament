@@ -110,9 +110,11 @@ public:
     inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
     inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset) noexcept;
+    void setMorphTargetCount(Instance instance, size_t count) noexcept;
     void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
     void setMorphTargetBufferAt(Instance instance,
             size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept;
+    inline size_t getMorphTargetCount(Instance instance) const noexcept;
     inline void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
 
     inline bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
@@ -142,7 +144,6 @@ public:
         uint32_t count;
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
-    inline int getMorphTargetCount(Instance instance) const noexcept;
 
     utils::Entity getEntity(Instance instance) const noexcept {
         return mManager.getEntity(instance);
@@ -362,11 +363,6 @@ FRenderableManager::MorphingBindingInfo
 FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
     MorphWeights const& morphWeights = mManager[instance].morphWeights;
     return { morphWeights.handle, morphWeights.count };
-}
-
-int FRenderableManager::getMorphTargetCount(Instance instance) const noexcept {
-    MorphWeights const& morphWeights = mManager[instance].morphWeights;
-    return morphWeights.count;
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

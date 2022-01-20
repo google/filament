@@ -266,6 +266,13 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsQuaternions(JNIEnv
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetMorphTargetCount(JNIEnv* env, jclass,
+        jlong nativeRenderableManager, jint instance, jint count) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setMorphTargetCount((RenderableManager::Instance)instance, count);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env, jclass,
         jlong nativeRenderableManager, jint instance, jfloatArray weights) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
@@ -273,6 +280,13 @@ Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env,
     jsize count = env->GetArrayLength(weights);
     rm->setMorphWeights((RenderableManager::Instance)instance, vec, count);
     env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetMorphTargetCount(JNIEnv* env, jclass,
+        jlong nativeRenderableManager, jint instance) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return rm->getMorphTargetCount((RenderableManager::Instance)instance);
 }
 
 extern "C" JNIEXPORT void JNICALL

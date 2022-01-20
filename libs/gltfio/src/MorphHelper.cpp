@@ -53,6 +53,8 @@ MorphHelper::MorphHelper(FFilamentAsset* asset, FFilamentInstance* inst) : mAsse
         cgltf_node const* node = pair.first;
         cgltf_mesh const* mesh = node->mesh;
         if (mesh) {
+            auto& rcm = mAsset->mEngine->getRenderableManager();
+            rcm.setMorphTargetCount(rcm.getInstance(pair.second), mesh->target_names_count);
             cgltf_primitive const* prims = mesh->primitives;
             for (cgltf_size pi = 0, count = mesh->primitives_count; pi < count; ++pi) {
                 addPrimitive(mesh, pi, pair.second);
@@ -71,16 +73,6 @@ MorphHelper::~MorphHelper() {
             }
         }
     }
-}
-
-int MorphHelper::getTargetCount(Entity entity) const noexcept {
-    if (mMorphTable.count(entity)) {
-        auto& primitive = mMorphTable.at(entity).primitives;
-        if (!primitive.empty() && primitive[0].targets) {
-            return primitive[0].targets->getCount();
-        }
-    }
-    return 0;
 }
 
 const char* MorphHelper::getTargetNameAt(Entity entity, size_t targetIndex) const noexcept {

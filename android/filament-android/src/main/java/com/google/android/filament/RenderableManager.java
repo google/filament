@@ -492,6 +492,17 @@ public class RenderableManager {
     }
 
     /**
+     * Updates the morph target count on a renderable, zero by default.
+     *
+     * <p>The renderable must be built with morphing enabled.</p>
+     *
+     * @see Builder#morphing
+     */
+    public void setMorphTargetCount(@EntityInstance int i, int count) {
+        nSetMorphTargetCount(mNativeObject, i, count);
+    }
+
+    /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
      * <p>The renderable must be built with morphing enabled.</p>
@@ -500,6 +511,14 @@ public class RenderableManager {
      */
     public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights) {
         nSetMorphWeights(mNativeObject, i, weights);
+    }
+
+    /**
+     * Gets the morph target count on a renderable.
+     */
+    @IntRange(from = 0)
+    public int getMorphTargetCount(@EntityInstance int i) {
+        return nGetMorphTargetCount(mNativeObject, i);
     }
 
     /**
@@ -763,7 +782,9 @@ public class RenderableManager {
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
     private static native int nSetBonesAsQuaternions(long nativeObject, int i, Buffer quaternions, int remaining, int boneCount, int offset);
+    private static native void nSetMorphTargetCount(long nativeObject, int i, int count);
     private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights);
+    private static native int nGetMorphTargetCount(long nativeObject, int i);
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);

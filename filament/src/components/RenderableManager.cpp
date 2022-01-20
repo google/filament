@@ -596,14 +596,22 @@ static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBuffe
     driver.updateBufferObject(handle, { out, size }, 0);
 }
 
-void FRenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
+void FRenderableManager::setMorphTargetCount(Instance instance, size_t count) noexcept {
     if (instance) {
-        MorphWeights& morphWeights = mManager[instance].morphWeights;
-        morphWeights.count = count;
-
         ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
                 "Only %d morph targets are supported (count=%d)", CONFIG_MAX_MORPH_TARGET_COUNT, count);
 
+        MorphWeights& morphWeights = mManager[instance].morphWeights;
+        morphWeights.count = count;
+    }
+}
+
+void FRenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
+    if (instance) {
+        ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
+                "Only %d morph targets are supported (count=%d)", CONFIG_MAX_MORPH_TARGET_COUNT, count);
+
+        MorphWeights& morphWeights = mManager[instance].morphWeights;
         if (morphWeights.handle) {
             updateMorphWeights(mEngine, morphWeights.handle, weights, count);
         }
@@ -618,6 +626,14 @@ void FRenderableManager::setMorphTargetBufferAt(Instance instance,
             primitives[primitiveIndex].set(morphTargetBuffer);
         }
     }
+}
+
+size_t FRenderableManager::getMorphTargetCount(Instance instance) const noexcept {
+    if (instance) {
+        const MorphWeights& morphWeights = mManager[instance].morphWeights;
+        return morphWeights.count;
+    }
+    return 0;
 }
 
 void FRenderableManager::setLightChannel(Instance ci, unsigned int channel, bool enable) noexcept {
@@ -750,6 +766,10 @@ void RenderableManager::setSkinningBuffer(Instance instance,
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
 }
 
+void RenderableManager::setMorphTargetCount(Instance instance, size_t count) noexcept {
+    upcast(this)->setMorphTargetCount(instance, count);
+}
+
 void RenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
     upcast(this)->setMorphWeights(instance, weights, count);
 }
@@ -757,6 +777,10 @@ void RenderableManager::setMorphWeights(Instance instance, float const* weights,
 void RenderableManager::setMorphTargetBufferAt(Instance instance,
         size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept {
     upcast(this)->setMorphTargetBufferAt(instance, primitiveIndex, upcast(morphTargetBuffer));
+}
+
+size_t RenderableManager::getMorphTargetCount(Instance instance) const noexcept {
+    return upcast(this)->getMorphTargetCount(instance);
 }
 
 void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {

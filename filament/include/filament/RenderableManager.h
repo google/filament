@@ -453,6 +453,11 @@ public:
             size_t count, size_t offset) noexcept;
 
     /**
+     * Sets the number of morphing in the given entity.
+     */
+    void setMorphTargetCount(Instance instance, size_t count) noexcept;
+
+    /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
      * The renderable must be built with morphing enabled, see Builder::morphing().
@@ -465,6 +470,11 @@ public:
      */
     void setMorphTargetBufferAt(Instance instance,
             size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept;
+
+    /**
+     * Gets the number of morphing in the given entity.
+     */
+    size_t getMorphTargetCount(Instance instance) const noexcept;
 
     /**
      * Gets the bounding box used for frustum culling.

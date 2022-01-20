@@ -49,7 +49,6 @@ public:
     MorphHelper(FFilamentAsset* asset, FFilamentInstance* inst);
     ~MorphHelper();
 
-    int getTargetCount(Entity entity) const noexcept;
     const char* getTargetNameAt(Entity entity, size_t targetIndex) const noexcept;
 
 private:
