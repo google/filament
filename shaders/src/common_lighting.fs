@@ -69,3 +69,28 @@ float computeMicroShadowing(float NoL, float visibility) {
     float microShadow = saturate(NoL * aperture);
     return microShadow * microShadow;
 }
+
+
+/**
+ * Returns the reflected vector at the current shading point. The reflected vector
+ * return by this function might be different from shading_reflected:
+ * - For anisotropic material, we bend the reflection vector to simulate
+ *   anisotropic indirect lighting
+ * - The reflected vector may be modified to point towards the dominant specular
+ *   direction to match reference renderings when the roughness increases
+ */
+
+vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
+#if defined(MATERIAL_HAS_ANISOTROPY)
+    vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;
+    vec3  anisotropicTangent  = cross(anisotropyDirection, v);
+    vec3  anisotropicNormal   = cross(anisotropicTangent, anisotropyDirection);
+    float bendFactor          = abs(pixel.anisotropy) * saturate(5.0 * pixel.perceptualRoughness);
+    vec3  bentNormal          = normalize(mix(n, anisotropicNormal, bendFactor));
+
+    vec3 r = reflect(-v, bentNormal);
+#else
+    vec3 r = reflect(-v, n);
+#endif
+    return r;
+}

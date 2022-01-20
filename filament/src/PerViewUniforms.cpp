@@ -170,8 +170,6 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao, AmbientOcclusionOption
 
 void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
         float refractionLodOffset,
-        math::mat4f const& historyProjection,
-        math::mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
     mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
@@ -180,9 +178,21 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
     });
 
     auto& s = mPerViewUb.edit();
-
     s.refractionLodOffset = refractionLodOffset;
+    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
+}
 
+void PerViewUniforms::prepareHistorySSR(Handle<HwTexture> ssr,
+        math::mat4f const& historyProjection,
+        math::mat4f const& uvFromViewMatrix,
+        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
+
+    mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
+        .filterMag = SamplerMagFilter::LINEAR,
+        .filterMin = SamplerMinFilter::LINEAR
+    });
+
+    auto& s = mPerViewUb.edit();
     s.ssrReprojection = historyProjection;
     s.ssrUvFromViewMatrix = uvFromViewMatrix;
     s.ssrThickness = ssrOptions.thickness;
