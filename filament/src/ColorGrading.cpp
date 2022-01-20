@@ -55,7 +55,9 @@ struct ColorGrading::BuilderDetails {
     bool hasAdjustments = false;
 
     // Everything below must be part of the == comparison operator
-    ColorGrading::QualityLevel quality = QualityLevel::MEDIUM;
+    LutFormat format = LutFormat::INTEGER;
+    uint8_t dimension = 32;
+
     // Out-of-gamut color handling
     bool   luminanceScaling = false;
     bool   gamutMapping     = false;
@@ -93,7 +95,8 @@ struct ColorGrading::BuilderDetails {
 
     bool operator==(const BuilderDetails &rhs) const {
         // Note: Do NOT compare hasAdjustments and toneMapper
-        return quality == rhs.quality &&
+        return format == rhs.format &&
+               dimension == rhs.dimension &&
                luminanceScaling == rhs.luminanceScaling &&
                gamutMapping == rhs.gamutMapping &&
                exposure == rhs.exposure &&
@@ -127,7 +130,34 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 ColorGrading::Builder& ColorGrading::Builder::quality(ColorGrading::QualityLevel qualityLevel) noexcept {
-    mImpl->quality = qualityLevel;
+    switch (qualityLevel) {
+        case ColorGrading::QualityLevel::LOW:
+            mImpl->format = LutFormat::INTEGER;
+            mImpl->dimension = 16;
+            break;
+        case ColorGrading::QualityLevel::MEDIUM:
+            mImpl->format = LutFormat::INTEGER;
+            mImpl->dimension = 32;
+            break;
+        case ColorGrading::QualityLevel::HIGH:
+            mImpl->format = LutFormat::FLOAT;
+            mImpl->dimension = 32;
+            break;
+        case ColorGrading::QualityLevel::ULTRA:
+            mImpl->format = LutFormat::FLOAT;
+            mImpl->dimension = 64;
+            break;
+    }
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::format(LutFormat format) noexcept {
+    mImpl->format = format;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::dimensions(uint8_t dim) noexcept {
+    mImpl->dimension = math::clamp(+dim, 16, 64);
     return *this;
 }
 
@@ -263,6 +293,7 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
 
     return colorGrading;
 }
+
 #pragma clang diagnostic pop
 
 //------------------------------------------------------------------------------
@@ -527,36 +558,17 @@ static float3 luminanceScaling(float3 x,
 // Quality
 //------------------------------------------------------------------------------
 
-static size_t selectLutDimension(ColorGrading::QualityLevel quality) noexcept {
-    switch (quality) {
-        case ColorGrading::QualityLevel::LOW:    return 16u;
-        case ColorGrading::QualityLevel::MEDIUM: return 32u;
-        case ColorGrading::QualityLevel::HIGH:   return 32u;
-        case ColorGrading::QualityLevel::ULTRA:  return 64u;
-    }
-}
-
-static void selectLutTextureParams(ColorGrading::QualityLevel quality,
+static void selectLutTextureParams(ColorGrading::LutFormat lutFormat,
         TextureFormat& internalFormat, PixelDataFormat& format, PixelDataType& type) noexcept {
     // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
     // is not supported everywhere
-    switch (quality) {
-        case ColorGrading::QualityLevel::LOW:
+    switch (lutFormat) {
+        case ColorGrading::LutFormat::INTEGER:
             internalFormat = TextureFormat::RGB10_A2;
             format = PixelDataFormat::RGBA;
             type = PixelDataType::UINT_2_10_10_10_REV;
             break;
-        case ColorGrading::QualityLevel::MEDIUM:
-            internalFormat = TextureFormat::RGB10_A2;
-            format = PixelDataFormat::RGBA;
-            type = PixelDataType::UINT_2_10_10_10_REV;
-            break;
-        case ColorGrading::QualityLevel::HIGH:
-            internalFormat = TextureFormat::RGBA16F;
-            format = PixelDataFormat::RGBA;
-            type = PixelDataType::HALF;
-            break;
-        case ColorGrading::QualityLevel::ULTRA:
+        case ColorGrading::LutFormat::FLOAT:
             internalFormat = TextureFormat::RGBA16F;
             format = PixelDataFormat::RGBA;
             type = PixelDataType::HALF;
@@ -620,7 +632,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     utils::SpinLock configLock;
     {
         std::lock_guard<utils::SpinLock> lock(configLock);
-        c.lutDimension          = selectLutDimension(builder->quality);
+        c.lutDimension          = builder->dimension;
         c.adaptationTransform   = adaptationTransform(builder->whiteBalance);
         c.colorGradingIn        = selectColorGradingTransformIn(builder->toneMapping);
         c.colorGradingOut       = selectColorGradingTransformOut(builder->toneMapping);
@@ -636,7 +648,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     TextureFormat textureFormat;
     PixelDataFormat format;
     PixelDataType type;
-    selectLutTextureParams(builder->quality, textureFormat, format, type);
+    selectLutTextureParams(builder->format, textureFormat, format, type);
     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
     void* converted = nullptr;
