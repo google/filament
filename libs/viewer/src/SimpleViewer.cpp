@@ -56,10 +56,12 @@ namespace filament {
 namespace viewer {
 
 // Taken from MeshAssimp.cpp
-static void loadTexture(Engine* engine, const std::string& filePath, Texture** map,
-    bool sRGB, bool hasAlpha, const std::string& artRootPathStr) {
+static int loadTexture(Engine* engine, const std::string& filePath, Texture** map,
+    bool sRGB, bool hasAlpha, int numChannels, const std::string& artRootPathStr) {
 
     std::cout << "Loading texture \"" << filePath << "\" relative to \"" << artRootPathStr << "\"" << std::endl;
+
+    int result = 0;
 
     if (!filePath.empty()) {
         utils::Path path(filePath);
@@ -74,20 +76,30 @@ static void loadTexture(Engine* engine, const std::string& filePath, Texture** m
 
         if (path.exists()) {
             int w, h, n;
-            int numChannels = hasAlpha ? 4 : 3;
 
             Texture::InternalFormat inputFormat;
-            if (sRGB) {
-                inputFormat = hasAlpha ? Texture::InternalFormat::SRGB8_A8 : Texture::InternalFormat::SRGB8;
+            if (numChannels == 1) {
+                inputFormat = Texture::InternalFormat::R8;
             }
             else {
-                inputFormat = hasAlpha ? Texture::InternalFormat::RGBA8 : Texture::InternalFormat::RGB8;
+                if (sRGB) {
+                    inputFormat = hasAlpha ? Texture::InternalFormat::SRGB8_A8 : Texture::InternalFormat::SRGB8;
+                }
+                else {
+                    inputFormat = hasAlpha ? Texture::InternalFormat::RGBA8 : Texture::InternalFormat::RGB8;
+                }
             }
 
-            Texture::Format outputFormat = hasAlpha ? Texture::Format::RGBA : Texture::Format::RGB;
-
+            Texture::Format outputFormat;
+            if (numChannels == 1) {
+                outputFormat = Texture::Format::R;
+            } else {
+                outputFormat = hasAlpha ? Texture::Format::RGBA : Texture::Format::RGB;
+            }
+            
             uint8_t* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, numChannels);
             if (data != nullptr) {
+                result = n;
                 *map = Texture::Builder()
                     .width(uint32_t(w))
                     .height(uint32_t(h))
@@ -112,6 +124,8 @@ static void loadTexture(Engine* engine, const std::string& filePath, Texture** m
             std::cout << "The texture " << path << " does not exist" << std::endl;
         }
     }
+
+    return result;
 }
 
 filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset) {
@@ -783,6 +797,188 @@ void SimpleViewer::changeAllVisibility(utils::Entity entity, bool changeToVisibl
     }
 };
 
+const char* SimpleViewer::formatToName(filament::Texture::InternalFormat format) const {
+    switch (format) {
+    case filament::Texture::InternalFormat::R8: return "R8";
+    case filament::Texture::InternalFormat::R8_SNORM: return "R8_SNORM";
+    case filament::Texture::InternalFormat::R8UI: return "R8UI";
+    case filament::Texture::InternalFormat::R8I: return "R8I";
+    case filament::Texture::InternalFormat::STENCIL8: return "STENCIL8";
+    case filament::Texture::InternalFormat::R16F: return "R16F";
+    case filament::Texture::InternalFormat::R16UI: return "R16UI";
+    case filament::Texture::InternalFormat::R16I: return "R16I";
+    case filament::Texture::InternalFormat::RG8: return "RG8";
+    case filament::Texture::InternalFormat::RG8_SNORM: return "RG8_SNORM";
+    case filament::Texture::InternalFormat::RG8UI: return "RG8UI";
+    case filament::Texture::InternalFormat::RG8I: return "RG8I";
+    case filament::Texture::InternalFormat::RGB565: return "RGB565";
+    case filament::Texture::InternalFormat::RGB9_E5: return "RGB9_E5";
+    case filament::Texture::InternalFormat::RGB5_A1: return "RGB5_A1";
+    case filament::Texture::InternalFormat::RGBA4: return "RGBA4";
+    case filament::Texture::InternalFormat::DEPTH16: return "DEPTH16";
+    case filament::Texture::InternalFormat::RGB8: return "RGB8";
+    case filament::Texture::InternalFormat::SRGB8: return "SRGB8";
+    case filament::Texture::InternalFormat::RGB8_SNORM: return "RGB8_SNORM";
+    case filament::Texture::InternalFormat::RGB8UI: return "RGB8UI";
+    case filament::Texture::InternalFormat::RGB8I: return "RGB8I";
+    case filament::Texture::InternalFormat::DEPTH24: return "DEPTH24";
+    case filament::Texture::InternalFormat::R32F: return "R32F";
+    case filament::Texture::InternalFormat::R32UI: return "R32UI";
+    case filament::Texture::InternalFormat::R32I: return "R32I";
+    case filament::Texture::InternalFormat::RG16F: return "RG16F";
+    case filament::Texture::InternalFormat::RG16UI: return "RG16UI";
+    case filament::Texture::InternalFormat::RG16I: return "RG16I";
+    case filament::Texture::InternalFormat::R11F_G11F_B10F: return "R11F_G11F_B10F";
+    case filament::Texture::InternalFormat::RGBA8: return "RGBA8";
+    case filament::Texture::InternalFormat::SRGB8_A8: return "SRGB8_A8";
+    case filament::Texture::InternalFormat::RGBA8_SNORM: return "RGBA8_SNORM";
+    case filament::Texture::InternalFormat::UNUSED: return "UNUSED";
+    case filament::Texture::InternalFormat::RGB10_A2: return "RGB10_A2";
+    case filament::Texture::InternalFormat::RGBA8UI: return "RGBA8UI";
+    case filament::Texture::InternalFormat::RGBA8I: return "RGBA8I";
+    case filament::Texture::InternalFormat::DEPTH32F: return "DEPTH32F";
+    case filament::Texture::InternalFormat::DEPTH24_STENCIL8: return "DEPTH24_STENCIL8";
+    case filament::Texture::InternalFormat::DEPTH32F_STENCIL8: return "DEPTH32F_STENCIL8";
+    case filament::Texture::InternalFormat::RGB16F: return "RGB16F";
+    case filament::Texture::InternalFormat::RGB16UI: return "RGB16UI";
+    case filament::Texture::InternalFormat::RGB16I: return "RGB16I";
+    case filament::Texture::InternalFormat::RG32F: return "RG32F";
+    case filament::Texture::InternalFormat::RG32UI: return "RG32UI";
+    case filament::Texture::InternalFormat::RG32I: return "RG32I";
+    case filament::Texture::InternalFormat::RGBA16F: return "RGBA16F";
+    case filament::Texture::InternalFormat::RGBA16UI: return "RGBA16UI";
+    case filament::Texture::InternalFormat::RGBA16I: return "RGBA16I";
+    case filament::Texture::InternalFormat::RGB32F: return "RGB32F";
+    case filament::Texture::InternalFormat::RGB32UI: return "RGB32UI";
+    case filament::Texture::InternalFormat::RGB32I: return "RGB32I";
+    case filament::Texture::InternalFormat::RGBA32F: return "RGBA32F";
+    case filament::Texture::InternalFormat::RGBA32UI: return "RGBA32UI";
+    case filament::Texture::InternalFormat::RGBA32I: return "RGBA32I";
+    case filament::Texture::InternalFormat::EAC_R11: return "EAC_R11";
+    case filament::Texture::InternalFormat::EAC_R11_SIGNED: return "EAC_R11_SIGNED";
+    case filament::Texture::InternalFormat::EAC_RG11: return "EAC_RG11";
+    case filament::Texture::InternalFormat::EAC_RG11_SIGNED: return "EAC_RG11_SIGNED";
+    case filament::Texture::InternalFormat::ETC2_RGB8: return "ETC2_RGB8";
+    case filament::Texture::InternalFormat::ETC2_SRGB8: return "ETC2_SRGB8";
+    case filament::Texture::InternalFormat::ETC2_RGB8_A1: return "ETC2_RGB8_A1";
+    case filament::Texture::InternalFormat::ETC2_SRGB8_A1: return "ETC2_SRGB8_A1";
+    case filament::Texture::InternalFormat::ETC2_EAC_RGBA8: return "ETC2_EAC_RGBA8";
+    case filament::Texture::InternalFormat::ETC2_EAC_SRGBA8: return "ETC2_EAC_SRGBA8";
+    case filament::Texture::InternalFormat::DXT1_RGB: return "DXT1_RGB";
+    case filament::Texture::InternalFormat::DXT1_RGBA: return "DXT1_RGBA";
+    case filament::Texture::InternalFormat::DXT3_RGBA: return "DXT3_RGBA";
+    case filament::Texture::InternalFormat::DXT5_RGBA: return "DXT5_RGBA";
+    case filament::Texture::InternalFormat::DXT1_SRGB: return "DXT1_SRGB";
+    case filament::Texture::InternalFormat::DXT1_SRGBA: return "DXT1_SRGBA";
+    case filament::Texture::InternalFormat::DXT3_SRGBA: return "DXT3_SRGBA";
+    case filament::Texture::InternalFormat::DXT5_SRGBA: return "DXT5_SRGBA";
+    case filament::Texture::InternalFormat::RGBA_ASTC_4x4: return "RGBA_ASTC_4x4";
+    case filament::Texture::InternalFormat::RGBA_ASTC_5x4: return "RGBA_ASTC_5x4";
+    case filament::Texture::InternalFormat::RGBA_ASTC_5x5: return "RGBA_ASTC_5x5";
+    case filament::Texture::InternalFormat::RGBA_ASTC_6x5: return "RGBA_ASTC_6x5";
+    case filament::Texture::InternalFormat::RGBA_ASTC_6x6: return "RGBA_ASTC_6x6";
+    case filament::Texture::InternalFormat::RGBA_ASTC_8x5: return "RGBA_ASTC_8x5";
+    case filament::Texture::InternalFormat::RGBA_ASTC_8x6: return "RGBA_ASTC_8x6";
+    case filament::Texture::InternalFormat::RGBA_ASTC_8x8: return "RGBA_ASTC_8x8";
+    case filament::Texture::InternalFormat::RGBA_ASTC_10x5: return "RGBA_ASTC_10x5";
+    case filament::Texture::InternalFormat::RGBA_ASTC_10x6: return "RGBA_ASTC_10x6";
+    case filament::Texture::InternalFormat::RGBA_ASTC_10x8: return "RGBA_ASTC_10x8";
+    case filament::Texture::InternalFormat::RGBA_ASTC_10x10: return "RGBA_ASTC_10x10";
+    case filament::Texture::InternalFormat::RGBA_ASTC_12x10: return "RGBA_ASTC_12x10";
+    case filament::Texture::InternalFormat::RGBA_ASTC_12x12: return "RGBA_ASTC_12x12";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_4x4: return "SRGB8_ALPHA8_ASTC_4x4";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_5x4: return "SRGB8_ALPHA8_ASTC_5x4";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_5x5: return "SRGB8_ALPHA8_ASTC_5x5";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_6x5: return "SRGB8_ALPHA8_ASTC_6x5";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_6x6: return "SRGB8_ALPHA8_ASTC_6x6";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x5: return "SRGB8_ALPHA8_ASTC_8x5";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x6: return "SRGB8_ALPHA8_ASTC_8x6";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x8: return "SRGB8_ALPHA8_ASTC_8x8";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x5: return "SRGB8_ALPHA8_ASTC_10x5";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x6: return "SRGB8_ALPHA8_ASTC_10x6";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x8: return "SRGB8_ALPHA8_ASTC_10x8";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x10: return "SRGB8_ALPHA8_ASTC_10x10";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x10: return "SRGB8_ALPHA8_ASTC_12x10";
+    case filament::Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x12: return "SRGB8_ALPHA8_ASTC_12x12";
+    }
+}
+
+std::string SimpleViewer::validateTweaks(const TweakableMaterial& tweaks) {
+    auto verifyTextured = [&]<typename T, bool MayContainFile, bool IsColor, bool IsDerivable>(
+        std::string & result,
+        const std::string & prompt,
+        const TweakableProperty<T, MayContainFile, IsColor, IsDerivable>&prop,
+        filament::Texture::InternalFormat expectedFormat = filament::Texture::InternalFormat::UNUSED) {
+
+        if (!prop.isFile) return;
+
+        if (prop.filename.getFileExtension() != "png") {
+            result += "ERROR: " + prompt + " is not a png.\n";
+        }
+
+        auto textureEntry = mTextures.find(prop.filename.asString());
+        if (textureEntry == mTextures.end()) {
+            result += "ERROR: " + prompt + " cannot be found.\n";
+            return;
+        }
+        int expectedChannelCount = 0;
+        // Infer the expected texture format if no explicit cue was given by the caller
+        if (expectedFormat == filament::Texture::InternalFormat::UNUSED) {
+            if (IsColor) {
+                if (tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentSolid) {
+                    expectedFormat = filament::Texture::InternalFormat::SRGB8_A8;
+                    expectedChannelCount = 4;
+                }
+                else {
+                    expectedFormat = filament::Texture::InternalFormat::SRGB8;
+                    expectedChannelCount = 3;
+                }
+            }
+            else {
+                expectedFormat = filament::Texture::InternalFormat::R8;
+                expectedChannelCount = 1;
+            }
+        }
+        else {
+            if (expectedFormat == filament::Texture::InternalFormat::SRGB8_A8) expectedChannelCount = 4;
+            else if (expectedFormat == filament::Texture::InternalFormat::SRGB8 || expectedFormat == filament::Texture::InternalFormat::RGB8) expectedChannelCount = 3;
+            else if (expectedFormat == filament::Texture::InternalFormat::R8) expectedChannelCount = 1;
+        }
+
+        if (textureEntry->second->getFormat() != expectedFormat) {
+            result += "ERROR: " + prompt + " has incorrect format! Expected " + formatToName(expectedFormat) + ", got " + formatToName(textureEntry->second->getFormat()) + ".\n";
+        }
+
+        auto textureChannelCountEntry = mTextureFileChannels.find(prop.filename.asString());
+        if (textureChannelCountEntry != mTextureFileChannels.end()) {
+            if (textureChannelCountEntry->second != expectedChannelCount) {
+                result += "ERROR: " + prompt + " has incorrect number of channels! Expected " + std::to_string(expectedChannelCount) + ", got " + std::to_string(textureChannelCountEntry->second) + ".\n";
+            }
+        }
+        else {
+            result += "ERROR: " + prompt + " has no channel numbers! Expected a " + std::to_string(expectedChannelCount) + " channel texture.\n";
+        }
+    };
+
+    std::string result = "";
+    verifyTextured(result, "BaseColor", tweaks.mBaseColor);
+
+    verifyTextured(result, "Normal", tweaks.mNormal, filament::Texture::InternalFormat::RGB8);
+    verifyTextured(result, "Occlusion", tweaks.mOcclusion);
+    verifyTextured(result, "Roughness", tweaks.mRoughness);
+    verifyTextured(result, "Metallic", tweaks.mMetallic);
+
+    verifyTextured(result, "ClearCoat Normal", tweaks.mClearCoatNormal, filament::Texture::InternalFormat::RGB8);
+    verifyTextured(result, "ClearCoat Roughness", tweaks.mClearCoatRoughness);
+
+    verifyTextured(result, "Sheen Roughness", tweaks.mSheenRoughness);
+    verifyTextured(result, "Transmission", tweaks.mTransmission);
+    verifyTextured(result, "Thickness", tweaks.mThickness);
+
+    return result;
+}
+
+
 void SimpleViewer::updateUserInterface() {
     using namespace filament;
 
@@ -844,6 +1040,7 @@ void SimpleViewer::updateUserInterface() {
                                 mMaterialInstances.push_back(newInstance);
                                 rm.setMaterialInstanceAt(instance, prim, newInstance);
                             }
+                            tweaks.mDoesRequireValidation = true;
                         }
 
                     } else {
@@ -858,6 +1055,7 @@ void SimpleViewer::updateUserInterface() {
                             if (ImGui::Button("Reset")) {
                                 TweakableMaterial::MaterialType prevType = tweaks.mShaderType;
                                 tweaks.resetWithType(prevType);
+                                tweaks.mDoesRequireValidation = true;
                             }
 
                             std::function<void( TweakableMaterial::MaterialType materialType)> changeMaterialTypeTo;
@@ -872,6 +1070,7 @@ void SimpleViewer::updateUserInterface() {
                                     rm.setMaterialInstanceAt(instance, prim, newInstance);
                                 }
                                 tweaks.mShaderType = materialType;
+                                tweaks.mDoesRequireValidation = true;
                             };
 
                             if (ImGui::RadioButton("Opaque", tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque)) {
@@ -892,7 +1091,8 @@ void SimpleViewer::updateUserInterface() {
                         }
                     }
 
-                    tweaks.drawUI();
+                    static std::string validationResults = "";
+                    tweaks.drawUI(validationResults);
 
                     auto checkAndFixPathRelative([](auto& path) {
                         utils::Path asPath(path);
@@ -905,6 +1105,7 @@ void SimpleViewer::updateUserInterface() {
                     });
 
                     // Load the requested textures
+                    bool isNewTextureLoaded = false;
                     TweakableMaterial::RequestedTexture currentRequestedTexture = tweaks.nextRequestedTexture();
                     while (currentRequestedTexture.filename != "") {
                         checkAndFixPathRelative(currentRequestedTexture.filename);
@@ -912,13 +1113,23 @@ void SimpleViewer::updateUserInterface() {
                         auto textureEntry = mTextures.find(keyName);
                         if (textureEntry == mTextures.end() ) {
                             mTextures[keyName] = nullptr;
-                            loadTexture(mEngine, currentRequestedTexture.filename, &mTextures[keyName], currentRequestedTexture.isSrgb, currentRequestedTexture.isAlpha, mSettings.viewer.artRootPath);
+                            mTextureFileChannels[keyName] = loadTexture(mEngine, currentRequestedTexture.filename, &mTextures[keyName], currentRequestedTexture.isSrgb, currentRequestedTexture.isAlpha, currentRequestedTexture.channelCount, mSettings.viewer.artRootPath);
+                            isNewTextureLoaded = true;
                         } else if (currentRequestedTexture.doRequestReload) {
                             if (mTextures[keyName] != nullptr) mEngine->destroy(mTextures[keyName]);
-                            loadTexture(mEngine, currentRequestedTexture.filename, &mTextures[keyName], currentRequestedTexture.isSrgb, currentRequestedTexture.isAlpha, mSettings.viewer.artRootPath);
+                            mTextureFileChannels[keyName] = loadTexture(mEngine, currentRequestedTexture.filename, &mTextures[keyName], currentRequestedTexture.isSrgb, currentRequestedTexture.isAlpha, currentRequestedTexture.channelCount, mSettings.viewer.artRootPath);
+                            isNewTextureLoaded = true;
                         }
 
                         currentRequestedTexture = tweaks.nextRequestedTexture();
+                    }
+
+                    if (tweaks.mDoesRequireValidation || isNewTextureLoaded) {
+                        tweaks.mDoesRequireValidation = false;
+                        validationResults = validateTweaks(tweaks);
+                        if (validationResults.length() != 0) {
+                            tweaks.mDoRelease = false;
+                        }
                     }
                 }
             }

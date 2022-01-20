@@ -22,6 +22,7 @@
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Scene.h>
+#include <filament/Texture.h>
 #include <filament/View.h>
 
 #include <gltfio/Animator.h>
@@ -230,6 +231,9 @@ private:
     void changeElementVisibility(utils::Entity entity, int elementIndex, bool newVisibility);
     void changeAllVisibility(utils::Entity entity, bool changeToVisible);
 
+    const char* formatToName(filament::Texture::InternalFormat format) const;
+    std::string validateTweaks(const TweakableMaterial&);
+
     void quickLoad();
     void undoLastModification();
     //void redoLastModification();
@@ -284,6 +288,7 @@ private:
     std::unordered_map<std::string, TweakableMaterial> mTweakedMaterials{};
     std::vector<filament::MaterialInstance*> mMaterialInstances{};
     std::unordered_map<std::string, filament::Texture*> mTextures{};
+    std::unordered_map<std::string, int> mTextureFileChannels{};
     bool mVisibility[10]{ true, true, true, true, true, true, true, true, true, true };
 
     TextureSampler trilinSampler = TextureSampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR, TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);

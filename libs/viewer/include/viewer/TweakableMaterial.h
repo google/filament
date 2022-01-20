@@ -72,6 +72,7 @@ public:
 
     struct RequestedTexture {
         std::string filename{};
+        int channelCount{};
         bool isSrgb{};
         bool isAlpha{};
         bool doRequestReload{};
@@ -79,22 +80,22 @@ public:
 
     json toJson();
     void fromJson(const json& source);
-    void drawUI();
+    void drawUI(const std::string& header);
 
     const TweakableMaterial::RequestedTexture nextRequestedTexture();
 
-    TweakablePropertyTextured<filament::math::float4> mBaseColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
+    TweakablePropertyTextured<filament::math::float4,true> mBaseColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
 
-    TweakablePropertyTextured<float, false> mNormal{};
-    TweakablePropertyTextured<float, false> mOcclusionIntensity{ 1.0f };
-    TweakablePropertyTextured<float, false> mOcclusion{1.0f};
+    TweakablePropertyTextured<float> mNormal{};
+    TweakableProperty<float, false> mOcclusionIntensity{ 1.0f };
+    TweakablePropertyTextured<float> mOcclusion{1.0f};
     TweakableProperty<float> mRoughnessScale{};
     TweakablePropertyTextured<float> mRoughness;
     TweakablePropertyTextured<float> mMetallic{};
 
     TweakableProperty<float> mClearCoat{};
     TweakableProperty<float> mClearCoatNormalIntensity{1.0f};
-    TweakablePropertyTextured<float, false> mClearCoatNormal{};
+    TweakablePropertyTextured<float> mClearCoatNormal{};
     TweakablePropertyTextured<float> mClearCoatRoughness{};
 
     std::vector< RequestedTexture > mRequestedTextures{};
@@ -130,14 +131,16 @@ public:
 
     void resetWithType(MaterialType newType);
 
+    bool mDoesRequireValidation = false;
+
 private:
     template< typename T, bool MayContainFile = false, bool IsColor = true, bool IsDerivable = false, typename = IsValidTweakableType<T> >
-    void enqueueTextureRequest(TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpa = false) {
-        enqueueTextureRequest(item.filename, item.doRequestReload, isSrgb, isAlpa);
+    void enqueueTextureRequest(TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpha = false, int channelCount = 1) {
+        enqueueTextureRequest(item.filename, item.doRequestReload, isSrgb, isAlpha, channelCount);
         item.doRequestReload = false;
     }
-
-    void enqueueTextureRequest(const std::string& filename, bool doRequestReload, bool isSrgb = false, bool isAlpa = false);
+    void enqueueTextureRequest(const std::string& filename, bool doRequestReload, bool isSrgb = false, bool isAlpha = false, int channelCount = 1);
+    void requestValidation();
 
     template< typename T, bool MayContainFile = false, bool IsColor = true, bool IsDerivable = false, typename = IsValidTweakableType<T> >
     void writeTexturedToJson(json& result, const std::string& prefix, const TweakableProperty<T, MayContainFile, IsColor>& item) {
@@ -146,8 +149,8 @@ private:
         result[prefix + "Texture"] = (item.isFile) ? item.filename.asString() : "";
     }
 
-    template< typename T, bool MayContainFile = false, bool IsColor = true, bool IsDerivable = false, typename = IsValidTweakableType<T> >
-    void readTexturedFromJson(const json& source, const std::string& prefix, TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpha = false, T defaultValue = {}) {
+    template< typename T, bool MayContainFile = false, bool IsColor = false, bool IsDerivable = false, typename = IsValidTweakableType<T> >
+    void readTexturedFromJson(const json& source, const std::string& prefix, TweakableProperty<T, MayContainFile, IsColor>& item, bool isSrgb = false, bool isAlpha = false, int channelCount = 1, T defaultValue = {}) {
         item.value = source.value(prefix, defaultValue);
         if (source.find(prefix) == source.end()) {
             std::cout << "Unable to read textured property '" << prefix << "', reverting to default value without texture." << std::endl;
@@ -160,7 +163,7 @@ private:
             item.filename = filename;
             item.doRequestReload = true;
             if (item.isFile) {
-                enqueueTextureRequest(item.filename.asString(), item.doRequestReload, isSrgb, isAlpha);
+                enqueueTextureRequest(item.filename.asString(), item.doRequestReload, isSrgb, isAlpha, channelCount);
             }
         }
     }
