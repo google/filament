@@ -81,6 +81,10 @@ public:
     static utils::io::sstream& generateShaderUnlit(utils::io::sstream& out, ShaderType type,
             filament::Variant variant, bool hasShadowMultiplier) ;
 
+    // generate the shader's code for the screen-space reflections
+    static utils::io::sstream& generateShaderReflections(utils::io::sstream& out, ShaderType type,
+            filament::Variant variant);
+
     // generate declarations for custom interpolants
     static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderType type,
             const utils::CString& name, size_t index) ;

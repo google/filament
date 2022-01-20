@@ -342,7 +342,7 @@ public class View {
      */
     public static class ScreenSpaceReflectionsOptions {
         /** ray thickness, in world units */
-        public float thickness = 0.5f;
+        public float thickness = 0.1f;
 
         /** bias, in world units, to prevent self-intersections */
         public float bias = 0.01f;
@@ -351,7 +351,7 @@ public class View {
         public float maxDistance = 3.0f;
 
         /** stride, in texels, for samples along the ray. */
-        public float stride = 1.0f;
+        public float stride = 2.0f;
 
         /** enables or disables screen-space reflections */
         public boolean enabled = false;

@@ -36,11 +36,19 @@ Variant Variant::filterUserVariant(
             variant.key &= ~(filterMask & FOG);
         }
     }
-    if (filterMask & (uint32_t)UserVariantFilterBit::SHADOW_RECEIVER) {
-        variant.key &= ~(filterMask & SRE);
-    }
-    if (filterMask & (uint32_t)UserVariantFilterBit::VSM) {
-        variant.key &= ~(filterMask & VSM);
+    if (!isSSRVariant(variant)) {
+        // SSR variant needs to be handled separately
+        if (filterMask & (uint32_t)UserVariantFilterBit::SHADOW_RECEIVER) {
+            variant.key &= ~(filterMask & SRE);
+        }
+        if (filterMask & (uint32_t)UserVariantFilterBit::VSM) {
+            variant.key &= ~(filterMask & VSM);
+        }
+    } else {
+        // see if we need to filter out the SSR variants
+        if (filterMask & (uint32_t)UserVariantFilterBit::SSR) {
+            variant.key &= ~SPECIAL_SSR;
+        }
     }
     return variant;
 }
@@ -112,10 +120,10 @@ constexpr inline size_t fragment_variant_count() noexcept {
 }
 
 static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 82);
-static_assert(valid_variant_count()    == 46);
-static_assert(vertex_variant_count()   == 16 - (2 + 0) + 4 - 0);    // 18
-static_assert(fragment_variant_count() == 32 - (4 + 8) + 4 - 1);    // 25
+static_assert(reserved_variant_count() == 80);
+static_assert(valid_variant_count() == 48);
+static_assert(vertex_variant_count() == 16 - (2 + 0) + 4 - 0);        // 18
+static_assert(fragment_variant_count() == 33 - (2 + 2 + 8) + 4 - 1);    // 24
 
 } // namespace details
 

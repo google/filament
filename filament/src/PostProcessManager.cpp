@@ -30,6 +30,7 @@
 #include "fg2/FrameGraphResources.h"
 
 #include "fsr.h"
+#include "PerViewUniforms.h"
 #include "RenderPass.h"
 
 #include "details/Camera.h"
@@ -435,6 +436,111 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
     fg.getBlackboard().put("structure", depth);
     fg.getBlackboard().put("picking", structurePass->picking);
     return depth;
+}
+
+// ------------------------------------------------------------------------------------------------
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
+        RenderPass const& pass,
+        FrameHistory const& frameHistory,
+        CameraInfo const& cameraInfo,
+        PerViewUniforms& uniforms,
+        ScreenSpaceReflectionsOptions const& options,
+        FrameGraphTexture::Descriptor const& desc) noexcept {
+
+    Blackboard& blackboard = fg.getBlackboard();
+
+    struct SSRPassData {
+        // our output, the reflection map
+        FrameGraphId<FrameGraphTexture> reflections;
+        // we need a depth buffer for culling
+        FrameGraphId<FrameGraphTexture> depth;
+        // we also need the structure buffer for ray-marching
+        FrameGraphId<FrameGraphTexture> structure;
+        // and the history buffer for fetching the reflections
+        FrameGraphId<FrameGraphTexture> history;
+    };
+
+    mat4f historyProjection;
+    FrameGraphId<FrameGraphTexture> history;
+
+    FrameHistoryEntry const& entry = frameHistory[0];
+    if (entry.ssr.color.handle) {
+        // the first time around we may not have a history buffer
+        history = fg.import("SSR history", entry.ssr.desc,
+                FrameGraphTexture::Usage::SAMPLEABLE, entry.ssr.color);
+        historyProjection = entry.ssr.projection;
+    }
+
+    auto const& uvFromClipMatrix = mEngine.getUvFromClipMatrix();
+
+    auto& ssrPass = fg.addPass<SSRPassData>("SSR Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+
+                // create our reflection buffer. We need an alpha channel, so we have to use RGBA16F
+                data.reflections = builder.createTexture("Reflections Texture", {
+                        .width = desc.width, .height = desc.height,
+                        .format = TextureFormat::RGBA16F });
+
+                // create our depth buffer, the depth buffer is never written to memory
+                data.depth = builder.createTexture("Reflections Texture Depth", {
+                        .width = desc.width, .height = desc.height,
+                        .format = TextureFormat::DEPTH32F });
+
+                // we're writing to both these buffers
+                data.reflections = builder.write(data.reflections,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                // finally declare our render target
+                builder.declareRenderPass("Reflections Target", {
+                        .attachments = { .color = { data.reflections }, .depth = data.depth },
+                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH });
+
+                // get the structure buffer
+                data.structure = blackboard.get<FrameGraphTexture>("structure");
+                assert_invariant(data.structure);
+                data.structure = builder.sample(data.structure);
+
+                if (history) {
+                    data.history = builder.sample(history);
+                }
+            },
+            [=, &uniforms, renderPass = pass](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) mutable {
+
+                // set structure sampler
+                uniforms.prepareStructure(data.structure ?
+                        resources.getTexture(data.structure) : getOneTexture());
+
+                // set screen-space reflections and screen-space refractions
+                mat4f uvFromViewMatrix = uvFromClipMatrix * cameraInfo.projection;
+                mat4f reprojection = uvFromClipMatrix * historyProjection
+                                     * inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                TextureHandle history = data.history ?
+                        resources.getTexture(data.history) : getZeroTexture();
+                uniforms.prepareHistorySSR(history,reprojection, uvFromViewMatrix,options);
+
+                uniforms.commit(driver);
+
+                auto out = resources.getRenderPassInfo();
+
+                // Remove the HAS_SHADOWING RenderFlags, since it's irrelevant when rendering reflections
+                RenderPass::RenderFlags flags = renderPass.getRenderFlags();
+                flags &= ~RenderPass::HAS_SHADOWING;
+                renderPass.setRenderFlags(flags);
+
+                // use our special SSR variant, it can only be applied to object that have
+                // the SCREEN_SPACE ReflectionMode.
+                renderPass.setVariant(Variant{Variant::SPECIAL_SSR});
+                // generate all our drawing commands, except blended objects.
+                renderPass.appendCommands(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
+                renderPass.sortCommands();
+                renderPass.execute(resources.getPassName(), out.target, out.params);
+            });
+
+    return ssrPass->reflections;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(FrameGraph& fg,
@@ -2290,23 +2396,25 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
     // get sample position within a pixel [-0.5, 0.5]
     const float2 jitter = halton(previous.frameId) - 0.5f;
     // save this frame's sample position
-    current.jitter = jitter;
+    current.taa.jitter = jitter;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-        FrameGraphId<FrameGraphTexture> colorHistory,
         TemporalAntiAliasingOptions const& taaOptions,
         ColorGradingConfig colorGradingConfig) noexcept {
 
     FrameHistoryEntry const& entry = frameHistory[0];
+    FrameGraphId<FrameGraphTexture> colorHistory;
     mat4f const* historyProjection = nullptr;
-    if (UTILS_UNLIKELY(!colorHistory)) {
+    if (UTILS_UNLIKELY(!entry.taa.color.handle)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
-        historyProjection = &frameHistory.getCurrent().projection;
+        historyProjection = &frameHistory.getCurrent().taa.projection;
     } else {
-        historyProjection = &entry.projection;
+        colorHistory = fg.import("TAA history", entry.taa.desc,
+                FrameGraphTexture::Usage::SAMPLEABLE, entry.taa.color);
+        historyProjection = &entry.taa.projection;
     }
 
     Blackboard& blackboard = fg.getBlackboard();
@@ -2366,7 +2474,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 d = sampleOffsets[i] - current.jitter;
+                    float2 d = sampleOffsets[i] - current.taa.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
                     // this is a gaussian fit of a 3.3 Blackman Harris window
                     // see: "High Quality Temporal Supersampling" by Bruan Karis
@@ -2394,7 +2502,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
                         *historyProjection *
-                        inverse(current.projection) *
+                        inverse(current.taa.projection) *
                         normalizedToClip);
 
                 mi->commit(driver);

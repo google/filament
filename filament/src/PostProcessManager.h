@@ -44,7 +44,7 @@ class FEngine;
 class FMaterial;
 class FMaterialInstance;
 class FrameGraph;
-class FView;
+class PerViewUniforms;
 class RenderPass;
 struct CameraInfo;
 
@@ -75,6 +75,15 @@ public:
     FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg,
             RenderPass const& pass, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
+
+    // reflections pass
+    FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
+            RenderPass const& pass,
+            FrameHistory const& frameHistory,
+            CameraInfo const& cameraInfo,
+            PerViewUniforms& uniforms,
+            ScreenSpaceReflectionsOptions const& options,
+            FrameGraphTexture::Descriptor const& desc) noexcept;
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
@@ -135,7 +144,6 @@ public:
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-            FrameGraphId<FrameGraphTexture> colorHistory,
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 

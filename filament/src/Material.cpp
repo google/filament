@@ -221,6 +221,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             mRasterState.depthWrite = true;
             break;
         case BlendingMode::MASKED:
+            // MASKED mode now leaves destination alpha intact.
+            // This prevents strange behavior with semi-transparent render targets, which the
+            // model viewer team discovered when testing against the Khronos alpha test
+            // conformance model.
             mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
             mRasterState.blendFunctionSrcAlpha = BlendFunction::ZERO;
             mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;

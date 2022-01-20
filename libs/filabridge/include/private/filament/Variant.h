@@ -51,7 +51,7 @@ struct Variant {
     // VSM: Variance shadow maps
     //
     //   X: either 1 or 0
-    //
+    //                               1     0    0      0     1     0     1
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     // Variant              |  0  | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   128
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
@@ -59,11 +59,13 @@ struct Variant {
     //
     // Standard variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      |  0  | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    64 - 24 = 40
+    //                      |  0  | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    64 - 22 = 42
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //      Vertex shader            0     0     0     X     X     X     X
     //    Fragment shader            X     X     0     0     X     X     X
-    //           Reserved            X     X     0     X     1     0     0      [ -8]
+    //       Fragment SSR            1     0     0     0     1     0     0
+    //           Reserved            1     1     0     X     1     0     0      [ -2]
+    //           Reserved            0     X     0     X     1     0     0      [ -4]
     //           Reserved            1     X     0     X     0     X     X      [-16]
     //
     // Depth variants:
@@ -74,7 +76,7 @@ struct Variant {
     //     Fragment depth            X     X     1     0     0     0     0
     //           Reserved            1     1     1     X     0     0     0     [ -2]
     //
-    // 46 variants used, 82 reserved (128 - 46)
+    // 48 variants used, 80 reserved (128 - 46)
     //
     // note: a valid variant can be neither a valid vertex nor a valid fragment variant
     //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
@@ -93,6 +95,9 @@ struct Variant {
     static constexpr type_t PCK   = 0x20; // picking (depth)
     static constexpr type_t VSM   = 0x40; // variance shadow maps
 
+    // special variants (variants that use the reserved space)
+    static constexpr type_t SPECIAL_SSR   = VSM | SRE; // screen-space reflections variant
+
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
 
@@ -107,12 +112,7 @@ struct Variant {
     // returns raw variant bits
     inline bool hasDirectionalLighting() const noexcept { return key & DIR; }
     inline bool hasDynamicLighting() const noexcept     { return key & DYN; }
-    inline bool hasShadowReceiver() const noexcept      { return key & SRE; }
     inline bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
-    inline bool hasDepth() const noexcept               { return key & DEP; }
-    inline bool hasFog() const noexcept                 { return key & FOG; }
-    inline bool hasPicking() const noexcept             { return key & PCK; }
-    inline bool hasVsm() const noexcept                 { return key & VSM; }
 
     inline void setDirectionalLighting(bool v) noexcept { set(v, DIR); }
     inline void setDynamicLighting(bool v) noexcept     { set(v, DYN); }
@@ -132,14 +132,21 @@ struct Variant {
 
     inline static constexpr bool isValidStandardVariant(Variant variant) noexcept {
         // can't have shadow receiver if we don't have any lighting
-        constexpr type_t RESERVED0_MASK  = SRE | DYN | DIR;
-        constexpr type_t RESERVED0_VALUE = SRE;
+        constexpr type_t RESERVED0_MASK  = VSM | FOG | SRE | DYN | DIR;
+        constexpr type_t RESERVED0_VALUE = VSM | FOG | SRE;
+
+        // can't have shadow receiver if we don't have any lighting
+        constexpr type_t RESERVED1_MASK  = VSM | SRE | DYN | DIR;
+        constexpr type_t RESERVED1_VALUE = SRE;
+
         // can't have VSM without shadow receiver
-        constexpr type_t RESERVED1_MASK  = VSM | SRE;
-        constexpr type_t RESERVED1_VALUE = VSM;
+        constexpr type_t RESERVED2_MASK  = VSM | SRE;
+        constexpr type_t RESERVED2_VALUE = VSM;
+
         return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
                ((variant.key & RESERVED0_MASK) != RESERVED0_VALUE) &&
-               ((variant.key & RESERVED1_MASK) != RESERVED1_VALUE);
+               ((variant.key & RESERVED1_MASK) != RESERVED1_VALUE) &&
+               ((variant.key & RESERVED2_MASK) != RESERVED2_VALUE);
     }
 
     inline static constexpr bool isVertexVariant(Variant variant) noexcept {
@@ -151,17 +158,40 @@ struct Variant {
     }
 
     static constexpr bool isReserved(Variant variant) noexcept {
-        return !isValidStandardVariant(variant) && !isValidDepthVariant(variant);
+        return !isValid(variant);
     }
 
     static constexpr bool isValid(Variant variant) noexcept {
         return isValidStandardVariant(variant) || isValidDepthVariant(variant);
     }
 
+    inline static constexpr bool isSSRVariant(Variant variant) noexcept {
+        return (variant.key & (VSM | DEP | SRE | DYN | DIR)) == (VSM | SRE);
+    }
+
+    inline static constexpr bool isVSMVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & VSM) == VSM);
+    }
+
+    inline static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & SRE) == SRE);
+    }
+
+    inline static constexpr bool isFogVariant(Variant variant) noexcept {
+        return (variant.key & (FOG | DEP)) == FOG;
+    }
+
+    inline static constexpr bool isPickingVariant(Variant variant) noexcept {
+        return (variant.key & (PCK | DEP)) == (PCK | DEP);
+    }
+
     static constexpr Variant filterVariantVertex(Variant variant) noexcept {
         // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
         // vertex shader.
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
+            if (isSSRVariant(variant)) {
+                variant.key &= ~(VSM | SRE);
+            }
             return variant & (SKN | SRE | DYN | DIR);
         }
         if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
@@ -187,6 +217,9 @@ struct Variant {
     static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {
         // special case for depth variant
         if (isValidDepthVariant(variant)) {
+            return variant;
+        }
+        if (isSSRVariant(variant)) {
             return variant;
         }
         if (!isLit) {
