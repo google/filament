@@ -68,11 +68,15 @@ bool SD_MacOpenFileDialog(char* browsedFile, const char* formats, bool folderOnl
     openPanel.canChooseFiles = !folderOnly ? YES : NO;
 
     if (!folderOnly) {
+#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 110000)
         if (@available(macOS 11.0, *)) {
             openPanel.allowedContentTypes = ConvertFormatsToUTI(formats);
         } else {
             openPanel.allowedFileTypes = GetExtensionsFromFormatString(formats);
         }
+#else
+        openPanel.allowedFileTypes = GetExtensionsFromFormatString(formats);
+#endif
     }
     NSModalResponse response = [openPanel runModal];
     
