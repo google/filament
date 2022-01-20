@@ -44,15 +44,15 @@ public:
      */
     void add(KeyType first, KeyType last, const ValueType& value) noexcept {
         // First check if an existing range contains "first".
-        iterator iter = find(first);
+        Iterator iter = findRange(first);
         if (iter != end()) {
-            Range<KeyType>& existing = get_range(iter);
+            Range<KeyType>& existing = getRange(iter);
             // Check if the existing range be extended.
-            if (get_value(iter) == value) {
+            if (getValue(iter) == value) {
                 if (existing.last < last) {
                     wipe(existing.last, last);
                     existing.last = last;
-                    merge_right(iter);
+                    mergeRight(iter);
                 }
                 return;
             }
@@ -61,16 +61,16 @@ public:
                 const KeyType tmp = existing.last;
                 existing.last = first;
                 insert(first, last, value);
-                insert(last, tmp, get_value(iter));
+                insert(last, tmp, getValue(iter));
                 return;
             }
             // Clip the end of the existing range and potentially remove it.
             existing.last = first;
             clean(iter);
             // Check there is a range to the right that needs to be clipped.
-            iter = find(last);
+            iter = findRange(last);
             if (iter != end()) {
-                get_range(iter).first = last;
+                getRange(iter).first = last;
                 clean(iter);
             }
             wipe(first, last);
@@ -80,20 +80,20 @@ public:
 
         // Check if an existing range contains the end of the new range.
         KeyType back = last;
-        iter = find(--back);
+        iter = findRange(--back);
         if (iter == end()) {
             wipe(first, last);
             insert(first, last, value);
             return;
         }
-        Range<KeyType>& existing = get_range(iter);
+        Range<KeyType>& existing = getRange(iter);
 
         // Check if the existing range be extended.
-        if (get_value(iter) == value) {
+        if (getValue(iter) == value) {
             if (existing.first > first) {
                 wipe(first, existing.first);
                 existing.first = first;
-                merge_left(iter);
+                mergeLeft(iter);
             }
             return;
         }
@@ -117,16 +117,16 @@ public:
      * Checks if a range exists that encompasses the given key.
      */
     bool has(KeyType key) const noexcept {
-        return find(key) != mMap.end();
+        return findRange(key) != mMap.end();
     }
 
     /**
      * Retrieves the element at the given location, panics if no element exists.
      */
     const ValueType& get(KeyType key) const {
-        const_iterator iter = find(key);
+        ConstIterator iter = findRange(key);
         ASSERT_PRECONDITION(iter != end(), "RangeMap: No element exists at the given key.");
-        return get_value(iter);
+        return getValue(iter);
     }
 
     /**
@@ -134,14 +134,14 @@ public:
      */
     void clear(KeyType first, KeyType last) noexcept {
         // Check if an existing range contains "first".
-        iterator iter = find(first);
+        Iterator iter = findRange(first);
         if (iter != end()) {
-            Range<KeyType>& existing = get_range(iter);
+            Range<KeyType>& existing = getRange(iter);
             // Split the existing range into two ranges.
             if (last < existing.last && first > existing.first) {
                 const KeyType tmp = existing.last;
                 existing.last = first;
-                insert(last, tmp, get_value(iter));
+                insert(last, tmp, getValue(iter));
                 return;
             }
             // Clip the end of the existing range and potentially remove it.
@@ -153,12 +153,12 @@ public:
 
         // Check if an existing range contains the end of the new range.
         KeyType back = last;
-        iter = find(--back);
+        iter = findRange(--back);
         if (iter == end()) {
             wipe(first, last);
             return;
         }
-        Range<KeyType>& existing = get_range(iter);
+        Range<KeyType>& existing = getRange(iter);
 
         // Clip the beginning of the existing range and potentially remove it.
         existing.first = last;
@@ -177,25 +177,25 @@ public:
     /**
      * Returns the number of internal interval objects (rarely used).
      */
-    size_t range_count() const noexcept { return mMap.size(); }
+    size_t rangeCount() const noexcept { return mMap.size(); }
 
 private:
 
     using Map = std::map<KeyType, std::pair<Range<KeyType>, ValueType>>;
-    using iterator = typename Map::iterator;
-    using const_iterator = typename Map::const_iterator;
+    using Iterator = typename Map::iterator;
+    using ConstIterator = typename Map::const_iterator;
 
-    const_iterator begin() const noexcept { return mMap.begin(); }
-    const_iterator end() const noexcept { return mMap.end(); }
+    ConstIterator begin() const noexcept { return mMap.begin(); }
+    ConstIterator end() const noexcept { return mMap.end(); }
 
-    iterator begin() noexcept { return mMap.begin(); }
-    iterator end() noexcept { return mMap.end(); }
+    Iterator begin() noexcept { return mMap.begin(); }
+    Iterator end() noexcept { return mMap.end(); }
 
-    Range<KeyType>& get_range(iterator iter) const { return iter->second.first; }
-    ValueType& get_value(iterator iter) const { return iter->second.second; }
+    Range<KeyType>& getRange(Iterator iter) const { return iter->second.first; }
+    ValueType& getValue(Iterator iter) const { return iter->second.second; }
 
-    const Range<KeyType>& get_range(const_iterator iter) const { return iter->second.first; }
-    const ValueType& get_value(const_iterator iter) const { return iter->second.second; }
+    const Range<KeyType>& getRange(ConstIterator iter) const { return iter->second.first; }
+    const ValueType& getValue(ConstIterator iter) const { return iter->second.second; }
 
     // Private helper that assumes there is no existing range that overlaps the given range.
     void insert(KeyType first, KeyType last, const ValueType& value) noexcept {
@@ -204,15 +204,15 @@ private:
 
         // Check if there is an adjacent range to the left than can be extended.
         KeyType previous = first;
-        if (iterator iter = find(--previous); iter != end() && get_value(iter) == value) {
-            get_range(iter).last = last;
-            merge_right(iter);
+        if (Iterator iter = findRange(--previous); iter != end() && getValue(iter) == value) {
+            getRange(iter).last = last;
+            mergeRight(iter);
             return;
         }
 
         // Check if there is an adjacent range to the right than can be extended.
-        if (iterator iter = find(last); iter != end() && get_value(iter) == value) {
-            get_range(iter).first = first;
+        if (Iterator iter = findRange(last); iter != end() && getValue(iter) == value) {
+            getRange(iter).first = first;
             return;
         }
 
@@ -223,9 +223,9 @@ private:
     // Note that this is quite different from the public "clear" method.
     void wipe(KeyType first, KeyType last) noexcept {
         // Find the first range whose beginning is greater than or equal to "first".
-        iterator iter = mMap.lower_bound(first);
-        while (iter != end() && get_range(iter).first < last) {
-            KeyType existing_last = get_range(iter).last;
+        Iterator iter = mMap.lower_bound(first);
+        while (iter != end() && getRange(iter).first < last) {
+            KeyType existing_last = getRange(iter).last;
             if (existing_last > last) {
                 break;
             }
@@ -233,71 +233,73 @@ private:
         }
     }
 
-    // Check if there is range to the right that touches the given range.
-    // If so, erase it, extend the given range rightwards, and return true.
-    bool merge_right(iterator iter) {
-        iterator next = iter;
-        if (++next == end() || get_value(next) != get_value(iter)) {
+    // Checks if there is range to the right that touches the given range.
+    // If so, erases it, extends the given range rightwards, and returns true.
+    bool mergeRight(Iterator iter) {
+        Iterator next = iter;
+        if (++next == end() || getValue(next) != getValue(iter)) {
             return false;
         }
-        if (get_range(next).first != get_range(iter).last) {
+        if (getRange(next).first != getRange(iter).last) {
             return false;
         }
-        get_range(iter).last = get_range(next).last;
+        getRange(iter).last = getRange(next).last;
         mMap.erase(next);
         return true;
     }
 
-    // Check if there is range to left right that touches the given range.
-    // If so, erase it, extend the given range leftwards, and return true.
-    bool merge_left(iterator iter) {
-        iterator prev = iter;
-        if (--prev == end() || get_value(prev) != get_value(iter)) {
+    // Checks if there is range to the left that touches the given range.
+    // If so, erases it, extends the given range leftwards, and returns true.
+    bool mergeLeft(Iterator iter) {
+        Iterator prev = iter;
+        if (--prev == end() || getValue(prev) != getValue(iter)) {
             return false;
         }
-        if (get_range(prev).last != get_range(iter).first) {
+        if (getRange(prev).last != getRange(iter).first) {
             return false;
         }
-        get_range(iter).first = get_range(prev).first;
+        getRange(iter).first = getRange(prev).first;
         mMap.erase(prev);
         return true;
     }
 
-    // Erase the given range if it contains no elements.
-    void clean(iterator iter) {
-        Range<KeyType>& range = get_range(iter);
+    // Erases the given range if it contains no elements.
+    void clean(Iterator iter) {
+        Range<KeyType>& range = getRange(iter);
         assert_invariant(range.first <= range.last);
         if (range.first == range.last) {
             mMap.erase(iter);
         }
     }
 
-    const_iterator find(KeyType key) const noexcept {
-        // Find the first range whose beginning is greater than or equal to the given key.
-        const_iterator iter = mMap.lower_bound(key);
-        if (iter != end() && get_range(iter).contains(key)) {
-            return iter;
-        }
-        // If that was the first range, or if the map is empty, return false.
-        if (iter == begin()) {
-            return end();
-        }
-        // Check the range immediately previous to the one that was found.
-        return get_range(--iter).contains(key) ? iter : end();
+    // If the given key is encompassed by an existing range, returns an iterator for that range.
+    // If no encompassing range exists, returns end().
+    ConstIterator findRange(KeyType key) const noexcept {
+        return findRangeT<ConstIterator>(*this, key);
     }
 
-    iterator find(KeyType key) noexcept {
+    // If the given key is encompassed by an existing range, returns an iterator for that range.
+    // If no encompassing range exists, returns end().
+    Iterator findRange(KeyType key) noexcept {
+        return findRangeT<Iterator>(*this, key);
+    }
+
+    // This template method allows us to avoid code duplication for const and non-const variants of
+    // findRange.  C++17 has "std::as_const()" but that would not be helpful here, as we would still
+    // need to convert a const iterator to a non-const iterator.
+    template<typename IteratorType, typename SelfType>
+    static IteratorType findRangeT(SelfType& instance, KeyType key) noexcept {
         // Find the first range whose beginning is greater than or equal to the given key.
-        iterator iter = mMap.lower_bound(key);
-        if (iter != end() && get_range(iter).contains(key)) {
+        IteratorType iter = instance.mMap.lower_bound(key);
+        if (iter != instance.end() && instance.getRange(iter).contains(key)) {
             return iter;
         }
         // If that was the first range, or if the map is empty, return false.
-        if (iter == begin()) {
-            return end();
+        if (iter == instance.begin()) {
+            return instance.end();
         }
         // Check the range immediately previous to the one that was found.
-        return get_range(--iter).contains(key) ? iter : end();
+        return instance.getRange(--iter).contains(key) ? iter : instance.end();
     }
 
     // This maps from the start value of each range to the range itself.
