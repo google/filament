@@ -1242,7 +1242,7 @@ void SimpleViewer::updateUserInterface() {
 
                     setTextureIfPresent(tweaks.mBaseColor.isFile, tweaks.mBaseColor.filename, "baseColor");
 
-                    matInstance->setParameter("normalScale", tweaks.mNormalIntensity.value);
+                    matInstance->setParameter("normalIntensity", tweaks.mNormalIntensity.value);
                     setTextureIfPresent(tweaks.mNormal.isFile, tweaks.mNormal.filename, "normal");
                     matInstance->setParameter("roughnessScale", tweaks.mRoughnessScale.value);
                     setTextureIfPresent(tweaks.mRoughness.isFile, tweaks.mRoughness.filename, "roughness");
@@ -1252,11 +1252,9 @@ void SimpleViewer::updateUserInterface() {
                         matInstance->setParameter("occlusion", tweaks.mOcclusion.value);
                     }
 
-                    matInstance->setParameter("clearCoatNormalScale", tweaks.mClearCoatNormalIntensity.value);
+                    matInstance->setParameter("clearCoatNormalIntensity", tweaks.mClearCoatNormalIntensity.value);
                     setTextureIfPresent(tweaks.mClearCoatNormal.isFile, tweaks.mClearCoatNormal.filename, "clearCoatNormal");
                     setTextureIfPresent(tweaks.mClearCoatRoughness.isFile, tweaks.mClearCoatRoughness.filename, "clearCoatRoughness");
-
-                    matInstance->setParameter("useBumpTexture", 0);
 
                     matInstance->setParameter("textureScaler", math::float4(tweaks.mBaseTextureScale, tweaks.mNormalTextureScale, tweaks.mClearCoatTextureScale, tweaks.mRefractiveTextureScale));
                     matInstance->setParameter("specularIntensity", tweaks.mSpecularIntensity.value);

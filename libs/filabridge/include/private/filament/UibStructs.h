@@ -54,25 +54,22 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     math::float4 resolution; // viewport width, height, 1/width, 1/height
 
-    math::float3 cameraForward;
-    float padding0;
-
     // camera position in view space (when camera_at_origin is enabled), i.e. it's (0,0,0).
     // Always add worldOffset in the shader to get the true world-space position of the camera.
-    math::float3 cameraPosition;
+    alignas(16) math::float3 cameraPosition;
     float time; // time in seconds, with a 1 second period
 
     math::float4 lightColorIntensity; // directional light
 
     math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
-    math::float3 padding1;
+    alignas(16) math::float3 padding1;
     uint32_t lightChannels;
 
-    math::float3 lightDirection;
+    alignas(16) math::float3 lightDirection;
     uint32_t fParamsX; // stride-x
 
-    math::float3 shadowBias; // unused, normal bias, unused
+    alignas(16) math::float3 shadowBias; // unused, normal bias, unused
     float oneOverFroxelDimensionY;
 
     math::float4 zParams; // froxel Z parameters
@@ -98,7 +95,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 8-15: screen-space contact shadows ray casting steps
     uint32_t directionalShadows;
 
-    math::float3 worldOffset; // this is (0,0,0) when camera_at_origin is disabled
+    alignas(16) math::float3 worldOffset; // this is (0,0,0) when camera_at_origin is disabled
     float ssContactShadowDistance;
 
     // fog
@@ -106,7 +103,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogMaxOpacity;
     float fogHeight;
     float fogHeightFalloff;         // falloff * 1.44269
-    math::float3 fogColor;
+    alignas(16) math::float3 fogColor;
     float fogDensity;               // (density/falloff)*exp(-falloff*(camera.y - fogHeight))
     float fogInscatteringStart;
     float fogInscatteringSize;
@@ -134,6 +131,9 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float reserved1;
     float reserved2;
     float reserved3;
+
+    alignas(16) math::float3 cameraForward;
+    float padding0;
 
     // bring PerViewUib to 2 KiB
     math::float4 padding3[57];

@@ -269,28 +269,28 @@ void FEngine::init() {
 
     mShaprGeneralMaterials[0] = upcast(
         FMaterial::Builder()
-            .package(MATERIALS_SHAPRGENERALMATERIALOPAQUE_DATA, MATERIALS_SHAPRGENERALMATERIALOPAQUE_SIZE)
+            .package(MATERIALS_OPAQUE_DATA, MATERIALS_OPAQUE_SIZE)
             .build(*const_cast<FEngine*>(this))
     );
     mShaprGeneralMaterials[1] = upcast(
         FMaterial::Builder()
-        .package(MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_DATA, MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_SIZE)
+        .package(MATERIALS_TRANSPARENTSOLID_DATA, MATERIALS_TRANSPARENTSOLID_SIZE)
         .build(*const_cast<FEngine*>(this))
     );
     // for legacy reasons
     mShaprGeneralMaterials[2] = upcast(
         FMaterial::Builder()
-        .package(MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_DATA, MATERIALS_SHAPRGENERALMATERIALTRANSPARENTSOLID_SIZE)
+        .package(MATERIALS_TRANSPARENTSOLID_DATA, MATERIALS_TRANSPARENTSOLID_SIZE)
         .build(*const_cast<FEngine*>(this))
     );
     mShaprGeneralMaterials[3] = upcast(
         FMaterial::Builder()
-        .package(MATERIALS_SHAPRGENERALMATERIALCLOTH_DATA, MATERIALS_SHAPRGENERALMATERIALCLOTH_SIZE)
+        .package(MATERIALS_CLOTH_DATA, MATERIALS_CLOTH_SIZE)
         .build(*const_cast<FEngine*>(this))
     );
     mShaprGeneralMaterials[4] = upcast(
         FMaterial::Builder()
-        .package(MATERIALS_SHAPRGENERALMATERIALSUBSURFACE_DATA, MATERIALS_SHAPRGENERALMATERIALSUBSURFACE_SIZE)
+        .package(MATERIALS_SUBSURFACE_DATA, MATERIALS_SUBSURFACE_SIZE)
         .build(*const_cast<FEngine*>(this))
     );
 

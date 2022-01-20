@@ -45,8 +45,6 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // view
             .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // camera
-            .add("cameraForward",           1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("cameraPosition",          1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
             // time
             .add("time",                    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
@@ -115,6 +113,10 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("reserved1",               1, UniformInterfaceBlock::Type::FLOAT)
             .add("reserved2",               1, UniformInterfaceBlock::Type::FLOAT)
             .add("reserved3",               1, UniformInterfaceBlock::Type::FLOAT)
+
+            // camera
+            .add("cameraForward", 1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
+            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring PerViewUib to 2 KiB
             .add("padding3", 57, UniformInterfaceBlock::Type::FLOAT4)

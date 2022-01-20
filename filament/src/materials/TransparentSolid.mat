@@ -1,0 +1,207 @@
+material {
+    name : generalShaprTransparentSolid,
+    blending : transparent,
+    transparency : twoPassesTwoSides,
+    refractionMode : screenspace,
+    refractionType : solid,
+    parameters : [
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // Attributes that may have a texture assigned to them. A single control to set their value when
+        // no texture is selected is optional but always named as the material, if present.
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        {
+            type : int,
+            name : useBaseColorTexture
+        },
+        {
+            type : sampler2d,
+            name : baseColorTexture
+        },
+        {
+            type : float4,
+            name : baseColor
+        },
+
+        {
+            type : int,
+            name : useNormalTexture
+        },
+        {
+            type : sampler2d,
+            name : normalTexture
+        },
+
+        {
+            type : int,
+            name : useRoughnessTexture
+        },        
+        {
+            type : sampler2d,
+            name : roughnessTexture
+        },
+        {
+            type : float,
+            name : roughness
+        },
+
+        {
+            type : int,
+            name : useClearCoatNormalTexture
+        },
+        {
+            type : sampler2d,
+            name : clearCoatNormalTexture
+        },
+
+        {
+            type : int,
+            name : useClearCoatRoughnessTexture
+        },        
+        {
+            type : sampler2d,
+            name : clearCoatRoughnessTexture
+        },
+        {
+            type : float,
+            name : clearCoatRoughness
+        },
+
+        {
+            type : int,
+            name : useMetallicTexture
+        },
+        {
+            type : sampler2d,
+            name : metallicTexture
+        },
+        {
+            type : float,
+            name : metallic
+        },
+
+        {
+            type : int,
+            name : useTransmissionTexture
+        },
+        {
+            type : sampler2d,
+            name : transmissionTexture
+        },
+        {
+            type : float,
+            name : transmission
+        },
+
+        {   // default: 1.5
+            type : float,
+            name : ior
+        },
+
+
+        // this is somewhat special because the value here will be assigned to both material.thickness and material.microThickness
+        {
+            type : int,
+            name : useThicknessTexture
+        },
+        {
+            type : sampler2d,
+            name : thicknessTexture
+        },
+        {
+            type : float,
+            name : thickness
+        },
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // Texture lookup scaling that transforms world coordinates to triplanar coordinates
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+
+        { // .r: baseColor, .g: normal|roughness|metallic, .b: clearCoat{Normal|Roughness|value} scaler, .a: ior, transmission, thickness|microThickness texture scalers
+            type : float4,
+            name : textureScaler
+        },
+        { // this is a compatibility attribute with the GltfViewer extra tweaks
+            type : float4,
+            name : scalingControl
+        },
+        { // this is a compatibility attribute with the Filament generated materials
+            type : float,
+            name : normalIntensity
+        },
+        { // this is a compatibility attribute with the Filament generated materials
+            type : float,
+            name : clearCoatNormalIntensity
+        },
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // material attributes that are purely driven by UBO values
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+
+        {
+            type : float,
+            name : specularIntensity
+        },
+        {
+            type : float,
+            name : clearCoat
+        },
+        {
+            type : float,
+            name : roughnessScale
+        },
+        {
+            type : float,
+            name : iorScale
+        },        
+        {
+            type : float,
+            name : maxThickness
+        },        
+        {
+            type : int,
+            name : doDeriveAbsorption
+        },
+        {
+            type : float3,
+            name : absorption
+        },
+        {
+            type : int,
+            name : useWard
+        },
+        {
+            type : float,
+            name : ambient
+        }
+    ],
+    variables: [
+        objectSpacePosition, 
+        objectSpaceNormal
+    ],
+    vertexDomain : object,
+    quality : high
+}
+
+vertex {
+    #include "MaterialHelpersVertex.fxh"
+
+    void materialVertex(inout MaterialVertexInputs material) {
+        ProcessVertex(material);
+    }
+}
+
+fragment {
+    #include "MaterialHelpersShading.fxh"
+
+    void material(inout MaterialInputs material) {
+        ApplyEditorScalers(material);
+
+        FragmentData fragmentData = GetPositionAndNormal();
+
+        ApplyAllPrePrepare(material, fragmentData);
+
+        prepareMaterial(material);
+
+        ApplyAllPostPrepare(material, fragmentData);
+    }
+}
