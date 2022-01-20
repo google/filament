@@ -2172,7 +2172,7 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
     // get sample position within a pixel [-0.5, 0.5]
     const float2 jitter = halton(previous.frameId) - 0.5f;
     // save this frame's sample position
-    current.jitter = jitter;
+    current.taa.jitter = jitter;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
@@ -2186,9 +2186,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     if (UTILS_UNLIKELY(!colorHistory)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
-        historyProjection = &frameHistory.getCurrent().projection;
+        historyProjection = &frameHistory.getCurrent().taa.projection;
     } else {
-        historyProjection = &entry.projection;
+        historyProjection = &entry.taa.projection;
     }
 
     Blackboard& blackboard = fg.getBlackboard();
@@ -2248,7 +2248,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 d = sampleOffsets[i] - current.jitter;
+                    float2 d = sampleOffsets[i] - current.taa.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
                     // this is a gaussian fit of a 3.3 Blackman Harris window
                     // see: "High Quality Temporal Supersampling" by Bruan Karis
@@ -2276,7 +2276,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
                         *historyProjection *
-                        inverse(current.projection) *
+                        inverse(current.taa.projection) *
                         normalizedToClip);
 
                 mi->commit(driver);

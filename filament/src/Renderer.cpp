@@ -483,7 +483,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         ppm.prepareTaa(history, cameraInfo, taaOptions);
         // convert the sample position to jitter in clip-space
         float2 jitterInClipSpace =
-                history.getCurrent().jitter * (2.0f / float2{ svp.width, svp.height });
+                history.getCurrent().taa.jitter * (2.0f / float2{ svp.width, svp.height });
         // update projection matrix
         cameraInfo.projection[2].xy -= jitterInClipSpace;
 
@@ -617,7 +617,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }, [&view](FrameGraphResources const& resources, auto const& data, backend::DriverApi&) {
             FrameHistory& frameHistory = view.getFrameHistory();
             FrameHistoryEntry& current = frameHistory.getCurrent();
-            resources.detach(data.color, &current.color, &current.colorDesc);
+            resources.detach(data.color, &current.taa.color, &current.taa.colorDesc);
         });
     }
 
@@ -920,7 +920,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
             const FrameHistory& frameHistory = view.getFrameHistory();
             FrameHistoryEntry const& entry = frameHistory[0];
-            historyProjection = entry.projection;
+            historyProjection = entry.taa.projection;
         }
     }
 
@@ -1392,7 +1392,7 @@ math::mat4f FRenderer::getClipSpaceToTextureSpaceMatrix() const noexcept {
 void FRenderer::setHistoryProjection(FView& view, math::mat4f const& projection) {
     auto& history = view.getFrameHistory();
     auto& current = history.getCurrent();
-    current.projection = projection;
+    current.taa.projection = projection;
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg,
@@ -1406,11 +1406,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg,
     }
 
     FrameHistoryEntry const& entry = frameHistory[0];
-    if (UTILS_UNLIKELY(!entry.color.handle)) {
+    if (UTILS_UNLIKELY(!entry.taa.color.handle)) {
         return {};
     }
-    FrameGraphId<FrameGraphTexture> colorHistory = fg.import("Color history", entry.colorDesc,
-            FrameGraphTexture::Usage::SAMPLEABLE, entry.color);
+    FrameGraphId<FrameGraphTexture> colorHistory = fg.import("Color history", entry.taa.colorDesc,
+            FrameGraphTexture::Usage::SAMPLEABLE, entry.taa.color);
     blackboard["colorHistory"] = colorHistory;
     return colorHistory;
 }
