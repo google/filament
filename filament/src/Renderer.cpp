@@ -560,9 +560,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, "Color Pass",
             desc, config, colorGradingConfigForColor, pass.getExecutor(), view);
 
-    // the color pass + refraction + color-grading as subpass if needed
-    // this cancels the colorPass() call above if refraction is active.
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
+        // this cancels the colorPass() call above if refraction is active.
+        // the color pass + refraction + color-grading as subpass if needed
         colorPassOutput = refractionPass(fg, config, colorGradingConfigForColor, pass, view);
     }
 
@@ -585,7 +585,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // if the depth is not used below.
     auto& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
-    depth = ppm.resolve(fg, "Resolved Depth Buffer", depth);
+    depth = ppm.resolveBaseLevel(fg, "Resolved Depth Buffer", depth);
     blackboard.put("depth", depth);
 
     // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of
@@ -706,6 +706,98 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //recordHighWatermark(pass.getCommandsHighWatermark());
 }
 
+FrameGraphId<FrameGraphTexture> FRenderer::generateMipmapSSR(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FCamera const& camera,
+        ColorPassConfig config, float* pLodOffset) const noexcept {
+
+    // TODO: add an option to generate a 1/4 res texture (for performance)
+
+    auto const& desc = fg.getDescriptor(input);
+
+    // scale factor for the gaussian so it matches our resolution / FOV
+    const float verticalFieldOfView = camera.getFieldOfView(Camera::Fov::VERTICAL);
+    const float s = verticalFieldOfView / float(desc.height);
+
+    // The kernel-size was determined empirically so that we don't get too many artifacts
+    // due to the down-sampling with a box filter (which happens implicitly).
+    // e.g.: size of 13 (4 stored coefficients)
+    //      +-------+-------+-------*===*-------+-------+-------+
+    //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
+    //      +-------+-------+-------*===*-------+-------+-------+
+    const size_t kernelSize = 21;   // requires only 6 stored coefficients and 11 tap/pass
+    static_assert(kernelSize & 1u, "kernel size must be odd");
+    static_assert((((kernelSize - 1u) / 2u) & 1u) == 0, "kernel positive side size must be even");
+
+    // The relation between n and sigma (variance) is 6*sigma - 1 = N
+    const float sigma0 = (kernelSize + 1) / 6.0f;
+
+    // The variance doubles each time we go one mip down, so the relation between LOD and
+    // sigma is: lod = log2(sigma/sigma0).
+    // sigma is deduced from the roughness: roughness = sqrt(2) * s * sigma
+    // In the end we get: lod = 2 * log2(perceptualRoughness) - log2(sigma0 * s * sqrt2)
+    const float refractionLodOffset = -std::log2(sigma0 * s * f::SQRT2);
+    const float maxPerceptualRoughness = 0.5f;
+    const uint8_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
+
+    // Number of roughness levels we want.
+    // TODO: If we want to limit the number of mip levels, we must reduce the initial
+    //       resolution (if we want to keep the same filter, and still match the IBL somewhat).
+    const uint8_t roughnessLodCount =
+            std::min(maxLod, FTexture::maxLevelCount(desc.width, desc.height));
+
+    // Then copy the color buffer into a texture, making sure that we keep the original
+    // buffer aspect-ratio (this is because dynamic-resolution is not necessarily homogenous).
+    uint32_t w = config.svp.width;
+    uint32_t h = config.svp.height;
+    if (config.scale.x < config.scale.y) { // we're downscaling more horizontally
+        w = uint32_t(float(config.vp.width) * config.scale.y);
+    } else if (config.scale.x > config.scale.y) { // we're downscaling more vertically
+        h = uint32_t(float(config.vp.height) * config.scale.x);
+    }
+
+    PostProcessManager& ppm = mEngine.getPostProcessManager();
+
+    /*
+     * Resolve
+     */
+
+    if (desc.samples > 1 &&
+            (w == config.svp.width && h == config.svp.height) &&
+            desc.format == TextureFormat::R11F_G11F_B10F) {
+        // Here we can resolve directly into a texture with the right dimensions, level count and format
+        // (resolve CANNOT scale or convert formats)
+        input = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, {
+                .width = w,
+                .height = h,
+                .levels = roughnessLodCount,
+                .format = TextureFormat::R11F_G11F_B10F,
+        });
+    } else {
+        // first resolve (if needed)
+        input = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
+        // then blit into an appropriate texture
+        // this handles scaling, format conversion and mipmaping
+        input = ppm.opaqueBlit(fg, input, {
+                .width = w,
+                .height = h,
+                .levels = roughnessLodCount,
+                .format = TextureFormat::R11F_G11F_B10F,
+        });
+        // TODO: in theory in the "no MSAA, no scaling, no format conversion" case, we should
+        //       be able to use the FrameGraph's forwardResource() (to a mipmapped texture) to
+        //       avoid this blit (i.e. draw directly into the base level)
+    }
+
+    /*
+     * Generate mipmap chain
+     */
+
+    *pLodOffset = refractionLodOffset;
+    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);
+    return input;
+}
+
 FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         ColorPassConfig config,
         PostProcessManager::ColorGradingConfig colorGradingConfig,
@@ -725,98 +817,61 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
     const bool hasScreenSpaceRefraction =
             (refraction->key & RenderPass::PASS_MASK) == uint64_t(RenderPass::Pass::REFRACT);
 
+    // if there wasn't any refractive object, just skip everything below.
     if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
         PostProcessManager& ppm = mEngine.getPostProcessManager();
+        float refractionLodOffset = 0.0f;
+
         // clear the color/depth buffers, which will orphan (and cull) the color pass
         input.clear();
         blackboard.remove("color");
         blackboard.remove("depth");
 
-        const RenderPass::Executor opaquePass{ pass.getExecutor(pass.begin(), refraction) };
+        input = colorPass(fg, "Color Pass (opaque)",
+                {
+                        // When rendering the opaques, we need to conserve the sample buffer,
+                        // so create config that specifies the sample count.
+                        .width = config.svp.width,
+                        .height = config.svp.height,
+                        .samples = config.msaa,
+                        .format = config.hdrFormat
+                },
+                config,
+                { .asSubpass = false },
+                { pass.getExecutor(pass.begin(), refraction) },
+                view);
 
-        FrameGraphTexture::Descriptor desc = {
-                .width = config.svp.width,
-                .height = config.svp.height,
-                .samples = config.msaa,  // we need to conserve the sample buffer
-                .format = config.hdrFormat
-        };
+        // generate the mipmap chain
+        input = generateMipmapSSR(fg,
+                input, view.getCameraUser(), config, &refractionLodOffset);
 
-        input = colorPass(fg, "Color Pass (opaque)", desc, config,
-                { .asSubpass = false }, opaquePass, view);
-
-        // vvv the actual refraction pass starts below vvv
-
-        // scale factor for the gaussian so it matches our resolution / FOV
-        const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
-        const float s = verticalFieldOfView / desc.height;
-
-        // The kernel-size was determined empirically so that we don't get too many artifacts
-        // due to the down-sampling with a box filter (which happens implicitly).
-        // e.g.: size of 13 (4 stored coefficients)
-        //      +-------+-------+-------*===*-------+-------+-------+
-        //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
-        //      +-------+-------+-------*===*-------+-------+-------+
-        const size_t kernelSize = 21;   // requires only 6 stored coefficients and 11 tap/pass
-        static_assert(kernelSize & 1u, "kernel size must be odd");
-        static_assert((((kernelSize - 1u) / 2u) & 1u) == 0, "kernel positive side size must be even");
-
-        // The relation between n and sigma (variance) is 6*sigma - 1 = N
-        const float sigma0 = (kernelSize + 1) / 6.0f;
-
-        // The variance doubles each time we go one mip down, so the relation between LOD and
-        // sigma is: lod = log2(sigma/sigma0).
-        // sigma is deduced from the roughness: roughness = sqrt(2) * s * sigma
-        // In the end we get: lod = 2 * log2(perceptualRoughness) - log2(sigma0 * s * sqrt2)
-        const float refractionLodOffset = -std::log2(sigma0 * s * f::SQRT2);
-        const float maxPerceptualRoughness = 0.5f;
-        const uint8_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
-
-        // Number of roughness levels we want.
-        // TODO: If we want to limit the number of mip levels, we must reduce the initial
-        //       resolution (if we want to keep the same filter, and still match the IBL somewhat).
-        const uint8_t roughnessLodCount =
-                std::min(maxLod, FTexture::maxLevelCount(desc.width, desc.height));
-
-        // First we need to resolve the MSAA buffer if enabled
-        input = ppm.resolve(fg, "Resolved Color Buffer", input);
-
-        // Then copy the color buffer into a texture, and make sure to scale it back properly.
-        uint32_t w = config.svp.width;
-        uint32_t h = config.svp.height;
-        if (config.scale.x < config.scale.y) {
-            // we're downscaling more horizontally
-            w = config.vp.width * config.scale.y;
-        } else {
-            // we're downscaling more vertically
-            h = config.vp.height * config.scale.x;
-        }
-
-        input = ppm.opaqueBlit(fg, input, {
-                .width = w,
-                .height = h,
-                .levels = roughnessLodCount,
-                .format = TextureFormat::R11F_G11F_B10F,
-        });
-
-        input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);
+        // and this becomes our SSR buffer
         blackboard["ssr"] = input;
 
-        // ^^^ the actual refraction pass ends above ^^^
 
-        // set-up the refraction pass
-        const RenderPass::Executor translucentPass{ pass.getExecutor(refraction, pass.end()) };
-
+        // Now we're doing the refraction pass proper.
+        // This uses the same framebuffer (color and depth) used by the opaque pass. This happens
+        // automatically because these are set in the Blackboard (they were set by the opaque
+        // pass). For this reason, `desc` below is only used in colorPass() for the width and
+        // height.
         config.refractionLodOffset = refractionLodOffset;
         config.clearFlags = TargetBufferFlags::NONE;
         output = colorPass(fg, "Color Pass (transparent)",
-                desc, config, colorGradingConfig, translucentPass, view);
+                {
+                        .width = config.svp.width,
+                        .height = config.svp.height
+                },
+                config,
+                colorGradingConfig,
+                { pass.getExecutor(refraction, pass.end()) },
+                view);
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
             // We need to do a resolve here because later passes (such as color grading or DoF) will need
             // to sample from 'output'. However, because we have MSAA, we know we're not sampleable.
             // And this is because in the SSR case, we had to use a renderbuffer to conserve the
             // multi-sample buffer.
-            output = ppm.resolve(fg, "Resolved Color Buffer", output);
+            output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", output);
         }
     } else {
         output = input;

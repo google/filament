@@ -143,8 +143,16 @@ public:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
-    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
+    // resolve base level of input and outputs a 1-level texture
+    FrameGraphId<FrameGraphTexture> resolveBaseLevel(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
+
+    // resolves base level of input and outputs a texture from outDesc. outDesc must
+    // have the same dimensions and format as input, or this will fail.
+    // outDesc can have mipmaps.
+    FrameGraphId<FrameGraphTexture> resolveBaseLevelNoCheck(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
