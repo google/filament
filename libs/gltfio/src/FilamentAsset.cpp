@@ -104,6 +104,14 @@ int FFilamentAsset::getMorphTargetCount(utils::Entity entity) noexcept {
     return 0;
 }
 
+const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
+        size_t targetIndex) const noexcept {
+    if (mResourcesLoaded) {
+        return mMorpher->getTargetNameAt(entity, targetIndex);
+    }
+    return nullptr;
+}
+
 Entity FFilamentAsset::getWireframe() noexcept {
     if (!mWireframe) {
         mWireframe = new Wireframe(this);
@@ -285,6 +293,11 @@ Animator* FilamentAsset::getAnimator() noexcept {
 
 int FilamentAsset::getMorphTargetCount(utils::Entity entity) noexcept {
     return upcast(this)->getMorphTargetCount(entity);
+}
+
+const char* FilamentAsset::getMorphTargetNameAt(utils::Entity entity,
+        size_t targetIndex) const noexcept {
+    return upcast(this)->getMorphTargetNameAt(entity, targetIndex);
 }
 
 Entity FilamentAsset::getWireframe() noexcept {

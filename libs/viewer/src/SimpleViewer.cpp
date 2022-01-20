@@ -407,13 +407,6 @@ void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instan
         mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
-
-        int morphCount = 0;
-        for (size_t i = 0, c = asset->getEntityCount(); i < c; ++i) {
-            auto entity = asset->getEntities()[i];
-            morphCount = std::max(morphCount, asset->getMorphTargetCount(entity));
-        }
-        mMorphWeights.resize(std::min(morphCount, 128), 0);
     }
 
     auto& tcm = mEngine->getRenderableManager();
@@ -435,7 +428,6 @@ void SimpleViewer::removeAsset() {
     }
     mAsset = nullptr;
     mAnimator = nullptr;
-    mMorphWeights.clear();
 }
 
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
@@ -986,21 +978,6 @@ void SimpleViewer::updateUserInterface() {
                 mResetAnimation = true;
             }
             ImGui::Unindent();
-        }
-
-        if (!mMorphWeights.empty() && ImGui::CollapsingHeader("Morphing")) {
-            for (int i = 0; i != mMorphWeights.size(); ++i) {
-                std::stringstream ss;
-                ss << i + 1 << " Weight";
-                std::string label = ss.str();
-                ImGui::SliderFloat(label.data(), &mMorphWeights[i], 0.0f, 1.0);
-            }
-            auto& rcm = mEngine->getRenderableManager();
-            auto entities = mAsset->getEntities();
-            for (size_t i = 0, c = mAsset->getEntityCount(); i != c; ++i) {
-                auto ci = rcm.getInstance(entities[i]);
-                rcm.setMorphWeights(ci, mMorphWeights.data(), mMorphWeights.size());
-            }
         }
 
         if (mEnableWireframe) {
