@@ -2554,14 +2554,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevel(FrameGraph& fg,
         const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept {
-
     // Don't do anything if we're not a MSAA buffer
     auto desc = fg.getDescriptor(input);
     if (desc.samples <= 1) {
         return input;
     }
+    desc.samples = 0;
+    desc.levels = 1;
+    return resolveBaseLevelNoCheck(fg, outputBufferName, input, desc);
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevelNoCheck(FrameGraph& fg,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor const& desc) noexcept {
 
     struct ResolveData {
         FrameGraphId<FrameGraphTexture> input;
@@ -2588,11 +2595,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
                 data.input = builder.read(input, data.usage);
 
-                auto outputDesc = desc;
-                outputDesc.levels = 1;
-                outputDesc.samples = 0;
-
-                rpDescAttachment = builder.createTexture(outputBufferName, outputDesc);
+                rpDescAttachment = builder.createTexture(outputBufferName, desc);
                 rpDescAttachment = builder.write(rpDescAttachment, data.usage);
                 data.output = rpDescAttachment;
                 builder.declareRenderPass("Resolve Pass", rpDesc);
