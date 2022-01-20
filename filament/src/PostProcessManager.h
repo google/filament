@@ -146,6 +146,10 @@ public:
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
 
+    FrameGraphId<FrameGraphTexture> resolveNoCheck(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc) noexcept;
+
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,

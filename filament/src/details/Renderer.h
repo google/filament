@@ -143,15 +143,25 @@ private:
     void renderInternal(FView const* view);
 
     struct ColorPassConfig {
+        // User Viewport
         Viewport vp;
+        // Scaled (down) viewport from dynamic resolution
         Viewport svp;
+        // dynamic resolution scale
         math::float2 scale;
+        // HDR format
         backend::TextureFormat hdrFormat;
+        // MSAA sample count
         uint8_t msaa;
+        // Clear flags
         backend::TargetBufferFlags clearFlags;
+        // Clear color
         math::float4 clearColor = {};
+        // Lod offset for the SSR pass
         float refractionLodOffset;
+        // Contact shadow enabled?
         bool hasContactShadows;
+        // Screen-space reflections enabled?
         bool hasScreenSpaceReflections;
     };
 
@@ -165,6 +175,11 @@ private:
             ColorPassConfig config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
+
+    FrameGraphId<FrameGraphTexture> generateMipmapSSR(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FCamera const& camera,
+            ColorPassConfig config, float* pLodOffset) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);

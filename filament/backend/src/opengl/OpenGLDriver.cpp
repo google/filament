@@ -3087,14 +3087,14 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
 
         // GL_INVALID_OPERATION is generated if GL_SAMPLE_BUFFERS for the read buffer is greater
         // than zero and the formats of draw and read buffers are not identical.
-        // However, it's not well defined in the spec what "format" means. So it's difficult
+        // However, it's not well-defined in the spec what "format" means. So it's difficult
         // to have an assert here -- especially when dealing with the default framebuffer
 
         // GL_INVALID_OPERATION is generated if GL_SAMPLE_BUFFERS for the read buffer is greater
         // than zero and (...) the source and destination rectangles are not defined with the
         // same (X0, Y0) and (X1, Y1) bounds.
 
-        // Additionally the EXT_multisampled_render_to_texture extension doesn't specify what
+        // Additionally, the EXT_multisampled_render_to_texture extension doesn't specify what
         // happens when blitting from an "implicit" resolve render target (does it work?), so
         // to ere on the safe side, we don't allow it.
         if (s->gl.samples > 1) {
