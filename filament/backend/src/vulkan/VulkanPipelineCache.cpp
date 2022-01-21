@@ -872,6 +872,7 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
             vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
         }
     }
+    mLayouts.clear();
     vkDestroyDescriptorPool(mDevice, mDescriptorPool, VKALLOC);
     mDescriptorPool = VK_NULL_HANDLE;
     for (int i = 0; i < VK_MAX_COMMAND_BUFFERS; i++) {
