@@ -443,14 +443,14 @@ public:
      * Updates the bone transforms in the range [offset, offset + boneCount).
      * The bones must be pre-allocated using Builder::skinning().
      */
-    void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
-    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept; //!< \overload
+    void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0);
+    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0); //!< \overload
 
     /**
      * Associates a SkinningBuffer to a renderable instance
      */
     void setSkinningBuffer(Instance instance, SkinningBuffer* skinningBuffer,
-            size_t count, size_t offset) noexcept;
+            size_t count, size_t offset);
 
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
@@ -458,8 +458,7 @@ public:
      * The renderable must be built with morphing enabled, see Builder::morphing().
      */
     void setMorphWeights(Instance instance,
-            float const* weights, size_t count, size_t offset = 0) noexcept;
-
+            float const* weights, size_t count, size_t offset = 0);
 
     /**
      * Associates a MorphTargetBuffer to the given primitive.

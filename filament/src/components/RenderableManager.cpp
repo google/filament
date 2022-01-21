@@ -523,7 +523,7 @@ void FRenderableManager::setGeometryAt(Instance instance, uint8_t level, size_t 
 }
 
 void FRenderableManager::setBones(Instance ci,
-        Bone const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
+        Bone const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) {
     if (ci) {
         Bones& bones = mManager[ci].bones;
 
@@ -539,7 +539,7 @@ void FRenderableManager::setBones(Instance ci,
 }
 
 void FRenderableManager::setBones(Instance ci,
-        mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
+        mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) {
     if (ci) {
         Bones& bones = mManager[ci].bones;
 
@@ -555,7 +555,7 @@ void FRenderableManager::setBones(Instance ci,
 }
 
 void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
-        FSkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
+        FSkinningBuffer* skinningBuffer, size_t count, size_t offset) {
 
     Bones& bones = mManager[ci].bones;
 
@@ -597,7 +597,7 @@ static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBuffe
 }
 
 void FRenderableManager::setMorphWeights(Instance instance, float const* weights,
-        size_t count, size_t offset) noexcept {
+        size_t count, size_t offset) {
     if (instance) {
         ASSERT_PRECONDITION(count + offset < CONFIG_MAX_MORPH_TARGET_COUNT,
                 "Only %d morph targets are supported (count=%d, offset=%d)",
@@ -748,22 +748,22 @@ void RenderableManager::setGeometryAt(RenderableManager::Instance instance, size
 }
 
 void RenderableManager::setBones(Instance instance,
-        RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) noexcept {
+        RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) {
     upcast(this)->setBones(instance, transforms, boneCount, offset);
 }
 
 void RenderableManager::setBones(Instance instance,
-        mat4f const* transforms, size_t boneCount, size_t offset) noexcept {
+        mat4f const* transforms, size_t boneCount, size_t offset) {
     upcast(this)->setBones(instance, transforms, boneCount, offset);
 }
 
 void RenderableManager::setSkinningBuffer(Instance instance,
-        SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
+        SkinningBuffer* skinningBuffer, size_t count, size_t offset) {
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
 }
 
 void RenderableManager::setMorphWeights(Instance instance, float const* weights,
-        size_t count, size_t offset) noexcept {
+        size_t count, size_t offset) {
     upcast(this)->setMorphWeights(instance, weights, count, offset);
 }
 
