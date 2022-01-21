@@ -610,10 +610,12 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
     }
 }
 
-void FRenderableManager::setMorphTargetBufferAt(Instance instance,
-        size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept {
+void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+        FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept {
+    assert_invariant(offset == 0 && "Offset not yet supported.");
+    assert_invariant(count == morphTargetBuffer->getVertexCount() && "Count not yet supported.");
     if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, 0);
+        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].set(morphTargetBuffer);
         }
@@ -754,9 +756,16 @@ void RenderableManager::setMorphWeights(Instance instance, float const* weights,
     upcast(this)->setMorphWeights(instance, weights, count);
 }
 
-void RenderableManager::setMorphTargetBufferAt(Instance instance,
-        size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept {
-    upcast(this)->setMorphTargetBufferAt(instance, primitiveIndex, upcast(morphTargetBuffer));
+void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept {
+    upcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex,
+            upcast(morphTargetBuffer), offset, count);
+}
+
+void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer, size_t count) noexcept {
+    upcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex,
+            upcast(morphTargetBuffer), 0, count);
 }
 
 void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {
