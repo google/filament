@@ -498,8 +498,8 @@ public class RenderableManager {
      *
      * @see Builder#morphing
      */
-    public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights) {
-        nSetMorphWeights(mNativeObject, i, weights);
+    public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights, @IntRange(from = 0) int offset) {
+        nSetMorphWeights(mNativeObject, i, weights, offset);
     }
 
     /**
@@ -771,7 +771,7 @@ public class RenderableManager {
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
     private static native int nSetBonesAsQuaternions(long nativeObject, int i, Buffer quaternions, int remaining, int boneCount, int offset);
-    private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights);
+    private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights, int offset);
     private static native int nGetMorphTargetCount(long nativeObject, int i);
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);

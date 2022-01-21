@@ -267,11 +267,11 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsQuaternions(JNIEnv
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env, jclass,
-        jlong nativeRenderableManager, jint instance, jfloatArray weights) {
+        jlong nativeRenderableManager, jint instance, jfloatArray weights, jint offset) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     jfloat* vec = env->GetFloatArrayElements(weights, NULL);
     jsize count = env->GetArrayLength(weights);
-    rm->setMorphWeights((RenderableManager::Instance)instance, vec, count);
+    rm->setMorphWeights((RenderableManager::Instance)instance, vec, count, offset);
     env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
 }
 
