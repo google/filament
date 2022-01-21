@@ -110,8 +110,8 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
     }
     if (bind) {
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                mPipelineKey.pipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors,
-                0, nullptr);
+                mPipelineKey.layout->pipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,
+                descriptors, 0, nullptr);
     }
     return true;
 }
@@ -135,9 +135,8 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         VkDescriptorSet descriptorSets[DESCRIPTOR_TYPE_COUNT],
         bool* bind, bool* overflow) noexcept {
     // If this method has never been called before, we need to create a new layout object.
-    std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts = { VK_NULL_HANDLE };
-    VkPipelineLayout& pipelineLayout = mPipelineKey.pipelineLayout;
-    getOrCreateLayout(setLayouts, pipelineLayout);
+    auto& layout = mPipelineKey.layout;
+    layout = getOrCreateLayout();
 
     DescriptorBundle*& descriptorBundle = mCmdBufferState[mCmdBufferIndex].currentDescriptorBundle;
 
@@ -166,7 +165,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
 
     // If there are no available descriptor sets that can be re-used, then create brand new ones
     // (one for each type). Otherwise, grab a descriptor set from each of the arenas.
-    if (!mDescriptorSetArena[0].count(pipelineLayout)) {
+    if (!mDescriptorSetArena[0].count(layout->pipelineLayout)) {
         if (mDescriptorBundles.size() >= mDescriptorPoolSize) {
             growDescriptorPool();
         }
@@ -174,7 +173,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = mDescriptorPool;
         allocInfo.descriptorSetCount = DESCRIPTOR_TYPE_COUNT;
-        allocInfo.pSetLayouts = setLayouts.data();
+        allocInfo.pSetLayouts = layout->setLayouts.data();
         VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptorSets);
         assert_invariant(err == VK_SUCCESS);
         if (err != VK_SUCCESS) {
@@ -183,7 +182,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         }
     } else {
         for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
-            auto search = mDescriptorSetArena[i].find(pipelineLayout);
+            auto search = mDescriptorSetArena[i].find(layout->pipelineLayout);
             descriptorSets[i] = search->second;
             mDescriptorSetArena[i].erase(search);
         }
@@ -199,7 +198,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
         descriptorBundle->handles[i] = descriptorSets[i];
     }
-    descriptorBundle->pipelineLayout = pipelineLayout;
+    descriptorBundle->pipelineLayout = layout->pipelineLayout;
     descriptorBundle->commandBuffers.setValue(1 << mCmdBufferIndex);
 
     // Clear the dirty flag for this command buffer.
@@ -307,15 +306,14 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     *bind = true;
 }
 
-bool VulkanPipelineCache::getOrCreateLayout(std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT>& setLayouts,
-        VkPipelineLayout& pipelineLayout) noexcept {
+VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayout() noexcept {
     auto iter = mLayouts.find(mLayoutKey);
     if (UTILS_LIKELY(iter != mLayouts.end())) {
-        LayoutBundle& bundle = iter.value();
-        setLayouts = bundle.setLayouts;
-        pipelineLayout = bundle.pipelineLayout;
-        return true;
+        return &iter.value();
     }
+
+    std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
+    VkPipelineLayout pipelineLayout;
 
     VkDescriptorSetLayoutBinding binding = {};
     binding.descriptorCount = 1; // NOTE: We never use arrays-of-blocks.
@@ -367,12 +365,13 @@ bool VulkanPipelineCache::getOrCreateLayout(std::array<VkDescriptorSetLayout, DE
             &pipelineLayout);
     ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
 
-    mLayouts.emplace(mLayoutKey, LayoutBundle{ setLayouts, pipelineLayout });
-    return true;
+    auto result = mLayouts.emplace(mLayoutKey, LayoutBundle{ setLayouts, pipelineLayout });
+    return &result.first.value();
 }
 
 bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
-    assert_invariant(mPipelineKey.pipelineLayout);
+    LayoutBundle*& layout = mPipelineKey.layout;
+    assert_invariant(layout);
     PipelineVal*& currentPipeline = mCmdBufferState[mCmdBufferIndex].currentPipeline;
 
     // If no bindings have been dirtied, return false to indicate there's no need to re-bind.
@@ -458,7 +457,7 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineCreateInfo.layout = mPipelineKey.pipelineLayout;
+    pipelineCreateInfo.layout = layout->pipelineLayout;
     pipelineCreateInfo.renderPass = mPipelineKey.renderPass;
     pipelineCreateInfo.subpass = mPipelineKey.subpassIndex;
     pipelineCreateInfo.stageCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1;
@@ -540,10 +539,11 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
         utils::slog.e << "vkCreateGraphicsPipelines error " << err << utils::io::endl;
         utils::debug_trap();
     }
+    ++layout->reference;
 
     // Stash a stable pointer to the stored cache entry to allow fast subsequent calls to
     // getOrCreatePipeline when nothing has been dirtied.
-    const PipelineVal cacheEntry = { *pipeline, 0u };
+    const PipelineVal cacheEntry = { *pipeline, layout, 0u };
     currentPipeline = &mPipelines.emplace(std::make_pair(mPipelineKey, cacheEntry)).first.value();
     mDirtyPipeline.unset(mCmdBufferIndex);
 
@@ -789,8 +789,23 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     using ConstPipeIterator = decltype(mPipelines)::const_iterator;
     for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
         if (iter.value().age > VK_MAX_PIPELINE_AGE) {
+            --iter->second.layout->reference;
             vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
             iter = mPipelines.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+
+    // Evict any layouts that have not been used in a while.
+    using ConstLayoutIterator = decltype(mLayouts)::const_iterator;
+    for (ConstLayoutIterator iter = mLayouts.begin(); iter != mLayouts.end();) {
+        if (iter->second.reference == 0) {
+            vkDestroyPipelineLayout(mDevice, iter->second.pipelineLayout, VKALLOC);
+            for (auto setLayout : iter->second.setLayouts) {
+                vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
+            }
+            iter = mLayouts.erase(iter);
         } else {
             ++iter;
         }

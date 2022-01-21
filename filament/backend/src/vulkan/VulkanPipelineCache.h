@@ -194,6 +194,12 @@ private:
 
     static LayoutBundleKey getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept;
 
+    struct LayoutBundle {
+        std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
+        VkPipelineLayout pipelineLayout;
+        uint32_t reference = 0;
+    };
+
     using LayoutBundleHashFn = utils::hash::MurmurHashFn<LayoutBundleKey>;
 
     struct LayoutBundleEqual {
@@ -213,7 +219,7 @@ private:
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 256 bytes
         VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 192 bytes
         uint32_t padding1;                                                          // 4 bytes
-        VkPipelineLayout pipelineLayout;             // 8 bytes
+        LayoutBundle* layout = nullptr;              // 8 bytes
     };
 
     static_assert(sizeof(VkVertexInputBindingDescription) == 12);
@@ -224,8 +230,8 @@ private:
     static_assert(offsetof(PipelineKey, subpassIndex)     == 152);
     static_assert(offsetof(PipelineKey, vertexAttributes) == 156);
     static_assert(offsetof(PipelineKey, vertexBuffers)    == 412);
-    static_assert(offsetof(PipelineKey, pipelineLayout)   == 608);
-    static_assert(sizeof(PipelineKey) == 616, "PipelineKey must not have any padding.");
+    static_assert(offsetof(PipelineKey, layout)           == 608);
+    static_assert(sizeof(PipelineKey) == 608 + sizeof(void*), "PipelineKey must not have any padding.");
 
     static_assert(std::is_trivially_copyable<PipelineKey>::value,
             "PipelineKey must be a POD for fast hashing.");
@@ -264,13 +270,9 @@ private:
         utils::bitset32 commandBuffers;
     };
 
-    struct LayoutBundle {
-        std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
-        VkPipelineLayout pipelineLayout;
-    };
-
     struct PipelineVal {
         VkPipeline handle;
+        LayoutBundle* layout;
 
         // The "age" of a pipeline cache entry is the number of command buffer flush events that
         // have occurred since it was last used in a command buffer. This is used for LRU caching,
@@ -293,8 +295,7 @@ private:
     void getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT],
             bool* bind, bool* overflow) noexcept;
 
-    bool getOrCreateLayout(std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT>& setLayouts,
-            VkPipelineLayout& pipelineLayout) noexcept;
+    LayoutBundle* getOrCreateLayout() noexcept;
 
     // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
     bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
