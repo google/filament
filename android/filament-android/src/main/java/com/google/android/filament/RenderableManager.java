@@ -400,14 +400,14 @@ public class RenderableManager {
         }
 
         /**
-         * Controls if the renderable has vertex morphing targets, false by default.
+         * Controls if the renderable has vertex morphing targets, zero by default.
          *
          * <p>See also {@link RenderableManager#setMorphWeights}, which can be called on a per-frame basis
          * to advance the animation.</p>
          */
         @NonNull
-        public Builder morphing(boolean enabled) {
-            nBuilderMorphing(mNativeBuilder, enabled);
+        public Builder morphing(@IntRange(from = 0, to = 125) int targetCount) {
+            nBuilderMorphing(mNativeBuilder, targetCount);
             return this;
         }
 
@@ -489,17 +489,6 @@ public class RenderableManager {
         if (result < 0) {
             throw new BufferOverflowException();
         }
-    }
-
-    /**
-     * Updates the morph target count on a renderable, zero by default.
-     *
-     * <p>The renderable must be built with morphing enabled.</p>
-     *
-     * @see Builder#morphing
-     */
-    public void setMorphTargetCount(@EntityInstance int i, int count) {
-        nSetMorphTargetCount(mNativeObject, i, count);
     }
 
     /**
@@ -775,14 +764,13 @@ public class RenderableManager {
     private static native void nBuilderSkinning(long nativeBuilder, int boneCount);
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
-    private static native void nBuilderMorphing(long nativeBuilder, boolean enabled);
+    private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
 
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
     private static native int nSetBonesAsQuaternions(long nativeObject, int i, Buffer quaternions, int remaining, int boneCount, int offset);
-    private static native void nSetMorphTargetCount(long nativeObject, int i, int count);
     private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights);
     private static native int nGetMorphTargetCount(long nativeObject, int i);
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);

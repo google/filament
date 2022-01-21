@@ -110,7 +110,6 @@ public:
     inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
     inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset) noexcept;
-    void setMorphTargetCount(Instance instance, size_t count) noexcept;
     void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
     void setMorphTargetBufferAt(Instance instance,
             size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept;

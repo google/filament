@@ -53,8 +53,6 @@ MorphHelper::MorphHelper(FFilamentAsset* asset, FFilamentInstance* inst) : mAsse
         cgltf_node const* node = pair.first;
         cgltf_mesh const* mesh = node->mesh;
         if (mesh) {
-            auto& rcm = mAsset->mEngine->getRenderableManager();
-            rcm.setMorphTargetCount(rcm.getInstance(pair.second), mesh->target_names_count);
             cgltf_primitive const* prims = mesh->primitives;
             for (cgltf_size pi = 0, count = mesh->primitives_count; pi < count; ++pi) {
                 addPrimitive(mesh, pi, pair.second);

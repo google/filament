@@ -53,9 +53,9 @@ struct RenderableManager::BuilderDetails {
     bool mCastShadows : 1;
     bool mReceiveShadows : 1;
     bool mScreenSpaceContactShadows : 1;
-    bool mMorphingEnabled : 1;
     bool mSkinningBufferMode : 1;
     size_t mSkinningBoneCount = 0;
+    size_t mMorphTargetCount = 0;
     Bone const* mUserBones = nullptr;
     mat4f const* mUserBoneMatrices = nullptr;
     FSkinningBuffer* mSkinningBuffer = nullptr;
@@ -63,8 +63,7 @@ struct RenderableManager::BuilderDetails {
 
     explicit BuilderDetails(size_t count)
             : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
-              mScreenSpaceContactShadows(false), mMorphingEnabled(false),
-              mSkinningBufferMode(false) {
+              mScreenSpaceContactShadows(false), mSkinningBufferMode(false) {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
@@ -193,8 +192,8 @@ RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bo
     return *this;
 }
 
-RenderableManager::Builder& RenderableManager::Builder::morphing(bool enable) noexcept {
-    mImpl->mMorphingEnabled = enable;
+RenderableManager::Builder& RenderableManager::Builder::morphing(size_t targetCount) noexcept {
+    mImpl->mMorphTargetCount = targetCount;
     return *this;
 }
 
@@ -318,10 +317,11 @@ void FRenderableManager::create(
         setScreenSpaceContactShadows(ci, builder->mScreenSpaceContactShadows);
         setCulling(ci, builder->mCulling);
         setSkinning(ci, false);
-        setMorphing(ci, builder->mMorphingEnabled);
+        setMorphing(ci, builder->mMorphTargetCount);
         mManager[ci].channels = builder->mChannels;
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
+        const uint32_t targetCount = builder->mMorphTargetCount;
         if (builder->mSkinningBufferMode) {
             if (builder->mSkinningBuffer) {
                 setSkinning(ci, boneCount > 0);
@@ -333,7 +333,7 @@ void FRenderableManager::create(
                         .skinningBufferMode = true };
             }
         } else {
-            if (UTILS_UNLIKELY(boneCount > 0 || builder->mMorphingEnabled)) {
+            if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
                 setSkinning(ci, boneCount > 0);
                 Bones& bones = manager[ci].bones;
                 // Note that we are sizing the bones UBO according to CONFIG_MAX_BONE_COUNT rather than
@@ -378,7 +378,7 @@ void FRenderableManager::create(
         // Even morphing isn't enabled, we should create morphig resources.
         // Because morphing shader code is generated when skinning is enabled.
         // You can see more detail at Variant::SKINNING_OR_MORPHING.
-        if (UTILS_UNLIKELY(boneCount > 0 || builder->mMorphingEnabled)) {
+        if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
             // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
             // and use bindUniformBufferRange which might be more efficient.
             MorphWeights& morphWeights = manager[ci].morphWeights;
@@ -387,7 +387,7 @@ void FRenderableManager::create(
                         sizeof(PerRenderableMorphingUib),
                         BufferObjectBinding::UNIFORM,
                         backend::BufferUsage::DYNAMIC),
-                .count = 0 };
+                .count = targetCount };
         }
     }
     engine.flushIfNeeded();
@@ -596,16 +596,6 @@ static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBuffe
     driver.updateBufferObject(handle, { out, size }, 0);
 }
 
-void FRenderableManager::setMorphTargetCount(Instance instance, size_t count) noexcept {
-    if (instance) {
-        ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
-                "Only %d morph targets are supported (count=%d)", CONFIG_MAX_MORPH_TARGET_COUNT, count);
-
-        MorphWeights& morphWeights = mManager[instance].morphWeights;
-        morphWeights.count = count;
-    }
-}
-
 void FRenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
     if (instance) {
         ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
@@ -621,6 +611,10 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
 void FRenderableManager::setMorphTargetBufferAt(Instance instance,
         size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept {
     if (instance) {
+#if !defined(NDEBUG)
+        MorphWeights& morphWeights = mManager[instance].morphWeights;
+        assert_invariant(morphWeights.count == morphTargetBuffer->getCount());
+#endif
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, 0);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].set(morphTargetBuffer);
@@ -764,10 +758,6 @@ void RenderableManager::setBones(Instance instance,
 void RenderableManager::setSkinningBuffer(Instance instance,
         SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
-}
-
-void RenderableManager::setMorphTargetCount(Instance instance, size_t count) noexcept {
-    upcast(this)->setMorphTargetCount(instance, count);
 }
 
 void RenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {

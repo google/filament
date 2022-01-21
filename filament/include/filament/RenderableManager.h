@@ -300,12 +300,12 @@ public:
         Builder& skinning(size_t boneCount) noexcept; //!< \overload
 
         /**
-         * Controls if the renderable has vertex morphing targets, false by default.
+         * Controls if the renderable has vertex morphing targets, zero by default.
          *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
          */
-        Builder& morphing(bool enable) noexcept;
+        Builder& morphing(size_t targetCount) noexcept;
 
         /**
          * Sets an ordering index for blended primitives that all live at the same Z value.
@@ -451,11 +451,6 @@ public:
      */
     void setSkinningBuffer(Instance instance, SkinningBuffer* skinningBuffer,
             size_t count, size_t offset) noexcept;
-
-    /**
-     * Sets the number of morphing in the given entity.
-     */
-    void setMorphTargetCount(Instance instance, size_t count) noexcept;
 
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.

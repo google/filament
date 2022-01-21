@@ -209,9 +209,9 @@ Java_com_google_android_filament_RenderableManager_nBuilderSkinningBones(JNIEnv*
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jclass,
-        jlong nativeBuilder, jboolean enabled) {
+        jlong nativeBuilder, jint targetCount) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
-    builder->morphing(enabled);
+    builder->morphing(targetCount);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -263,13 +263,6 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsQuaternions(JNIEnv
     rm->setBones((RenderableManager::Instance)i,
             static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
     return 0;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetMorphTargetCount(JNIEnv* env, jclass,
-        jlong nativeRenderableManager, jint instance, jint count) {
-    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    rm->setMorphTargetCount((RenderableManager::Instance)instance, count);
 }
 
 extern "C" JNIEXPORT void JNICALL
