@@ -2177,17 +2177,19 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-        FrameGraphId<FrameGraphTexture> colorHistory,
         TemporalAntiAliasingOptions const& taaOptions,
         ColorGradingConfig colorGradingConfig) noexcept {
 
     FrameHistoryEntry const& entry = frameHistory[0];
+    FrameGraphId<FrameGraphTexture> colorHistory;
     mat4f const* historyProjection = nullptr;
-    if (UTILS_UNLIKELY(!colorHistory)) {
+    if (UTILS_UNLIKELY(!entry.taa.color.handle)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
         historyProjection = &frameHistory.getCurrent().taa.projection;
     } else {
+        colorHistory = fg.import("TAA history", entry.taa.desc,
+                FrameGraphTexture::Usage::SAMPLEABLE, entry.taa.color);
         historyProjection = &entry.taa.projection;
     }
 
@@ -2538,7 +2540,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevel(FrameGraph& fg,
         const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept {
     // Don't do anything if we're not a MSAA buffer
     auto desc = fg.getDescriptor(input);
@@ -2546,13 +2548,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         return input;
     }
     desc.samples = 0;
-    desc.levels = 1; // TODO: maybe we should rename to resolveBaseLevel()
-    return resolveNoCheck(fg, outputBufferName, input, desc);
+    desc.levels = 1;
+    return resolveBaseLevelNoCheck(fg, outputBufferName, input, desc);
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolveNoCheck(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevelNoCheck(FrameGraph& fg,
         const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
-        FrameGraphTexture::Descriptor const& desc) noexcept {
+        FrameGraphTexture::Descriptor const& outDesc) noexcept {
 
     struct ResolveData {
         FrameGraphId<FrameGraphTexture> input;
@@ -2565,21 +2567,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveNoCheck(FrameGraph& f
             [&](FrameGraph::Builder& builder, auto& data) {
                 FrameGraphRenderPass::Descriptor rpDesc;
 
-                auto& rpDescAttachment = isDepthFormat(desc.format) ?
+                auto& rpDescAttachment = isDepthFormat(outDesc.format) ?
                                    rpDesc.attachments.depth :
                                    rpDesc.attachments.color[0];
 
-                data.usage = isDepthFormat(desc.format) ?
+                data.usage = isDepthFormat(outDesc.format) ?
                              FrameGraphTexture::Usage::DEPTH_ATTACHMENT :
                              FrameGraphTexture::Usage::COLOR_ATTACHMENT;
 
-                data.inFlags = isDepthFormat(desc.format) ?
+                data.inFlags = isDepthFormat(outDesc.format) ?
                                backend::TargetBufferFlags::DEPTH :
                                backend::TargetBufferFlags::COLOR0;
 
                 data.input = builder.read(input, data.usage);
 
-                rpDescAttachment = builder.createTexture(outputBufferName, desc);
+                rpDescAttachment = builder.createTexture(outputBufferName, outDesc);
                 rpDescAttachment = builder.write(rpDescAttachment, data.usage);
                 data.output = rpDescAttachment;
                 builder.declareRenderPass("Resolve Pass", rpDesc);

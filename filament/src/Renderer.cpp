@@ -308,6 +308,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      */
 
     FrameGraph fg(engine.getResourceAllocator());
+    auto& blackboard = fg.getBlackboard();
 
     /*
      * Shadow pass
@@ -386,7 +387,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .clearFlags = clearFlags,
             .clearColor = clearColor,
             .hasContactShadows = scene.hasContactShadows(),
-            .hasScreenSpaceReflections = ssReflectionsOptions.enabled
+            .hasScreenSpaceReflections = ssReflectionsOptions.enabled,
+            .ssrLodOffset = 0.0f,
     };
 
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
@@ -448,7 +450,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
-        auto& blackboard = fg.getBlackboard();
         auto picking = blackboard.get<FrameGraphTexture>("picking");
         fg.addPass<PickingResolvePassData>("Picking Resolve Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
@@ -467,14 +468,24 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     // Store this frame's camera projection in the frame history.
-    if (UTILS_UNLIKELY(taaOptions.enabled || ssReflectionsOptions.enabled)) {
-        auto projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
-        setHistoryProjection(view, projection);
-        // update frame id
+    if (UTILS_UNLIKELY(taaOptions.enabled)) {
         auto& history = view.getFrameHistory();
-        auto const& previous = history[0];
         auto& current = history.getCurrent();
-        current.frameId = previous.frameId + 1;
+        auto const& previous = history[0];
+        current.taa.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+        // update frame id
+        current.frameId = previous.frameId + 1; // TODO: should probably be done somewhere else
+    }
+
+    // TODO: this probably need to move somewhere else closer to SSR
+    if (UTILS_UNLIKELY(ssReflectionsOptions.enabled)) {
+        auto& history = view.getFrameHistory();
+        auto& current = history.getCurrent();
+        auto const& previous = history[0];
+        // TODO: this projection now can be tailored to SSR
+        current.ssr.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+        // update frame id
+        current.frameId = previous.frameId + 1; // TODO: should probably be done somewhere else
     }
 
     // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
@@ -579,6 +590,40 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         colorPassOutput = ppm.customResolveUncompressPass(fg, colorPassOutput);
     }
 
+    if (ssReflectionsOptions.enabled) {
+        // if we have screen-space reflections, but we don't have a SSR buffer yet
+        // (meaning we didn't have screen-space refraction), just generate it now.
+        auto ssr = blackboard.get<FrameGraphTexture>("ssr");
+        if (!ssr) {
+            colorPassOutput = generateMipmapSSR(fg,
+                    colorPassOutput, view.getCameraUser(), config, &config.ssrLodOffset);
+            blackboard["ssr"] = colorPassOutput;
+        }
+    }
+
+    // export the SSR buffer if screen-space reflections are enabled
+    if (ssReflectionsOptions.enabled) {
+        struct ExportSSRHistoryData {
+            FrameGraphId<FrameGraphTexture> ssr;
+        };
+        fg.addPass<ExportSSRHistoryData>("Export SSR history",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    // We need to use sideEffect here to ensure this pass won't be culled.
+                    // The "output" of this pass is going to be used during the next frame as
+                    // an "import".
+                    builder.sideEffect();
+                    auto ssr = blackboard.get<FrameGraphTexture>("ssr");
+                    data.ssr = builder.sample(ssr); // FIXME: an access must be declared for detach(), why?
+                }, [&view, &config](FrameGraphResources const& resources, auto const& data,
+                        backend::DriverApi&) {
+                    FrameHistoryEntry& current = view.getFrameHistory().getCurrent();
+                    resources.detach(data.ssr,
+                            &current.ssr.color, &current.ssr.desc);
+                    current.ssr.lodOffset = config.ssrLodOffset;
+                });
+    }
+
+
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
     fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
         // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
@@ -588,9 +633,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // resolve depth -- which might be needed because of TAA or DoF. This pass will be culled
     // if the depth is not used below.
-    auto& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
-    depth = ppm.resolve(fg, "Resolved Depth Buffer", depth);
+    depth = ppm.resolveBaseLevel(fg, "Resolved Depth Buffer", depth);
     blackboard.put("depth", depth);
 
     // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of
@@ -600,25 +644,24 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, view.getFrameHistory(),
-                getColorHistory(fg, view.getFrameHistory()), taaOptions, colorGradingConfig);
-    }
+        input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, colorGradingConfig);
 
-    struct ExportColorHistoryData {
-        FrameGraphId<FrameGraphTexture> color;
-    };
-    if (taaOptions.enabled || ssReflectionsOptions.enabled) {
-        fg.addPass<ExportColorHistoryData>("Export color history", [&](FrameGraph::Builder& builder,
-                auto& data) {
-            // We need to use sideEffect here to ensure this pass won't be culled. The "output" of
-            // this pass is going to be used during the next frame as an "import".
-            builder.sideEffect();
-            data.color = builder.sample(input);
-        }, [&view](FrameGraphResources const& resources, auto const& data, backend::DriverApi&) {
-            FrameHistory& frameHistory = view.getFrameHistory();
-            FrameHistoryEntry& current = frameHistory.getCurrent();
-            resources.detach(data.color, &current.taa.color, &current.taa.colorDesc);
-        });
+        struct ExportColorHistoryData {
+            FrameGraphId<FrameGraphTexture> color;
+        };
+        fg.addPass<ExportColorHistoryData>("Export TAA history",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    // We need to use sideEffect here to ensure this pass won't be culled.
+                    // The "output" of this pass is going to be used during the next frame as
+                    // an "import".
+                    builder.sideEffect();
+                    data.color = builder.sample(input); // FIXME: an access must be declared for detach(), why?
+                }, [&view](FrameGraphResources const& resources, auto const& data,
+                        backend::DriverApi&) {
+                    FrameHistoryEntry& current = view.getFrameHistory().getCurrent();
+                    resources.detach(data.color,
+                            &current.taa.color, &current.taa.desc);
+                });
     }
 
     // --------------------------------------------------------------------------------------------
@@ -692,7 +735,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
 
-//    auto debug = fg.getBlackboard().get<FrameGraphTexture>("structure");
+//    auto debug = blackboard.get<FrameGraphTexture>("structure");
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
 
     fg.forwardResource(fgViewRenderTarget, input);
@@ -772,7 +815,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::generateMipmapSSR(FrameGraph& fg,
             desc.format == TextureFormat::R11F_G11F_B10F) {
         // Here we can resolve directly into a texture with the right dimensions, level count and format
         // (resolve CANNOT scale or convert formats)
-        input = ppm.resolveNoCheck(fg, "Resolved Color Buffer", input, {
+        input = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, {
                 .width = w,
                 .height = h,
                 .levels = roughnessLodCount,
@@ -780,7 +823,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::generateMipmapSSR(FrameGraph& fg,
         });
     } else {
         // first resolve (if needed)
-        input = ppm.resolve(fg, "Resolved Color Buffer", input);
+        input = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
         // then blit into an appropriate texture
         // this handles scaling, format conversion and mipmaping
         input = ppm.opaqueBlit(fg, input, {
@@ -859,7 +902,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // automatically because these are set in the Blackboard (they were set by the opaque
         // pass). For this reason, `desc` below is only used in colorPass() for the width and
         // height.
-        config.refractionLodOffset = refractionLodOffset;
+        config.ssrLodOffset = refractionLodOffset;
         config.clearFlags = TargetBufferFlags::NONE;
         output = colorPass(fg, "Color Pass (transparent)",
                 {
@@ -876,7 +919,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
             // to sample from 'output'. However, because we have MSAA, we know we're not sampleable.
             // And this is because in the SSR case, we had to use a renderbuffer to conserve the
             // multi-sample buffer.
-            output = ppm.resolve(fg, "Resolved Color Buffer", output);
+            output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", output);
         }
     } else {
         output = input;
@@ -901,13 +944,14 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         TargetBufferFlags clearFlags{};
     };
 
+    Blackboard& blackboard = fg.getBlackboard();
 
     mat4f historyProjection;
-    FrameGraphId<FrameGraphTexture> colorHistory =
-            fg.getBlackboard().get<FrameGraphTexture>("ssr");
+    FrameGraphId<FrameGraphTexture> ssrHistory =
+            blackboard.get<FrameGraphTexture>("ssr");
 
     if (config.hasScreenSpaceReflections) {
-        if (colorHistory) {
+        if (ssrHistory) {
             // "ssr" is set in the blackboard, so we're now going to draw the translucent objects
             // of the refraction pass.
             // In this case the SSR texture is "current" (it's not from the previous frame).
@@ -915,19 +959,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
             historyProjection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
         } else {
             // we don't have a SSR buffer yet, so we need to get it from the frame history.
-            colorHistory = getColorHistory(fg, view.getFrameHistory());
-            fg.getBlackboard().put("ssr", colorHistory);
-
-            const FrameHistory& frameHistory = view.getFrameHistory();
+            auto const& frameHistory = view.getFrameHistory();
             FrameHistoryEntry const& entry = frameHistory[0];
-            historyProjection = entry.taa.projection;
+            if (entry.ssr.color.handle) {
+                ssrHistory = fg.import("SSR history", entry.ssr.desc,
+                        FrameGraphTexture::Usage::SAMPLEABLE, entry.ssr.color);
+                historyProjection = entry.ssr.projection;
+                config.ssrLodOffset = entry.ssr.lodOffset;
+            }
         }
     }
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
-                Blackboard& blackboard = fg.getBlackboard();
                 TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
 
@@ -937,7 +982,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.depth = blackboard.get<FrameGraphTexture>("depth");
 
                 // Screen-space reflection or refractions
-                data.ssr = blackboard.get<FrameGraphTexture>("ssr");
+                data.ssr = ssrHistory;
                 if (data.ssr) {
                     data.ssr = builder.sample(data.ssr);
                 }
@@ -1044,7 +1089,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
                 TextureHandle ssrHandle = data.ssr ?
                         resources.getTexture(data.ssr) : ppm.getOneTexture();
-                view.prepareSSR(ssrHandle, config.refractionLodOffset,
+                view.prepareSSR(ssrHandle, config.ssrLodOffset,
                         reprojection, projectToPixelMatrix,
                         view.getScreenSpaceReflectionsOptions());
 
@@ -1387,32 +1432,6 @@ math::mat4f FRenderer::getClipSpaceToTextureSpaceMatrix() const noexcept {
             0.0f,  0.0f,   1.0f, 0.0f,
             0.0f,  0.0f,   0.0f, 1.0f
     });
-}
-
-void FRenderer::setHistoryProjection(FView& view, math::mat4f const& projection) {
-    auto& history = view.getFrameHistory();
-    auto& current = history.getCurrent();
-    current.taa.projection = projection;
-}
-
-FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg,
-        FrameHistory const& frameHistory) noexcept {
-    // Here we import the previous frame's color output and cache it in the blackboard. This ensures
-    // we only import it once per frame even across multiple calls to getColorHistory.
-    Blackboard& blackboard = fg.getBlackboard();
-
-    if (auto history = blackboard.get<FrameGraphTexture>("colorHistory")) {
-        return history;
-    }
-
-    FrameHistoryEntry const& entry = frameHistory[0];
-    if (UTILS_UNLIKELY(!entry.taa.color.handle)) {
-        return {};
-    }
-    FrameGraphId<FrameGraphTexture> colorHistory = fg.import("Color history", entry.taa.colorDesc,
-            FrameGraphTexture::Usage::SAMPLEABLE, entry.taa.color);
-    blackboard["colorHistory"] = colorHistory;
-    return colorHistory;
 }
 
 // ------------------------------------------------------------------------------------------------

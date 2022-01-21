@@ -157,12 +157,12 @@ private:
         backend::TargetBufferFlags clearFlags;
         // Clear color
         math::float4 clearColor = {};
-        // Lod offset for the SSR pass
-        float refractionLodOffset;
         // Contact shadow enabled?
         bool hasContactShadows;
         // Screen-space reflections enabled?
         bool hasScreenSpaceReflections;
+        // Lod offset for the SSR pass
+        mutable float ssrLodOffset;
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
@@ -204,11 +204,6 @@ private:
     }
 
     math::mat4f getClipSpaceToTextureSpaceMatrix() const noexcept;
-
-    void setHistoryProjection(FView& view, math::mat4f const& projection);
-
-    static FrameGraphId<FrameGraphTexture> getColorHistory(FrameGraph& fg,
-            FrameHistory const& frameHistory) noexcept;
 
     // keep a reference to our engine
     FEngine& mEngine;

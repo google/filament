@@ -251,7 +251,11 @@ vec4 evaluateScreenSpaceReflections(const PixelParams pixel, const vec3 wsRayDir
         float distanceFade = saturate(1.0 - (distFactor, distFactor));
         float fade = edgeFade * distanceFade;
 
-        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0f).rgb, fade);
+        // TODO: lower LOD with ray distance
+        float tweakedPerceptualRoughness = pixel.perceptualRoughness * 1.74;
+        float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
+
+        Fr = vec4(textureLod(light_ssr, reprojected.xy, lod).rgb, fade);
     }
     return Fr;
 }
