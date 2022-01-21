@@ -881,6 +881,14 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
     }
 
     mDescriptorBundles.clear();
+
+    // Our current layout bundle strategy can cause the # of layout bundles to explode in certain
+    // situations, so it's interesting to report the number that get stuffed into the cache.
+    #ifndef NDEBUG
+    utils::slog.d << "Destroying " << mLayouts.size() << " bundles of layouts."
+                  << utils::io::endl;
+    #endif
+
     for (auto& iter : mLayouts) {
         vkDestroyPipelineLayout(mDevice, iter.second.pipelineLayout, VKALLOC);
         for (auto setLayout : iter.second.setLayouts) {
