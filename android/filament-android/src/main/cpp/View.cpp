@@ -391,6 +391,16 @@ Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *, 
 }
 
 extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetScreenSpaceReflectionsOptions(JNIEnv*, jclass,
+        jlong nativeView, jfloat thickness, jfloat bias, jfloat maxDistance, jfloat stride, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setScreenSpaceReflectionsOptions({.thickness = thickness, .bias = bias,
+            .maxDistance = maxDistance, .stride = stride, .enabled = (bool) enabled
+    });
+}
+
+extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_View_nIsShadowingEnabled(JNIEnv *, jclass, jlong nativeView) {
     View* view = (View*) nativeView;

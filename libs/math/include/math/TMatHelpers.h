@@ -21,7 +21,7 @@
 #include <math/quat.h>
 #include <math/TVecHelpers.h>
 
-#include <algorithm>        // for std::swap
+#include <algorithm>        // for std::swap and std::min
 #include <cmath>            // for std:: namespace
 
 #include <math.h>

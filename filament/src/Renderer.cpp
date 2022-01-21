@@ -438,14 +438,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // Currently it consists of a simple depth pass.
     // This is normally used by SSAO and contact-shadows
 
-    // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
-    RenderPass structurePass(pass);
-    structurePass.setRenderFlags(structureRenderFlags);
-    structurePass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
-    structurePass.sortCommands();
-
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, structurePass, svp.width, svp.height, {
+    ppm.structure(fg, pass, structureRenderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
@@ -510,7 +504,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Color passes
 
-    // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
+    // This one doesn't need to be a FrameGraph pass because it always happens by construction
+    // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     pass.setRenderFlags(colorRenderFlags);
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
@@ -549,7 +544,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
 
     if (colorGradingConfigForColor.asSubpass) {
-        // append colorgrading subpass after all other passes
+        // append color grading subpass after all other passes
         pass.appendCustomCommand(
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
@@ -851,13 +846,23 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         TargetBufferFlags clearFlags{};
     };
 
-    FrameGraphId<FrameGraphTexture> colorHistory;
+
     mat4f historyProjection;
+    FrameGraphId<FrameGraphTexture> colorHistory =
+            fg.getBlackboard().get<FrameGraphTexture>("ssr");
+
     if (config.hasScreenSpaceReflections) {
-        colorHistory = getColorHistory(fg, view.getFrameHistory());
-        if (UTILS_UNLIKELY(!colorHistory)) {
-            // if we don't have a history yet, don't render reflections this frame
+        if (colorHistory) {
+            // "ssr" is set in the blackboard, so we're now going to draw the translucent objects
+            // of the refraction pass.
+            // In this case the SSR texture is "current" (it's not from the previous frame).
+            const auto& cameraInfo = view.getCameraInfo();
+            historyProjection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
         } else {
+            // we don't have a SSR buffer yet, so we need to get it from the frame history.
+            colorHistory = getColorHistory(fg, view.getFrameHistory());
+            fg.getBlackboard().put("ssr", colorHistory);
+
             const FrameHistory& frameHistory = view.getFrameHistory();
             FrameHistoryEntry const& entry = frameHistory[0];
             historyProjection = entry.projection;
@@ -876,17 +881,10 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.color = blackboard.get<FrameGraphTexture>("color");
                 data.depth = blackboard.get<FrameGraphTexture>("depth");
 
-                // TODO: we currently only allow either screen-space reflections or refractions,
-                // but not both. If SS reflections are enabled, we prefer those.
-                if (config.hasScreenSpaceReflections && colorHistory) {
-                    // Screen-space reflections
-                    data.ssr = builder.sample(colorHistory);
-                } else {
-                    // Screen-space refractions
-                    data.ssr = blackboard.get<FrameGraphTexture>("ssr");
-                    if (data.ssr) {
-                        data.ssr = builder.sample(data.ssr);
-                    }
+                // Screen-space reflection or refractions
+                data.ssr = blackboard.get<FrameGraphTexture>("ssr");
+                if (data.ssr) {
+                    data.ssr = builder.sample(data.ssr);
                 }
 
                 if (config.hasContactShadows || config.hasScreenSpaceReflections) {
@@ -976,33 +974,24 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : ppm.getOneTexture());
 
-                // set screen-space reflections or screen-space refractions
-                if (data.ssr) {
-                    // We currently only allow either SS reflections or refractions.
-                    auto const& ssrOptions = view.getScreenSpaceReflectionsOptions();
-                    const bool reflections = config.hasScreenSpaceReflections && ssrOptions.enabled;
-                    const bool refractions = !config.hasScreenSpaceReflections;
-
-                    if (reflections) {
-                        const auto& cameraInfo = view.getCameraInfo();
-                        auto reprojection =
-                                getClipSpaceToTextureSpaceMatrix() *
-                                historyProjection *
-                                inverse(cameraInfo.view * cameraInfo.worldOrigin);
-
-                        auto projectToPixelMatrix =
-                                getClipSpaceToTextureSpaceMatrix() *
-                                cameraInfo.projection;
-
-                        view.prepareSSReflections(resources.getTexture(data.ssr), reprojection,
-                                projectToPixelMatrix, ssrOptions);
-                    } else if (refractions) { // TODO: support both
-                        view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
-                    }
-                } else {
-                    // Screen-space reflections must be explicitly disabled.
-                    view.disableSSReflections();
+                // set screen-space reflections and screen-space refractions
+                mat4f reprojection;
+                mat4f projectToPixelMatrix;
+                if (config.hasScreenSpaceReflections) {
+                    const auto& cameraInfo = view.getCameraInfo();
+                    projectToPixelMatrix =
+                            getClipSpaceToTextureSpaceMatrix() *
+                            cameraInfo.projection;
+                    reprojection =
+                            getClipSpaceToTextureSpaceMatrix() *
+                            historyProjection *
+                            inverse(cameraInfo.view * cameraInfo.worldOrigin);
                 }
+                TextureHandle ssrHandle = data.ssr ?
+                        resources.getTexture(data.ssr) : ppm.getOneTexture();
+                view.prepareSSR(ssrHandle, config.refractionLodOffset,
+                        reprojection, projectToPixelMatrix,
+                        view.getScreenSpaceReflectionsOptions());
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
                 view.commitUniforms(driver);

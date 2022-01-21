@@ -17,8 +17,8 @@
 #ifndef TNT_UTILS_SLICE_H
 #define TNT_UTILS_SLICE_H
 
-#include <algorithm>
 #include <atomic>
+#include <utility>
 
 #include <assert.h>
 #include <stddef.h>

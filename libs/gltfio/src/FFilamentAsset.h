@@ -192,9 +192,9 @@ struct FFilamentAsset : public FilamentAsset {
 
     Animator* getAnimator() noexcept;
 
-    void setMorphWeights(utils::Entity entity , const float* weights, size_t count) noexcept;
-
     int getMorphTargetCount(utils::Entity entity) noexcept;
+
+    const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
     utils::Entity getWireframe() noexcept;
 

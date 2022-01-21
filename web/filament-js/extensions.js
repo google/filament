@@ -294,6 +294,21 @@ Filament.loadClassExtensions = function() {
         this._setTemporalAntiAliasingOptions(options);
     };
 
+    /// setScreenSpaceReflectionsOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// thickness, bias, maxDistance, stride, enabled.
+    Filament.View.prototype.setScreenSpaceReflectionsOptions = function(overrides) {
+        const options = {
+            thickness: 0.5,
+            bias: 0.01,
+            maxDistance: 3.0,
+            stride: 1.0,
+            enabled: false
+        };
+        Object.assign(options, overrides);
+        this._setScreenSpaceReflectionsOptions(options);
+    };
+
     /// setBloomOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
     /// enabled, strength, resolution, anomorphism, levels, blendMode, threshold, highlight.

@@ -1434,8 +1434,8 @@ void MetalDriver::enumerateSamplerGroups(
 
         const auto* metalSamplerGroup = mContext->samplerBindings[blockInfo.samplerGroup];
         if (!metalSamplerGroup) {
-            utils::slog.w << "Program has non-empty samplerGroup (index " << blockInfo.samplerGroup <<
-                    ") but has not bound any samplers." << utils::io::endl;
+            // Do not emit warning here. For example this can arise when skinning is enabled
+            // and the morphing texture is unused.
             continue;
         }
 
