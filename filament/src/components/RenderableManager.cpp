@@ -586,24 +586,26 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
 }
 
 static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
-        float const* weights, size_t count) noexcept {
+        float const* weights, size_t count, size_t offset) noexcept {
     auto& driver = engine.getDriverApi();
-    auto size = sizeof(PerRenderableMorphingUib);
+    auto size = sizeof(float4) * count;
     auto* UTILS_RESTRICT out = (PerRenderableMorphingUib*)driver.allocate(size);
     memset(out, 0, size);
     std::transform(weights, weights + count, out->weights,
             [](float value) { return float4(value); });
-    driver.updateBufferObject(handle, { out, size }, 0);
+    driver.updateBufferObject(handle, { out, size }, sizeof(float4) * offset);
 }
 
-void FRenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
+void FRenderableManager::setMorphWeights(Instance instance, float const* weights,
+        size_t count, size_t offset) noexcept {
     if (instance) {
-        ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
-                "Only %d morph targets are supported (count=%d)", CONFIG_MAX_MORPH_TARGET_COUNT, count);
+        ASSERT_PRECONDITION(count + offset < CONFIG_MAX_MORPH_TARGET_COUNT,
+                "Only %d morph targets are supported (count=%d, offset=%d)",
+                CONFIG_MAX_MORPH_TARGET_COUNT, count, offset);
 
         MorphWeights& morphWeights = mManager[instance].morphWeights;
         if (morphWeights.handle) {
-            updateMorphWeights(mEngine, morphWeights.handle, weights, count);
+            updateMorphWeights(mEngine, morphWeights.handle, weights, count, offset);
         }
     }
 }
@@ -760,8 +762,9 @@ void RenderableManager::setSkinningBuffer(Instance instance,
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
 }
 
-void RenderableManager::setMorphWeights(Instance instance, float const* weights, size_t count) noexcept {
-    upcast(this)->setMorphWeights(instance, weights, count);
+void RenderableManager::setMorphWeights(Instance instance, float const* weights,
+        size_t count, size_t offset) noexcept {
+    upcast(this)->setMorphWeights(instance, weights, count, offset);
 }
 
 void RenderableManager::setMorphTargetBufferAt(Instance instance,

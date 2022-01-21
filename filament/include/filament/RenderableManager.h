@@ -457,7 +457,8 @@ public:
      *
      * The renderable must be built with morphing enabled, see Builder::morphing().
      */
-    void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
+    void setMorphWeights(Instance instance,
+            float const* weights, size_t count, size_t offset = 0) noexcept;
 
 
     /**
