@@ -85,6 +85,7 @@ public:
     const TweakableMaterial::RequestedTexture nextRequestedTexture();
 
     TweakablePropertyTextured<filament::math::float4,true> mBaseColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
+    TweakableProperty<filament::math::float3> mTintColor{ { 1.0f, 1.0f, 1.0f } };
 
     TweakablePropertyTextured<float> mNormal{};
     TweakableProperty<float, false> mOcclusionIntensity{ 1.0f };
@@ -126,7 +127,7 @@ public:
     bool mUseWard{};
     bool mDoRelease{}; // this notifies the material integrator tool that this material needs to be checked into the codebase
 
-    enum MaterialType { Opaque, TransparentSolid, TransparentThin, Cloth, Subsurface };
+    enum MaterialType { Opaque, Transparent, Refractive, Cloth, Subsurface };
     MaterialType mShaderType{};
 
     void resetWithType(MaterialType newType);

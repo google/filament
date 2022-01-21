@@ -1,5 +1,5 @@
 material {
-    name : generalShaprCloth,
+    name : Cloth,
     shadingModel : cloth,
     specularAntiAliasing : true,
     parameters : [
@@ -18,6 +18,11 @@ material {
         {
             type : float4,
             name : baseColor
+        },
+
+        {
+            type : float3,
+            name : tintColor,
         },
 
         {

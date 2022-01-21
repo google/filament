@@ -20,6 +20,7 @@ json TweakableMaterial::toJson() {
     result["useWard"] = mUseWard;
 
     writeTexturedToJson(result, "baseColor", mBaseColor);
+    result["tintcolor"] = mTintColor.value;
 
     result["normalIntensity"] = mNormalIntensity.value;
 
@@ -76,11 +77,12 @@ void TweakableMaterial::fromJson(const json& source) {
         mShaderType = source["materialType"];
     }
 
-    bool isAlpha = (mShaderType == TweakableMaterial::MaterialType::TransparentSolid) || (mShaderType == TweakableMaterial::MaterialType::TransparentThin);
+    bool isAlpha = (mShaderType == TweakableMaterial::MaterialType::Transparent) || (mShaderType == TweakableMaterial::MaterialType::Refractive);
 
     readValueFromJson(source, "useWard", mUseWard, false);
 
     readTexturedFromJson(source, "baseColor", mBaseColor, true, isAlpha, isAlpha ? 4 : 3);
+    readValueFromJson(source, "tintColor", mTintColor);
 
     readValueFromJson(source, "normalIntensity", mNormalIntensity, 1.0f);
     readTexturedFromJson(source, "normalTexture", mNormal, false, false, 3);
@@ -167,6 +169,7 @@ void TweakableMaterial::resetWithType(MaterialType newType) {
 
     mRequestedTextures = {};
 
+    resetMemberToValue(mTintColor, { 1.0f, 1.0f, 1.0f });
     mBaseTextureScale = 1.0f;
     mNormalTextureScale = 1.0f;
     mClearCoatTextureScale = 1.0f;
@@ -220,9 +223,11 @@ void TweakableMaterial::drawUI(const std::string& header) {
 
         mBaseColor.addWidget("baseColor");
         if (mBaseColor.isFile) {
-            bool isAlpha = (mShaderType == MaterialType::TransparentSolid);
+            bool isAlpha = (mShaderType == MaterialType::Transparent || mShaderType == MaterialType::Refractive);
             enqueueTextureRequest(mBaseColor, true, isAlpha, isAlpha ? 4 : 3);
         }
+
+        mTintColor.addWidget("tintColor");
     }
 
     if (ImGui::CollapsingHeader("Normal, roughness, specular, metallic")) {
@@ -284,9 +289,11 @@ void TweakableMaterial::drawUI(const std::string& header) {
         break;
     }
     // For backward compatibility and warning supression (the enum value needs to be kept)
-    case MaterialType::TransparentThin:
-    case MaterialType::TransparentSolid: {
-        if (ImGui::CollapsingHeader("Transparent and refractive properties")) {
+    case MaterialType::Transparent: {
+        break;
+    }
+    case MaterialType::Refractive: {
+        if (ImGui::CollapsingHeader("Refractive properties")) {
             ImGui::SliderFloat("Tile: refractive textures", &mRefractiveTextureScale, 1.0f / 1024.0f, 32.0f);
             ImGui::Separator();
 
@@ -309,7 +316,6 @@ void TweakableMaterial::drawUI(const std::string& header) {
     case MaterialType::Subsurface: {
         if (ImGui::CollapsingHeader("Subsurface settings")) {
             mSubsurfaceColor.addWidget("subsurface color");
-            mSheenColor.addWidget("sheen color");
 
             mSubsurfacePower.addWidget("subsurface power", 0.125f, 16.0f);
 

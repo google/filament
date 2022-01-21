@@ -148,9 +148,9 @@ void ApplyClearCoatNormalMap(inout MaterialInputs material, inout FragmentData f
 }
 
 void ApplyBaseColor(inout MaterialInputs material, inout FragmentData fragmentData) {
-#if defined(MATERIAL_HAS_BASE_COLOR)
+#if defined(MATERIAL_HAS_BASE_COLOR) 
     if (materialParams.useBaseColorTexture == 1) {
-#if defined(BLENDING_ENABLED)
+#if defined(BLENDING_ENABLED) || defined(HAS_REFRACTION)
         material.baseColor.rgba = TriplanarTexture(materialParams_baseColorTexture,
                                                    materialParams.textureScaler.x,
                                                    fragmentData.pos,
@@ -164,16 +164,23 @@ void ApplyBaseColor(inout MaterialInputs material, inout FragmentData fragmentDa
                                      .rgb;
 #endif
     } else {
-#if defined(BLENDING_ENABLED)
+#if defined(BLENDING_ENABLED) || defined(HAS_REFRACTION)
         material.baseColor.rgba = materialParams.baseColor.rgba;
 #else
         material.baseColor.rgb = materialParams.baseColor.rgb;
 #endif
     }
+
+    // Naive multiplicative tinting seems to be fine enough for now
+    material.baseColor.rgb *= materialParams.tintColor.rgb;
 #if defined(BLENDING_ENABLED)
-    //material.baseColor.rgb *= material.baseColor.a;
+    material.baseColor.rgb *= material.baseColor.a;
+#endif
+
+#if defined(BLENDING_ENABLED)
+    material.baseColor.a = 0.0;
 #else
-    material.baseColor.a = 1.0; // These are opaque
+    material.baseColor.a = 1.0;
 #endif
 #endif
 }
@@ -248,19 +255,22 @@ void ApplyClearCoatRoughness(inout MaterialInputs material, inout FragmentData f
 }
 
 void ApplyAbsorption(inout MaterialInputs material, inout FragmentData fragmentData) {
-#if defined(MATERIAL_HAS_ABSORPTION) && defined(BLENDING_ENABLED)
+    // This is a transmission-only property and those materials actually disable blending
+#if defined(MATERIAL_HAS_ABSORPTION) && defined(HAS_REFRACTION)
     material.absorption = ( materialParams.doDeriveAbsorption == 1 ) ? 1.0 - material.baseColor.rgb : materialParams.absorption;
 #endif
 }
 
 void ApplyIOR(inout MaterialInputs material, inout FragmentData fragmentData) {
-#if defined(MATERIAL_HAS_IOR) && defined(BLENDING_ENABLED)
+    // This is a transmission-only property and those materials actually disable blending
+#if defined(MATERIAL_HAS_IOR) && defined(HAS_REFRACTION)
     material.ior = 1.0 + materialParams.iorScale * ( materialParams.ior - 1.0 );
 #endif
 }
 
 void ApplyTransmission(inout MaterialInputs material, inout FragmentData fragmentData) {
-#if defined(MATERIAL_HAS_TRANSMISSION) && defined(BLENDING_ENABLED)
+    // This is a transmission-only property and those materials actually disable blending
+#if defined(MATERIAL_HAS_TRANSMISSION) && defined(HAS_REFRACTION)
     if ( materialParams.useTransmissionTexture == 1 ) {
         material.transmission = TriplanarTexture(materialParams_transmissionTexture, materialParams.textureScaler.w, fragmentData.pos, fragmentData.normal).r;
     } else {
@@ -270,8 +280,9 @@ void ApplyTransmission(inout MaterialInputs material, inout FragmentData fragmen
 }
 
 void ApplyThickness(inout MaterialInputs material, inout FragmentData fragmentData) {
+    // This is a transmission-only property and those materials actually disable blending
     // This applies both micro and regular thickness, although we only do the latter for now (the former would be used in transparent thin materials).
-#if defined(BLENDING_ENABLED)
+#if defined(BLENDING_ENABLED) && defined(HAS_REFRACTION)
     float thicknessValue = 0.0;
     if (materialParams.useThicknessTexture == 1) {
         thicknessValue = TriplanarTexture(materialParams_thicknessTexture,
@@ -286,7 +297,7 @@ void ApplyThickness(inout MaterialInputs material, inout FragmentData fragmentDa
 
 #if defined(MATERIAL_HAS_MICRO_THICKNESS) && defined(REFRACTION_TYPE) && REFRACTION_TYPE == REFRACTION_TYPE_THIN
     material.microThickness = thicknessValue; // default 0.0
-#elif defined(BLENDING_ENABLED) && defined(HAS_REFRACTION)
+#elif defined(HAS_REFRACTION)
     material.thickness = thicknessValue; // default 0.5
 #endif
 #endif
@@ -295,12 +306,16 @@ void ApplyThickness(inout MaterialInputs material, inout FragmentData fragmentDa
 void ApplySheenRoughness(inout MaterialInputs material, inout FragmentData fragmentData) {
 #if defined(MATERIAL_HAS_SHEEN_ROUGHNESS) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_CLOTH) &&    \
     defined(BLENDING_DISABLED)
+#if defined(MATERIAL_HAS_USE_SHEEN_ROUGHNESS_TEXTURE)
     if (materialParams.useSheenRoughnessTexture == 1) {
         material.sheenRoughness =
             TriplanarTexture(materialParams_sheenRoughnessTexture, 1.0f, fragmentData.pos, fragmentData.normal).r;
     } else {
         material.sheenRoughness = materialParams.sheenRoughness;
     }
+#else
+    material.sheenRoughness = materialParams.sheenRoughness;
+#endif
 #endif
 }
 

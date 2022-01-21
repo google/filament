@@ -1,5 +1,5 @@
 material {
-    name : generalShaprSubsurface,
+    name : Subsurface,
     shadingModel : subsurface,
     specularAntiAliasing : true,
     parameters : [
@@ -18,6 +18,11 @@ material {
         {
             type : float4,
             name : baseColor
+        },
+
+        {
+            type : float3,
+            name : tintColor,
         },
 
         {

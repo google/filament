@@ -178,7 +178,8 @@ set(MATERIAL_SRCS
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
         src/materials/Opaque.mat
-        src/materials/TransparentSolid.mat
+        src/materials/Transparent.mat
+        src/materials/Refractive.mat
         src/materials/Subsurface.mat
         src/materials/Cloth.mat
         src/materials/dof/dof.mat

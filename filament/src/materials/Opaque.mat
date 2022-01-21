@@ -1,5 +1,6 @@
 material {
-    name : generalShaprOpaque,
+    name : Opaque,
+    specularAntiAliasing : true,
     parameters : [
         //////////////////////////////////////////////////////////////////////////////////////////////////
         // Attributes that may have a texture assigned to them. A single control to set their value when
@@ -16,6 +17,11 @@ material {
         {
             type : float4,
             name : baseColor
+        },
+
+        {
+            type : float3,
+            name : tintColor,
         },
 
         {
