@@ -31,7 +31,6 @@
 #include <tsl/robin_map.h>
 #include <type_traits>
 #include <vector>
-#include <unordered_map>
 
 #include "VulkanCommands.h"
 
@@ -327,7 +326,7 @@ private:
     utils::bitset32 mDirtyPipeline;
     utils::bitset32 mDirtyDescriptor;
 
-    std::unordered_multimap<VkPipelineLayout, VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
+    tsl::robin_map<VkPipelineLayout, VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
 
     LayoutMap mLayouts;
     PipelineMap mPipelines;
