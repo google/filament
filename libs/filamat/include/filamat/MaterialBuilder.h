@@ -45,8 +45,8 @@ class JobSystem;
 namespace filamat {
 
 struct MaterialInfo;
-class ChunkContainer;
 struct Variant;
+class ChunkContainer;
 
 class UTILS_PUBLIC MaterialBuilderBase {
 public:
@@ -653,7 +653,7 @@ private:
 
     bool generateShaders(
             utils::JobSystem& jobSystem,
-            const std::vector<Variant>& variants, ChunkContainer& container,
+            const std::vector<filamat::Variant>& variants, ChunkContainer& container,
             const MaterialInfo& info) const noexcept;
 
     bool hasCustomVaryings() const noexcept;
