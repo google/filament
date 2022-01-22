@@ -1059,6 +1059,13 @@ class_<RenderableManager>("RenderableManager")
         self->setMorphWeights(instance, weights, count);
     }), allow_raw_pointers())
 
+    .function("setMorphTargetBufferAt", EMBIND_LAMBDA(void, (RenderableManager* self,
+            RenderableManager::Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count), {
+        self->setMorphTargetBufferAt(instance, level, primitiveIndex,
+                morphTargetBuffer, offset, count);
+    }), allow_raw_pointers())
+
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
