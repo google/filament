@@ -196,6 +196,7 @@ private:
     struct LayoutBundle {
         std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
         VkPipelineLayout pipelineLayout;
+        std::vector<VkDescriptorSet> setArena[DESCRIPTOR_TYPE_COUNT];
         uint32_t reference = 0;
     };
 
@@ -263,13 +264,13 @@ private:
     // Represents a group of descriptor sets that are bound simultaneously.
     struct DescriptorBundle {
         VkDescriptorSet handles[DESCRIPTOR_TYPE_COUNT];
-        VkPipelineLayout pipelineLayout;
+        LayoutBundle* layoutBundle = nullptr;
         utils::bitset32 commandBuffers;
     };
 
     struct PipelineVal {
         VkPipeline handle;
-        LayoutBundle* layout;
+        LayoutBundle* layoutBundle;
 
         // The "age" of a pipeline cache entry is the number of command buffer flush events that
         // have occurred since it was last used in a command buffer. This is used for LRU caching,
@@ -292,7 +293,7 @@ private:
     void getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT],
             bool* bind, bool* overflow) noexcept;
 
-    LayoutBundle* getOrCreateLayout() noexcept;
+    LayoutBundle* getOrCreateLayoutBundle() noexcept;
 
     // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
     bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
@@ -323,8 +324,6 @@ private:
     // needs to be retrieved from the cache or created.
     utils::bitset32 mDirtyPipeline;
     utils::bitset32 mDirtyDescriptor;
-
-    tsl::robin_map<VkPipelineLayout, VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
 
     LayoutMap mLayouts;
     PipelineMap mPipelines;

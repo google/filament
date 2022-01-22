@@ -109,7 +109,7 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
         return false;
     }
     if (bind) {
-        auto layout = getOrCreateLayout();
+        auto layout = getOrCreateLayoutBundle();
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 layout->pipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,
                 descriptors, 0, nullptr);
@@ -135,8 +135,8 @@ void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scisso
 void VulkanPipelineCache::getOrCreateDescriptors(
         VkDescriptorSet descriptorSets[DESCRIPTOR_TYPE_COUNT],
         bool* bind, bool* overflow) noexcept {
-    // If this method has never been called before, we need to create a new layout object.
-    auto layout = getOrCreateLayout();
+    // If this method has never been called before, we need to create a new layoutBundle object.
+    auto layoutBundle = getOrCreateLayoutBundle();
 
     DescriptorBundle*& descriptorBundle = mCmdBufferState[mCmdBufferIndex].currentDescriptorBundle;
 
@@ -165,7 +165,8 @@ void VulkanPipelineCache::getOrCreateDescriptors(
 
     // If there are no available descriptor sets that can be re-used, then create brand new ones
     // (one for each type). Otherwise, grab a descriptor set from each of the arenas.
-    if (!mDescriptorSetArena[0].count(layout->pipelineLayout)) {
+    auto& descriptorSetArena = layoutBundle->setArena;
+    if (descriptorSetArena[0].empty()) {
         if (mDescriptorBundles.size() >= mDescriptorPoolSize) {
             growDescriptorPool();
         }
@@ -173,7 +174,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = mDescriptorPool;
         allocInfo.descriptorSetCount = DESCRIPTOR_TYPE_COUNT;
-        allocInfo.pSetLayouts = layout->setLayouts.data();
+        allocInfo.pSetLayouts = layoutBundle->setLayouts.data();
         VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptorSets);
         assert_invariant(err == VK_SUCCESS);
         if (err != VK_SUCCESS) {
@@ -182,9 +183,8 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         }
     } else {
         for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
-            auto search = mDescriptorSetArena[i].find(layout->pipelineLayout);
-            descriptorSets[i] = search->second;
-            mDescriptorSetArena[i].erase(search);
+            descriptorSets[i] = descriptorSetArena[i].back();
+            descriptorSetArena[i].pop_back();
         }
     }
 
@@ -198,7 +198,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
         descriptorBundle->handles[i] = descriptorSets[i];
     }
-    descriptorBundle->pipelineLayout = layout->pipelineLayout;
+    descriptorBundle->layoutBundle = layoutBundle;
     descriptorBundle->commandBuffers.setValue(1 << mCmdBufferIndex);
 
     // Clear the dirty flag for this command buffer.
@@ -306,7 +306,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     *bind = true;
 }
 
-VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayout() noexcept {
+VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayoutBundle() noexcept {
     auto iter = mLayouts.find(mLayoutKey);
     if (UTILS_LIKELY(iter != mLayouts.end())) {
         return &iter.value();
@@ -365,12 +365,12 @@ VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayout() noex
             &pipelineLayout);
     ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
 
-    auto result = mLayouts.emplace(mLayoutKey, LayoutBundle{ setLayouts, pipelineLayout });
+    auto result = mLayouts.emplace(mLayoutKey, LayoutBundle{ setLayouts, pipelineLayout, {} });
     return &result.first.value();
 }
 
 bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
-    LayoutBundle* layout = getOrCreateLayout();
+    LayoutBundle* layout = getOrCreateLayoutBundle();
     assert_invariant(layout);
     PipelineVal*& currentPipeline = mCmdBufferState[mCmdBufferIndex].currentPipeline;
 
@@ -768,9 +768,10 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     for (ConstDescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end();) {
         const DescriptorBundle& cacheEntry = iter.value();
         if (cacheEntry.commandBuffers.getValue() == 0) {
-            mDescriptorSetArena[0].emplace(cacheEntry.pipelineLayout, cacheEntry.handles[0]);
-            mDescriptorSetArena[1].emplace(cacheEntry.pipelineLayout, cacheEntry.handles[1]);
-            mDescriptorSetArena[2].emplace(cacheEntry.pipelineLayout, cacheEntry.handles[2]);
+            auto& descriptorSetArena = cacheEntry.layoutBundle->setArena;
+            descriptorSetArena[0].push_back(cacheEntry.handles[0]);
+            descriptorSetArena[1].push_back(cacheEntry.handles[1]);
+            descriptorSetArena[2].push_back(cacheEntry.handles[2]);
             iter = mDescriptorBundles.erase(iter);
         } else {
             ++iter;
@@ -789,7 +790,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     using ConstPipeIterator = decltype(mPipelines)::const_iterator;
     for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
         if (iter.value().age > VK_MAX_PIPELINE_AGE) {
-            --iter->second.layout->reference;
+            --iter->second.layoutBundle->reference;
             vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
             iter = mPipelines.erase(iter);
         } else {
@@ -874,12 +875,6 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
             << utils::io::endl;
     #endif
 
-    // There is no need to free descriptor sets individually since destroying the VkDescriptorPool
-    // implicitly frees them.
-    for (auto& arena : mDescriptorSetArena) {
-        arena.clear();
-    }
-
     mDescriptorBundles.clear();
 
     // Our current layout bundle strategy can cause the # of layout bundles to explode in certain
@@ -894,6 +889,8 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
         for (auto setLayout : iter.second.setLayouts) {
             vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
         }
+        // There is no need to free descriptor sets individually since destroying the VkDescriptorPool
+        // implicitly frees them.
     }
     mLayouts.clear();
     vkDestroyDescriptorPool(mDevice, mDescriptorPool, VKALLOC);
@@ -922,8 +919,11 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
 
     // Clear out all unused descriptor sets in the arena so they don't get reclaimed. There is no
     // need to free them individually since the old VkDescriptorPool will be destroyed.
-    for (auto& arena : mDescriptorSetArena) {
-        arena.clear();
+    for (auto iter = mLayouts.begin(); iter != mLayouts.end(); ++iter) {
+        auto& setArena = iter.value().setArena;
+        for (auto& arena : setArena) {
+            arena.clear();
+        }
     }
 
     // Move all in-use descriptors from the primary cache into an "extinct" list, so that they will
