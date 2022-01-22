@@ -148,6 +148,8 @@ public:
     static constexpr uint64_t CUSTOM_INDEX_MASK             = 0x00000000FFFFFFFFllu;
     static constexpr unsigned CUSTOM_INDEX_SHIFT            = 0;
 
+    // we assume Variant fits in 8-bits.
+    static_assert(sizeof(Variant::type_t) == 1);
 
     enum class Pass : uint64_t {    // 6-bits max
         DEPTH    = uint64_t(0x00) << PASS_SHIFT,

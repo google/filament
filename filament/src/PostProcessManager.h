@@ -29,6 +29,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
 
+#include <private/filament/Variant.h>
+
 #include <utils/CString.h>
 
 #include <tsl/robin_map.h>
@@ -208,7 +210,7 @@ private:
         FMaterial* getMaterial() const;
         FMaterialInstance* getMaterialInstance() const;
 
-        backend::PipelineState getPipelineState(uint8_t variant = 0u) const noexcept;
+        backend::PipelineState getPipelineState(Variant::type_t variantKey = 0u) const noexcept;
 
     private:
         FMaterial* assertMaterial() const noexcept;
