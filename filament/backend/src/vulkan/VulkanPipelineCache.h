@@ -218,7 +218,6 @@ private:
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 256 bytes
         VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 192 bytes
         uint32_t padding1;                                                          // 4 bytes
-        LayoutBundle* layout = nullptr;              // 8 bytes
     };
 
     static_assert(sizeof(VkVertexInputBindingDescription) == 12);
@@ -229,8 +228,7 @@ private:
     static_assert(offsetof(PipelineKey, subpassIndex)     == 152);
     static_assert(offsetof(PipelineKey, vertexAttributes) == 156);
     static_assert(offsetof(PipelineKey, vertexBuffers)    == 412);
-    static_assert(offsetof(PipelineKey, layout)           == 608);
-    static_assert(sizeof(PipelineKey) == 608 + sizeof(void*), "PipelineKey must not have any padding.");
+    static_assert(sizeof(PipelineKey) == 608, "PipelineKey must not have any padding.");
 
     static_assert(std::is_trivially_copyable<PipelineKey>::value,
             "PipelineKey must be a POD for fast hashing.");

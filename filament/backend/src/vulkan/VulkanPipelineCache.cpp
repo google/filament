@@ -109,8 +109,9 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
         return false;
     }
     if (bind) {
+        auto layout = getOrCreateLayout();
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                mPipelineKey.layout->pipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,
+                layout->pipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,
                 descriptors, 0, nullptr);
     }
     return true;
@@ -135,8 +136,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         VkDescriptorSet descriptorSets[DESCRIPTOR_TYPE_COUNT],
         bool* bind, bool* overflow) noexcept {
     // If this method has never been called before, we need to create a new layout object.
-    auto& layout = mPipelineKey.layout;
-    layout = getOrCreateLayout();
+    auto layout = getOrCreateLayout();
 
     DescriptorBundle*& descriptorBundle = mCmdBufferState[mCmdBufferIndex].currentDescriptorBundle;
 
@@ -370,7 +370,7 @@ VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayout() noex
 }
 
 bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
-    LayoutBundle*& layout = mPipelineKey.layout;
+    LayoutBundle* layout = getOrCreateLayout();
     assert_invariant(layout);
     PipelineVal*& currentPipeline = mCmdBufferState[mCmdBufferIndex].currentPipeline;
 
