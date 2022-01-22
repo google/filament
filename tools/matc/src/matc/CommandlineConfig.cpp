@@ -105,13 +105,13 @@ static uint8_t parseVariantFilter(const std::string& arg) {
     uint8_t variantFilter = 0;
     while (std::getline(ss, item, ',')) {
         if (item == "directionalLighting") {
-            variantFilter |= filament::Variant::DIRECTIONAL_LIGHTING;
+            variantFilter |= filament::Variant::DIR;
         } else if (item == "dynamicLighting") {
-            variantFilter |= filament::Variant::DYNAMIC_LIGHTING;
+            variantFilter |= filament::Variant::DYN;
         } else if (item == "shadowReceiver") {
-            variantFilter |= filament::Variant::SHADOW_RECEIVER;
+            variantFilter |= filament::Variant::SRE;
         } else if (item == "skinning") {
-            variantFilter |= filament::Variant::SKINNING_OR_MORPHING;
+            variantFilter |= filament::Variant::SKN;
         } else if (item == "vsm") {
             variantFilter |= filament::Variant::VSM;
         } else if (item == "fog") {

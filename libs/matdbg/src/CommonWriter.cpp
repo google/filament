@@ -36,11 +36,11 @@ std::string formatVariantString(uint8_t variant, MaterialDomain domain) noexcept
     // Variant header file and allows the information to fit in a reasonable amount of space on
     // the page. The HTML file has a legend.
     if (variant) {
-        if (variant & Variant::DIRECTIONAL_LIGHTING)  variantString += "DIR|";
-        if (variant & Variant::DYNAMIC_LIGHTING)      variantString += "DYN|";
-        if (variant & Variant::SHADOW_RECEIVER)       variantString += "SRE|";
-        if (variant & Variant::SKINNING_OR_MORPHING)  variantString += "SKN|";
-        if (variant & Variant::DEPTH)                 variantString += "DEP|";
+        if (variant & Variant::DIR) variantString += "DIR|";
+        if (variant & Variant::DYN) variantString += "DYN|";
+        if (variant & Variant::SRE) variantString += "SRE|";
+        if (variant & Variant::SKN) variantString += "SKN|";
+        if (variant & Variant::DEP) variantString += "DEP|";
         if (variant & Variant::FOG)                   variantString += "FOG|";
         if (variant & Variant::VSM)                   variantString += "VSM|";
         variantString = variantString.substr(0, variantString.length() - 1);

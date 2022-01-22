@@ -583,6 +583,17 @@ void SimpleViewer::updateUserInterface() {
         rm.setCastShadows(instance, scaster);
         ImGui::Checkbox("receives shadows", &sreceiver);
         rm.setReceiveShadows(instance, sreceiver);
+        auto numMorphTargets = mAsset->getMorphTargetCount(entity);
+        if (numMorphTargets > 0) {
+            bool selected = entity == mCurrentMorphingEntity;
+            ImGui::Checkbox("morphing", &selected);
+            if (selected) {
+                mCurrentMorphingEntity = entity;
+                mMorphWeights.resize(numMorphTargets, 0.0f);
+            } else {
+                mCurrentMorphingEntity = utils::Entity();
+            }
+        }
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
             const char* mname = rm.getMaterialInstanceAt(instance, prim)->getName();
@@ -978,6 +989,24 @@ void SimpleViewer::updateUserInterface() {
                 mResetAnimation = true;
             }
             ImGui::Unindent();
+        }
+
+        if (mCurrentMorphingEntity && ImGui::CollapsingHeader("Morphing")) {
+            const bool isAnimating = mCurrentAnimation > 0 && mAnimator && mAnimator->getAnimationCount() > 0;
+            if (isAnimating) {
+                ImGui::BeginDisabled();
+            }
+            for (int i = 0; i != mMorphWeights.size(); ++i) {
+                ImGui::SliderFloat(mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i),
+                        &mMorphWeights[i], 0.0f, 1.0);
+            }
+            if (isAnimating) {
+                ImGui::EndDisabled();
+            }
+            if (!isAnimating) {
+                auto instance = rm.getInstance(mCurrentMorphingEntity);
+                rm.setMorphWeights(instance, mMorphWeights.data(), mMorphWeights.size());
+            }
         }
 
         if (mEnableWireframe) {
