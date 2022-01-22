@@ -186,10 +186,10 @@ public:
 private:
     static constexpr uint32_t ALL_COMMAND_BUFFERS = (1 << VK_MAX_COMMAND_BUFFERS) - 1;
 
-    struct LayoutBundleKey {
-        // Currently, only samplers can be bound to each shader stages.
-        std::array<VkShaderStageFlags, SAMPLER_BINDING_COUNT> samplers;
-    };
+    using LayoutBundleKey = utils::bitset64; // 2 bits(vertex and fragment) per sampler * 32 samplers
+
+    static void setLayoutBundleKey(ShaderStageFlags flags, uint16_t binding, LayoutBundleKey& key);
+    static VkShaderStageFlags getShaderStageFlags(LayoutBundleKey key, uint16_t binding);
 
     static LayoutBundleKey getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept;
 

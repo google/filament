@@ -336,7 +336,7 @@ VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayout() noex
     VkDescriptorSetLayoutBinding sbindings[SAMPLER_BINDING_COUNT];
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
-        binding.stageFlags = mLayoutKey.samplers[i];
+        binding.stageFlags = getShaderStageFlags(mLayoutKey, i);
         binding.binding = i;
         sbindings[i] = binding;
     }
@@ -935,13 +935,33 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
     mDescriptorBundles.clear();
 }
 
+void VulkanPipelineCache::setLayoutBundleKey(ShaderStageFlags flags, uint16_t binding, LayoutBundleKey& key) {
+    if (flags.vertex) {
+        key.set(binding * 2 + 0);
+    }
+    if (flags.fragment) {
+        key.set(binding * 2 + 1);
+    }
+}
+
+VkShaderStageFlags VulkanPipelineCache::getShaderStageFlags(LayoutBundleKey key, uint16_t binding) {
+    VkShaderStageFlags flags = 0;
+    if (key.test(binding * 2 + 0)) {
+        flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    }
+    if (key.test(binding * 2 + 1)) {
+        flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+    return flags;
+}
+
 VulkanPipelineCache::LayoutBundleKey
 VulkanPipelineCache::getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
     LayoutBundleKey key = {};
     for (uint32_t binding = 0; binding < Program::BINDING_COUNT; ++binding) {
-        VkShaderStageFlags stageFlags = getShaderStageFlags( samplerGroupInfo[binding].stageFlags);
+        const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
         for (auto& sampler : samplerGroupInfo[binding].samplers) {
-            key.samplers[sampler.binding] = stageFlags;
+            setLayoutBundleKey(stageFlags, sampler.binding, key);
         }
     }
     return key;
@@ -949,7 +969,7 @@ VulkanPipelineCache::getLayoutBundleKey(const Program::SamplerGroupInfo& sampler
 
 bool VulkanPipelineCache::LayoutBundleEqual::operator()(const VulkanPipelineCache::LayoutBundleKey& k1,
         const VulkanPipelineCache::LayoutBundleKey& k2) const {
-    return k1.samplers == k2.samplers;
+    return k1 == k2;
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const VulkanPipelineCache::PipelineKey& k1,
