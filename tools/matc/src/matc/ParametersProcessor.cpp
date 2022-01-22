@@ -692,10 +692,10 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
     // due to static initialization ordering.
     static const std::unordered_map<std::string, uint8_t> strToEnum  = [] {
         std::unordered_map<std::string, uint8_t> strToEnum;
-        strToEnum["directionalLighting"] = filament::Variant::DIRECTIONAL_LIGHTING;
-        strToEnum["dynamicLighting"] = filament::Variant::DYNAMIC_LIGHTING;
-        strToEnum["shadowReceiver"] = filament::Variant::SHADOW_RECEIVER;
-        strToEnum["skinning"] = filament::Variant::SKINNING_OR_MORPHING;
+        strToEnum["directionalLighting"] = filament::Variant::DIR;
+        strToEnum["dynamicLighting"] = filament::Variant::DYN;
+        strToEnum["shadowReceiver"] = filament::Variant::SRE;
+        strToEnum["skinning"] = filament::Variant::SKN;
         strToEnum["vsm"] = filament::Variant::VSM;
         strToEnum["fog"] = filament::Variant::FOG;
         return strToEnum;

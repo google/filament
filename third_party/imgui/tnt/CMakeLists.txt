@@ -25,6 +25,7 @@ set(SRCS
     ${SRC_DIR}/imgui.cpp
     ${SRC_DIR}/imgui_demo.cpp
     ${SRC_DIR}/imgui_draw.cpp
+    ${SRC_DIR}/imgui_tables.cpp
     ${SRC_DIR}/imgui_widgets.cpp
 )
 
