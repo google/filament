@@ -28,7 +28,7 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             const char* materialName) {
     // We assume material variant 0 here, which is sufficient for calculating the binding map.
     // The material variant currently only affects sampler formats (for VSM), not offsets.
-    const uint8_t variantKey = 0;
+    const Variant dummyVariant{};
     uint8_t offset = 0;
     size_t maxSamplerIndex = backend::MAX_SAMPLER_COUNT - 1;
     bool overflow = false;
@@ -38,7 +38,7 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
         if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
             sib = perMaterialSib;
         } else {
-            sib = filament::SibGenerator::getSib(blockIndex, variantKey);
+            sib = filament::SibGenerator::getSib(blockIndex, dummyVariant);
         }
         if (sib) {
             auto sibFields = sib->getSamplerInfoList();
@@ -69,7 +69,7 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
                 sib = perMaterialSib;
             } else {
-                sib = filament::SibGenerator::getSib(blockIndex, variantKey);
+                sib = filament::SibGenerator::getSib(blockIndex, dummyVariant);
             }
             if (sib) {
                 auto sibFields = sib->getSamplerInfoList();

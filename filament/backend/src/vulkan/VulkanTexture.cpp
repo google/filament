@@ -428,6 +428,10 @@ void VulkanTexture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkIm
     region.imageSubresource.mipLevel = miplevel;
     region.imageSubresource.layerCount = 1;
     region.imageExtent = extent;
+    if (target == SamplerType::SAMPLER_2D_ARRAY) {      
+        region.imageExtent.depth = 1;      
+        region.imageSubresource.layerCount = depth;
+    }
     vkCmdCopyBufferToImage(cmd, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
