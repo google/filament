@@ -7,8 +7,11 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.17.0
 
-- engine: add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
-  access this new feature**].
+- engine: Add experimental glossy screen-space reflections.
+- engine: Add support for GPU morphing and 128 morph targets.
+- engine: Fix crash with non-shadow receiving renderables and VSM.
+- engine: Bring back the 3x3 filter for PCF shadows.
+- engine: Correct AABB calculation for skinned glTF models.
 
 ## v1.16.1
 
