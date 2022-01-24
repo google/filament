@@ -188,16 +188,13 @@ private:
 
     using LayoutBundleKey = utils::bitset64; // 2 bits(vertex and fragment) per sampler * 32 samplers
 
-    static void setLayoutBundleKey(ShaderStageFlags flags, uint16_t binding, LayoutBundleKey& key);
-    static VkShaderStageFlags getShaderStageFlags(LayoutBundleKey key, uint16_t binding);
-
     static LayoutBundleKey getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept;
 
     struct LayoutBundle {
         std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
         VkPipelineLayout pipelineLayout;
         std::vector<VkDescriptorSet> setArena[DESCRIPTOR_TYPE_COUNT];
-        uint32_t reference = 0;
+        uint32_t referenceCount = 0;
     };
 
     using LayoutBundleHashFn = utils::hash::MurmurHashFn<LayoutBundleKey>;
@@ -278,7 +275,7 @@ private:
         uint32_t age;
     };
 
-    using LayoutMap = tsl::robin_map<LayoutBundleKey, LayoutBundle, LayoutBundleHashFn, LayoutBundleEqual>;
+    using LayoutMap = tsl::robin_map<LayoutBundleKey , LayoutBundle, LayoutBundleHashFn, LayoutBundleEqual>;
     using PipelineMap = tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual>;
     using DescriptorMap = tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual>;
 
@@ -308,7 +305,7 @@ private:
     VmaAllocator mAllocator = VK_NULL_HANDLE;
     const RasterState mDefaultRasterState;
 
-    // Current bindings are divided into two "keys" which are composed of a mix of actual values
+    // Current bindings are divided into three "keys" which are composed of a mix of actual values
     // (e.g., blending is OFF) and weak references to Vulkan objects (e.g., shader programs and
     // uniform buffers).
     LayoutBundleKey mLayoutKey;

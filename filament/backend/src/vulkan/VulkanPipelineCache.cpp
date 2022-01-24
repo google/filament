@@ -37,6 +37,26 @@ namespace backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
+static void setLayoutBundleKey(ShaderStageFlags flags, uint16_t binding, utils::bitset64& key) {
+    if (flags.vertex) {
+        key.set(binding * 2 + 0);
+    }
+    if (flags.fragment) {
+        key.set(binding * 2 + 1);
+    }
+}
+
+static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t binding) {
+    VkShaderStageFlags flags = 0;
+    if (key.test(binding * 2 + 0)) {
+        flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    }
+    if (key.test(binding * 2 + 1)) {
+        flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+    return flags;
+}
+
 VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
     markDirtyDescriptor();
     markDirtyPipeline();
@@ -356,7 +376,7 @@ VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayoutBundle(
     dlinfo.pBindings = tbindings;
     vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &setLayouts[2]);
 
-    // Create the one and only VkPipelineLayout that we'll ever use.
+    // Create VkPipelineLayout based on how to resources are bounded.
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
     pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.setLayoutCount = setLayouts.size();
@@ -539,7 +559,7 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
         utils::slog.e << "vkCreateGraphicsPipelines error " << err << utils::io::endl;
         utils::debug_trap();
     }
-    ++layout->reference;
+    ++layout->referenceCount;
 
     // Stash a stable pointer to the stored cache entry to allow fast subsequent calls to
     // getOrCreatePipeline when nothing has been dirtied.
@@ -790,7 +810,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     using ConstPipeIterator = decltype(mPipelines)::const_iterator;
     for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
         if (iter.value().age > VK_MAX_PIPELINE_AGE) {
-            --iter->second.layoutBundle->reference;
+            --iter->second.layoutBundle->referenceCount;
             vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
             iter = mPipelines.erase(iter);
         } else {
@@ -801,7 +821,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     // Evict any layouts that have not been used in a while.
     using ConstLayoutIterator = decltype(mLayouts)::const_iterator;
     for (ConstLayoutIterator iter = mLayouts.begin(); iter != mLayouts.end();) {
-        if (iter->second.reference == 0) {
+        if (iter->second.referenceCount == 0) {
             vkDestroyPipelineLayout(mDevice, iter->second.pipelineLayout, VKALLOC);
             for (auto setLayout : iter->second.setLayouts) {
                 vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
@@ -933,26 +953,6 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
         mExtinctDescriptorBundles.push_back(iter.value());
     }
     mDescriptorBundles.clear();
-}
-
-void VulkanPipelineCache::setLayoutBundleKey(ShaderStageFlags flags, uint16_t binding, LayoutBundleKey& key) {
-    if (flags.vertex) {
-        key.set(binding * 2 + 0);
-    }
-    if (flags.fragment) {
-        key.set(binding * 2 + 1);
-    }
-}
-
-VkShaderStageFlags VulkanPipelineCache::getShaderStageFlags(LayoutBundleKey key, uint16_t binding) {
-    VkShaderStageFlags flags = 0;
-    if (key.test(binding * 2 + 0)) {
-        flags |= VK_SHADER_STAGE_VERTEX_BIT;
-    }
-    if (key.test(binding * 2 + 1)) {
-        flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-    }
-    return flags;
 }
 
 VulkanPipelineCache::LayoutBundleKey
