@@ -25,10 +25,11 @@
 #include <backend/DriverEnums.h>
 #include <backend/ShaderStageFlags.h>
 
+#include <private/filament/Variant.h>
+
 #include <array>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 class Program {
 public:
@@ -63,7 +64,7 @@ public:
     ~Program() noexcept;
 
     // sets the material name and variant for diagnostic purposes only
-    Program& diagnostics(utils::CString const& name, uint8_t variantKey);
+    Program& diagnostics(utils::CString const& name, Variant variant);
 
     // sets one of the program's shader (e.g. vertex, fragment)
     Program& shader(Shader shader, void const* data, size_t size) noexcept;
@@ -102,7 +103,7 @@ public:
 
     const utils::CString& getName() const noexcept { return mName; }
 
-    uint8_t getVariant() const noexcept { return mVariant; }
+    Variant getVariant() const noexcept { return mVariant; }
 
     bool hasSamplers() const noexcept { return mHasSamplers; }
 
@@ -116,10 +117,9 @@ private:
     std::array<ShaderBlob, SHADER_TYPE_COUNT> mShadersSource;
     utils::CString mName;
     bool mHasSamplers = false;
-    uint8_t mVariant;
+    Variant mVariant;
 };
 
-} // namespace backend;
-} // namespace filament;
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H

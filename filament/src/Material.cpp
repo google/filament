@@ -288,9 +288,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     // pre-cache the shared variants -- these variants are shared with the default material.
     if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
         auto& cachedPrograms = mCachedPrograms;
-        for (uint8_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
-            if (Variant::isValidDepthVariant(i)) {
-                cachedPrograms[i] = engine.getDefaultMaterial()->getProgram(i);
+        for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
+            const Variant variant(k);
+            if (Variant::isValidDepthVariant(variant)) {
+                cachedPrograms[k] = engine.getDefaultMaterial()->getProgram(variant);
             }
         }
     }
@@ -348,27 +349,27 @@ UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
     return mUniformInterfaceBlock.getUniformInfo(name.c_str());
 }
 
-Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
+Handle<HwProgram> FMaterial::getProgramSlow(Variant variant) const noexcept {
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
-            return getSurfaceProgramSlow(variantKey);
+            return getSurfaceProgramSlow(variant);
 
         case MaterialDomain::POST_PROCESS:
-            return getPostProcessProgramSlow(variantKey);
+            return getPostProcessProgramSlow(variant);
     }
 }
 
-Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey) const noexcept {
+Handle<HwProgram> FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
-    assert_invariant( variantKey == Variant::filterVariant(variantKey, isVariantLit()) );
+    assert_invariant(variant == Variant::filterVariant(variant, isVariantLit()) );
 
-    assert_invariant(!Variant::isReserved(variantKey));
+    assert_invariant(!Variant::isReserved(variant));
 
-    uint8_t vertexVariantKey = Variant::filterVariantVertex(variantKey);
-    uint8_t fragmentVariantKey = Variant::filterVariantFragment(variantKey);
+    Variant vertexVariant   = Variant::filterVariantVertex(variant);
+    Variant fragmentVariant = Variant::filterVariantFragment(variant);
 
-    Program pb = getProgramBuilderWithVariants(variantKey, vertexVariantKey, fragmentVariantKey);
+    Program pb = getProgramBuilderWithVariants(variant, vertexVariant, fragmentVariant);
     pb
         .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
         .setUniformBlock(BindingPoints::PER_RENDERABLE, PerRenderableUib::_name)
@@ -377,36 +378,36 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey) const noe
         .setUniformBlock(BindingPoints::FROXEL_RECORDS, FroxelRecordUib::_name)
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
-    if (Variant(variantKey).hasSkinningOrMorphing()) {
+    if (Variant(variant).hasSkinningOrMorphing()) {
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableUibBone::_name);
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_MORPHING, PerRenderableMorphingUib::_name);
 
         addSamplerGroup(pb, BindingPoints::PER_RENDERABLE_MORPHING,
-                SibGenerator::getPerRenderPrimitiveMorphingSib(variantKey), mSamplerBindings);
+                SibGenerator::getPerRenderPrimitiveMorphingSib(variant), mSamplerBindings);
     }
 
-    addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variantKey), mSamplerBindings);
+    addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variant), mSamplerBindings);
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 
-    return createAndCacheProgram(std::move(pb), variantKey);
+    return createAndCacheProgram(std::move(pb), variant);
 }
 
-Handle<HwProgram> FMaterial::getPostProcessProgramSlow(uint8_t variantKey)
+Handle<HwProgram> FMaterial::getPostProcessProgramSlow(Variant variant)
     const noexcept {
 
-    Program pb = getProgramBuilderWithVariants(variantKey, variantKey, variantKey);
+    Program pb = getProgramBuilderWithVariants(variant, variant, variant);
     pb.setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
       .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 
-    return createAndCacheProgram(std::move(pb), variantKey);
+    return createAndCacheProgram(std::move(pb), variant);
 }
 
 Program FMaterial::getProgramBuilderWithVariants(
-        uint8_t variantKey,
-        uint8_t vertexVariantKey,
-        uint8_t fragmentVariantKey) const noexcept {
+        Variant variant,
+        Variant vertexVariant,
+        Variant fragmentVariant) const noexcept {
     const ShaderModel sm = mEngine.getDriver().getShaderModel();
     const bool isNoop = mEngine.getBackend() == Backend::NOOP;
 
@@ -417,12 +418,12 @@ Program FMaterial::getProgramBuilderWithVariants(
     filaflat::ShaderBuilder& vsBuilder = mEngine.getVertexShaderBuilder();
 
     UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(vsBuilder, sm,
-            vertexVariantKey, ShaderType::VERTEX);
+            vertexVariant, ShaderType::VERTEX);
 
     ASSERT_POSTCONDITION(isNoop || (vsOK && vsBuilder.size() > 0),
             "The material '%s' has not been compiled to include the required "
             "GLSL or SPIR-V chunks for the vertex shader (variant=0x%x, filtered=0x%x).",
-            mName.c_str(), variantKey, vertexVariantKey);
+            mName.c_str(), variant.key, vertexVariant.key);
 
     /*
      * Fragment shader
@@ -431,26 +432,25 @@ Program FMaterial::getProgramBuilderWithVariants(
     filaflat::ShaderBuilder& fsBuilder = mEngine.getFragmentShaderBuilder();
 
     UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(fsBuilder, sm,
-            fragmentVariantKey, ShaderType::FRAGMENT);
+            fragmentVariant, ShaderType::FRAGMENT);
 
     ASSERT_POSTCONDITION(isNoop || (fsOK && fsBuilder.size() > 0),
             "The material '%s' has not been compiled to include the required "
             "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filtered=0x%x).",
-            mName.c_str(), variantKey, fragmentVariantKey);
+            mName.c_str(), variant.key, fragmentVariant.key);
 
     Program pb;
-    pb      .diagnostics(mName, variantKey)
+    pb      .diagnostics(mName, variant)
             .withVertexShader(vsBuilder.data(), vsBuilder.size())
             .withFragmentShader(fsBuilder.data(), fsBuilder.size());
     return pb;
 }
 
-Handle<HwProgram> FMaterial::createAndCacheProgram(Program&& p,
-        uint8_t variantKey) const noexcept {
+Handle<HwProgram> FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
     auto program = mEngine.getDriverApi().createProgram(std::move(p));
     assert_invariant(program);
 
-    mCachedPrograms[variantKey] = program;
+    mCachedPrograms[variant.key] = program;
     return program;
 }
 
@@ -544,17 +544,18 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
 void FMaterial::destroyPrograms(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();
     auto& cachedPrograms = mCachedPrograms;
-    for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
+    for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
+        const Variant variant(k);
         if (!mIsDefaultMaterial) {
             // The depth variants may be shared with the default material, in which case
             // we should not free it now.
-            bool isSharedVariant = Variant::isValidDepthVariant(i) && !mHasCustomDepthShader;
+            bool isSharedVariant = Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
             if (isSharedVariant) {
                 // we don't own this variant, skip.
                 continue;
             }
         }
-        driverApi.destroyProgram(cachedPrograms[i]);
+        driverApi.destroyProgram(cachedPrograms[k]);
     }
 }
 

@@ -139,10 +139,10 @@ FMaterial* PostProcessManager::PostProcessMaterial::assertMaterial() const noexc
     return mMaterial;
 }
 
-PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(uint8_t variant) const noexcept {
+PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(Variant::type_t variantKey) const noexcept {
     FMaterial* const material = assertMaterial();
     return {
-            .program = material->getProgram(variant),
+            .program = material->getProgram(Variant{variantKey}),
             .rasterState = material->getRasterState(),
             .scissor = material->getDefaultInstance()->getScissor()
     };

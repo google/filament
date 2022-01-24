@@ -20,19 +20,21 @@
 #include <string>
 #include <vector>
 
+#include <private/filament/Variant.h>
+
 namespace filamat {
 
 // TextEntry stores a shader in ASCII text format, like GLSL.
 struct TextEntry {
     uint8_t shaderModel;
-    uint8_t variant;
+    filament::Variant::type_t variantKey;
     uint8_t stage;
     std::string shader;
 };
 
 struct SpirvEntry {
     uint8_t shaderModel;
-    uint8_t variant;
+    filament::Variant::type_t variantKey;
     uint8_t stage;
     size_t dictionaryIndex;
 
