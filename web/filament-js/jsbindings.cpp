@@ -1055,15 +1055,13 @@ class_<RenderableManager>("RenderableManager")
     }), allow_raw_pointers())
     
     .function("setMorphWeights", EMBIND_LAMBDA(void, (RenderableManager* self,
-            RenderableManager::Instance instance, float* weights, size_t count), {
-        self->setMorphWeights(instance, weights, count);
-    }), allow_raw_pointers())
-
-    .function("setMorphTargetBufferAt", EMBIND_LAMBDA(void, (RenderableManager* self,
-            RenderableManager::Instance instance, uint8_t level, size_t primitiveIndex,
-            MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count), {
-        self->setMorphTargetBufferAt(instance, level, primitiveIndex,
-                morphTargetBuffer, offset, count);
+            RenderableManager::Instance instance, emscripten::val weights), {
+        auto nfloats = weights["length"].as<size_t>();
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = weights[i].as<float>();
+        }
+        self->setMorphWeights(instance, floats.data(), nfloats);
     }), allow_raw_pointers())
 
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
