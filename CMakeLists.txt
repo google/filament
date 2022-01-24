@@ -123,6 +123,10 @@ if (ANDROID OR WEBGL OR IOS OR FILAMENT_LINUX_IS_MOBILE)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
+if (ANDROID)
+    add_definitions(-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
+endif()
+
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
     set(IS_HOST_PLATFORM TRUE)
 endif()
@@ -295,7 +299,7 @@ if (LINUX)
 endif()
 
 if (ANDROID)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Werror=unguarded-availability")
 endif()
 
 if (CYGWIN)

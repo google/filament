@@ -85,6 +85,7 @@ struct App {
 
     gltfio::ResourceLoader* resourceLoader = nullptr;
     bool recomputeAabb = false;
+    bool ignoreBindTransform = false;
 
     bool actualSize = false;
 
@@ -133,6 +134,8 @@ static void printUsage(char* name) {
         "       Do not scale the model to fit into a unit cube\n\n"
         "   --recompute-aabb, -r\n"
         "       Ignore the min/max attributes in the glTF file\n\n"
+        "   --ignore-bind-transform, -g\n"
+        "       Ignore bind transform when recomputing aabb\n\n"
         "   --settings=<path to JSON file>, -t\n"
         "       Apply the settings in the given JSON file\n\n"
         "   --ubershader, -u\n"
@@ -161,19 +164,20 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:ev";
+    static constexpr const char* OPTSTR = "ha:i:usc:rgt:b:ev";
     static const struct option OPTIONS[] = {
-        { "help",         no_argument,       nullptr, 'h' },
-        { "api",          required_argument, nullptr, 'a' },
-        { "batch",        required_argument, nullptr, 'b' },
-        { "headless",     no_argument,       nullptr, 'e' },
-        { "ibl",          required_argument, nullptr, 'i' },
-        { "ubershader",   no_argument,       nullptr, 'u' },
-        { "actual-size",  no_argument,       nullptr, 's' },
-        { "camera",       required_argument, nullptr, 'c' },
-        { "recompute-aabb", no_argument,     nullptr, 'r' },
-        { "settings",     required_argument, nullptr, 't' },
-        { "split-view",   no_argument,       nullptr, 'v' },
+        { "help",         no_argument,          nullptr, 'h' },
+        { "api",          required_argument,    nullptr, 'a' },
+        { "batch",        required_argument,    nullptr, 'b' },
+        { "headless",     no_argument,          nullptr, 'e' },
+        { "ibl",          required_argument,    nullptr, 'i' },
+        { "ubershader",   no_argument,          nullptr, 'u' },
+        { "actual-size",  no_argument,          nullptr, 's' },
+        { "camera",       required_argument,    nullptr, 'c' },
+        { "recompute-aabb", no_argument,        nullptr, 'r' },
+        { "ignore-bind-transform", no_argument, nullptr, 'g' },
+        { "settings",     required_argument,    nullptr, 't' },
+        { "split-view",   no_argument,          nullptr, 'v' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -219,6 +223,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             case 'r':
                 app->recomputeAabb = true;
+                break;
+            case 'g':
+                app->ignoreBindTransform = true;
                 break;
             case 't':
                 app->settingsFile = arg;
@@ -412,6 +419,7 @@ int main(int argc, char** argv) {
         configuration.engine = app.engine;
         configuration.gltfPath = gltfPath.c_str();
         configuration.recomputeBoundingBoxes = app.recomputeAabb;
+        configuration.ignoreBindTransform = app.ignoreBindTransform;
         configuration.normalizeSkinningWeights = true;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);

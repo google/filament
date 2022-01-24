@@ -52,13 +52,13 @@ constexpr mat3f sRGB_to_XYZ{
      0.1804380f,  0.0721750f,  0.9503040f
 };
 
-constexpr mat3f REC2020_to_XYZ{
+constexpr mat3f Rec2020_to_XYZ{
      0.6369530f,  0.2626983f,  0.0000000f,
      0.1446169f,  0.6780088f,  0.0280731f,
      0.1688558f,  0.0592929f,  1.0608272f
 };
 
-constexpr mat3f XYZ_to_REC2020{
+constexpr mat3f XYZ_to_Rec2020{
     1.7166634f,  -0.6666738f,  0.0176425f,
     -0.3556733f,  1.6164557f, -0.0427770f,
     -0.2533681f,  0.0157683f,  0.9422433f
@@ -130,6 +130,18 @@ constexpr mat3f sRGB_to_OkLab_LMS{
      0.0514459929f, 0.1073969566f, 0.6299787005f
 };
 
+constexpr mat3f XYZ_to_OkLab_LMS{
+     0.8189330101f, 0.3618667424f, -0.1288597137f,
+     0.0329845436f, 0.9293118715f,  0.0361456387f,
+     0.0482003018f, 0.2643662691f,  0.6338517070f
+};
+
+constexpr mat3f OkLab_LMS_to_XYZ{
+     1.227014f, -0.557800f,  0.281256f,
+    -0.040580f,  1.112257f, -0.071677f,
+    -0.076381f, -0.421482f,  1.586163f
+};
+
 constexpr mat3f OkLab_LMS_to_OkLab{
      0.2104542553f,  1.9779984951f,  0.0259040371f,
      0.7936177850f, -2.4285922050f,  0.7827717662f,
@@ -148,21 +160,25 @@ constexpr mat3f OkLab_LMS_to_sRGB{
      0.2309699292f, -0.3413193965f,  1.7076147010f
 };
 
-constexpr mat3f sRGB_to_REC2020 = XYZ_to_REC2020 * sRGB_to_XYZ;
+constexpr mat3f sRGB_to_Rec2020 = XYZ_to_Rec2020 * sRGB_to_XYZ;
 
-constexpr mat3f REC2020_to_sRGB = XYZ_to_sRGB * REC2020_to_XYZ;
+constexpr mat3f Rec2020_to_sRGB = XYZ_to_sRGB * Rec2020_to_XYZ;
 
 constexpr mat3f sRGB_to_LMS_CAT16 = XYZ_to_CIECAT16 * sRGB_to_XYZ;
 
 constexpr mat3f LMS_CAT16_to_sRGB = XYZ_to_sRGB * CIECAT16_to_XYZ;
 
-constexpr mat3f REC2020_to_LMS_CAT16 = XYZ_to_CIECAT16 * REC2020_to_XYZ;
+constexpr mat3f Rec2020_to_LMS_CAT16 = XYZ_to_CIECAT16 * Rec2020_to_XYZ;
 
-constexpr mat3f LMS_CAT16_to_REC2020 = XYZ_to_REC2020 * CIECAT16_to_XYZ;
+constexpr mat3f LMS_CAT16_to_Rec2020 = XYZ_to_Rec2020 * CIECAT16_to_XYZ;
 
-constexpr mat3f REC2020_to_AP0 = AP1_to_AP0 * XYZ_to_AP1 * REC2020_to_XYZ;
+constexpr mat3f Rec2020_to_AP0 = AP1_to_AP0 * XYZ_to_AP1 * Rec2020_to_XYZ;
 
-constexpr mat3f AP1_to_REC2020 = XYZ_to_REC2020 * AP1_to_XYZ;
+constexpr mat3f AP1_to_Rec2020 = XYZ_to_Rec2020 * AP1_to_XYZ;
+
+constexpr mat3f Rec2020_to_OkLab_LMS = XYZ_to_OkLab_LMS * Rec2020_to_XYZ;
+
+constexpr mat3f OkLab_LMS_to_Rec2020 = XYZ_to_Rec2020 * OkLab_LMS_to_XYZ;
 
 //------------------------------------------------------------------------------
 // Constants
@@ -175,17 +191,17 @@ constexpr float3 ILLUMINANT_D65_xyY{0.31271f, 0.32902f, 1.0f};
 // Result of: XYZ_to_CIECAT16 * xyY_to_XYZ(ILLUMINANT_D65_xyY);
 constexpr float3 ILLUMINANT_D65_LMS_CAT16{0.975533f, 1.016483f, 1.084837f};
 
-// RGB to luminance coefficients for Rec.2020, from REC2020_to_XYZ
-constexpr float3 LUMINANCE_REC2020{0.2627002f, 0.6779981f, 0.0593017f};
+// RGB to luminance coefficients for Rec.2020, from Rec2020_to_XYZ
+constexpr float3 LUMINANCE_Rec2020{0.2627002f, 0.6779981f, 0.0593017f};
 
 // RGB to luminance coefficients for ACEScg (AP1), from AP1_to_XYZ
 constexpr float3 LUMINANCE_AP1{0.272229f, 0.674082f, 0.0536895f};
 
 // RGB to luminance coefficients for Rec.709, from sRGB_to_XYZ
-constexpr float3 LUMINANCE_REC709{0.2126730f, 0.7151520f, 0.0721750f};
+constexpr float3 LUMINANCE_Rec709{0.2126730f, 0.7151520f, 0.0721750f};
 
 // RGB to luminance coefficients for Rec.709 with HK-like weighting
-constexpr float3 LUMINANCE_HK_REC709{0.13913043f, 0.73043478f, 0.13043478f};
+constexpr float3 LUMINANCE_HK_Rec709{0.13913043f, 0.73043478f, 0.13043478f};
 
 constexpr float MIDDLE_GRAY_ACEScg = 0.18f;
 
@@ -212,19 +228,27 @@ inline constexpr XYZ xyY_to_XYZ(xyY v) noexcept {
 }
 
 inline constexpr xyY XYZ_to_xyY(XYZ v) noexcept {
-    return float3(v.xy / max(v.x + v.y + v.z, 1e-5f), v.y);
-}
-
-inline float3 sRGB_to_OkLab(float3 x) noexcept {
-    return OkLab_LMS_to_OkLab * cbrt(sRGB_to_OkLab_LMS * x);
+    return {v.xy / max(v.x + v.y + v.z, 1e-5f), v.y};
 }
 
 inline constexpr float3 pow3(float3 x) noexcept {
     return x * x * x;
 }
 
+inline float3 sRGB_to_OkLab(float3 x) noexcept {
+    return OkLab_LMS_to_OkLab * cbrt(sRGB_to_OkLab_LMS * x);
+}
+
+inline float3 Rec2020_to_OkLab(float3 x) noexcept {
+    return OkLab_LMS_to_OkLab * cbrt(Rec2020_to_OkLab_LMS * x);
+}
+
 inline float3 OkLab_to_sRGB(float3 x) noexcept {
     return OkLab_LMS_to_sRGB * pow3(OkLab_to_OkLab_LMS * x);
+}
+
+inline float3 OkLab_to_Rec2020(float3 x) noexcept {
+    return OkLab_LMS_to_Rec2020 * pow3(OkLab_to_OkLab_LMS * x);
 }
 
 //------------------------------------------------------------------------------

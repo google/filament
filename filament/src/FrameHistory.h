@@ -28,7 +28,7 @@ namespace filament {
 struct FrameHistoryEntry {
     FrameGraphTexture color;
     FrameGraphTexture::Descriptor colorDesc;
-    math::mat4f projection;
+    math::mat4f projection;     // world space to clip space
     math::float2 jitter{};
     uint32_t frameId = 0;
 
@@ -57,6 +57,10 @@ public:
 
     // the current frame info, this is where we store the current frame information
     T& getCurrent() noexcept {
+        return mCurrentEntry;
+    }
+
+    const T& getCurrent() const noexcept {
         return mCurrentEntry;
     }
 

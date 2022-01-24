@@ -136,8 +136,16 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float nearOverFarMinusNear;         // n / (f-n), always positive
     float temporalNoise;                // noise [0,1] when TAA is used, 0 otherwise
 
+    // Screen-space reflections
+    math::mat4f ssrReprojection;
+    math::mat4f ssrProjectToPixelMatrix;
+    float ssrThickness;                 // ssr thickness, in world units
+    float ssrBias;                      // ssr bias, in world units
+    float ssrDistance;                  // ssr world raycast distance, 0 when ssr is off
+    float ssrStride;                    // ssr texel stride, >= 1.0
+
     // bring PerViewUib to 2 KiB
-    math::float4 padding2[58];
+    math::float4 padding3[49];
 };
 
 // 2 KiB == 128 float4s
@@ -149,7 +157,7 @@ struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-memb
     static constexpr utils::StaticString _name{ "ObjectUniforms" };
     math::mat4f worldFromModelMatrix;
     math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
-    alignas(16) math::float4 morphWeights;    // morph weights (we could easily have 8 using half)
+    alignas(16) uint32_t morphTargetCount;
     uint32_t flags;                           // see packFlags() below
     uint32_t channels;                        // 0x000000ll
     uint32_t objectId;                        // used for picking
@@ -226,6 +234,14 @@ struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
 };
 static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
         "PerRenderableUibBone exceed max UBO size");
+
+struct alignas(16) PerRenderableMorphingUib {
+    static constexpr utils::StaticString _name{ "MorphingUniforms" };
+    // The array stride(the bytes between array elements) is always rounded up to the size of a vec4 in std140.
+    math::float4 weights[CONFIG_MAX_MORPH_TARGET_COUNT];
+};
+static_assert(sizeof(PerRenderableMorphingUib) <= 16384,
+        "PerRenderableMorphingUib exceed max UBO size");
 
 } // namespace filament
 

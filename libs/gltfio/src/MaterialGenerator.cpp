@@ -324,6 +324,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             .transparencyMode(config.doubleSided ?
                     MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES :
                     MaterialBuilder::TransparencyMode::DEFAULT)
+            .reflectionMode(MaterialBuilder::ReflectionMode::SCREEN_SPACE)
             .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
 
     if (!optimizeShaders) {

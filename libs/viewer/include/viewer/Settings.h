@@ -59,6 +59,7 @@ enum class ToneMapping : uint8_t {
 };
 
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
+using ScreenSpaceReflectionsOptions = filament::View::ScreenSpaceReflectionsOptions;
 using AntiAliasing = filament::View::AntiAliasing;
 using BloomOptions = filament::View::BloomOptions;
 using DepthOfFieldOptions = filament::View::DepthOfFieldOptions;
@@ -105,10 +106,9 @@ private:
 };
 
 struct GenericToneMapperSettings {
-    float contrast = 1.585f;
-    float shoulder = 0.5f;
+    float contrast = 1.55f;
     float midGrayIn = 0.18f;
-    float midGrayOut = 0.268f;
+    float midGrayOut = 0.215f;
     float hdrMax = 10.0f;
     bool operator!=(const GenericToneMapperSettings &rhs) const { return !(rhs == *this); }
     bool operator==(const GenericToneMapperSettings &rhs) const;
@@ -161,6 +161,7 @@ struct ViewSettings {
 
     // View Options (sorted)
     AmbientOcclusionOptions ssao;
+    ScreenSpaceReflectionsOptions screenSpaceReflections;
     BloomOptions bloom;
     DepthOfFieldOptions dof;
     DynamicResolutionOptions dsr;

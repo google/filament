@@ -25,10 +25,6 @@
 #include <android/api-level.h>
 #include <android/hardware_buffer.h>
 
-#if __ANDROID_API__ >= 26
-#   define PLATFORM_HAS_HARDWAREBUFFER
-#endif
-
 namespace filament {
 
 /*
@@ -78,16 +74,9 @@ private:
 
     VirtualMachineEnv& mVm;
 
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
-    // if we compile for API 26 (Oreo) and above, we're guaranteed to have AHardwareBuffer
-    // in all other cases, we need to get them at runtime.
-    int (*AHardwareBuffer_allocate)(const AHardwareBuffer_Desc*, AHardwareBuffer**) = nullptr;
-    void (*AHardwareBuffer_release)(AHardwareBuffer*) = nullptr;
-
     jclass mGraphicBufferClass = nullptr;
     jmethodID mGraphicBuffer_nCreateGraphicBuffer = nullptr;
     jmethodID mGraphicBuffer_nDestroyGraphicBuffer = nullptr;
-#endif
 };
 
 

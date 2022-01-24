@@ -1337,21 +1337,26 @@ public class View {
      *
      * <p>Post-processing includes:</p>
      * <ul>
-     * <li>Tone-mapping & gamma encoding</li>
+     * <li>Depth-of-field</li>
+     * <li>Bloom</li>
+     * <li>Vignetting</li>
+     * <li>Temporal Anti-aliasing (TAA)</li>
+     * <li>Color grading & gamma encoding</li>
      * <li>Dithering</li>
-     * <li>MSAA</li>
      * <li>FXAA</li>
      * <li>Dynamic scaling</li>
      * </ul>
      *
      * <p>
-     * Disabling post-processing forgoes color correctness as well as anti-aliasing and
-     * should only be used experimentally (e.g., for UI overlays).
+     * Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques
+     * and should only be used for debugging, UI overlays or when using custom render targets
+     * (see RenderTarget).
      * </p>
      *
      * @param enabled true enables post processing, false disables it
      *
-     * @see #setToneMapping
+     * @see #setBloomOptions
+     * @see #setColorGrading
      * @see #setAntiAliasing
      * @see #setDithering
      * @see #setSampleCount

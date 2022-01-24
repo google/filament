@@ -317,7 +317,8 @@ void PostProcessManager::commitAndRender(FrameGraphResources::RenderPassInfo con
 // ------------------------------------------------------------------------------------------------
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
-        RenderPass const& pass, uint32_t width, uint32_t height,
+        RenderPass const& pass, uint8_t structureRenderFlags,
+        uint32_t width, uint32_t height,
         StructurePassConfig const& config) noexcept {
 
     const float scale = config.scale;
@@ -367,10 +368,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
                 });
             },
-            [=](FrameGraphResources const& resources,
+            [=, renderPass = pass](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
                 auto out = resources.getRenderPassInfo();
-                pass.execute(resources.getPassName(), out.target, out.params);
+                renderPass.setRenderFlags(structureRenderFlags);
+                renderPass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
+                renderPass.sortCommands();
+                renderPass.execute(resources.getPassName(), out.target, out.params);
             });
 
     auto depth = structurePass->depth;
@@ -2167,12 +2171,8 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
     auto& current = frameHistory.getCurrent();
     // get sample position within a pixel [-0.5, 0.5]
     const float2 jitter = halton(previous.frameId) - 0.5f;
-    // compute the world-space to clip-space matrix for this frame
-    current.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
     // save this frame's sample position
     current.jitter = jitter;
-    // update frame id
-    current.frameId = previous.frameId + 1;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,

@@ -20,6 +20,15 @@ mat3 getWorldFromModelNormalMatrix() {
 // Attributes access
 //------------------------------------------------------------------------------
 
+/** @public-api */
+int getVertexIndex() {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    return gl_VertexIndex;
+#else
+    return gl_VertexID;
+#endif
+}
+
 #if defined(HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
 
@@ -63,6 +72,26 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
         + mulBoneVertex(p, ids.z) * weights.z
         + mulBoneVertex(p, ids.w) * weights.w;
 }
+
+#define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
+
+void morphPosition(inout vec4 p) {
+    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
+        texcoord.z = int(i) * 2 + 0;
+        p += morphingUniforms.weights[i] * texelFetch(morphing_targets, texcoord, 0);
+    }
+}
+
+void morphNormal(inout vec3 n) {
+    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
+        texcoord.z = int(i) * 2 + 1;
+        vec3 normal;
+        toTangentFrame(texelFetch(morphing_targets, texcoord, 0), normal);
+        n += morphingUniforms.weights[i].xyz * normal;
+    }
+}
 #endif
 
 /** @public-api */
@@ -72,10 +101,7 @@ vec4 getPosition() {
 #if defined(HAS_SKINNING_OR_MORPHING)
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
-        pos += objectUniforms.morphWeights.x * mesh_custom0;
-        pos += objectUniforms.morphWeights.y * mesh_custom1;
-        pos += objectUniforms.morphWeights.z * mesh_custom2;
-        pos += objectUniforms.morphWeights.w * mesh_custom3;
+        morphPosition(pos);
     }
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
@@ -111,15 +137,6 @@ vec4 getCustom6() { return mesh_custom6; }
 #if defined(HAS_ATTRIBUTE_CUSTOM7)
 vec4 getCustom7() { return mesh_custom7; }
 #endif
-
-/** @public-api */
-int getVertexIndex() {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    return gl_VertexIndex;
-#else
-    return gl_VertexID;
-#endif
-}
 
 //------------------------------------------------------------------------------
 // Helpers

@@ -152,6 +152,7 @@ private:
         math::float4 clearColor = {};
         float refractionLodOffset;
         bool hasContactShadows;
+        bool hasScreenSpaceReflections;
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
@@ -186,6 +187,10 @@ private:
     duration getUserTime() const noexcept {
         return clock::now() - getUserEpoch();
     }
+
+    math::mat4f getClipSpaceToTextureSpaceMatrix() const noexcept;
+
+    void setHistoryProjection(FView& view, math::mat4f const& projection);
 
     static FrameGraphId<FrameGraphTexture> getColorHistory(FrameGraph& fg,
             FrameHistory const& frameHistory) noexcept;
