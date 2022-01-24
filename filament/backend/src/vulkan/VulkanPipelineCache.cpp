@@ -967,6 +967,10 @@ VulkanPipelineCache::getLayoutBundleKey(const Program::SamplerGroupInfo& sampler
     return key;
 }
 
+size_t VulkanPipelineCache::LayoutBundleHashFn::operator()(const LayoutBundleKey& key) const {
+    return key.getValue();
+}
+
 bool VulkanPipelineCache::LayoutBundleEqual::operator()(const VulkanPipelineCache::LayoutBundleKey& k1,
         const VulkanPipelineCache::LayoutBundleKey& k2) const {
     return k1 == k2;

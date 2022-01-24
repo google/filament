@@ -197,7 +197,9 @@ private:
         uint32_t referenceCount = 0;
     };
 
-    using LayoutBundleHashFn = utils::hash::MurmurHashFn<LayoutBundleKey>;
+    struct LayoutBundleHashFn {
+        size_t operator()(const LayoutBundleKey& key) const;
+    };
 
     struct LayoutBundleEqual {
         bool operator()(const LayoutBundleKey& k1, const LayoutBundleKey& k2) const;
