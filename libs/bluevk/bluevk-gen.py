@@ -15,6 +15,13 @@
 # limitations under the License.
 
 """
+----------------------------------------------------------------------------------------------------
+WARNING:
+
+When running this script, be sure to also update headers in bluevk/include as described below.
+Also, do not update vk_platform.h or accidentally add unused hpp headers.
+----------------------------------------------------------------------------------------------------
+
 Generates C++ code that binds Vulkan entry points at run time and provides enum-to-string
 conversion operators. By default this fetches the latest vk.xml from github; note that
 the XML needs to be consistent with the Vulkan headers that live in bluevk/include/vulkan,
@@ -210,7 +217,9 @@ def consumeXML(spec):
             cmdrefs = req.findall('command')
             command_groups.setdefault(key, []).extend([cmdref.get('name') for cmdref in cmdrefs])
 
-    # Build a list of provisional types that are not fully defined in the core Vulkan headers.
+    # Build a list of unnecessary types that should be skipped to avoid codegen problems. Many of
+    # these types seem to be only partially defined in the XML spec, or defined in a manner that
+    # is inconsistent with other types.
     provisional_types = set([
         'VkFullScreenExclusiveEXT',
         'VkStencilFaceFlagBits',
@@ -219,6 +228,9 @@ def consumeXML(spec):
         'VkSwapchainImageUsageFlagBitsANDROID',
         'VkSurfaceCounterFlagBitsEXT',
         'VkPipelineStageFlagBits2KHR',
+        'VkSemaphoreCreateFlagBits',
+        'VkShaderModuleCreateFlagBits',
+        'VkPipelineLayoutCreateFlagBits',
     ])
     for ext in spec.findall('extensions/extension'):
         if ext.get('platform') == 'provisional':
@@ -309,8 +321,6 @@ def consumeXML(spec):
             print '\t' + name,
             cmd = commands[name]
             type = cmd.findtext('param[1]/type')
-            if name == 'vkGetInstanceProcAddr':
-                type = ''
             if name == 'vkGetDeviceProcAddr':
                 type = 'VkInstance'
             if isAncestor(types, type, 'VkDevice'):
@@ -404,6 +414,14 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
             loader_functions.append('#if ' + preproc_expr)
 
         for (name, fn) in functions.items():
+            # Emit the function definition.
+            function_pointers.append("PFN_%(name)s %(name)s;" % {'name': fn.name})
+
+            # This function pointer is already manually loaded, so do not emit the loader call.
+            if name != 'vkGetInstanceProcAddr':
+                continue
+
+            # Emit the loader call.
             loadfn = '    %(name)s = (PFN_%(name)s) loadcb(context, "%(name)s");' % {
                 'name': fn.name }
             if fn.type == 'instance':
@@ -412,7 +430,6 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
                 device_functions.append(loadfn)
             elif fn.type == 'loader':
                 loader_functions.append(loadfn)
-            function_pointers.append("PFN_%(name)s %(name)s;" % {'name': fn.name})
 
         function_pointers.append('#endif // ' + preproc_expr)
         if has_instance:
