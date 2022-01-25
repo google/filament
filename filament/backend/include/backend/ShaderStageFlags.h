@@ -35,6 +35,10 @@ struct ShaderStageFlags {
 
 constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { .vertex = true, .fragment = true };
 
+inline bool test(ShaderStageFlags flags, ShaderType type) {
+    return flags.data & (0x1 << type);
+}
+
 inline bool operator==(ShaderStageFlags lhs, ShaderStageFlags rhs) {
     return lhs.data == rhs.data;
 }
