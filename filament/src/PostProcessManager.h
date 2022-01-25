@@ -156,9 +156,9 @@ public:
             FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
             bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
-    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
-    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
-    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwTexture> getOneTexture() const;
+    backend::Handle<backend::HwTexture> getZeroTexture() const;
+    backend::Handle<backend::HwTexture> getOneTextureArray() const;
 
     math::float2 halton(size_t index) const noexcept {
         return mHaltonSamples[index & 0xFu];
@@ -234,9 +234,6 @@ private:
     void registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size);
     PostProcessMaterial& getPostProcessMaterial(utils::StaticString name) noexcept;
 
-    backend::Handle<backend::HwTexture> mDummyOneTexture;
-    backend::Handle<backend::HwTexture> mDummyOneTextureArray;
-    backend::Handle<backend::HwTexture> mDummyZeroTexture;
     backend::Handle<backend::HwTexture> mStarburstTexture;
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
