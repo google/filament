@@ -273,6 +273,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
         BlockInfo blockInfo = blockInfos[i];
         HwSamplerGroup const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
         if (UTILS_UNLIKELY(!hwsb)) {
+            tmu += blockInfo.count + 1;
             continue;
         }
         SamplerGroup const& UTILS_RESTRICT sb = *(hwsb->sb);
