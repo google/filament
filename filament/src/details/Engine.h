@@ -332,9 +332,14 @@ public:
         return mRandomEngine;
     }
 
-    void pumpMessageQueues() {
+    void pumpMessageQueues() const {
         getDriver().purge();
     }
+
+    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
+    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
+    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwSamplerGroup> getDummyMorphingSamplerGroup() const { return mDummyMorphingSamplerGroup; }
 
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
@@ -423,6 +428,11 @@ private:
     mutable filaflat::ShaderBuilder mVertexShaderBuilder;
     mutable filaflat::ShaderBuilder mFragmentShaderBuilder;
     FDebugRegistry mDebugRegistry;
+
+    backend::Handle<backend::HwTexture> mDummyOneTexture;
+    backend::Handle<backend::HwTexture> mDummyOneTextureArray;
+    backend::Handle<backend::HwTexture> mDummyZeroTexture;
+    backend::Handle<backend::HwSamplerGroup> mDummyMorphingSamplerGroup;
 
     std::thread::id mMainThreadId{};
 

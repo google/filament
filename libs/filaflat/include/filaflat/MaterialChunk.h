@@ -22,6 +22,8 @@
 
 #include <filaflat/Unflattener.h>
 
+#include <private/filament/Variant.h>
+
 #include <tsl/robin_map.h>
 
 namespace filaflat {
@@ -41,7 +43,7 @@ public:
     // call this as many times as needed
     bool getShader(ShaderBuilder& shaderBuilder,
             BlobDictionary const& dictionary,
-            uint8_t shaderModel, uint8_t variant, uint8_t stage);
+            uint8_t shaderModel, filament::Variant variant, uint8_t stage);
 
 private:
     ChunkContainer const& mContainer;
@@ -52,11 +54,11 @@ private:
 
     bool getTextShader(Unflattener unflattener,
             BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
-            uint8_t shaderModel, uint8_t variant, uint8_t stage);
+            uint8_t shaderModel, filament::Variant variant, uint8_t ps);
 
     bool getSpirvShader(
             BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
-            uint8_t shaderModel, uint8_t variant, uint8_t stage);
+            uint8_t shaderModel, filament::Variant variant, uint8_t stage);
 };
 
 } // namespace filamat

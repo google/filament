@@ -121,6 +121,8 @@ typedef enum {
     VK_ICD_WSI_PLATFORM_METAL,
     VK_ICD_WSI_PLATFORM_DIRECTFB,
     VK_ICD_WSI_PLATFORM_VI,
+    VK_ICD_WSI_PLATFORM_GGP,
+    VK_ICD_WSI_PLATFORM_SCREEN,
 } VkIcdWsiPlatform;
 
 typedef struct {
@@ -196,6 +198,13 @@ typedef struct {
 } VkIcdSurfaceIOS;
 #endif  // VK_USE_PLATFORM_IOS_MVK
 
+#ifdef VK_USE_PLATFORM_GGP
+typedef struct {
+    VkIcdSurfaceBase base;
+    GgpStreamDescriptor streamDescriptor;
+} VkIcdSurfaceGgp;
+#endif  // VK_USE_PLATFORM_GGP
+
 typedef struct {
     VkIcdSurfaceBase base;
     VkDisplayModeKHR displayMode;
@@ -224,5 +233,13 @@ typedef struct {
     void *window;
 } VkIcdSurfaceVi;
 #endif // VK_USE_PLATFORM_VI_NN
+
+#ifdef VK_USE_PLATFORM_SCREEN_QNX
+typedef struct {
+    VkIcdSurfaceBase base;
+    struct _screen_context *context;
+    struct _screen_window *window;
+} VkIcdSurfaceScreen;
+#endif  // VK_USE_PLATFORM_SCREEN_QNX
 
 #endif  // VKICD_H

@@ -173,8 +173,8 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
         FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
-    uint8_t variant =
-            Variant::filterVariant(cmdDraw.primitive.materialVariant.key, ma->isVariantLit());
+    Variant variant = Variant::filterVariant(
+            cmdDraw.primitive.materialVariant, ma->isVariantLit());
 
     // Below, we evaluate both commands to avoid a branch
 
@@ -193,7 +193,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
     keyDraw |= uint64_t(hasScreenSpaceRefraction ? Pass::REFRACT : Pass::COLOR);
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
-    keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
+    keyDraw |= makeField(variant.key, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
@@ -204,7 +204,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
     cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.primitive.mi = mi;
-    cmdDraw.primitive.materialVariant.key = variant;
+    cmdDraw.primitive.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -528,12 +528,13 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(driver, mBegin, mEnd, mRenderableSoa);
+    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa);
     driver.endRenderPass();
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
+void RenderPass::Executor::recordDriverCommands(FEngine& engine,
+        backend::DriverApi& driver,
         const Command* first, const Command* last,
         FScene::RenderableSoa const& soa) const noexcept {
     SYSTRACE_CALL();
@@ -577,7 +578,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                 mi->use(driver);
             }
 
-            pipeline.program = ma->getProgram(info.materialVariant.key);
+            pipeline.program = ma->getProgram(info.materialVariant);
             size_t offset = info.index * sizeof(PerRenderableUib);
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
                     uboHandle, offset, sizeof(PerRenderableUib));
@@ -589,6 +590,11 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         skinning.handle,
                         skinning.offset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
+
+                if (!info.morphTargetBuffer) {
+                    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                            engine.getDummyMorphingSamplerGroup());
+                }
             }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
@@ -598,7 +604,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         info.morphWeightBuffer);
 
                 // When only skinning is enabled, morphTargetBuffer isn't created.
-                if (UTILS_UNLIKELY(info.morphTargetBuffer)) {
+                if (info.morphTargetBuffer) {
                     driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
                             info.morphTargetBuffer);
                 }

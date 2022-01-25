@@ -167,18 +167,17 @@ ShaderGenerator::ShaderGenerator(
 
 std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-        MaterialInfo const& material, uint8_t variantKey, Interpolation interpolation,
+        MaterialInfo const& material, const filament::Variant variant, Interpolation interpolation,
         VertexDomain vertexDomain) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return createPostProcessVertexProgram(shaderModel, targetApi,
-                targetLanguage, material, variantKey, material.samplerBindings);
+                targetLanguage, material, variant.key, material.samplerBindings);
     }
 
     io::sstream vs;
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
-    const filament::Variant variant(variantKey);
 
     cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
 
@@ -194,7 +193,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     // we're in masked mode because fragment shader needs the color varyings
     const bool useOptimizedDepthVertexShader =
             // must be a depth variant
-            filament::Variant::isValidDepthVariant(variantKey) &&
+            filament::Variant::isValidDepthVariant(variant) &&
             // must have an empty vertex shader
             mIsMaterialVertexShaderEmpty &&
             // but must not be MASKED mode
@@ -244,7 +243,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
                 UibGenerator::getPerRenderableMorphingUib());
         cg.generateSamplers(vs,
                 material.samplerBindings.getBlockOffset(BindingPoints::PER_RENDERABLE_MORPHING),
-                SibGenerator::getPerRenderPrimitiveMorphingSib(variantKey));
+                SibGenerator::getPerRenderPrimitiveMorphingSib(variant));
     }
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
@@ -281,16 +280,15 @@ static bool isMobileTarget(ShaderModel model) {
 
 std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-        MaterialInfo const& material, uint8_t variantKey,
+        MaterialInfo const& material, const filament::Variant variant,
         Interpolation interpolation) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return createPostProcessFragmentProgram(shaderModel, targetApi, targetLanguage, material,
-                variantKey, material.samplerBindings);
+                variant.key, material.samplerBindings);
     }
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
-    const filament::Variant variant(variantKey);
 
     io::sstream fs;
     cg.generateProlog(fs, ShaderType::FRAGMENT, material.hasExternalSamplers);
@@ -439,7 +437,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     CodeGenerator::generateSeparator(fs);
     cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(BindingPoints::PER_VIEW),
-            SibGenerator::getPerViewSib(variantKey));
+            SibGenerator::getPerViewSib(variant));
     cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
@@ -454,7 +452,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     CodeGenerator::generateFog(fs, ShaderType::FRAGMENT);
 
     // shading model
-    if (filament::Variant::isValidDepthVariant(variantKey)) {
+    if (filament::Variant::isValidDepthVariant(variant)) {
         // In MASKED mode or with transparent shadows, we need the alpha channel computed by
         // the material (user code), so we append it here.
         if (material.blendingMode == BlendingMode::MASKED || material.hasTransparentShadow) {
@@ -492,7 +490,7 @@ void ShaderGenerator::fixupExternalSamplers(ShaderModel sm,
 std::string ShaderGenerator::createPostProcessVertexProgram(
         ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-        uint8_t variant, const SamplerBindingMap& samplerBindingMap) const noexcept {
+        const filament::Variant::type_t variantKey, SamplerBindingMap const& samplerBindingMap) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream vs;
     cg.generateProlog(vs, ShaderType::VERTEX, false);
@@ -511,7 +509,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(
     }
 
     CodeGenerator::generatePostProcessInputs(vs, ShaderType::VERTEX);
-    generatePostProcessMaterialVariantDefines(vs, PostProcessVariant(variant));
+    generatePostProcessMaterialVariantDefines(vs, PostProcessVariant(variantKey));
 
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());

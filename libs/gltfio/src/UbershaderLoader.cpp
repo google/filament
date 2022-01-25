@@ -45,7 +45,7 @@ public:
     ~UbershaderLoader() {}
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-            const char* label) override;
+            const char* label, const char* extras) override;
 
     size_t getMaterialsCount() const noexcept override;
     const Material* const* getMaterials() const noexcept override;
@@ -163,7 +163,7 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
 }
 
 MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-        const char* label) {
+        const char* label, const char* extras) {
     // Diagnostics are not supported with LOAD_UBERSHADERS, please use GENERATE_SHADERS instead.
     if (config->enableDiagnostics) {
         return nullptr;

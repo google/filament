@@ -3,12 +3,17 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.17.1 (currently main branch)
+## v1.17.2 (currently main branch)
+
+## v1.17.1
 
 ## v1.17.0
 
-- engine: Add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
-  access this new feature**].
+- engine: Add experimental glossy screen-space reflections.
+- engine: Add support for GPU morphing and 128 morph targets.
+- engine: Fix crash with non-shadow receiving renderables and VSM.
+- engine: Bring back the 3x3 filter for PCF shadows.
+- engine: Correct AABB calculation for skinned glTF models.
 
 ## v1.16.1
 

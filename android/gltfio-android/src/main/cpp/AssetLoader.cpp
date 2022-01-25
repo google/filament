@@ -69,7 +69,7 @@ public:
         jclass providerClass = env->GetObjectClass(provider);
 
         mCreateMaterialInstance = env->GetMethodID(providerClass, "createMaterialInstance",
-                "(L" JAVA_MATERIAL_KEY ";[ILjava/lang/String;)Lcom/google/android/filament/MaterialInstance;");
+                "(L" JAVA_MATERIAL_KEY ";[ILjava/lang/String;Ljava/lang/String;)Lcom/google/android/filament/MaterialInstance;");
         assert_invariant(mCreateMaterialInstance);
 
         mGetMaterials = env->GetMethodID(providerClass, "getMaterials",
@@ -89,7 +89,7 @@ public:
         delete mPreviousMaterials;
     }
 
-    MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap, const char* label) override {
+    MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap, const char* label, const char* extras) override {
         // Create a Java object for the material key and copy the native fields into it.
         jobject javaKey = mEnv->NewObject(mMaterialKeyClass, mMaterialKeyConstructor);
 
@@ -99,12 +99,15 @@ public:
         // Convert the optional label into a Java string.
         jstring stringLabel = label ? mEnv->NewStringUTF(label) : nullptr;
 
+        // Convert the optional extras into a Java string.
+        jstring stringExtras = extras ? mEnv->NewStringUTF(extras) : nullptr;
+
         // Allocate space for the output argument.
         jintArray uvMapArray = mEnv->NewIntArray(8);
 
         // Call the Java-based material provider.
         jobject materialInstance = mEnv->CallObjectMethod(mJavaProvider, mCreateMaterialInstance,
-                javaKey, uvMapArray, stringLabel);
+                javaKey, uvMapArray, stringLabel, stringExtras);
 
         // Copy the UvMap results from the JVM array into the native array.
         if (uvmap) {
@@ -123,6 +126,10 @@ public:
 
         if (stringLabel) {
             mEnv->DeleteLocalRef(stringLabel);
+        }
+
+        if (stringExtras) {
+            mEnv->DeleteLocalRef(stringExtras);
         }
 
         if (materialInstance == nullptr) {

@@ -123,12 +123,12 @@ static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const
         string variantString = formatVariantString(item.variant, domain);
         string ps = (item.pipelineStage == backend::ShaderType::VERTEX) ? "vertex  " : "fragment";
         json
-            << "    {"
-            << "\"index\": \"" << std::setw(2) << i << "\", "
-            << "\"shaderModel\": \"" << toString(item.shaderModel) << "\", "
-            << "\"pipelineStage\": \"" << ps << "\", "
-            << "\"variantString\": \"" << variantString << "\", "
-            << "\"variant\": \"" << std::hex << int(item.variant) << std::dec << "\" }"
+                << "    {"
+                << "\"index\": \"" << std::setw(2) << i << "\", "
+                << "\"shaderModel\": \"" << toString(item.shaderModel) << "\", "
+                << "\"pipelineStage\": \"" << ps << "\", "
+                << "\"variantString\": \"" << variantString << "\", "
+                << "\"variant\": \"" << std::hex << +item.variant.key << std::dec << "\" }"
             << ((i == info.size() - 1) ? "\n" : ",\n");
     }
 }

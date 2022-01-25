@@ -77,20 +77,20 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
+    backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        mActivePrograms.set(variantKey);
+        mActivePrograms.set(variant.key);
         if (UTILS_UNLIKELY(mPendingEdits.load())) {
             const_cast<FMaterial*>(this)->applyPendingEdits();
         }
 #endif
-        backend::Handle<backend::HwProgram> const entry = mCachedPrograms[variantKey];
-        return UTILS_LIKELY(entry) ? entry : getProgramSlow(variantKey);
+        backend::Handle<backend::HwProgram> const entry = mCachedPrograms[variant.key];
+        return UTILS_LIKELY(entry) ? entry : getProgramSlow(variant);
     }
-    backend::Program getProgramBuilderWithVariants(uint8_t variantKey, uint8_t vertexVariantKey,
-            uint8_t fragmentVariantKey) const noexcept;
+    backend::Program getProgramBuilderWithVariants(Variant variant, Variant vertexVariant,
+            Variant fragmentVariant) const noexcept;
     backend::Handle<backend::HwProgram> createAndCacheProgram(backend::Program&& p,
-            uint8_t variantKey) const noexcept;
+            Variant variant) const noexcept;
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
@@ -164,9 +164,9 @@ public:
     /** @}*/
 
 private:
-    backend::Handle<backend::HwProgram> getProgramSlow(uint8_t variantKey) const noexcept;
-    backend::Handle<backend::HwProgram> getSurfaceProgramSlow(uint8_t variantKey) const noexcept;
-    backend::Handle<backend::HwProgram> getPostProcessProgramSlow(uint8_t variantKey) const noexcept;
+    backend::Handle<backend::HwProgram> getProgramSlow(Variant variant) const noexcept;
+    backend::Handle<backend::HwProgram> getSurfaceProgramSlow(Variant variant) const noexcept;
+    backend::Handle<backend::HwProgram> getPostProcessProgramSlow(Variant variant) const noexcept;
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
