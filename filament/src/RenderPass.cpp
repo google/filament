@@ -528,12 +528,13 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(driver, mBegin, mEnd, mRenderableSoa);
+    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa);
     driver.endRenderPass();
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
+void RenderPass::Executor::recordDriverCommands(FEngine& engine,
+        backend::DriverApi& driver,
         const Command* first, const Command* last,
         FScene::RenderableSoa const& soa) const noexcept {
     SYSTRACE_CALL();
@@ -589,6 +590,11 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         skinning.handle,
                         skinning.offset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
+
+                if (!info.morphTargetBuffer) {
+                    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                            engine.getDummyMorphingSamplerGroup());
+                }
             }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
@@ -598,7 +604,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         info.morphWeightBuffer);
 
                 // When only skinning is enabled, morphTargetBuffer isn't created.
-                if (UTILS_UNLIKELY(info.morphTargetBuffer)) {
+                if (info.morphTargetBuffer) {
                     driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
                             info.morphTargetBuffer);
                 }

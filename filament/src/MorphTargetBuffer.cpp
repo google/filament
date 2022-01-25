@@ -95,20 +95,23 @@ static inline size_t getTangentIndex(size_t targetIndex) noexcept {
 }
 
 FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
-        : mSBuffer(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT),
-          mVertexCount(builder->mVertexCount),
+        : mVertexCount(builder->mVertexCount),
           mCount(builder->mCount) {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
-    mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1, TextureFormat::RGBA32F, 1,
-            getWidth(mVertexCount), getHeight(mVertexCount), getDepth(mCount),
+    // create buffer (here a texture) to store the morphing vertex data
+    mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+            TextureFormat::RGBA32F, 1,
+            getWidth(mVertexCount),
+            getHeight(mVertexCount),
+            getDepth(mCount),
             TextureUsage::DEFAULT);
 
-    SamplerParams samplerParams{};
-    samplerParams.filterMin = SamplerMinFilter::NEAREST;
-    samplerParams.filterMag = SamplerMagFilter::NEAREST;
-    mSBuffer.setSampler(PerRenderPrimitiveMorphingSib::TARGETS, mTbHandle, samplerParams);
+    // create and update sampler group
+    mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
+    SamplerGroup samplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
+    samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::TARGETS, mTbHandle, {});
+    driver.updateSamplerGroup(mSbHandle, std::move(samplerGroup.toCommandStream()));
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {
@@ -118,10 +121,19 @@ void FMorphTargetBuffer::terminate(FEngine& engine) {
     driver.destroyTexture(mTbHandle);
 }
 
+Handle<HwSamplerGroup> FMorphTargetBuffer::createDummySampleGroup(FEngine& engine) noexcept {
+    DriverApi& driver = engine.getDriverApi();
+    Handle<HwSamplerGroup> sgh = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
+    backend::SamplerGroup group(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
+    group.setSampler(PerRenderPrimitiveMorphingSib::TARGETS, engine.getOneTextureArray(), {});
+    driver.updateSamplerGroup(sgh, std::move(group.toCommandStream()));
+    return sgh;
+}
+
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex, math::float3 const* positions, size_t count) {
     ASSERT_PRECONDITION(targetIndex < mCount, "targetIndex must be < count");
 
-    auto size = getSize(mVertexCount);
+    const size_t size = getSize(mVertexCount);
 
     ASSERT_PRECONDITION((int)sizeof(math::float3) * count <= size,
             "MorphTargetBuffer (size=%lu) overflow (size=%lu)",
@@ -184,13 +196,6 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex, math
     driver.update3DImage(mTbHandle, 0, 0, 0, getTangentIndex(targetIndex),
             getWidth(mVertexCount), getHeight(mVertexCount), 1,
             std::move(buffer));
-}
-
-void FMorphTargetBuffer::commit(FEngine& engine) const noexcept {
-    if (mSBuffer.isDirty()) {
-        FEngine::DriverApi& driver = engine.getDriverApi();
-        driver.updateSamplerGroup(mSbHandle, std::move(mSBuffer.toCommandStream()));
-    }
 }
 
 // ------------------------------------------------------------------------------------------------

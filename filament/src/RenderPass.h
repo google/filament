@@ -333,7 +333,7 @@ public:
             assert_invariant(e <= pass->end());
         }
 
-        void recordDriverCommands(backend::DriverApi& driver,
+        void recordDriverCommands(FEngine& engine, backend::DriverApi& driver,
                 const Command* first, const Command* last,
                 FScene::RenderableSoa const& soa) const noexcept;
 
