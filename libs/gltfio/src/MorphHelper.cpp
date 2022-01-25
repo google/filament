@@ -52,10 +52,11 @@ MorphHelper::MorphHelper(FFilamentAsset* asset, FFilamentInstance* inst) : mAsse
     for (auto pair : sourceNodes) {
         cgltf_node const* node = pair.first;
         cgltf_mesh const* mesh = node->mesh;
+        cgltf_skin const* skin = node->skin;
         if (mesh) {
             cgltf_primitive const* prims = mesh->primitives;
             for (cgltf_size pi = 0, count = mesh->primitives_count; pi < count; ++pi) {
-                addPrimitive(mesh, pi, pair.second);
+                addPrimitive(mesh, pi, skin->joints_count, pair.second);
             }
             addTargetNames(mesh, pair.second);
         }
@@ -95,7 +96,7 @@ const char* MorphHelper::getTargetNameAt(Entity entity, size_t targetIndex) cons
 
 // This method copies various morphing-related data from the FilamentAsset MeshCache primitive
 // (which lives in transient memory) into the MorphHelper primitive (which will stay resident).
-void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entity entity){
+void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, bool skinning, Entity entity){
     auto& entry = mMorphTable[entity];
     auto& engine = *mAsset->mEngine;
     const cgltf_primitive& prim = mesh->primitives[primitiveIndex];
@@ -110,10 +111,18 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                 .vertexCount(vertexBuffer->getVertexCount())
                 .count(prim.targets_count)
                 .build(engine);
-
         auto& rcm = engine.getRenderableManager();
-        rcm.setMorphTargetBufferAt(rcm.getInstance(entity),
-                primitiveIndex, morphHelperPrim.targets);
+        rcm.setMorphTargetBufferAt(rcm.getInstance(entity), primitiveIndex,
+                morphHelperPrim.targets);
+    } else if (skinning) {
+        // A dummy morph target buffer is required if skinning is only enabled.
+        morphHelperPrim.targets = MorphTargetBuffer::Builder()
+                .vertexCount(1)
+                .count(1)
+                .build(engine);
+        auto& rcm = engine.getRenderableManager();
+        rcm.setMorphTargetBufferAt(rcm.getInstance(entity), primitiveIndex,
+                morphHelperPrim.targets);
     }
 
     const cgltf_accessor* previous = nullptr;

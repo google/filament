@@ -62,7 +62,7 @@ private:
         utils::FixedCapacityVector<utils::CString> targetNames;
     };
 
-    void addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entity entity);
+    void addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, bool skinning, Entity entity);
     void addTargetNames(cgltf_mesh const* mesh, Entity entity);
 
     tsl::robin_map<Entity, TableEntry> mMorphTable;
