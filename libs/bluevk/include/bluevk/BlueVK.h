@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -256,6 +256,10 @@ extern PFN_vkGetSwapchainGrallocUsage2ANDROID vkGetSwapchainGrallocUsage2ANDROID
 extern PFN_vkGetSwapchainGrallocUsageANDROID vkGetSwapchainGrallocUsageANDROID;
 extern PFN_vkQueueSignalReleaseImageANDROID vkQueueSignalReleaseImageANDROID;
 #endif // defined(VK_ANDROID_native_buffer)
+#if defined(VK_EXT_acquire_drm_display)
+extern PFN_vkAcquireDrmDisplayEXT vkAcquireDrmDisplayEXT;
+extern PFN_vkGetDrmDisplayEXT vkGetDrmDisplayEXT;
+#endif // defined(VK_EXT_acquire_drm_display)
 #if defined(VK_EXT_acquire_xlib_display)
 extern PFN_vkAcquireXlibDisplayEXT vkAcquireXlibDisplayEXT;
 extern PFN_vkGetRandROutputDisplayEXT vkGetRandROutputDisplayEXT;
@@ -365,6 +369,10 @@ extern PFN_vkCmdSetLineStippleEXT vkCmdSetLineStippleEXT;
 #if defined(VK_EXT_metal_surface)
 extern PFN_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 #endif // defined(VK_EXT_metal_surface)
+#if defined(VK_EXT_multi_draw)
+extern PFN_vkCmdDrawMultiEXT vkCmdDrawMultiEXT;
+extern PFN_vkCmdDrawMultiIndexedEXT vkCmdDrawMultiIndexedEXT;
+#endif // defined(VK_EXT_multi_draw)
 #if defined(VK_EXT_private_data)
 extern PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
 extern PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
@@ -413,6 +421,13 @@ extern PFN_vkCreateStreamDescriptorSurfaceGGP vkCreateStreamDescriptorSurfaceGGP
 extern PFN_vkGetPastPresentationTimingGOOGLE vkGetPastPresentationTimingGOOGLE;
 extern PFN_vkGetRefreshCycleDurationGOOGLE vkGetRefreshCycleDurationGOOGLE;
 #endif // defined(VK_GOOGLE_display_timing)
+#if defined(VK_HUAWEI_invocation_mask)
+extern PFN_vkCmdBindInvocationMaskHUAWEI vkCmdBindInvocationMaskHUAWEI;
+#endif // defined(VK_HUAWEI_invocation_mask)
+#if defined(VK_HUAWEI_subpass_shading)
+extern PFN_vkCmdSubpassShadingHUAWEI vkCmdSubpassShadingHUAWEI;
+extern PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
+#endif // defined(VK_HUAWEI_subpass_shading)
 #if defined(VK_INTEL_performance_query)
 extern PFN_vkAcquirePerformanceConfigurationINTEL vkAcquirePerformanceConfigurationINTEL;
 extern PFN_vkCmdSetPerformanceMarkerINTEL vkCmdSetPerformanceMarkerINTEL;
@@ -582,6 +597,9 @@ extern PFN_vkGetPipelineExecutableInternalRepresentationsKHR vkGetPipelineExecut
 extern PFN_vkGetPipelineExecutablePropertiesKHR vkGetPipelineExecutablePropertiesKHR;
 extern PFN_vkGetPipelineExecutableStatisticsKHR vkGetPipelineExecutableStatisticsKHR;
 #endif // defined(VK_KHR_pipeline_executable_properties)
+#if defined(VK_KHR_present_wait)
+extern PFN_vkWaitForPresentKHR vkWaitForPresentKHR;
+#endif // defined(VK_KHR_present_wait)
 #if defined(VK_KHR_push_descriptor)
 extern PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
 #endif // defined(VK_KHR_push_descriptor)
@@ -679,6 +697,13 @@ extern PFN_vkCreateMacOSSurfaceMVK vkCreateMacOSSurfaceMVK;
 #if defined(VK_NN_vi_surface)
 extern PFN_vkCreateViSurfaceNN vkCreateViSurfaceNN;
 #endif // defined(VK_NN_vi_surface)
+#if defined(VK_NVX_binary_import)
+extern PFN_vkCmdCuLaunchKernelNVX vkCmdCuLaunchKernelNVX;
+extern PFN_vkCreateCuFunctionNVX vkCreateCuFunctionNVX;
+extern PFN_vkCreateCuModuleNVX vkCreateCuModuleNVX;
+extern PFN_vkDestroyCuFunctionNVX vkDestroyCuFunctionNVX;
+extern PFN_vkDestroyCuModuleNVX vkDestroyCuModuleNVX;
+#endif // defined(VK_NVX_binary_import)
 #if defined(VK_NVX_image_view_handle)
 extern PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
 extern PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX;
@@ -711,6 +736,9 @@ extern PFN_vkGetGeneratedCommandsMemoryRequirementsNV vkGetGeneratedCommandsMemo
 #if defined(VK_NV_external_memory_capabilities)
 extern PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV vkGetPhysicalDeviceExternalImageFormatPropertiesNV;
 #endif // defined(VK_NV_external_memory_capabilities)
+#if defined(VK_NV_external_memory_rdma)
+extern PFN_vkGetMemoryRemoteAddressNV vkGetMemoryRemoteAddressNV;
+#endif // defined(VK_NV_external_memory_rdma)
 #if defined(VK_NV_external_memory_win32)
 extern PFN_vkGetMemoryWin32HandleNV vkGetMemoryWin32HandleNV;
 #endif // defined(VK_NV_external_memory_win32)
@@ -864,6 +892,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingR
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingRateNV& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingRateTypeNV& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkProvokingVertexModeEXT& value);
+utils::io::ostream& operator<<(utils::io::ostream& out, const VkAccelerationStructureMotionInstanceTypeNV& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkPipelineCacheCreateFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkQueueFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkCullModeFlagBits& value);
@@ -938,7 +967,6 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkPipelineCreation
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkPerformanceCounterDescriptionFlagBitsKHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkAcquireProfilingLockFlagBitsKHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkShaderCorePropertiesFlagBitsAMD& value);
-utils::io::ostream& operator<<(utils::io::ostream& out, const VkShaderModuleCreateFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkPipelineCompilerControlFlagBitsAMD& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkToolPurposeFlagBitsEXT& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkSubmitFlagBitsKHR& value);
