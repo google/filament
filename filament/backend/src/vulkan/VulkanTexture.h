@@ -31,10 +31,12 @@ struct VulkanTexture : public HwTexture {
             TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
             TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle = {});
     ~VulkanTexture();
-    void update2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
-            int miplevel);
-    void update3DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
-            uint32_t depth, int miplevel);
+
+    // Uploads data into a subregion of a 2D or 3D texture.
+    void updateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
+            uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel);
+
+    // Uploads data into all 6 faces of a cubemap for a given miplevel.
     void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             uint32_t miplevel);
 
@@ -63,16 +65,7 @@ private:
     // Gets or creates a cached VkImageView for a range of miplevels and array layers.
     VkImageView getImageView(VkImageSubresourceRange range);
 
-    // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
-    // height define a subregion within the miplevel.
-    void copyBufferToImage(VkCommandBuffer cmdbuffer, VkBuffer buffer, VkImage image,
-            uint32_t width, uint32_t height, uint32_t depth,
-            FaceOffsets const* faceOffsets, uint32_t miplevel);
-
-    void updateWithCopyBuffer(const PixelBufferDescriptor& hostData, uint32_t width,
-        uint32_t height, uint32_t depth, uint32_t miplevel);
-
-    void updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
+    void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
         uint32_t height, uint32_t depth, uint32_t miplevel);
 
     VulkanTexture* mSidecarMSAA = nullptr;

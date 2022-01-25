@@ -340,7 +340,7 @@ void VulkanContext::createEmptyTexture(VulkanStagePool& stagePool) {
             TextureUsage::SUBPASS_INPUT, stagePool);
     uint32_t black = 0;
     PixelBufferDescriptor pbd(&black, 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
-    emptyTexture->update2DImage(pbd, 1, 1, 0);
+    emptyTexture->updateImage(pbd, 1, 1, 1, 0, 0, 0, 0);
 }
 
 } // namespace filament
