@@ -865,8 +865,8 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 void VulkanDriver::update2DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {
-    assert_invariant(xoffset == 0 && yoffset == 0 && "Offsets not yet supported.");
-    handle_cast<VulkanTexture*>(th)->update2DImage(data, width, height, level);
+    handle_cast<VulkanTexture*>(th)->updateImage(data, width, height, 1,
+            xoffset, yoffset, 0, level);
     scheduleDestroy(std::move(data));
 }
 
@@ -879,8 +879,8 @@ void VulkanDriver::update3DImage(
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {
-    assert_invariant(xoffset == 0 && yoffset == 0 && zoffset == 0 && "Offsets not yet supported.");
-    handle_cast<VulkanTexture*>(th)->update3DImage(data, width, height, depth, level);
+    handle_cast<VulkanTexture*>(th)->updateImage(data, width, height, depth,
+            xoffset, yoffset, zoffset, level);
     scheduleDestroy(std::move(data));
 }
 
