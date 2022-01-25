@@ -872,19 +872,6 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
     }
 }
 
-void FView::updatePrimitivesMorphTargetBuffer(FEngine& engine, const CameraInfo&,
-        FScene::RenderableSoa& renderableData, Range visible) noexcept {
-    for (uint32_t index : visible) {
-        Slice<FRenderPrimitive> primitives = renderableData.elementAt<FScene::PRIMITIVES>(index);
-        for (auto& primitive : primitives) {
-            auto morphTargetBuffer = primitive.getMorphTargetBuffer();
-            if (morphTargetBuffer) {
-                morphTargetBuffer->commit(engine);
-            }
-        }
-    }
-}
-
 void FView::renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
         RenderPass const& pass) noexcept {
     mShadowMapManager.render(fg, engine, driver, pass, *this);
