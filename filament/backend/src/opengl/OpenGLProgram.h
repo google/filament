@@ -74,10 +74,10 @@ private:
     struct BlockInfo {
         uint8_t binding : 3;    // binding (i.e.: index in mSamplerBindings)
         uint8_t unused  : 1;    // padding / available
-        uint8_t count   : 4;    // number of TMUs actually used minus 1
+        uint8_t count   : 5;    // number of TMUs actually used minus 1
 
-        // if TEXTURE_UNIT_COUNT > 16, the count bitfield must be increased accordingly
-        static_assert(TEXTURE_UNIT_COUNT <= 16, "TEXTURE_UNIT_COUNT must be <= 16");
+        // if TEXTURE_UNIT_COUNT > 32, the count bitfield must be increased accordingly
+        static_assert(TEXTURE_UNIT_COUNT <= 32, "TEXTURE_UNIT_COUNT must be <= 32");
 
         // if SAMPLER_BINDING_COUNT > 8, the binding bitfield must be increased accordingly
         static_assert(backend::Program::BINDING_COUNT <= 8, "BINDING_COUNT must be <= 8");
