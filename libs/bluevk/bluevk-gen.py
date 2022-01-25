@@ -418,7 +418,7 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
             function_pointers.append("PFN_%(name)s %(name)s;" % {'name': fn.name})
 
             # This function pointer is already manually loaded, so do not emit the loader call.
-            if name != 'vkGetInstanceProcAddr':
+            if name == 'vkGetInstanceProcAddr':
                 continue
 
             # Emit the loader call.
