@@ -940,7 +940,9 @@ std::string SimpleViewer::validateTweaks(const TweakableMaterial& tweaks) {
             else if (expectedFormat == filament::Texture::InternalFormat::R8) expectedChannelCount = 1;
         }
 
-        if (textureEntry->second->getFormat() != expectedFormat) {
+        if (textureEntry->second == nullptr) {
+            result += "ERROR: texture for " + prompt + " could not be loaded!\n";
+        } else if (textureEntry->second->getFormat() != expectedFormat) {
             result += "ERROR: " + prompt + " has incorrect format! Expected " + formatToName(expectedFormat) + ", got " + formatToName(textureEntry->second->getFormat()) + ".\n";
         }
 
