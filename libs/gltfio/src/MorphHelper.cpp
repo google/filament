@@ -109,6 +109,7 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
     const cgltf_accessor* previous = nullptr;
     for (int targetIndex = 0; targetIndex < prim.targets_count; targetIndex++) {
         const cgltf_morph_target& morphTarget = prim.targets[targetIndex];
+        bool hasNormals = false;
         for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
             const cgltf_attribute& attribute = morphTarget.attributes[aindex];
             const cgltf_accessor* accessor = attribute.data;
@@ -117,6 +118,7 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                 continue;
             }
             if (atype == cgltf_attribute_type_normal) {
+                hasNormals = true;
                 // TODO: use JobSystem for this, like what we do for non-morph tangents.
                 TangentsJob job;
                 TangentsJob::Params params = { .in = { &prim, targetIndex } };
@@ -150,6 +152,18 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                                 (const float4*) data, vertexBuffer->getVertexCount());
                     }
                 }
+            }
+        }
+
+        // Generate flat normals if necessary.
+        if (!hasNormals && !prim.material->unlit) {
+            TangentsJob job;
+            TangentsJob::Params params = { .in = { &prim, targetIndex } };
+            TangentsJob::run(&params);
+            if (params.out.results) {
+                morphHelperPrim.targets->setTangentsAt(engine, targetIndex,
+                        params.out.results, params.out.vertexCount);
+                free(params.out.results);
             }
         }
     }
