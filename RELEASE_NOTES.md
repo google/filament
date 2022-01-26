@@ -3,9 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.17.2 (currently main branch)
+## v1.18.0 (currently main branch)
 
-## v1.17.1
+- engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
 
 ## v1.17.0
 
