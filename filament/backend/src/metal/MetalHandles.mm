@@ -377,7 +377,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
     // separate binding "namespace" for each stage. So, we recompute binding indices for each shader
     // stage. This logic should match updateResourceBinding in GLSLPostProcessor.cpp
     // This is an example how binding indices each of shader stages is generated from sampler's
-    // bindings. Below is sampler`s bindings.
+    // bindings. Below is sampler's bindings.
     //  0 shadowMap { fragment }
     //  1 structure { fragment }
     //  2 targets { vertex }
