@@ -106,13 +106,14 @@ public:
     inline void setSkinning(Instance instance, bool enable) noexcept;
     inline void setMorphing(Instance instance, bool enable) noexcept;
     inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
-    inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0) noexcept;
-    inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
+    inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
+    inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
     inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
-            size_t count, size_t offset) noexcept;
-    void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
+            size_t count, size_t offset);
+    void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept;
+            FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
+    inline size_t getMorphTargetCount(Instance instance) const noexcept;
     inline void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
 
     inline bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
@@ -142,7 +143,6 @@ public:
         uint32_t count;
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
-    inline int getMorphTargetCount(Instance instance) const noexcept;
 
     utils::Entity getEntity(Instance instance) const noexcept {
         return mManager.getEntity(instance);
@@ -362,11 +362,6 @@ FRenderableManager::MorphingBindingInfo
 FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
     MorphWeights const& morphWeights = mManager[instance].morphWeights;
     return { morphWeights.handle, morphWeights.count };
-}
-
-int FRenderableManager::getMorphTargetCount(Instance instance) const noexcept {
-    MorphWeights const& morphWeights = mManager[instance].morphWeights;
-    return morphWeights.count;
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

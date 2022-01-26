@@ -73,16 +73,6 @@ MorphHelper::~MorphHelper() {
     }
 }
 
-int MorphHelper::getTargetCount(Entity entity) const noexcept {
-    if (mMorphTable.count(entity)) {
-        auto& primitive = mMorphTable.at(entity).primitives;
-        if (!primitive.empty() && primitive[0].targets) {
-            return primitive[0].targets->getCount();
-        }
-    }
-    return 0;
-}
-
 const char* MorphHelper::getTargetNameAt(Entity entity, size_t targetIndex) const noexcept {
     if (mMorphTable.count(entity)) {
         auto& targetNames = mMorphTable.at(entity).targetNames;
