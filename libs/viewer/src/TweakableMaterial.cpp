@@ -8,6 +8,7 @@ TweakableMaterial::TweakableMaterial() {
     mIorScale.value = 1.0f;
     mNormalIntensity.value = 1.0f;
     mRoughnessScale.value = 1.0f;
+    mReflectance.value = 1.0f;
     mOcclusionIntensity.value = 1.0f;
 }
 
@@ -27,6 +28,7 @@ json TweakableMaterial::toJson() {
     writeTexturedToJson(result, "normalTexture", mNormal);
 
     result["roughnessScale"] = mRoughnessScale.value;
+    result["reflectance"] = mReflectance.value;
     writeTexturedToJson(result, "roughness", mRoughness);
 
     writeTexturedToJson(result, "metallic", mMetallic);
@@ -88,6 +90,7 @@ void TweakableMaterial::fromJson(const json& source) {
     readTexturedFromJson(source, "normalTexture", mNormal, false, false, 3);
 
     readValueFromJson(source, "roughnessScale", mRoughnessScale, 1.0f);
+    readValueFromJson(source, "reflectance", mReflectance, 1.0f);
     readTexturedFromJson(source, "roughness", mRoughness);
 
     readTexturedFromJson(source, "metallic", mMetallic);
@@ -199,6 +202,8 @@ void TweakableMaterial::resetWithType(MaterialType newType) {
 
     mDoRelease = false;
 
+    mReflectance.value = 1.0f;
+
     mShaderType = newType;
 }
 
@@ -297,6 +302,7 @@ void TweakableMaterial::drawUI(const std::string& header) {
             ImGui::SliderFloat("Tile: refractive textures", &mRefractiveTextureScale, 1.0f / 1024.0f, 32.0f);
             ImGui::Separator();
 
+            mReflectance.addWidget("reflectance", 0.0f, 1.0f);
             mIorScale.addWidget("ior scale", 0.0f, 4.0f);
             mIor.addWidget("ior", 1.0f, 2.0f);
             mAbsorption.addWidget("absorption");
