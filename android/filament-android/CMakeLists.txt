@@ -74,6 +74,7 @@ add_library(filament-jni SHARED
     src/main/cpp/Material.cpp
     src/main/cpp/MaterialInstance.cpp
     src/main/cpp/MathUtils.cpp
+    src/main/cpp/MorphTargetBuffer.cpp
     src/main/cpp/RenderableManager.cpp
     src/main/cpp/Renderer.cpp
     src/main/cpp/RenderTarget.cpp

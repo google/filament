@@ -463,8 +463,10 @@ public:
     /**
      * Associates a MorphTargetBuffer to the given primitive.
      */
-    void setMorphTargetBufferAt(Instance instance,
-            size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept;
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept;
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t count) noexcept; //!< \overload
 
     /**
      * Gets the bounding box used for frustum culling.
