@@ -221,11 +221,7 @@ void ApplyReflectance(inout MaterialInputs material, inout FragmentData fragment
 #if defined(MATERIAL_HAS_REFLECTANCE) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     // Careful: reflectance affects non-metals, so this alone may still make things overly shiny - we added
     // specularIntensity to handle specular response on all lighting paths.
-#if defined(HAS_REFRACTION)
-    material.reflectance = materialParams.reflectance;
-#else
     material.reflectance = clamp(1.0 - material.roughness, 0.0, 1.0);
-#endif
 #endif
 }
 

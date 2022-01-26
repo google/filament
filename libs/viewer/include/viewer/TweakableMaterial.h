@@ -93,7 +93,6 @@ public:
     TweakableProperty<float> mRoughnessScale{};
     TweakablePropertyTextured<float> mRoughness;
     TweakablePropertyTextured<float> mMetallic{};
-    TweakableProperty<float> mReflectance{ {1.0f} };
 
     TweakableProperty<float> mClearCoat{};
     TweakableProperty<float> mClearCoatNormalIntensity{1.0f};
