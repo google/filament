@@ -261,6 +261,20 @@ void FEngine::init() {
                     .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));
 
+    // create dummy textures we need throughout the engine
+
+    mDummyOneTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
+    mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
+    mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
+    // dummy textures must be initialized before this call
+    mDummyMorphingSamplerGroup = FMorphTargetBuffer::createDummySampleGroup(*this);
+
     mPostProcessManager.init();
     mLightManager.init(*this);
     mDFG = std::make_unique<DFG>(*this);
@@ -343,6 +357,11 @@ void FEngine::shutdown() {
         cleanupResourceList(item.second);
     }
     cleanupResourceList(mFences);
+
+    driver.destroySamplerGroup(mDummyMorphingSamplerGroup);
+    driver.destroyTexture(mDummyOneTexture);
+    driver.destroyTexture(mDummyOneTextureArray);
+    driver.destroyTexture(mDummyZeroTexture);
 
     /*
      * Shutdown the backend...

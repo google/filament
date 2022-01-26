@@ -346,7 +346,7 @@ static void printShaderInfo(ostream& text, const vector<ShaderInfo>& info,
         text << setw(2) << left << toString(item.pipelineStage);
         text << " ";
         text << "0x" << hex << setfill('0') << setw(2)
-             << right << (int) item.variant;
+             << right << +item.variant.key;
         text << setfill(' ') << dec;
         text << "   ";
         text << formatVariantString(item.variant, domain);

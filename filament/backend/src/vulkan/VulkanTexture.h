@@ -21,6 +21,8 @@
 #include "VulkanBuffer.h"
 #include "VulkanUtility.h"
 
+#include <utils/RangeMap.h>
+
 namespace filament {
 namespace backend {
 
@@ -29,10 +31,12 @@ struct VulkanTexture : public HwTexture {
             TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
             TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle = {});
     ~VulkanTexture();
-    void update2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
-            int miplevel);
-    void update3DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
-            uint32_t depth, int miplevel);
+
+    // Uploads data into a subregion of a 2D or 3D texture.
+    void updateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
+            uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel);
+
+    // Uploads data into all 6 faces of a cubemap for a given miplevel.
     void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             uint32_t miplevel);
 
@@ -49,35 +53,37 @@ struct VulkanTexture : public HwTexture {
 
     VkFormat getVkFormat() const { return mVkFormat; }
     VkImage getVkImage() const { return mTextureImage; }
+    VkImageLayout getVkLayout(uint32_t layer, uint32_t level) const;
+
     void setSidecar(VulkanTexture* sidecar) { mSidecarMSAA = sidecar; }
     VulkanTexture* getSidecar() const { return mSidecarMSAA; }
 
+    void transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
+            VkImageLayout newLayout);
+
 private:
     // Gets or creates a cached VkImageView for a range of miplevels and array layers.
-    // If isAttachment is true, this always returns a 2D image view without swizzle.
-    VkImageView getImageView(VkImageSubresourceRange range, bool isAttachment = false);
+    VkImageView getImageView(VkImageSubresourceRange range);
 
-    // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
-    // height define a subregion within the miplevel.
-    void copyBufferToImage(VkCommandBuffer cmdbuffer, VkBuffer buffer, VkImage image,
-            uint32_t width, uint32_t height, uint32_t depth,
-            FaceOffsets const* faceOffsets, uint32_t miplevel);
-
-    void updateWithCopyBuffer(const PixelBufferDescriptor& hostData, uint32_t width,
-        uint32_t height, uint32_t depth, uint32_t miplevel);
-
-    void updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
+    void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
         uint32_t height, uint32_t depth, uint32_t miplevel);
 
     VulkanTexture* mSidecarMSAA = nullptr;
     const VkFormat mVkFormat;
+    const VkImageAspectFlags mAspect;
+    const VkImageViewType mViewType;
     const VkComponentMapping mSwizzle;
-    VkImageViewType mViewType;
     VkImage mTextureImage = VK_NULL_HANDLE;
     VkDeviceMemory mTextureImageMemory = VK_NULL_HANDLE;
+
+    // Track the image layout of each subresource using a sparse range map.
+    utils::RangeMap<uint32_t, VkImageLayout> mSubresourceLayouts;
+
+    // Track the range of subresources that define the "primary" image view, which is the special
+    // image view that gets bound to an actual texture sampler.
     VkImageSubresourceRange mPrimaryViewRange;
+
     std::map<VkImageSubresourceRange, VkImageView> mCachedImageViews;
-    VkImageAspectFlags mAspect;
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
 };

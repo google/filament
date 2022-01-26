@@ -139,10 +139,10 @@ FMaterial* PostProcessManager::PostProcessMaterial::assertMaterial() const noexc
     return mMaterial;
 }
 
-PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(uint8_t variant) const noexcept {
+PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(Variant::type_t variantKey) const noexcept {
     FMaterial* const material = assertMaterial();
     return {
-            .program = material->getProgram(variant),
+            .program = material->getProgram(Variant{variantKey}),
             .rasterState = material->getRasterState(),
             .scissor = material->getDefaultInstance()->getScissor()
     };
@@ -253,15 +253,6 @@ void PostProcessManager::init() noexcept {
         registerPostProcessMaterial(info.name, info.data, info.size);
     }
 
-    mDummyOneTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
-
-    mDummyOneTextureArray = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
-            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
-
-    mDummyZeroTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
-
     mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::R8, 1, 256, 1, 1, TextureUsage::DEFAULT);
 
@@ -277,17 +268,26 @@ void PostProcessManager::init() noexcept {
         float r = 0.5f + 0.5f * dist(gen);
         return uint8_t(r * 255.0f);
     });
-    driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
-    driver.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1, std::move(dataOneArray));
-    driver.update2DImage(mDummyZeroTexture, 0, 0, 0, 1, 1, std::move(dataZero));
-    driver.update2DImage(mStarburstTexture, 0, 0, 0, 256, 1, std::move(dataStarburst));
+
+    driver.update2DImage(engine.getOneTexture(),
+            0, 0, 0, 1, 1,
+            std::move(dataOne));
+
+    driver.update3DImage(engine.getOneTextureArray(),
+            0, 0, 0, 0, 1, 1, 1,
+            std::move(dataOneArray));
+
+    driver.update2DImage(engine.getZeroTexture(),
+            0, 0, 0, 1, 1,
+            std::move(dataZero));
+
+    driver.update2DImage(mStarburstTexture,
+            0, 0, 0, 256, 1,
+            std::move(dataStarburst));
 }
 
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
     FEngine& engine = mEngine;
-    driver.destroyTexture(mDummyOneTexture);
-    driver.destroyTexture(mDummyOneTextureArray);
-    driver.destroyTexture(mDummyZeroTexture);
     driver.destroyTexture(mStarburstTexture);
     auto first = mMaterialRegistry.begin();
     auto last = mMaterialRegistry.end();
@@ -295,6 +295,18 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
         first.value().terminate(engine);
         ++first;
     }
+}
+
+backend::Handle<backend::HwTexture> PostProcessManager::getOneTexture() const {
+    return mEngine.getOneTexture();
+}
+
+backend::Handle<backend::HwTexture> PostProcessManager::getZeroTexture() const {
+    return mEngine.getZeroTexture();
+}
+
+backend::Handle<backend::HwTexture> PostProcessManager::getOneTextureArray() const {
+    return mEngine.getOneTextureArray();
 }
 
 UTILS_NOINLINE

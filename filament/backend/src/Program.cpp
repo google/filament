@@ -27,7 +27,7 @@ Program::Program(Program&& rhs) noexcept = default;
 Program& Program::operator=(Program&& rhs) noexcept = default;
 Program::~Program() noexcept = default;
 
-Program& Program::diagnostics(utils::CString const& name, uint8_t variant) {
+Program& Program::diagnostics(utils::CString const& name, Variant variant) {
     mName = name;
     mVariant = variant;
     return *this;

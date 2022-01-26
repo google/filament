@@ -418,9 +418,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
     view.updatePrimitivesLod(engine, cameraInfo,
             scene.getRenderableData(), view.getVisibleRenderables());
-    // updatePrimitivesMorphTargetBuffer must be run after updatePrimitivesLod.
-    view.updatePrimitivesMorphTargetBuffer(engine, cameraInfo,
-            scene.getRenderableData(), view.getVisibleRenderables());
 
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
