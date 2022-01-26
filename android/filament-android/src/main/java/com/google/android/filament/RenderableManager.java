@@ -503,6 +503,39 @@ public class RenderableManager {
     }
 
     /**
+     * Changes the morph target buffer for the given primitive.
+     *
+     * <p>The renderable must be built with morphing enabled.</p>
+     *
+     * @see Builder#morphing
+     */
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
+                                       @NonNull MorphTargetBuffer morphTargetBuffer,
+                                       @IntRange(from = 0) int offset,
+                                       @IntRange(from = 0) int count) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
+                morphTargetBuffer.getNativeObject(), offset, count);
+    }
+
+    /**
+     * Changes the morph target buffer for the given primitive.
+     *
+     * <p>The renderable must be built with morphing enabled.</p>
+     *
+     * @see Builder#morphing
+     */
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
+                                       @NonNull MorphTargetBuffer morphTargetBuffer,
+                                       @IntRange(from = 0) int count) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
+                morphTargetBuffer.getNativeObject(), 0, count);
+    }
+
+    /**
      * Changes the bounding box used for frustum culling.
      *
      * @see Builder#boundingBox
@@ -764,6 +797,7 @@ public class RenderableManager {
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
     private static native int nSetBonesAsQuaternions(long nativeObject, int i, Buffer quaternions, int remaining, int boneCount, int offset);
     private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights);
+    private static native void nSetMorphTargetBufferAt(long nativeObject, int i, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);

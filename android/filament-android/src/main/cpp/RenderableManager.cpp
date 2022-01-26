@@ -276,6 +276,17 @@ Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferAt(JNIEnv*,
+        jclass, jlong nativeRenderableManager, jint i, int level, jint primitiveIndex,
+        jlong nativeMorphTargetBuffer, jint offset, jint count) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+    rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
+                               (size_t) primitiveIndex, morphTargetBuffer,
+                               (size_t) offset, (size_t) count);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetAxisAlignedBoundingBox(JNIEnv*,
         jclass, jlong nativeRenderableManager, jint i, jfloat cx, jfloat cy, jfloat cz,
         jfloat ex, jfloat ey, jfloat ez) {
