@@ -588,12 +588,11 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
 static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
         float const* weights, size_t count, size_t offset) noexcept {
     auto& driver = engine.getDriverApi();
-    auto size = sizeof(float4) * count;
-    auto* UTILS_RESTRICT out = (PerRenderableMorphingUib*)driver.allocate(size);
-    memset(out, 0, size);
+    auto size = sizeof(PerRenderableMorphingUib);
+    auto* UTILS_RESTRICT out = driver.allocatePod<PerRenderableMorphingUib>(1);
     std::transform(weights, weights + count, out->weights,
-            [](float value) { return float4(value); });
-    driver.updateBufferObject(handle, { out, size }, sizeof(float4) * offset);
+            [](float value) { return float4(value, 0, 0, 0); });
+    driver.updateBufferObject(handle, { out, size }, 0);
 }
 
 void FRenderableManager::setMorphWeights(Instance instance, float const* weights,
