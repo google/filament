@@ -610,12 +610,15 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
 }
 
 void FRenderableManager::setMorphTargetBufferAt(Instance instance,
-        size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept {
+        size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) {
     if (instance) {
-#if !defined(NDEBUG)
+        assert_invariant(morphTargetBuffer);
+
         MorphWeights& morphWeights = mManager[instance].morphWeights;
-        assert_invariant(morphWeights.count == morphTargetBuffer->getCount());
-#endif
+        ASSERT_PRECONDITION(morphWeights.count == morphTargetBuffer->getCount(),
+                "Only %d morph targets can be set (count=%d)",
+                morphWeights.count, morphTargetBuffer->getCount());
+
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, 0);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].set(morphTargetBuffer);
@@ -767,7 +770,7 @@ void RenderableManager::setMorphWeights(Instance instance, float const* weights,
 }
 
 void RenderableManager::setMorphTargetBufferAt(Instance instance,
-        size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept {
+        size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) {
     upcast(this)->setMorphTargetBufferAt(instance, primitiveIndex, upcast(morphTargetBuffer));
 }
 

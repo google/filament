@@ -112,7 +112,7 @@ public:
             size_t count, size_t offset);
     void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferAt(Instance instance,
-            size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer) noexcept;
+            size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer);
     inline size_t getMorphTargetCount(Instance instance) const noexcept;
     inline void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
 

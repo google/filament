@@ -464,7 +464,7 @@ public:
      * Associates a MorphTargetBuffer to the given primitive.
      */
     void setMorphTargetBufferAt(Instance instance,
-            size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept;
+            size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer);
 
     /**
      * Gets the number of morphing in the given entity.
