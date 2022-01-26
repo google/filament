@@ -589,10 +589,9 @@ static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBuffe
         float const* weights, size_t count) noexcept {
     auto& driver = engine.getDriverApi();
     auto size = sizeof(PerRenderableMorphingUib);
-    auto* UTILS_RESTRICT out = (PerRenderableMorphingUib*)driver.allocate(size);
-    memset(out, 0, size);
+    auto* UTILS_RESTRICT out = driver.allocatePod<PerRenderableMorphingUib>(1);
     std::transform(weights, weights + count, out->weights,
-            [](float value) { return float4(value); });
+            [](float value) { return float4(value, 0, 0, 0); });
     driver.updateBufferObject(handle, { out, size }, 0);
 }
 
