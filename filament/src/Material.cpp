@@ -143,7 +143,7 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
             const bool strict = (bindingPoint == filament::BindingPoints::PER_MATERIAL_INSTANCE);
             samplers[i] = { std::move(uniformName), binding, strict };
         }
-        pb.setSamplerGroup(bindingPoint, samplers.data(), samplers.size());
+        pb.setSamplerGroup(bindingPoint, sib.getStageFlags(), samplers.data(), samplers.size());
     }
 }
 
@@ -389,6 +389,8 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(Variant variant) const noexce
     addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variant), mSamplerBindings);
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 
+    // getSurfaceBindingIndexMap in GLSLPostProcessor.cpp also needs to update if sampler groups are added.
+
     return createAndCacheProgram(std::move(pb), variant);
 }
 
@@ -400,6 +402,8 @@ Handle<HwProgram> FMaterial::getPostProcessProgramSlow(Variant variant)
       .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
+
+    // getPostProcessBindingIndexMap in GLSLPostProcessor.cpp also needs to update if sampler groups are added.
 
     return createAndCacheProgram(std::move(pb), variant);
 }

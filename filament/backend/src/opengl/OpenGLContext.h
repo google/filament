@@ -34,7 +34,7 @@ namespace filament {
 
 class OpenGLContext {
 public:
-    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = 16;   // All mobile GPUs as of 2016
+    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = backend::MAX_SAMPLER_COUNT;
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
     typedef math::details::TVec4<GLint> vec4gli;
     typedef math::details::TVec2<GLclampf> vec2glf;

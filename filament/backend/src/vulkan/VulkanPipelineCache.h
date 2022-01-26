@@ -41,6 +41,8 @@ VK_DEFINE_HANDLE(VmaPool)
 namespace filament {
 namespace backend {
 
+struct VulkanProgram;
+
 // VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
 // Please note the following limitations:
@@ -145,7 +147,7 @@ public:
     void bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept;
 
     // Each of the following methods are fast and do not make Vulkan calls.
-    void bindProgramBundle(const ProgramBundle& bundle) noexcept;
+    void bindProgram(const VulkanProgram& program) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
@@ -183,6 +185,25 @@ public:
 
 private:
     static constexpr uint32_t ALL_COMMAND_BUFFERS = (1 << VK_MAX_COMMAND_BUFFERS) - 1;
+
+    using LayoutBundleKey = utils::bitset64; // 2 bits(vertex and fragment) per sampler * 32 samplers
+
+    static LayoutBundleKey getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept;
+
+    struct LayoutBundle {
+        std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
+        VkPipelineLayout pipelineLayout;
+        std::vector<VkDescriptorSet> setArena[DESCRIPTOR_TYPE_COUNT];
+        uint32_t referenceCount = 0;
+    };
+
+    struct LayoutBundleHashFn {
+        size_t operator()(const LayoutBundleKey& key) const;
+    };
+
+    struct LayoutBundleEqual {
+        bool operator()(const LayoutBundleKey& k1, const LayoutBundleKey& k2) const;
+    };
 
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
@@ -242,11 +263,13 @@ private:
     // Represents a group of descriptor sets that are bound simultaneously.
     struct DescriptorBundle {
         VkDescriptorSet handles[DESCRIPTOR_TYPE_COUNT];
+        LayoutBundle* layoutBundle = nullptr;
         utils::bitset32 commandBuffers;
     };
 
     struct PipelineVal {
         VkPipeline handle;
+        LayoutBundle* layoutBundle;
 
         // The "age" of a pipeline cache entry is the number of command buffer flush events that
         // have occurred since it was last used in a command buffer. This is used for LRU caching,
@@ -254,6 +277,7 @@ private:
         uint32_t age;
     };
 
+    using LayoutMap = tsl::robin_map<LayoutBundleKey , LayoutBundle, LayoutBundleHashFn, LayoutBundleEqual>;
     using PipelineMap = tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual>;
     using DescriptorMap = tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual>;
 
@@ -268,10 +292,11 @@ private:
     void getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT],
             bool* bind, bool* overflow) noexcept;
 
+    LayoutBundle* getOrCreateLayoutBundle() noexcept;
+
     // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
     bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
 
-    void createLayoutsAndDescriptors() noexcept;
     void destroyLayoutsAndDescriptors() noexcept;
     void markDirtyPipeline() noexcept { mDirtyPipeline.setValue(ALL_COMMAND_BUFFERS); }
     void markDirtyDescriptor() noexcept { mDirtyDescriptor.setValue(ALL_COMMAND_BUFFERS); }
@@ -282,9 +307,10 @@ private:
     VmaAllocator mAllocator = VK_NULL_HANDLE;
     const RasterState mDefaultRasterState;
 
-    // Current bindings are divided into two "keys" which are composed of a mix of actual values
+    // Current bindings are divided into three "keys" which are composed of a mix of actual values
     // (e.g., blending is OFF) and weak references to Vulkan objects (e.g., shader programs and
     // uniform buffers).
+    LayoutBundleKey mLayoutKey;
     PipelineKey mPipelineKey;
     DescriptorKey mDescriptorKey;
 
@@ -298,11 +324,7 @@ private:
     utils::bitset32 mDirtyPipeline;
     utils::bitset32 mDirtyDescriptor;
 
-    VkDescriptorSetLayout mDescriptorSetLayouts[DESCRIPTOR_TYPE_COUNT] = {};
-
-    std::vector<VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
-
-    VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
+    LayoutMap mLayouts;
     PipelineMap mPipelines;
     DescriptorMap mDescriptorBundles;
     uint32_t mCmdBufferIndex = 0;

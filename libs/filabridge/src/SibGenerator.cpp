@@ -33,7 +33,8 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
         auto builder = SamplerInterfaceBlock::Builder();
 
         builder
-            .name("Light");
+            .name("Light")
+            .stageFlags({ .fragment = true });
 
         if (hasVsm) {
             builder.add("shadowMap", Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::HIGH);
@@ -73,6 +74,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Vari
 
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
             .name("Morphing")
+            .stageFlags({ .vertex = true })
             .add("targets", Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH)
             .build();
 
