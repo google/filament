@@ -112,8 +112,8 @@ public class MorphTargetBuffer {
      * @param count Number of position elements in positions
      */
     public void setPositionsAt(@NonNull Engine engine,
-                               @IntRange(from = 0) int targetIndex,
-                               @NonNull float[] positions, @IntRange(from = 0, to = 125) int count) {
+            @IntRange(from = 0) int targetIndex,
+            @NonNull float[] positions, @IntRange(from = 0, to = 125) int count) {
         int result = nSetPositionsAt(mNativeObject, engine.getNativeObject(), targetIndex,
                 positions, count);
         if (result < 0) {
@@ -130,8 +130,8 @@ public class MorphTargetBuffer {
      * @param count Number of tangent elements in tangents
      */
     public void setTangentsAt(@NonNull Engine engine,
-                              @IntRange(from = 0) int targetIndex,
-                              @NonNull short[] tangents, @IntRange(from = 0, to = 125) int count) {
+            @IntRange(from = 0) int targetIndex,
+            @NonNull short[] tangents, @IntRange(from = 0, to = 125) int count) {
         int result = nSetTangentsAt(mNativeObject, engine.getNativeObject(), targetIndex,
                 tangents, count);
         if (result < 0) {
