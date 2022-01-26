@@ -728,6 +728,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
                         .domain = mMaterialDomain,
+                        .materialInfo = &info,
                         .glsl = {},
                 };
 

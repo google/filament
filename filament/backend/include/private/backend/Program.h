@@ -23,6 +23,7 @@
 #include <utils/Log.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/ShaderStageFlags.h>
 
 #include <private/filament/Variant.h>
 
@@ -47,7 +48,12 @@ public:
         bool strict = false;        // if true, this sampler must always have a bound texture
     };
 
-    using SamplerGroupInfo = std::array<utils::FixedCapacityVector<Sampler>, BINDING_COUNT>;
+    struct SamplerGroupData {
+        utils::FixedCapacityVector<Sampler> samplers;
+        ShaderStageFlags stageFlags = ALL_SHADER_STAGE_FLAGS;
+    };
+
+    using SamplerGroupInfo = std::array<SamplerGroupData, BINDING_COUNT>;
     using UniformBlockInfo = std::array<utils::CString, BINDING_COUNT>;
 
     Program() noexcept;
@@ -75,7 +81,8 @@ public:
     // 'samplers' can be destroyed after this call.
     // This effectively associates a set of (BindingPoints, index) to a texture unit in the shader.
     // Or more precisely, what layout(binding=) is set to in GLSL.
-    Program& setSamplerGroup(size_t bindingPoint, Sampler const* samplers, size_t count) noexcept;
+    Program& setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
+            Sampler const* samplers, size_t count) noexcept;
 
     Program& withVertexShader(void const* data, size_t size) {
         return shader(Shader::VERTEX, data, size);

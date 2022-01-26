@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DRIVER_VULKANUTILITY_H
 
 #include <backend/DriverEnums.h>
+#include <backend/ShaderStageFlags.h>
 
 #include <bluevk/BlueVK.h>
 
@@ -49,6 +50,7 @@ PixelDataType getComponentType(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
 VkImageViewType getImageViewType(SamplerType target);
 VkImageLayout getDefaultImageLayout(TextureUsage usage);
+VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
 
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
 

@@ -119,7 +119,7 @@ private:
         mHandleAllocator.deallocate(handle, p);
     }
 
-    void enumerateSamplerGroups(const MetalProgram* program,
+    void enumerateSamplerGroups(const MetalProgram* program, ShaderType shaderType,
             const std::function<void(const SamplerGroup::Sampler*, size_t)>& f);
     void enumerateBoundUniformBuffers(const std::function<void(const UniformBufferState&,
             MetalBuffer*, uint32_t)>& f);

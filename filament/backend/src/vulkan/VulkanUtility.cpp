@@ -533,6 +533,13 @@ VkImageLayout getDefaultImageLayout(TextureUsage usage) {
     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
+VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
+    VkShaderStageFlags flags = 0x0;
+    if (stageFlags.vertex)   flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if (stageFlags.fragment) flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    return flags;
+}
+
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition) {
     if (transition.oldLayout == transition.newLayout) {
         return;

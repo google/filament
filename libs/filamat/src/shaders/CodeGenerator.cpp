@@ -370,7 +370,11 @@ io::sstream& CodeGenerator::generateSamplers(
             // allows the sampler bindings to live in a separate "namespace" that starts at zero.
             // Note that the set specifier is not covered by the desktop GLSL spec, including
             // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
-            if (mTargetApi == TargetApi::VULKAN) {
+            if (mTargetApi == TargetApi::VULKAN ||
+            // For Metal, the sampler binding index must less than 16. But we generate sampler binding
+            // index sequentially regardless binding shader stages, so it could be greater than 15.
+            // To avoid this problem, we have to re-calculate resource binding indices each of shader stages.
+                mTargetApi == TargetApi::METAL) {
                 out << ", set = 1";
             }
 

@@ -45,9 +45,11 @@ Program& Program::setUniformBlock(size_t bindingPoint, utils::CString uniformBlo
     return *this;
 }
 
-Program& Program::setSamplerGroup(size_t bindingPoint,
+Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
         const Program::Sampler* samplers, size_t count) noexcept {
-    auto& samplerList = mSamplerGroups[bindingPoint];
+    auto& groupData = mSamplerGroups[bindingPoint];
+    groupData.stageFlags = stageFlags;
+    auto& samplerList = groupData.samplers;
     samplerList.reserve(count);
     samplerList.resize(count);
     std::copy_n(samplers, count, samplerList.data());
