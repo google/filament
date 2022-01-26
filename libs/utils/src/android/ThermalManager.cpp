@@ -16,7 +16,7 @@
 
 #include <utils/android/ThermalManager.h>
 
-#include <android/Thermal.h>
+#include <android/thermal.h>
 
 #include <utility>
 
