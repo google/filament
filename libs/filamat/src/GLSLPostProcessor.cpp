@@ -189,7 +189,7 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
 
     // The index will be used to remap based on BindingIndexMap and
     // the result becomes a [[buffer(index)]], [[texture(index)]] or [[sampler(index)]].
-    auto duplicateResourceBinding = [executionModel, &mslCompiler]
+    auto updateResourceBinding = [executionModel, &mslCompiler]
             (const auto& resource, const BindingIndexMap* map = nullptr) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
@@ -206,10 +206,10 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
     auto resources = mslCompiler.get_shader_resources();
     auto bindingIndexMap = getBindingIndexMap(config);
     for (const auto& resource : resources.sampled_images) {
-        duplicateResourceBinding(resource, &bindingIndexMap);
+        updateResourceBinding(resource, &bindingIndexMap);
     }
     for (const auto& resource : resources.uniform_buffers) {
-        duplicateResourceBinding(resource);
+        updateResourceBinding(resource);
     }
 
     *outMsl = mslCompiler.compile();
