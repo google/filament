@@ -168,38 +168,27 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao, AmbientOcclusionOption
     s.aoBentNormals = options.enabled && options.bentNormals ? 1.0f : 0.0f;
 }
 
-void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) noexcept {
+void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
+        float refractionLodOffset,
+        math::mat4f const& historyProjection,
+        math::mat4f const& projectToPixelMatrix,
+        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
+
     mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
         .filterMag = SamplerMagFilter::LINEAR,
         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
     });
-    auto& s = mPerViewUb.edit();
-    s.refractionLodOffset = refractionLodOffset;
-}
 
-void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f const& historyProjection,
-        math::mat4f const& projectToPixelMatrix,
-        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
-    mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR
-    });
     auto& s = mPerViewUb.edit();
+
+    s.refractionLodOffset = refractionLodOffset;
+
     s.ssrReprojection = historyProjection;
     s.ssrProjectToPixelMatrix = projectToPixelMatrix;
     s.ssrThickness = ssrOptions.thickness;
     s.ssrBias = ssrOptions.bias;
     s.ssrDistance = ssrOptions.maxDistance;
     s.ssrStride = ssrOptions.stride;
-}
-
-void PerViewUniforms::disableSSReflections() noexcept {
-    // We must bind a placeholder texture, even if reflections are disabled, to avoid a
-    // "no texture unit bound" warning.
-    Handle<backend::HwTexture> placeholder = mEngine.getPostProcessManager().getOneTexture();
-    auto& s = mPerViewUb.edit();
-    mPerViewSb.setSampler(PerViewSib::SSR, placeholder, {});
-    s.ssrDistance = 0.0f;
 }
 
 void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {

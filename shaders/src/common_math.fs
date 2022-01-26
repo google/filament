@@ -183,3 +183,16 @@ highp mat3 cofactor(const highp mat3 m) {
     cof[2][2] = a * e - b * d;
     return cof;
 }
+
+//------------------------------------------------------------------------------
+// Random
+//------------------------------------------------------------------------------
+
+/*
+ * Random number between 0 and 1, using interleaved gradient noise.
+ * w must not be normalized (e.g. window coordinates)
+ */
+float interleavedGradientNoise(const highp vec2 w) {
+    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
+    return fract(m.z * fract(dot(w, m.xy)));
+}

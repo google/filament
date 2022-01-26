@@ -300,12 +300,12 @@ public:
         Builder& skinning(size_t boneCount) noexcept; //!< \overload
 
         /**
-         * Controls if the renderable has vertex morphing targets, false by default.
+         * Controls if the renderable has vertex morphing targets, zero by default.
          *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
          */
-        Builder& morphing(bool enable) noexcept;
+        Builder& morphing(size_t targetCount) noexcept;
 
         /**
          * Sets an ordering index for blended primitives that all live at the same Z value.
@@ -443,28 +443,41 @@ public:
      * Updates the bone transforms in the range [offset, offset + boneCount).
      * The bones must be pre-allocated using Builder::skinning().
      */
-    void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
-    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept; //!< \overload
+    void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0);
+    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0); //!< \overload
 
     /**
      * Associates a SkinningBuffer to a renderable instance
      */
     void setSkinningBuffer(Instance instance, SkinningBuffer* skinningBuffer,
-            size_t count, size_t offset) noexcept;
+            size_t count, size_t offset);
 
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
      * The renderable must be built with morphing enabled, see Builder::morphing().
+     *
+     * @param instance Instance of the component obtained from getInstance().
+     * @param weights Pointer to morph target weights to be update.
+     * @param count Number of morph target weights.
+     * @param offset Index of the first first morph target weight to set at instance.
      */
-    void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
-
+    void setMorphWeights(Instance instance,
+            float const* weights, size_t count, size_t offset = 0);
 
     /**
      * Associates a MorphTargetBuffer to the given primitive.
      */
-    void setMorphTargetBufferAt(Instance instance,
-            size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer) noexcept;
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t count); //!< \overload
+
+    /**
+     * Gets t
+     * number of morphing in the given entity.
+     */
+    size_t getMorphTargetCount(Instance instance) const noexcept;
 
     /**
      * Gets the bounding box used for frustum culling.

@@ -28,24 +28,19 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             const char* materialName) {
     // We assume material variant 0 here, which is sufficient for calculating the binding map.
     // The material variant currently only affects sampler formats (for VSM), not offsets.
-    const uint8_t variantKey = 0;
+    const Variant dummyVariant{};
     uint8_t offset = 0;
-    size_t maxSamplerIndex = backend::MAX_SAMPLER_COUNT - 1;
-    bool overflow = false;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
         filament::SamplerInterfaceBlock const* sib;
         if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
             sib = perMaterialSib;
         } else {
-            sib = filament::SibGenerator::getSib(blockIndex, variantKey);
+            sib = filament::SibGenerator::getSib(blockIndex, dummyVariant);
         }
         if (sib) {
             auto sibFields = sib->getSamplerInfoList();
             for (const auto& sInfo : sibFields) {
-                if (offset > maxSamplerIndex) {
-                    overflow = true;
-                }
                 addSampler({
                     .blockIndex = blockIndex,
                     .localOffset = sInfo.offset,
@@ -55,9 +50,37 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
         }
     }
 
+    auto isOverflow = [&perMaterialSib, &dummyVariant]() {
+        size_t numVertexSampler = 0, numFragmentSampler = 0;
+        for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
+            filament::SamplerInterfaceBlock const* sib;
+            if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
+                sib = perMaterialSib;
+            } else {
+                sib = filament::SibGenerator::getSib(blockIndex, dummyVariant);
+            }
+            if (sib) {
+                // Shader stage flags is only needed to check if MAX_SAMPLER_COUNT is exceeded.
+                // Somehow if we can get shader stage flags from Program then we can remove it in SamplerInterfaceBlock.
+                const auto stageFlags = sib->getStageFlags();
+                if (stageFlags.vertex) {
+                    numVertexSampler += sib->getSamplerInfoList().size();
+                }
+                if (stageFlags.fragment) {
+                    numFragmentSampler += sib->getSamplerInfoList().size();
+                }
+                if (numVertexSampler >= backend::MAX_VERTEX_SAMPLER_COUNT ||
+                    numFragmentSampler >= backend::MAX_FRAGMENT_SAMPLER_COUNT) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
     // If an overflow occurred, go back through and list all sampler names. This is helpful to
     // material authors who need to understand where the samplers are coming from.
-    if (overflow) {
+    if (isOverflow()) {
         utils::slog.e << "WARNING: Exceeded max sampler count of " << backend::MAX_SAMPLER_COUNT;
         if (materialName) {
             utils::slog.e << " (" << materialName << ")";
@@ -69,12 +92,13 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
                 sib = perMaterialSib;
             } else {
-                sib = filament::SibGenerator::getSib(blockIndex, variantKey);
+                sib = filament::SibGenerator::getSib(blockIndex, dummyVariant);
             }
             if (sib) {
                 auto sibFields = sib->getSamplerInfoList();
                 for (auto sInfo : sibFields) {
-                    utils::slog.e << "  " << (int) offset << " " << sInfo.name.c_str() << utils::io::endl;
+                    utils::slog.e << "  " << (int) offset << " " << sInfo.name.c_str()
+                        << " " << sib->getStageFlags() << utils::io::endl;
                     offset++;
                 }
             }

@@ -3,12 +3,21 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.16.2 (currently main branch)
+## v1.17.2 (currently main branch)
+
+## v1.17.1
+
+## v1.17.0
+
+- engine: Add experimental glossy screen-space reflections.
+- engine: Add support for GPU morphing and 128 morph targets.
+- engine: Fix crash with non-shadow receiving renderables and VSM.
+- engine: Bring back the 3x3 filter for PCF shadows.
+- engine: Correct AABB calculation for skinned glTF models.
 
 ## v1.16.1
 
-- engine: add experimental glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
-  access this new feature**].
+- engine: Added line/triangle strip support.
 
 ## v1.16.0
 
@@ -20,10 +29,10 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.15.2
 
-- engine: add support for PCSS (Percentage Closer Soft Shadows).
-- engine: fix spotlight shadow bias.
-- samples: avoid leaking IBLs in Android sample-gltf-viewer.
-- libs: fix `libibl` on mobile.
+- engine: Add support for PCSS (Percentage Closer Soft Shadows).
+- engine: Fix spotlight shadow bias.
+- samples: Avoid leaking IBLs in Android sample-gltf-viewer.
+- libs: Fix `libibl` on mobile.
 
 ## v1.15.1
 

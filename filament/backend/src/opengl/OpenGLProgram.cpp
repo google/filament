@@ -199,14 +199,15 @@ highp uint packHalf2x16(vec2 v) {
             #pragma nounroll
             for (size_t i = 0, c = samplerGroupInfo.size(); i < c; i++) {
                 auto const& groupInfo = samplerGroupInfo[i];
-                if (!groupInfo.empty()) {
+                auto const& samplers = groupInfo.samplers;
+                if (!samplers.empty()) {
                     // Cache the sampler uniform locations for each interface block
                     BlockInfo& info = mBlockInfos[numUsedBindings];
                     info.binding = uint8_t(i);
                     uint8_t count = 0;
-                    for (uint8_t j = 0, m = uint8_t(groupInfo.size()); j < m; ++j) {
+                    for (uint8_t j = 0, m = uint8_t(samplers.size()); j < m; ++j) {
                         // find its location and associate a TMU to it
-                        GLint loc = glGetUniformLocation(program, groupInfo[j].name.c_str());
+                        GLint loc = glGetUniformLocation(program, samplers[j].name.c_str());
                         if (loc >= 0) {
                             glUniform1i(loc, tmu);
                             indicesRun[tmu] = j;
@@ -272,6 +273,10 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
         BlockInfo blockInfo = blockInfos[i];
         HwSamplerGroup const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
+        if (UTILS_UNLIKELY(!hwsb)) {
+            tmu += blockInfo.count + 1;
+            continue;
+        }
         SamplerGroup const& UTILS_RESTRICT sb = *(hwsb->sb);
         SamplerGroup::Sampler const* const UTILS_RESTRICT samplers = sb.getSamplers();
         for (uint8_t j = 0, m = blockInfo.count ; j <= m; ++j, ++tmu) { // "<=" on purpose here

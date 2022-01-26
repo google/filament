@@ -24,7 +24,7 @@
 
 namespace filament {
 
-SamplerInterfaceBlock const& SibGenerator::getPerViewSib(uint8_t variantKey) noexcept {
+SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexcept {
     using Type = SamplerInterfaceBlock::Type;
     using Format = SamplerInterfaceBlock::Format;
     using Precision = SamplerInterfaceBlock::Precision;
@@ -62,18 +62,18 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(uint8_t variantKey) noe
     assert(sibPcf.getSize() == PerViewSib::SAMPLER_COUNT);
     assert(sibVsm.getSize() == PerViewSib::SAMPLER_COUNT);
 
-    Variant v(variantKey);
+    Variant v(variant);
 
     return v.hasVsm() ? sibVsm : sibPcf;
 }
 
-SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(uint8_t variantKey) noexcept {
+SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Variant variant) noexcept {
     using Type = SamplerInterfaceBlock::Type;
     using Format = SamplerInterfaceBlock::Format;
     using Precision = SamplerInterfaceBlock::Precision;
 
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
-            .name("MorphTargetBuffer")
+            .name("Morphing")
             .stageFlags({ .vertex = true })
             .add("positions", Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH)
             .add("tangents",  Type::SAMPLER_2D_ARRAY, Format::INT,   Precision::HIGH)
@@ -82,14 +82,14 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(uint
     return sib;
 }
 
-SamplerInterfaceBlock const* SibGenerator::getSib(uint8_t bindingPoint, uint8_t variantKey) noexcept {
+SamplerInterfaceBlock const* SibGenerator::getSib(uint8_t bindingPoint, Variant variant) noexcept {
     switch (bindingPoint) {
         case BindingPoints::PER_VIEW:
-            return &getPerViewSib(variantKey);
+            return &getPerViewSib(variant);
         case BindingPoints::PER_RENDERABLE:
             return nullptr;
         case BindingPoints::PER_RENDERABLE_MORPHING:
-            return &getPerRenderPrimitiveMorphingSib(variantKey);
+            return &getPerRenderPrimitiveMorphingSib(variant);
         case BindingPoints::LIGHTS:
             return nullptr;
         default:

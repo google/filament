@@ -657,21 +657,11 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
-void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
-    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
-    // If screen-space refractions are enabled, make sure to disable screen-space reflections.
-    // TODO: support simultaneous screen-space refractions and reflections.
-    mPerViewUniforms.disableSSReflections();
-}
-
-void FView::disableSSReflections() const noexcept {
-    mPerViewUniforms.disableSSReflections();
-}
-
-void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
-        math::mat4f historyProjection, math::mat4f projectToPixelMatrix,
+void FView::prepareSSR(Handle <HwTexture> ssr, float refractionLodOffset,
+        mat4f const& historyProjection, mat4f const& projectToPixelMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, projectToPixelMatrix, ssrOptions);
+    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset,
+            historyProjection, projectToPixelMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
@@ -879,19 +869,6 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
         uint8_t level = 0; // TODO: pick the proper level of detail
         auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
-    }
-}
-
-void FView::updatePrimitivesMorphTargetBuffer(FEngine& engine, const CameraInfo&,
-        FScene::RenderableSoa& renderableData, Range visible) noexcept {
-    for (uint32_t index : visible) {
-        Slice<FRenderPrimitive> primitives = renderableData.elementAt<FScene::PRIMITIVES>(index);
-        for (auto& primitive : primitives) {
-            auto morphTargetBuffer = primitive.getMorphTargetBuffer();
-            if (morphTargetBuffer) {
-                morphTargetBuffer->commit(engine);
-            }
-        }
     }
 }
 

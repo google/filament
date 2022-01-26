@@ -79,7 +79,7 @@ void morphPosition(inout vec4 p) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
         texcoord.z = int(i);
-        p += morphingUniforms.weights[i] * texelFetch(morphTargetBuffer_positions, texcoord, 0);
+        p += morphingUniforms.weights[i][0] * texelFetch(morphTargetBuffer_positions, texcoord, 0);
     }
 }
 
@@ -90,7 +90,7 @@ void morphNormal(inout vec3 n) {
         ivec4 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0);
         vec3 normal;
         toTangentFrame(float4(tangent) / 32767.0, normal);
-        n += morphingUniforms.weights[i].xyz * normal;
+        n += morphingUniforms.weights[i][0] * normal;
     }
 }
 #endif

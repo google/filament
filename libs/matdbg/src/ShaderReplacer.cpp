@@ -60,7 +60,7 @@ public:
     void writeShadersChunk(ChunkType tag, ostream& stream) const;
 
     // Replaces the specified shader text with new content.
-    void replaceShader(backend::ShaderModel shaderModel, uint8_t variant,
+    void replaceShader(backend::ShaderModel shaderModel, Variant variant,
             ShaderType stage, const char* source, size_t sourceLength);
 
     bool isEmpty() const { return mStringLines.size() == 0 && mShaderRecords.size() == 0; }
@@ -68,7 +68,7 @@ public:
 private:
     struct ShaderRecord {
         uint8_t model;
-        uint8_t variant;
+        Variant variant;
         uint8_t stage;
         uint32_t offset;
         vector<uint16_t> lineIndices;
@@ -100,7 +100,7 @@ public:
     void writeShadersChunk(ChunkType tag, ostream& stream) const;
 
     // Replaces the specified shader with new content.
-    void replaceShader(backend::ShaderModel shaderModel, uint8_t variant,
+    void replaceShader(backend::ShaderModel shaderModel, Variant variant,
             ShaderType stage, const char* source, size_t sourceLength);
 
     bool isEmpty() const { return mDataBlobs.size() == 0 && mShaderRecords.size() == 0; }
@@ -108,7 +108,7 @@ public:
 private:
     struct ShaderRecord {
         uint8_t model;
-        uint8_t variant;
+        Variant variant;
         uint8_t stage;
         uint32_t blobIndex;
     };
@@ -143,8 +143,8 @@ ShaderReplacer::~ShaderReplacer() {
     delete mEditedPackage;
 }
 
-bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, uint8_t variant,
-            ShaderType stage, const char* source, size_t sourceLength) {
+bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant variant,
+            ShaderType stage, const char* sourceString, size_t stringLength) {
     if (!mOriginalPackage.parse()) {
         return false;
     }
@@ -155,7 +155,7 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, uint8_t varian
     }
 
     if (mDictionaryTag == ChunkType::DictionarySpirv) {
-        return replaceSpirv(shaderModel, variant, stage, source, sourceLength);
+        return replaceSpirv(shaderModel, variant, stage, sourceString, stringLength);
     }
 
     // Clone all chunks except Dictionary* and Material*.
@@ -187,7 +187,7 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, uint8_t varian
 
     // Append the new chunks for Dictionary* and Material*.
     if (!shaderIndex.isEmpty()) {
-        shaderIndex.replaceShader(shaderModel, variant, stage, source, sourceLength);
+        shaderIndex.replaceShader(shaderModel, variant, stage, sourceString, stringLength);
         shaderIndex.writeLinesChunk(mDictionaryTag, tstream);
         shaderIndex.writeShadersChunk(mMaterialTag, tstream);
     }
@@ -204,7 +204,7 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, uint8_t varian
     return true;
 }
 
-bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, uint8_t variant,
+bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
             ShaderType stage, const char* source, size_t sourceLength) {
     filaflat::ChunkContainer const& cc = mOriginalPackage;
 
@@ -389,7 +389,7 @@ void ShaderIndex::writeShadersChunk(ChunkType tag, ostream& stream) const {
     }
 }
 
-void ShaderIndex::replaceShader(backend::ShaderModel shaderModel, uint8_t variant,
+void ShaderIndex::replaceShader(backend::ShaderModel shaderModel, Variant variant,
             backend::ShaderType stage, const char* source, size_t sourceLength) {
     decodeShadersFromIndices();
     const uint8_t model = (uint8_t) shaderModel;
@@ -545,7 +545,7 @@ void BlobIndex::writeShadersChunk(ChunkType tag, ostream& stream) const {
     }
 }
 
-void BlobIndex::replaceShader(ShaderModel shaderModel, uint8_t variant,
+void BlobIndex::replaceShader(ShaderModel shaderModel, Variant variant,
             ShaderType stage, const char* source, size_t sourceLength) {
     smolv::ByteArray compressed;
     if (!smolv::Encode(source, sourceLength, compressed, 0)) {

@@ -395,6 +395,13 @@ value_object<filament::View::TemporalAntiAliasingOptions>("View$TemporalAntiAlia
     .field("filterWidth", &filament::View::TemporalAntiAliasingOptions::filterWidth)
     .field("feedback", &filament::View::TemporalAntiAliasingOptions::feedback);
 
+value_object<filament::View::ScreenSpaceReflectionsOptions>("View$ScreenSpaceReflectionsOptions")
+    .field("thickness", &filament::View::ScreenSpaceReflectionsOptions::thickness)
+    .field("bias", &filament::View::ScreenSpaceReflectionsOptions::bias)
+    .field("maxDistance", &filament::View::ScreenSpaceReflectionsOptions::maxDistance)
+    .field("stride", &filament::View::ScreenSpaceReflectionsOptions::stride)
+    .field("enabled", &filament::View::ScreenSpaceReflectionsOptions::enabled);
+
 value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)
     .field("strength", &filament::View::BloomOptions::strength)
@@ -693,6 +700,7 @@ class_<View>("View")
     .function("_setDepthOfFieldOptions", &View::setDepthOfFieldOptions)
     .function("_setMultiSampleAntiAliasingOptions", &View::setMultiSampleAntiAliasingOptions)
     .function("_setTemporalAntiAliasingOptions", &View::setTemporalAntiAliasingOptions)
+    .function("_setScreenSpaceReflectionsOptions", &View::setScreenSpaceReflectionsOptions)
     .function("_setBloomOptions", &View::setBloomOptions)
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
@@ -1047,8 +1055,13 @@ class_<RenderableManager>("RenderableManager")
     }), allow_raw_pointers())
     
     .function("setMorphWeights", EMBIND_LAMBDA(void, (RenderableManager* self,
-            RenderableManager::Instance instance, float* weights, size_t count), {
-        self->setMorphWeights(instance, weights, count);
+            RenderableManager::Instance instance, emscripten::val weights), {
+        auto nfloats = weights["length"].as<size_t>();
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = weights[i].as<float>();
+        }
+        self->setMorphWeights(instance, floats.data(), nfloats);
     }), allow_raw_pointers())
 
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)

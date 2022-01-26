@@ -22,12 +22,14 @@
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
 
+#include <private/filament/Variant.h>
+
 namespace filament {
 namespace matdbg {
 
 struct ShaderInfo {
     backend::ShaderModel shaderModel;
-    uint8_t variant;
+    Variant variant;
     backend::ShaderType pipelineStage;
     uint32_t offset;
 };

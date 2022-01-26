@@ -133,9 +133,10 @@ public:
      * @param uvmap Output argument that gets populated with a small table that maps from a glTF uv
      *              index to a Filament uv index.
      * @param label Optional tag that is not a part of the cache key.
+     * @param extras Optional extras as stringified JSON (not a part of the cache key). Don't store the pointer.
      */
     virtual filament::MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-            const char* label = "material") = 0;
+            const char* label = "material", const char* extras = nullptr) = 0;
 
     /**
      * Gets a weak reference to the array of cached materials.

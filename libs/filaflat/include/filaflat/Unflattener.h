@@ -20,6 +20,8 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+#include <private/filament/Variant.h>
+
 #include <stdint.h>
 
 namespace filaflat {
@@ -61,6 +63,10 @@ public:
         *i = mCursor[0];
         mCursor += 1;
         return true;
+    }
+
+    bool read(filament::Variant* v) noexcept {
+        return read(&v->key);
     }
 
     bool read(uint16_t* i) noexcept {

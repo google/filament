@@ -73,6 +73,9 @@ set(SRCS
 if (WIN32)
     list(APPEND SRCS src/win32/Path.cpp)
 endif()
+if (ANDROID)
+    list(APPEND SRCS src/android/ThermalManager.cpp)
+endif()
 if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Condition.cpp)
     list(APPEND SRCS src/linux/Mutex.cpp)
@@ -135,6 +138,7 @@ set(TEST_SRCS
         test/test_Entity.cpp
         test/test_FixedCapacityVector.cpp
         test/test_JobSystem.cpp
+        test/test_RangeMap.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
         test/test_string.cpp

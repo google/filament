@@ -29,6 +29,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
+#include <private/filament/Variant.h>
 
 #include <utils/CString.h>
 
@@ -276,7 +277,7 @@ bool MaterialParser::getReflectionMode(ReflectionMode* value) const noexcept {
 }
 
 bool MaterialParser::getShader(ShaderBuilder& shader,
-        ShaderModel shaderModel, uint8_t variant, ShaderType stage) noexcept {
+        ShaderModel shaderModel, Variant variant, ShaderType stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,
             mImpl.mBlobDictionary, (uint8_t)shaderModel, variant, stage);
 }

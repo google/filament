@@ -236,13 +236,14 @@ private:
     std::function<void()> mCustomUI;
 
     // Properties that can be changed from the UI.
-    int mCurrentAnimation = 1;
+    int mCurrentAnimation = 1; // It is a 1-based index and 0 means not playing animation
     bool mResetAnimation = true;
     bool mEnableWireframe = false;
     int mVsmMsaaSamplesLog2 = 1;
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;
+    utils::Entity mCurrentMorphingEntity;
     std::vector<float> mMorphWeights;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).

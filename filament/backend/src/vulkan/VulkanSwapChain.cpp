@@ -289,6 +289,7 @@ void VulkanSwapChain::makePresentable() {
         return;
     }
     VulkanAttachment& swapContext = color[currentSwapIndex];
+    assert_invariant(swapContext.layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -311,7 +312,7 @@ void VulkanSwapChain::makePresentable() {
         .oldLayout = firstRenderPass ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 #endif
 
-        .newLayout = swapContext.layout,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = swapContext.image,

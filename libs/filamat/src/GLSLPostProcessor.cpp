@@ -28,15 +28,65 @@
 
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
+#include "shaders/MaterialInfo.h"
 
 #include <utils/Log.h>
 #include <filament/MaterialEnums.h>
+#include <private/filament/Variant.h>
+#include <private/filament/SibGenerator.h>
 
 using namespace glslang;
 using namespace spirv_cross;
 using namespace spvtools;
 
 namespace filamat {
+
+using BindingIndexMap = tsl::robin_map<std::string, uint16_t>;
+
+
+static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
+        filament::SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
+    const auto stageFlags = sib.getStageFlags();
+    if (!stageFlags.hasShaderType(config.shaderType)) {
+        return;
+    }
+    const auto& infoList = sib.getSamplerInfoList();
+    for (const auto& info : infoList) {
+        auto uniformName = filament::SamplerInterfaceBlock::getUniformName(
+                sib.getName().c_str(), info.name.c_str());
+        map[uniformName.c_str()] = map.size();
+    }
+}
+
+static BindingIndexMap getSurfaceBindingIndexMap(const GLSLPostProcessor::Config& config) {
+    BindingIndexMap map;
+    // We assume material variant 0 here, which is sufficient for calculating the binding map.
+    // The material variant currently only affects sampler formats (for VSM), not offsets.
+    const filament::Variant dummyVariant{};
+    generateBindingIndexMap(config,
+            filament::SibGenerator::getPerRenderPrimitiveMorphingSib(dummyVariant), map);
+    generateBindingIndexMap(config,
+            filament::SibGenerator::getPerViewSib(dummyVariant), map);
+    generateBindingIndexMap(config,
+            config.materialInfo->sib, map);
+    return map;
+}
+
+
+static BindingIndexMap getPostProcessBindingIndexMap(const GLSLPostProcessor::Config& config) {
+    BindingIndexMap map;
+    generateBindingIndexMap(config, config.materialInfo->sib, map);
+    return map;
+}
+
+static BindingIndexMap getBindingIndexMap(const GLSLPostProcessor::Config& config) {
+    switch (config.domain) {
+    case filament::MaterialDomain::SURFACE:
+        return getSurfaceBindingIndexMap(config);
+    case filament::MaterialDomain::POST_PROCESS:
+        return getPostProcessBindingIndexMap(config);
+    }
+}
 
 GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags)
         : mOptimization(optimization),
@@ -137,25 +187,29 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
 
     auto executionModel = mslCompiler.get_execution_model();
 
-    auto duplicateResourceBinding = [executionModel, &mslCompiler](const auto& resource) {
+    // The index will be used to remap based on BindingIndexMap and
+    // the result becomes a [[buffer(index)]], [[texture(index)]] or [[sampler(index)]].
+    auto updateResourceBinding = [executionModel, &mslCompiler]
+            (const auto& resource, const BindingIndexMap* map = nullptr) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
         MSLResourceBinding newBinding;
         newBinding.stage = executionModel;
         newBinding.desc_set = set;
         newBinding.binding = binding;
-        newBinding.msl_texture = binding;
-        newBinding.msl_sampler = binding;
-        newBinding.msl_buffer = binding;
+        newBinding.msl_texture =
+        newBinding.msl_sampler =
+        newBinding.msl_buffer = map ? map->at(mslCompiler.get_name(resource.id)) : binding;
         mslCompiler.add_msl_resource_binding(newBinding);
     };
 
     auto resources = mslCompiler.get_shader_resources();
+    auto bindingIndexMap = getBindingIndexMap(config);
     for (const auto& resource : resources.sampled_images) {
-        duplicateResourceBinding(resource);
+        updateResourceBinding(resource, &bindingIndexMap);
     }
     for (const auto& resource : resources.uniform_buffers) {
-        duplicateResourceBinding(resource);
+        updateResourceBinding(resource);
     }
 
     *outMsl = mslCompiler.compile();

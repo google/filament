@@ -57,6 +57,7 @@ MorphHelper::MorphHelper(FFilamentAsset* asset, FFilamentInstance* inst) : mAsse
             for (cgltf_size pi = 0, count = mesh->primitives_count; pi < count; ++pi) {
                 addPrimitive(mesh, pi, pair.second);
             }
+            addTargetNames(mesh, pair.second);
         }
     }
 }
@@ -72,20 +73,14 @@ MorphHelper::~MorphHelper() {
     }
 }
 
-void MorphHelper::setWeights(Entity entity, float const* weights, int count) noexcept {
-    auto& engine = *mAsset->mEngine;
-    auto& rcm = engine.getRenderableManager();
-    rcm.setMorphWeights(rcm.getInstance(entity), weights, count);
-}
-
-int MorphHelper::getTargetCount(Entity entity) const noexcept {
+const char* MorphHelper::getTargetNameAt(Entity entity, size_t targetIndex) const noexcept {
     if (mMorphTable.count(entity)) {
-        auto& primitive = mMorphTable.at(entity).primitives;
-        if (!primitive.empty() && primitive[0].targets) {
-            return primitive[0].targets->getCount();
+        auto& targetNames = mMorphTable.at(entity).targetNames;
+        if (!targetNames.empty()) {
+            return targetNames[targetIndex].c_str();
         }
     }
-    return 0;
+    return nullptr;
 }
 
 // This method copies various morphing-related data from the FilamentAsset MeshCache primitive
@@ -107,8 +102,8 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                 .build(engine);
 
         auto& rcm = engine.getRenderableManager();
-        rcm.setMorphTargetBufferAt(rcm.getInstance(entity),
-                primitiveIndex, morphHelperPrim.targets);
+        rcm.setMorphTargetBufferAt(rcm.getInstance(entity), 0, primitiveIndex,
+                morphHelperPrim.targets, vertexBuffer->getVertexCount());
     }
 
     const cgltf_accessor* previous = nullptr;
@@ -157,6 +152,23 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                 }
             }
         }
+    }
+}
+
+void MorphHelper::addTargetNames(cgltf_mesh const* mesh, Entity entity) {
+    const auto count = mesh->target_names_count;
+    if (count == 0) {
+        return;
+    }
+
+    auto& entry = mMorphTable[entity];
+    auto& names = entry.targetNames;
+
+    assert_invariant(names.empty());
+    names.reserve(count);
+
+    for (cgltf_size i = 0; i < count; ++i) {
+        names.push_back(utils::StaticString::make(mesh->target_names[i]));
     }
 }
 

@@ -106,15 +106,16 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:depthwrite" class="level3"><span class="tocNumber">4.2.19&nbsp; </span>Rasterization: depthWrite</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:depthculling" class="level3"><span class="tocNumber">4.2.20&nbsp; </span>Rasterization: depthCulling</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:doublesided" class="level3"><span class="tocNumber">4.2.21&nbsp; </span>Rasterization: doubleSided</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:shadowmultiplier" class="level3"><span class="tocNumber">4.2.22&nbsp; </span>Lighting: shadowMultiplier</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:transparentshadow" class="level3"><span class="tocNumber">4.2.23&nbsp; </span>Lighting: transparentShadow</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.24&nbsp; </span>Lighting: clearCoatIorChange</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.25&nbsp; </span>Lighting: multiBounceAmbientOcclusion</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.26&nbsp; </span>Lighting: specularAmbientOcclusion</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.27&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.28&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.29&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.30&nbsp; </span>Shading: customSurfaceShading</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:reflections" class="level3"><span class="tocNumber">4.2.22&nbsp; </span>Lighting: reflections</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:shadowmultiplier" class="level3"><span class="tocNumber">4.2.23&nbsp; </span>Lighting: shadowMultiplier</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:transparentshadow" class="level3"><span class="tocNumber">4.2.24&nbsp; </span>Lighting: transparentShadow</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.25&nbsp; </span>Lighting: clearCoatIorChange</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.26&nbsp; </span>Lighting: multiBounceAmbientOcclusion</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.27&nbsp; </span>Lighting: specularAmbientOcclusion</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.28&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.29&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.30&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.31&nbsp; </span>Shading: customSurfaceShading</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&nbsp; </span>Fragment block</a><br>
@@ -773,7 +774,7 @@ and with (right)</span></center></div></center>
 
 The <code>bentNormal</code> property defines the average unoccluded direction at a point on the surface. It is
 used to improve the accuracy of indirect lighting. Bent normals can also improve the quality of
-specular ambient occlusion (see section  <a href="#toc4.2.26">4.2.26</a> about
+specular ambient occlusion (see section  <a href="#toc4.2.27">4.2.27</a> about
 <code>specularAmbientOcclusion</code>).
 
 </p><p>
@@ -1959,15 +1960,43 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
 
-</p></dd><dt>Description</dt><dd><p>      Enables two-sided rendering and its capability to be toggled at run time. When set to <code>true</code>,
-      <code>culling</code> is automatically set to <code>none</code>; if the triangle is back-facing, the triangle's
-      normal is flipped to become front-facing. When explicitly set to <code>false</code>, this allows the
-      double-sidedness to be toggled at run time.
+</p></dd><dt>Description</dt><dd><p>      Only available in the <code>unlit</code> shading model. If this property is enabled, the final color
+      computed by the material is multiplied by the shadowing factor (or visibility). This allows to
+      create transparent shadow-receiving objects (for instance an invisible ground plane in AR).
+      This is only supported with shadows from directional lights.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    doubleSided : <span class="hljs-literal">true</span></span>
+<span class="line">    name : <span class="hljs-string">"Invisible shadow plane"</span>,</span>
+<span class="line">    shadingModel : unlit,</span>
+<span class="line">    shadowMultiplier : <span class="hljs-literal">true</span>,</span>
+<span class="line">    blending : transparent</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">fragment {</span>
+<span class="line">    void material(inout MaterialInputs material) {</span>
+<span class="line">        prepareMaterial(material);</span>
+<span class="line">        <span class="hljs-comment">// baseColor defines the color and opacity of the final shadow</span></span>
+<span class="line">        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);</span>
+<span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="lighting:shadowmultiplier">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:shadowmultiplier">&nbsp;</a><a class="target" name="toc4.2.22">&nbsp;</a><h3>Lighting: shadowMultiplier</h3>
+<a class="target" name="lighting:reflections">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:reflections">&nbsp;</a><a class="target" name="toc4.2.22">&nbsp;</a><h3>Lighting: reflections</h3>
+<p>
+
+
+</p><dl><dt>Type</dt><dd><p>     <code>string</code>
+
+</p></dd><dt>Value</dt><dd><p>      <code>default</code> or <code>screenspace</code>. Defaults to <code>default</code>.
+
+</p></dd><dt>Description</dt><dd><p>      Controls the source of specular reflections for this material. When this property is set to
+      <code>default</code>, reflections only come image-based lights. When this property is set to
+      <code>screenspace</code>, reflections come from the screen space's color buffer in addition to
+      image-based lights.
+
+</p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    name : <span class="hljs-string">"Glossy metal"</span>,</span>
+<span class="line">    reflections : screenspace</span>
+<span class="line">}</span></code></pre>
+<a class="target" name="lighting:shadowmultiplier">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:shadowmultiplier">&nbsp;</a><a class="target" name="toc4.2.23">&nbsp;</a><h3>Lighting: shadowMultiplier</h3>
 <p>
 
 
@@ -1994,7 +2023,7 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 <span class="line">        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="lighting:transparentshadow">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:transparentshadow">&nbsp;</a><a class="target" name="toc4.2.23">&nbsp;</a><h3>Lighting: transparentShadow</h3>
+<a class="target" name="lighting:transparentshadow">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:transparentshadow">&nbsp;</a><a class="target" name="toc4.2.24">&nbsp;</a><h3>Lighting: transparentShadow</h3>
 <p>
 
 
@@ -2028,7 +2057,7 @@ radius of 4. Model <a href="https://sketchfab.com/3d-models/bottle-of-water-48fd
 by <a href="https://sketchfab.com/person-x">T-Art</a>.</span></center></div></center>
 
 <p></p>
-<a class="target" name="lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="toc4.2.24">&nbsp;</a><h3>Lighting: clearCoatIorChange</h3>
+<a class="target" name="lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="toc4.2.25">&nbsp;</a><h3>Lighting: clearCoatIorChange</h3>
 <p>
 
 
@@ -2050,7 +2079,7 @@ with <code>clearCoatIorChange</code> enabled (left) and disabled
 (right).</span></center></div></center>
 
 <p></p>
-<a class="target" name="lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="toc4.2.25">&nbsp;</a><h3>Lighting: multiBounceAmbientOcclusion</h3>
+<a class="target" name="lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="toc4.2.26">&nbsp;</a><h3>Lighting: multiBounceAmbientOcclusion</h3>
 <p>
 
 
@@ -2079,7 +2108,7 @@ occclusion enabled (left) and disabled (right).</span></center></div></center>
 occclusion enabled and disabled.</span></center></div></center>
 
 <p></p>
-<a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.26">&nbsp;</a><h3>Lighting: specularAmbientOcclusion</h3>
+<a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.27">&nbsp;</a><h3>Lighting: specularAmbientOcclusion</h3>
 <p>
 
 
@@ -2105,7 +2134,7 @@ occclusion enabled and disabled.</span></center></div></center>
 particularly visible under the hose.</span></center></div></center>
 
 <p></p>
-<a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.27">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasing</h3>
+<a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.28">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasing</h3>
 <p>
 
 
@@ -2122,7 +2151,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasing : <span class="hljs-literal">true</span></span>
 <span class="line">}</span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="toc4.2.28">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingVariance</h3>
+<a class="target" name="anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="toc4.2.29">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingVariance</h3>
 <p>
 
 
@@ -2137,7 +2166,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasingVariance : <span class="hljs-number">0.2</span></span>
 <span class="line">}</span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="toc4.2.29">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingThreshold</h3>
+<a class="target" name="anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="toc4.2.30">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingThreshold</h3>
 <p>
 
 
@@ -2151,7 +2180,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasingThreshold : <span class="hljs-number">0.1</span></span>
 <span class="line">}</span></code></pre>
-<a class="target" name="shading:customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/shading:customsurfaceshading">&nbsp;</a><a class="target" name="toc4.2.30">&nbsp;</a><h3>Shading: customSurfaceShading</h3>
+<a class="target" name="shading:customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/shading:customsurfaceshading">&nbsp;</a><a class="target" name="toc4.2.31">&nbsp;</a><h3>Shading: customSurfaceShading</h3>
 <p>
 
 

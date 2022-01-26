@@ -95,33 +95,25 @@ void ExternalTextureManagerAndroid::destroy(ExternalTextureManagerAndroid* pExte
 // called on gl thread
 ExternalTextureManagerAndroid::ExternalTextureManagerAndroid() noexcept
         : mVm(VirtualMachineEnv::get()) {
-    // if we compile for API 26 (Oreo) and above, we're guaranteed to have AHardwareBuffer
-    // in all other cases, we need to get them at runtime.
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
-    // the following dlsym() calls don't work on API 19
-    if (api_level() >= 21) {
-        loadSymbol(AHardwareBuffer_allocate, "AHardwareBuffer_allocate");
-        loadSymbol(AHardwareBuffer_release, "AHardwareBuffer_release");
-    }
-#endif
 }
 
 // not quite sure on which thread this is going to be called
 ExternalTextureManagerAndroid::~ExternalTextureManagerAndroid() noexcept {
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
-    if (mGraphicBufferClass) {
-        JNIEnv* env = VirtualMachineEnv::getThreadEnvironment();
-        if (env) {
-            env->DeleteGlobalRef(mGraphicBufferClass);
+    if (__builtin_available(android 26, *)) {
+    } else {
+        if (mGraphicBufferClass) {
+            JNIEnv* env = VirtualMachineEnv::getThreadEnvironment();
+            if (env) {
+                env->DeleteGlobalRef(mGraphicBufferClass);
+            }
         }
     }
-#endif
 }
 
 // called on gl thread
 backend::Platform::ExternalTexture* ExternalTextureManagerAndroid::createExternalTexture() noexcept {
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
-    if (!AHardwareBuffer_allocate) {
+    if (__builtin_available(android 26, *)) {
+    } else {
         // initialize java stuff on-demand
         if (!mGraphicBufferClass) {
             JNIEnv* env = mVm.getEnvironment();
@@ -134,7 +126,6 @@ backend::Platform::ExternalTexture* ExternalTextureManagerAndroid::createExterna
             mGraphicBufferClass = static_cast<jclass>(env->NewGlobalRef(mGraphicBufferClass));
         }
     }
-#endif
     EGLExternalTexture* ets = new EGLExternalTexture;
     return ets;
 }
@@ -181,9 +172,7 @@ void ExternalTextureManagerAndroid::alloc(
             return;
     }
 
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
-    if (AHardwareBuffer_allocate) {
-#endif
+    if (__builtin_available(android 26, *)) {
         // allocate new storage...
         AHardwareBuffer* buffer = nullptr;
         if (AHardwareBuffer_allocate(&desc, &buffer) < 0) {
@@ -191,7 +180,6 @@ void ExternalTextureManagerAndroid::alloc(
             return;
         }
         ets->hardwareBuffer = buffer;
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
     } else {
         // note: This is called on the application thread (not the GL thread)
         JNIEnv* env = VirtualMachineEnv::getThreadEnvironment();
@@ -209,23 +197,17 @@ void ExternalTextureManagerAndroid::alloc(
             ets->clientBuffer = static_cast<ANativeWindowBuffer*>(gb);
         }
     }
-#endif
 }
 
 // called on gl thread
 void ExternalTextureManagerAndroid::destroyStorage(backend::Platform::ExternalTexture* t) noexcept {
         EGLExternalTexture* ets = static_cast<EGLExternalTexture*>(t);
-
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
-    if (AHardwareBuffer_allocate) {
-#endif
+    if (__builtin_available(android 26, *)) {
         // destroy the current storage if any
         if (ets->hardwareBuffer) {
             AHardwareBuffer_release(ets->hardwareBuffer);
             ets->hardwareBuffer = nullptr;
         }
-
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
     } else {
         if (ets->graphicBufferWrapper) {
             JNIEnv* env = VirtualMachineEnv::get().getEnvironment();
@@ -235,7 +217,6 @@ void ExternalTextureManagerAndroid::destroyStorage(backend::Platform::ExternalTe
             ets->graphicBufferWrapper = nullptr;
         }
     }
-#endif
 }
 
 } // namespace filament

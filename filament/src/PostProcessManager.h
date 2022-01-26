@@ -29,6 +29,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
 
+#include <private/filament/Variant.h>
+
 #include <utils/CString.h>
 
 #include <tsl/robin_map.h>
@@ -70,7 +72,8 @@ public:
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
-    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
+    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg,
+            RenderPass const& pass, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
     // SSAO
@@ -153,9 +156,9 @@ public:
             FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
             bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
-    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
-    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
-    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwTexture> getOneTexture() const;
+    backend::Handle<backend::HwTexture> getZeroTexture() const;
+    backend::Handle<backend::HwTexture> getOneTextureArray() const;
 
     math::float2 halton(size_t index) const noexcept {
         return mHaltonSamples[index & 0xFu];
@@ -207,7 +210,7 @@ private:
         FMaterial* getMaterial() const;
         FMaterialInstance* getMaterialInstance() const;
 
-        backend::PipelineState getPipelineState(uint8_t variant = 0u) const noexcept;
+        backend::PipelineState getPipelineState(Variant::type_t variantKey = 0u) const noexcept;
 
     private:
         FMaterial* assertMaterial() const noexcept;
@@ -231,9 +234,6 @@ private:
     void registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size);
     PostProcessMaterial& getPostProcessMaterial(utils::StaticString name) noexcept;
 
-    backend::Handle<backend::HwTexture> mDummyOneTexture;
-    backend::Handle<backend::HwTexture> mDummyOneTextureArray;
-    backend::Handle<backend::HwTexture> mDummyZeroTexture;
     backend::Handle<backend::HwTexture> mStarburstTexture;
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};

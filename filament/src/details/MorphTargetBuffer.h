@@ -48,19 +48,19 @@ public:
     inline size_t getVertexCount() const noexcept { return mVertexCount; }
     inline size_t getCount() const noexcept { return mCount; }
 
+    static backend::Handle<backend::HwSamplerGroup> createDummySampleGroup(FEngine& engine) noexcept;
+
 private:
     friend class FView;
     friend class RenderPass;
 
-    void commit(FEngine& engine) const noexcept;
-    void bind(backend::DriverApi& driver) const noexcept;
+    inline backend::Handle<backend::HwSamplerGroup> getHwHandle() const noexcept { return mSbHandle; }
 
     void updatePositionsAt(FEngine& engine, size_t targetIndex, void* data, size_t size);
 
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
     backend::Handle<backend::HwTexture> mPbHandle;
     backend::Handle<backend::HwTexture> mTbHandle;
-    backend::SamplerGroup mSBuffer;
     size_t mVertexCount;
     size_t mCount;
 };
