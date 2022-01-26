@@ -372,10 +372,8 @@ io::sstream& CodeGenerator::generateSamplers(
             // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
             if (mTargetApi == TargetApi::VULKAN ||
             // For Metal, the sampler binding index must less than 16. But we generate sampler binding
-            // index sequentially regardless binding shader stages, so we could be greater than 15.
-            // To avoid this problem, we have to pack binding indices. For instance, sampler binding index
-            // can be 0, 2 and 16. It's violate Metal spec. so we need to reorder binding index continuously
-            // like 0, 1 and 2. The set specifier will be used to do this.
+            // index sequentially regardless binding shader stages, so it could be greater than 15.
+            // To avoid this problem, we have to re-calculate resource binding indices each of shader stages.
                 mTargetApi == TargetApi::METAL) {
                 out << ", set = 1";
             }

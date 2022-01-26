@@ -372,6 +372,27 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
     // All stages of the program have compiled successfuly, this is a valid program.
     isValid = true;
 
+    // It calculates resource binding indices to avoid Metal spec. Sampler's binding can be up to
+    // 31. But it's not allowed by Metal spec if binding index is greater than 16. To avoid this
+    // spec, we need to calculate binding indices each of shader stages. Shaders also should be
+    // updated for this so, it's done by updateResourceBinding in GLSLPostProcessor.cpp.
+    //
+    // This is an example how binding indices each of shader stages is generated from sampler's
+    // bindings. Below is sampler`s bindings.
+    //  0 shadowMap { fragment }
+    //  1 structure { fragment }
+    //  2 targets { vertex }
+    //  3 color { vertex | fragment }
+    //  4 depth { vertex | fragment }
+    // Below is generated vertex sampler binding indices.
+    //  0 targets
+    //  1 color
+    //  2 depth
+    // Below is generated fragment sampler binding indices.
+    //  0 shadowMap
+    //  1 structure
+    //  2 color
+    //  3 depth
     auto& samplerGroupInfo = program.getSamplerGroupInfo();
     for (size_t shaderType = 0; shaderType != PIPELINE_STAGE_COUNT; ++shaderType) {
         size_t bindingIdx = 0;
