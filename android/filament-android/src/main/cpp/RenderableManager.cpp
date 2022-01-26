@@ -275,6 +275,16 @@ Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env,
     env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferAt(JNIEnv*,
+        jclass, jlong nativeRenderableManager, jint i, int level, jint primitiveIndex,
+        jlong nativeMorphTargetBuffer, jint offset, jint count) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+    rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
+            (size_t) primitiveIndex, morphTargetBuffer, (size_t) offset, (size_t) count);
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_RenderableManager_nGetMorphTargetCount(JNIEnv* env, jclass,
         jlong nativeRenderableManager, jint instance) {

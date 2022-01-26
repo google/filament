@@ -468,11 +468,14 @@ public:
     /**
      * Associates a MorphTargetBuffer to the given primitive.
      */
-    void setMorphTargetBufferAt(Instance instance,
-            size_t primitiveIndex, MorphTargetBuffer* morphTargetBuffer);
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t count); //!< \overload
 
     /**
-     * Gets the number of morphing in the given entity.
+     * Gets t
+     * number of morphing in the given entity.
      */
     size_t getMorphTargetCount(Instance instance) const noexcept;
 

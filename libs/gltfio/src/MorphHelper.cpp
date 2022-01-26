@@ -102,8 +102,8 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Entit
                 .build(engine);
 
         auto& rcm = engine.getRenderableManager();
-        rcm.setMorphTargetBufferAt(rcm.getInstance(entity),
-                primitiveIndex, morphHelperPrim.targets);
+        rcm.setMorphTargetBufferAt(rcm.getInstance(entity), 0, primitiveIndex,
+                morphHelperPrim.targets, vertexBuffer->getVertexCount());
     }
 
     const cgltf_accessor* previous = nullptr;
