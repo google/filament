@@ -456,6 +456,11 @@ public:
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
      * The renderable must be built with morphing enabled, see Builder::morphing().
+     *
+     * @param instance Instance of the component obtained from getInstance().
+     * @param weights Pointer to morph target weights to be update.
+     * @param count Number of morph target weights.
+     * @param offset Index of the first first morph target weight to set at instance.
      */
     void setMorphWeights(Instance instance,
             float const* weights, size_t count, size_t offset = 0);
