@@ -400,7 +400,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         for (size_t samplerGroupIdx = 0; samplerGroupIdx != SAMPLER_GROUP_COUNT; ++samplerGroupIdx) {
             auto& groupData = samplerGroupInfo[samplerGroupIdx];
             auto stageFlags = groupData.stageFlags;
-            if ((stageFlags.data & (0x1 << shaderType)) == 0) {
+            if (!stageFlags.hasShaderType(static_cast<ShaderType>(shaderType))) {
                 continue;
             }
             auto& samplers = groupData.samplers;

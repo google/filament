@@ -19,33 +19,19 @@
 
 #include <backend/DriverEnums.h>
 
-#include <stdint.h>
-
 namespace filament::backend {
 
 struct ShaderStageFlags {
-    union {
-        struct {
-            bool vertex : 1;
-            bool fragment : 1;
-        };
-        uint8_t data = 0;
-    };
+    bool vertex : 1;
+    bool fragment : 1;
+
+    inline bool hasShaderType(ShaderType type) const {
+        return (vertex && type == ShaderType::VERTEX) ||
+               (fragment && type == ShaderType::FRAGMENT);
+    }
 };
 
 constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { .vertex = true, .fragment = true };
-
-inline bool test(ShaderStageFlags flags, ShaderType type) {
-    return flags.data & (0x1 << type);
-}
-
-inline bool operator==(ShaderStageFlags lhs, ShaderStageFlags rhs) {
-    return lhs.data == rhs.data;
-}
-
-inline bool operator!=(ShaderStageFlags lhs, ShaderStageFlags rhs) {
-    return lhs.data != rhs.data;
-}
 
 inline utils::io::ostream& operator<<(utils::io::ostream& stream, ShaderStageFlags stageFlags) {
     stream << "{ ";

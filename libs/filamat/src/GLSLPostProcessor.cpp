@@ -47,7 +47,7 @@ using BindingIndexMap = tsl::robin_map<std::string, uint16_t>;
 static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
         filament::SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
     const auto stageFlags = sib.getStageFlags();
-    if (!test(stageFlags, config.shaderType)) {
+    if (!stageFlags.hasShaderType(config.shaderType)) {
         return;
     }
     const auto& infoList = sib.getSamplerInfoList();
