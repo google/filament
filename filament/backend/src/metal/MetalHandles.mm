@@ -372,11 +372,10 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
     // All stages of the program have compiled successfuly, this is a valid program.
     isValid = true;
 
-    // It calculates resource binding indices to avoid Metal spec. Sampler's binding can be up to
-    // 31. But it's not allowed by Metal spec if binding index is greater than 16. To avoid this
-    // spec, we need to calculate binding indices each of shader stages. Shaders also should be
-    // updated for this so, it's done by updateResourceBinding in GLSLPostProcessor.cpp.
-    //
+    // This calculates Metal resource binding indices. Filament's sampler bindings range from 0-31
+    // across both vertex and fragment stages. However, Metal binding indices must be < 16, with a
+    // separate binding "namespace" for each stage. So, we recompute binding indices for each shader
+    // stage. This logic should match updateResourceBinding in GLSLPostProcessor.cpp
     // This is an example how binding indices each of shader stages is generated from sampler's
     // bindings. Below is sampler`s bindings.
     //  0 shadowMap { fragment }
