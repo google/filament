@@ -304,6 +304,14 @@ void TweakableMaterial::drawUI(const std::string& header) {
             mMaxThickness.addWidget("thickness scale", 1.0f, 32.0f);
             mThickness.addWidget("thickness");
         }
+        if (ImGui::CollapsingHeader("Metal (anisotropy, etc.) settings")) {
+            mAnisotropy.addWidget("anisotropy", -1.0f, 1.0f);
+
+            // This is more intuitive to toggle like this
+            ImGui::Separator();
+            ImGui::LabelText("anisotropy direction", "anisotropy direction");
+            ImGuiExt::DirectionWidget("anisotropyDirection", mAnisotropyDirection.value.v);
+        }
         break;
     }
     case MaterialType::Cloth: {
