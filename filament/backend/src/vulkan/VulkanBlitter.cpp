@@ -129,11 +129,9 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
-
-    VkImageLayout srcLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    if (src.texture) {
-        srcLayout = mContext.getTextureLayout(src.texture->usage);
-    }
+    const VkImageLayout srcLayout = src.texture ?
+        getDefaultImageLayout(src.texture->usage) :
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     transitionImageLayout(cmdbuffer, {
         src.image,
@@ -172,7 +170,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
     // Determine the desired texture layout for the destination while ensuring that the default
     // render target is supported, which has no associated texture.
     const VkImageLayout desiredLayout = dst.texture ?
-            mContext.getTextureLayout(dst.texture->usage) :
+            getDefaultImageLayout(dst.texture->usage) :
             mContext.currentSurface->getColor().layout;
 
     transitionImageLayout(cmdbuffer, blitterTransitionHelper({
@@ -267,7 +265,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     // BEGIN RENDER PASS
     // -----------------
 
-    const VkImageLayout layout = mContext.getTextureLayout(TextureUsage::DEPTH_ATTACHMENT);
+    const VkImageLayout layout = getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT);
 
     const VulkanFboCache::RenderPassKey rpkey = {
         .depthLayout = layout,

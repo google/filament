@@ -48,7 +48,10 @@ VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
+VkImageViewType getImageViewType(SamplerType target);
+VkImageLayout getDefaultImageLayout(TextureUsage usage);
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
+
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
 
 // Helper function for populating barrier fields based on the desired image layout.
