@@ -209,9 +209,9 @@ Java_com_google_android_filament_RenderableManager_nBuilderSkinningBones(JNIEnv*
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jclass,
-        jlong nativeBuilder, jboolean enabled) {
+        jlong nativeBuilder, jint targetCount) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
-    builder->morphing(enabled);
+    builder->morphing(targetCount);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -267,11 +267,11 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsQuaternions(JNIEnv
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env, jclass,
-        jlong nativeRenderableManager, jint instance, jfloatArray weights) {
+        jlong nativeRenderableManager, jint instance, jfloatArray weights, jint offset) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     jfloat* vec = env->GetFloatArrayElements(weights, NULL);
     jsize count = env->GetArrayLength(weights);
-    rm->setMorphWeights((RenderableManager::Instance)instance, vec, count);
+    rm->setMorphWeights((RenderableManager::Instance)instance, vec, count, offset);
     env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
 }
 
@@ -282,8 +282,14 @@ Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferAt(JNIEn
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
     rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
-                               (size_t) primitiveIndex, morphTargetBuffer,
-                               (size_t) offset, (size_t) count);
+            (size_t) primitiveIndex, morphTargetBuffer, (size_t) offset, (size_t) count);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetMorphTargetCount(JNIEnv* env, jclass,
+        jlong nativeRenderableManager, jint instance) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return rm->getMorphTargetCount((RenderableManager::Instance)instance);
 }
 
 extern "C" JNIEXPORT void JNICALL

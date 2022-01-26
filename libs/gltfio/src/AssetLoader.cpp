@@ -492,7 +492,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     }
 
     if (numMorphTargets > 0) {
-        builder.morphing(true);
+        builder.morphing(numMorphTargets);
     }
 
     const Aabb transformed = aabb.transform(worldTransform);

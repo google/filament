@@ -583,7 +583,7 @@ void SimpleViewer::updateUserInterface() {
         rm.setCastShadows(instance, scaster);
         ImGui::Checkbox("receives shadows", &sreceiver);
         rm.setReceiveShadows(instance, sreceiver);
-        auto numMorphTargets = mAsset->getMorphTargetCount(entity);
+        auto numMorphTargets = rm.getMorphTargetCount(instance);
         if (numMorphTargets > 0) {
             bool selected = entity == mCurrentMorphingEntity;
             ImGui::Checkbox("morphing", &selected);
