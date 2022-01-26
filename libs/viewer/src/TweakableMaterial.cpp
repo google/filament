@@ -84,7 +84,7 @@ void TweakableMaterial::fromJson(const json& source) {
     readValueFromJson(source, "useWard", mUseWard, false);
 
     readTexturedFromJson(source, "baseColor", mBaseColor, true, isAlpha, isAlpha ? 4 : 3);
-    readValueFromJson(source, "tintColor", mTintColor);
+    readValueFromJson(source, "tintColor", mTintColor, { 1.0f, 1.0f, 1.0f });
 
     readValueFromJson(source, "normalIntensity", mNormalIntensity, 1.0f);
     readTexturedFromJson(source, "normalTexture", mNormal, false, false, 3);

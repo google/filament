@@ -286,7 +286,7 @@ void ApplyTransmission(inout MaterialInputs material, inout FragmentData fragmen
 void ApplyThickness(inout MaterialInputs material, inout FragmentData fragmentData) {
     // This is a transmission-only property and those materials actually disable blending
     // This applies both micro and regular thickness, although we only do the latter for now (the former would be used in transparent thin materials).
-#if defined(BLENDING_ENABLED) && defined(HAS_REFRACTION)
+#if defined(BLENDING_DISABLED) && defined(HAS_REFRACTION)
     float thicknessValue = 0.0;
     if (materialParams.useThicknessTexture == 1) {
         thicknessValue = TriplanarTexture(materialParams_thicknessTexture,
