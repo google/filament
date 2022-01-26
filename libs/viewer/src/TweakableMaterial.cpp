@@ -20,7 +20,7 @@ json TweakableMaterial::toJson() {
     result["useWard"] = mUseWard;
 
     writeTexturedToJson(result, "baseColor", mBaseColor);
-    result["tintcolor"] = mTintColor.value;
+    result["tintColor"] = mTintColor.value;
 
     result["normalIntensity"] = mNormalIntensity.value;
 
