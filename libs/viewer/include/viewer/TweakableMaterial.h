@@ -84,7 +84,7 @@ public:
 
     const TweakableMaterial::RequestedTexture nextRequestedTexture();
 
-    TweakablePropertyTextured<filament::math::float4,true> mBaseColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
+    TweakablePropertyTextured<filament::math::float4,true> mBaseColor{ {1.0f, 1.0f, 1.0f, 1.0f} };
     TweakableProperty<filament::math::float3> mTintColor{ { 1.0f, 1.0f, 1.0f } };
 
     TweakablePropertyTextured<float> mNormal{};
