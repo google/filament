@@ -238,13 +238,7 @@ public:
 
     using RenderFlags = uint8_t;
     static constexpr RenderFlags HAS_SHADOWING           = 0x01;
-    static constexpr RenderFlags HAS_DIRECTIONAL_LIGHT   = 0x02;
-    static constexpr RenderFlags HAS_DYNAMIC_LIGHTING    = 0x04;
-    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
-    static constexpr RenderFlags HAS_FOG                 = 0x10;
-    static constexpr RenderFlags HAS_VSM                 = 0x20;
-    static constexpr RenderFlags HAS_PICKING             = 0x40;
-    static constexpr RenderFlags HAS_DPCF_OR_PCSS        = 0x80;
+    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x02;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -278,6 +272,9 @@ public:
 
     //  flags controlling how commands are generated
     void setRenderFlags(RenderFlags flags) noexcept { mFlags = flags; }
+
+    // variant to use
+    void setVariant(Variant variant) noexcept { mVariant = variant; }
 
     // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to determine
     // if the renderable is visible for this pass.
@@ -369,13 +366,15 @@ private:
             "Size of Commands jobs must be multiple of a cache-line size");
 
     static inline void generateCommands(uint32_t commandTypeFlags, Command* commands,
-            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
-            FScene::VisibleMaskType visibilityMask, math::float3 cameraPosition, math::float3 cameraForward) noexcept;
+            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
+            Variant variant, RenderFlags renderFlags,
+            FScene::VisibleMaskType visibilityMask,
+            math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     template<uint32_t commandTypeFlags>
     static inline void generateCommandsImpl(uint32_t, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
-            RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
+            Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw,
@@ -414,6 +413,9 @@ private:
 
     // info about the scene features (e.g.: has shadows, lighting, etc...)
     RenderFlags mFlags{};
+
+    // Variant to use
+    Variant mVariant{};
 
     // Additional visibility mask
     FScene::VisibleMaskType mVisibilityMask = std::numeric_limits<FScene::VisibleMaskType>::max();
