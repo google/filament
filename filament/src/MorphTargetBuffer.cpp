@@ -41,10 +41,8 @@ BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
 BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
 BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder&
-BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder&
-BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::vertexCount(size_t vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
@@ -66,8 +64,7 @@ MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
 // When you change this value, you must change MAX_MORPH_TARGET_BUFFER_WIDTH at getters.vs
 constexpr size_t MAX_MORPH_TARGET_BUFFER_WIDTH = 2048;
 
-static const auto FREE_CALLBACK =
-        [](void* mem, size_t, void*) { ::free(mem); };
+static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { ::free(mem); };
 
 static inline size_t getWidth(size_t vertexCount) noexcept {
     return std::min(vertexCount, MAX_MORPH_TARGET_BUFFER_WIDTH);
@@ -112,6 +109,7 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getHeight(mVertexCount),
             mCount,
             TextureUsage::DEFAULT);
+
     mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA16I, 1,
             getWidth(mVertexCount),
