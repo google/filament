@@ -531,7 +531,7 @@ public:
 
     /**
      * Legacy morphing uses the data in the VertexAttribute slots (\c MORPH_POSITION_0, etc) and is
-     * limited to 4 morph targets. See RenderableManager::Builder::morphing().
+     * limited to 4 morph targets. See filament::RenderableManager::Builder::morphing().
      */
     MaterialBuilder& useLegacyMorphing() noexcept;
 

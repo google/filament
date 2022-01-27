@@ -313,7 +313,7 @@ public:
          * appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc). Legacy morphing only
          * supports up to 4 morph targets and will be deprecated in the future. Legacy morphing must
          * be enabled on the material definition: either via the legacyMorphing material attribute
-         * or by calling MaterialBuilder::useLegacyMorphing().
+         * or by calling filamat::MaterialBuilder::useLegacyMorphing().
          *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
