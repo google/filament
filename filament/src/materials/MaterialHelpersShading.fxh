@@ -148,7 +148,7 @@ void ApplyClearCoatNormalMap(inout MaterialInputs material, inout FragmentData f
 }
 
 void ApplyBaseColor(inout MaterialInputs material, inout FragmentData fragmentData) {
-#if defined(MATERIAL_HAS_BASE_COLOR) 
+#if defined(MATERIAL_HAS_BASE_COLOR)
     if (materialParams.useBaseColorTexture == 1) {
 #if defined(BLENDING_ENABLED) || defined(HAS_REFRACTION)
         material.baseColor.rgba = TriplanarTexture(materialParams_baseColorTexture,
@@ -175,9 +175,6 @@ void ApplyBaseColor(inout MaterialInputs material, inout FragmentData fragmentDa
     material.baseColor.rgb *= materialParams.tintColor.rgb;
 #if defined(BLENDING_ENABLED)
     material.baseColor.rgb *= material.baseColor.a;
-#endif
-
-#if defined(BLENDING_ENABLED)
     material.baseColor.a = 0.0;
 #else
     material.baseColor.a = 1.0;
