@@ -34,6 +34,8 @@ namespace filament {
         using type_t = uint8_t;
 
         Variant() noexcept = default;
+        Variant(Variant const& rhs) noexcept = default;
+        Variant& operator=(Variant const& rhs) noexcept = default;
         constexpr explicit Variant(type_t key) noexcept : key(key) { }
 
 

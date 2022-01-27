@@ -382,8 +382,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
             },
             [=, renderPass = pass](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
+                Variant structureVariant(Variant::DEPTH_VARIANT);
+                structureVariant.setPicking(config.picking);
+
                 auto out = resources.getRenderPassInfo();
                 renderPass.setRenderFlags(structureRenderFlags);
+                renderPass.setVariant(structureVariant);
                 renderPass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
                 renderPass.sortCommands();
                 renderPass.execute(resources.getPassName(), out.target, out.params);
