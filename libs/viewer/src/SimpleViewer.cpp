@@ -738,9 +738,6 @@ void SimpleViewer::loadTweaksFromFile(const std::string& entityName, const std::
     inFile >> js;
     inFile.close();
     tweaks.fromJson(js);
-
-    // fixup legacy transparent thin material
-    if (tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentThin) tweaks.mShaderType = TweakableMaterial::MaterialType::TransparentSolid;
 }
 
 void SimpleViewer::changeElementVisibility(utils::Entity entity, int elementIndex, bool newVisibility) {
@@ -923,7 +920,7 @@ std::string SimpleViewer::validateTweaks(const TweakableMaterial& tweaks) {
         // Infer the expected texture format if no explicit cue was given by the caller
         if (expectedFormat == filament::Texture::InternalFormat::UNUSED) {
             if (IsColor) {
-                if (tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentSolid) {
+                if (tweaks.mShaderType == TweakableMaterial::MaterialType::Transparent || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
                     expectedFormat = filament::Texture::InternalFormat::SRGB8_A8;
                     expectedChannelCount = 4;
                 }
@@ -943,7 +940,9 @@ std::string SimpleViewer::validateTweaks(const TweakableMaterial& tweaks) {
             else if (expectedFormat == filament::Texture::InternalFormat::R8) expectedChannelCount = 1;
         }
 
-        if (textureEntry->second->getFormat() != expectedFormat) {
+        if (textureEntry->second == nullptr) {
+            result += "ERROR: texture for " + prompt + " could not be loaded!\n";
+        } else if (textureEntry->second->getFormat() != expectedFormat) {
             result += "ERROR: " + prompt + " has incorrect format! Expected " + formatToName(expectedFormat) + ", got " + formatToName(textureEntry->second->getFormat()) + ".\n";
         }
 
@@ -1075,8 +1074,12 @@ void SimpleViewer::updateUserInterface() {
                                 changeMaterialTypeTo(TweakableMaterial::MaterialType::Opaque);
                             }
                             ImGui::SameLine();
-                            if (ImGui::RadioButton("Transparent solid", tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentSolid)) {
-                                changeMaterialTypeTo(TweakableMaterial::MaterialType::TransparentSolid);
+                            if (ImGui::RadioButton("Transparent", tweaks.mShaderType == TweakableMaterial::MaterialType::Transparent)) {
+                                changeMaterialTypeTo(TweakableMaterial::MaterialType::Transparent);
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::RadioButton("Refractive", tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive)) {
+                                changeMaterialTypeTo(TweakableMaterial::MaterialType::Refractive);
                             }
                             ImGui::SameLine();
                             if (ImGui::RadioButton("Cloth", tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth)) {
@@ -1242,21 +1245,21 @@ void SimpleViewer::updateUserInterface() {
 
                     setTextureIfPresent(tweaks.mBaseColor.isFile, tweaks.mBaseColor.filename, "baseColor");
 
-                    matInstance->setParameter("normalScale", tweaks.mNormalIntensity.value);
+                    matInstance->setParameter("tintColor", tweaks.mTintColor.value);
+
+                    matInstance->setParameter("normalIntensity", tweaks.mNormalIntensity.value);
                     setTextureIfPresent(tweaks.mNormal.isFile, tweaks.mNormal.filename, "normal");
                     matInstance->setParameter("roughnessScale", tweaks.mRoughnessScale.value);
                     setTextureIfPresent(tweaks.mRoughness.isFile, tweaks.mRoughness.filename, "roughness");
-                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth || tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface) {
+                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth || tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
                         matInstance->setParameter("occlusionIntensity", tweaks.mOcclusionIntensity.value);
                         setTextureIfPresent(tweaks.mOcclusion.isFile, tweaks.mOcclusion.filename, "occlusion");
                         matInstance->setParameter("occlusion", tweaks.mOcclusion.value);
                     }
 
-                    matInstance->setParameter("clearCoatNormalScale", tweaks.mClearCoatNormalIntensity.value);
+                    matInstance->setParameter("clearCoatNormalIntensity", tweaks.mClearCoatNormalIntensity.value);
                     setTextureIfPresent(tweaks.mClearCoatNormal.isFile, tweaks.mClearCoatNormal.filename, "clearCoatNormal");
                     setTextureIfPresent(tweaks.mClearCoatRoughness.isFile, tweaks.mClearCoatRoughness.filename, "clearCoatRoughness");
-
-                    matInstance->setParameter("useBumpTexture", 0);
 
                     matInstance->setParameter("textureScaler", math::float4(tweaks.mBaseTextureScale, tweaks.mNormalTextureScale, tweaks.mClearCoatTextureScale, tweaks.mRefractiveTextureScale));
                     matInstance->setParameter("specularIntensity", tweaks.mSpecularIntensity.value);
@@ -1290,7 +1293,7 @@ void SimpleViewer::updateUserInterface() {
                         matInstance->setParameter("subsurfacePower", tweaks.mSubsurfacePower.value);
                     }
 
-                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque) {
+                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
                         // Transparent materials do not expose anisotropy and sheen, these are not present in their UBOs
                         matInstance->setParameter("anisotropy", tweaks.mAnisotropy.value);
                         matInstance->setParameter("anisotropyDirection", normalize(tweaks.mAnisotropyDirection.value));
@@ -1302,27 +1305,31 @@ void SimpleViewer::updateUserInterface() {
                             matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
                             matInstance->setParameter("doDeriveSheenColor", 0);
                         }
-                        setTextureIfPresent(tweaks.mSheenRoughness.isFile, tweaks.mSheenRoughness.filename, "sheenRoughness");
+                        if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque) {
+                            setTextureIfPresent(tweaks.mSheenRoughness.isFile, tweaks.mSheenRoughness.filename, "sheenRoughness");
+                        }
                         matInstance->setParameter("sheenRoughness", tweaks.mSheenRoughness.value);
-                    } else if (tweaks.mShaderType == TweakableMaterial::MaterialType::TransparentSolid) {
-                        // Only transparent materials have the properties below
-                        if (tweaks.mSheenColor.useDerivedQuantity) {
-                            matInstance->setParameter("doDeriveAbsorption", 1);
-                        }
-                        else {
-                            matInstance->setParameter("absorption", tweaks.mAbsorption.value);
-                            matInstance->setParameter("doDeriveAbsorption", 0);
-                        }
-                        
-                        setTextureIfPresent(tweaks.mTransmission.isFile, tweaks.mTransmission.filename, "transmission");
-                        setTextureIfPresent(tweaks.mThickness.isFile, tweaks.mThickness.filename, "thickness");
 
-                        matInstance->setParameter("iorScale", tweaks.mIorScale.value);
-                        matInstance->setParameter("ior", tweaks.mIor.value);
-                        matInstance->setParameter("transmission", tweaks.mTransmission.value);
-                        matInstance->setParameter("thickness", tweaks.mThickness.value);
-                        matInstance->setParameter("maxThickness", tweaks.mMaxThickness.value);
-                    }
+                        if (tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
+                            // Only refractive materials have the properties below
+                            if (tweaks.mAbsorption.useDerivedQuantity) {
+                                matInstance->setParameter("doDeriveAbsorption", 1);
+                            }
+                            else {
+                                matInstance->setParameter("absorption", tweaks.mAbsorption.value);
+                                matInstance->setParameter("doDeriveAbsorption", 0);
+                            }
+
+                            setTextureIfPresent(tweaks.mTransmission.isFile, tweaks.mTransmission.filename, "transmission");
+                            setTextureIfPresent(tweaks.mThickness.isFile, tweaks.mThickness.filename, "thickness");
+
+                            matInstance->setParameter("iorScale", tweaks.mIorScale.value);
+                            matInstance->setParameter("ior", tweaks.mIor.value);
+                            matInstance->setParameter("transmission", tweaks.mTransmission.value);
+                            matInstance->setParameter("thickness", tweaks.mThickness.value);
+                            matInstance->setParameter("maxThickness", tweaks.mMaxThickness.value);
+                        }
+                    } 
                 }
             }
         }
