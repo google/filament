@@ -170,7 +170,7 @@ void Manipulator<FLOAT>::setProperties(const Config& props) {
     }
 
     if (mProps.upVector == vec3(0)) {
-        mProps.upVector = vec3(0, 0, 1);
+        mProps.upVector = vec3(0, 1, 0);
     }
 
     if (mProps.fovDegrees == FLOAT(0)) {

@@ -67,7 +67,7 @@ public:
     }
 
     void updateTarget(FLOAT pitch, FLOAT yaw) {
-        Base::mTarget = Base::mEye + (mat3::eulerZYX(yaw, 0, pitch) * vec3(0.0, 1.0, 0.0));
+        Base::mTarget = Base::mEye + (mat3::eulerZYX(0, yaw, pitch) * vec3(0.0, 0.0, -1.0));
     }
 
     void grabBegin(int x, int y, bool strafe) override {
@@ -144,10 +144,10 @@ public:
         vec3 forceWorld = (orientation * vec4{ forceLocal, 0.0f }).xyz;
 
         if (mKeyDown[(int) Base::Key::UP]) {
-            forceWorld += vec3{  0.0,  0.0,  1.0 };
+            forceWorld += vec3{  0.0,  1.0,  0.0 };
         }
         if (mKeyDown[(int) Base::Key::DOWN]) {
-            forceWorld += vec3{  0.0,  0.0, -1.0 };
+            forceWorld += vec3{  0.0, -1.0,  0.0 };
         }
 
         forceWorld *= mMoveSpeed;

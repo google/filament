@@ -645,15 +645,11 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // set-up the camera manipulators
     mMainCameraMan = CameraManipulator::Builder()
-            .targetPosition(0, -4, 0)
-            .upVector(0, 0, 1)
-            .flightStartPosition(3, 1, 2)
-            .flightStartOrientation(-0.1, 1)
+            .targetPosition(0, 0, -4)
             .flightMoveDamping(15.0)
             .build(config.cameraMode);
     mDebugCameraMan = CameraManipulator::Builder()
-            .targetPosition(0, -4, 0)
-            .upVector(0, 0, 1)
+            .targetPosition(0, 0, -4)
             .build(camutils::Mode::ORBIT);
 
     mMainView->setCamera(mMainCamera);
@@ -676,7 +672,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     // configure the cameras
     configureCamerasForWindow();
 
-    mMainCamera->lookAt({4, -4, 0}, {0, -4, 0}, {0, 0, 1});
+    mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
 }
 
 FilamentApp::Window::~Window() {
@@ -845,7 +841,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
     mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0078125, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
-    mOrthoCamera->lookAt({ 4, -4, 0 }, { 0, -4, 0 });
+    mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {
