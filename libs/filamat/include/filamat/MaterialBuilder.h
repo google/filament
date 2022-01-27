@@ -530,6 +530,12 @@ public:
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
     /**
+     * Legacy morphing uses the data in the VertexAttribute slots (\c MORPH_POSITION_0, etc) and is
+     * limited to 4 morph targets. See RenderableManager::Builder::morphing().
+     */
+    MaterialBuilder& useLegacyMorphing() noexcept;
+
+    /**
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
      */
@@ -743,6 +749,8 @@ private:
     bool mCustomSurfaceShading = false;
 
     bool mEnableFramebufferFetch = false;
+
+    bool mUseLegacyMorphing = false;
 
     PreprocessorDefineList mDefines;
 };
