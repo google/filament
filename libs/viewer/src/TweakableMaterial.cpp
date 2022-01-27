@@ -32,7 +32,7 @@ json TweakableMaterial::toJson() {
     writeTexturedToJson(result, "metallic", mMetallic);
 
     result["occlusionIntensity"] = mOcclusionIntensity.value;
-    result["occlusion"] = mOcclusion.value;
+    writeTexturedToJson(result, "occlusion", mOcclusion);
 
     result["clearCoat"] = mClearCoat.value;
     result["clearCoatNormalIntensity"] = mClearCoatNormalIntensity.value;
