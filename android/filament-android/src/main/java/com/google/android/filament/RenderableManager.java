@@ -400,7 +400,21 @@ public class RenderableManager {
         }
 
         /**
-         * Controls if the renderable has vertex morphing targets, zero by default.
+         * Controls if the renderable has vertex morphing targets, zero by default. This is
+         * required to enable GPU morphing.
+         *
+         * <p>Filament supports two morphing modes: standard (default) and legacy.</p>
+         *
+         * <p>For standard morphing, A {@link MorphTargetBuffer} must be created and provided via
+         * {@link RenderableManager#setMorphTargetBufferAt}. Standard morphing supports up to
+         * <code>CONFIG_MAX_MORPH_TARGET_COUNT</code> morph targets.</p>
+         *
+         * For legacy morphing, the attached {@link VertexBuffer} must provide data in the
+         * appropriate {@link VertexBuffer.VertexAttribute} slots (<code>MORPH_POSITION_0</code> etc).
+         * Legacy morphing only supports up to 4 morph targets and will be deprecated in the future.
+         * Legacy morphing must be enabled on the material definition: either via the
+         * <code>legacyMorphing</code> material attribute or by calling
+         * {@link MaterialBuilder::useLegacyMorphing}.
          *
          * <p>See also {@link RenderableManager#setMorphWeights}, which can be called on a per-frame basis
          * to advance the animation.</p>
@@ -494,7 +508,8 @@ public class RenderableManager {
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * <p>The renderable must be built with morphing enabled.</p>
+     * <p>The renderable must be built with morphing enabled. In legacy morphing mode, only the
+     * first 4 weights are considered.</p>
      *
      * @see Builder#morphing
      */

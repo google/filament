@@ -590,6 +590,13 @@ static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue
     return true;
 }
 
+static bool processLegacyMorphing(MaterialBuilder& builder, const JsonishValue& value) {
+    if (value.toJsonBool()->getBool()) {
+        builder.useLegacyMorphing();
+    }
+    return true;
+}
+
 static bool processCustomSurfaceShading(MaterialBuilder& builder, const JsonishValue& value) {
     builder.customSurfaceShading(value.toJsonBool()->getBool());
     return true;
@@ -759,6 +766,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
+    mParameters["legacyMorphing"]                = { &processLegacyMorphing, Type::BOOL };
     mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
     mParameters["quality"]                       = { &processQuality, Type::STRING };
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };

@@ -187,6 +187,8 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
 
     CodeGenerator::generateDefine(vs, "FLIP_UV_ATTRIBUTE", material.flipUV);
 
+    CodeGenerator::generateDefine(vs, "LEGACY_MORPHING", material.useLegacyMorphing);
+
     const bool litVariants = lit || material.hasShadowMultiplier;
 
     // note: even if the user vertex shader is empty, we can't use the "optimized" version if
@@ -217,6 +219,16 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     if (variant.hasSkinningOrMorphing()) {
         attributes.set(VertexAttribute::BONE_INDICES);
         attributes.set(VertexAttribute::BONE_WEIGHTS);
+        if (material.useLegacyMorphing) {
+            attributes.set(VertexAttribute::MORPH_POSITION_0);
+            attributes.set(VertexAttribute::MORPH_POSITION_1);
+            attributes.set(VertexAttribute::MORPH_POSITION_2);
+            attributes.set(VertexAttribute::MORPH_POSITION_3);
+            attributes.set(VertexAttribute::MORPH_TANGENTS_0);
+            attributes.set(VertexAttribute::MORPH_TANGENTS_1);
+            attributes.set(VertexAttribute::MORPH_TANGENTS_2);
+            attributes.set(VertexAttribute::MORPH_TANGENTS_3);
+        }
     }
     CodeGenerator::generateShaderInputs(vs, ShaderType::VERTEX, attributes, interpolation);
 

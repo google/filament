@@ -35,12 +35,10 @@ vec3 mulBoneNormal(vec3 n, uint i) {
     highp mat3 cof;
 
     // the first 8 elements of the cofactor matrix are stored as fp16
-    highp vec2 zx = unpackHalf2x16(bonesUniforms.bones[i].cof[1]);
-    cof[0].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[0]);
-    cof[0].z = zx[0];
-    cof[1].x = zx[1];
-    cof[1].yz = unpackHalf2x16(bonesUniforms.bones[i].cof[2]);
-    cof[2].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[3]);
+    highp vec2 x0y0 = unpackHalf2x16(bonesUniforms.bones[i].cof[0]);
+    highp vec2 z0x1 = unpackHalf2x16(bonesUniforms.bones[i].cof[1]);
+    highp vec2 y1z1 = unpackHalf2x16(bonesUniforms.bones[i].cof[2]);
+    highp vec2 x2y2 = unpackHalf2x16(bonesUniforms.bones[i].cof[3]);
 
     // the last element must be computed by hand
     highp float a = bonesUniforms.bones[i].transform[0][0];
@@ -48,7 +46,9 @@ vec3 mulBoneNormal(vec3 n, uint i) {
     highp float d = bonesUniforms.bones[i].transform[1][0];
     highp float e = bonesUniforms.bones[i].transform[1][1];
 
-    cof[2].z = a * e - b * d;
+    cof[0].xyz = vec3(x0y0, z0x1.x);
+    cof[1].xyz = vec3(z0x1.y, y1z1);
+    cof[2].xyz = vec3(x2y2, a * e - b * d);
 
     return normalize(cof * n);
 }
@@ -102,7 +102,14 @@ vec4 getPosition() {
 #if defined(HAS_SKINNING_OR_MORPHING)
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+        #if defined(LEGACY_MORPHING)
+        pos += morphingUniforms.weights[0] * mesh_custom0;
+        pos += morphingUniforms.weights[1] * mesh_custom1;
+        pos += morphingUniforms.weights[2] * mesh_custom2;
+        pos += morphingUniforms.weights[3] * mesh_custom3;
+        #else
         morphPosition(pos);
+        #endif
     }
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {

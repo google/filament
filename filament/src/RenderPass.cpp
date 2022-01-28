@@ -94,6 +94,7 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
     FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     const RenderFlags renderFlags = mFlags;
+    const Variant variant = mVariant;
     const FScene::VisibleMaskType visibilityMask = mVisibilityMask;
     CameraInfo const& camera = mCamera;
 
@@ -113,11 +114,11 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
     // we extract camera position/forward outside of the loop, because these are not cheap.
     const float3 cameraPosition(camera.getPosition());
     const float3 cameraForwardVector(camera.getForwardVector());
-    auto work = [commandTypeFlags, curr, &soa, renderFlags, visibilityMask, cameraPosition,
+    auto work = [commandTypeFlags, curr, &soa, variant, renderFlags, visibilityMask, cameraPosition,
                  cameraForwardVector]
             (uint32_t startIndex, uint32_t indexCount) {
         RenderPass::generateCommands(commandTypeFlags, curr,
-                soa, { startIndex, startIndex + indexCount }, renderFlags, visibilityMask,
+                soa, { startIndex, startIndex + indexCount }, variant, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector);
     };
 
@@ -211,8 +212,10 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
 /* static */
 UTILS_NOINLINE
 void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
-        FScene::RenderableSoa const& soa, Range<uint32_t> range, RenderFlags renderFlags,
-        FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward) noexcept {
+        FScene::RenderableSoa const& soa, Range<uint32_t> range,
+        Variant variant, RenderFlags renderFlags,
+        FScene::VisibleMaskType visibilityMask,
+        float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -239,11 +242,11 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
     switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
-                    soa, range, renderFlags, visibilityMask, cameraPosition, cameraForward);
+                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         case CommandTypeFlags::DEPTH:
             generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
-                    soa, range, renderFlags, visibilityMask, cameraPosition, cameraForward);
+                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         default:
             // we should never end-up here
@@ -257,7 +260,7 @@ UTILS_NOINLINE
 void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
-        RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
+        Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
@@ -283,23 +286,13 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
 
-    Variant materialVariant;
-    materialVariant.setDirectionalLighting(renderFlags & HAS_DIRECTIONAL_LIGHT);
-    materialVariant.setDynamicLighting(renderFlags & HAS_DYNAMIC_LIGHTING);
-    materialVariant.setFog(renderFlags & HAS_FOG);
-    // DPCF and PCSS uses the same color pass shader as VSM (but not for depth)
-    materialVariant.setVsm(((renderFlags & HAS_VSM) || (renderFlags & HAS_DPCF_OR_PCSS)) && hasShadowing);
-    materialVariant.setShadowReceiver(false); // this is set per Renderable
-
     Command cmdColor;
 
     Command cmdDepth;
     if constexpr (isDepthPass) {
-        cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
-        cmdDepth.primitive.materialVariant.setPicking(renderFlags & HAS_PICKING);
-        cmdDepth.primitive.materialVariant.setVsm(renderFlags & HAS_VSM);
+        cmdDepth.primitive.materialVariant = variant;
         cmdDepth.primitive.rasterState = {};
-        cmdDepth.primitive.rasterState.colorWrite = renderFlags & (HAS_VSM | HAS_PICKING);
+        cmdDepth.primitive.rasterState.colorWrite = variant.hasPicking() || variant.hasVsm();
         cmdDepth.primitive.rasterState.depthWrite = true;
         cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::GE;
         cmdDepth.primitive.rasterState.alphaToCoverage = false;
@@ -355,8 +348,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
-        materialVariant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
-        materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
+        variant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
+        variant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
 
         if constexpr (isDepthPass) {
             cmdDepth.key = uint64_t(Pass::DEPTH);
@@ -384,7 +377,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             FMorphTargetBuffer const* const morphTargetBuffer = primitive.getMorphTargetBuffer();
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.materialVariant = materialVariant;
+                cmdColor.primitive.materialVariant = variant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
 
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;

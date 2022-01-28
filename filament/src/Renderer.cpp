@@ -285,23 +285,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
 
     RenderPass pass(engine, commandArena);
-    RenderPass::RenderFlags baseRenderFlags = 0;
-    if (view.hasShadowing())               baseRenderFlags |= RenderPass::HAS_SHADOWING;
-    if (view.hasDirectionalLight())        baseRenderFlags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
-    if (view.hasDynamicLighting())         baseRenderFlags |= RenderPass::HAS_DYNAMIC_LIGHTING;
-    if (view.hasFog())                     baseRenderFlags |= RenderPass::HAS_FOG;
-    if (view.isFrontFaceWindingInverted()) baseRenderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
 
-    RenderPass::RenderFlags colorRenderFlags = baseRenderFlags;
-    switch (view.getShadowType()) {
-        case ShadowType::PCF:   break;
-        case ShadowType::VSM:   colorRenderFlags |= RenderPass::HAS_VSM;            break;
-        case ShadowType::DPCF:  colorRenderFlags |= RenderPass::HAS_DPCF_OR_PCSS;   break;
-        case ShadowType::PCSS:  colorRenderFlags |= RenderPass::HAS_DPCF_OR_PCSS;   break;
-    }
+    RenderPass::RenderFlags renderFlags = 0;
+    if (view.hasShadowing())                renderFlags |= RenderPass::HAS_SHADOWING;
+    if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
 
-    RenderPass::RenderFlags structureRenderFlags = baseRenderFlags;
-    if (view.hasPicking())                 structureRenderFlags |= RenderPass::HAS_PICKING;
+    Variant variant;
+    variant.setDirectionalLighting(view.hasDirectionalLight());
+    variant.setDynamicLighting(view.hasDynamicLighting());
+    variant.setFog(view.hasFog());
+    variant.setVsm(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
 
     /*
      * Frame graph
@@ -314,8 +307,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      */
 
     if (view.needsShadowMap()) {
+        Variant shadowVariant(Variant::DEPTH_VARIANT);
+        shadowVariant.setVsm(view.getShadowType() == ShadowType::VSM);
+
         RenderPass shadowPass(pass);
-        shadowPass.setRenderFlags(colorRenderFlags);
+        shadowPass.setRenderFlags(renderFlags);
+        shadowPass.setVariant(shadowVariant);
         view.renderShadowMaps(fg, engine, driver, shadowPass);
     }
 
@@ -436,7 +433,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // This is normally used by SSAO and contact-shadows
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, pass, structureRenderFlags, svp.width, svp.height, {
+    ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
@@ -503,7 +500,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
-    pass.setRenderFlags(colorRenderFlags);
+    pass.setRenderFlags(renderFlags);
+    pass.setVariant(variant);
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
 

@@ -905,6 +905,11 @@ MaterialBuilder& MaterialBuilder::enableFramebufferFetch() noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::useLegacyMorphing() noexcept {
+    mUseLegacyMorphing = true;
+    return *this;
+}
+
 Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     if (materialBuilderClients == 0) {
         utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
@@ -951,6 +956,8 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     if (mMaterialDomain == MaterialDomain::SURFACE) {
         writeSurfaceChunks(container);
     }
+
+    info.useLegacyMorphing = mUseLegacyMorphing;
 
     // Generate all shaders and write the shader chunks.
     const auto variants = mMaterialDomain == MaterialDomain::SURFACE ?
