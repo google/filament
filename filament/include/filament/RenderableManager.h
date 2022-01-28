@@ -484,6 +484,7 @@ public:
      */
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
+
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             MorphTargetBuffer* morphTargetBuffer, size_t count); //!< \overload
 

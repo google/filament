@@ -88,7 +88,8 @@ public:
      * @param count number of position elements in positions
      * @see setTangentsAt
      */
-    void setPositionsAt(Engine& engine, size_t targetIndex, math::float3 const* positions, size_t count);
+    void setPositionsAt(Engine& engine, size_t targetIndex,
+            math::float3 const* positions, size_t count, size_t offset = 0);
 
     /**
      * Updates the position of morph target at the index.
@@ -101,7 +102,8 @@ public:
      * @param count number of position elements in positions
      * @see setPositionsAt
      */
-    void setPositionsAt(Engine& engine, size_t targetIndex, math::float4 const* positions, size_t count);
+    void setPositionsAt(Engine& engine, size_t targetIndex,
+            math::float4 const* positions, size_t count, size_t offset = 0);
 
     /**
      * Updates the position of morph target at the index.
@@ -114,7 +116,8 @@ public:
      * @param count number of tangent elements in tangents
      * @see setTangentsAt
      */
-    void setTangentsAt(Engine& engine, size_t targetIndex, math::short4 const* tangents, size_t count);
+    void setTangentsAt(Engine& engine, size_t targetIndex,
+            math::short4 const* tangents, size_t count, size_t offset = 0);
 
     /**
      * Returns the vertex count of this MorphTargetBuffer.
