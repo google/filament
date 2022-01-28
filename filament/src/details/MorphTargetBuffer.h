@@ -54,9 +54,11 @@ private:
     friend class FView;
     friend class RenderPass;
 
+    void updatePositionsAt(FEngine& engine, size_t targetIndex, void* data, size_t size);
     inline backend::Handle<backend::HwSamplerGroup> getHwHandle() const noexcept { return mSbHandle; }
 
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
+    backend::Handle<backend::HwTexture> mPbHandle;
     backend::Handle<backend::HwTexture> mTbHandle;
     size_t mVertexCount;
     size_t mCount;
