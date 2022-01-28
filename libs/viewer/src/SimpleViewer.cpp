@@ -997,7 +997,8 @@ void SimpleViewer::updateUserInterface() {
                 ImGui::BeginDisabled();
             }
             for (int i = 0; i != mMorphWeights.size(); ++i) {
-                ImGui::SliderFloat(mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i),
+                const char* name = mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i);
+                ImGui::SliderFloat(name ? name : "Unnamed target",
                         &mMorphWeights[i], 0.0f, 1.0);
             }
             if (isAnimating) {
