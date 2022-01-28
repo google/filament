@@ -101,7 +101,14 @@ vec4 getPosition() {
 #if defined(HAS_SKINNING_OR_MORPHING)
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+        #if defined(LEGACY_MORPHING)
+        pos += morphingUniforms.weights[0] * mesh_custom0;
+        pos += morphingUniforms.weights[1] * mesh_custom1;
+        pos += morphingUniforms.weights[2] * mesh_custom2;
+        pos += morphingUniforms.weights[3] * mesh_custom3;
+        #else
         morphPosition(pos);
+        #endif
     }
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {

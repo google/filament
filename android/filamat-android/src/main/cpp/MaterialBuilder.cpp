@@ -370,3 +370,10 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderVariant
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->variantFilter((uint8_t) variantFilter);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderUseLegacyMorphing(JNIEnv*,
+        jclass, jlong nativeBuilder) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->useLegacyMorphing();
+}
