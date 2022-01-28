@@ -42,9 +42,15 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    void setPositionsAt(FEngine& engine, size_t targetIndex, math::float3 const* positions, size_t count);
-    void setPositionsAt(FEngine& engine, size_t targetIndex, math::float4 const* positions, size_t count);
-    void setTangentsAt(FEngine& engine, size_t targetIndex, math::short4 const* tangents, size_t count);
+    void setPositionsAt(FEngine& engine, size_t targetIndex,
+            math::float3 const* positions, size_t count, size_t offset);
+
+    void setPositionsAt(FEngine& engine, size_t targetIndex,
+            math::float4 const* positions, size_t count, size_t offset);
+
+    void setTangentsAt(FEngine& engine, size_t targetIndex,
+            math::short4 const* tangents, size_t count, size_t offset);
+
     inline size_t getVertexCount() const noexcept { return mVertexCount; }
     inline size_t getCount() const noexcept { return mCount; }
 
@@ -54,7 +60,10 @@ private:
     friend class FView;
     friend class RenderPass;
 
-    void updatePositionsAt(FEngine& engine, size_t targetIndex, void* data, size_t size);
+    void updateDataAt(backend::DriverApi& driver, backend::Handle <backend::HwTexture> handle,
+            backend::PixelDataFormat format, backend::PixelDataType type, const char* out,
+            size_t elementSize, size_t targetIndex, size_t count, size_t offset);
+
     inline backend::Handle<backend::HwSamplerGroup> getHwHandle() const noexcept { return mSbHandle; }
 
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
