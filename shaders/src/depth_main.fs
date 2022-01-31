@@ -1,6 +1,6 @@
-#if defined(HAS_VSM)
+#if defined(VARIANT_HAS_VSM)
 layout(location = 0) out vec4 fragColor;
-#elif defined(HAS_PICKING)
+#elif defined(VARIANT_HAS_PICKING)
 layout(location = 0) out highp uint2 outPicking;
 #else
 // not color output
@@ -9,7 +9,7 @@ layout(location = 0) out highp uint2 outPicking;
 //------------------------------------------------------------------------------
 // Depth
 //
-// note: HAS_VSM and HAS_PICKING are mutually exclusive
+// note: VARIANT_HAS_VSM and VARIANT_HAS_PICKING are mutually exclusive
 //------------------------------------------------------------------------------
 
 highp vec2 computeDepthMomentsVSM(const highp float depth);
@@ -17,7 +17,7 @@ highp vec2 computeDepthMomentsVSM(const highp float depth);
 void main() {
     filament_lodBias = frameUniforms.lodBias;
 
-#if defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(HAS_TRANSPARENT_SHADOW))
+#if defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(MATERIAL_HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);
     material(inputs);
@@ -29,7 +29,7 @@ void main() {
     }
 #endif
 
-#if defined(HAS_TRANSPARENT_SHADOW)
+#if defined(MATERIAL_HAS_TRANSPARENT_SHADOW)
     // Interleaved gradient noise, see dithering.fs
     float noise = fract(52.982919 * fract(dot(vec2(0.06711, 0.00584), gl_FragCoord.xy)));
     if (noise >= alpha) {
@@ -38,7 +38,7 @@ void main() {
 #endif
 #endif
 
-#if defined(HAS_VSM)
+#if defined(VARIANT_HAS_VSM)
     // interpolated depth is stored in vertex_worldPosition.w (see main.vs)
     highp float depth = vertex_worldPosition.w;
     depth = exp(depth);
@@ -46,7 +46,7 @@ void main() {
     fragColor.zw = vec2(0.0);
     // enable for full EVSM (needed for large blurs). RGBA16F needed.
     //fragColor.zw = computeDepthMomentsVSM(-1.0/depth);
-#elif defined(HAS_PICKING)
+#elif defined(VARIANT_HAS_PICKING)
     outPicking.x = objectUniforms.objectId;
     outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
 #else

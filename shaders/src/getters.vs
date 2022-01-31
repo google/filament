@@ -29,7 +29,7 @@ int getVertexIndex() {
 #endif
 }
 
-#if defined(HAS_SKINNING_OR_MORPHING)
+#if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
 
     highp mat3 cof;
@@ -99,7 +99,7 @@ void morphNormal(inout vec3 n) {
 vec4 getPosition() {
     vec4 pos = mesh_position;
 
-#if defined(HAS_SKINNING_OR_MORPHING)
+#if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 
     if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
         #if defined(LEGACY_MORPHING)

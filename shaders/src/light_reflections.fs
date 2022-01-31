@@ -2,7 +2,7 @@
 // Screen-space reflections
 //------------------------------------------------------------------------------
 
-#if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
+#if defined(MATERIAL_HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
 
 // Copied from depthUtils.fs
 highp float linearizeDepth(highp float depth) {

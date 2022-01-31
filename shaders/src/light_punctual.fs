@@ -212,7 +212,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 #endif
 
         float visibility = 1.0;
-#if defined(HAS_SHADOWING)
+#if defined(VARIANT_HAS_SHADOWING)
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
                 visibility = shadow(false, light_shadowMap, light.shadowLayer, light.shadowIndex, 0u);

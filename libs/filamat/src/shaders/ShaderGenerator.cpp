@@ -206,12 +206,14 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
                      material.blendingMode == BlendingMode::FADE));
 
     CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER", useOptimizedDepthVertexShader);
-    CodeGenerator::generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
-    CodeGenerator::generateDefine(vs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
-    CodeGenerator::generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
-    CodeGenerator::generateDefine(vs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
-    CodeGenerator::generateDefine(vs, "HAS_SKINNING_OR_MORPHING", variant.hasSkinningOrMorphing());
-    CodeGenerator::generateDefine(vs, "HAS_VSM", variant.hasVsm());
+
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
+
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_SKINNING_OR_MORPHING", variant.hasSkinningOrMorphing());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_VSM", variant.hasVsm());
     CodeGenerator::generateDefine(vs, getShadingDefine(material.shading), true);
     generateMaterialDefines(vs, mProperties, mDefines);
 
@@ -319,10 +321,10 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 
     // We only support both screen-space refractions and reflections at the same time.
-    // And the HAS_REFRACTION/HAS_REFLECTIONS defines signify if refraction/reflections are supported by
+    // And the MATERIAL_HAS_REFRACTION/MATERIAL_HAS_REFLECTIONS defines signify if refraction/reflections are supported by
     // the material.
 
-    CodeGenerator::generateDefine(fs, "HAS_REFRACTION", material.refractionMode != RefractionMode::NONE);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_REFRACTION", material.refractionMode != RefractionMode::NONE);
     if (material.refractionMode != RefractionMode::NONE) {
         CodeGenerator::generateDefine(fs, "REFRACTION_MODE_CUBEMAP", uint32_t(RefractionMode::CUBEMAP));
         CodeGenerator::generateDefine(fs, "REFRACTION_MODE_SCREEN_SPACE", uint32_t(RefractionMode::SCREEN_SPACE));
@@ -349,7 +351,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         }
     }
 
-    CodeGenerator::generateDefine(fs, "HAS_REFLECTIONS", material.reflectionMode != ReflectionMode::DEFAULT);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_REFLECTIONS", material.reflectionMode != ReflectionMode::DEFAULT);
     if (material.reflectionMode != ReflectionMode::DEFAULT) {
         CodeGenerator::generateDefine(fs, "REFLECTION_MODE_SCREEN_SPACE", uint32_t(ReflectionMode::SCREEN_SPACE));
         if (material.reflectionMode == ReflectionMode::SCREEN_SPACE) {
@@ -363,14 +365,16 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     // lighting variants
     bool litVariants = lit || material.hasShadowMultiplier;
-    CodeGenerator::generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
-    CodeGenerator::generateDefine(fs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
-    CodeGenerator::generateDefine(fs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
-    CodeGenerator::generateDefine(fs, "HAS_FOG", variant.hasFog() && !variant.hasDepth());
-    CodeGenerator::generateDefine(fs, "HAS_PICKING", variant.hasPicking() && variant.hasDepth());
-    CodeGenerator::generateDefine(fs, "HAS_VSM", variant.hasVsm());
-    CodeGenerator::generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
-    CodeGenerator::generateDefine(fs, "HAS_TRANSPARENT_SHADOW", material.hasTransparentShadow);
+
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_TRANSPARENT_SHADOW", material.hasTransparentShadow);
+
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_FOG", variant.hasFog() && !variant.hasDepth());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_PICKING", variant.hasPicking() && variant.hasDepth());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_VSM", variant.hasVsm());
 
     // material defines
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY", material.hasDoubleSidedCapability);

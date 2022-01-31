@@ -48,7 +48,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
 #endif
 
     float visibility = 1.0;
-#if defined(HAS_SHADOWING)
+#if defined(VARIANT_HAS_SHADOWING)
     if (light.NoL > 0.0) {
         float ssContactShadowOcclusion = 0.0;
 
