@@ -485,11 +485,11 @@ float shadow(const bool DIRECTIONAL,
 
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
-#if defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
         shadowPosition = getCascadeLightSpacePosition(cascade);
 #endif
     } else {
-#if defined(HAS_DYNAMIC_LIGHTING)
+#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
         highp float zLight = dot(shadowUniforms.shadows[index].lightFromWorldZ, vec4(getWorldPosition(), 1.0));
         shadowPosition = getSpotLightSpacePosition(index, zLight);
 #endif
@@ -511,11 +511,11 @@ float shadow(const bool DIRECTIONAL,
 
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
-#if defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
         shadowPosition = getCascadeLightSpacePosition(cascade);
 #endif
     } else {
-#if defined(HAS_DYNAMIC_LIGHTING)
+#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
         zLight = dot(shadowUniforms.shadows[index].lightFromWorldZ, vec4(getWorldPosition(), 1.0));
         shadowPosition = getSpotLightSpacePosition(index, zLight);
 #endif

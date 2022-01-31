@@ -88,7 +88,7 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #endif
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
-#if defined(HAS_REFRACTION)
+#if defined(MATERIAL_HAS_REFRACTION)
     // Air's Index of refraction is 1.000277 at STP but everybody uses 1.0
     const float airIor = 1.0;
 #if !defined(MATERIAL_HAS_IOR)
@@ -276,11 +276,11 @@ vec4 evaluateLights(const MaterialInputs material) {
     // it also saves 1 shader variant
     evaluateIBL(material, pixel, color);
 
-#if defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
     evaluateDirectionalLight(material, pixel, color);
 #endif
 
-#if defined(HAS_DYNAMIC_LIGHTING)
+#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
     evaluatePunctualLights(material, pixel, color);
 #endif
 

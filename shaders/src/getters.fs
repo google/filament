@@ -98,7 +98,7 @@ highp vec3 getNormalizedViewportCoord2() {
     return vec3(shading_normalizedViewportCoord, gl_FragCoord.z);
 }
 
-#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DYNAMIC_LIGHTING)
 highp vec4 getSpotLightSpacePosition(uint index, highp float zLight) {
     highp mat4 lightFromWorldMatrix = shadowUniforms.shadows[index].lightFromWorldMatrix;
     highp vec3 dir = shadowUniforms.shadows[index].direction;
@@ -127,7 +127,7 @@ uint getShadowCascade() {
     return clamp(uint(dot(vec4(greaterZ), vec4(1.0))), 0u, cascadeCount - 1u);
 }
 
-#if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 
 highp vec4 getCascadeLightSpacePosition(uint cascade) {
     // For the first cascade, return the interpolated light space position.

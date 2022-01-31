@@ -23,7 +23,7 @@ LAYOUT_LOCATION(10) in highp vec2 vertex_uv01;
 LAYOUT_LOCATION(10) in highp vec4 vertex_uv01;
 #endif
 
-#if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 LAYOUT_LOCATION(11) in highp vec4 vertex_lightSpacePosition;
 #endif
 
