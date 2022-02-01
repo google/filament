@@ -181,28 +181,29 @@ public:
     void onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) override;
 
     // Injects a dummy texture that can be used to clear out old descriptor sets.
-    void setDummyTexture(VkImageView imageView) { mDummyImageView = imageView; }
+    void setDummyTexture(VkImageView imageView) {
+        mDummySamplerInfo.imageView = imageView;
+        mDummyTargetInfo.imageView = imageView;
+    }
 
 private:
     static constexpr uint32_t ALL_COMMAND_BUFFERS = (1 << VK_MAX_COMMAND_BUFFERS) - 1;
 
-    using LayoutBundleKey = utils::bitset64; // 2 bits(vertex and fragment) per sampler * 32 samplers
-
-    static LayoutBundleKey getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept;
+    using PipelineLayoutKey = utils::bitset64; // 2 bits(vertex and fragment) per sampler * 32 samplers
 
     struct LayoutBundle {
         std::array<VkDescriptorSetLayout, DESCRIPTOR_TYPE_COUNT> setLayouts;
+        std::array<std::vector<VkDescriptorSet>, DESCRIPTOR_TYPE_COUNT> setArenas;
         VkPipelineLayout pipelineLayout;
-        std::vector<VkDescriptorSet> setArena[DESCRIPTOR_TYPE_COUNT];
-        uint32_t referenceCount = 0;
+        int32_t referenceCount = 0;
     };
 
-    struct LayoutBundleHashFn {
-        size_t operator()(const LayoutBundleKey& key) const;
+    struct LayoutKeyHashFn {
+        size_t operator()(const PipelineLayoutKey& key) const;
     };
 
-    struct LayoutBundleEqual {
-        bool operator()(const LayoutBundleKey& k1, const LayoutBundleKey& k2) const;
+    struct LayoutKeyEqual {
+        bool operator()(const PipelineLayoutKey& k1, const PipelineLayoutKey& k2) const;
     };
 
     // The pipeline key is a POD that represents all currently bound states that form the immutable
@@ -264,6 +265,9 @@ private:
     struct DescriptorBundle {
         VkDescriptorSet handles[DESCRIPTOR_TYPE_COUNT];
         LayoutBundle* layoutBundle = nullptr;
+
+        // This bitset points to the command buffers that contain references to these descriptors.
+        // The descriptors are safe to reclaim when there are no command buffers that refer to it.
         utils::bitset32 commandBuffers;
     };
 
@@ -277,7 +281,7 @@ private:
         uint32_t age;
     };
 
-    using LayoutMap = tsl::robin_map<LayoutBundleKey , LayoutBundle, LayoutBundleHashFn, LayoutBundleEqual>;
+    using LayoutMap = tsl::robin_map<PipelineLayoutKey , LayoutBundle, LayoutKeyHashFn, LayoutKeyEqual>;
     using PipelineMap = tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual>;
     using DescriptorMap = tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual>;
 
@@ -292,7 +296,7 @@ private:
     void getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT],
             bool* bind, bool* overflow) noexcept;
 
-    LayoutBundle* getOrCreateLayoutBundle() noexcept;
+    LayoutBundle* getOrCreatePipelineLayout() noexcept;
 
     // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
     bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
@@ -310,7 +314,7 @@ private:
     // Current bindings are divided into three "keys" which are composed of a mix of actual values
     // (e.g., blending is OFF) and weak references to Vulkan objects (e.g., shader programs and
     // uniform buffers).
-    LayoutBundleKey mLayoutKey;
+    PipelineLayoutKey mLayoutKey;
     PipelineKey mPipelineKey;
     DescriptorKey mDescriptorKey;
 
@@ -338,7 +342,6 @@ private:
     std::vector<VkDescriptorPool> mExtinctDescriptorPools;
     std::vector<DescriptorBundle> mExtinctDescriptorBundles;
 
-    VkImageView mDummyImageView = VK_NULL_HANDLE;
     VkDescriptorBufferInfo mDummyBufferInfo = {};
     VkWriteDescriptorSet mDummyBufferWriteInfo = {};
     VkDescriptorImageInfo mDummySamplerInfo = {};
