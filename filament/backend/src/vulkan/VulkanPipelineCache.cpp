@@ -37,15 +37,6 @@ namespace backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
-static void setLayoutBundleKey(ShaderStageFlags flags, uint16_t binding, utils::bitset64& key) {
-    if (flags.vertex) {
-        key.set(binding * 2 + 0);
-    }
-    if (flags.fragment) {
-        key.set(binding * 2 + 1);
-    }
-}
-
 static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t binding) {
     VkShaderStageFlags flags = 0;
     if (key.test(binding * 2 + 0)) {
@@ -55,6 +46,23 @@ static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t bind
         flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     }
     return flags;
+}
+
+utils::bitset64
+static getPipelineLayoutKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
+    utils::bitset64 key = {};
+    for (uint32_t binding = 0; binding < Program::BINDING_COUNT; ++binding) {
+        const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
+        for (const auto& sampler : samplerGroupInfo[binding].samplers) {
+            if (stageFlags.vertex) {
+                key.set(sampler.binding * 2 + 0);
+            }
+            if (stageFlags.fragment) {
+                key.set(sampler.binding * 2 + 1);
+            }
+        }
+    }
+    return key;
 }
 
 VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
@@ -118,6 +126,31 @@ void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
 
     mDummyBufferInfo.buffer = mDummyBuffer;
     mDummyBufferInfo.range = bufferInfo.size;
+
+    // Formulate some dummy descriptor info used solely for clearing out unused bindings. This is
+    // especially crucial after a texture has been destroyed. Since core Vulkan does not allow
+    // specifying VK_NULL_HANDLE without the robustness2 extension, we are forced to use dummy
+    // resources for this.
+    mDummySamplerInfo.imageLayout = mDummyTargetInfo.imageLayout;
+
+    VkSamplerCreateInfo samplerInfo {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .anisotropyEnable = VK_FALSE,
+        .maxAnisotropy = 1,
+        .compareEnable = VK_FALSE,
+        .compareOp = VK_COMPARE_OP_ALWAYS,
+        .minLod = 0.0f,
+        .maxLod = 1.0f,
+        .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+        .unnormalizedCoordinates = VK_FALSE
+    };
+    vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &mDummySamplerInfo.sampler);
 }
 
 bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
@@ -129,7 +162,7 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
         return false;
     }
     if (bind) {
-        auto layout = getOrCreateLayoutBundle();
+        LayoutBundle* layout = getOrCreatePipelineLayout();
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 layout->pipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,
                 descriptors, 0, nullptr);
@@ -155,9 +188,6 @@ void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scisso
 void VulkanPipelineCache::getOrCreateDescriptors(
         VkDescriptorSet descriptorSets[DESCRIPTOR_TYPE_COUNT],
         bool* bind, bool* overflow) noexcept {
-    // If this method has never been called before, we need to create a new layoutBundle object.
-    auto layoutBundle = getOrCreateLayoutBundle();
-
     DescriptorBundle*& descriptorBundle = mCmdBufferState[mCmdBufferIndex].currentDescriptorBundle;
 
     // Leave early if no bindings have been dirtied.
@@ -183,10 +213,13 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         return;
     }
 
+    // Create a new pipeline layout or fetch one from the cache.
+    LayoutBundle* layoutBundle = getOrCreatePipelineLayout();
+
     // If there are no available descriptor sets that can be re-used, then create brand new ones
     // (one for each type). Otherwise, grab a descriptor set from each of the arenas.
-    auto& descriptorSetArena = layoutBundle->setArena;
-    if (descriptorSetArena[0].empty()) {
+    auto& descriptorSetArenas = layoutBundle->setArenas;
+    if (descriptorSetArenas[0].empty()) {
         if (mDescriptorBundles.size() >= mDescriptorPoolSize) {
             growDescriptorPool();
         }
@@ -203,8 +236,8 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         }
     } else {
         for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
-            descriptorSets[i] = descriptorSetArena[i].back();
-            descriptorSetArena[i].pop_back();
+            descriptorSets[i] = descriptorSetArenas[i].back();
+            descriptorSetArenas[i].pop_back();
         }
     }
 
@@ -223,35 +256,6 @@ void VulkanPipelineCache::getOrCreateDescriptors(
 
     // Clear the dirty flag for this command buffer.
     mDirtyDescriptor.unset(mCmdBufferIndex);
-
-    // Formulate some dummy descriptor info used solely for clearing out unused bindings. This is
-    // especially crucial after a texture has been destroyed. Since core Vulkan does not allow
-    // specifying VK_NULL_HANDLE without the robustness2 extension, we are forced to use dummy
-    // resources for this.
-    mDummySamplerInfo.imageLayout = mDummyTargetInfo.imageLayout;
-    mDummySamplerInfo.imageView = mDummyImageView;
-    mDummyTargetInfo.imageView = mDummyImageView;
-
-    if (mDummySamplerInfo.sampler == VK_NULL_HANDLE) {
-        VkSamplerCreateInfo samplerInfo {
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_NEAREST,
-            .minFilter = VK_FILTER_NEAREST,
-            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-            .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            .anisotropyEnable = VK_FALSE,
-            .maxAnisotropy = 1,
-            .compareEnable = VK_FALSE,
-            .compareOp = VK_COMPARE_OP_ALWAYS,
-            .minLod = 0.0f,
-            .maxLod = 1.0f,
-            .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-            .unnormalizedCoordinates = VK_FALSE
-        };
-        vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &mDummySamplerInfo.sampler);
-    }
 
     // Rewrite every binding in the new descriptor sets.
     VkDescriptorBufferInfo descriptorBuffers[UBUFFER_BINDING_COUNT];
@@ -279,6 +283,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
             writeInfo.pTexelBufferView = nullptr;
         } else {
             writeInfo = mDummyBufferWriteInfo;
+            assert_invariant(mDummyBufferWriteInfo.pBufferInfo->buffer);
         }
         assert_invariant(writeInfo.pBufferInfo->buffer);
         writeInfo.dstSet = descriptorBundle->handles[0];
@@ -299,6 +304,9 @@ void VulkanPipelineCache::getOrCreateDescriptors(
             writeInfo.pTexelBufferView = nullptr;
         } else {
             writeInfo = mDummySamplerWriteInfo;
+            assert_invariant(mDummySamplerWriteInfo.pImageInfo->sampler);
+            assert_invariant(mDummySamplerInfo.imageView);
+
         }
         writeInfo.dstSet = descriptorBundle->handles[1];
         writeInfo.dstBinding = binding;
@@ -318,6 +326,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
             writeInfo.pTexelBufferView = nullptr;
         } else {
             writeInfo = mDummyTargetWriteInfo;
+            assert_invariant(mDummyTargetInfo.imageView);
         }
         writeInfo.dstSet = descriptorBundle->handles[2];
         writeInfo.dstBinding = binding;
@@ -326,7 +335,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     *bind = true;
 }
 
-VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayoutBundle() noexcept {
+VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreatePipelineLayout() noexcept {
     auto iter = mLayouts.find(mLayoutKey);
     if (UTILS_LIKELY(iter != mLayouts.end())) {
         return &iter.value();
@@ -385,12 +394,12 @@ VulkanPipelineCache::LayoutBundle* VulkanPipelineCache::getOrCreateLayoutBundle(
             &pipelineLayout);
     ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
 
-    auto result = mLayouts.emplace(mLayoutKey, LayoutBundle{ setLayouts, pipelineLayout, {} });
+    auto result = mLayouts.emplace(mLayoutKey, LayoutBundle{ setLayouts, {}, pipelineLayout });
     return &result.first.value();
 }
 
 bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
-    LayoutBundle* layout = getOrCreateLayoutBundle();
+    LayoutBundle* layout = getOrCreatePipelineLayout();
     assert_invariant(layout);
     PipelineVal*& currentPipeline = mCmdBufferState[mCmdBufferIndex].currentPipeline;
 
@@ -578,7 +587,12 @@ void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
             mPipelineKey.shaders[ssi] = shaders[ssi];
         }
     }
-    mLayoutKey = getLayoutBundleKey(program.samplerGroupInfo);
+    PipelineLayoutKey key = getPipelineLayoutKey(program.samplerGroupInfo);
+    if (key != mLayoutKey) {
+        markDirtyPipeline();
+        markDirtyDescriptor();
+        mLayoutKey = key;
+    }
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {
@@ -788,10 +802,10 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     for (ConstDescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end();) {
         const DescriptorBundle& cacheEntry = iter.value();
         if (cacheEntry.commandBuffers.getValue() == 0) {
-            auto& descriptorSetArena = cacheEntry.layoutBundle->setArena;
-            descriptorSetArena[0].push_back(cacheEntry.handles[0]);
-            descriptorSetArena[1].push_back(cacheEntry.handles[1]);
-            descriptorSetArena[2].push_back(cacheEntry.handles[2]);
+            auto& descriptorSetArenas = cacheEntry.layoutBundle->setArenas;
+            for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
+                descriptorSetArenas[i].push_back(cacheEntry.handles[i]);
+            }
             iter = mDescriptorBundles.erase(iter);
         } else {
             ++iter;
@@ -810,7 +824,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     using ConstPipeIterator = decltype(mPipelines)::const_iterator;
     for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
         if (iter.value().age > VK_MAX_PIPELINE_AGE) {
-            --iter->second.layoutBundle->referenceCount;
+            --mLayouts[iter->second.pipelineLayout].referenceCount;
             vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
             iter = mPipelines.erase(iter);
         } else {
@@ -821,7 +835,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     // Evict any layouts that have not been used in a while.
     using ConstLayoutIterator = decltype(mLayouts)::const_iterator;
     for (ConstLayoutIterator iter = mLayouts.begin(); iter != mLayouts.end();) {
-        if (iter->second.referenceCount == 0) {
+        if (iter->second.referenceCount <= 0) {
             vkDestroyPipelineLayout(mDevice, iter->second.pipelineLayout, VKALLOC);
             for (auto setLayout : iter->second.setLayouts) {
                 vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
@@ -940,8 +954,8 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
     // Clear out all unused descriptor sets in the arena so they don't get reclaimed. There is no
     // need to free them individually since the old VkDescriptorPool will be destroyed.
     for (auto iter = mLayouts.begin(); iter != mLayouts.end(); ++iter) {
-        auto& setArena = iter.value().setArena;
-        for (auto& arena : setArena) {
+        auto& setArenas = iter.value().setArenas;
+        for (auto& arena : setArenas) {
             arena.clear();
         }
     }
@@ -955,24 +969,12 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
     mDescriptorBundles.clear();
 }
 
-VulkanPipelineCache::LayoutBundleKey
-VulkanPipelineCache::getLayoutBundleKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
-    LayoutBundleKey key = {};
-    for (uint32_t binding = 0; binding < Program::BINDING_COUNT; ++binding) {
-        const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
-        for (auto& sampler : samplerGroupInfo[binding].samplers) {
-            setLayoutBundleKey(stageFlags, sampler.binding, key);
-        }
-    }
-    return key;
-}
-
-size_t VulkanPipelineCache::LayoutBundleHashFn::operator()(const LayoutBundleKey& key) const {
+size_t VulkanPipelineCache::LayoutKeyHashFn::operator()(const PipelineLayoutKey& key) const {
     return key.getValue();
 }
 
-bool VulkanPipelineCache::LayoutBundleEqual::operator()(const VulkanPipelineCache::LayoutBundleKey& k1,
-        const VulkanPipelineCache::LayoutBundleKey& k2) const {
+bool VulkanPipelineCache::LayoutKeyEqual::operator()(const PipelineLayoutKey& k1,
+        const PipelineLayoutKey& k2) const {
     return k1 == k2;
 }
 
