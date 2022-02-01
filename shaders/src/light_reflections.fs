@@ -238,18 +238,22 @@ vec4 evaluateScreenSpaceReflections(const PixelParams pixel, const vec3 wsRayDir
         reprojected *= (1.0 / reprojected.w);
 
         // Compute the screen-space reflection's contribution.
+
         // TODO: parameterize fadeRate.
-        const float fadeRate = 12.0f;
+        const float fadeRateEdge = 12.0f;
+        const float fadeRateDistance = 4.0f;
 
         // Fade the reflections out near the edges.
-        vec2 edgeFactor = max(fadeRate * abs(reprojected.xy - 0.5f) - (fadeRate / 2.0f - 1.0f), 0.0f);
-        float edgeFade = saturate(1.0 - dot(edgeFactor, edgeFactor));
+        vec2 edgeFactor = max(fadeRateEdge * abs(reprojected.xy - 0.5f) - (fadeRateEdge * 0.5f - 1.0f), 0.0f);
+        float fade = saturate(1.0 - dot(edgeFactor, edgeFactor));
 
         // Fade the reflections out near maxRayTraceDistance.
         float t = distance(vsOrigin, vsHitPoint) / maxRayTraceDistance;
-        float distFactor = max(fadeRate * (t - 0.5f) - (fadeRate / 2.0f - 1.0f), 0.0f);
-        float distanceFade = saturate(1.0 - (distFactor, distFactor));
-        float fade = edgeFade * distanceFade;
+        fade *= saturate(fadeRateDistance - fadeRateDistance * t);
+
+        // Fade when pointing towards the camera (likely to hit a backface)
+        // note: vsDirection.z is the cos(vsDirection, view)
+        fade *= (1.0 - max(0.0, vsDirection.z));
 
         Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0f).rgb, fade);
     }
