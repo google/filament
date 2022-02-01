@@ -1826,7 +1826,11 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     mPipelineCache.bindScissor(cmdbuffer, scissor);
 
     // Bind a new pipeline if the pipeline state changed.
-    mPipelineCache.bindPipeline(cmdbuffer);
+    // If allocation failed, skip the draw call and bail. We do not emit an error since the
+    // validation layer will already do so.
+    if (!mPipelineCache.bindPipeline(cmdbuffer)) {
+        return;
+    }
 
     // Next bind the vertex buffers and index buffer. One potential performance improvement is to
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
