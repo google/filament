@@ -69,8 +69,8 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
                 if (stageFlags.fragment) {
                     numFragmentSampler += sib->getSamplerInfoList().size();
                 }
-                if (numVertexSampler >= backend::MAX_VERTEX_SAMPLER_COUNT ||
-                    numFragmentSampler >= backend::MAX_FRAGMENT_SAMPLER_COUNT) {
+                if (numVertexSampler > backend::MAX_VERTEX_SAMPLER_COUNT ||
+                    numFragmentSampler > backend::MAX_FRAGMENT_SAMPLER_COUNT) {
                     return true;
                 }
             }
