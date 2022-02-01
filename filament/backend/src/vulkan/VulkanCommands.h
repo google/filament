@@ -50,6 +50,7 @@ struct VulkanCommandBuffer {
     uint32_t index = 0;
 };
 
+// Allows classes to be notified after a new command buffer has been activated.
 class CommandBufferObserver {
 public:
     virtual void onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) = 0;
