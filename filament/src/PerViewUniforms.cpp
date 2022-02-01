@@ -187,7 +187,7 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
     s.ssrProjectToPixelMatrix = projectToPixelMatrix;
     s.ssrThickness = ssrOptions.thickness;
     s.ssrBias = ssrOptions.bias;
-    s.ssrDistance = ssrOptions.maxDistance;
+    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
     s.ssrStride = ssrOptions.stride;
 }
 
