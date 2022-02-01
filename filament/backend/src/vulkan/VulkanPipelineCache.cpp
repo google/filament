@@ -251,7 +251,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
         descriptorBundle->handles[i] = descriptorSets[i];
     }
-    descriptorBundle->layoutBundle = layoutBundle;
+    descriptorBundle->pipelineLayout = mLayoutKey;
     descriptorBundle->commandBuffers.setValue(1 << mCmdBufferIndex);
 
     // Clear the dirty flag for this command buffer.
@@ -572,7 +572,7 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
 
     // Stash a stable pointer to the stored cache entry to allow fast subsequent calls to
     // getOrCreatePipeline when nothing has been dirtied.
-    const PipelineVal cacheEntry = { *pipeline, layout, 0u };
+    const PipelineVal cacheEntry = { *pipeline, mLayoutKey, 0u };
     currentPipeline = &mPipelines.emplace(std::make_pair(mPipelineKey, cacheEntry)).first.value();
     mDirtyPipeline.unset(mCmdBufferIndex);
 
@@ -802,7 +802,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     for (ConstDescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end();) {
         const DescriptorBundle& cacheEntry = iter.value();
         if (cacheEntry.commandBuffers.getValue() == 0) {
-            auto& descriptorSetArenas = cacheEntry.layoutBundle->setArenas;
+            auto& descriptorSetArenas = mLayouts[cacheEntry.pipelineLayout].setArenas;
             for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
                 descriptorSetArenas[i].push_back(cacheEntry.handles[i]);
             }

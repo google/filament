@@ -264,7 +264,7 @@ private:
     // Represents a group of descriptor sets that are bound simultaneously.
     struct DescriptorBundle {
         VkDescriptorSet handles[DESCRIPTOR_TYPE_COUNT];
-        LayoutBundle* layoutBundle = nullptr;
+        PipelineLayoutKey pipelineLayout;
 
         // This bitset points to the command buffers that contain references to these descriptors.
         // The descriptors are safe to reclaim when there are no command buffers that refer to it.
@@ -273,7 +273,7 @@ private:
 
     struct PipelineVal {
         VkPipeline handle;
-        LayoutBundle* layoutBundle;
+        PipelineLayoutKey pipelineLayout;
 
         // The "age" of a pipeline cache entry is the number of command buffer flush events that
         // have occurred since it was last used in a command buffer. This is used for LRU caching,
