@@ -22,6 +22,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/filament/Variant.h>
+
 #include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
 
 #include "ShaderMinifier.h"
@@ -48,6 +50,7 @@ public:
     ~GLSLPostProcessor();
 
     struct Config {
+        filament::Variant variant;
         filament::backend::ShaderType shaderType;
         filament::backend::ShaderModel shaderModel;
         filament::MaterialDomain domain;
