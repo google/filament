@@ -58,13 +58,13 @@ static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
 }
 
 static BindingIndexMap getSurfaceBindingIndexMap(const GLSLPostProcessor::Config& config) {
+    const filament::Variant& variant = config.variant;
     BindingIndexMap map;
     // Always add the morphing sampler group because there is no way
     // that SamplerBindingMap knows the current variant.
-    const filament::Variant dummyVariant{};
     generateBindingIndexMap(config,
-            filament::SibGenerator::getPerRenderPrimitiveMorphingSib(dummyVariant), map);
-    generateBindingIndexMap(config, filament::SibGenerator::getPerViewSib(dummyVariant), map);
+            filament::SibGenerator::getPerRenderPrimitiveMorphingSib(variant), map);
+    generateBindingIndexMap(config, filament::SibGenerator::getPerViewSib(variant), map);
     generateBindingIndexMap(config, config.materialInfo->sib, map);
     return map;
 }
