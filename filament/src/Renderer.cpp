@@ -971,10 +971,10 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 // set screen-space reflections and screen-space refractions
                 mat4f reprojection;
-                mat4f projectToPixelMatrix;
+                mat4f uvFromViewMatrix;
                 if (config.hasScreenSpaceReflections) {
                     const auto& cameraInfo = view.getCameraInfo();
-                    projectToPixelMatrix =
+                    uvFromViewMatrix =
                             getClipSpaceToTextureSpaceMatrix() *
                             cameraInfo.projection;
                     reprojection =
@@ -985,7 +985,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 TextureHandle ssrHandle = data.ssr ?
                         resources.getTexture(data.ssr) : ppm.getOneTexture();
                 view.prepareSSR(ssrHandle, config.refractionLodOffset,
-                        reprojection, projectToPixelMatrix,
+                        reprojection, uvFromViewMatrix,
                         view.getScreenSpaceReflectionsOptions());
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
