@@ -573,7 +573,7 @@ vec3 evaluateRefraction(
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // specular layer
-    vec3 Fr;
+    vec3 Fr = vec3(0.0f);
 
     // screen-space reflections
 #if defined(MATERIAL_HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
