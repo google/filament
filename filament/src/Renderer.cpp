@@ -463,28 +463,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // Store this frame's camera projection in the frame history.
     if (UTILS_UNLIKELY(taaOptions.enabled)) {
-        auto& history = view.getFrameHistory();
-        auto& current = history.getCurrent();
-        auto const& previous = history[0];
-        current.taa.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
-        // update frame id
-        current.frameId = previous.frameId + 1; // TODO: should probably be done somewhere else
-    }
-
-    // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
-    if (taaOptions.enabled) {
-        auto& history = view.getFrameHistory();
-        ppm.prepareTaa(history, cameraInfo, taaOptions);
-        // convert the sample position to jitter in clip-space
-        float2 jitterInClipSpace =
-                history.getCurrent().taa.jitter * (2.0f / float2{ svp.width, svp.height });
-        // update projection matrix
-        cameraInfo.projection[2].xy -= jitterInClipSpace;
-
-        fg.addTrivialSideEffectPass("Jitter Camera", [=, &view] (DriverApi& driver) {
-            view.prepareCamera(cameraInfo);
-            view.commitUniforms(driver);
-        });
+        // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
+        ppm.prepareTaa(fg, svp, view.getFrameHistory(), &FrameHistoryEntry::taa,
+                &cameraInfo, view.getPerViewUniforms());
     }
 
     // --------------------------------------------------------------------------------------------
@@ -635,24 +616,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, colorGradingConfig);
-
-        struct ExportColorHistoryData {
-            FrameGraphId<FrameGraphTexture> color;
-        };
-        fg.addPass<ExportColorHistoryData>("Export TAA history",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    // We need to use sideEffect here to ensure this pass won't be culled.
-                    // The "output" of this pass is going to be used during the next frame as
-                    // an "import".
-                    builder.sideEffect();
-                    data.color = builder.sample(input); // FIXME: an access must be declared for detach(), why?
-                }, [&view](FrameGraphResources const& resources, auto const& data,
-                        backend::DriverApi&) {
-                    FrameHistoryEntry& current = view.getFrameHistory().getCurrent();
-                    resources.detach(data.color,
-                            &current.taa.color, &current.taa.desc);
-                });
+        input = ppm.taa(fg, input, view.getFrameHistory(), &FrameHistoryEntry::taa,
+                taaOptions, colorGradingConfig);
     }
 
     // --------------------------------------------------------------------------------------------
