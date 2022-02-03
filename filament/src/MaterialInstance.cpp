@@ -305,6 +305,27 @@ void FMaterialInstance::setParameter(const char* name,
 
 void FMaterialInstance::setParameterImpl(const char* name,
         Texture const* texture, TextureSampler const& sampler) noexcept {
+
+#ifndef NDEBUG
+    // Per GLES3.x specification, depth texture can't be filtered unless in compare mode.
+    if (isDepthFormat(texture->getFormat())) {
+        if (sampler.getCompareMode() == SamplerCompareMode::NONE) {
+            SamplerMinFilter minFilter = sampler.getMinFilter();
+            SamplerMagFilter magFilter = sampler.getMagFilter();
+            if (magFilter == SamplerMagFilter::LINEAR ||
+                minFilter == SamplerMinFilter::LINEAR ||
+                minFilter == SamplerMinFilter::LINEAR_MIPMAP_LINEAR ||
+                minFilter == SamplerMinFilter::LINEAR_MIPMAP_NEAREST ||
+                minFilter == SamplerMinFilter::NEAREST_MIPMAP_LINEAR) {
+                PANIC_LOG("Depth textures can't be sampled with a linear filter "
+                          "unless the comparison mode is set to COMPARE_TO_TEXTURE. "
+                          "(material: \"%s\", parameter: \"%s\")",
+                          getMaterial()->getName().c_str(), name);
+            }
+        }
+    }
+#endif
+
     setParameter(name, upcast(texture)->getHwHandle(), sampler.getSamplerParams());
 }
 
