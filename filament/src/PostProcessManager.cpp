@@ -2459,33 +2459,54 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA->output;
 }
 
-void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
-        CameraInfo const& cameraInfo,
-        TemporalAntiAliasingOptions const& taaOptions) const noexcept {
-    auto const& previous = frameHistory[0];
-    auto& current = frameHistory.getCurrent();
-    // get sample position within a pixel [-0.5, 0.5]
+void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+        FrameHistory& frameHistory,
+        FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
+        CameraInfo* inoutCameraInfo,
+        PerViewUniforms& uniforms) const noexcept {
+    auto const& previous = frameHistory.getPrevious().*pTaa;
+    auto& current = frameHistory.getCurrent().*pTaa;
+
+    // compute projection
+    current.projection = inoutCameraInfo->projection * (inoutCameraInfo->view * inoutCameraInfo->worldOrigin);
+    current.frameId = previous.frameId + 1;
+
+    // sample position within a pixel [-0.5, 0.5]
     const float2 jitter = halton(previous.frameId) - 0.5f;
-    // save this frame's sample position
-    current.taa.jitter = jitter;
+    current.jitter = jitter;
+
+    float2 jitterInClipSpace = jitter * (2.0f / float2{ svp.width, svp.height });
+
+    // update projection matrix
+    inoutCameraInfo->projection[2].xy -= jitterInClipSpace;
+
+    fg.addTrivialSideEffectPass("Jitter Camera",
+            [=, &uniforms] (DriverApi& driver) {
+        uniforms.prepareCamera(*inoutCameraInfo);
+        uniforms.commit(driver);
+    });
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameHistory& frameHistory,
+        FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
         TemporalAntiAliasingOptions const& taaOptions,
         ColorGradingConfig colorGradingConfig) noexcept {
 
-    FrameHistoryEntry const& entry = frameHistory[0];
+    auto const& previous = frameHistory.getPrevious().*pTaa;
+    auto& current = frameHistory.getCurrent().*pTaa;
+
     FrameGraphId<FrameGraphTexture> colorHistory;
-    mat4f const* historyProjection = nullptr;
-    if (UTILS_UNLIKELY(!entry.taa.color.handle)) {
+    mat4f historyProjection;
+    if (UTILS_UNLIKELY(!previous.color.handle)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
-        historyProjection = &frameHistory.getCurrent().taa.projection;
+        historyProjection = current.projection;
     } else {
-        colorHistory = fg.import("TAA history", entry.taa.desc,
-                FrameGraphTexture::Usage::SAMPLEABLE, entry.taa.color);
-        historyProjection = &entry.taa.projection;
+        colorHistory = fg.import("TAA history", previous.desc,
+                FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
+        historyProjection = previous.projection;
     }
 
     Blackboard& blackboard = fg.getBlackboard();
@@ -2499,7 +2520,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> tonemappedOutput;
     };
-    auto& taa = fg.addPass<TAAData>("TAA",
+    auto& taaPass = fg.addPass<TAAData>("TAA",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto desc = fg.getDescriptor(input);
                 data.color = builder.sample(input);
@@ -2521,7 +2542,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         .attachments = { .color = { data.output, data.tonemappedOutput }}
                 });
             },
-            [=, &frameHistory](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, &current](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
 
                 constexpr mat4f normalizedToClip{mat4f::row_major_init{
                         2, 0, 0, -1,
@@ -2536,8 +2557,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
                 };
 
-                FrameHistoryEntry& current = frameHistory.getCurrent();
-
                 float sum = 0.0;
                 float weights[9];
 
@@ -2545,7 +2564,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 d = sampleOffsets[i] - current.taa.jitter;
+                    float2 d = sampleOffsets[i] - current.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
                     // this is a gaussian fit of a 3.3 Blackman Harris window
                     // see: "High Quality Temporal Supersampling" by Bruan Karis
@@ -2572,8 +2591,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 });
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
-                        *historyProjection *
-                        inverse(current.taa.projection) *
+                        historyProjection *
+                        inverse(current.projection) *
                         normalizedToClip);
 
                 mi->commit(driver);
@@ -2592,7 +2611,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 }
                 driver.endRenderPass();
             });
-    return colorGradingConfig.asSubpass ? taa->tonemappedOutput : taa->output;
+
+    input = colorGradingConfig.asSubpass ? taaPass->tonemappedOutput : taaPass->output;
+
+    struct ExportColorHistoryData {
+        FrameGraphId<FrameGraphTexture> color;
+    };
+    auto& exportHistoryPass = fg.addPass<ExportColorHistoryData>("Export TAA history",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                // We need to use sideEffect here to ensure this pass won't be culled.
+                // The "output" of this pass is going to be used during the next frame as
+                // an "import".
+                builder.sideEffect();
+                data.color = builder.sample(input); // FIXME: an access must be declared for detach(), why?
+            }, [&current](FrameGraphResources const& resources, auto const& data,
+                    backend::DriverApi&) {
+                resources.detach(data.color,
+                        &current.color, &current.desc);
+            });
+
+    return exportHistoryPass->color;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,

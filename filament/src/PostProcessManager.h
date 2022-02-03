@@ -139,11 +139,16 @@ public:
             bool translucent) noexcept;
 
     // Temporal Anti-aliasing
-    void prepareTaa(FrameHistory& frameHistory, CameraInfo const& cameraInfo,
-            TemporalAntiAliasingOptions const& taaOptions) const noexcept;
+    void prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
+            CameraInfo* inoutCameraInfo,
+            PerViewUniforms& uniforms) const noexcept;
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 
