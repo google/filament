@@ -488,9 +488,6 @@ public:
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             MorphTargetBuffer* morphTargetBuffer, size_t count); //!< \overload
 
-    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            MorphTargetBuffer* morphTargetBuffer); //!< \overload
-
     /**
      * Gets t
      * number of morphing in the given entity.

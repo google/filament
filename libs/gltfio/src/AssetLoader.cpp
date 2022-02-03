@@ -546,7 +546,9 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         // TODO: Set morph target buffers via builder.
         outputPrim = mResult->mMeshCache[mesh].data();
         for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim) {
-            mRenderableManager.setMorphTargetBufferAt(renderable, 0, index, outputPrim->targets);
+            MorphTargetBuffer* const morphTargetBuffer = outputPrim->targets;
+            mRenderableManager.setMorphTargetBufferAt(renderable, 0, index, morphTargetBuffer,
+                    morphTargetBuffer->getVertexCount());
         }
     }
 }

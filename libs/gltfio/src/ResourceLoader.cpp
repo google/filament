@@ -502,8 +502,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
                     uploadCallback, uploadUserdata(asset)));
             slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
             continue;
-        }
-        else if (slot.indexBuffer) {
+        } else if (slot.indexBuffer) {
             if (accessor->component_type == cgltf_component_type_r_8u) {
                 const size_t size16 = size * 2;
                 uint16_t* data16 = (uint16_t*) malloc(size16);
