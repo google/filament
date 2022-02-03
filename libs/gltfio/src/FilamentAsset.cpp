@@ -22,7 +22,6 @@
 #include <utils/Log.h>
 #include <utils/NameComponentManager.h>
 
-#include "MorphHelper.h"
 #include "Wireframe.h"
 
 using namespace filament;
@@ -42,7 +41,6 @@ FFilamentAsset::~FFilamentAsset() {
 
     delete mAnimator;
     delete mWireframe;
-    delete mMorpher;
 
     mEngine->destroy(mRoot);
     mEntityManager->destroy(mRoot);
@@ -72,6 +70,9 @@ FFilamentAsset::~FFilamentAsset() {
     for (auto tx : mTextures) {
         mEngine->destroy(tx);
     }
+    for (auto tb : mMorphTargetBuffers) {
+        mEngine->destroy(tb);
+    }
 }
 
 const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
@@ -99,10 +100,21 @@ Animator* FFilamentAsset::getAnimator() noexcept {
 
 const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         size_t targetIndex) const noexcept {
-    if (mResourcesLoaded) {
-        return mMorpher->getTargetNameAt(entity, targetIndex);
+    if (!mResourcesLoaded) {
+        return nullptr;
     }
-    return nullptr;
+
+    const auto iter = mMorphTargetNames.find(entity);
+    if (iter == mMorphTargetNames.end()) {
+        return nullptr;
+    }
+
+    const auto& morphTargetNames = iter->second;
+    if (targetIndex >= morphTargetNames.size()) {
+        return nullptr;
+    }
+
+    return morphTargetNames[targetIndex].c_str();
 }
 
 Entity FFilamentAsset::getWireframe() noexcept {

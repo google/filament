@@ -18,7 +18,12 @@
 
 #include <math/vec4.h>
 
-namespace filament { class VertexBuffer; }
+namespace filament {
+
+class VertexBuffer;
+class MorphTargetBuffer;
+
+}
 
 namespace gltfio {
 
@@ -41,6 +46,7 @@ struct TangentsJob {
     // a convenience to clients. You can think of this as a scratch space for clients.
     struct Context {
         filament::VertexBuffer* const vb;
+        filament::MorphTargetBuffer* const tb;
         const uint8_t slot;
     };
 
