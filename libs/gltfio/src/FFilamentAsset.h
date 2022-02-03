@@ -65,15 +65,15 @@ namespace gltfio {
 
 class Animator;
 class Wireframe;
-class MorphHelper;
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
 struct BufferSlot {
     const cgltf_accessor* accessor;
     cgltf_attribute_type attribute;
-    int bufferIndex; // for vertex buffers only
+    int bufferIndex; // for vertex buffer and morph target buffer only
     filament::VertexBuffer* vertexBuffer;
     filament::IndexBuffer* indexBuffer;
+    filament::MorphTargetBuffer* morphTargetBuffer;
 };
 
 // Encapsulates a connection between Texture and MaterialInstance.
@@ -97,6 +97,7 @@ struct Primitive {
     filament::IndexBuffer* indices = nullptr;
     filament::Aabb aabb; // object-space bounding box
     UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
+    filament::MorphTargetBuffer* targets = nullptr;
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
@@ -237,18 +238,19 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<filament::VertexBuffer*> mVertexBuffers;
     std::vector<filament::BufferObject*> mBufferObjects;
     std::vector<filament::IndexBuffer*> mIndexBuffers;
+    std::vector<filament::MorphTargetBuffer*> mMorphTargetBuffers;
     std::vector<filament::Texture*> mTextures;
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
     SkinVector mSkins; // unused for instanced assets
     Animator* mAnimator = nullptr;
-    MorphHelper* mMorpher = nullptr;
     Wireframe* mWireframe = nullptr;
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
     tsl::robin_map<utils::Entity, utils::CString> mNodeExtras;
+    tsl::robin_map<utils::Entity, std::vector<utils::CString>> mMorphTargetNames;
     utils::CString mAssetExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.
