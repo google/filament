@@ -444,7 +444,8 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
 
     Aabb aabb;
 
-    cgltf_size numMorphTargets = 0;
+    // glTF spec says that all primitives MUST have the same number of morph targets in the same order.
+    const cgltf_size numMorphTargets = mesh->weights_count;
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
     for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim, ++inputPrim) {
@@ -453,12 +454,11 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             slog.e << "Unsupported primitive type in " << name << io::endl;
         }
 
-        if (inputPrim->targets_count > 0) {
-            if (numMorphTargets > 0 && inputPrim->targets_count != numMorphTargets) {
-                slog.e << "Sister primitives must all have the same number of morph targets."
-                        << io::endl;
-            }
-            numMorphTargets = inputPrim->targets_count;
+        if (numMorphTargets > 0 && inputPrim->targets_count != numMorphTargets) {
+            slog.e << "Sister primitives must all have the same number of morph targets."
+                   << io::endl;
+            mError = true;
+            continue;
         }
 
         // Create a material instance for this primitive or fetch one from the cache.
