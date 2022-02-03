@@ -783,12 +783,6 @@ void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
             upcast(morphTargetBuffer), 0, count);
 }
 
-void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-        MorphTargetBuffer* morphTargetBuffer) {
-    upcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex,
-            upcast(morphTargetBuffer), 0, morphTargetBuffer->getVertexCount());
-}
-
 size_t RenderableManager::getMorphTargetCount(Instance instance) const noexcept {
     return upcast(this)->getMorphTargetCount(instance);
 }
