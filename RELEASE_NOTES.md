@@ -3,12 +3,13 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.18.0 (currently main branch)
+## v1.19.0 (currently main branch)
 
-- engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
 - engine: Support 256 morph targets.
 
-## v1.17.1
+## v1.18.0
+
+- engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
 
 ## v1.17.0
 
