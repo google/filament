@@ -119,7 +119,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             // Screen-space reflection parameters
             .add("ssrReprojection",         1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("ssrProjectToPixelMatrix", 1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("ssrUvFromViewMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("ssrThickness",            1, UniformInterfaceBlock::Type::FLOAT)
             .add("ssrBias",                 1, UniformInterfaceBlock::Type::FLOAT)
             .add("ssrDistance",             1, UniformInterfaceBlock::Type::FLOAT)

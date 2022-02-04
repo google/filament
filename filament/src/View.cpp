@@ -658,10 +658,10 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 }
 
 void FView::prepareSSR(Handle <HwTexture> ssr, float refractionLodOffset,
-        mat4f const& historyProjection, mat4f const& projectToPixelMatrix,
+        mat4f const& historyProjection, mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset,
-            historyProjection, projectToPixelMatrix, ssrOptions);
+            historyProjection, uvFromViewMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {

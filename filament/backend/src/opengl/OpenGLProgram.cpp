@@ -309,6 +309,18 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 params.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
             }
 
+#ifndef NDEBUG
+            // GLES3.x specification forbids depth textures to be filtered.
+            if (isDepthFormat(t->format)
+                && params.compareMode == SamplerCompareMode::NONE
+                && params.filterMag != SamplerMagFilter::NEAREST
+                && params.filterMin != SamplerMinFilter::NEAREST
+                && params.filterMin != SamplerMinFilter::NEAREST_MIPMAP_NEAREST) {
+                slog.w << "In material " << name.c_str()
+                       << ": depth texture used with filtering sampler, tmu = "
+                       << +index << io::endl;
+            }
+#endif
             gld->bindTexture(tmu, t);
             gld->bindSampler(tmu, params);
 

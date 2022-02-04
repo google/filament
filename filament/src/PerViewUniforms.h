@@ -77,7 +77,7 @@ public:
     void prepareSSR(TextureHandle ssr,
             float refractionLodOffset,
             math::mat4f const& historyProjection,
-            math::mat4f const& projectToPixelMatrix,
+            math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
 
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,

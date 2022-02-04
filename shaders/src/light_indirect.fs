@@ -541,7 +541,7 @@ vec3 evaluateRefraction(
     vec3 Ft;
 
     // compute the point where the ray exits the medium, if needed
-    vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
+    vec4 p = vec4(getClipFromWorldMatrix() * vec4(ray.position, 1.0));
     p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
     // perceptualRoughness to LOD
@@ -580,7 +580,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec4 Fssr = vec4(0.0f);
     // evaluateScreenSpaceReflections will set the value of ssr if there's a hit.
     // ssr.a contains the reflection's contribution.
-    if (pixel.roughness <= 0.01f && frameUniforms.ssrDistance > 0.0f) {
+    if (pixel.roughness <= 0.1f && frameUniforms.ssrDistance > 0.0f) {
         vec3 r = getReflectedVector(pixel, shading_view, shading_normal);
         Fssr = evaluateScreenSpaceReflections(pixel, r);
     }

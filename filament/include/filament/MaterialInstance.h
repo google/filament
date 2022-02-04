@@ -109,6 +109,9 @@ public:
     /**
      * Set a texture as the named parameter
      *
+     * Note: Depth textures can't be sampled with a linear filter unless the comparison mode is set
+     *       to COMPARE_TO_TEXTURE.
+     *
      * @param name      Name of the parameter as defined by Material. Cannot be nullptr.
      * @param texture   Non nullptr Texture object pointer.
      * @param sampler   Sampler parameters.
