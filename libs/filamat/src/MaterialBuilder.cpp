@@ -488,6 +488,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.reflectionMode = mReflectionMode;
     info.quality = mShaderQuality;
     info.hasCustomSurfaceShading = mCustomSurfaceShading;
+    info.useLegacyMorphing = mUseLegacyMorphing;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -936,7 +937,7 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     }
 
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
-    MaterialInfo info;
+    MaterialInfo info {};
     prepareToBuild(info);
 
     // Run checks, in order.
