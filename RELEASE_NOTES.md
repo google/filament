@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.18.0 (currently main branch)
 
 - engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
+- engine: Support 256 morph targets.
 
 ## v1.17.1
 
