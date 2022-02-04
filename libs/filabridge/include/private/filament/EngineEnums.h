@@ -69,7 +69,7 @@ constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 
 // The maximum number of morph target count.
 // This value is limited by ES3.0, ES3.0 only guarantees 256 layers in an array texture.
-constexpr int CONFIG_MAX_MORPH_TARGET_COUNT = 256;
+constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
 
 } // namespace filament
 
