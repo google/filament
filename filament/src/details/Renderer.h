@@ -176,11 +176,6 @@ private:
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
-    FrameGraphId<FrameGraphTexture> generateMipmapSSR(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            FCamera const& camera,
-            ColorPassConfig config, float* pLodOffset) const noexcept;
-
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
     }
