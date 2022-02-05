@@ -1002,7 +1002,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-    VulkanAttachment depth = rt->getDepth(sc);
+    VulkanAttachment depth = rt->getSamples() == 1 ? rt->getDepth(sc) : rt->getMsaaDepth();
     VulkanTexture* depthFeedback = nullptr;
 
     // If an uncleared depth buffer is attached but discarded at the end of the pass, then we should
@@ -1055,7 +1055,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .width = (uint16_t) extent.width,
         .height = (uint16_t) extent.height,
         .layers = 1,
-        .samples = rpkey.samples
+        .samples = rpkey.samples,
     };
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (rt->getColor(sc, i).format == VK_FORMAT_UNDEFINED) {
@@ -1076,7 +1076,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         }
     }
     if (depth.format != VK_FORMAT_UNDEFINED) {
-        fbkey.depth = rpkey.samples == 1 ? depth.view : rt->getMsaaDepth().view;
+        fbkey.depth = depth.view;
         assert_invariant(fbkey.depth);
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
