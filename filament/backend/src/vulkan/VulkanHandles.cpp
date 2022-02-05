@@ -227,7 +227,7 @@ VkExtent2D VulkanRenderTarget::getExtent(VulkanSwapChain* currentSurface) const 
 }
 
 VulkanAttachment VulkanRenderTarget::getColor(VulkanSwapChain* currentSurface, int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColor();
+    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColorAttachment();
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
@@ -235,7 +235,7 @@ VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
 }
 
 VulkanAttachment VulkanRenderTarget::getDepth(VulkanSwapChain* currentSurface) const {
-    return mOffscreen ? mDepth : currentSurface->depth;
+    return mOffscreen ? mDepth : currentSurface->getDepthAttachment();
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {

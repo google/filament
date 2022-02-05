@@ -34,9 +34,14 @@ struct VulkanSwapChain : public HwSwapChain {
     void destroy();
     void makePresentable();
     bool hasResized() const;
-    VulkanAttachment& getColor() { return color[currentSwapIndex]; }
 
-    VulkanContext& context;
+    // TODO: remove the "attachment" structs from here and instead return a VulkanTexture reference.
+    // Leveraging VulkanTexture will simplify this class by providing management and tracking
+    // for VkImageView and VkImageLayout. More importantly, it will allow us to remove many
+    // "is this a swap chain?" conditionals that are sprinkled throughout the Vulkan backend.
+    const VulkanAttachment& getColorAttachment() { return mColor[currentSwapIndex]; }
+    const VulkanAttachment& getDepthAttachment() { return mDepth; }
+
     VkSurfaceKHR surface = {};
     VkSwapchainKHR swapchain = {};
     VkSurfaceFormatKHR surfaceFormat = {};
@@ -44,11 +49,6 @@ struct VulkanSwapChain : public HwSwapChain {
     VkQueue presentQueue = {};
     VkQueue headlessQueue = {};
     uint32_t currentSwapIndex = {};
-
-    // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
-    // in a swap chain.
-    utils::FixedCapacityVector<VulkanAttachment> color;
-    VulkanAttachment depth = {};
 
     // This is signaled when vkAcquireNextImageKHR succeeds, and is waited on by the first
     // submission.
@@ -59,6 +59,16 @@ struct VulkanSwapChain : public HwSwapChain {
 
     bool suboptimal = false;
     bool firstRenderPass = false;
+
+private:
+    VulkanContext& mContext;
+
+    // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
+    // in a swap chain.
+    utils::FixedCapacityVector<VulkanAttachment> mColor;
+    VulkanAttachment mDepth = {};
+
+    void createFinalDepthBuffer(VkFormat depthFormat, VkExtent2D size);
 };
 
 } // namespace filament
