@@ -27,13 +27,13 @@ namespace backend {
 
 bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
-        currentSwapIndex = (currentSwapIndex + 1) % color.size();
+        currentSwapIndex = (currentSwapIndex + 1) % mColor.size();
         return true;
     }
 
     // This immediately retrieves the index of the next available presentable image, and
     // asynchronously requests the GPU to trigger the "imageAvailable" semaphore.
-    VkResult result = vkAcquireNextImageKHR(context.device, swapchain,
+    VkResult result = vkAcquireNextImageKHR(mContext.device, swapchain,
             UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &currentSwapIndex);
 
     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
@@ -45,15 +45,14 @@ bool VulkanSwapChain::acquire() {
 
     // To ensure that the next command buffer submission does not write into the image before
     // it has been acquired, push the image available semaphore into the command buffer manager.
-    context.commands->injectDependency(imageAvailable);
+    mContext.commands->injectDependency(imageAvailable);
     acquired = true;
 
     assert_invariant(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
     return true;
 }
 
-static void createFinalDepthBuffer(VulkanContext& context, VulkanSwapChain& surfaceContext,
-        VkFormat depthFormat, VkExtent2D size) {
+void VulkanSwapChain::createFinalDepthBuffer(VkFormat depthFormat, VkExtent2D size) {
     // Create an appropriately-sized device-only VkImage.
     VkImage depthImage;
     VkImageCreateInfo imageInfo {
@@ -66,22 +65,21 @@ static void createFinalDepthBuffer(VulkanContext& context, VulkanSwapChain& surf
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     };
-    VkResult error = bluevk::vkCreateImage(context.device, &imageInfo, VKALLOC, &depthImage);
+    VkResult error = bluevk::vkCreateImage(mContext.device, &imageInfo, VKALLOC, &depthImage);
     assert_invariant(!error && "Unable to create depth image.");
 
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs;
-    bluevk::vkGetImageMemoryRequirements(context.device, depthImage, &memReqs);
+    bluevk::vkGetImageMemoryRequirements(mContext.device, depthImage, &memReqs);
     VkMemoryAllocateInfo allocInfo {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memReqs.size,
-        .memoryTypeIndex = context.selectMemoryType(memReqs.memoryTypeBits,
+        .memoryTypeIndex = mContext.selectMemoryType(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
-    error = bluevk::vkAllocateMemory(context.device, &allocInfo, nullptr,
-            &surfaceContext.depth.memory);
+    error = bluevk::vkAllocateMemory(mContext.device, &allocInfo, nullptr, &mDepth.memory);
     assert_invariant(!error && "Unable to allocate depth memory.");
-    error = bluevk::vkBindImageMemory(context.device, depthImage, surfaceContext.depth.memory, 0);
+    error = bluevk::vkBindImageMemory(mContext.device, depthImage, mDepth.memory, 0);
     assert_invariant(!error && "Unable to bind depth memory.");
 
     // Create a VkImageView so that we can attach depth to the framebuffer.
@@ -97,24 +95,24 @@ static void createFinalDepthBuffer(VulkanContext& context, VulkanSwapChain& surf
             .layerCount = 1,
         },
     };
-    error = bluevk::vkCreateImageView(context.device, &viewInfo, VKALLOC, &depthView);
+    error = bluevk::vkCreateImageView(mContext.device, &viewInfo, VKALLOC, &depthView);
     assert_invariant(!error && "Unable to create depth view.");
 
-    // Unlike the color attachments (which are double-buffered or triple-buffered), we only need one
+    // Unlike the mColor attachments (which are double-buffered or triple-buffered), we only need one
     // depth attachment in the entire chain.
-    surfaceContext.depth.view = depthView;
-    surfaceContext.depth.image = depthImage;
-    surfaceContext.depth.format = depthFormat;
-    surfaceContext.depth.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    mDepth.view = depthView;
+    mDepth.image = depthImage;
+    mDepth.format = depthFormat;
+    mDepth.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     // Begin a new command buffer solely for the purpose of transitioning the image layout.
-    VkCommandBuffer cmdbuffer = context.commands->get().cmdbuffer;
+    VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
     // Transition the depth image into an optimal layout.
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        .newLayout = surfaceContext.depth.layout,
+        .newLayout = mDepth.layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = depthImage,
@@ -130,7 +128,7 @@ static void createFinalDepthBuffer(VulkanContext& context, VulkanSwapChain& surf
 
 void VulkanSwapChain::create() {
     VkSurfaceCapabilitiesKHR caps;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context.physicalDevice, surface, &caps);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext.physicalDevice, surface, &caps);
 
     // The general advice is to require one more than the minimum swap chain length, since the
     // absolute minimum could easily require waiting for a driver or presentation layer to release
@@ -153,11 +151,11 @@ void VulkanSwapChain::create() {
     if (surfaceFormat.format == VK_FORMAT_UNDEFINED) {
 
         uint32_t surfaceFormatsCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, surface,
+        vkGetPhysicalDeviceSurfaceFormatsKHR(mContext.physicalDevice, surface,
                 &surfaceFormatsCount, nullptr);
 
         FixedCapacityVector<VkSurfaceFormatKHR> surfaceFormats(surfaceFormatsCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, surface,
+        vkGetPhysicalDeviceSurfaceFormatsKHR(mContext.physicalDevice, surface,
                 &surfaceFormatsCount, surfaceFormats.data());
 
         surfaceFormat = surfaceFormats[0];
@@ -202,20 +200,20 @@ void VulkanSwapChain::create() {
         // exclusive mode, which could result in a smoother orientation change.
         .oldSwapchain = VK_NULL_HANDLE
     };
-    VkResult result = vkCreateSwapchainKHR(context.device, &createInfo, VKALLOC, &swapchain);
+    VkResult result = vkCreateSwapchainKHR(mContext.device, &createInfo, VKALLOC, &swapchain);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceFormatsKHR error.");
 
     // Extract the VkImage handles from the swap chain.
     uint32_t imageCount;
-    result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount, nullptr);
+    result = vkGetSwapchainImagesKHR(mContext.device, swapchain, &imageCount, nullptr);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR count error.");
-    color.reserve(imageCount);
-    color.resize(imageCount);
+    mColor.reserve(imageCount);
+    mColor.resize(imageCount);
     FixedCapacityVector<VkImage> images(imageCount);
-    result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount, images.data());
+    result = vkGetSwapchainImagesKHR(mContext.device, swapchain, &imageCount, images.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
-        color[i] = {
+        mColor[i] = {
             .format = surfaceFormat.format,
             .image = images[i],
             .view = {},
@@ -243,22 +241,22 @@ void VulkanSwapChain::create() {
     ivCreateInfo.subresourceRange.layerCount = 1;
     for (size_t i = 0; i < images.size(); ++i) {
         ivCreateInfo.image = images[i];
-        result = bluevk::vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                &color[i].view);
+        result = bluevk::vkCreateImageView(mContext.device, &ivCreateInfo, VKALLOC,
+                &mColor[i].view);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateImageView error.");
     }
 
-    createSemaphore(context.device, &imageAvailable);
+    createSemaphore(mContext.device, &imageAvailable);
     acquired = false;
 
-    createFinalDepthBuffer(context, *this, context.finalDepthFormat, clientSize);
+    createFinalDepthBuffer(mContext.finalDepthFormat, clientSize);
 }
 
 void VulkanSwapChain::destroy() {
-    context.commands->flush();
-    context.commands->wait();
-    const VkDevice device = context.device;
-    for (VulkanAttachment& swapContext : color) {
+    mContext.commands->flush();
+    mContext.commands->wait();
+    const VkDevice device = mContext.device;
+    for (VulkanAttachment& swapContext : mColor) {
 
         // If this is headless, then we own the image and need to explicitly destroy it.
         if (!swapchain) {
@@ -272,9 +270,9 @@ void VulkanSwapChain::destroy() {
     vkDestroySwapchainKHR(device, swapchain, VKALLOC);
     vkDestroySemaphore(device, imageAvailable, VKALLOC);
 
-    vkDestroyImageView(device, depth.view, VKALLOC);
-    vkDestroyImage(device, depth.image, VKALLOC);
-    vkFreeMemory(device, depth.memory, VKALLOC);
+    vkDestroyImageView(device, mDepth.view, VKALLOC);
+    vkDestroyImage(device, mDepth.image, VKALLOC);
+    vkFreeMemory(device, mDepth.memory, VKALLOC);
 }
 
 // Near the end of the frame, we transition the swap chain to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR using
@@ -288,7 +286,7 @@ void VulkanSwapChain::makePresentable() {
     if (headlessQueue) {
         return;
     }
-    VulkanAttachment& swapContext = color[currentSwapIndex];
+    VulkanAttachment& swapContext = mColor[currentSwapIndex];
     assert_invariant(swapContext.layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -322,38 +320,38 @@ void VulkanSwapChain::makePresentable() {
             .layerCount = 1,
         },
     };
-    vkCmdPipelineBarrier(context.commands->get().cmdbuffer,
+    vkCmdPipelineBarrier(mContext.commands->get().cmdbuffer,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-static void getHeadlessQueue(VulkanContext& context, VulkanSwapChain& sc) {
-    vkGetDeviceQueue(context.device, context.graphicsQueueFamilyIndex, 0, &sc.headlessQueue);
+static void getHeadlessQueue(VulkanContext& mContext, VulkanSwapChain& sc) {
+    vkGetDeviceQueue(mContext.device, mContext.graphicsQueueFamilyIndex, 0, &sc.headlessQueue);
     ASSERT_POSTCONDITION(sc.headlessQueue, "Unable to obtain graphics queue.");
     sc.presentQueue = VK_NULL_HANDLE;
 }
 
-static void getPresentationQueue(VulkanContext& context, VulkanSwapChain& sc) {
+static void getPresentationQueue(VulkanContext& mContext, VulkanSwapChain& sc) {
     uint32_t queueFamiliesCount;
-    vkGetPhysicalDeviceQueueFamilyProperties(context.physicalDevice, &queueFamiliesCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(mContext.physicalDevice, &queueFamiliesCount, nullptr);
     FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(context.physicalDevice, &queueFamiliesCount,
+    vkGetPhysicalDeviceQueueFamilyProperties(mContext.physicalDevice, &queueFamiliesCount,
             queueFamiliesProperties.data());
     uint32_t presentQueueFamilyIndex = 0xffff;
 
     // We prefer the graphics and presentation queues to be the same, so first check if that works.
     // On most platforms they must be the same anyway, and this avoids issues with MoltenVK.
     VkBool32 supported = VK_FALSE;
-    vkGetPhysicalDeviceSurfaceSupportKHR(context.physicalDevice, context.graphicsQueueFamilyIndex,
+    vkGetPhysicalDeviceSurfaceSupportKHR(mContext.physicalDevice, mContext.graphicsQueueFamilyIndex,
             sc.surface, &supported);
     if (supported) {
-        presentQueueFamilyIndex = context.graphicsQueueFamilyIndex;
+        presentQueueFamilyIndex = mContext.graphicsQueueFamilyIndex;
     }
 
     // Otherwise fall back to separate graphics and presentation queues.
     if (presentQueueFamilyIndex == 0xffff) {
         for (uint32_t j = 0; j < queueFamiliesCount; ++j) {
-            vkGetPhysicalDeviceSurfaceSupportKHR(context.physicalDevice, j, sc.surface, &supported);
+            vkGetPhysicalDeviceSurfaceSupportKHR(mContext.physicalDevice, j, sc.surface, &supported);
             if (supported) {
                 presentQueueFamilyIndex = j;
                 break;
@@ -362,7 +360,7 @@ static void getPresentationQueue(VulkanContext& context, VulkanSwapChain& sc) {
     }
     ASSERT_POSTCONDITION(presentQueueFamilyIndex != 0xffff,
             "This physical device does not support the presentation queue.");
-    if (context.graphicsQueueFamilyIndex != presentQueueFamilyIndex) {
+    if (mContext.graphicsQueueFamilyIndex != presentQueueFamilyIndex) {
 
         // TODO: Strictly speaking, this code path is incorrect. However it is not triggered on any
         // Android devices that we've tested with, nor with MoltenVK.
@@ -375,10 +373,10 @@ static void getPresentationQueue(VulkanContext& context, VulkanSwapChain& sc) {
         // (e.g. upload a vertex buffer) before the swap chain is created.
         //
         // https://github.com/google/filament/issues/1532
-        vkGetDeviceQueue(context.device, presentQueueFamilyIndex, 0, &sc.presentQueue);
+        vkGetDeviceQueue(mContext.device, presentQueueFamilyIndex, 0, &sc.presentQueue);
 
     } else {
-        sc.presentQueue = context.graphicsQueue;
+        sc.presentQueue = mContext.graphicsQueue;
     }
     ASSERT_POSTCONDITION(sc.presentQueue, "Unable to obtain presentation queue.");
     sc.headlessQueue = VK_NULL_HANDLE;
@@ -386,7 +384,7 @@ static void getPresentationQueue(VulkanContext& context, VulkanSwapChain& sc) {
 
 // Primary SwapChain constructor. (not headless)
 VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface) :
-        context(context) {
+        mContext(context) {
     suboptimal = false;
     surface = vksurface;
     firstRenderPass = true;
@@ -396,7 +394,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface)
 
 // Headless SwapChain constructor. (does not create a VkSwapChainKHR)
 VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height) :
-        context(context) {
+        mContext(context) {
     surface = VK_NULL_HANDLE;
     getHeadlessQueue(context, *this);
 
@@ -404,10 +402,10 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
     swapchain = VK_NULL_HANDLE;
 
     // Somewhat arbitrarily, headless rendering is double-buffered.
-    color.reserve(2);
-    color.resize(2);
+    mColor.reserve(2);
+    mColor.resize(2);
 
-    for (size_t i = 0; i < color.size(); ++i) {
+    for (size_t i = 0; i < mColor.size(); ++i) {
         VkImage image;
         VkImageCreateInfo iCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -440,7 +438,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
         vkAllocateMemory(context.device, &allocInfo, VKALLOC, &imageMemory);
         vkBindImageMemory(context.device, image, imageMemory, 0);
 
-        color[i] = {
+        mColor[i] = {
             .format = surfaceFormat.format, .image = image,
             .view = {}, .memory = imageMemory, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
         };
@@ -456,7 +454,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
             }
         };
         vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                    &color[i].view);
+                    &mColor[i].view);
 
         VkImageMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -481,7 +479,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
 
     imageAvailable = VK_NULL_HANDLE;
 
-    createFinalDepthBuffer(context, *this, context.finalDepthFormat, clientSize);
+    createFinalDepthBuffer(context.finalDepthFormat, clientSize);
 }
 
 bool VulkanSwapChain::hasResized() const {
@@ -489,7 +487,7 @@ bool VulkanSwapChain::hasResized() const {
         return false;
     }
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context.physicalDevice, surface, &surfaceCapabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext.physicalDevice, surface, &surfaceCapabilities);
     return !equivalent(clientSize, surfaceCapabilities.currentExtent);
 }
 

@@ -171,7 +171,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
     // render target is supported, which has no associated texture.
     const VkImageLayout desiredLayout = dst.texture ?
             getDefaultImageLayout(dst.texture->usage) :
-            mContext.currentSurface->getColor().layout;
+            mContext.currentSurface->getColorAttachment().layout;
 
     transitionImageLayout(cmdbuffer, blitterTransitionHelper({
         .image = dst.image,
