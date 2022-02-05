@@ -78,7 +78,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
 #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
                 << ", variant = (" << utils::io::hex
-                << (int) builder.getVariant() << utils::io::dec << "), "
+                << (int) builder.getVariant().key() << utils::io::dec << "), "
                 << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
                 << utils::io::endl;
 #endif

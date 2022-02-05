@@ -27,9 +27,17 @@ namespace filament {
 namespace backend {
 
 struct VulkanTexture : public HwTexture {
+
+    // Standard constructor for user-facing textures.
     VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
             TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle = {});
+
+    // Specialized constructor for internally created textures (e.g. from a swap chain)
+    // The texture will never destroy the given VkImage, but it does manages its subresources.
+    VulkanTexture(VulkanContext& context, VkImage image, VkFormat format, uint8_t samples,
+            uint32_t w, uint32_t h, TextureUsage usage, VulkanStagePool& stagePool);
+
     ~VulkanTexture();
 
     // Uploads data into a subregion of a 2D or 3D texture.
@@ -46,6 +54,9 @@ struct VulkanTexture : public HwTexture {
     // Sets the min/max range of miplevels in the primary image view.
     void setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel);
 
+    // If any primary views have UNDEFINED layout, this returns false. For diagnostic purposes only.
+    bool validatePrimaryImageView() const;
+
     // Gets or creates a cached VkImageView for a single subresource that can be used as a render
     // target attachment.  Unlike the primary image view, this always has type VK_IMAGE_VIEW_TYPE_2D
     // and the identity swizzle.
@@ -61,9 +72,13 @@ struct VulkanTexture : public HwTexture {
     void transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
             VkImageLayout newLayout);
 
-private:
+    // Notifies the texture that a particular subresource's layout has changed.
+    void trackLayout(uint32_t miplevel, uint32_t layer, VkImageLayout layout);
+
     // Gets or creates a cached VkImageView for a range of miplevels and array layers.
     VkImageView getImageView(VkImageSubresourceRange range);
+
+private:
 
     void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
         uint32_t height, uint32_t depth, uint32_t miplevel);
