@@ -135,7 +135,7 @@ Handle<HwSamplerGroup> FMorphTargetBuffer::createDummySampleGroup(FEngine& engin
     Handle<HwSamplerGroup> sgh = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
     backend::SamplerGroup group(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
     group.setSampler(PerRenderPrimitiveMorphingSib::POSITIONS, engine.getOneTextureArray(), {});
-    group.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS, engine.getOneTextureArray(), {});
+    group.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS, engine.getOneIntegerTextureArray(), {});
     driver.updateSamplerGroup(sgh, std::move(group.toCommandStream()));
     return sgh;
 }

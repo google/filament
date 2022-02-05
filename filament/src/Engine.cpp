@@ -269,6 +269,9 @@ void FEngine::init() {
     mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+    mDummyOneIntegerTextureArray =  driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+            TextureFormat::RGBA8I, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
     mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
@@ -361,6 +364,7 @@ void FEngine::shutdown() {
     driver.destroySamplerGroup(mDummyMorphingSamplerGroup);
     driver.destroyTexture(mDummyOneTexture);
     driver.destroyTexture(mDummyOneTextureArray);
+    driver.destroyTexture(mDummyOneIntegerTextureArray);
     driver.destroyTexture(mDummyZeroTexture);
 
     /*
