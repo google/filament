@@ -81,10 +81,16 @@ public:
             filament::Viewport const& svp, const CameraInfo& cameraInfo,
             AmbientOcclusionOptions const& options) noexcept;
 
-    // Used in refraction pass
+    // Gaussian mipmap
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
+            FrameGraphId<FrameGraphTexture> input, size_t levels, bool reinhard,
             size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
+
+    FrameGraphId<FrameGraphTexture> generateMipmapSSR(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, float verticalFieldOfView,
+            filament::Viewport const& svp, math::float2 scale, backend::TextureFormat format,
+            float* pLodOffset) const noexcept;
+
 
     // Depth-of-field
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
@@ -118,7 +124,7 @@ public:
     FrameGraphId<FrameGraphTexture> customResolveUncompressPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> inout) noexcept;
 
-        // Anti-aliasing
+    // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
