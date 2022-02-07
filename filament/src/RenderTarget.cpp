@@ -97,8 +97,8 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     uint32_t maxHeight = 0;
     for (auto const& attachment : mImpl->mAttachments) {
         if (attachment.texture) {
-            const uint32_t w = attachment.texture->getWidth(color.mipLevel);
-            const uint32_t h = attachment.texture->getHeight(color.mipLevel);
+            const uint32_t w = attachment.texture->getWidth(attachment.mipLevel);
+            const uint32_t h = attachment.texture->getHeight(attachment.mipLevel);
             minWidth  = std::min(minWidth, w);
             minHeight = std::min(minHeight, h);
             maxWidth  = std::max(maxWidth, w);

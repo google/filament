@@ -27,7 +27,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 18;
+static constexpr size_t MATERIAL_VERSION = 19;
 
 /**
  * Supported shading models
@@ -150,6 +150,7 @@ enum VertexAttribute : uint8_t {
     // this is limited by driver::MAX_VERTEX_ATTRIBUTE_COUNT
 };
 
+static constexpr size_t MAX_LEGACY_MORPH_TARGETS = 4;
 static constexpr size_t MAX_MORPH_TARGETS = 128; // this is limited by filament::CONFIG_MAX_MORPH_TARGET_COUNT
 static constexpr size_t MAX_CUSTOM_ATTRIBUTES = 8;
 
