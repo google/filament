@@ -441,6 +441,10 @@ bool FScene::hasContactShadows() const noexcept {
     return hasContactShadows && mHasContactShadows;
 }
 
+void FScene::forEach(Invocable<void(utils::Entity)>&& functor) const noexcept {
+    std::for_each(mEntities.begin(), mEntities.end(), std::move(functor));
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -487,6 +491,10 @@ size_t Scene::getLightCount() const noexcept {
 
 bool Scene::hasEntity(Entity entity) const noexcept {
     return upcast(this)->hasEntity(entity);
+}
+
+void Scene::forEach(Invocable<void(utils::Entity)>&& functor) const noexcept {
+    upcast(this)->forEach(std::move(functor));
 }
 
 } // namespace filament
