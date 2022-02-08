@@ -6,6 +6,10 @@ A new header is inserted each time a *tag* is created.
 ## v1.18.0 (currently main branch)
 
 - engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
+- engine: Support legacy morphing mode with vertex attributes.
+- engine: Allow more flexible quality settings for the ColorGrading LUT.
+- engine: Improve screen-space reflections quality and allow reflections and refractions together.
+- Vulkan: Bug fixes and improvements.
 
 ## v1.17.0
 
