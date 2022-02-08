@@ -709,13 +709,13 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
 void MetalDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* externalBuffer) {
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
     ib->buffer.releaseExternalBuffer();
-    ib->buffer.wrapExternalBuffer((__bridge id<MTLBuffer>)externalBuffer);
+    ib->buffer.wrapExternalBuffer((id<MTLBuffer>) CFBridgingRelease(externalBuffer));
 }
 
 void MetalDriver::setExternalBuffer(Handle<HwBufferObject> boh, void* externalBuffer) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
     bo->getBuffer()->releaseExternalBuffer();
-    bo->getBuffer()->wrapExternalBuffer((__bridge id<MTLBuffer>)externalBuffer);
+    bo->getBuffer()->wrapExternalBuffer((id<MTLBuffer>) CFBridgingRelease(externalBuffer));
 }
 
 void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,

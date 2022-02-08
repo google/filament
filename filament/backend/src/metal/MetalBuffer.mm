@@ -57,7 +57,7 @@ MetalBuffer::~MetalBuffer() {
     }
 }
 
-void MetalBuffer::wrapExternalBuffer(id <MTLBuffer> buffer) {
+void MetalBuffer::wrapExternalBuffer(id<MTLBuffer> buffer) {
     ASSERT_PRECONDITION(!mExternalBuffer, "A external buffer is already wrapped. Call releaseExternalBuffer()");
     ASSERT_PRECONDITION(buffer, "External buffer cannot be nil");
     ASSERT_PRECONDITION(!mCpuBuffer, "This buffer is backed by CPU memory");
@@ -69,9 +69,6 @@ bool MetalBuffer::releaseExternalBuffer() {
         return false;
     }
 
-#if !__has_feature(objc_arc)
-    [mExternalBuffer release];
-#endif
     mExternalBuffer = nil;
     return true;
 }

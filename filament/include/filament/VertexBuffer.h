@@ -206,7 +206,14 @@ public:
     void setBufferObjectAt(Engine& engine, uint8_t bufferIndex, BufferObject const* bufferObject);
 
     /**
-     * Wraps the given external buffer (stores a strong reference to it).
+     * Specify a native buffer to import as a Filament vertex buffer.
+     *
+     * The externalBuffer pointer is backend-specific:
+     *   - Metal: id<MTLBuffer>
+     *
+     * With Metal, the id<MTLBuffer> object should be cast to an void* using
+     * CFBridgingRetain to transfer ownership to Filament. Filament will release ownership of
+     * the buffer object when the Filament vertex buffer is destroyed.
      *
      * To use this, you must first call enableExternalBuffer() on the Builder.
      *

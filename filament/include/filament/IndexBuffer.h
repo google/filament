@@ -125,11 +125,18 @@ public:
 
 
     /**
-     * Wraps the given external buffer (stores a strong reference to it).
+     * Specify a native buffer to import as a Filament index buffer.
+     *
+     * The externalBuffer pointer is backend-specific:
+     *   - Metal: id<MTLBuffer>
+     *
+     * With Metal, the id<MTLBuffer> object should be cast to an void* using
+     * CFBridgingRetain to transfer ownership to Filament. Filament will release ownership of
+     * the buffer object when the Filament index buffer is destroyed.
      *
      * To use this, you must first call enableExternalBuffer() on the Builder.
      *
-     * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
+     * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
      * @param externalBuffer Pointer to the external buffer that will be used in this buffer slot.
      */
     void setExternalBuffer(Engine& engine, void* externalBuffer);
