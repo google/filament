@@ -231,6 +231,17 @@ enum class Property : uint8_t {
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };
 
+enum class UserVariantFilterBit : uint32_t {
+    DIRECTIONAL_LIGHTING        = 0x01,
+    DYNAMIC_LIGHTING            = 0x02,
+    SHADOW_RECEIVER             = 0x04,
+    SKINNING                    = 0x08,
+    FOG                         = 0x10,
+    VSM                         = 0x20,
+};
+
+using UserVariantFilterMask = uint32_t;
+
 } // namespace filament
 
 #endif

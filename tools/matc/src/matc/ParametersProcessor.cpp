@@ -697,17 +697,19 @@ static bool processRefractionType(MaterialBuilder& builder, const JsonishValue& 
 static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
     // We avoid using an initializer list for this particular map to avoid build errors that are
     // due to static initialization ordering.
-    static const std::unordered_map<std::string, uint8_t> strToEnum  = [] {
-        std::unordered_map<std::string, uint8_t> strToEnum;
-        strToEnum["directionalLighting"] = filament::Variant::DIR;
-        strToEnum["dynamicLighting"] = filament::Variant::DYN;
-        strToEnum["shadowReceiver"] = filament::Variant::SRE;
-        strToEnum["skinning"] = filament::Variant::SKN;
-        strToEnum["vsm"] = filament::Variant::VSM;
-        strToEnum["fog"] = filament::Variant::FOG;
+    using filament::Variant;
+    static const std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum  = [] {
+        std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum;
+        strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
+        strToEnum["dynamicLighting"]        = filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
+        strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
+        strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
+        strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
+        strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
         return strToEnum;
     }();
-    uint8_t variantFilter = 0;
+
+    filament::UserVariantFilterMask variantFilter = {};
     const JsonishArray* jsonArray = value.toJsonArray();
     const auto& elements = jsonArray->getElements();
 
@@ -726,7 +728,7 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
                       " is not a valid variant" << std::endl;
         }
 
-        variantFilter |= strToEnum.at(s);
+        variantFilter |= (uint32_t)strToEnum.at(s);
     }
 
     builder.variantFilter(variantFilter);
