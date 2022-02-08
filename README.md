@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.17.0'
+    implementation 'com.google.android.filament:filament-android:1.18.0'
 }
 ```
 
@@ -52,7 +52,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.17.0'
+pod 'Filament', '~> 1.18.0'
 ```
 
 ### Snapshots
@@ -126,6 +126,7 @@ steps:
 - Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
+- Screen-space reflections
 - Screen-space refraction
 - Global fog
 - Dynamic resolution (with support for AMD FidelityFX FSR)

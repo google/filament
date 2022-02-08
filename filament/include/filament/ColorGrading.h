@@ -103,12 +103,19 @@ class FColorGrading;
 class UTILS_PUBLIC ColorGrading : public FilamentAPI {
     struct BuilderDetails;
 public:
+
     enum class QualityLevel : uint8_t {
         LOW,
         MEDIUM,
         HIGH,
         ULTRA
     };
+
+    enum class LutFormat : uint8_t {
+        INTEGER,    //!< 10 bits per component
+        FLOAT,      //!< 16 bits per component (10 bits mantissa precision)
+    };
+
 
     /**
      * List of available tone-mapping operators.
@@ -140,6 +147,7 @@ public:
          * 3D texture. For instance, a low quality level will use a 16x16x16 10 bit LUT, a medium
          * quality level will use a 32x32x32 10 bit LUT, a high quality will use a 32x32x32 16 bit
          * LUT, and a ultra quality will use a 64x64x64 16 bit LUT.
+         * This overrides the values set by format() and dimensions().
          *
          * The default quality is medium.
          *
@@ -148,6 +156,30 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& quality(QualityLevel qualityLevel) noexcept;
+
+        /**
+         * When color grading is implemented using a 3D LUT, this sets the texture format of
+         * of the LUT. This overrides the value set by quality().
+         *
+         * The default is INTEGER
+         *
+         * @param format The desired format of the 3D LUT.
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& format(LutFormat format) noexcept;
+
+        /**
+         * When color grading is implemented using a 3D LUT, this sets the dimension of the LUT.
+         * This overrides the value set by quality().
+         *
+         * The default is 32
+         *
+         * @param dim The desired dimension of the LUT. Between 16 and 64.
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& dimensions(uint8_t dim) noexcept;
 
         /**
          * Selects the tone mapping operator to apply to the HDR color buffer as the last

@@ -17,16 +17,19 @@
 #ifndef TNT_FILAMENT_DETAILS_SHADERGENERATOR_H
 #define TNT_FILAMENT_DETAILS_SHADERGENERATOR_H
 
-#include <algorithm>
+
+#include "MaterialInfo.h"
 
 #include <filament/MaterialEnums.h>
 
 #include <filamat/MaterialBuilder.h>
 
-#include "MaterialInfo.h"
+#include <private/filament/Variant.h>
 
 #include <utils/CString.h>
 #include <utils/sstream.h>
+
+#include <algorithm>
 
 namespace filamat {
 
@@ -47,13 +50,13 @@ public:
 
     std::string createVertexProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, uint8_t variantKey,
+            MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation,
             filament::VertexDomain vertexDomain) const noexcept;
 
-    std::string createFragmentProgram(filament::backend::ShaderModel sm,
+    std::string createFragmentProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, uint8_t variantKey,
+            MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation) const noexcept;
 
     /**
@@ -70,7 +73,7 @@ private:
 
     std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, uint8_t variant,
+            MaterialInfo const& material, filament::Variant::type_t variantKey,
             const filament::SamplerBindingMap& samplerBindingMap) const noexcept;
 
     std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,

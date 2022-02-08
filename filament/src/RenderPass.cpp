@@ -173,8 +173,8 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
         FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
-    uint8_t variant =
-            Variant::filterVariant(cmdDraw.primitive.materialVariant.key, ma->isVariantLit());
+    Variant variant = Variant::filterVariant(
+            cmdDraw.primitive.materialVariant, ma->isVariantLit());
 
     // Below, we evaluate both commands to avoid a branch
 
@@ -193,7 +193,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
     keyDraw |= uint64_t(hasScreenSpaceRefraction ? Pass::REFRACT : Pass::COLOR);
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
-    keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
+    keyDraw |= makeField(variant.key, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
@@ -204,7 +204,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
     cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.primitive.mi = mi;
-    cmdDraw.primitive.materialVariant.key = variant;
+    cmdDraw.primitive.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -277,6 +277,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
+    auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
@@ -372,6 +373,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
+        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
 
         /*
          * This is our hot loop. It's written to avoid branches.
@@ -379,11 +381,16 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (auto const& primitive : primitives) {
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
+            FMorphTargetBuffer const* const morphTargetBuffer = primitive.getMorphTargetBuffer();
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.morphTargetBuffer = primitive.getMorphTargetBuffer();
                 cmdColor.primitive.materialVariant = materialVariant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
+
+                cmdColor.primitive.morphWeightBuffer = morphing.handle;
+                if (UTILS_UNLIKELY(morphTargetBuffer)) {
+                    cmdColor.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
+                }
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -471,8 +478,12 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdDepth.primitive.mi = mi;
-                cmdDepth.primitive.morphTargetBuffer = primitive.getMorphTargetBuffer();
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
+
+                cmdDepth.primitive.morphWeightBuffer = morphing.handle;
+                if (UTILS_UNLIKELY(morphTargetBuffer)) {
+                    cmdDepth.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
+                }
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
@@ -517,12 +528,13 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(driver, mBegin, mEnd, mRenderableSoa);
+    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa);
     driver.endRenderPass();
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
+void RenderPass::Executor::recordDriverCommands(FEngine& engine,
+        backend::DriverApi& driver,
         const Command* first, const Command* last,
         FScene::RenderableSoa const& soa) const noexcept {
     SYSTRACE_CALL();
@@ -531,7 +543,6 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
         SYSTRACE_VALUE32("commandCount", last - first);
 
         auto const* const UTILS_RESTRICT soaSkinning = soa.data<FScene::SKINNING_BUFFER>();
-        auto const* const UTILS_RESTRICT soaMorphing = soa.data<FScene::MORPHING_BUFFER>();
 
         PolygonOffset dummyPolyOffset;
         PipelineState pipeline{ .polygonOffset = mPolygonOffset };
@@ -567,7 +578,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                 mi->use(driver);
             }
 
-            pipeline.program = ma->getProgram(info.materialVariant.key);
+            pipeline.program = ma->getProgram(info.materialVariant);
             size_t offset = info.index * sizeof(PerRenderableUib);
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
                     uboHandle, offset, sizeof(PerRenderableUib));
@@ -579,17 +590,24 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         skinning.handle,
                         skinning.offset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
+
+                if (!info.morphTargetBuffer) {
+                    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                            engine.getDummyMorphingSamplerGroup());
+                }
             }
 
-            auto morphTargetBuffer = info.morphTargetBuffer;
-            if (UTILS_UNLIKELY(morphTargetBuffer)) {
+            if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
                 // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
                 // and use bindUniformBufferRange which might be more efficient.
-                auto morphing = soaMorphing[info.index];
-                assert_invariant(morphing.handle);
-                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
-                assert_invariant(morphing.count <= morphTargetBuffer->getCount());
-                morphTargetBuffer->bind(driver);
+                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
+                        info.morphWeightBuffer);
+
+                // When only skinning is enabled, morphTargetBuffer isn't created.
+                if (info.morphTargetBuffer) {
+                    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                            info.morphTargetBuffer);
+                }
             }
 
             driver.draw(pipeline, info.primitiveHandle);

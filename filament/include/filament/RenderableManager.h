@@ -300,7 +300,20 @@ public:
         Builder& skinning(size_t boneCount) noexcept; //!< \overload
 
         /**
-         * Controls if the renderable has vertex morphing targets, false by default.
+         * Controls if the renderable has vertex morphing targets, false by default. This is
+         * required to enable GPU morphing.
+         *
+         * Filament supports two morphing modes: standard (default) and legacy.
+         *
+         * For standard morphing, A MorphTargetBuffer must be created and provided via
+         * RenderableManager::setMorphTargetBufferAt(). Standard morphing supports up to
+         * \c CONFIG_MAX_MORPH_TARGET_COUNT morph targets.
+         *
+         * For legacy morphing, the attached VertexBuffer must provide data in the
+         * appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc). Legacy morphing only
+         * supports up to 4 morph targets and will be deprecated in the future. Legacy morphing must
+         * be enabled on the material definition: either via the legacyMorphing material attribute
+         * or by calling filamat::MaterialBuilder::useLegacyMorphing().
          *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
@@ -455,7 +468,8 @@ public:
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * The renderable must be built with morphing enabled, see Builder::morphing().
+     * The renderable must be built with morphing enabled, see Builder::morphing(). In legacy
+     * morphing mode, only the first 4 weights are considered.
      */
     void setMorphWeights(Instance instance, float const* weights, size_t count) noexcept;
 

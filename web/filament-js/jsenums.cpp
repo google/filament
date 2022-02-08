@@ -61,7 +61,15 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("CUSTOM4", CUSTOM4)
     .value("CUSTOM5", CUSTOM5)
     .value("CUSTOM6", CUSTOM6)
-    .value("CUSTOM7", CUSTOM7);
+    .value("CUSTOM7", CUSTOM7)
+    .value("MORPH_POSITION_0", MORPH_POSITION_0)
+    .value("MORPH_POSITION_1", MORPH_POSITION_1)
+    .value("MORPH_POSITION_2", MORPH_POSITION_2)
+    .value("MORPH_POSITION_3", MORPH_POSITION_3)
+    .value("MORPH_TANGENTS_0", MORPH_TANGENTS_0)
+    .value("MORPH_TANGENTS_1", MORPH_TANGENTS_1)
+    .value("MORPH_TANGENTS_2", MORPH_TANGENTS_2)
+    .value("MORPH_TANGENTS_3", MORPH_TANGENTS_3);
 
 enum_<BufferObject::BindingType>("BufferObject$BindingType")
     .value("VERTEX", BufferObject::BindingType::VERTEX);

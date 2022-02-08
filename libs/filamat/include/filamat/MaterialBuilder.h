@@ -45,8 +45,8 @@ class JobSystem;
 namespace filamat {
 
 struct MaterialInfo;
-class ChunkContainer;
 struct Variant;
+class ChunkContainer;
 
 class UTILS_PUBLIC MaterialBuilderBase {
 public:
@@ -530,6 +530,12 @@ public:
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
     /**
+     * Legacy morphing uses the data in the VertexAttribute slots (\c MORPH_POSITION_0, etc) and is
+     * limited to 4 morph targets. See filament::RenderableManager::Builder::morphing().
+     */
+    MaterialBuilder& useLegacyMorphing() noexcept;
+
+    /**
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
      */
@@ -653,7 +659,7 @@ private:
 
     bool generateShaders(
             utils::JobSystem& jobSystem,
-            const std::vector<Variant>& variants, ChunkContainer& container,
+            const std::vector<filamat::Variant>& variants, ChunkContainer& container,
             const MaterialInfo& info) const noexcept;
 
     bool hasCustomVaryings() const noexcept;
@@ -743,6 +749,8 @@ private:
     bool mCustomSurfaceShading = false;
 
     bool mEnableFramebufferFetch = false;
+
+    bool mUseLegacyMorphing = false;
 
     PreprocessorDefineList mDefines;
 };

@@ -79,6 +79,7 @@ public class View {
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+    private ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
     private SoftShadowOptions mSoftShadowOptions;
@@ -334,6 +335,28 @@ public class View {
         /** enables or disables temporal anti-aliasing */
         public boolean enabled = false;
     };
+
+    /**
+     * Options for Screen-space Reflections.
+     * @see View#setScreenSpaceReflectionOptions
+     */
+    public static class ScreenSpaceReflectionsOptions {
+        /** ray thickness, in world units */
+        public float thickness = 0.5f;
+
+        /** bias, in world units, to prevent self-intersections */
+        public float bias = 0.01f;
+
+        /** maximum distance, in world units, to raycast */
+        public float maxDistance = 3.0f;
+
+        /** stride, in texels, for samples along the ray. */
+        public float stride = 1.0f;
+
+        /** enables or disables screen-space reflections */
+        public boolean enabled = false;
+    };
+
 
     /**
      * Options for controlling the Bloom effect
@@ -1186,6 +1209,17 @@ public class View {
     }
 
     /**
+     * Enables or disable screen-space reflections. Disabled by default.
+     *
+     * @param options screen-space reflections options
+     */
+    public void setScreenSpaceReflectionsOptions(@NonNull ScreenSpaceReflectionsOptions options) {
+        mScreenSpaceReflectionsOptions = options;
+        nSetScreenSpaceReflectionsOptions(getNativeObject(), options.thickness, options.bias,
+                options.maxDistance, options.stride, options.enabled);
+    }
+
+    /**
      * Returns temporal anti-aliasing options.
      *
      * @return temporal anti-aliasing options
@@ -1196,6 +1230,19 @@ public class View {
             mTemporalAntiAliasingOptions = new TemporalAntiAliasingOptions();
         }
         return mTemporalAntiAliasingOptions;
+    }
+
+    /**
+     * Returns screen-space reflections options.
+     *
+     * @return screen-space reflections options
+     */
+    @NonNull
+    public ScreenSpaceReflectionsOptions getScreenSpaceReflectionsOptions() {
+        if (mScreenSpaceReflectionsOptions == null) {
+            mScreenSpaceReflectionsOptions = new ScreenSpaceReflectionsOptions();
+        }
+        return mScreenSpaceReflectionsOptions;
     }
 
     /**
@@ -1782,6 +1829,7 @@ public class View {
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
+    private static native void nSetScreenSpaceReflectionsOptions(long nativeView, float thickness, float bias, float maxDistance, float stride, boolean enabled);
     private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);

@@ -21,9 +21,9 @@
 
 namespace filament::matdbg {
 
-std::string formatVariantString(uint8_t variant, MaterialDomain domain) noexcept {
+std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept {
     if (domain == MaterialDomain::POST_PROCESS) {
-        switch ((PostProcessVariant) variant) {
+        switch (PostProcessVariant{variant.key}) {
             case PostProcessVariant::OPAQUE: return "OPA";
             case PostProcessVariant::TRANSLUCENT: return "TRN";
         }
@@ -35,14 +35,14 @@ std::string formatVariantString(uint8_t variant, MaterialDomain domain) noexcept
     // NOTE: The 3-character nomenclature used here is consistent with the ASCII art seen in the
     // Variant header file and allows the information to fit in a reasonable amount of space on
     // the page. The HTML file has a legend.
-    if (variant) {
-        if (variant & Variant::DIRECTIONAL_LIGHTING)  variantString += "DIR|";
-        if (variant & Variant::DYNAMIC_LIGHTING)      variantString += "DYN|";
-        if (variant & Variant::SHADOW_RECEIVER)       variantString += "SRE|";
-        if (variant & Variant::SKINNING_OR_MORPHING)  variantString += "SKN|";
-        if (variant & Variant::DEPTH)                 variantString += "DEP|";
-        if (variant & Variant::FOG)                   variantString += "FOG|";
-        if (variant & Variant::VSM)                   variantString += "VSM|";
+    if (variant.key) {
+        if (variant.key & Variant::DIR) variantString += "DIR|";
+        if (variant.key & Variant::DYN) variantString += "DYN|";
+        if (variant.key & Variant::SRE) variantString += "SRE|";
+        if (variant.key & Variant::SKN) variantString += "SKN|";
+        if (variant.key & Variant::DEP) variantString += "DEP|";
+        if (variant.key & Variant::FOG) variantString += "FOG|";
+        if (variant.key & Variant::VSM) variantString += "VSM|";
         variantString = variantString.substr(0, variantString.length() - 1);
     }
 

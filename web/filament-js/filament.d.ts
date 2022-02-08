@@ -123,6 +123,14 @@ export interface View$BloomOptions {
     // TODO: add support for dirt texture in BloomOptions.
 }
 
+export interface View$ScreenSpaceReflectionsOptions {
+    thickness?: number;
+    bias?: number;
+    maxDistance?: number;
+    stride?: number;
+    enabled?: boolean;
+}
+
 export interface View$FogOptions {
     distance?: number;
     maximumOpacity?: number;
@@ -521,6 +529,7 @@ export class View {
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
     public setDepthOfFieldOptions(options: View$DepthOfFieldOptions): void;
     public setBloomOptions(options: View$BloomOptions): void;
+    public setScreenSpaceReflectionsOptions(options: View$ScreenSpaceReflectionsOptions): void;
     public setFogOptions(options: View$FogOptions): void;
     public setVignetteOptions(options: View$VignetteOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
@@ -589,7 +598,7 @@ export class Engine {
     public getSupportedFormatSuffix(suffix: string): void;
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
-    public loadFilamesh(urlOrBuffer: BufferReference, definstance: MaterialInstance, matinstances: object): Filamesh;
+    public loadFilamesh(urlOrBuffer: BufferReference, definstance?: MaterialInstance, matinstances?: object): Filamesh;
 }
 
 export class gltfio$AssetLoader {
@@ -992,6 +1001,14 @@ export enum VertexAttribute {
     CUSTOM5 = 13,
     CUSTOM6 = 14,
     CUSTOM7 = 15,
+    MORPH_POSITION_0 = CUSTOM0,
+    MORPH_POSITION_1 = CUSTOM1,
+    MORPH_POSITION_2 = CUSTOM2,
+    MORPH_POSITION_3 = CUSTOM3,
+    MORPH_TANGENTS_0 = CUSTOM4,
+    MORPH_TANGENTS_1 = CUSTOM5,
+    MORPH_TANGENTS_2 = CUSTOM6,
+    MORPH_TANGENTS_3 = CUSTOM7,
 }
 
 export enum VertexBuffer$AttributeType {

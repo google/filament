@@ -51,6 +51,19 @@ Java_com_google_android_filament_ColorGrading_nBuilderQuality(JNIEnv*, jclass, j
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderFormat(JNIEnv*, jclass, jlong nativeBuilder, jint format_) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    ColorGrading::LutFormat format = (ColorGrading::LutFormat) format_;
+    builder->format(format);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderDimensions(JNIEnv*, jclass, jlong nativeBuilder, jint dim_) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    builder->dimensions((uint8_t)dim_);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_ColorGrading_nBuilderToneMapper(JNIEnv*, jclass,
         jlong nativeBuilder, jlong toneMapper_) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;

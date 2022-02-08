@@ -590,6 +590,13 @@ static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue
     return true;
 }
 
+static bool processLegacyMorphing(MaterialBuilder& builder, const JsonishValue& value) {
+    if (value.toJsonBool()->getBool()) {
+        builder.useLegacyMorphing();
+    }
+    return true;
+}
+
 static bool processCustomSurfaceShading(MaterialBuilder& builder, const JsonishValue& value) {
     builder.customSurfaceShading(value.toJsonBool()->getBool());
     return true;
@@ -692,10 +699,10 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
     // due to static initialization ordering.
     static const std::unordered_map<std::string, uint8_t> strToEnum  = [] {
         std::unordered_map<std::string, uint8_t> strToEnum;
-        strToEnum["directionalLighting"] = filament::Variant::DIRECTIONAL_LIGHTING;
-        strToEnum["dynamicLighting"] = filament::Variant::DYNAMIC_LIGHTING;
-        strToEnum["shadowReceiver"] = filament::Variant::SHADOW_RECEIVER;
-        strToEnum["skinning"] = filament::Variant::SKINNING_OR_MORPHING;
+        strToEnum["directionalLighting"] = filament::Variant::DIR;
+        strToEnum["dynamicLighting"] = filament::Variant::DYN;
+        strToEnum["shadowReceiver"] = filament::Variant::SRE;
+        strToEnum["skinning"] = filament::Variant::SKN;
         strToEnum["vsm"] = filament::Variant::VSM;
         strToEnum["fog"] = filament::Variant::FOG;
         return strToEnum;
@@ -759,6 +766,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
+    mParameters["legacyMorphing"]                = { &processLegacyMorphing, Type::BOOL };
     mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
     mParameters["quality"]                       = { &processQuality, Type::STRING };
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };

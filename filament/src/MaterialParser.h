@@ -29,6 +29,7 @@
 #include <utils/CString.h>
 
 #include <inttypes.h>
+#include "private/filament/Variant.h"
 
 namespace filaflat {
 class ChunkContainer;
@@ -92,7 +93,7 @@ public:
     bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
 
     bool getShader(filaflat::ShaderBuilder& shader, backend::ShaderModel shaderModel,
-            uint8_t variant, backend::ShaderType stage) noexcept;
+            Variant variant, backend::ShaderType stage) noexcept;
 
 private:
     struct MaterialParserDetails {
