@@ -20,6 +20,8 @@
 #include <stdint.h>
 #include <cstddef>
 
+#include <filament/MaterialEnums.h>
+
 #include <utils/bitset.h>
 
 namespace filament {
@@ -152,6 +154,10 @@ struct Variant {
         return !isValidStandardVariant(variant) && !isValidDepthVariant(variant);
     }
 
+    static constexpr bool isValid(Variant variant) noexcept {
+        return isValidStandardVariant(variant) || isValidDepthVariant(variant);
+    }
+
     static constexpr Variant filterVariantVertex(Variant variant) noexcept {
         // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
         // vertex shader.
@@ -206,85 +212,15 @@ struct Variant {
         return Variant(key & rhs);
     }
 
+    static Variant filterUserVariant(
+            Variant variant, UserVariantFilterMask filterMask) noexcept;
+
 private:
     void set(bool v, type_t mask) noexcept {
         key = (key & ~mask) | (v ? mask : type_t(0));
     }
 };
 
-namespace details {
-
-// compile time sanity-check tests
-
-constexpr inline bool reserved_is_not_valid() noexcept {
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        bool is_valid = Variant::isValidDepthVariant(variant) ||
-                Variant::isValidStandardVariant(variant);
-        bool is_reserved = Variant::isReserved(variant);
-        if (is_valid == is_reserved) {
-            return false;
-        }
-    }
-    return true;
-}
-
-constexpr inline size_t reserved_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isReserved(variant)) { count++; }
-    }
-    return count;
-}
-
-constexpr inline size_t valid_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isValidDepthVariant(variant) ||
-            Variant::isValidStandardVariant(variant)) {
-            count++;
-        }
-    }
-    return count;
-}
-
-constexpr inline size_t vertex_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isValidDepthVariant(variant) ||
-            Variant::isValidStandardVariant(variant)) {
-            if (Variant::isVertexVariant(variant)) {
-                count++;
-            }
-        }
-    }
-    return count;
-}
-
-constexpr inline size_t fragment_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isValidDepthVariant(variant) ||
-            Variant::isValidStandardVariant(variant)) {
-            if (Variant::filterVariantFragment(variant).key == i) {
-                count++;
-            }
-        }
-    }
-    return count;
-}
-
-static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 82);
-static_assert(valid_variant_count()    == 46);
-static_assert(vertex_variant_count()   == 16 - (2 + 0) + 4 - 0);    // 18
-static_assert(fragment_variant_count() == 32 - (4 + 8) + 4 - 1);    // 25
-
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILABRIDGE_VARIANT_H
