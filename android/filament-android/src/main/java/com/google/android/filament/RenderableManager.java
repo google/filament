@@ -420,7 +420,7 @@ public class RenderableManager {
          * to advance the animation.</p>
          */
         @NonNull
-        public Builder morphing(@IntRange(from = 0, to = 125) int targetCount) {
+        public Builder morphing(@IntRange(from = 0, to = 255) int targetCount) {
             nBuilderMorphing(mNativeBuilder, targetCount);
             return this;
         }
