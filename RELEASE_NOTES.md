@@ -3,13 +3,19 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.19.0 (currently main branch)
+## v1.19.1 (currently main branch)
+
+## v1.19.0
 
 - engine: Support 256 morph targets.
 
 ## v1.18.0
 
 - engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
+- engine: Support legacy morphing mode with vertex attributes.
+- engine: Allow more flexible quality settings for the ColorGrading LUT.
+- engine: Improve screen-space reflections quality and allow reflections and refractions together.
+- Vulkan: Bug fixes and improvements.
 
 ## v1.17.0
 
