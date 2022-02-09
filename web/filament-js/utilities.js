@@ -30,10 +30,12 @@
 Filament.Buffer = function(typedarray) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
+
+    // Note that the following line is essentially a memcpy, and in some situations this memcpy
+    // isn't required. However emscripten might "grow" the heap when we instantiate the low-level
+    // BufferDescriptor, so unconditionally making a copy is the safest option.
+    const ta = new Uint8Array(typedarray);
+
     const bd = new Filament.driver$BufferDescriptor(ta.byteLength);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
@@ -49,10 +51,7 @@ Filament.Buffer = function(typedarray) {
 Filament.PixelBuffer = function(typedarray, format, datatype) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
+    const ta = new Uint8Array(typedarray);
     const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, format, datatype);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
@@ -69,10 +68,7 @@ Filament.CompressedPixelBuffer = function(typedarray, cdatatype, faceSize) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
     faceSize = faceSize || typedarray.byteLength;
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
+    const ta = new Uint8Array(typedarray);
     const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, cdatatype, faceSize, true);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
