@@ -197,6 +197,18 @@ RenderableManager::Builder& RenderableManager::Builder::morphing(size_t targetCo
     return *this;
 }
 
+RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept {
+    std::vector<Entry>& entries = mImpl->mEntries;
+    if (primitiveIndex < entries.size()) {
+        auto& morphing = entries[primitiveIndex].morphing;
+        morphing.buffer = morphTargetBuffer;
+        morphing.offset = offset;
+        morphing.count = count;
+    }
+    return *this;
+}
+
 RenderableManager::Builder& RenderableManager::Builder::blendOrder(size_t index, uint16_t blendOrder) noexcept {
     if (index < mImpl->mEntries.size()) {
         mImpl->mEntries[index].blendOrder = blendOrder;
@@ -388,6 +400,11 @@ void FRenderableManager::create(
                         BufferObjectBinding::UNIFORM,
                         backend::BufferUsage::DYNAMIC),
                 .count = targetCount };
+
+            for (size_t i = 0, c = builder->mEntries.size(); i < c; ++i) {
+                const auto& morphing = builder->mEntries[i].morphing;
+                rp[i].set(upcast(morphing.buffer));
+            }
         }
     }
     engine.flushIfNeeded();

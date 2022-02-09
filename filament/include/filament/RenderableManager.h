@@ -20,6 +20,7 @@
 #include <filament/Box.h>
 #include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include <backend/DriverEnums.h>
 
@@ -321,6 +322,25 @@ public:
         Builder& morphing(size_t targetCount) noexcept;
 
         /**
+         * Specifies the morph target buffer for a primitive.
+         *
+         * The morph target buffer must have an associated renderable and geometry. Especially
+         * the count of morph target buffer must equals to the renderable's morph target count
+         * and the count or the vertex count of morph target buffer must equals to the geometry's
+         * count.
+         *
+         * @param level the level of detail (lod), only 0 can be specified
+         * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
+         * @param morphTargetBuffer specifies the morph target buffer
+         * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
+         * @param count number of the morph target buffer to read, must be equal to geometry's count (for triangles, this should be a multiple of 3)
+         */
+        Builder& morphing(uint8_t level, size_t primitiveIndex,
+                MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept;
+        inline Builder& morphing(uint8_t level, size_t primitiveIndex,
+                MorphTargetBuffer* morphTargetBuffer) noexcept;
+
+        /**
          * Sets an ordering index for blended primitives that all live at the same Z value.
          *
          * @param primitiveIndex the primitive of interest
@@ -362,6 +382,11 @@ public:
             MaterialInstance const* materialInstance = nullptr;
             PrimitiveType type = PrimitiveType::TRIANGLES;
             uint16_t blendOrder = 0;
+            struct {
+                MorphTargetBuffer* buffer = nullptr;
+                size_t offset = 0;
+                size_t count = 0;
+            } morphing;
         };
     };
 
@@ -595,6 +620,12 @@ public:
     static Box computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
             size_t stride = sizeof(VECTOR)) noexcept;
 };
+
+RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer) noexcept {
+    return morphing(level, primitiveIndex, morphTargetBuffer, 0,
+            morphTargetBuffer->getVertexCount());
+}
 
 template<typename VECTOR, typename INDEX, typename, typename>
 Box RenderableManager::computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,

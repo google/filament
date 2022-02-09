@@ -426,6 +426,44 @@ public class RenderableManager {
         }
 
         /**
+         * Specifies the morph target buffer for a primitive.
+         *
+         * The morph target buffer must have an associated renderable and geometry. Especially
+         * the count of morph target buffer must equals to the renderable's morph target count
+         * and the count or the vertex count of morph target buffer must equals to the geometry's
+         * count.
+         *
+         * @param level the level of detail (lod), only 0 can be specified
+         * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
+         * @param morphTargetBuffer specifies the morph target buffer
+         * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
+         * @param count number of the morph target buffer to read, must be equal to geometry's count (for triangles, this should be a multiple of 3)
+         */
+        @NonNull
+        public Builder morphing(@IntRange(from = 0) int level,
+                                @IntRange(from = 0) int primitiveIndex,
+                                @NonNull MorphTargetBuffer morphTargetBuffer,
+                                @IntRange(from = 0) int offset,
+                                @IntRange(from = 0) int count) {
+            nBuilderMorphing(mNativeBuilder, level, primitiveIndex,
+                    morphTargetBuffer.getNativeObject(), offset, count);
+            return this;
+        }
+
+        /**
+         * Utility method to specify morph target buffer for a primitive.
+         * For details, see the {@link RenderableManager.Builder#morphing}.
+         */
+        @NonNull
+        public Builder morphing(@IntRange(from = 0) int level,
+                                @IntRange(from = 0) int primitiveIndex,
+                                @NonNull MorphTargetBuffer morphTargetBuffer) {
+            nBuilderMorphing(mNativeBuilder, level, primitiveIndex,
+                    morphTargetBuffer.getNativeObject(), 0, morphTargetBuffer.getVertexCount());
+            return this;
+        }
+
+        /**
          * Adds the Renderable component to an entity.
          *
          * <p>If this component already exists on the given entity and the construction is successful,
@@ -813,6 +851,7 @@ public class RenderableManager {
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
     private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
+    private static native void nBuilderMorphing(long nativeBuilder, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
 
