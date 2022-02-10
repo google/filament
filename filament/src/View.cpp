@@ -319,6 +319,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     }
 
     mPerViewUniforms.prepareAmbientLight(*ibl, intensity, exposure);
+    mPerViewUniforms.prepareIblLight(mIblOptions);
 
     /*
      * Directional light (always at index 0)
@@ -1057,6 +1058,14 @@ void View::setScreenSpaceRefractionEnabled(bool enabled) noexcept {
 
 bool View::isScreenSpaceRefractionEnabled() const noexcept {
     return upcast(this)->isScreenSpaceRefractionEnabled();
+}
+
+void View::setIblOptions(IblOptions const& options) noexcept {
+    upcast(this)->setIblOptions(options);
+}
+
+IblOptions const& View::getIblOptions() const noexcept {
+    return upcast(this)->getIblOptions();
 }
 
 View::PickingQuery& View::pick(uint32_t x, uint32_t y,

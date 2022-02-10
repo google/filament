@@ -131,12 +131,17 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmReserved0;
 
     float lodBias;
-    float reserved1;
+    uint32_t iblTechnique; // 0: infinite cubemap IBL, 1: (origin centered) finite sphere IBL, 2: (origin centered) finite cube IBL
+    float iblWidthDiv2;    // radius of IBL sphere if iblTechnique else half width of the box of the envmap
+    float iblHeightDiv2;   // half height of the box of the envmap
+
+    float iblDepthDiv2;    // half depth of the box of the envmap
     float reserved2;
     float reserved3;
+    float reserved4;
 
     // bring PerViewUib to 2 KiB
-    math::float4 padding3[57];
+    math::float4 padding3[56];
 };
 
 // 2 KiB == 128 float4s

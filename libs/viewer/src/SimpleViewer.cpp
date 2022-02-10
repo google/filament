@@ -1433,6 +1433,7 @@ void SimpleViewer::updateUserInterface() {
     }
 
     auto& light = mSettings.lighting;
+    auto& iblOptions = mSettings.ibl;
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();
         if (ImGui::CollapsingHeader("Skybox")) {
@@ -1442,6 +1443,36 @@ void SimpleViewer::updateUserInterface() {
         if (ImGui::CollapsingHeader("Indirect light")) {
             ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
             ImGui::SliderAngle("IBL rotation", &light.iblRotation);
+
+            if (ImGui::RadioButton("Infinite", iblOptions.iblTechnique == 0)) {
+                iblOptions.iblTechnique = 0;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Sphere", iblOptions.iblTechnique == 1)) {
+                iblOptions.iblTechnique = 1;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Box", iblOptions.iblTechnique == 2)) {
+                iblOptions.iblTechnique = 2;
+            }
+
+            if (iblOptions.iblTechnique == 1) {
+                static float radius = iblOptions.widthDiv2;
+                ImGui::SliderFloat("Sphere radius", &iblOptions.widthDiv2, 0.0f, 256.0f);
+                iblOptions.widthDiv2 = radius;
+            }
+            else if (iblOptions.iblTechnique == 2) {
+                static float width = 2.0f * iblOptions.widthDiv2;
+                static float height = 2.0f * iblOptions.heightDiv2;
+                static float depth = 2.0f * iblOptions.depthDiv2;
+                ImGui::SliderFloat("Box width", &width, 0.0f, 256.0f);
+                ImGui::SliderFloat("Box height", &height, 0.0f, 256.0f);
+                ImGui::SliderFloat("Box depth", &depth, 0.0f, 256.0f);
+
+                iblOptions.widthDiv2  = width / 2.0f;
+                iblOptions.heightDiv2 = height / 2.0f;
+                iblOptions.depthDiv2  = depth / 2.0f;
+            }
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
@@ -1607,6 +1638,7 @@ void SimpleViewer::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
+    mView->setIblOptions(mSettings.ibl);
 
     if (light.enableSunlight) {
         mScene->addEntity(mSunlight);

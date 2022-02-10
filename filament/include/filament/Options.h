@@ -357,6 +357,15 @@ struct VsmShadowOptions {
     float lightBleedReduction = 0.15f;
 };
 
+struct IblOptions {
+    // 0: infinite cubemap IBL, 1: finite sphere IBL, 2: finite cube IBL
+    uint32_t iblTechnique = 0;
+
+    float widthDiv2  = 3.4f;
+    float heightDiv2 = 2.4f;
+    float depthDiv2  = 1.8f;
+};
+
 } // namespace filament
 
 #endif //TNT_FILAMENT_OPTIONS_H
