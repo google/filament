@@ -148,14 +148,23 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
 #else
     vec3 r = reflect(-v, n);
 #endif
+
+#if defined(IN_SHAPR_SHADER)
+    return vec3(-r.x, r.z, r.y);
+#else
     return r;
+#endif
 }
 
 vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 r = getReflectedVector(pixel, shading_view, n);
 #else
-    vec3 r = shading_reflected;
+    #if defined(IN_SHAPR_SHADER)
+        vec3 r = shading_reflected;
+    #else
+        vec3 r = vec3(-shading_reflected.x, shading_reflected.z, shading_reflected.y);
+    #endif
 #endif
     return getSpecularDominantDirection(n, r, pixel.roughness);
 }
