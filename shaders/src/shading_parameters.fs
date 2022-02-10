@@ -11,7 +11,7 @@ void computeShadingParams() {
     highp vec3 n = vertex_worldNormal;
 #if defined(MATERIAL_NEEDS_TBN)
     highp vec3 t = vertex_worldTangent.xyz;
-    highp vec3 b = cross(n, t) * sign(vertex_worldTangent.w);
+    highp vec3 b = cross(n, t) * (vertex_worldTangent.w < 0.0 ? -1.0 : 1.0);
 #endif
 
 #if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
@@ -56,7 +56,11 @@ void computeShadingParams() {
 void prepareMaterial(const MaterialInputs material) {
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 #if defined(MATERIAL_HAS_NORMAL)
+#if defined(SHAPR_USE_WORLD_NORMALS)
+    shading_normal = material.normal;
+#else
     shading_normal = normalize(shading_tangentToWorld * material.normal);
+#endif
 #else
     shading_normal = getWorldGeometricNormalVector();
 #endif
@@ -64,12 +68,20 @@ void prepareMaterial(const MaterialInputs material) {
     shading_reflected = reflect(-shading_view, shading_normal);
 
 #if defined(MATERIAL_HAS_BENT_NORMAL)
+#if defined(SHAPR_USE_WORLD_NORMALS)
+    shading_bentNormal = material.bentNormal;
+#else
     shading_bentNormal = normalize(shading_tangentToWorld * material.bentNormal);
+#endif
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+#if defined(SHAPR_USE_WORLD_NORMALS)
+    shading_clearCoatNormal = material.clearCoatNormal;
+#else
     shading_clearCoatNormal = normalize(shading_tangentToWorld * material.clearCoatNormal);
+#endif
 #else
     shading_clearCoatNormal = getWorldGeometricNormalVector();
 #endif
