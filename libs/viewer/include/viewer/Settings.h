@@ -166,6 +166,7 @@ struct ViewSettings {
     DynamicLightingSettings dynamicLighting;
     ShadowType shadowType = ShadowType::PCF;
     VsmShadowOptions vsmShadowOptions;
+    IblOptions iblOptions{};
     bool postProcessingEnabled = true;
 };
 
@@ -214,6 +215,7 @@ struct Settings {
     MaterialSettings material;
     LightSettings lighting;
     ViewerOptions viewer;
+    IblOptions ibl;
 };
 
 } // namespace viewer

@@ -421,6 +421,14 @@ public:
 
     auto& getShadowUniforms() const { return mShadowUb; }
 
+    void setIblOptions(IblOptions const& options) noexcept {
+        mIblOptions = options;
+    }
+
+    IblOptions const& getIblOptions() const noexcept {
+        return mIblOptions;
+    }
+
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
     FrameHistory& getFrameHistory() noexcept { return mFrameHistory; }
@@ -567,6 +575,8 @@ private:
     mutable bool mNeedsShadowMap = false;
 
     ShadowMapManager mShadowMapManager;
+
+    IblOptions mIblOptions;
 };
 
 FILAMENT_UPCAST(View)

@@ -702,6 +702,14 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->vsmShadowOptions);
         } else if (compare(tok, jsonChunk, "postProcessingEnabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->postProcessingEnabled);
+        } else if (compare(tok, jsonChunk, "iblTechnique") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTechnique);
+        } else if (compare(tok, jsonChunk, "widthDiv2") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.widthDiv2);
+        } else if (compare(tok, jsonChunk, "heightDiv2") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.heightDiv2);
+        } else if (compare(tok, jsonChunk, "depthDiv2") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.depthDiv2);
         } else {
             slog.w << "Invalid view setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -983,6 +991,7 @@ void applySettings(const ViewSettings& settings, View* dest) {
     dest->setShadowType(settings.shadowType);
     dest->setVsmShadowOptions(settings.vsmShadowOptions);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
+    dest->setIblOptions(settings.iblOptions);
 }
 
 template <typename T>
@@ -1466,7 +1475,12 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"shadowType\": " << (in.shadowType) << ",\n"
         << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
         << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
+        << "\"iblTechnique\": " << to_string(in.iblOptions.iblTechnique) << "\n"
+        << "\"widthDiv2\": " << to_string(in.iblOptions.widthDiv2) << "\n"
+        << "\"heightDiv2\": " << to_string(in.iblOptions.heightDiv2) << "\n"
+        << "\"depthDiv2\": " << to_string(in.iblOptions.depthDiv2) << "\n"
         << "}";
+    
 }
 
 static std::ostream& operator<<(std::ostream& out, const Settings& in) {
