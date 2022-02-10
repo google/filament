@@ -31,14 +31,17 @@ Filament.Buffer = function(typedarray) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
 
-    // Note that the following line is essentially a memcpy, and in some situations this memcpy
-    // isn't required. However emscripten might "grow" the heap when we instantiate the low-level
-    // BufferDescriptor, so unconditionally making a copy is the safest option.
-    const ta = new Uint8Array(typedarray);
+    // The only reason we need to create a copy here is that emscripten might "grow" its entire heap
+    // (i.e. destroy and recreate) during the allocation of the BufferDescriptor, which would cause
+    // detachment if the source array happens to be view into the old emscripten heap.
+    const ta = typedarray.slice();
 
     const bd = new Filament.driver$BufferDescriptor(ta.byteLength);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
+
+    // getBytes() returns a view into the emscripten heap, this just does a memcpy into it.
     bd.getBytes().set(uint8array);
+
     return bd;
 };
 
@@ -51,7 +54,7 @@ Filament.Buffer = function(typedarray) {
 Filament.PixelBuffer = function(typedarray, format, datatype) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
-    const ta = new Uint8Array(typedarray);
+    const ta = typedarray.slice();
     const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, format, datatype);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
@@ -68,7 +71,7 @@ Filament.CompressedPixelBuffer = function(typedarray, cdatatype, faceSize) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
     faceSize = faceSize || typedarray.byteLength;
-    const ta = new Uint8Array(typedarray);
+    const ta = typedarray.slice();
     const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, cdatatype, faceSize, true);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
