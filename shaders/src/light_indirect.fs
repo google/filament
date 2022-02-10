@@ -520,15 +520,9 @@ vec3 evaluateRefraction(
     vec4 p = vec4(getClipFromWorldMatrix() * vec4(ray.position, 1.0));
     p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
-    // perceptualRoughness to LOD
-    // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
-    // cubemap and screen-space modes match at perceptualRoughness 0.125
-    // TODO: Remove this factor temporarily until we find a better solution
-    //       This overblurs many scenes and needs a more principled approach
-    // float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
-    float tweakedPerceptualRoughness = perceptualRoughness;
-    float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
-
+    // distance to camera plane
+    const float invLog2sqrt5 = 0.8614;
+    float lod = max(0.0, (2.0f * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
     Ft = textureLod(light_ssr, p.xy, lod).rgb;
 #endif
 
@@ -567,7 +561,10 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
         // TODO: maybe make this a parameter
         const float maxPerceptualRoughness = sqrt(0.5);
         if (pixel.perceptualRoughness < maxPerceptualRoughness) {
-            float lod = max(0.0, 2.0 * log2(pixel.perceptualRoughness) + frameUniforms.refractionLodOffset);
+            // distance to camera plane
+            const float invLog2sqrt5 = 0.8614;
+            float d = -mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
+            float lod = max(0.0, (log2(pixel.roughness / d) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
 #if !defined(MATERIAL_HAS_REFRACTION)
             // this is temporary, until we can access the SSR buffer when we have refraction
             ssrFr = textureLod(light_ssr, interpolationCache.uv, lod);

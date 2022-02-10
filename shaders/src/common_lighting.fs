@@ -94,3 +94,12 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
 #endif
     return r;
 }
+
+void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_ANISOTROPY)
+    vec3 direction = material.anisotropyDirection;
+    pixel.anisotropy = material.anisotropy;
+    pixel.anisotropicT = normalize(shading_tangentToWorld * direction);
+    pixel.anisotropicB = normalize(cross(getWorldGeometricNormalVector(), pixel.anisotropicT));
+#endif
+}

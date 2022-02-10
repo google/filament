@@ -93,7 +93,7 @@ public:
     // Gaussian mipmap
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t levels, bool reinhard,
-            size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
+            size_t kernelWidth, float sigma) noexcept;
 
     FrameGraphId<FrameGraphTexture> generateMipmapSSR(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, float verticalFieldOfView,
@@ -176,7 +176,7 @@ public:
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
             FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
-            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
+            bool reinhard, size_t kernelWidth, float sigma) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;
