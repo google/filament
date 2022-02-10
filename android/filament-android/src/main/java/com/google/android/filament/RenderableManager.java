@@ -535,27 +535,23 @@ public class RenderableManager {
     }
 
     /**
+     * Utility method to change morph target buffer for the given primitive.
+     * For details, see the {@link RenderableManager#setMorphTargetBufferAt}.
+     */
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
+                                       @NonNull MorphTargetBuffer morphTargetBuffer) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
+                morphTargetBuffer.getNativeObject(), 0, morphTargetBuffer.getVertexCount());
+    }
+
+    /**
      * Gets the morph target count on a renderable.
      */
     @IntRange(from = 0)
     public int getMorphTargetCount(@EntityInstance int i) {
         return nGetMorphTargetCount(mNativeObject, i);
-    }
-
-    /**
-     * Changes the morph target buffer for the given primitive.
-     *
-     * <p>The renderable must be built with morphing enabled.</p>
-     *
-     * @see Builder#morphing
-     */
-    public void setMorphTargetBufferAt(@EntityInstance int i,
-                                       @IntRange(from = 0) int level,
-                                       @IntRange(from = 0) int primitiveIndex,
-                                       @NonNull MorphTargetBuffer morphTargetBuffer,
-                                       @IntRange(from = 0) int count) {
-        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
-                morphTargetBuffer.getNativeObject(), 0, count);
     }
 
     /**
