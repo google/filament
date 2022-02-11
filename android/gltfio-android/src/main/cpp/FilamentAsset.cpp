@@ -215,6 +215,15 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUriCount(JNIEn
     return (jint) asset->getResourceUriCount();
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetNameAt(JNIEnv* env, jclass,
+        jlong nativeAsset, jint entityId, jint targetIndex) {
+    Entity entity = Entity::import(entityId);
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    const char* val = asset->getMorphTargetNameAt(entity, (size_t) targetIndex);
+    return val ? env->NewStringUTF(val) : nullptr;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* env, jclass,
                                                                        jlong nativeAsset,
