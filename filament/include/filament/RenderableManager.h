@@ -42,7 +42,6 @@ class Engine;
 class IndexBuffer;
 class Material;
 class MaterialInstance;
-class MorphTargetBuffer;
 class Renderer;
 class SkinningBuffer;
 class VertexBuffer;
@@ -510,8 +509,11 @@ public:
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
 
-    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            MorphTargetBuffer* morphTargetBuffer, size_t count); //!< \overload
+    /**
+     * Utility method to change a MorphTargetBuffer to the given primitive
+     */
+    inline void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer);
 
     /**
      * Gets t
@@ -624,6 +626,12 @@ public:
 RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, size_t primitiveIndex,
         MorphTargetBuffer* morphTargetBuffer) noexcept {
     return morphing(level, primitiveIndex, morphTargetBuffer, 0,
+            morphTargetBuffer->getVertexCount());
+}
+
+void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer) {
+    setMorphTargetBufferAt(instance, level, primitiveIndex, morphTargetBuffer, 0,
             morphTargetBuffer->getVertexCount());
 }
 
