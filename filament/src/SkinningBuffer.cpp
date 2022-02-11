@@ -79,7 +79,7 @@ FSkinningBuffer::FSkinningBuffer(FEngine& engine, const Builder& builder)
     if (builder->mInitialize) {
         // initialize the bones to identity (before rounding up)
         auto* out = driver.allocatePod<PerRenderableUibBone>(mBoneCount);
-        std::uninitialized_fill_n(out, mBoneCount, PerRenderableUibBone{});
+        std::uninitialized_fill_n(out, mBoneCount, makeBone({}));
         driver.updateBufferObject(mHandle, {
             out, mBoneCount * sizeof(PerRenderableUibBone) }, 0);
     }
