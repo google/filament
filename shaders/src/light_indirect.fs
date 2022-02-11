@@ -161,9 +161,9 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
     vec3 r = getReflectedVector(pixel, shading_view, n);
 #else
     #if defined(IN_SHAPR_SHADER)
-        vec3 r = shading_reflected;
-    #else
         vec3 r = vec3(-shading_reflected.x, shading_reflected.z, shading_reflected.y);
+    #else
+        vec3 r = shading_reflected;
     #endif
 #endif
     return getSpecularDominantDirection(n, r, pixel.roughness);
