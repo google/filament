@@ -98,6 +98,16 @@ vec3 diffuseIrradiance(const vec3 n) {
 // IBL specular
 //------------------------------------------------------------------------------
 
+// Helper function that converts the incoming Z-up world space reflection vector
+// to a Filament IBL texture lookup vector, where the top face is actually +Y.
+vec3 zUpToIblDirection(vec3 r) {
+#if defined(IN_SHAPR_SHADER)
+    return vec3(-r.x, r.z, r.y);
+#else
+    return r;
+#endif    
+}
+
 float perceptualRoughnessToLod(float perceptualRoughness) {
     // The mapping below is a quadratic fit for log2(perceptualRoughness)+iblRoughnessOneLevel when
     // iblRoughnessOneLevel is 4. We found empirically that this mapping works very well for
@@ -107,12 +117,12 @@ float perceptualRoughnessToLod(float perceptualRoughness) {
 
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
     float lod = perceptualRoughnessToLod(perceptualRoughness);
-    return decodeDataForIBL(textureLod(light_iblSpecular, r, lod));
+    return decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod));
 }
 
 vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
     float lod = frameUniforms.iblRoughnessOneLevel * roughness;
-    return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
+    return decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod + offset));
 }
 
 vec3 getSpecularDominantDirection(const vec3 n, const vec3 r, float roughness) {
@@ -125,14 +135,6 @@ vec3 specularDFG(const PixelParams pixel) {
 #else
     return mix(pixel.dfg.xxx, pixel.dfg.yyy, pixel.f0);
 #endif
-}
-
-vec3 zUpToIblDir(vec3 r) {
-#if defined(IN_SHAPR_SHADER)
-    return vec3(-r.x, r.z, r.y);
-#else
-    return r;
-#endif    
 }
 
 /**
@@ -157,14 +159,14 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
     vec3 r = reflect(-v, n);
 #endif
 
-    return zUpToIblDir(r);
+    return r;
 }
 
 vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 r = getReflectedVector(pixel, shading_view, n);
 #else
-    vec3 r = zUpToIblDir(shading_reflected);
+    vec3 r = shading_reflected;
 #endif
     return getSpecularDominantDirection(n, r, pixel.roughness);
 }
@@ -406,7 +408,7 @@ void evaluateSheenIBL(const MaterialInputs material, const PixelParams pixel, fl
     vec3 reflectance = pixel.sheenDFG * pixel.sheenColor;
     reflectance *= specularAO(shading_NoV, diffuseAO, pixel.sheenRoughness, cache);
 
-    Fr += material.specularIntensity * reflectance * prefilteredRadiance(zUpToIblDir(shading_reflected), pixel.sheenPerceptualRoughness);
+    Fr += material.specularIntensity * reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
 #endif
 #endif
 }
@@ -423,10 +425,10 @@ void evaluateClearCoatIBL(const MaterialInputs material, const PixelParams pixel
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
     float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
-    vec3 clearCoatR = zUpToIblDir(reflect(-shading_view, shading_clearCoatNormal));
+    vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
 #else
     float clearCoatNoV = shading_NoV;
-    vec3 clearCoatR = zUpToIblDir(shading_reflected);
+    vec3 clearCoatR = shading_reflected;
 #endif
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
