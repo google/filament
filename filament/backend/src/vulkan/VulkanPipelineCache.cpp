@@ -95,7 +95,8 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
 }
 
 VulkanPipelineCache::~VulkanPipelineCache() {
-    destroyCache();
+    // This does nothing because VulkanDriver::terminate() calls destroyCache() in order to
+    // be explicit about teardown order of various components.
 }
 
 void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
