@@ -127,6 +127,14 @@ vec3 specularDFG(const PixelParams pixel) {
 #endif
 }
 
+vec3 zUpToIblDir(vec3 r) {
+#if defined(IN_SHAPR_SHADER)
+    return vec3(-r.x, r.z, r.y);
+#else
+    return r;
+#endif    
+}
+
 /**
  * Returns the reflected vector at the current shading point. The reflected vector
  * return by this function might be different from shading_reflected:
@@ -149,22 +157,14 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
     vec3 r = reflect(-v, n);
 #endif
 
-#if defined(IN_SHAPR_SHADER)
-    return vec3(-r.x, r.z, r.y);
-#else
-    return r;
-#endif
+    return zUpToIblDir(r);
 }
 
 vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 r = getReflectedVector(pixel, shading_view, n);
 #else
-    #if defined(IN_SHAPR_SHADER)
-        vec3 r = vec3(-shading_reflected.x, shading_reflected.z, shading_reflected.y);
-    #else
-        vec3 r = shading_reflected;
-    #endif
+    vec3 r = zUpToIblDir(shading_reflected);
 #endif
     return getSpecularDominantDirection(n, r, pixel.roughness);
 }
@@ -406,7 +406,7 @@ void evaluateSheenIBL(const MaterialInputs material, const PixelParams pixel, fl
     vec3 reflectance = pixel.sheenDFG * pixel.sheenColor;
     reflectance *= specularAO(shading_NoV, diffuseAO, pixel.sheenRoughness, cache);
 
-    Fr += material.specularIntensity * reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
+    Fr += material.specularIntensity * reflectance * prefilteredRadiance(zUpToIblDir(shading_reflected), pixel.sheenPerceptualRoughness);
 #endif
 #endif
 }
@@ -423,10 +423,10 @@ void evaluateClearCoatIBL(const MaterialInputs material, const PixelParams pixel
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
     float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
-    vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
+    vec3 clearCoatR = zUpToIblDir(reflect(-shading_view, shading_clearCoatNormal));
 #else
     float clearCoatNoV = shading_NoV;
-    vec3 clearCoatR = shading_reflected;
+    vec3 clearCoatR = zUpToIblDir(shading_reflected);
 #endif
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
