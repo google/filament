@@ -459,6 +459,10 @@ void VulkanTexture::transitionLayout(VkCommandBuffer commands, const VkImageSubr
     const uint32_t last_layer = first_layer + range.layerCount;
     const uint32_t first_level = range.baseMipLevel;
     const uint32_t last_level = first_level + range.levelCount;
+
+    assert_invariant(first_level <= 0xffff && last_level <= 0xffff);
+    assert_invariant(first_layer <= 0xffff && last_layer <= 0xffff);
+
     if (newLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
         for (uint32_t layer = first_layer; layer < last_layer; ++layer) {
             const uint32_t first = (layer << 16) | first_level;
@@ -476,6 +480,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer commands, const VkImageSubr
 
 // Notifies the texture that a particular subresource's layout has changed.
 void VulkanTexture::trackLayout(uint32_t miplevel, uint32_t layer, VkImageLayout layout) {
+    assert_invariant((miplevel + 1) <= 0xffff && layer <= 0xffff);
     const uint32_t first = (layer << 16) | miplevel;
     const uint32_t last = (layer << 16) | (miplevel + 1);
     if (UTILS_UNLIKELY(layout == VK_IMAGE_LAYOUT_UNDEFINED)) {
@@ -486,6 +491,7 @@ void VulkanTexture::trackLayout(uint32_t miplevel, uint32_t layer, VkImageLayout
 }
 
 VkImageLayout VulkanTexture::getVkLayout(uint32_t layer, uint32_t level) const {
+    assert_invariant(level <= 0xffff && layer <= 0xffff);
     const uint32_t key = (layer << 16) | level;
     if (!mSubresourceLayouts.has(key)) {
         return VK_IMAGE_LAYOUT_UNDEFINED;

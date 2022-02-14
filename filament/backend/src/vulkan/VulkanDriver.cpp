@@ -1041,7 +1041,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .discardEnd = params.flags.discardEnd,
         .samples = rt->getSamples(),
         .subpassMask = uint8_t(params.subpassMask),
-        .isSwapChain = rt->isSwapChain(),
     };
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const VulkanAttachment& info = rt->getColor(sc, i);
