@@ -1149,7 +1149,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
 }
 
-void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph) {
+void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
@@ -1402,7 +1402,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                                    indexCount:primitive->count
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
-                                            indexBufferOffset:primitive->offset + offset];
+                                            indexBufferOffset:primitive->offset + offset
+                                                instanceCount:instanceCount];
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

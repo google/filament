@@ -621,7 +621,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
                 }
             }
 
-            driver.draw(pipeline, info.primitiveHandle);
+            driver.draw(pipeline, info.primitiveHandle, 1);
         }
     }
 }

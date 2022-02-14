@@ -214,6 +214,10 @@ private:
             PostProcessMaterial const& material,
             backend::DriverApi& driver) const noexcept;
 
+    void render(FrameGraphResources::RenderPassInfo const& out,
+            backend::PipelineState const& pipeline,
+            backend::DriverApi& driver) const noexcept;
+
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept;
