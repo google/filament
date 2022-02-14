@@ -21,24 +21,26 @@
 namespace filamat {
 
 std::vector<Variant> determineSurfaceVariants(
-        filament::Variant::type_t variantFilter, bool isLit, bool shadowMultiplier) {
+        filament::UserVariantFilterMask userVariantFilter, bool isLit, bool shadowMultiplier) {
     std::vector<Variant> variants;
-    filament::Variant::type_t variantMask = ~variantFilter;
     for (filament::Variant::type_t k = 0; k < filament::VARIANT_COUNT; k++) {
         filament::Variant variant(k);
         if (filament::Variant::isReserved(variant)) {
             continue;
         }
 
-        // Remove variants for unlit materials
-        filament::Variant v = filament::Variant::filterVariant(
-                variant & variantMask, isLit || shadowMultiplier);
+        filament::Variant filteredVariant =
+                filament::Variant::filterUserVariant(variant, userVariantFilter);
 
-        if (filament::Variant::filterVariantVertex(v) == variant) {
+        // Remove variants for unlit materials
+        filteredVariant = filament::Variant::filterVariant(
+                filteredVariant, isLit || shadowMultiplier);
+
+        if (filament::Variant::filterVariantVertex(filteredVariant) == variant) {
             variants.emplace_back(variant, filament::backend::ShaderType::VERTEX);
         }
 
-        if (filament::Variant::filterVariantFragment(v) == variant) {
+        if (filament::Variant::filterVariantFragment(filteredVariant) == variant) {
             variants.emplace_back(variant, filament::backend::ShaderType::FRAGMENT);
         }
     }

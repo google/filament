@@ -191,6 +191,8 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
 
     const bool litVariants = lit || material.hasShadowMultiplier;
 
+    assert_invariant(filament::Variant::isValid(variant));
+
     // note: even if the user vertex shader is empty, we can't use the "optimized" version if
     // we're in masked mode because fragment shader needs the color varyings
     const bool useOptimizedDepthVertexShader =
@@ -205,15 +207,23 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
                     (material.blendingMode == BlendingMode::TRANSPARENT ||
                      material.blendingMode == BlendingMode::FADE));
 
-    CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER", useOptimizedDepthVertexShader);
+    CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER",
+            useOptimizedDepthVertexShader);
 
-    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_SHADOW_MULTIPLIER",
+            material.hasShadowMultiplier);
 
-    CodeGenerator::generateDefine(vs, "VARIANT_HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
-    CodeGenerator::generateDefine(vs, "VARIANT_HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
-    CodeGenerator::generateDefine(vs, "VARIANT_HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
-    CodeGenerator::generateDefine(vs, "VARIANT_HAS_SKINNING_OR_MORPHING", variant.hasSkinningOrMorphing());
-    CodeGenerator::generateDefine(vs, "VARIANT_HAS_VSM", variant.hasVsm());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_DIRECTIONAL_LIGHTING",
+            litVariants && variant.hasDirectionalLighting());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_DYNAMIC_LIGHTING",
+            litVariants && variant.hasDynamicLighting());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_SHADOWING",
+            litVariants && filament::Variant::isShadowReceiverVariant(variant));
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_SKINNING_OR_MORPHING",
+            variant.hasSkinningOrMorphing());
+    CodeGenerator::generateDefine(vs, "VARIANT_HAS_VSM",
+            filament::Variant::isVSMVariant(variant));
+
     CodeGenerator::generateDefine(vs, getShadingDefine(material.shading), true);
     generateMaterialDefines(vs, mProperties, mDefines);
 
@@ -351,33 +361,40 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         }
     }
 
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_REFLECTIONS", material.reflectionMode != ReflectionMode::DEFAULT);
-    if (material.reflectionMode != ReflectionMode::DEFAULT) {
-        CodeGenerator::generateDefine(fs, "REFLECTION_MODE_SCREEN_SPACE", uint32_t(ReflectionMode::SCREEN_SPACE));
-        if (material.reflectionMode == ReflectionMode::SCREEN_SPACE) {
-            CodeGenerator::generateDefine(fs, "REFLECTION_MODE", "REFLECTION_MODE_SCREEN_SPACE");
-        }
-    }
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_REFLECTIONS", material.reflectionMode == ReflectionMode::SCREEN_SPACE);
 
     bool multiBounceAO = material.multiBounceAOSet ?
             material.multiBounceAO : !isMobileTarget(shaderModel);
     CodeGenerator::generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);
 
+    assert_invariant(filament::Variant::isValid(variant));
+
     // lighting variants
     bool litVariants = lit || material.hasShadowMultiplier;
 
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_TRANSPARENT_SHADOW", material.hasTransparentShadow);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_SHADOW_MULTIPLIER",
+            material.hasShadowMultiplier);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_TRANSPARENT_SHADOW",
+            material.hasTransparentShadow);
 
-    CodeGenerator::generateDefine(fs, "VARIANT_HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
-    CodeGenerator::generateDefine(fs, "VARIANT_HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
-    CodeGenerator::generateDefine(fs, "VARIANT_HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
-    CodeGenerator::generateDefine(fs, "VARIANT_HAS_FOG", variant.hasFog() && !variant.hasDepth());
-    CodeGenerator::generateDefine(fs, "VARIANT_HAS_PICKING", variant.hasPicking() && variant.hasDepth());
-    CodeGenerator::generateDefine(fs, "VARIANT_HAS_VSM", variant.hasVsm());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_DIRECTIONAL_LIGHTING",
+            litVariants && variant.hasDirectionalLighting());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_DYNAMIC_LIGHTING",
+            litVariants && variant.hasDynamicLighting());
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_SHADOWING",
+            litVariants && filament::Variant::isShadowReceiverVariant(variant));
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_FOG",
+            filament::Variant::isFogVariant(variant));
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_PICKING",
+            filament::Variant::isPickingVariant(variant));
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_VSM",
+            filament::Variant::isVSMVariant(variant));
+    CodeGenerator::generateDefine(fs, "VARIANT_HAS_SSR",
+            filament::Variant::isSSRVariant(variant));
 
     // material defines
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY", material.hasDoubleSidedCapability);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY",
+            material.hasDoubleSidedCapability);
     switch (material.blendingMode) {
         case BlendingMode::OPAQUE:
             CodeGenerator::generateDefine(fs, "BLEND_MODE_OPAQUE", true);
@@ -442,7 +459,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
             BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::LIGHTS, UibGenerator::getLightsUib());
-    if (litVariants && variant.hasShadowReceiver()) {
+    if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
         cg.generateUniforms(fs, ShaderType::FRAGMENT,
                 BindingPoints::SHADOW, UibGenerator::getShadowUib());
     }
@@ -479,11 +496,14 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         CodeGenerator::generateDepthShaderMain(fs, ShaderType::FRAGMENT);
     } else {
         appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
-        if (material.isLit) {
-            CodeGenerator::generateShaderLit(fs, ShaderType::FRAGMENT, variant, material.shading,
-                    material.hasCustomSurfaceShading);
+        if (filament::Variant::isSSRVariant(variant)) {
+            CodeGenerator::generateShaderReflections(fs, ShaderType::FRAGMENT, variant);
+        } else if (material.isLit) {
+            CodeGenerator::generateShaderLit(fs, ShaderType::FRAGMENT, variant,
+                    material.shading,material.hasCustomSurfaceShading);
         } else {
-            CodeGenerator::generateShaderUnlit(fs, ShaderType::FRAGMENT, variant, material.hasShadowMultiplier);
+            CodeGenerator::generateShaderUnlit(fs, ShaderType::FRAGMENT, variant,
+                    material.hasShadowMultiplier);
         }
         // entry point
         CodeGenerator::generateShaderMain(fs, ShaderType::FRAGMENT);

@@ -404,7 +404,7 @@ MaterialBuilder& MaterialBuilder::generateDebugInfo(bool generateDebugInfo) noex
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::variantFilter(uint8_t variantFilter) noexcept {
+MaterialBuilder& MaterialBuilder::variantFilter(filament::UserVariantFilterMask variantFilter) noexcept {
     mVariantFilter = variantFilter;
     return *this;
 }

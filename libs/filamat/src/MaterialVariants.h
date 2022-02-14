@@ -33,7 +33,7 @@ struct Variant {
 };
 
 std::vector<Variant> determineSurfaceVariants(
-        filament::Variant::type_t variantFilter, bool isLit, bool shadowMultiplier);
+        filament::UserVariantFilterMask, bool isLit, bool shadowMultiplier);
 
 std::vector<Variant> determinePostProcessVariants();
 

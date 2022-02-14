@@ -30,6 +30,7 @@
 #include "fg2/FrameGraphResources.h"
 
 #include "fsr.h"
+#include "PerViewUniforms.h"
 #include "RenderPass.h"
 
 #include "details/Camera.h"
@@ -437,6 +438,111 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
     return depth;
 }
 
+// ------------------------------------------------------------------------------------------------
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
+        RenderPass const& pass,
+        FrameHistory const& frameHistory,
+        CameraInfo const& cameraInfo,
+        PerViewUniforms& uniforms,
+        ScreenSpaceReflectionsOptions const& options,
+        FrameGraphTexture::Descriptor const& desc) noexcept {
+
+    Blackboard& blackboard = fg.getBlackboard();
+
+    struct SSRPassData {
+        // our output, the reflection map
+        FrameGraphId<FrameGraphTexture> reflections;
+        // we need a depth buffer for culling
+        FrameGraphId<FrameGraphTexture> depth;
+        // we also need the structure buffer for ray-marching
+        FrameGraphId<FrameGraphTexture> structure;
+        // and the history buffer for fetching the reflections
+        FrameGraphId<FrameGraphTexture> history;
+    };
+
+    mat4f historyProjection;
+    FrameGraphId<FrameGraphTexture> history;
+
+    FrameHistoryEntry const& entry = frameHistory[0];
+    if (entry.ssr.color.handle) {
+        // the first time around we may not have a history buffer
+        history = fg.import("SSR history", entry.ssr.desc,
+                FrameGraphTexture::Usage::SAMPLEABLE, entry.ssr.color);
+        historyProjection = entry.ssr.projection;
+    }
+
+    auto const& uvFromClipMatrix = mEngine.getUvFromClipMatrix();
+
+    auto& ssrPass = fg.addPass<SSRPassData>("SSR Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+
+                // create our reflection buffer. We need an alpha channel, so we have to use RGBA16F
+                data.reflections = builder.createTexture("Reflections Texture", {
+                        .width = desc.width, .height = desc.height,
+                        .format = TextureFormat::RGBA16F });
+
+                // create our depth buffer, the depth buffer is never written to memory
+                data.depth = builder.createTexture("Reflections Texture Depth", {
+                        .width = desc.width, .height = desc.height,
+                        .format = TextureFormat::DEPTH32F });
+
+                // we're writing to both these buffers
+                data.reflections = builder.write(data.reflections,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                // finally declare our render target
+                builder.declareRenderPass("Reflections Target", {
+                        .attachments = { .color = { data.reflections }, .depth = data.depth },
+                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH });
+
+                // get the structure buffer
+                data.structure = blackboard.get<FrameGraphTexture>("structure");
+                assert_invariant(data.structure);
+                data.structure = builder.sample(data.structure);
+
+                if (history) {
+                    data.history = builder.sample(history);
+                }
+            },
+            [=, &uniforms, renderPass = pass](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) mutable {
+
+                // set structure sampler
+                uniforms.prepareStructure(data.structure ?
+                        resources.getTexture(data.structure) : getOneTexture());
+
+                // set screen-space reflections and screen-space refractions
+                mat4f uvFromViewMatrix = uvFromClipMatrix * cameraInfo.projection;
+                mat4f reprojection = uvFromClipMatrix * historyProjection
+                                     * inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                TextureHandle history = data.history ?
+                        resources.getTexture(data.history) : getZeroTexture();
+                uniforms.prepareHistorySSR(history,reprojection, uvFromViewMatrix,options);
+
+                uniforms.commit(driver);
+
+                auto out = resources.getRenderPassInfo();
+
+                // Remove the HAS_SHADOWING RenderFlags, since it's irrelevant when rendering reflections
+                RenderPass::RenderFlags flags = renderPass.getRenderFlags();
+                flags &= ~RenderPass::HAS_SHADOWING;
+                renderPass.setRenderFlags(flags);
+
+                // use our special SSR variant, it can only be applied to object that have
+                // the SCREEN_SPACE ReflectionMode.
+                renderPass.setVariant(Variant{Variant::SPECIAL_SSR});
+                // generate all our drawing commands, except blended objects.
+                renderPass.appendCommands(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
+                renderPass.sortCommands();
+                renderPass.execute(resources.getPassName(), out.target, out.params);
+            });
+
+    return ssrPass->reflections;
+}
+
 FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(FrameGraph& fg,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
         AmbientOcclusionOptions const& options) noexcept {
@@ -775,9 +881,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, size_t levels,
-        bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
+        bool reinhard, size_t kernelWidth, float sigma) noexcept {
     for (size_t i = 1; i < levels; i++) {
-        input = gaussianBlurPass(fg, input, i - 1, input, i, 0, reinhard, kernelWidth, sigmaRatio);
+        input = gaussianBlurPass(fg, input, i - 1, input, i, 0, reinhard, kernelWidth, sigma);
         reinhard = false; // only do the reinhard filtering on the first level
     }
     return input;
@@ -786,9 +892,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
         FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
-        bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
-
-    const float sigma = (float(kernelWidth) + 1.0f) / sigmaRatio;
+        bool reinhard, size_t kernelWidth, const float sigma) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
@@ -948,8 +1052,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
 
     auto const& desc = fg.getDescriptor(input);
 
-    // scale factor for the gaussian so it matches our resolution / FOV
-    const float s = verticalFieldOfView / float(desc.height);
+    // texel size of the reflection buffer in world units at 1 meter
+    constexpr float d = 1.0f; // 1m
+    const float texelSizeAtOneMeter = d * std::tan(verticalFieldOfView) / float(desc.height);
 
     // The kernel-size was determined empirically so that we don't get too many artifacts
     // due to the down-sampling with a box filter (which happens implicitly).
@@ -961,29 +1066,99 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
     static_assert(kernelSize & 1u, "kernel size must be odd");
     static_assert((((kernelSize - 1u) / 2u) & 1u) == 0, "kernel positive side size must be even");
 
-    // The relation between n and sigma (variance) is 6*sigma - 1 = N
+    // The relation between the kernel size N and sigma (standard deviation) is 6*sigma - 1 = N
+    // and is designed so the filter keeps its "gaussian-ness".
+    // The standard deviation sigma0 is expressed in texels.
     constexpr float sigma0 = (kernelSize + 1) / 6.0f;
 
-    // The variance doubles each time we go one mip down:
-    //      sigma = sigma0 * 2^lod
-    //      lod = log2(sigma) - log2(sigma0) = log2(sigma / sigma0).
-    //
-    // sigma is deduced from the roughness:
-    //      roughness = sqrt(2) * s * sigma
-    //
-    // In the end we get: lod = 2 * log2(perceptualRoughness) - log2(sigma0 * s * sqrt2)
+    /*
+     * 1. Relation between standard deviation and LOD
+     * ----------------------------------------------
+     *
+     * The standard deviation doubles at each level (i.e. variance quadruples), however,
+     * the mip-chain is constructed by successively blurring each level, which causes the
+     * variance of a given level to increase by the variance of the previous level (i.e. variances
+     * add under convolution). This results in a scaling of 2.23 (instead of 2) of the standard
+     * deviation for each level: sqrt( 1^2 + 2^2 ) = sqrt(5) = 2.23;
+     *
+     *  The standard deviation is scaled by 2.23 each time we go one mip down,
+     *  and our mipmap chain is built such that lod 0 is not blurred and lod 1 is blurred with
+     *  sigma0 * 2 (because of the smaller resolution of lod 1). To simplify things a bit, we
+     *  replace this factor by 2.23 (i.e. we pretend that lod 0 is blurred by sigma0).
+     *  We then get:
+     *      sigma = sigma0 * 2.23^lod
+     *      lod   = log2(sigma / sigma0) / log2(2.23)
+     *
+     *      +------------------------------------------------+
+     *      |  lod = [ log2(sigma) - log2(sigma0) ] * 0.8614 |
+     *      +------------------------------------------------+
+     *
+     * 2. Relation between standard deviation and roughness
+     * ----------------------------------------------------
+     *
+     *  The spherical gaussian approximation of the GGX distribution is given by:
+     *
+     *           1         2(cos(theta)-1)
+     *         ------ exp(  --------------- )
+     *         pi*a^2           a^2
+     *
+     *
+     *  Which is equivalent to:
+     *
+     *      sqrt(2)
+     *      ------- Gaussian(2 * sqrt(1 - cos(theta)), a)
+     *       pi*a
+     *
+     *  But when we filter a frame, we're actually calculating:
+     *
+     *      Gaussian(d * tan(theta), sigma)
+     *
+     *  With d the distance from the eye to the center sample, theta the angle, and it turns out
+     *  that sqrt(2) * tan(theta) is very close to 2 * sqrt(1 - cos(theta)) for small angles, we
+     *  can make that assumption because our filter is not wide.
+     *  The above can be rewritten as:
+     *
+     *      Gaussian(d * tan(theta), a * d / sqrt(2))
+     *    = Gaussian(    tan(theta), a     / sqrt(2))
+     *
+     *  Which now matches the SG approximation (we don't mind the scale factor because it's
+     *  calculated automatically in the shader).
+     *
+     *  We finally get that:
+     *
+     *      +---------------------+
+     *      | sigma = a / sqrt(2) |
+     *      +---------------------+
+     *
+     *
+     * 3. Taking the resolution into account
+     * -------------------------------------
+     *
+     *  sigma0 above is expressed in texels, but we're interested in world units. The texel
+     *  size in world unit is given by:
+     *
+     *      +--------------------------------+
+     *      |  s = d * tan(fov) / resolution |      with d distance to camera plane
+     *      +--------------------------------+
+     *
+     * 4. Roughness to lod mapping
+     * ---------------------------
+     *
+     *  Putting it all together we get:
+     *
+     *      lod   = [ log2(sigma)       - log2(           sigma0 * s ) ] * 0.8614
+     *      lod   = [ log2(a / sqrt(2)) - log2(           sigma0 * s ) ] * 0.8614
+     *      lod   = [ log2(a)           - log2( sqrt(2) * sigma0 * s ) ] * 0.8614
+     *
+     *   +-------------------------------------------------------------------------------------+
+     *   | lod   = [ log2(a / d) - log2(sqrt(2) * sigma0 * (tan(fov) / resolution)) ] * 0.8614 |
+     *   +-------------------------------------------------------------------------------------+
+     */
 
-    // FIXME: revisit the formula above. Not sure where the 2* comes from.
-
-    const float refractionLodOffset = -std::log2(sigma0 * s * f::SQRT2);
-    const float maxPerceptualRoughness = 0.5f;
-    const uint8_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
-
-    // Number of roughness levels we want.
-    // TODO: If we want to limit the number of mip levels, we must reduce the initial
-    //       resolution (if we want to keep the same filter, and still match the IBL somewhat).
-    const uint8_t roughnessLodCount =
-            std::min(maxLod, FTexture::maxLevelCount(desc.width, desc.height));
+    const float refractionLodOffset = -std::log2(f::SQRT2 * sigma0 * texelSizeAtOneMeter);
+    uint8_t roughnessLodCount = FTexture::maxLevelCount(desc.width, desc.height);
+    // we don't go lower than 16 texel in one dimension
+    roughnessLodCount = std::max(std::min(4, +roughnessLodCount), +roughnessLodCount - 4);
 
     // Then copy the color buffer into a texture, making sure that we keep the original
     // buffer aspect-ratio (this is because dynamic-resolution is not necessarily homogenous).
@@ -1035,7 +1210,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
      */
 
     *pLodOffset = refractionLodOffset;
-    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);
+    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize, sigma0);
     return input;
 }
 
@@ -1753,10 +1928,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     commitAndRender(out, material, driver);
                 });
 
+        constexpr float kernelWidth = 9;
+        constexpr float sigma = (kernelWidth + 1.0f) / 6.0f;
         auto flare = gaussianBlurPass(fg,
                 flarePass->out, 0,
                 {}, 0, 0,
-                false, 9);
+                false, kernelWidth, sigma);
 
         fg.getBlackboard().put("flare", flare);
 
@@ -2290,23 +2467,25 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
     // get sample position within a pixel [-0.5, 0.5]
     const float2 jitter = halton(previous.frameId) - 0.5f;
     // save this frame's sample position
-    current.jitter = jitter;
+    current.taa.jitter = jitter;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-        FrameGraphId<FrameGraphTexture> colorHistory,
         TemporalAntiAliasingOptions const& taaOptions,
         ColorGradingConfig colorGradingConfig) noexcept {
 
     FrameHistoryEntry const& entry = frameHistory[0];
+    FrameGraphId<FrameGraphTexture> colorHistory;
     mat4f const* historyProjection = nullptr;
-    if (UTILS_UNLIKELY(!colorHistory)) {
+    if (UTILS_UNLIKELY(!entry.taa.color.handle)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
-        historyProjection = &frameHistory.getCurrent().projection;
+        historyProjection = &frameHistory.getCurrent().taa.projection;
     } else {
-        historyProjection = &entry.projection;
+        colorHistory = fg.import("TAA history", entry.taa.desc,
+                FrameGraphTexture::Usage::SAMPLEABLE, entry.taa.color);
+        historyProjection = &entry.taa.projection;
     }
 
     Blackboard& blackboard = fg.getBlackboard();
@@ -2366,7 +2545,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 d = sampleOffsets[i] - current.jitter;
+                    float2 d = sampleOffsets[i] - current.taa.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
                     // this is a gaussian fit of a 3.3 Blackman Harris window
                     // see: "High Quality Temporal Supersampling" by Bruan Karis
@@ -2394,7 +2573,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
                         *historyProjection *
-                        inverse(current.projection) *
+                        inverse(current.taa.projection) *
                         normalizedToClip);
 
                 mi->commit(driver);
