@@ -98,6 +98,16 @@ vec3 diffuseIrradiance(const vec3 n) {
 // IBL specular
 //------------------------------------------------------------------------------
 
+// Helper function that converts the incoming Z-up world space reflection vector
+// to a Filament IBL texture lookup vector, where the top face is actually +Y.
+vec3 zUpToIblDirection(vec3 r) {
+#if defined(IN_SHAPR_SHADER)
+    return vec3(-r.x, r.z, r.y);
+#else
+    return r;
+#endif    
+}
+
 float perceptualRoughnessToLod(float perceptualRoughness) {
     // The mapping below is a quadratic fit for log2(perceptualRoughness)+iblRoughnessOneLevel when
     // iblRoughnessOneLevel is 4. We found empirically that this mapping works very well for
@@ -107,12 +117,12 @@ float perceptualRoughnessToLod(float perceptualRoughness) {
 
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
     float lod = perceptualRoughnessToLod(perceptualRoughness);
-    return decodeDataForIBL(textureLod(light_iblSpecular, r, lod));
+    return decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod));
 }
 
 vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
     float lod = frameUniforms.iblRoughnessOneLevel * roughness;
-    return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
+    return decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod + offset));
 }
 
 vec3 getSpecularDominantDirection(const vec3 n, const vec3 r, float roughness) {
