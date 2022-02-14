@@ -443,7 +443,7 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 #endif
 }
 
-#if defined(HAS_REFRACTION)
+#if defined(MATERIAL_HAS_REFRACTION)
 
 struct Refraction {
     vec3 position;
@@ -541,7 +541,7 @@ vec3 evaluateRefraction(
     vec3 Ft;
 
     // compute the point where the ray exits the medium, if needed
-    vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
+    vec4 p = vec4(getClipFromWorldMatrix() * vec4(ray.position, 1.0));
     p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
 
     // perceptualRoughness to LOD
@@ -573,14 +573,14 @@ vec3 evaluateRefraction(
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // specular layer
-    vec3 Fr;
+    vec3 Fr = vec3(0.0f);
 
     // screen-space reflections
-#if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
+#if defined(MATERIAL_HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
     vec4 Fssr = vec4(0.0f);
     // evaluateScreenSpaceReflections will set the value of ssr if there's a hit.
     // ssr.a contains the reflection's contribution.
-    if (pixel.roughness <= 0.01f && frameUniforms.ssrDistance > 0.0f) {
+    if (pixel.roughness <= 0.1f && frameUniforms.ssrDistance > 0.0f) {
         vec3 r = getReflectedVector(pixel, shading_view, shading_normal);
         Fssr = evaluateScreenSpaceReflections(pixel, r);
     }
@@ -604,7 +604,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     }
 #endif
 
-#if defined(HAS_REFLECTIONS)
+#if defined(MATERIAL_HAS_REFLECTIONS)
     Fssr.rgb *= E;
 #endif
 
@@ -620,7 +620,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
     vec3 specularSingleBounceAO = singleBounceAO(specularAO) * pixel.energyCompensation;
     Fr *= specularSingleBounceAO;
-#if defined(HAS_REFLECTIONS)
+#if defined(MATERIAL_HAS_REFLECTIONS)
     Fssr.rgb *= specularSingleBounceAO;
 #endif
 
@@ -654,23 +654,23 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     // clear coat layer
     evaluateClearCoatIBL(pixel, diffuseAO, interpolationCache, Fd, Fr);
 
-#if defined(HAS_REFRACTION)
+#if defined(MATERIAL_HAS_REFRACTION)
     vec3 Ft = evaluateRefraction(pixel, shading_normal, E);
 #endif
 
     // Combine all terms
     // Note: iblLuminance is already premultiplied by the exposure
-#if defined(HAS_REFRACTION) && defined(HAS_REFLECTIONS)
+#if defined(MATERIAL_HAS_REFRACTION) && defined(MATERIAL_HAS_REFLECTIONS)
     color.rgb +=
             Fr * (frameUniforms.iblLuminance * (1.0 - Fssr.a)) + Fssr.rgb * Fssr.a +
             Fd * (frameUniforms.iblLuminance * (1.0 - pixel.transmission)) +
             Ft * pixel.transmission;
-#elif defined(HAS_REFRACTION)
+#elif defined(MATERIAL_HAS_REFRACTION)
     color.rgb +=
             Fr *  frameUniforms.iblLuminance +
             Fd * (frameUniforms.iblLuminance * (1.0 - pixel.transmission)) +
             Ft * pixel.transmission;
-#elif defined(HAS_REFLECTIONS)
+#elif defined(MATERIAL_HAS_REFLECTIONS)
     color.rgb +=
             Fr * (frameUniforms.iblLuminance * (1.0 - Fssr.a)) + Fssr.rgb * Fssr.a +
             Fd * frameUniforms.iblLuminance;

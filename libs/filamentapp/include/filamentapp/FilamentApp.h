@@ -180,8 +180,10 @@ private:
         void configureCamerasForWindow();
         void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
 
+        FilamentApp* const mFilamentApp = nullptr;
+        const bool mIsHeadless;
+
         SDL_Window* mWindow = nullptr;
-        FilamentApp* mFilamentApp = nullptr;
         filament::Renderer* mRenderer = nullptr;
         filament::Engine::Backend mBackend;
 

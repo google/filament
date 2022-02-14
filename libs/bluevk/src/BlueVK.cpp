@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,6 +97,10 @@ static void loadInstanceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(vo
     vkGetPhysicalDeviceQueueFamilyProperties2 = (PFN_vkGetPhysicalDeviceQueueFamilyProperties2) loadcb(context, "vkGetPhysicalDeviceQueueFamilyProperties2");
     vkGetPhysicalDeviceSparseImageFormatProperties2 = (PFN_vkGetPhysicalDeviceSparseImageFormatProperties2) loadcb(context, "vkGetPhysicalDeviceSparseImageFormatProperties2");
 #endif // defined(VK_VERSION_1_1)
+#if defined(VK_EXT_acquire_drm_display)
+    vkAcquireDrmDisplayEXT = (PFN_vkAcquireDrmDisplayEXT) loadcb(context, "vkAcquireDrmDisplayEXT");
+    vkGetDrmDisplayEXT = (PFN_vkGetDrmDisplayEXT) loadcb(context, "vkGetDrmDisplayEXT");
+#endif // defined(VK_EXT_acquire_drm_display)
 #if defined(VK_EXT_acquire_xlib_display)
     vkAcquireXlibDisplayEXT = (PFN_vkAcquireXlibDisplayEXT) loadcb(context, "vkAcquireXlibDisplayEXT");
     vkGetRandROutputDisplayEXT = (PFN_vkGetRandROutputDisplayEXT) loadcb(context, "vkGetRandROutputDisplayEXT");
@@ -357,7 +361,6 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
     vkGetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements) loadcb(context, "vkGetImageMemoryRequirements");
     vkGetImageSparseMemoryRequirements = (PFN_vkGetImageSparseMemoryRequirements) loadcb(context, "vkGetImageSparseMemoryRequirements");
     vkGetImageSubresourceLayout = (PFN_vkGetImageSubresourceLayout) loadcb(context, "vkGetImageSubresourceLayout");
-    vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) loadcb(context, "vkGetInstanceProcAddr");
     vkGetPipelineCacheData = (PFN_vkGetPipelineCacheData) loadcb(context, "vkGetPipelineCacheData");
     vkGetQueryPoolResults = (PFN_vkGetQueryPoolResults) loadcb(context, "vkGetQueryPoolResults");
     vkGetRenderAreaGranularity = (PFN_vkGetRenderAreaGranularity) loadcb(context, "vkGetRenderAreaGranularity");
@@ -512,6 +515,10 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
 #if defined(VK_EXT_line_rasterization)
     vkCmdSetLineStippleEXT = (PFN_vkCmdSetLineStippleEXT) loadcb(context, "vkCmdSetLineStippleEXT");
 #endif // defined(VK_EXT_line_rasterization)
+#if defined(VK_EXT_multi_draw)
+    vkCmdDrawMultiEXT = (PFN_vkCmdDrawMultiEXT) loadcb(context, "vkCmdDrawMultiEXT");
+    vkCmdDrawMultiIndexedEXT = (PFN_vkCmdDrawMultiIndexedEXT) loadcb(context, "vkCmdDrawMultiIndexedEXT");
+#endif // defined(VK_EXT_multi_draw)
 #if defined(VK_EXT_private_data)
     vkCreatePrivateDataSlotEXT = (PFN_vkCreatePrivateDataSlotEXT) loadcb(context, "vkCreatePrivateDataSlotEXT");
     vkDestroyPrivateDataSlotEXT = (PFN_vkDestroyPrivateDataSlotEXT) loadcb(context, "vkDestroyPrivateDataSlotEXT");
@@ -550,6 +557,13 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
     vkGetPastPresentationTimingGOOGLE = (PFN_vkGetPastPresentationTimingGOOGLE) loadcb(context, "vkGetPastPresentationTimingGOOGLE");
     vkGetRefreshCycleDurationGOOGLE = (PFN_vkGetRefreshCycleDurationGOOGLE) loadcb(context, "vkGetRefreshCycleDurationGOOGLE");
 #endif // defined(VK_GOOGLE_display_timing)
+#if defined(VK_HUAWEI_invocation_mask)
+    vkCmdBindInvocationMaskHUAWEI = (PFN_vkCmdBindInvocationMaskHUAWEI) loadcb(context, "vkCmdBindInvocationMaskHUAWEI");
+#endif // defined(VK_HUAWEI_invocation_mask)
+#if defined(VK_HUAWEI_subpass_shading)
+    vkCmdSubpassShadingHUAWEI = (PFN_vkCmdSubpassShadingHUAWEI) loadcb(context, "vkCmdSubpassShadingHUAWEI");
+    vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI = (PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI) loadcb(context, "vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI");
+#endif // defined(VK_HUAWEI_subpass_shading)
 #if defined(VK_INTEL_performance_query)
     vkAcquirePerformanceConfigurationINTEL = (PFN_vkAcquirePerformanceConfigurationINTEL) loadcb(context, "vkAcquirePerformanceConfigurationINTEL");
     vkCmdSetPerformanceMarkerINTEL = (PFN_vkCmdSetPerformanceMarkerINTEL) loadcb(context, "vkCmdSetPerformanceMarkerINTEL");
@@ -673,6 +687,9 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
     vkGetPipelineExecutablePropertiesKHR = (PFN_vkGetPipelineExecutablePropertiesKHR) loadcb(context, "vkGetPipelineExecutablePropertiesKHR");
     vkGetPipelineExecutableStatisticsKHR = (PFN_vkGetPipelineExecutableStatisticsKHR) loadcb(context, "vkGetPipelineExecutableStatisticsKHR");
 #endif // defined(VK_KHR_pipeline_executable_properties)
+#if defined(VK_KHR_present_wait)
+    vkWaitForPresentKHR = (PFN_vkWaitForPresentKHR) loadcb(context, "vkWaitForPresentKHR");
+#endif // defined(VK_KHR_present_wait)
 #if defined(VK_KHR_push_descriptor)
     vkCmdPushDescriptorSetKHR = (PFN_vkCmdPushDescriptorSetKHR) loadcb(context, "vkCmdPushDescriptorSetKHR");
 #endif // defined(VK_KHR_push_descriptor)
@@ -736,6 +753,13 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
     vkGetVideoSessionMemoryRequirementsKHR = (PFN_vkGetVideoSessionMemoryRequirementsKHR) loadcb(context, "vkGetVideoSessionMemoryRequirementsKHR");
     vkUpdateVideoSessionParametersKHR = (PFN_vkUpdateVideoSessionParametersKHR) loadcb(context, "vkUpdateVideoSessionParametersKHR");
 #endif // defined(VK_KHR_video_queue)
+#if defined(VK_NVX_binary_import)
+    vkCmdCuLaunchKernelNVX = (PFN_vkCmdCuLaunchKernelNVX) loadcb(context, "vkCmdCuLaunchKernelNVX");
+    vkCreateCuFunctionNVX = (PFN_vkCreateCuFunctionNVX) loadcb(context, "vkCreateCuFunctionNVX");
+    vkCreateCuModuleNVX = (PFN_vkCreateCuModuleNVX) loadcb(context, "vkCreateCuModuleNVX");
+    vkDestroyCuFunctionNVX = (PFN_vkDestroyCuFunctionNVX) loadcb(context, "vkDestroyCuFunctionNVX");
+    vkDestroyCuModuleNVX = (PFN_vkDestroyCuModuleNVX) loadcb(context, "vkDestroyCuModuleNVX");
+#endif // defined(VK_NVX_binary_import)
 #if defined(VK_NVX_image_view_handle)
     vkGetImageViewAddressNVX = (PFN_vkGetImageViewAddressNVX) loadcb(context, "vkGetImageViewAddressNVX");
     vkGetImageViewHandleNVX = (PFN_vkGetImageViewHandleNVX) loadcb(context, "vkGetImageViewHandleNVX");
@@ -755,6 +779,9 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
     vkDestroyIndirectCommandsLayoutNV = (PFN_vkDestroyIndirectCommandsLayoutNV) loadcb(context, "vkDestroyIndirectCommandsLayoutNV");
     vkGetGeneratedCommandsMemoryRequirementsNV = (PFN_vkGetGeneratedCommandsMemoryRequirementsNV) loadcb(context, "vkGetGeneratedCommandsMemoryRequirementsNV");
 #endif // defined(VK_NV_device_generated_commands)
+#if defined(VK_NV_external_memory_rdma)
+    vkGetMemoryRemoteAddressNV = (PFN_vkGetMemoryRemoteAddressNV) loadcb(context, "vkGetMemoryRemoteAddressNV");
+#endif // defined(VK_NV_external_memory_rdma)
 #if defined(VK_NV_external_memory_win32)
     vkGetMemoryWin32HandleNV = (PFN_vkGetMemoryWin32HandleNV) loadcb(context, "vkGetMemoryWin32HandleNV");
 #endif // defined(VK_NV_external_memory_win32)
@@ -1010,6 +1037,10 @@ PFN_vkGetSwapchainGrallocUsage2ANDROID vkGetSwapchainGrallocUsage2ANDROID;
 PFN_vkGetSwapchainGrallocUsageANDROID vkGetSwapchainGrallocUsageANDROID;
 PFN_vkQueueSignalReleaseImageANDROID vkQueueSignalReleaseImageANDROID;
 #endif // defined(VK_ANDROID_native_buffer)
+#if defined(VK_EXT_acquire_drm_display)
+PFN_vkAcquireDrmDisplayEXT vkAcquireDrmDisplayEXT;
+PFN_vkGetDrmDisplayEXT vkGetDrmDisplayEXT;
+#endif // defined(VK_EXT_acquire_drm_display)
 #if defined(VK_EXT_acquire_xlib_display)
 PFN_vkAcquireXlibDisplayEXT vkAcquireXlibDisplayEXT;
 PFN_vkGetRandROutputDisplayEXT vkGetRandROutputDisplayEXT;
@@ -1119,6 +1150,10 @@ PFN_vkCmdSetLineStippleEXT vkCmdSetLineStippleEXT;
 #if defined(VK_EXT_metal_surface)
 PFN_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 #endif // defined(VK_EXT_metal_surface)
+#if defined(VK_EXT_multi_draw)
+PFN_vkCmdDrawMultiEXT vkCmdDrawMultiEXT;
+PFN_vkCmdDrawMultiIndexedEXT vkCmdDrawMultiIndexedEXT;
+#endif // defined(VK_EXT_multi_draw)
 #if defined(VK_EXT_private_data)
 PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
 PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
@@ -1167,6 +1202,13 @@ PFN_vkCreateStreamDescriptorSurfaceGGP vkCreateStreamDescriptorSurfaceGGP;
 PFN_vkGetPastPresentationTimingGOOGLE vkGetPastPresentationTimingGOOGLE;
 PFN_vkGetRefreshCycleDurationGOOGLE vkGetRefreshCycleDurationGOOGLE;
 #endif // defined(VK_GOOGLE_display_timing)
+#if defined(VK_HUAWEI_invocation_mask)
+PFN_vkCmdBindInvocationMaskHUAWEI vkCmdBindInvocationMaskHUAWEI;
+#endif // defined(VK_HUAWEI_invocation_mask)
+#if defined(VK_HUAWEI_subpass_shading)
+PFN_vkCmdSubpassShadingHUAWEI vkCmdSubpassShadingHUAWEI;
+PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
+#endif // defined(VK_HUAWEI_subpass_shading)
 #if defined(VK_INTEL_performance_query)
 PFN_vkAcquirePerformanceConfigurationINTEL vkAcquirePerformanceConfigurationINTEL;
 PFN_vkCmdSetPerformanceMarkerINTEL vkCmdSetPerformanceMarkerINTEL;
@@ -1336,6 +1378,9 @@ PFN_vkGetPipelineExecutableInternalRepresentationsKHR vkGetPipelineExecutableInt
 PFN_vkGetPipelineExecutablePropertiesKHR vkGetPipelineExecutablePropertiesKHR;
 PFN_vkGetPipelineExecutableStatisticsKHR vkGetPipelineExecutableStatisticsKHR;
 #endif // defined(VK_KHR_pipeline_executable_properties)
+#if defined(VK_KHR_present_wait)
+PFN_vkWaitForPresentKHR vkWaitForPresentKHR;
+#endif // defined(VK_KHR_present_wait)
 #if defined(VK_KHR_push_descriptor)
 PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
 #endif // defined(VK_KHR_push_descriptor)
@@ -1433,6 +1478,13 @@ PFN_vkCreateMacOSSurfaceMVK vkCreateMacOSSurfaceMVK;
 #if defined(VK_NN_vi_surface)
 PFN_vkCreateViSurfaceNN vkCreateViSurfaceNN;
 #endif // defined(VK_NN_vi_surface)
+#if defined(VK_NVX_binary_import)
+PFN_vkCmdCuLaunchKernelNVX vkCmdCuLaunchKernelNVX;
+PFN_vkCreateCuFunctionNVX vkCreateCuFunctionNVX;
+PFN_vkCreateCuModuleNVX vkCreateCuModuleNVX;
+PFN_vkDestroyCuFunctionNVX vkDestroyCuFunctionNVX;
+PFN_vkDestroyCuModuleNVX vkDestroyCuModuleNVX;
+#endif // defined(VK_NVX_binary_import)
 #if defined(VK_NVX_image_view_handle)
 PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
 PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX;
@@ -1465,6 +1517,9 @@ PFN_vkGetGeneratedCommandsMemoryRequirementsNV vkGetGeneratedCommandsMemoryRequi
 #if defined(VK_NV_external_memory_capabilities)
 PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV vkGetPhysicalDeviceExternalImageFormatPropertiesNV;
 #endif // defined(VK_NV_external_memory_capabilities)
+#if defined(VK_NV_external_memory_rdma)
+PFN_vkGetMemoryRemoteAddressNV vkGetMemoryRemoteAddressNV;
+#endif // defined(VK_NV_external_memory_rdma)
 #if defined(VK_NV_external_memory_win32)
 PFN_vkGetMemoryWin32HandleNV vkGetMemoryWin32HandleNV;
 #endif // defined(VK_NV_external_memory_win32)
@@ -2309,6 +2364,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkValidationFeatur
         case VK_VALIDATION_FEATURE_DISABLE_OBJECT_LIFETIMES_EXT: out << "VK_VALIDATION_FEATURE_DISABLE_OBJECT_LIFETIMES_EXT"; break;
         case VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT: out << "VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT"; break;
         case VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT: out << "VK_VALIDATION_FEATURE_DISABLE_UNIQUE_HANDLES_EXT"; break;
+        case VK_VALIDATION_FEATURE_DISABLE_SHADER_VALIDATION_CACHE_EXT: out << "VK_VALIDATION_FEATURE_DISABLE_SHADER_VALIDATION_CACHE_EXT"; break;
         default: out << "UNKNOWN"; break;
     }
     return out;
@@ -2515,6 +2571,8 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkDriverId& value)
         case VK_DRIVER_ID_MESA_LLVMPIPE: out << "VK_DRIVER_ID_MESA_LLVMPIPE"; break;
         case VK_DRIVER_ID_MOLTENVK: out << "VK_DRIVER_ID_MOLTENVK"; break;
         case VK_DRIVER_ID_COREAVI_PROPRIETARY: out << "VK_DRIVER_ID_COREAVI_PROPRIETARY"; break;
+        case VK_DRIVER_ID_JUICE_PROPRIETARY: out << "VK_DRIVER_ID_JUICE_PROPRIETARY"; break;
+        case VK_DRIVER_ID_VERISILICON_PROPRIETARY: out << "VK_DRIVER_ID_VERISILICON_PROPRIETARY"; break;
         default: out << "UNKNOWN"; break;
     }
     return out;
@@ -2813,6 +2871,15 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkProvokingVertexM
     switch (value) {
         case VK_PROVOKING_VERTEX_MODE_FIRST_VERTEX_EXT: out << "VK_PROVOKING_VERTEX_MODE_FIRST_VERTEX_EXT"; break;
         case VK_PROVOKING_VERTEX_MODE_LAST_VERTEX_EXT: out << "VK_PROVOKING_VERTEX_MODE_LAST_VERTEX_EXT"; break;
+        default: out << "UNKNOWN"; break;
+    }
+    return out;
+}
+utils::io::ostream& operator<<(utils::io::ostream& out, const VkAccelerationStructureMotionInstanceTypeNV& value) {
+    switch (value) {
+        case VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_STATIC_NV: out << "VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_STATIC_NV"; break;
+        case VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_MATRIX_MOTION_NV: out << "VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_MATRIX_MOTION_NV"; break;
+        case VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_SRT_MOTION_NV: out << "VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_SRT_MOTION_NV"; break;
         default: out << "UNKNOWN"; break;
     }
     return out;
@@ -3433,7 +3500,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkResolveModeFlagB
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkGeometryInstanceFlagBitsKHR& value) {
     switch (value) {
         case 0x00000001: out << "VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR"; break;
-        case 0x00000002: out << "VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR"; break;
+        case 0x00000002: out << "VK_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING_BIT_KHR"; break;
         case 0x00000004: out << "VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR"; break;
         case 0x00000008: out << "VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR"; break;
         default: out << "UNKNOWN_FLAGS"; break;
@@ -3505,12 +3572,6 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkAcquireProfiling
     return out;
 }
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkShaderCorePropertiesFlagBitsAMD& value) {
-    switch (value) {
-        default: out << "UNKNOWN_FLAGS"; break;
-    }
-    return out;
-}
-utils::io::ostream& operator<<(utils::io::ostream& out, const VkShaderModuleCreateFlagBits& value) {
     switch (value) {
         default: out << "UNKNOWN_FLAGS"; break;
     }

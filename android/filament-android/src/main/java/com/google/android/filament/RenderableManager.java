@@ -400,7 +400,7 @@ public class RenderableManager {
         }
 
         /**
-         * Controls if the renderable has vertex morphing targets, false by default. This is
+         * Controls if the renderable has vertex morphing targets, zero by default. This is
          * required to enable GPU morphing.
          *
          * <p>Filament supports two morphing modes: standard (default) and legacy.</p>
@@ -420,8 +420,8 @@ public class RenderableManager {
          * to advance the animation.</p>
          */
         @NonNull
-        public Builder morphing(boolean enabled) {
-            nBuilderMorphing(mNativeBuilder, enabled);
+        public Builder morphing(@IntRange(from = 0, to = 125) int targetCount) {
+            nBuilderMorphing(mNativeBuilder, targetCount);
             return this;
         }
 
@@ -513,8 +513,49 @@ public class RenderableManager {
      *
      * @see Builder#morphing
      */
-    public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights) {
-        nSetMorphWeights(mNativeObject, i, weights);
+    public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights, @IntRange(from = 0) int offset) {
+        nSetMorphWeights(mNativeObject, i, weights, offset);
+    }
+
+    /**
+     * Changes the morph target buffer for the given primitive.
+     *
+     * <p>The renderable must be built with morphing enabled.</p>
+     *
+     * @see Builder#morphing
+     */
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
+                                       @NonNull MorphTargetBuffer morphTargetBuffer,
+                                       @IntRange(from = 0) int offset,
+                                       @IntRange(from = 0) int count) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
+                morphTargetBuffer.getNativeObject(), offset, count);
+    }
+
+    /**
+     * Gets the morph target count on a renderable.
+     */
+    @IntRange(from = 0)
+    public int getMorphTargetCount(@EntityInstance int i) {
+        return nGetMorphTargetCount(mNativeObject, i);
+    }
+
+    /**
+     * Changes the morph target buffer for the given primitive.
+     *
+     * <p>The renderable must be built with morphing enabled.</p>
+     *
+     * @see Builder#morphing
+     */
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
+                                       @NonNull MorphTargetBuffer morphTargetBuffer,
+                                       @IntRange(from = 0) int count) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
+                morphTargetBuffer.getNativeObject(), 0, count);
     }
 
     /**
@@ -771,14 +812,16 @@ public class RenderableManager {
     private static native void nBuilderSkinning(long nativeBuilder, int boneCount);
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
-    private static native void nBuilderMorphing(long nativeBuilder, boolean enabled);
+    private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
 
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
     private static native int nSetBonesAsQuaternions(long nativeObject, int i, Buffer quaternions, int remaining, int boneCount, int offset);
-    private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights);
+    private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights, int offset);
+    private static native void nSetMorphTargetBufferAt(long nativeObject, int i, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
+    private static native int nGetMorphTargetCount(long nativeObject, int i);
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);

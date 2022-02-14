@@ -18,6 +18,8 @@
 
 package com.google.android.filament.utils
 
+import kotlin.math.pow
+
 const val FPI         = 3.1415926536f
 const val HALF_PI     = FPI * 0.5f
 const val TWO_PI      = FPI * 2.0f
@@ -40,4 +42,4 @@ inline fun fract(v: Float) = v % 1
 
 inline fun sqr(v: Float) = v * v
 
-inline fun pow(x: Float, y: Float) = StrictMath.pow(x.toDouble(), y.toDouble()).toFloat()
+inline fun pow(x: Float, y: Float) = (x.toDouble().pow(y.toDouble())).toFloat()

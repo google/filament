@@ -12,7 +12,7 @@ void main() {
 
     // In USE_OPTIMIZED_DEPTH_VERTEX_SHADER mode, we can even skip this if we're already in
     // VERTEX_DOMAIN_DEVICE and we don't have VSM.
-#if !defined(VERTEX_DOMAIN_DEVICE) || defined(HAS_VSM)
+#if !defined(VERTEX_DOMAIN_DEVICE) || defined(VARIANT_HAS_VSM)
     // Run initMaterialVertex to compute material.worldPosition.
     MaterialVertexInputs material;
     initMaterialVertex(material);
@@ -34,7 +34,7 @@ void main() {
         // We encode the orthonormal basis as a quaternion to save space in the attributes
         toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent.xyz);
 
-        #if defined(HAS_SKINNING_OR_MORPHING)
+        #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
         if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
             #if defined(LEGACY_MORPHING)
             vec3 normal0, normal1, normal2, normal3;
@@ -69,7 +69,7 @@ void main() {
         // Without anisotropy or normal mapping we only need the normal vector
         toTangentFrame(mesh_tangents, material.worldNormal);
 
-        #if defined(HAS_SKINNING_OR_MORPHING)
+        #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
             if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
                 skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
             }
@@ -115,7 +115,7 @@ void main() {
     vertex_worldNormal = material.worldNormal;
 #endif
 
-#if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
     vertex_lightSpacePosition = computeLightSpacePosition(
             vertex_worldPosition.xyz, vertex_worldNormal,
             frameUniforms.lightDirection, frameUniforms.shadowBias, getLightFromWorldMatrix());
@@ -142,7 +142,7 @@ void main() {
     gl_Position.z = gl_Position.z * -0.5 + 0.5;
 #endif
 
-#if defined(HAS_VSM)
+#if defined(VARIANT_HAS_VSM)
     // For VSM, we use the linear light-space Z coordinate as the depth metric, which works for both
     // directional and spot lights and can be safely interpolated.
     // The value is guaranteed to be between [-znear, -zfar] by construction of viewFromWorldMatrix,

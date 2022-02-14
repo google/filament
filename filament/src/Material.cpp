@@ -381,10 +381,12 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(Variant variant) const noexce
     if (Variant(variant).hasSkinningOrMorphing()) {
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableUibBone::_name);
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_MORPHING, PerRenderableMorphingUib::_name);
-
-        addSamplerGroup(pb, BindingPoints::PER_RENDERABLE_MORPHING,
-                SibGenerator::getPerRenderPrimitiveMorphingSib(variant), mSamplerBindings);
     }
+
+    // Always add the morphing sampler group because there is no way
+    // that SamplerBindingMap knows the current variant.
+    addSamplerGroup(pb, BindingPoints::PER_RENDERABLE_MORPHING,
+            SibGenerator::getPerRenderPrimitiveMorphingSib(variant), mSamplerBindings);
 
     addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variant), mSamplerBindings);
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);

@@ -26,8 +26,9 @@ namespace filament {
 
 void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             const char* materialName) {
-    // We assume material variant 0 here, which is sufficient for calculating the binding map.
-    // The material variant currently only affects sampler formats (for VSM), not offsets.
+    // TODO: Calculate SamplerBindingMap with a material variant.
+    // The dummy variant isn't enough for calculating the binding map.
+    // The material variant affects sampler bindings.
     const Variant dummyVariant{};
     uint8_t offset = 0;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {

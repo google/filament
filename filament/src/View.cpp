@@ -658,10 +658,10 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 }
 
 void FView::prepareSSR(Handle <HwTexture> ssr, float refractionLodOffset,
-        mat4f const& historyProjection, mat4f const& projectToPixelMatrix,
+        mat4f const& historyProjection, mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset,
-            historyProjection, projectToPixelMatrix, ssrOptions);
+            historyProjection, uvFromViewMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
@@ -869,19 +869,6 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
         uint8_t level = 0; // TODO: pick the proper level of detail
         auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
-    }
-}
-
-void FView::updatePrimitivesMorphTargetBuffer(FEngine& engine, const CameraInfo&,
-        FScene::RenderableSoa& renderableData, Range visible) noexcept {
-    for (uint32_t index : visible) {
-        Slice<FRenderPrimitive> primitives = renderableData.elementAt<FScene::PRIMITIVES>(index);
-        for (auto& primitive : primitives) {
-            auto morphTargetBuffer = primitive.getMorphTargetBuffer();
-            if (morphTargetBuffer) {
-                morphTargetBuffer->commit(engine);
-            }
-        }
     }
 }
 

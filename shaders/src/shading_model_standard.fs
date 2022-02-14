@@ -108,7 +108,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
     vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
-#if defined(HAS_REFRACTION)
+#if defined(MATERIAL_HAS_REFRACTION)
     Fd *= (1.0 - pixel.transmission);
 #endif
 

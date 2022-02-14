@@ -42,7 +42,7 @@ struct PixelParams {
     float anisotropy;
 #endif
 
-#if defined(SHADING_MODEL_SUBSURFACE) || defined(HAS_REFRACTION)
+#if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION)
     float thickness;
 #endif
 #if defined(SHADING_MODEL_SUBSURFACE)
@@ -54,7 +54,7 @@ struct PixelParams {
     vec3  subsurfaceColor;
 #endif
 
-#if defined(HAS_REFRACTION)
+#if defined(MATERIAL_HAS_REFRACTION)
     float etaRI;
     float etaIR;
     float transmission;

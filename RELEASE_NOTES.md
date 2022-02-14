@@ -3,7 +3,19 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.18.0 (currently main branch)
+## v1.19.1 (currently main branch)
+
+## v1.19.0
+
+- engine: Support 256 morph targets.
+- engine: Screen-space reflection improvements.
+- engine: Morphing improvements and bug fixes.
+- gltfio: Generate morphing normals when they are missing.
+- gltfio: Support material extras.
+- Java: Add bindings for new morphing API.
+- Vulkan: Fix segfault on macOS.
+
+## v1.18.0
 
 - engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
 - engine: Support legacy morphing mode with vertex attributes.

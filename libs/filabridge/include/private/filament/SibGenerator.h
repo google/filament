@@ -52,12 +52,10 @@ struct PerViewSib {
 };
 
 struct PerRenderPrimitiveMorphingSib {
-    // Morph positions and normals are packed into one texture.
-    // Because some materials exceed MAX_SAMPLER_COUNT(16)
-    // when morph positions and normals are bound to samplers separately.
-    static constexpr size_t TARGETS       = 0;      // morph positions and normals
+    static constexpr size_t POSITIONS      = 0;
+    static constexpr size_t TANGENTS       = 1;
 
-    static constexpr size_t SAMPLER_COUNT = 1;
+    static constexpr size_t SAMPLER_COUNT  = 2;
 };
 
 }

@@ -19,6 +19,8 @@
 
 #include <stddef.h>
 
+#include <iterator>
+
 namespace utils {
 
 template<typename T>

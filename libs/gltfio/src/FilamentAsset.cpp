@@ -97,13 +97,6 @@ Animator* FFilamentAsset::getAnimator() noexcept {
     return mAnimator;
 }
 
-int FFilamentAsset::getMorphTargetCount(utils::Entity entity) noexcept {
-    if (mResourcesLoaded) {
-        return mMorpher->getTargetCount(entity);
-    }
-    return 0;
-}
-
 const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         size_t targetIndex) const noexcept {
     if (mResourcesLoaded) {
@@ -289,10 +282,6 @@ const char* FilamentAsset::getExtras(Entity entity) const noexcept {
 
 Animator* FilamentAsset::getAnimator() noexcept {
     return upcast(this)->getAnimator();
-}
-
-int FilamentAsset::getMorphTargetCount(utils::Entity entity) noexcept {
-    return upcast(this)->getMorphTargetCount(entity);
 }
 
 const char* FilamentAsset::getMorphTargetNameAt(utils::Entity entity,

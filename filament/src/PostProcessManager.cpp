@@ -382,8 +382,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
             },
             [=, renderPass = pass](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
+                Variant structureVariant(Variant::DEPTH_VARIANT);
+                structureVariant.setPicking(config.picking);
+
                 auto out = resources.getRenderPassInfo();
                 renderPass.setRenderFlags(structureRenderFlags);
+                renderPass.setVariant(structureVariant);
                 renderPass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
                 renderPass.sortCommands();
                 renderPass.execute(resources.getPassName(), out.target, out.params);
@@ -770,9 +774,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount,
+        FrameGraphId<FrameGraphTexture> input, size_t levels,
         bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
-    for (size_t i = 1; i < roughnessLodCount; i++) {
+    for (size_t i = 1; i < levels; i++) {
         input = gaussianBlurPass(fg, input, i - 1, input, i, 0, reinhard, kernelWidth, sigmaRatio);
         reinhard = false; // only do the reinhard filtering on the first level
     }
@@ -784,7 +788,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
         FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
         bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
 
-    const float sigma = (kernelWidth + 1.0f) / sigmaRatio;
+    const float sigma = (float(kernelWidth) + 1.0f) / sigmaRatio;
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
@@ -807,8 +811,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
         float totalWeight = kernel[0].x;
 
         for (size_t i = 1; i < m; i++) {
-            float x0 = i * 2 - 1;
-            float x1 = i * 2;
+            float x0 = float(i * 2 - 1);
+            float x1 = float(i * 2);
             float k0 = std::exp(-alpha * x0 * x0);
             float k1 = std::exp(-alpha * x1 * x1);
             float k = k0 + k1;
@@ -931,6 +935,108 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             });
 
     return output;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        const float verticalFieldOfView,
+        filament::Viewport const& svp, float2 scale,
+        TextureFormat format,
+        float* pLodOffset) const noexcept {
+
+    // TODO: add an option to generate a 1/4 res texture (for performance)
+
+    auto const& desc = fg.getDescriptor(input);
+
+    // scale factor for the gaussian so it matches our resolution / FOV
+    const float s = verticalFieldOfView / float(desc.height);
+
+    // The kernel-size was determined empirically so that we don't get too many artifacts
+    // due to the down-sampling with a box filter (which happens implicitly).
+    // e.g.: size of 13 (4 stored coefficients)
+    //      +-------+-------+-------*===*-------+-------+-------+
+    //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
+    //      +-------+-------+-------*===*-------+-------+-------+
+    const size_t kernelSize = 21;   // requires only 6 stored coefficients and 11 tap/pass
+    static_assert(kernelSize & 1u, "kernel size must be odd");
+    static_assert((((kernelSize - 1u) / 2u) & 1u) == 0, "kernel positive side size must be even");
+
+    // The relation between n and sigma (variance) is 6*sigma - 1 = N
+    constexpr float sigma0 = (kernelSize + 1) / 6.0f;
+
+    // The variance doubles each time we go one mip down:
+    //      sigma = sigma0 * 2^lod
+    //      lod = log2(sigma) - log2(sigma0) = log2(sigma / sigma0).
+    //
+    // sigma is deduced from the roughness:
+    //      roughness = sqrt(2) * s * sigma
+    //
+    // In the end we get: lod = 2 * log2(perceptualRoughness) - log2(sigma0 * s * sqrt2)
+
+    // FIXME: revisit the formula above. Not sure where the 2* comes from.
+
+    const float refractionLodOffset = -std::log2(sigma0 * s * f::SQRT2);
+    const float maxPerceptualRoughness = 0.5f;
+    const uint8_t maxLod = std::ceil(2.0f * std::log2(maxPerceptualRoughness) + refractionLodOffset);
+
+    // Number of roughness levels we want.
+    // TODO: If we want to limit the number of mip levels, we must reduce the initial
+    //       resolution (if we want to keep the same filter, and still match the IBL somewhat).
+    const uint8_t roughnessLodCount =
+            std::min(maxLod, FTexture::maxLevelCount(desc.width, desc.height));
+
+    // Then copy the color buffer into a texture, making sure that we keep the original
+    // buffer aspect-ratio (this is because dynamic-resolution is not necessarily homogenous).
+    uint32_t w = svp.width;
+    uint32_t h = svp.height;
+    if (scale.x != scale.y) {
+        // dynamic resolution wasn't homogenous, which would affect the blur, so make sure to
+        // keep an intermediary buffer that has the same aspect-ratio as the original.
+        const float homogenousScale = std::sqrt(scale.x * scale.y);
+        w = uint32_t((homogenousScale / scale.x) * float(svp.width));
+        h = uint32_t((homogenousScale / scale.y) * float(svp.height));
+    }
+
+    PostProcessManager& ppm = mEngine.getPostProcessManager();
+
+    /*
+     * Resolve if needed + copy the image into first LOD
+     */
+
+    if (desc.samples > 1 &&
+        (w == svp.width && h == svp.height) &&
+        desc.format == format) {
+        // Here we can resolve directly into a texture with the right dimensions, level count and format
+        // (resolve CANNOT scale or convert formats)
+        input = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, {
+                .width = w,
+                .height = h,
+                .levels = roughnessLodCount,
+                .format = format,
+        });
+    } else {
+        // first resolve (if needed)
+        input = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
+        // then blit into an appropriate texture
+        // this handles scaling, format conversion and mipmaping
+        input = ppm.opaqueBlit(fg, input, {
+                .width = w,
+                .height = h,
+                .levels = roughnessLodCount,
+                .format = format,
+        });
+        // Note: it's not possible to use the FrameGraph's forwardResource(), as an optimization
+        // because the SSR buffer must be distinct from the color buffer (input here), because
+        // we can't read and write into the same buffer, later in the refraction pass.
+    }
+
+    /*
+     * Generate mipmap chain
+     */
+
+    *pLodOffset = refractionLodOffset;
+    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);
+    return input;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
@@ -2550,14 +2656,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevel(FrameGraph& fg,
         const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept {
-
     // Don't do anything if we're not a MSAA buffer
     auto desc = fg.getDescriptor(input);
     if (desc.samples <= 1) {
         return input;
     }
+    desc.samples = 0;
+    desc.levels = 1;
+    return resolveBaseLevelNoCheck(fg, outputBufferName, input, desc);
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevelNoCheck(FrameGraph& fg,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor const& desc) noexcept {
 
     struct ResolveData {
         FrameGraphId<FrameGraphTexture> input;
@@ -2584,11 +2697,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
                 data.input = builder.read(input, data.usage);
 
-                auto outputDesc = desc;
-                outputDesc.levels = 1;
-                outputDesc.samples = 0;
-
-                rpDescAttachment = builder.createTexture(outputBufferName, outputDesc);
+                rpDescAttachment = builder.createTexture(outputBufferName, desc);
                 rpDescAttachment = builder.write(rpDescAttachment, data.usage);
                 data.output = rpDescAttachment;
                 builder.declareRenderPass("Resolve Pass", rpDesc);

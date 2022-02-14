@@ -217,14 +217,6 @@ public class FilamentAsset {
     }
 
     /**
-     * Gets the number of morphing in the given entity.
-     */
-    @IntRange(from = 0)
-    public int getMorphTargetCount(@Entity int entity) {
-        return nGetMorphTargetCount(mNativeObject, entity);
-    }
-
-    /**
      * Gets resource URIs for all externally-referenced buffers.
      */
     public @NonNull String[] getResourceUris() {
@@ -273,7 +265,6 @@ public class FilamentAsset {
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
-    private static native int nGetMorphTargetCount(long nativeAsset, int entity);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
     private static native void nReleaseSourceData(long nativeAsset);

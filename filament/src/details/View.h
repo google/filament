@@ -172,7 +172,7 @@ public:
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
-            math::mat4f const& historyProjection, math::mat4f const& projectToPixelMatrix,
+            math::mat4f const& historyProjection, math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
@@ -198,10 +198,6 @@ public:
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
-            FScene::RenderableSoa& renderableData, Range visible) noexcept;
-
-    void updatePrimitivesMorphTargetBuffer(
-            FEngine& engine, const CameraInfo&,
             FScene::RenderableSoa& renderableData, Range visible) noexcept;
 
     void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
