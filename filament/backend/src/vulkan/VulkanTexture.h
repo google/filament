@@ -54,8 +54,11 @@ struct VulkanTexture : public HwTexture {
     // Sets the min/max range of miplevels in the primary image view.
     void setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel);
 
-    // If any primary views have UNDEFINED layout, this returns false. For diagnostic purposes only.
-    bool validatePrimaryImageView() const;
+    VkImageSubresourceRange getPrimaryRange() const { return mPrimaryViewRange; }
+
+    VkImageLayout getPrimaryImageLayout() const {
+        return getVkLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
+    }
 
     // Gets or creates a cached VkImageView for a single subresource that can be used as a render
     // target attachment.  Unlike the primary image view, this always has type VK_IMAGE_VIEW_TYPE_2D

@@ -1029,6 +1029,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         renderPassDepthLayout = VulkanDepthLayout::READ_ONLY;
     }
 
+    if (depth.texture) {
+        depth.texture->trackLayout(depth.level, depth.layer, toVkImageLayout(renderPassDepthLayout));
+    }
+
     // Create the VkRenderPass or fetch it from cache.
     VulkanFboCache::RenderPassKey rpkey = {
         .initialColorLayoutMask = 0,
@@ -1177,6 +1181,20 @@ void VulkanDriver::endRenderPass(int) {
     vkCmdEndRenderPass(cmdbuffer);
 
     assert_invariant(mCurrentRenderTarget);
+
+    // In most cases, the image layout used during the render pass is the same as "finalLayout".
+    // i.e. there is no transition at the end. However one exception is depth, which can sometimes
+    // be transitioned from DEPTH_STENCIL_READ_ONLY_OPTIMAL to GENERAL. Here we detect this case
+    // and notify the texture wrapper for proper tracking.
+    VulkanTexture* depthFeedbackTexture = mContext.currentRenderPass.depthFeedback;
+    if (depthFeedbackTexture) {
+
+        VulkanSwapChain* const sc = mContext.currentSurface;
+        const VulkanAttachment& depth = mCurrentRenderTarget->getDepth(sc);
+
+        depthFeedbackTexture->trackLayout(depth.level, depth.layer,
+                getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
+    }
 
     // Since we might soon be sampling from the render target that we just wrote to, we need a
     // pipeline barrier between framebuffer writes and shader reads. This is a memory barrier rather
@@ -1759,13 +1777,12 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             iInfo[bindingPoint] = {
                 .sampler = vksampler,
                 .imageView = texture->getPrimaryImageView(),
-                .imageLayout = getDefaultImageLayout(texture->usage)
+                .imageLayout = texture->getPrimaryImageLayout()
             };
 
-            // TODO: it should not be necessary to use a custom image view here, an actual fix might
-            // be necessary in a higher layer (e.g. adding a call setMinMaxLevels in the SSAO path).
+            // TODO: it should not be necessary to use a custom image view here, instead we should
+            // transition all levels that need to be transitioned.
             if (mContext.currentRenderPass.depthFeedback == texture) {
-                iInfo[bindingPoint].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
                 VkImageSubresourceRange range = {
                     .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
                     .baseMipLevel = 0,

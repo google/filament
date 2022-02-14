@@ -369,19 +369,6 @@ void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) 
     getImageView(mPrimaryViewRange);
 }
 
-bool VulkanTexture::validatePrimaryImageView() const {
-    const auto& sr = mPrimaryViewRange;
-    for (uint32_t layer = 0; layer < sr.layerCount; ++layer) {
-        for (uint32_t level = 0; level < sr.levelCount; ++level) {
-            VkImageLayout layout = getVkLayout(layer + sr.baseArrayLayer, level + sr.baseMipLevel);
-            if (layout == VK_IMAGE_LAYOUT_UNDEFINED) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 VkImageView VulkanTexture::getAttachmentView(int singleLevel, int singleLayer,
         VkImageAspectFlags aspect) {
     VkImageSubresourceRange range = {
