@@ -1408,8 +1408,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     const VkDevice device = mContext.device;
     VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget*>(src);
     VulkanTexture* srcTexture = srcTarget->getColor(mContext.currentSurface, 0).texture;
-    const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() :
-            mContext.currentSurface->surfaceFormat.format;
+    assert_invariant(srcTexture);
+    const VkFormat srcFormat = srcTexture->getVkFormat();
     const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
 
     // Create a host visible, linearly tiled image as a staging area.
@@ -1495,9 +1495,6 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     // Transition the source image layout (which might be the swap chain)
 
-    // Since ReadPixels is always issued after at least one render pass, we know that the color
-    // attachment layout is COLOR_ATTACHMENT_OPTIMAL.
-
     const VkImageSubresourceRange srcRange = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
         .baseMipLevel = srcAttachment.level,
@@ -1506,41 +1503,19 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         .layerCount = 1,
     };
 
-    VkImage srcImage = srcAttachment.image;
-    transitionImageLayout(cmdbuffer, {
-        .image = srcImage,
-        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        .subresources = srcRange,
-        .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        .srcAccessMask = 0,
-        .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
-        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-    });
+    srcTexture->transitionLayout(cmdbuffer, srcRange, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    // Perform the into the staging area. At this point we know that the src layout is
+    // Perform the copy into the staging area. At this point we know that the src layout is
     // TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
 
     vkCmdCopyImage(cmdbuffer, srcTarget->getColor(mContext.currentSurface, 0).image,
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_GENERAL,
             1, &imageCopyRegion);
 
-    // Restore the source image layout back to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL.
+    // Restore the source image layout.
 
-    if (UTILS_LIKELY(srcTexture)) {
-        srcTexture->transitionLayout(cmdbuffer, srcRange, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    } else {
-        transitionImageLayout(cmdbuffer, {
-            .image = srcImage,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            .subresources = srcRange,
-            .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
-            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        });
-    }
+    srcTexture->transitionLayout(cmdbuffer, srcRange,
+            getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
 
     // TODO: don't flush/wait here -- we should do this asynchronously
 
@@ -1558,10 +1533,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
     srcPixels += subResourceLayout.offset;
 
-    // TODO: investigate why this Y-flip exists. This conditional seems to work with both
-    // test_ReadPixels.cpp (readpixels from a normal render target with texture attachment) and
-    // viewer_basic_test.cc (readpixels from an offscreen swap chain)
-    const bool flipY = srcTexture ? true : false;
+    const bool flipY = false;
 
     if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), srcPixels,
             subResourceLayout.rowPitch, width, height, swizzle, flipY)) {

@@ -83,9 +83,11 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
     }
 #endif
 
-    if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
+    assert_invariant(src.texture && dst.texture);
+
+    if (src.texture->samples > 1 && dst.texture->samples == 1) {
         blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(sc), src, dst, args.srcRectPair,
-            args.dstRectPair);
+                args.dstRectPair);
         return;
     }
 
@@ -129,9 +131,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
-    const VkImageLayout srcLayout = src.texture ?
-        getDefaultImageLayout(src.texture->usage) :
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    const VkImageLayout srcLayout = getDefaultImageLayout(src.texture->usage);
 
     transitionImageLayout(cmdbuffer, {
         src.image,
@@ -151,7 +151,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
     });
 
-    if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
+    if (src.texture->samples > 1 && dst.texture->samples == 1) {
         assert_invariant(aspect != VK_IMAGE_ASPECT_DEPTH_BIT && "Resolve with depth is not yet supported.");
         vkCmdResolveImage(cmdbuffer, src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, resolveRegions);
@@ -167,16 +167,10 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
         .subresources = srcRange
     }));
 
-    // Determine the desired texture layout for the destination while ensuring that the default
-    // render target is supported, which has no associated texture.
-    const VkImageLayout desiredLayout = dst.texture ?
-            getDefaultImageLayout(dst.texture->usage) :
-            mContext.currentSurface->getColorAttachment().layout;
-
     transitionImageLayout(cmdbuffer, blitterTransitionHelper({
         .image = dst.image,
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .newLayout = desiredLayout,
+        .newLayout = getDefaultImageLayout(dst.texture->usage),
         .subresources = dstRange,
     }));
 }
