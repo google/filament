@@ -7,7 +7,9 @@ For starters, create a text file called `redball.html` and copy over the HTML th
 
 Next you'll need to get a couple command-line tools: `matc` and `cmgen`. You can find these in the
 appropriate [Filament release](//github.com/google/filament/releases). You should choose the
-archive that corresponds to your development machine rather than the one for web.
+archive that corresponds to your development machine rather than the one for web, and the version
+that matches the `unpkg.com/filament@x.x.x` url in the script tag of `redball.html` (you may check
+out the last available release of [filament on npm](https://www.npmjs.com/package/filament)).
 
 ## Define plastic material
 

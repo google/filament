@@ -3,11 +3,19 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.19.1 (currently main branch)
+## v1.19.2 (currently main branch)
+
+## v1.19.1
 
 ## v1.19.0
 
 - engine: Support 256 morph targets.
+- engine: Screen-space reflection improvements.
+- engine: Morphing improvements and bug fixes.
+- gltfio: Generate morphing normals when they are missing.
+- gltfio: Support material extras.
+- Java: Add bindings for new morphing API.
+- Vulkan: Fix segfault on macOS.
 
 ## v1.18.0
 

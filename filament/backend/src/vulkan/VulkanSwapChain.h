@@ -20,27 +20,29 @@
 #include "VulkanContext.h"
 #include "VulkanDriver.h"
 
+#include <memory>
+
 #include <utils/FixedCapacityVector.h>
 
 namespace filament {
 namespace backend {
 
 struct VulkanSwapChain : public HwSwapChain {
-    VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface);
-    VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height);
+    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface);
+
+    // Headless constructor.
+    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, uint32_t width, uint32_t height);
 
     bool acquire();
-    void create();
+    void create(VulkanStagePool& stagePool);
     void destroy();
     void makePresentable();
     bool hasResized() const;
+    VulkanAttachment getColorAttachment() const; // TODO: remove
+    VulkanAttachment getDepthAttachment() const; // TODO: remove
+    VulkanTexture& getColorTexture() const;
 
-    // TODO: remove the "attachment" structs from here and instead return a VulkanTexture reference.
-    // Leveraging VulkanTexture will simplify this class by providing management and tracking
-    // for VkImageView and VkImageLayout. More importantly, it will allow us to remove many
-    // "is this a swap chain?" conditionals that are sprinkled throughout the Vulkan backend.
-    const VulkanAttachment& getColorAttachment() { return mColor[currentSwapIndex]; }
-    const VulkanAttachment& getDepthAttachment() { return mDepth; }
+    // TODO: privatize more fields
 
     VkSurfaceKHR surface = {};
     VkSwapchainKHR swapchain = {};
@@ -52,7 +54,7 @@ struct VulkanSwapChain : public HwSwapChain {
 
     // This is signaled when vkAcquireNextImageKHR succeeds, and is waited on by the first
     // submission.
-    VkSemaphore imageAvailable = {};
+    VkSemaphore imageAvailable = VK_NULL_HANDLE;
 
     // This is true after the swap chain image has been acquired, but before it has been presented.
     bool acquired = false;
@@ -65,13 +67,11 @@ private:
 
     // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
     // in a swap chain.
-    utils::FixedCapacityVector<VulkanAttachment> mColor;
-    VulkanAttachment mDepth = {};
-
-    void createFinalDepthBuffer(VkFormat depthFormat, VkExtent2D size);
+    utils::FixedCapacityVector<std::unique_ptr<VulkanTexture>> mColor;
+    std::unique_ptr<VulkanTexture> mDepth;
 };
 
 } // namespace filament
 } // namespace backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANTEXTURE_H
+#endif // TNT_FILAMENT_DRIVER_VULKANSWAPCHAIN_H

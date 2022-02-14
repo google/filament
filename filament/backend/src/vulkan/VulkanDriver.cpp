@@ -575,13 +575,13 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     const VkInstance instance = mContext.instance;
     auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance,
             flags);
-    construct<VulkanSwapChain>(sch, mContext, vksurface);
+    construct<VulkanSwapChain>(sch, mContext, mStagePool, vksurface);
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
     assert_invariant(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
-    construct<VulkanSwapChain>(sch, mContext, width, height);
+    construct<VulkanSwapChain>(sch, mContext, mStagePool, width, height);
 }
 
 void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
@@ -1005,44 +1005,55 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VulkanAttachment depth = rt->getSamples() == 1 ? rt->getDepth(sc) : rt->getMsaaDepth();
     VulkanTexture* depthFeedback = nullptr;
 
+    VulkanDepthLayout initialDepthLayout = fromVkImageLayout(depth.layout);
+    VulkanDepthLayout renderPassDepthLayout =
+            fromVkImageLayout(getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
+    VulkanDepthLayout finalDepthLayout = renderPassDepthLayout;
+
     // If an uncleared depth buffer is attached but discarded at the end of the pass, then we should
     // permit the shader to sample from it by transitioning the layout of all its subresources to a
     // read-only layout. This is especially crucial for SSAO.
+    //
+    // We do not use GENERAL here due to the following validation message:
+    //
+    //   The Vulkan spec states: Image subresources used as attachments in the current render pass
+    //   must not be accessed in any way other than as an attachment by this command, except for
+    //   cases involving read-only access to depth/stencil attachments as described in the Render
+    //   Pass chapter.
+    //
+    // https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-None-04584)
+    //
     if (depth.texture && any(params.flags.discardEnd & TargetBufferFlags::DEPTH) &&
             !any(params.flags.clear & TargetBufferFlags::DEPTH)) {
         depthFeedback = depth.texture;
-        const VulkanLayoutTransition transition = {
-            .image = depth.image,
-            .oldLayout = depth.layout,
-            .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-            .subresources = {
-                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                .levelCount = depth.texture->levels,
-                .layerCount = depth.texture->depth,
-            },
-            .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            .dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
-        };
-        transitionImageLayout(cmdbuffer, transition);
-        depth.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        renderPassDepthLayout = VulkanDepthLayout::READ_ONLY;
     }
 
     // Create the VkRenderPass or fetch it from cache.
     VulkanFboCache::RenderPassKey rpkey = {
-        .depthLayout = depth.layout,
+        .initialColorLayoutMask = 0,
+        .initialDepthLayout = initialDepthLayout,
+        .renderPassDepthLayout = renderPassDepthLayout,
+        .finalDepthLayout = finalDepthLayout,
         .depthFormat = depth.format,
         .clear = params.flags.clear,
         .discardStart = discardStart,
         .discardEnd = params.flags.discardEnd,
         .samples = rt->getSamples(),
-        .subpassMask = uint8_t(params.subpassMask)
+        .subpassMask = uint8_t(params.subpassMask),
     };
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        rpkey.colorLayout[i] = rt->getColor(sc, i).layout;
-        rpkey.colorFormat[i] = rt->getColor(sc, i).format;
-        VulkanTexture* texture = rt->getColor(sc, i).texture;
+        const VulkanAttachment& info = rt->getColor(sc, i);
+        if (info.layout != VK_IMAGE_LAYOUT_UNDEFINED) {
+            rpkey.initialColorLayoutMask |= 1 << i;
+        }
+        rpkey.colorFormat[i] = info.format;
+        VulkanTexture* texture = info.texture;
         if (rpkey.samples > 1 && texture && texture->samples == 1) {
             rpkey.needsResolveMask |= (1 << i);
+        }
+        if (texture) {
+            texture->trackLayout(info.level, info.layer, getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
         }
     }
 
@@ -1166,23 +1177,6 @@ void VulkanDriver::endRenderPass(int) {
     vkCmdEndRenderPass(cmdbuffer);
 
     assert_invariant(mCurrentRenderTarget);
-
-    VulkanTexture* depthFeedback = mContext.currentRenderPass.depthFeedback;
-    if (depthFeedback) {
-        const VulkanLayoutTransition transition = {
-            .image = depthFeedback->getVkImage(),
-            .oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .subresources = {
-                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                .levelCount = depthFeedback->levels,
-                .layerCount = depthFeedback->depth,
-            },
-            .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            .dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
-        };
-        transitionImageLayout(cmdbuffer, transition);
-    }
 
     // Since we might soon be sampling from the render target that we just wrote to, we need a
     // pipeline barrier between framebuffer writes and shader reads. This is a memory barrier rather
@@ -1760,7 +1754,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         SamplerGroup* sb = vksb->sb.get();
         assert_invariant(sb->getSize() == samplers.size());
         size_t samplerIdx = 0;
-        for (const auto& sampler : samplers) {
+        for (auto& sampler : samplers) {
             size_t bindingPoint = sampler.binding;
             const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
             samplerIdx++;
@@ -1769,7 +1763,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             // appropriate. The fallback improves robustness but does not guarantee 100% success.
             // It can be argued that clients are being malfeasant here anyway, since Vulkan does
             // not allow sampling from a non-bound texture.
-            const VulkanTexture* texture;
+            VulkanTexture* texture;
             if (UTILS_UNLIKELY(!boundSampler->t)) {
                 if (!sampler.strict) {
                     continue;
@@ -1781,7 +1775,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
                 texture = mContext.emptyTexture;
             } else {
-                texture = handle_cast<const VulkanTexture*>(boundSampler->t);
+                texture = handle_cast<VulkanTexture*>(boundSampler->t);
                 mDisposer.acquire(texture);
             }
 
@@ -1794,8 +1788,18 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 .imageLayout = getDefaultImageLayout(texture->usage)
             };
 
+            // TODO: it should not be necessary to use a custom image view here, an actual fix might
+            // be necessary in a higher layer (e.g. adding a call setMinMaxLevels in the SSAO path).
             if (mContext.currentRenderPass.depthFeedback == texture) {
                 iInfo[bindingPoint].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+                VkImageSubresourceRange range = {
+                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                };
+                iInfo[bindingPoint].imageView = texture->getImageView(range);
             }
         }
     }
@@ -1872,7 +1876,7 @@ void VulkanDriver::refreshSwapChain() {
 
     assert_invariant(!surface.headlessQueue && "Resizing headless swap chains is not supported.");
     surface.destroy();
-    surface.create();
+    surface.create(mStagePool);
 
     mFramebufferCache.reset();
 }
