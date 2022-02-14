@@ -8,6 +8,10 @@
 #define BLENDING_ENABLED
 #endif
 
+float sign_nozero(float f) {
+    return f < 0.0 ? -1.0 : 1.0;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Input adjustment functions
@@ -73,8 +77,8 @@ vec4 TriplanarTexture(sampler2D tex, float scaler, highp vec3 pos, lowp vec3 nor
     // Depending on the resolution of the texture, we may want to multiply the texture coordinates
     vec3 queryPos = scaler * pos;
     vec3 weights = ComputeWeights(normal);
-    return weights.x * texture(tex, queryPos.yz) + weights.y * texture(tex, queryPos.xz) +
-           weights.z * texture(tex, queryPos.xy);
+    return weights.x * texture(tex, -queryPos.zy) + weights.y * texture(tex, queryPos.xz) +
+           weights.z * texture(tex, queryPos.xy * vec2(1, -1));
 }
 
 vec3 UnpackNormal(vec2 packedNormal) {
@@ -88,28 +92,30 @@ vec3 UnpackNormal(vec3 packedNormal) {
 // This is a whiteout blended tripalanar normal mapping, where each plane's tangent frame is
 // approximated by the appropriate sequence and flips of world space axes. For more details
 // Refer to https://bgolus.medium.com/normal-mapping-for-a-triplanar-shader-10bf39dca05a
-vec3 TriplanarNormalMap(sampler2D normalMap, float scaler, highp vec3 pos, lowp vec3 normal) {
+vec3 TriplanarNormalMap(sampler2D normalMap, float scaler, highp vec3 pos, lowp vec3 normal, float normalIntensity) {
     // Whiteout blend
     // Triplanar uvs
     // We intentionally diverged from the original article and use 'pos.yz' below to align with triplanarTexture()
-    vec2 uvX = scaler * pos.yz; // x facing plane
+    vec2 uvX = scaler * -pos.zy; // x facing plane
     vec2 uvY = scaler * pos.xz; // y facing plane
-    vec2 uvZ = scaler * pos.xy; // z facing plane
+    vec2 uvZ = scaler * pos.xy * vec2(1, -1); // z facing plane
 
     // Tangent space normal maps
     // 2-channel XY TS normal texture: this saves 33% on storage
-    lowp vec3 tnormalX = UnpackNormal(texture(normalMap, uvX).xy);
-    lowp vec3 tnormalY = UnpackNormal(texture(normalMap, uvY).xy);
-    lowp vec3 tnormalZ = UnpackNormal(texture(normalMap, uvZ).xy);
+    lowp vec3 tnormalX = UnpackNormal(texture(normalMap, uvX).xy) * vec3(sign_nozero(normal.x), 1, 1);
+    lowp vec3 tnormalY = UnpackNormal(texture(normalMap, uvY).xy) * vec3(sign_nozero(normal.y), 1, 1);
+    lowp vec3 tnormalZ = UnpackNormal(texture(normalMap, uvZ).xy) * vec3(sign_nozero(normal.z), 1, 1);
 
     // Swizzle world normals into tangent space and apply Whiteout blend
-    tnormalX = vec3(tnormalX.xy + normal.zy, abs(tnormalX.z) * normal.x);
-    tnormalY = vec3(tnormalY.xy + normal.xz, abs(tnormalY.z) * normal.y);
-    tnormalZ = vec3(tnormalZ.xy + normal.xy, abs(tnormalZ.z) * normal.z);
+    tnormalX = vec3(tnormalX.xy + normal.zy * vec2(-sign_nozero(normal.x), -1), abs(tnormalX.z) * abs(normal.x)) * vec3(normalIntensity, normalIntensity, 1);
+    tnormalY = vec3(tnormalY.xy + normal.xz * vec2(sign_nozero(normal.y), 1), abs(tnormalY.z) * abs(normal.y)) * vec3(normalIntensity, normalIntensity, 1);
+    tnormalZ = vec3(tnormalZ.xy + normal.xy * vec2(sign_nozero(normal.z), -1), abs(tnormalZ.z) * abs(normal.z)) * vec3(normalIntensity, normalIntensity, 1);
     // Compute blend weights
     vec3 blend = ComputeWeights(normal);
     // Swizzle tangent normals to match world orientation and triblend
-    return normalize(tnormalX.zyx * blend.x + tnormalY.xzy * blend.y + tnormalZ.xyz * blend.z);
+    return normalize(tnormalX.zyx * blend.x * vec3(sign_nozero(normal.x), 1, -sign_nozero(normal.x)) +
+                     tnormalY.xzy * blend.y * vec3(sign_nozero(normal.y), sign_nozero(normal.y), -1) +
+                     tnormalZ.xyz * blend.z * vec3(sign_nozero(normal.z), 1, sign_nozero(normal.z)));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,11 +132,10 @@ void ApplyNormalMap(inout MaterialInputs material, inout FragmentData fragmentDa
         vec3 normalWS = TriplanarNormalMap(materialParams_normalTexture,
                                            materialParams.textureScaler.y,
                                            fragmentData.pos,
-                                           fragmentData.normal);
+                                           fragmentData.normal,
+                                           materialParams.normalIntensity);
         material.normal = normalWS * getWorldTangentFrame();
     }
-    // By this time the normal should be ready, it is safe to apply the normal scale
-    material.normal.xy *= materialParams.normalIntensity;
 #endif
 }
 
@@ -140,9 +145,9 @@ void ApplyClearCoatNormalMap(inout MaterialInputs material, inout FragmentData f
         vec3 clearCoatNormalWS = TriplanarNormalMap(materialParams_clearCoatNormalTexture,
                                                     materialParams.textureScaler.z,
                                                     fragmentData.pos,
-                                                    fragmentData.normal);
+                                                    fragmentData.normal,
+                                                    materialParams.clearCoatNormalIntensity);
         material.clearCoatNormal = clearCoatNormalWS * getWorldTangentFrame();
-        material.clearCoatNormal.xy *= materialParams.clearCoatNormalIntensity;
     }
 #endif
 }
