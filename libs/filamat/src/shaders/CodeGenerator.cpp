@@ -588,14 +588,18 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_COMMON_LIGHTING_FS_DATA;
-        if (variant.hasShadowReceiver()) {
+        if (filament::Variant::isShadowReceiverVariant(variant)) {
             out << SHADERS_SHADOWING_FS_DATA;
         }
+
+        // the only reason we have this assert here is that we used to have a check,
+        // which seemed unnecessary.
+        assert_invariant(shading != Shading::UNLIT);
 
         out << SHADERS_BRDF_FS_DATA;
         switch (shading) {
             case Shading::UNLIT:
-                assert("Lit shader generated with unlit shading model");
+                // can't happen
                 break;
             case Shading::SPECULAR_GLOSSINESS:
             case Shading::LIT:
@@ -613,11 +617,10 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
                 break;
         }
 
-        if (shading != Shading::UNLIT) {
-            out << SHADERS_AMBIENT_OCCLUSION_FS_DATA;
-            out << SHADERS_LIGHT_REFLECTIONS_FS_DATA;
-            out << SHADERS_LIGHT_INDIRECT_FS_DATA;
-        }
+        out << SHADERS_AMBIENT_OCCLUSION_FS_DATA;
+        out << SHADERS_LIGHT_REFLECTIONS_FS_DATA;   // TODO: keep this because it'll be nedeed for translucents reflections
+        out << SHADERS_LIGHT_INDIRECT_FS_DATA;
+
         if (variant.hasDirectionalLighting()) {
             out << SHADERS_LIGHT_DIRECTIONAL_FS_DATA;
         }
@@ -635,11 +638,22 @@ io::sstream& CodeGenerator::generateShaderUnlit(io::sstream& out, ShaderType typ
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         if (hasShadowMultiplier) {
-            if (variant.hasShadowReceiver()) {
+            if (filament::Variant::isShadowReceiverVariant(variant)) {
                 out << SHADERS_SHADOWING_FS_DATA;
             }
         }
         out << SHADERS_SHADING_UNLIT_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateShaderReflections(utils::io::sstream& out, ShaderType type,
+        filament::Variant variant) {
+    if (type == ShaderType::VERTEX) {
+    } else if (type == ShaderType::FRAGMENT) {
+        out << SHADERS_COMMON_LIGHTING_FS_DATA;
+        out << SHADERS_LIGHT_REFLECTIONS_FS_DATA;
+        out << SHADERS_SHADING_REFLECTIONS_FS_DATA;
     }
     return out;
 }

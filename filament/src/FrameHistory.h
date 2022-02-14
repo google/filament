@@ -25,13 +25,21 @@
 namespace filament {
 
 // This is where we store all the history of a frame
+// when adding things here, please update:
+//      FView::commitFrameHistory()
 struct FrameHistoryEntry {
-    FrameGraphTexture color;
-    FrameGraphTexture::Descriptor colorDesc;
-    math::mat4f projection;     // world space to clip space
-    math::float2 jitter{};
+    struct {
+        FrameGraphTexture color;
+        FrameGraphTexture::Descriptor desc;
+        math::mat4f projection;     // world space to clip space
+        math::float2 jitter{};
+    } taa;
+    struct {
+        FrameGraphTexture color;
+        FrameGraphTexture::Descriptor desc;
+        math::mat4f projection;
+    } ssr;
     uint32_t frameId = 0;
-
 };
 
 /*

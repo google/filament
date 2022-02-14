@@ -657,10 +657,15 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
-void FView::prepareSSR(Handle <HwTexture> ssr, float refractionLodOffset,
+void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset,
+        ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
+    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset, ssrOptions);
+}
+
+void FView::prepareHistorySSR(Handle<HwTexture> ssr,
         mat4f const& historyProjection, mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset,
+    mPerViewUniforms.prepareHistorySSR(ssr,
             historyProjection, uvFromViewMatrix, ssrOptions);
 }
 
@@ -880,8 +885,10 @@ void FView::renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi
 void FView::commitFrameHistory(FEngine& engine) noexcept {
     // Here we need to destroy resources in mFrameHistory.back()
     auto& frameHistory = mFrameHistory;
+
     FrameHistoryEntry& last = frameHistory.back();
-    last.color.destroy(engine.getResourceAllocator());
+    last.taa.color.destroy(engine.getResourceAllocator());
+    last.ssr.color.destroy(engine.getResourceAllocator());
 
     // and then push the new history entry to the history stack
     frameHistory.commit();

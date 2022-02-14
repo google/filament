@@ -76,6 +76,9 @@ public:
     // screen-space reflection and/or refraction (SSR)
     void prepareSSR(TextureHandle ssr,
             float refractionLodOffset,
+            ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
+
+    void prepareHistorySSR(TextureHandle ssr,
             math::mat4f const& historyProjection,
             math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;

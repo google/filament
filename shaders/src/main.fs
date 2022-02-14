@@ -44,7 +44,7 @@ void main() {
     fragColor = fog(fragColor, view);
 #endif
 
-#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR) && !defined(MATERIAL_HAS_REFLECTIONS)
     blendPostLightingColor(inputs, fragColor);
 #endif
 }

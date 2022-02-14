@@ -171,15 +171,18 @@ public:
 
         // shadow-casters are rendered in the depth buffer, regardless of blending (or alpha masking)
         DEPTH_CONTAINS_SHADOW_CASTERS = 0x4,
-        // alpha-blended objects are not rendered in the depth buffer
-        DEPTH_FILTER_TRANSLUCENT_OBJECTS = 0x8,
         // alpha-tested objects are not rendered in the depth buffer
-        DEPTH_FILTER_ALPHA_MASKED_OBJECTS = 0x10,
+        DEPTH_FILTER_ALPHA_MASKED_OBJECTS = 0x08,
+
+        // alpha-blended objects are not rendered in the depth buffer
+        FILTER_TRANSLUCENT_OBJECTS = 0x10,
 
         // generate commands for shadow map
         SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS,
         // generate commands for SSAO
-        SSAO = DEPTH | DEPTH_FILTER_TRANSLUCENT_OBJECTS,
+        SSAO = DEPTH | FILTER_TRANSLUCENT_OBJECTS,
+        // generate commands for screen-space reflections
+        SCREEN_SPACE_REFLECTIONS = COLOR | FILTER_TRANSLUCENT_OBJECTS
     };
 
 
@@ -272,6 +275,7 @@ public:
 
     //  flags controlling how commands are generated
     void setRenderFlags(RenderFlags flags) noexcept { mFlags = flags; }
+    RenderFlags getRenderFlags() const noexcept { return mFlags; }
 
     // variant to use
     void setVariant(Variant variant) noexcept { mVariant = variant; }
