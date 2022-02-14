@@ -158,7 +158,6 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
 #else
     vec3 r = reflect(-v, n);
 #endif
-
     return r;
 }
 
