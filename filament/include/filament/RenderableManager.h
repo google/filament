@@ -329,6 +329,18 @@ public:
         Builder& blendOrder(size_t primitiveIndex, uint16_t order) noexcept;
 
         /**
+         * Specifies the number of draw instance of this renderable. The default is 1 instance and
+         * the maximum number of instances allowed is 65535. 0 is invalid.
+         * All instances are culled using the same bounding box, so care must be taken to make
+         * sure all instances render inside the specified bounding box.
+         * The material can use getInstanceIndex() in the vertex shader to get the instance index and
+         * possibly adjust the position or transform.
+         *
+         * @param instanceCount the number of instances silently clamped between 1 and 65535.
+         */
+        Builder& instances(size_t instanceCount) noexcept;
+
+        /**
          * Adds the Renderable component to an entity.
          *
          * @param engine Reference to the filament::Engine to associate this Renderable with.

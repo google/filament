@@ -220,8 +220,9 @@ public:
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
         backend::RasterState rasterState;                               // 4 bytes
         uint16_t index = 0;                                             // 2 bytes
+        uint16_t instanceCount;                                         // 2 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[13 - sizeof(void*)] = {};                      // 5 bytes (9)
+        uint8_t reserved[11 - sizeof(void*)] = {};                      // 3 bytes (7)
     };
     static_assert(sizeof(PrimitiveInfo) == 32);
 
