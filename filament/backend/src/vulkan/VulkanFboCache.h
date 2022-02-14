@@ -45,6 +45,8 @@ class VulkanFboCache {
 public:
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key.
+    // TODO: This struct can be reduced in size by using a subset of formats instead of VkFormat
+    //       and removing the "finalDepthLayout" field.
     struct alignas(8) RenderPassKey {
         // For each target, we need to know three image layouts: the layout BEFORE the pass, the
         // layout DURING the pass, and the layout AFTER the pass. Here are the rules:
@@ -52,10 +54,12 @@ public:
         // - Color targets have their initial image layout specified with a bitmask.
         // - For each color target, the pre-existing layout is either UNDEFINED (0) or GENERAL (1).
         // - The render pass and final images layout for color buffers is always GENERAL.
-        uint8_t initialColorLayoutMask;          // 1 byte
-        VulkanDepthLayout initialDepthLayout;    // 1 byte
-        VulkanDepthLayout renderPassDepthLayout; // 1 byte
-        VulkanDepthLayout finalDepthLayout;      // 1 byte (for now this is always GENERAL)
+        uint8_t initialColorLayoutMask;
+        VulkanDepthLayout initialDepthLayout : 2;
+        VulkanDepthLayout renderPassDepthLayout : 2;
+        VulkanDepthLayout finalDepthLayout : 2;      // for now this is always GENERAL
+        uint8_t padding0 : 2;
+        uint8_t padding1[2];
 
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
         VkFormat depthFormat; // 4 bytes
@@ -65,7 +69,7 @@ public:
         uint8_t samples; // 1 byte
         uint8_t needsResolveMask; // 1 byte
         uint8_t subpassMask; // 1 byte
-        bool isSwapChain; // 1 byte
+        bool padding2; // 1 byte
     };
     struct RenderPassVal {
         VkRenderPass handle;
