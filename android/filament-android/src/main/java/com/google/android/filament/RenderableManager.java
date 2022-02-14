@@ -285,6 +285,22 @@ public class RenderableManager {
         }
 
         /**
+         * Specifies the number of draw instance of this renderable. The default is 1 instance and
+         * the maximum number of instances allowed is 65535. 0 is invalid.
+         * All instances are culled using the same bounding box, so care must be taken to make
+         * sure all instances render inside the specified bounding box.
+         * The material can use getInstanceIndex() in the vertex shader to get the instance index and
+         * possibly adjust the position or transform.
+         *
+         * @param instanceCount the number of instances silently clamped between 1 and 65535.
+         */
+        @NonNull
+        public Builder instances(@IntRange(from = 1, to = 65535) int instanceCount) {
+            nBuilderInstances(mNativeBuilder, instanceCount);
+            return this;
+        }
+
+        /**
          * Controls if this renderable casts shadows, false by default.
          *
          * If the View's shadow type is set to {@link View.ShadowType#VSM}, castShadows should only
@@ -811,6 +827,7 @@ public class RenderableManager {
     private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
+    private static native void nBuilderInstances(long nativeRenderableManager, int instances);
 
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);

@@ -291,6 +291,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
     auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
+    auto const* const UTILS_RESTRICT soaInstanceCount  = soa.data<FScene::INSTANCE_COUNT>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
@@ -357,6 +358,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
+        cmdColor.primitive.instanceCount = soaInstanceCount[i];
 
         // if we are already a SSR variant, the SRE bit is already set,
         // there is no harm setting it again
@@ -371,6 +373,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
             cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
+            cmdDepth.primitive.instanceCount = soaInstanceCount[i];
             cmdDepth.primitive.materialVariant.setSkinning(
                     soaVisibility[i].skinning || soaVisibility[i].morphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
@@ -621,7 +624,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
                 }
             }
 
-            driver.draw(pipeline, info.primitiveHandle, 1);
+            driver.draw(pipeline, info.primitiveHandle, info.instanceCount);
         }
     }
 }
