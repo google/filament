@@ -126,7 +126,7 @@ TEST_F(BackendTest, MRT) {
 
         // Draw a triangle.
         getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive());
+        getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
         getDriverApi().endRenderPass();
 
         getDriverApi().flush();

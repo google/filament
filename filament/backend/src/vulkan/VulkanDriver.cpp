@@ -1624,7 +1624,8 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
     }
 }
 
-void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph) {
+void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
+        const uint32_t instanceCount) {
     VulkanCommandBuffer const* commands = &mContext.commands->get();
     VkCommandBuffer cmdbuffer = commands->cmdbuffer;
     const VulkanRenderPrimitive& prim = *handle_cast<VulkanRenderPrimitive*>(rph);
@@ -1845,7 +1846,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     // Finally, make the actual draw call. TODO: support subranges
     const uint32_t indexCount = prim.count;
-    const uint32_t instanceCount = 1;
     const uint32_t firstIndex = prim.offset / prim.indexBuffer->elementSize;
     const int32_t vertexOffset = 0;
     const uint32_t firstInstId = 1;

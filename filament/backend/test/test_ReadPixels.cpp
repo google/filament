@@ -280,7 +280,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
-        getDriverApi().draw(state, triangle.getRenderPrimitive());
+        getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
 
         getDriverApi().endRenderPass();
 
@@ -414,7 +414,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
         // Render some content, just so we don't read back uninitialized data.
         getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive());
+        getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
         getDriverApi().endRenderPass();
 
         PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
