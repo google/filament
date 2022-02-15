@@ -208,14 +208,14 @@ Java_com_google_android_filament_RenderableManager_nBuilderSkinningBones(JNIEnv*
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nBuilderMorphing__JI(JNIEnv*, jclass,
+Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jclass,
         jlong nativeBuilder, jint targetCount) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
     builder->morphing(targetCount);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nBuilderMorphing__JIIJII(JNIEnv*, jclass,
+Java_com_google_android_filament_RenderableManager_nBuilderSetMorphTargetBufferAt(JNIEnv*, jclass,
         jlong nativeBuilder, int level, int primitiveIndex, jlong nativeMorphTargetBuffer,
         int offset, int count) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;

@@ -446,7 +446,7 @@ public class RenderableManager {
                                 @NonNull MorphTargetBuffer morphTargetBuffer,
                                 @IntRange(from = 0) int offset,
                                 @IntRange(from = 0) int count) {
-            nBuilderMorphing(mNativeBuilder, level, primitiveIndex,
+            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
                     morphTargetBuffer.getNativeObject(), offset, count);
             return this;
         }
@@ -459,7 +459,7 @@ public class RenderableManager {
         public Builder morphing(@IntRange(from = 0) int level,
                                 @IntRange(from = 0) int primitiveIndex,
                                 @NonNull MorphTargetBuffer morphTargetBuffer) {
-            nBuilderMorphing(mNativeBuilder, level, primitiveIndex,
+            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
                     morphTargetBuffer.getNativeObject(), 0, morphTargetBuffer.getVertexCount());
             return this;
         }
@@ -848,7 +848,7 @@ public class RenderableManager {
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
     private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
-    private static native void nBuilderMorphing(long nativeBuilder, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
+    private static native void nBuilderSetMorphTargetBufferAt(long nativeBuilder, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
 
