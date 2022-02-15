@@ -1512,7 +1512,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_GENERAL,
             1, &imageCopyRegion);
 
-    // Restore the source image layout.
+    // Restore the source image layout. Between driver API calls, color images are always kept in
+    // UNDEFINED layout or in their "usage default" layout (see comment for getDefaultImageLayout).
 
     srcTexture->transitionLayout(cmdbuffer, srcRange,
             getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
