@@ -1,9 +1,9 @@
 #!/bin/bash
 if [ `uname` == "Linux" ];then
-    curl -OL https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip
+    curl -OL https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip
     unzip -q ninja-linux.zip
 elif [ `uname` == "Darwin" ];then
-    curl -OL https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-mac.zip
+    curl -OL https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
     unzip -q ninja-mac.zip
 else
     echo "Unsupported OS"

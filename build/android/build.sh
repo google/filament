@@ -56,7 +56,7 @@ fi
 # Continuous builds will build everything
 ANDROID_ABIS=
 if [[ "$TARGET" == "presubmit" ]]; then
-  ANDROID_ABIS="-q arm64-v8a,x86"
+  ANDROID_ABIS="-q arm64-v8a"
 fi
 
 # Build the Android sample-gltf-viewer APK during release.
