@@ -172,6 +172,8 @@ public:
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
+            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
+    void prepareHistorySSR(backend::Handle<backend::HwTexture> ssr,
             math::mat4f const& historyProjection, math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
@@ -465,6 +467,9 @@ public:
             Frustum const& frustum, size_t bit) noexcept;
 
     auto& getShadowUniforms() const { return mShadowUb; }
+
+    PerViewUniforms const& getPerViewUniforms() const noexcept { return mPerViewUniforms; }
+    PerViewUniforms& getPerViewUniforms() noexcept { return mPerViewUniforms; }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.

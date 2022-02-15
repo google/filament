@@ -61,6 +61,7 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
             "view.taa.enabled": [false, true],
             "view.antiAliasing": ["NONE", "FXAA"],
             "view.ssao.enabled": [false, true],
+            "view.screenSpaceReflections.enabled": [false, true]
             "view.bloom.enabled": [false, true],
             "view.dof.enabled": [false, true]
         }

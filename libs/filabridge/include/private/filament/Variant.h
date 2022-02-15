@@ -20,271 +20,240 @@
 #include <stdint.h>
 #include <cstddef>
 
+#include <filament/MaterialEnums.h>
+
 #include <utils/bitset.h>
 
 namespace filament {
-    static constexpr size_t VARIANT_BITS = 7;
-    static constexpr size_t VARIANT_COUNT = 1 << VARIANT_BITS;
+static constexpr size_t VARIANT_BITS = 7;
+static constexpr size_t VARIANT_COUNT = 1 << VARIANT_BITS;
 
-    using VariantList = utils::bitset<uint64_t, VARIANT_COUNT / 64>;
+using VariantList = utils::bitset<uint64_t, VARIANT_COUNT / 64>;
 
-    // IMPORTANT: update filterVariant() when adding more variants
-    // Also be sure to update formatVariantString inside CommonWriter.cpp
-    struct Variant {
-        using type_t = uint8_t;
+// IMPORTANT: update filterVariant() when adding more variants
+// Also be sure to update formatVariantString inside CommonWriter.cpp
+struct Variant {
+    using type_t = uint8_t;
 
-        Variant() noexcept = default;
-        Variant(Variant const& rhs) noexcept = default;
-        Variant& operator=(Variant const& rhs) noexcept = default;
-        constexpr explicit Variant(type_t key) noexcept : key(key) { }
+    Variant() noexcept = default;
+    Variant(Variant const& rhs) noexcept = default;
+    Variant& operator=(Variant const& rhs) noexcept = default;
+    constexpr explicit Variant(type_t key) noexcept : key(key) { }
 
 
-        // DIR: Directional Lighting
-        // DYN: Dynamic Lighting
-        // SRE: Shadow Receiver
-        // SKN: Skinning
-        // DEP: Depth only
-        // FOG: Fog
-        // PCK: Picking (depth variant only)
-        // VSM: Variance shadow maps
-        //
-        //   X: either 1 or 0
-        //
-        //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        // Variant              |  0  | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   128
-        //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        //                                    PCK
-        //
-        // Standard variants:
-        //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        //                      |  0  | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    64 - 24 = 40
-        //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        //      Vertex shader            0     0     0     X     X     X     X
-        //    Fragment shader            X     X     0     0     X     X     X
-        //           Reserved            X     X     0     X     1     0     0      [ -8]
-        //           Reserved            1     X     0     X     0     X     X      [-16]
-        //
-        // Depth variants:
-        //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        //                      |  0  | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   8 - 2 = 6
-        //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        //       Vertex depth            X     0     1     X     0     0     0
-        //     Fragment depth            X     X     1     0     0     0     0
-        //           Reserved            1     1     1     X     0     0     0     [ -2]
-        //
-        // 46 variants used, 82 reserved (128 - 46)
-        //
-        // note: a valid variant can be neither a valid vertex nor a valid fragment variant
-        //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
-        //       see filterVariantVertex(), filterVariantFragment().
+    // DIR: Directional Lighting
+    // DYN: Dynamic Lighting
+    // SRE: Shadow Receiver
+    // SKN: Skinning
+    // DEP: Depth only
+    // FOG: Fog
+    // PCK: Picking (depth variant only)
+    // VSM: Variance shadow maps
+    //
+    //   X: either 1 or 0
+    //                               1     0    0      0     1     0     1
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    // Variant              |  0  | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   128
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    //                                    PCK
+    //
+    // Standard variants:
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    //                      |  0  | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    64 - 22 = 42
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    //      Vertex shader            0     0     0     X     X     X     X
+    //    Fragment shader            X     X     0     0     X     X     X
+    //       Fragment SSR            1     0     0     0     1     0     0
+    //           Reserved            1     1     0     X     1     0     0      [ -2]
+    //           Reserved            0     X     0     X     1     0     0      [ -4]
+    //           Reserved            1     X     0     X     0     X     X      [-16]
+    //
+    // Depth variants:
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    //                      |  0  | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   8 - 2 = 6
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    //       Vertex depth            X     0     1     X     0     0     0
+    //     Fragment depth            X     X     1     0     0     0     0
+    //           Reserved            1     1     1     X     0     0     0     [ -2]
+    //
+    // 48 variants used, 80 reserved (128 - 46)
+    //
+    // note: a valid variant can be neither a valid vertex nor a valid fragment variant
+    //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
+    //       see filterVariantVertex(), filterVariantFragment().
 
-        type_t key = 0u;
+    type_t key = 0u;
 
-        // when adding more bits, update FRenderer::CommandKey::draw::materialVariant as needed
-        // when adding more bits, update VARIANT_COUNT
-        static constexpr type_t DIR   = 0x01; // directional light present, per frame/world position
-        static constexpr type_t DYN   = 0x02; // point, spot or area present, per frame/world position
-        static constexpr type_t SRE   = 0x04; // receives shadows, per renderable
-        static constexpr type_t SKN   = 0x08; // GPU skinning and/or morphing
-        static constexpr type_t DEP   = 0x10; // depth only variants
-        static constexpr type_t FOG   = 0x20; // fog (standard)
-        static constexpr type_t PCK   = 0x20; // picking (depth)
-        static constexpr type_t VSM   = 0x40; // variance shadow maps
+    // when adding more bits, update FRenderer::CommandKey::draw::materialVariant as needed
+    // when adding more bits, update VARIANT_COUNT
+    static constexpr type_t DIR   = 0x01; // directional light present, per frame/world position
+    static constexpr type_t DYN   = 0x02; // point, spot or area present, per frame/world position
+    static constexpr type_t SRE   = 0x04; // receives shadows, per renderable
+    static constexpr type_t SKN   = 0x08; // GPU skinning and/or morphing
+    static constexpr type_t DEP   = 0x10; // depth only variants
+    static constexpr type_t FOG   = 0x20; // fog (standard)
+    static constexpr type_t PCK   = 0x20; // picking (depth)
+    static constexpr type_t VSM   = 0x40; // variance shadow maps
 
-        static constexpr type_t STANDARD_MASK      = DEP;
-        static constexpr type_t STANDARD_VARIANT   = 0u;
+    // special variants (variants that use the reserved space)
+    static constexpr type_t SPECIAL_SSR   = VSM | SRE; // screen-space reflections variant
 
-        // the depth variant deactivates all variants that make no sense when writing the depth
-        // only -- essentially, all fragment-only variants.
-        static constexpr type_t DEPTH_MASK         = DEP | SRE | DYN | DIR;
-        static constexpr type_t DEPTH_VARIANT      = DEP;
+    static constexpr type_t STANDARD_MASK      = DEP;
+    static constexpr type_t STANDARD_VARIANT   = 0u;
 
-        // this mask filters out the lighting variants
-        static constexpr type_t UNLIT_MASK         = SKN | FOG;
+    // the depth variant deactivates all variants that make no sense when writing the depth
+    // only -- essentially, all fragment-only variants.
+    static constexpr type_t DEPTH_MASK         = DEP | SRE | DYN | DIR;
+    static constexpr type_t DEPTH_VARIANT      = DEP;
 
-        // returns raw variant bits
-        inline bool hasDirectionalLighting() const noexcept { return key & DIR; }
-        inline bool hasDynamicLighting() const noexcept     { return key & DYN; }
-        inline bool hasShadowReceiver() const noexcept      { return key & SRE; }
-        inline bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
-        inline bool hasDepth() const noexcept               { return key & DEP; }
-        inline bool hasFog() const noexcept                 { return key & FOG; }
-        inline bool hasPicking() const noexcept             { return key & PCK; }
-        inline bool hasVsm() const noexcept                 { return key & VSM; }
+    // this mask filters out the lighting variants
+    static constexpr type_t UNLIT_MASK         = SKN | FOG;
 
-        inline void setDirectionalLighting(bool v) noexcept { set(v, DIR); }
-        inline void setDynamicLighting(bool v) noexcept     { set(v, DYN); }
-        inline void setShadowReceiver(bool v) noexcept      { set(v, SRE); }
-        inline void setSkinning(bool v) noexcept            { set(v, SKN); }
-        inline void setFog(bool v) noexcept                 { set(v, FOG); }
-        inline void setPicking(bool v) noexcept             { set(v, PCK); }
-        inline void setVsm(bool v) noexcept                 { set(v, VSM); }
+    // returns raw variant bits
+    inline bool hasDirectionalLighting() const noexcept { return key & DIR; }
+    inline bool hasDynamicLighting() const noexcept     { return key & DYN; }
+    inline bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
 
-        inline static constexpr bool isValidDepthVariant(Variant variant) noexcept {
-            // Can't have VSM and PICKING together with DEPTH variants
-            constexpr type_t RESERVED_MASK  = VSM | PCK | DEP | SRE | DYN | DIR;
-            constexpr type_t RESERVED_VALUE = VSM | PCK | DEP;
-            return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
-                   ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
-       }
+    inline void setDirectionalLighting(bool v) noexcept { set(v, DIR); }
+    inline void setDynamicLighting(bool v) noexcept     { set(v, DYN); }
+    inline void setShadowReceiver(bool v) noexcept      { set(v, SRE); }
+    inline void setSkinning(bool v) noexcept            { set(v, SKN); }
+    inline void setFog(bool v) noexcept                 { set(v, FOG); }
+    inline void setPicking(bool v) noexcept             { set(v, PCK); }
+    inline void setVsm(bool v) noexcept                 { set(v, VSM); }
 
-        inline static constexpr bool isValidStandardVariant(Variant variant) noexcept {
-            // can't have shadow receiver if we don't have any lighting
-            constexpr type_t RESERVED0_MASK  = SRE | DYN | DIR;
-            constexpr type_t RESERVED0_VALUE = SRE;
-            // can't have VSM without shadow receiver
-            constexpr type_t RESERVED1_MASK  = VSM | SRE;
-            constexpr type_t RESERVED1_VALUE = VSM;
-            return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
-                   ((variant.key & RESERVED0_MASK) != RESERVED0_VALUE) &&
-                   ((variant.key & RESERVED1_MASK) != RESERVED1_VALUE);
+    inline static constexpr bool isValidDepthVariant(Variant variant) noexcept {
+        // Can't have VSM and PICKING together with DEPTH variants
+        constexpr type_t RESERVED_MASK  = VSM | PCK | DEP | SRE | DYN | DIR;
+        constexpr type_t RESERVED_VALUE = VSM | PCK | DEP;
+        return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
+               ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
+   }
+
+    inline static constexpr bool isValidStandardVariant(Variant variant) noexcept {
+        // can't have shadow receiver if we don't have any lighting
+        constexpr type_t RESERVED0_MASK  = VSM | FOG | SRE | DYN | DIR;
+        constexpr type_t RESERVED0_VALUE = VSM | FOG | SRE;
+
+        // can't have shadow receiver if we don't have any lighting
+        constexpr type_t RESERVED1_MASK  = VSM | SRE | DYN | DIR;
+        constexpr type_t RESERVED1_VALUE = SRE;
+
+        // can't have VSM without shadow receiver
+        constexpr type_t RESERVED2_MASK  = VSM | SRE;
+        constexpr type_t RESERVED2_VALUE = VSM;
+
+        return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
+               ((variant.key & RESERVED0_MASK) != RESERVED0_VALUE) &&
+               ((variant.key & RESERVED1_MASK) != RESERVED1_VALUE) &&
+               ((variant.key & RESERVED2_MASK) != RESERVED2_VALUE);
+    }
+
+    inline static constexpr bool isVertexVariant(Variant variant) noexcept {
+        return filterVariantVertex(variant) == variant;
+    }
+
+    inline static constexpr bool isFragmentVariant(Variant variant) noexcept {
+        return filterVariantFragment(variant) == variant;
+    }
+
+    static constexpr bool isReserved(Variant variant) noexcept {
+        return !isValid(variant);
+    }
+
+    static constexpr bool isValid(Variant variant) noexcept {
+        return isValidStandardVariant(variant) || isValidDepthVariant(variant);
+    }
+
+    inline static constexpr bool isSSRVariant(Variant variant) noexcept {
+        return (variant.key & (VSM | DEP | SRE | DYN | DIR)) == (VSM | SRE);
+    }
+
+    inline static constexpr bool isVSMVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & VSM) == VSM);
+    }
+
+    inline static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
+        return !isSSRVariant(variant) && ((variant.key & SRE) == SRE);
+    }
+
+    inline static constexpr bool isFogVariant(Variant variant) noexcept {
+        return (variant.key & (FOG | DEP)) == FOG;
+    }
+
+    inline static constexpr bool isPickingVariant(Variant variant) noexcept {
+        return (variant.key & (PCK | DEP)) == (PCK | DEP);
+    }
+
+    static constexpr Variant filterVariantVertex(Variant variant) noexcept {
+        // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
+        // vertex shader.
+        if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
+            if (isSSRVariant(variant)) {
+                variant.key &= ~(VSM | SRE);
+            }
+            return variant & (SKN | SRE | DYN | DIR);
         }
-
-        inline static constexpr bool isVertexVariant(Variant variant) noexcept {
-            return filterVariantVertex(variant) == variant;
+        if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
+            // Only VSM and skinning affects the vertex shader's DEPTH variant
+            return variant & (VSM | SKN | DEP);
         }
+        return {};
+    }
 
-        inline static constexpr bool isFragmentVariant(Variant variant) noexcept {
-            return filterVariantFragment(variant) == variant;
+    static constexpr Variant filterVariantFragment(Variant variant) noexcept {
+        // filter out fragment variants that are not needed. For e.g. skinning doesn't
+        // affect the fragment shader.
+        if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
+            return variant & (VSM | FOG | SRE | DYN | DIR);
         }
-
-        static constexpr bool isReserved(Variant variant) noexcept {
-            return !isValidStandardVariant(variant) && !isValidDepthVariant(variant);
+        if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
+            // Only VSM & PICKING affects the fragment shader's DEPTH variant
+            return variant & (VSM | PCK | DEP);
         }
+        return {};
+    }
 
-        static constexpr Variant filterVariantVertex(Variant variant) noexcept {
-            // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
-            // vertex shader.
-            if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
-                return variant & (SKN | SRE | DYN | DIR);
-            }
-            if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
-                // Only VSM and skinning affects the vertex shader's DEPTH variant
-                return variant & (VSM | SKN | DEP);
-            }
-            return {};
-        }
-
-        static constexpr Variant filterVariantFragment(Variant variant) noexcept {
-            // filter out fragment variants that are not needed. For e.g. skinning doesn't
-            // affect the fragment shader.
-            if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
-                return variant & (VSM | FOG | SRE | DYN | DIR);
-            }
-            if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
-                // Only VSM & PICKING affects the fragment shader's DEPTH variant
-                return variant & (VSM | PCK | DEP);
-            }
-            return {};
-        }
-
-        static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {
-            // special case for depth variant
-            if (isValidDepthVariant(variant)) {
-                return variant;
-            }
-            if (!isLit) {
-                // when the shading mode is unlit, remove all the lighting variants
-                return variant & UNLIT_MASK;
-            }
-            // if shadow receiver is disabled, turn off VSM
-            if (!(variant.key & SRE)) {
-                return variant & ~VSM;
-            }
+    static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {
+        // special case for depth variant
+        if (isValidDepthVariant(variant)) {
             return variant;
         }
-
-        constexpr bool operator==(Variant rhs) const noexcept {
-            return key == rhs.key;
+        if (isSSRVariant(variant)) {
+            return variant;
         }
-
-        constexpr bool operator!=(Variant rhs) const noexcept {
-            return key != rhs.key;
+        if (!isLit) {
+            // when the shading mode is unlit, remove all the lighting variants
+            return variant & UNLIT_MASK;
         }
-
-        constexpr Variant operator & (type_t rhs) const noexcept {
-            return Variant(key & rhs);
+        // if shadow receiver is disabled, turn off VSM
+        if (!(variant.key & SRE)) {
+            return variant & ~VSM;
         }
-
-    private:
-        void set(bool v, type_t mask) noexcept {
-            key = (key & ~mask) | (v ? mask : type_t(0));
-        }
-    };
-
-namespace details {
-
-// compile time sanity-check tests
-
-constexpr inline bool reserved_is_not_valid() noexcept {
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        bool is_valid = Variant::isValidDepthVariant(variant) ||
-                Variant::isValidStandardVariant(variant);
-        bool is_reserved = Variant::isReserved(variant);
-        if (is_valid == is_reserved) {
-            return false;
-        }
+        return variant;
     }
-    return true;
-}
 
-constexpr inline size_t reserved_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isReserved(variant)) { count++; }
+    constexpr bool operator==(Variant rhs) const noexcept {
+        return key == rhs.key;
     }
-    return count;
-}
 
-constexpr inline size_t valid_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isValidDepthVariant(variant) ||
-            Variant::isValidStandardVariant(variant)) {
-            count++;
-        }
+    constexpr bool operator!=(Variant rhs) const noexcept {
+        return key != rhs.key;
     }
-    return count;
-}
 
-constexpr inline size_t vertex_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isValidDepthVariant(variant) ||
-            Variant::isValidStandardVariant(variant)) {
-            if (Variant::isVertexVariant(variant)) {
-                count++;
-            }
-        }
+    constexpr Variant operator & (type_t rhs) const noexcept {
+        return Variant(key & rhs);
     }
-    return count;
-}
 
-constexpr inline size_t fragment_variant_count() noexcept {
-    size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
-        const Variant variant(i);
-        if (Variant::isValidDepthVariant(variant) ||
-            Variant::isValidStandardVariant(variant)) {
-            if (Variant::filterVariantFragment(variant).key == i) {
-                count++;
-            }
-        }
+    static Variant filterUserVariant(
+            Variant variant, UserVariantFilterMask filterMask) noexcept;
+
+private:
+    void set(bool v, type_t mask) noexcept {
+        key = (key & ~mask) | (v ? mask : type_t(0));
     }
-    return count;
-}
+};
 
-static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 82);
-static_assert(valid_variant_count()    == 46);
-static_assert(vertex_variant_count()   == 16 - (2 + 0) + 4 - 0);    // 18
-static_assert(fragment_variant_count() == 32 - (4 + 8) + 4 - 1);    // 25
-
-} // namespace details
 } // namespace filament
 
 #endif // TNT_FILABRIDGE_VARIANT_H

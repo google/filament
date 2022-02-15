@@ -517,8 +517,7 @@ public:
             MorphTargetBuffer* morphTargetBuffer);
 
     /**
-     * Gets t
-     * number of morphing in the given entity.
+     * Gets the number of morphing in the given entity.
      */
     size_t getMorphTargetCount(Instance instance) const noexcept;
 

@@ -44,7 +44,7 @@ class FEngine;
 class FMaterial;
 class FMaterialInstance;
 class FrameGraph;
-class FView;
+class PerViewUniforms;
 class RenderPass;
 struct CameraInfo;
 
@@ -76,6 +76,15 @@ public:
             RenderPass const& pass, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
+    // reflections pass
+    FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
+            RenderPass const& pass,
+            FrameHistory const& frameHistory,
+            CameraInfo const& cameraInfo,
+            PerViewUniforms& uniforms,
+            ScreenSpaceReflectionsOptions const& options,
+            FrameGraphTexture::Descriptor const& desc) noexcept;
+
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
             filament::Viewport const& svp, const CameraInfo& cameraInfo,
@@ -84,7 +93,7 @@ public:
     // Gaussian mipmap
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, size_t levels, bool reinhard,
-            size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
+            size_t kernelWidth, float sigma) noexcept;
 
     FrameGraphId<FrameGraphTexture> generateMipmapSSR(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, float verticalFieldOfView,
@@ -130,12 +139,16 @@ public:
             bool translucent) noexcept;
 
     // Temporal Anti-aliasing
-    void prepareTaa(FrameHistory& frameHistory, CameraInfo const& cameraInfo,
-            TemporalAntiAliasingOptions const& taaOptions) const noexcept;
+    void prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
+            CameraInfo* inoutCameraInfo,
+            PerViewUniforms& uniforms) const noexcept;
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-            FrameGraphId<FrameGraphTexture> colorHistory,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 
@@ -168,7 +181,7 @@ public:
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
             FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
-            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
+            bool reinhard, size_t kernelWidth, float sigma) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;

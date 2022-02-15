@@ -118,7 +118,6 @@ protected:
         .targetApi = TargetApi::OPENGL,
         .targetLanguage = TargetLanguage::SPIRV
     };
-    uint8_t mVariantFilter = 0;
 
     // Keeps track of how many times MaterialBuilder::init() has been called without a call to
     // MaterialBuilder::shutdown(). Internally, glslang does something similar. We keep track for
@@ -518,7 +517,7 @@ public:
     MaterialBuilder& generateDebugInfo(bool generateDebugInfo) noexcept;
 
     //! Specifies a list of variants that should be filtered out during code generation.
-    MaterialBuilder& variantFilter(uint8_t variantFilter) noexcept;
+    MaterialBuilder& variantFilter(filament::UserVariantFilterMask variantFilter) noexcept;
 
     //! Adds a new preprocessor macro definition to the shader code. Can be called repeatedly.
     MaterialBuilder& shaderDefine(const char* name, const char* value) noexcept;
@@ -635,7 +634,7 @@ public:
     // returns a list of at least getParameterCount() parameters
     const ParameterList& getParameters() const noexcept { return mParameters; }
 
-    uint8_t getVariantFilter() const { return mVariantFilter; }
+    filament::UserVariantFilterMask getVariantFilter() const { return mVariantFilter; }
 
     /// @endcond
 
@@ -753,6 +752,8 @@ private:
     bool mUseLegacyMorphing = false;
 
     PreprocessorDefineList mDefines;
+
+    filament::UserVariantFilterMask mVariantFilter = {};
 };
 
 } // namespace filamat

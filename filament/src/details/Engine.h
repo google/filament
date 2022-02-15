@@ -176,6 +176,10 @@ public:
         return mFullScreenTriangleIb;
     }
 
+    math::mat4f getUvFromClipMatrix() const noexcept {
+        return mUvFromClipMatrix;
+    }
+
     PostProcessManager const& getPostProcessManager() const noexcept {
         return mPostProcessManager;
     }
@@ -366,6 +370,7 @@ private:
     backend::Handle<backend::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;
     FIndexBuffer* mFullScreenTriangleIb = nullptr;
+    math::mat4f mUvFromClipMatrix;
 
     PostProcessManager mPostProcessManager;
 
