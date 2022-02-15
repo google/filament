@@ -93,7 +93,7 @@ buildscript {
 
     dependencies {
         // NOTE: See TODO in gradle.properties once we move to Gradle 7.4
-        classpath 'com.android.tools.build:gradle:7.0.3'
+        classpath 'com.android.tools.build:gradle:7.1.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
@@ -181,7 +181,7 @@ subprojects {
 
             externalNativeBuild {
                 cmake {
-                    version "3.19.0+"
+                    version "3.18.0+"
                     path "CMakeLists.txt"
                 }
             }

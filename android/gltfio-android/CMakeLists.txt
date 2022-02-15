@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.18)
 project(gltfio-android)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
