@@ -46,34 +46,24 @@ public:
         // First check if an existing range contains "first".
         Iterator iter = findRange(first);
         if (iter != end()) {
-            Range<KeyType>& existing = getRange(iter);
+            const Range<KeyType> existing = getRange(iter);
             // Check if the existing range be extended.
             if (getValue(iter) == value) {
                 if (existing.last < last) {
                     wipe(existing.last, last);
-                    existing.last = last;
+                    iter = shrink(iter, existing.first, last);
                     mergeRight(iter);
                 }
                 return;
             }
             // Split the existing range into two ranges.
             if (last < existing.last && first > existing.first) {
-                const KeyType tmp = existing.last;
-                existing.last = first;
+                iter = shrink(iter, existing.first, first);
                 insert(first, last, value);
-                insert(last, tmp, getValue(iter));
+                insert(last, existing.last, getValue(iter));
                 return;
             }
-            // Clip the end of the existing range and potentially remove it.
-            existing.last = first;
-            clean(iter);
-            // Check there is a range to the right that needs to be clipped.
-            iter = findRange(last);
-            if (iter != end()) {
-                getRange(iter).first = last;
-                clean(iter);
-            }
-            wipe(first, last);
+            clear(first, last);
             insert(first, last, value);
             return;
         }
@@ -86,21 +76,22 @@ public:
             insert(first, last, value);
             return;
         }
-        Range<KeyType>& existing = getRange(iter);
+        const Range<KeyType> existing = getRange(iter);
 
         // Check if the existing range be extended.
         if (getValue(iter) == value) {
             if (existing.first > first) {
                 wipe(first, existing.first);
-                existing.first = first;
+                iter = shrink(iter, first, existing.last);
                 mergeLeft(iter);
             }
             return;
         }
 
         // Clip the beginning of the existing range and potentially remove it.
-        existing.first = last;
-        clean(iter);
+        if (last < existing.last) {
+            shrink(iter, last, existing.last);
+        }
         wipe(first, last);
         insert(first, last, value);
     }
@@ -136,18 +127,23 @@ public:
         // Check if an existing range contains "first".
         Iterator iter = findRange(first);
         if (iter != end()) {
-            Range<KeyType>& existing = getRange(iter);
+            const Range<KeyType> existing = getRange(iter);
             // Split the existing range into two ranges.
             if (last < existing.last && first > existing.first) {
-                const KeyType tmp = existing.last;
-                existing.last = first;
-                insert(last, tmp, getValue(iter));
+                iter = shrink(iter, existing.first, first);
+                insert(last, existing.last, getValue(iter));
                 return;
             }
-            // Clip the end of the existing range and potentially remove it.
-            existing.last = first;
-            clean(iter);
-            wipe(first, last);
+            // Clip one of the ends of the existing range or remove it.
+            if (first > existing.first) {
+                shrink(iter, existing.first, first);
+            } else if (last < existing.last) {
+                shrink(iter, last, existing.last);
+            } else {
+                wipe(first, last);
+            }
+            // There might be another range that intersects the cleared range, so try again.
+            clear(first, last);
             return;
         }
 
@@ -158,11 +154,12 @@ public:
             wipe(first, last);
             return;
         }
-        Range<KeyType>& existing = getRange(iter);
+        const Range<KeyType> existing = getRange(iter);
 
         // Clip the beginning of the existing range and potentially remove it.
-        existing.first = last;
-        clean(iter);
+        if (last < existing.last) {
+            shrink(iter, last, existing.last);
+        }
         wipe(first, last);
     }
 
@@ -263,13 +260,13 @@ private:
         return true;
     }
 
-    // Erases the given range if it contains no elements.
-    void clean(Iterator iter) {
-        Range<KeyType>& range = getRange(iter);
-        assert_invariant(range.first <= range.last);
-        if (range.first == range.last) {
-            mMap.erase(iter);
-        }
+    // Private helper that clips one end of an existing range.
+    Iterator shrink(Iterator iter, KeyType first, KeyType last) {
+        assert_invariant(first < last);
+        assert_invariant(getRange(iter).first == first || getRange(iter).last == last);
+        std::pair<utils::Range<KeyType>, ValueType> value = {{first, last}, iter->second.second};
+        mMap.erase(iter);
+        return mMap.insert({first, value}).first;
     }
 
     // If the given key is encompassed by an existing range, returns an iterator for that range.
