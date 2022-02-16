@@ -1008,7 +1008,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VulkanAttachment depth = rt->getSamples() == 1 ? rt->getDepth() : rt->getMsaaDepth();
     VulkanTexture* depthFeedback = nullptr;
 
-    VulkanDepthLayout initialDepthLayout = fromVkImageLayout(depth.layout);
+    VulkanDepthLayout initialDepthLayout = fromVkImageLayout(depth.getLayout());
     VulkanDepthLayout renderPassDepthLayout =
             fromVkImageLayout(getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
     VulkanDepthLayout finalDepthLayout = renderPassDepthLayout;
@@ -1051,16 +1051,16 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     };
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const VulkanAttachment& info = rt->getColor(i);
-        if (info.layout != VK_IMAGE_LAYOUT_UNDEFINED) {
+        if (info.texture) {
             rpkey.initialColorLayoutMask |= 1 << i;
-        }
-        rpkey.colorFormat[i] = info.format;
-        VulkanTexture* texture = info.texture;
-        if (rpkey.samples > 1 && texture && texture->samples == 1) {
-            rpkey.needsResolveMask |= (1 << i);
-        }
-        if (texture) {
-            texture->trackLayout(info.level, info.layer, getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
+            info.texture->trackLayout(info.level, info.layer,
+                    getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
+            rpkey.colorFormat[i] = info.format;
+            if (rpkey.samples > 1 && info.texture->samples == 1) {
+                rpkey.needsResolveMask |= (1 << i);
+            }
+        } else {
+            rpkey.colorFormat[i] = VK_FORMAT_UNDEFINED;
         }
     }
 
@@ -1251,10 +1251,10 @@ void VulkanDriver::nextSubpass(int) {
 
     for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
         if ((1 << i) & mContext.currentRenderPass.subpassMask) {
-            VulkanAttachment subpassInput = mCurrentRenderTarget->getColor(i);
+            const VulkanAttachment& subpassInput = mCurrentRenderTarget->getColor(i);
             VkDescriptorImageInfo info = {
                 .imageView = subpassInput.view,
-                .imageLayout = subpassInput.layout,
+                .imageLayout = subpassInput.getLayout(),
             };
             mPipelineCache.bindInputAttachment(i, info);
         }

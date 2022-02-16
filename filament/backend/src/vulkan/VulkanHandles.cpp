@@ -105,7 +105,6 @@ static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachmen
         .view = {},
         .memory = {},
         .texture = spec.texture,
-        .layout = spec.texture->getVkLayout(spec.layer, spec.level),
         .level = spec.level,
         .layer = spec.layer
     };
@@ -208,7 +207,6 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         .view = {},
         .memory = {},
         .texture = msTexture,
-        .layout = {},
         .level = depthSpec.level,
         .layer = depthSpec.layer,
     });
