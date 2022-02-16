@@ -17,6 +17,7 @@
 #include "VulkanContext.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
+#include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
 #include <utils/Panic.h>
@@ -28,6 +29,10 @@ using utils::FixedCapacityVector;
 
 namespace filament {
 namespace backend {
+
+VkImageLayout VulkanAttachment::getLayout() const {
+    return texture ? texture->getVkLayout(layer, level) : VK_IMAGE_LAYOUT_UNDEFINED;
+}
 
 void VulkanContext::selectPhysicalDevice() {
     uint32_t physicalDeviceCount = 0;

@@ -34,8 +34,8 @@ bool VulkanSwapChain::acquire() {
         // catch errors here than with validation. If this is the first time a particular image has
         // been acquired, it should be in an UNDEFINED state. If this is not the first time, then it
         // should be in the normal layout that we use for color attachments.
-        assert_invariant(this->getColorAttachment().layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-                this->getColorAttachment().layout == getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
+        assert_invariant(this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_UNDEFINED ||
+                this->getColorAttachment().getLayout() == getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
 
         return true;
     }
@@ -54,8 +54,8 @@ bool VulkanSwapChain::acquire() {
 
     // Next perform a quick sanity check on the image layout. Similar to attachable textures, we
     // immediately transition the swap chain image layout during the first render pass of the frame.
-    assert_invariant(this->getColorAttachment().layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-            this->getColorAttachment().layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    assert_invariant(this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_UNDEFINED ||
+            this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // To ensure that the next command buffer submission does not write into the image before
     // it has been acquired, push the image available semaphore into the command buffer manager.
@@ -334,7 +334,6 @@ VulkanAttachment VulkanSwapChain::getColorAttachment() const {
         .view = tex.getAttachmentView(0, 0, VK_IMAGE_ASPECT_COLOR_BIT),
         .memory = VK_NULL_HANDLE,
         .texture = &tex,
-        .layout = tex.getVkLayout(0, 0),
         .level = 0,
         .layer = 0,
     };
@@ -348,7 +347,6 @@ VulkanAttachment VulkanSwapChain::getDepthAttachment() const {
         .view = tex.getAttachmentView(0, 0, VK_IMAGE_ASPECT_DEPTH_BIT),
         .memory = VK_NULL_HANDLE,
         .texture = &tex,
-        .layout = tex.getVkLayout(0, 0),
         .level = 0,
         .layer = 0,
     };
