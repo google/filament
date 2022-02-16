@@ -95,21 +95,6 @@ VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
 }
 
-static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachment spec) {
-    if (spec.texture == nullptr) {
-        return spec;
-    }
-    return {
-        .format = spec.texture->getVkFormat(),
-        .image = spec.texture->getVkImage(),
-        .view = {},
-        .memory = {},
-        .texture = spec.texture,
-        .level = spec.level,
-        .layer = spec.layer
-    };
-}
-
 // Creates a special "default" render target (i.e. associated with the swap chain)
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
         mOffscreen(false), mSamples(1) {}
@@ -126,29 +111,11 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
             VulkanAttachment depthStencil[2], VulkanStagePool& stagePool) :
             HwRenderTarget(width, height), mOffscreen(true), mSamples(samples) {
-
-    // For each color attachment, create (or fetch from cache) a VkImageView that selects a specific
-    // miplevel and array layer.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        const VulkanAttachment& spec = color[index];
-        mColor[index] = createAttachment(context, spec);
-        VulkanTexture* texture = spec.texture;
-        if (texture == nullptr) {
-            continue;
-        }
-        mColor[index].view = texture->getAttachmentView(spec.level, spec.layer,
-                VK_IMAGE_ASPECT_COLOR_BIT);
+        mColor[index] = color[index];
     }
-
-    // For the depth attachment, create (or fetch from cache) a VkImageView that selects a specific
-    // miplevel and array layer.
-    const VulkanAttachment& depthSpec = depthStencil[0];
-    mDepth = createAttachment(context, depthSpec);
+    mDepth = depthStencil[0];
     VulkanTexture* depthTexture = mDepth.texture;
-    if (depthTexture) {
-        mDepth.view = depthTexture->getAttachmentView(mDepth.level, mDepth.layer,
-                VK_IMAGE_ASPECT_DEPTH_BIT);
-    }
 
     if (samples == 1) {
         return;
@@ -175,9 +142,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
                         texture->format, samples, width, height, depth, texture->usage, stagePool);
                 texture->setSidecar(msTexture);
             }
-            mMsaaAttachments[index] = createAttachment(context, { .texture = msTexture });
-            mMsaaAttachments[index].view = msTexture->getAttachmentView(0, 0,
-                    VK_IMAGE_ASPECT_COLOR_BIT);
+            mMsaaAttachments[index] = { .texture = msTexture };
         }
         if (texture && texture->samples > 1) {
             mMsaaAttachments[index] = mColor[index];
@@ -201,17 +166,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
                 depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
         depthTexture->setSidecar(msTexture);
     }
-    mMsaaDepthAttachment = createAttachment(context, {
-        .format = {},
-        .image = {},
-        .view = {},
-        .memory = {},
+
+    mMsaaDepthAttachment = {
         .texture = msTexture,
-        .level = depthSpec.level,
-        .layer = depthSpec.layer,
-    });
-    mMsaaDepthAttachment.view = msTexture->getAttachmentView(depthSpec.level, depthSpec.layer,
-            VK_IMAGE_ASPECT_DEPTH_BIT);
+        .level = mDepth.level,
+        .layer = mDepth.layer,
+    };
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
@@ -250,7 +210,7 @@ int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const 
     }
     int count = 0;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (mColor[i].format == VK_FORMAT_UNDEFINED) {
+        if (!mColor[i].texture) {
             continue;
         }
         // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
