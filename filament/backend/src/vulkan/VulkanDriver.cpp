@@ -1042,7 +1042,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .initialDepthLayout = initialDepthLayout,
         .renderPassDepthLayout = renderPassDepthLayout,
         .finalDepthLayout = finalDepthLayout,
-        .depthFormat = depth.format,
+        .depthFormat = depth.getFormat(),
         .clear = params.flags.clear,
         .discardStart = discardStart,
         .discardEnd = params.flags.discardEnd,
@@ -1055,7 +1055,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             rpkey.initialColorLayoutMask |= 1 << i;
             info.texture->trackLayout(info.level, info.layer,
                     getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
-            rpkey.colorFormat[i] = info.format;
+            rpkey.colorFormat[i] = info.getFormat();
             if (rpkey.samples > 1 && info.texture->samples == 1) {
                 rpkey.needsResolveMask |= (1 << i);
             }
@@ -1076,25 +1076,25 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .samples = rpkey.samples,
     };
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (rt->getColor(i).format == VK_FORMAT_UNDEFINED) {
+        if (!rt->getColor(i).texture) {
             fbkey.color[i] = VK_NULL_HANDLE;
             fbkey.resolve[i] = VK_NULL_HANDLE;
         } else if (fbkey.samples == 1) {
-            fbkey.color[i] = rt->getColor(i).view;
+            fbkey.color[i] = rt->getColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
             fbkey.resolve[i] = VK_NULL_HANDLE;
             assert_invariant(fbkey.color[i]);
         } else {
-            fbkey.color[i] = rt->getMsaaColor(i).view;
+            fbkey.color[i] = rt->getMsaaColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
             VulkanTexture* texture = rt->getColor(i).texture;
-            if (texture && texture->samples == 1) {
-                fbkey.resolve[i] = rt->getColor(i).view;
+            if (texture->samples == 1) {
+                fbkey.resolve[i] = rt->getColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
                 assert_invariant(fbkey.resolve[i]);
             }
             assert_invariant(fbkey.color[i]);
         }
     }
-    if (depth.format != VK_FORMAT_UNDEFINED) {
-        fbkey.depth = depth.view;
+    if (depth.texture) {
+        fbkey.depth = depth.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
         assert_invariant(fbkey.depth);
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
@@ -1251,9 +1251,9 @@ void VulkanDriver::nextSubpass(int) {
 
     for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
         if ((1 << i) & mContext.currentRenderPass.subpassMask) {
-            const VulkanAttachment& subpassInput = mCurrentRenderTarget->getColor(i);
+            VulkanAttachment subpassInput = mCurrentRenderTarget->getColor(i);
             VkDescriptorImageInfo info = {
-                .imageView = subpassInput.view,
+                .imageView = subpassInput.getImageView(VK_IMAGE_ASPECT_COLOR_BIT),
                 .imageLayout = subpassInput.getLayout(),
             };
             mPipelineCache.bindInputAttachment(i, info);
@@ -1535,7 +1535,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     // Perform the copy into the staging area. At this point we know that the src layout is
     // TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
 
-    vkCmdCopyImage(cmdbuffer, srcTarget->getColor(0).image,
+    vkCmdCopyImage(cmdbuffer, srcTarget->getColor(0).getImage(),
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_GENERAL,
             1, &imageCopyRegion);
 

@@ -30,8 +30,21 @@ using utils::FixedCapacityVector;
 namespace filament {
 namespace backend {
 
+VkImage VulkanAttachment::getImage() const {
+    return texture ? texture->getVkImage() : VK_NULL_HANDLE;
+}
+
+VkFormat VulkanAttachment::getFormat() const {
+    return texture ? texture->getVkFormat() : VK_FORMAT_UNDEFINED;
+}
+
 VkImageLayout VulkanAttachment::getLayout() const {
     return texture ? texture->getVkLayout(layer, level) : VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
+VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) {
+    assert_invariant(texture);
+    return texture->getAttachmentView(level, layer, aspect);
 }
 
 void VulkanContext::selectPhysicalDevice() {

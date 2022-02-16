@@ -328,28 +328,12 @@ bool VulkanSwapChain::hasResized() const {
 
 VulkanAttachment VulkanSwapChain::getColorAttachment() const {
     VulkanTexture& tex = getColorTexture();
-    return VulkanAttachment {
-        .format = tex.getVkFormat(),
-        .image = tex.getVkImage(),
-        .view = tex.getAttachmentView(0, 0, VK_IMAGE_ASPECT_COLOR_BIT),
-        .memory = VK_NULL_HANDLE,
-        .texture = &tex,
-        .level = 0,
-        .layer = 0,
-    };
+    return VulkanAttachment { .texture = &tex, .level = 0, .layer = 0 };
 }
 
 VulkanAttachment VulkanSwapChain::getDepthAttachment() const {
     VulkanTexture& tex = *this->mDepth.get();
-    return VulkanAttachment {
-        .format = tex.getVkFormat(),
-        .image = tex.getVkImage(),
-        .view = tex.getAttachmentView(0, 0, VK_IMAGE_ASPECT_DEPTH_BIT),
-        .memory = VK_NULL_HANDLE,
-        .texture = &tex,
-        .level = 0,
-        .layer = 0,
-    };
+    return VulkanAttachment { .texture = &tex, .level = 0, .layer = 0 };
 }
 
 VulkanTexture& VulkanSwapChain::getColorTexture() const {
