@@ -674,7 +674,7 @@ public:
      * @tparam method   Method to call on T (e.g.: &Foo::bar)
      * @param x         Horizontal coordinate to query in the viewport with origin on the left.
      * @param y         Vertical coordinate to query on the viewport with origin at the bottom.
-     * @param data      A pointer to an instance of T
+     * @param instance  A pointer to an instance of T
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
@@ -694,7 +694,7 @@ public:
      * @tparam method   Method to call on T (e.g.: &Foo::bar)
      * @param x         Horizontal coordinate to query in the viewport with origin on the left.
      * @param y         Vertical coordinate to query on the viewport with origin at the bottom.
-     * @param data      An instance of T
+     * @param instance  An instance of T
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
