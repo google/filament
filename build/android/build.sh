@@ -52,7 +52,7 @@ if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
     ${ANDROID_HOME}/tools/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION" > /dev/null
 fi
 
-# Only build 1 32 bit and 1 64 bit target during presubmit to cut down build times
+# Only build 1 64 bit target during presubmit to cut down build times during presubmit
 # Continuous builds will build everything
 ANDROID_ABIS=
 if [[ "$TARGET" == "presubmit" ]]; then
