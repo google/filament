@@ -49,6 +49,7 @@ struct RenderableManager::BuilderDetails {
     uint8_t mLayerMask = 0x1;
     uint8_t mPriority = 0x4;
     uint8_t mChannels = 1;
+    uint16_t mInstanceCount = 1;
     bool mCulling : 1;
     bool mCastShadows : 1;
     bool mReceiveShadows : 1;
@@ -287,6 +288,11 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
     return Success;
 }
 
+RenderableManager::Builder& RenderableManager::Builder::instances(size_t instanceCount) noexcept {
+    mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 65535u);
+    return *this;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 FRenderableManager::FRenderableManager(FEngine& engine) noexcept : mEngine(engine) {
@@ -331,6 +337,7 @@ void FRenderableManager::create(
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphTargetCount);
         mManager[ci].channels = builder->mChannels;
+        mManager[ci].instanceCount = builder->mInstanceCount;
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
         const uint32_t targetCount = builder->mMorphTargetCount;

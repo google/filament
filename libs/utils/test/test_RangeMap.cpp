@@ -110,12 +110,40 @@ TEST(RangeMapTest, Simple) {
     map.add(10, 13, 'a');
     EXPECT_EQ(map.rangeCount(), 3);
     map.add(10, 12, 'b');
-    EXPECT_EQ(map.rangeCount(), 4);
 
+    EXPECT_EQ(map.rangeCount(), 5);
     map.add(0, 26, 'b');
     EXPECT_EQ(map.rangeCount(), 1);
     map.add(10, 12, 'c');
     EXPECT_EQ(map.rangeCount(), 3);
     map.add(9, 13, 'c');
     EXPECT_EQ(map.rangeCount(), 3);
+}
+
+enum MockImageLayout {
+    VK_IMAGE_LAYOUT_UNDEFINED = 0,
+    VK_IMAGE_LAYOUT_GENERAL = 1,
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL = 2,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL = 3,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL = 4,
+    VK_IMAGE_LAYOUT_MAX_ENUM = 0x7FFFFFFF
+};
+
+TEST(RangeMapTest, BugRepro1) {
+    utils::RangeMap<int32_t, MockImageLayout> tracker;
+    tracker.set(1, VK_IMAGE_LAYOUT_GENERAL);
+    tracker.set(2, VK_IMAGE_LAYOUT_GENERAL);
+    tracker.set(3, VK_IMAGE_LAYOUT_GENERAL);
+    tracker.set(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
+    tracker.add(0, 2, VK_IMAGE_LAYOUT_GENERAL);
+    EXPECT_EQ(tracker.rangeCount(), 1);
+
+    tracker.set(0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+    EXPECT_EQ(tracker.rangeCount(), 2);
+
+    tracker.reset(3);
+    tracker.reset(2);
+    tracker.clear(-1, 2);
+    EXPECT_EQ(tracker.rangeCount(), 0);
 }

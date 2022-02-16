@@ -483,7 +483,8 @@ DECL_DRIVER_API_N(blit,
 
 DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,
-        backend::RenderPrimitiveHandle, rph)
+        backend::RenderPrimitiveHandle, rph,
+        uint32_t, instanceCount)
 
 #pragma clang diagnostic pop
 

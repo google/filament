@@ -3135,7 +3135,7 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
     }
 }
 
-void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
+void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -3172,8 +3172,14 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 
     setViewportScissor(state.scissor);
 
-    glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
-            rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+    if (UTILS_LIKELY(instanceCount <= 1)) {
+        glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
+                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+    } else {
+        glDrawElementsInstanced(GLenum(rp->type), rp->count,
+                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset),
+                instanceCount);
+    }
 
     CHECK_GL_ERROR(utils::slog.e)
 }

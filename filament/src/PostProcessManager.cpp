@@ -311,14 +311,23 @@ backend::Handle<backend::HwTexture> PostProcessManager::getOneTextureArray() con
 }
 
 UTILS_NOINLINE
+void PostProcessManager::render(FrameGraphResources::RenderPassInfo const& out,
+        backend::PipelineState const& pipeline,
+        DriverApi& driver) const noexcept {
+    FEngine& engine = mEngine;
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+    driver.beginRenderPass(out.target, out.params);
+    driver.draw(pipeline, fullScreenRenderPrimitive, 1);
+    driver.endRenderPass();
+}
+
+UTILS_NOINLINE
 void PostProcessManager::commitAndRender(FrameGraphResources::RenderPassInfo const& out,
         PostProcessMaterial const& material, uint8_t variant, DriverApi& driver) const noexcept {
     FMaterialInstance* const mi = material.getMaterialInstance();
     mi->commit(driver);
     mi->use(driver);
-    driver.beginRenderPass(out.target, out.params);
-    driver.draw(material.getPipelineState(variant), mEngine.getFullScreenRenderPrimitive());
-    driver.endRenderPass();
+    render(out, material.getPipelineState(variant), driver);
 }
 
 UTILS_ALWAYS_INLINE
@@ -547,9 +556,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
         AmbientOcclusionOptions const& options) noexcept {
 
-    FEngine& engine = mEngine;
-    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
-
     FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
     assert_invariant(depth);
 
@@ -754,10 +760,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
                 PipelineState pipeline(material.getPipelineState());
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
-
-                driver.beginRenderPass(ssao.target, ssao.params);
-                driver.draw(pipeline, fullScreenRenderPrimitive);
-                driver.endRenderPass();
+                render(ssao, pipeline, driver);
             });
 
     FrameGraphId<FrameGraphTexture> ssao = SSAOPass->ssao;
@@ -783,8 +786,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
         FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
         TextureFormat format, BilateralPassConfig config) noexcept {
-
-    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     struct BlurPassData {
         FrameGraphId<FrameGraphTexture> input;
@@ -870,10 +871,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
 
                 PipelineState pipeline(material.getPipelineState());
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
-
-                driver.beginRenderPass(blurred.target, blurred.params);
-                driver.draw(pipeline, fullScreenRenderPrimitive);
-                driver.endRenderPass();
+                render(blurred, pipeline, driver);
             });
 
     return blurPass->blurred;
@@ -893,8 +891,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
         FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
         FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
         bool reinhard, size_t kernelWidth, const float sigma) noexcept {
-
-    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
     auto computeGaussianCoefficients = [kernelWidth, sigma](float2* kernel, size_t size) -> size_t {
         const float alpha = 1.0f / (2.0f * sigma * sigma);
@@ -1033,9 +1029,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 mi->commit(driver);
                 // we don't need to call use() here, since it's the same material
 
-                driver.beginRenderPass(hwOutRT.target, hwOutRT.params);
-                driver.draw(separableGaussianBlur.getPipelineState(), fullScreenRenderPrimitive);
-                driver.endRenderPass();
+                render(hwOutRT, separableGaussianBlur.getPipelineState(), driver);
             });
 
     return output;
@@ -1217,9 +1211,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, const DepthOfFieldOptions& dofOptions,
         bool translucent, const CameraInfo& cameraInfo, float2 scale) noexcept {
-
-    FEngine& engine = mEngine;
-    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     const uint8_t variant = uint8_t(
             translucent ? PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
@@ -1452,9 +1443,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     mi->setParameter("weightScale", 0.5f / float(1u<<level));   // FIXME: halfres?
                     mi->setParameter("pixelSize", 1.0f / float2{w, h});
                     mi->commit(driver);
-                    driver.beginRenderPass(out.target, out.params);
-                    driver.draw(pipeline, fullScreenRenderPrimitive);
-                    driver.endRenderPass();
+                    render(out, pipeline, driver);
                 }
                 driver.setMinMaxLevels(inOutColor, 0, mipmapCount - 1u);
                 driver.setMinMaxLevels(inOutCoc, 0, mipmapCount - 1u);
@@ -1770,8 +1759,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     constexpr bool isWebGL = false;
 #endif
 
-    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
-
     // Figure out a good size for the bloom buffer.
     auto const& desc = fg.getDescriptor(input);
 
@@ -1870,9 +1857,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
                         hwOutRT.params.flags.discardStart = TargetBufferFlags::COLOR;
                         hwOutRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-                        driver.beginRenderPass(hwOutRT.target, hwOutRT.params);
-                        driver.draw(pipeline, fullScreenRenderPrimitive);
-                        driver.endRenderPass();
+                        render(hwOutRT, pipeline, driver);
 
                         // prepare the next level
                         mi->setParameter("source", hwOut, {
@@ -1979,10 +1964,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                         mi->setParameter("level", float(i));
                         driver.setMinMaxLevels(hwIn, i, i);
                         mi->commit(driver);
-
-                        driver.beginRenderPass(hwDstRT.target, hwDstRT.params);
-                        driver.draw(pipeline, fullScreenRenderPrimitive);
-                        driver.endRenderPass();
+                        render(hwDstRT, pipeline, driver);
                     }
 
                     driver.setMinMaxLevels(hwIn, 0, inoutBloomOptions.levels - 1);
@@ -2065,9 +2047,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
                         hwDstRT.params.flags.discardStart = TargetBufferFlags::COLOR;
                         hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-                        driver.beginRenderPass(hwDstRT.target, hwDstRT.params);
-                        driver.draw(pipeline, fullScreenRenderPrimitive);
-                        driver.endRenderPass();
+                        render(hwDstRT, pipeline, driver);
 
                         // prepare the next level
                         mi->setParameter("source", parity ? hwOut : hwStage, {
@@ -2128,10 +2108,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                         });
                         mi->setParameter("level", float(i));
                         mi->commit(driver);
-
-                        driver.beginRenderPass(hwDstRT.target, hwDstRT.params);
-                        driver.draw(pipeline, fullScreenRenderPrimitive);
-                        driver.endRenderPass();
+                        render(hwDstRT, pipeline, driver);
                     }
 
                     // Every other level is missing from the out texture, so we need to do
@@ -2223,7 +2200,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
     driver.nextSubpass();
-    driver.draw(material.getPipelineState(variant), fullScreenRenderPrimitive);
+    driver.draw(material.getPipelineState(variant), fullScreenRenderPrimitive, 1);
 }
 
 
@@ -2242,7 +2219,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
     FMaterialInstance* mi = material.getMaterialInstance();
     mi->use(driver);
     driver.nextSubpass();
-    driver.draw(material.getPipelineState(), fullScreenRenderPrimitive);
+    driver.draw(material.getPipelineState(), fullScreenRenderPrimitive, 1);
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(FrameGraph& fg,
@@ -2605,7 +2582,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                     out.params.subpassMask = 1;
                 }
                 driver.beginRenderPass(out.target, out.params);
-                driver.draw(material.getPipelineState(variant), mEngine.getFullScreenRenderPrimitive());
+                driver.draw(material.getPipelineState(variant), mEngine.getFullScreenRenderPrimitive(), 1);
                 if (colorGradingConfig.asSubpass) {
                     colorGradingSubpass(driver, colorGradingConfig);
                 }
@@ -2807,7 +2784,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     if (translucent) {
                         enableTranslucentBlending(pipeline);
                     }
-                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                    driver.draw(pipeline, fullScreenRenderPrimitive, 1);
                 }
 
                 { // scope to not leak local variables
@@ -2821,7 +2798,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     if (twoPassesEASU) {
                         pipeline.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
                     }
-                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                    driver.draw(pipeline, fullScreenRenderPrimitive, 1);
                 }
 
                 driver.endRenderPass();
@@ -2861,9 +2838,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
                     PipelineState pipeline(material.getPipelineState(variant));
-                    driver.beginRenderPass(out.target, out.params);
-                    driver.draw(pipeline, fullScreenRenderPrimitive);
-                    driver.endRenderPass();
+                    render(out, pipeline, driver);
                 });
 
         output = ppFsrRcas->output;
@@ -3001,10 +2976,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 mi->setParameter("uvscale", 1.0f / dim);
                 mi->commit(driver);
                 mi->use(driver);
-
-                driver.beginRenderPass(out.target, out.params);
-                driver.draw(pipeline, mEngine.getFullScreenRenderPrimitive());
-                driver.endRenderPass();
+                render(out, pipeline, driver);
 
                 if (finalize) {
                    driver.setMinMaxLevels(in, 0, level);

@@ -514,6 +514,11 @@ VkImageViewType getImageViewType(SamplerType target) {
     }
 }
 
+// Between Driver API calls, non-presentable texture images are generally kept either in the
+// UNDEFINED layout, or in the usage-specific layout specified by this function. This simple
+// convention allows the use of a bitfield to represent layout in RenderPassKey. However there are
+// exceptions for depth and for transient use of specialized layouts, which is why VulkanTexture
+// tracks actual layout at the subresource level.
 VkImageLayout getDefaultImageLayout(TextureUsage usage) {
     // Filament sometimes samples from depth while it is bound to the current render target, (e.g.
     // SSAO does this while depth writes are disabled) so let's keep it simple and use GENERAL for

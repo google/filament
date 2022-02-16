@@ -129,6 +129,7 @@ public:
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
     inline uint8_t getChannels(Instance instance) const noexcept;
+    inline uint16_t getInstanceCount(Instance instance) const noexcept;
 
     struct SkinningBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
@@ -187,6 +188,7 @@ private:
         LAYERS,             // user data
         MORPH_WEIGHTS,      // filament data, UBO storing a pointer to the morph weights information
         CHANNELS,           // user data
+        INSTANCE_COUNT,     // user data
         VISIBILITY,         // user data
         PRIMITIVES,         // user data
         BONES,              // filament data, UBO storing a pointer to the bones information
@@ -197,6 +199,7 @@ private:
             uint8_t,                         // LAYERS
             MorphWeights,                    // MORPH_WEIGHTS
             uint8_t,                         // CHANNELS
+            uint16_t,                        // INSTANCE_COUNT
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             Bones                            // BONES
@@ -214,13 +217,14 @@ private:
 
             union {
                 // this specific usage of union is permitted. All fields are identical
-                Field<AABB>         aabb;
-                Field<LAYERS>       layers;
-                Field<MORPH_WEIGHTS> morphWeights;
-                Field<CHANNELS>     channels;
-                Field<VISIBILITY>   visibility;
-                Field<PRIMITIVES>   primitives;
-                Field<BONES>        bones;
+                Field<AABB>             aabb;
+                Field<LAYERS>           layers;
+                Field<MORPH_WEIGHTS>    morphWeights;
+                Field<CHANNELS>         channels;
+                Field<INSTANCE_COUNT>   instanceCount;
+                Field<VISIBILITY>       visibility;
+                Field<PRIMITIVES>       primitives;
+                Field<BONES>            bones;
             };
         };
 
@@ -341,6 +345,10 @@ uint8_t FRenderableManager::getPriority(Instance instance) const noexcept {
 
 uint8_t FRenderableManager::getChannels(Instance instance) const noexcept {
     return mManager[instance].channels;
+}
+
+uint16_t FRenderableManager::getInstanceCount(Instance instance) const noexcept {
+    return mManager[instance].instanceCount;
 }
 
 Box const& FRenderableManager::getAABB(Instance instance) const noexcept {

@@ -230,6 +230,13 @@ Java_com_google_android_filament_RenderableManager_nBuilderLightChannel(JNIEnv*,
     builder->lightChannel(channel, (bool)enable);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderInstances(JNIEnv*, jclass,
+        jlong nativeBuilder, jint instanceCount) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->instances(instanceCount);
+}
+
 // ------------------------------------------------------------------------------------------------
 
 extern "C" JNIEXPORT void JNICALL

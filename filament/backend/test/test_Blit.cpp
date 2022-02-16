@@ -460,7 +460,7 @@ TEST_F(BackendTest, DepthMinify) {
         .scale = float4(1, 1, 0.5, 0),
     });
     api.beginRenderPass(srcRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive());
+    api.draw(state, triangle->getRenderPrimitive(), 1);
     api.endRenderPass();
     api.endFrame(0);
 
@@ -480,7 +480,7 @@ TEST_F(BackendTest, DepthMinify) {
         .scale = float4(1.2, 1.2, 0.75, 0),
     });
     api.beginRenderPass(dstRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive());
+    api.draw(state, triangle->getRenderPrimitive(), 1);
     api.endRenderPass();
     api.endFrame(0);
 
@@ -584,7 +584,7 @@ TEST_F(BackendTest, ColorResolve) {
         .scale = float4(1, 1, 0.5, 0),
     });
     api.beginRenderPass(srcRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive());
+    api.draw(state, triangle->getRenderPrimitive(), 1);
     api.endRenderPass();
     api.endFrame(0);
 
@@ -706,7 +706,7 @@ TEST_F(BackendTest, DepthResolve) {
         .scale = float4(1, 1, 0.5, 0),
     });
     api.beginRenderPass(srcRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive());
+    api.draw(state, triangle->getRenderPrimitive(), 1);
     api.endRenderPass();
     api.endFrame(0);
 
@@ -726,7 +726,7 @@ TEST_F(BackendTest, DepthResolve) {
         .scale = float4(1.2, 1.2, 0.75, 0),
     });
     api.beginRenderPass(dstRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive());
+    api.draw(state, triangle->getRenderPrimitive(), 1);
     api.endRenderPass();
 
     // Grab a screenshot.
