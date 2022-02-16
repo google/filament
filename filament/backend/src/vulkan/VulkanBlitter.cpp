@@ -39,8 +39,8 @@ struct BlitterUniforms {
 };
 
 void VulkanBlitter::blitColor(BlitArgs args) {
-    const VulkanAttachment src = args.srcTarget->getColor(mContext.currentSurface, args.targetIndex);
-    const VulkanAttachment dst = args.dstTarget->getColor(mContext.currentSurface, 0);
+    const VulkanAttachment src = args.srcTarget->getColor(args.targetIndex);
+    const VulkanAttachment dst = args.dstTarget->getColor(0);
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
 #if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
@@ -58,14 +58,13 @@ void VulkanBlitter::blitColor(BlitArgs args) {
     }
 #endif
 
-    blitFast(aspect, args.filter, args.srcTarget->getExtent(mContext.currentSurface), src, dst,
+    blitFast(aspect, args.filter, args.srcTarget->getExtent(), src, dst,
             args.srcRectPair, args.dstRectPair);
 }
 
 void VulkanBlitter::blitDepth(BlitArgs args) {
-    VulkanSwapChain* const sc = mContext.currentSurface;
-    const VulkanAttachment src = args.srcTarget->getDepth(sc);
-    const VulkanAttachment dst = args.dstTarget->getDepth(sc);
+    const VulkanAttachment src = args.srcTarget->getDepth();
+    const VulkanAttachment dst = args.dstTarget->getDepth();
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 #if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
@@ -86,12 +85,12 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
     assert_invariant(src.texture && dst.texture);
 
     if (src.texture->samples > 1 && dst.texture->samples == 1) {
-        blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(sc), src, dst, args.srcRectPair,
+        blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
                 args.dstRectPair);
         return;
     }
 
-    blitFast(aspect, args.filter, args.srcTarget->getExtent(sc), src, dst, args.srcRectPair,
+    blitFast(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
             args.dstRectPair);
 }
 
