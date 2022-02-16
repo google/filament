@@ -215,6 +215,15 @@ Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderSetMorphTargetBufferAt(JNIEnv*, jclass,
+        jlong nativeBuilder, int level, int primitiveIndex, jlong nativeMorphTargetBuffer,
+        int offset, int count) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+    builder->morphing(level, primitiveIndex, morphTargetBuffer, offset, count);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderLightChannel(JNIEnv*, jclass,
         jlong nativeBuilder, jint channel, jboolean enable) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;

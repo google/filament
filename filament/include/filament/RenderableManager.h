@@ -321,6 +321,26 @@ public:
         Builder& morphing(size_t targetCount) noexcept;
 
         /**
+         * Specifies the morph target buffer for a primitive.
+         *
+         * The morph target buffer must have an associated renderable and geometry. Two conditions
+         * must be met:
+         * 1. The number of morph targets in the buffer must equal the renderable's morph target
+         *    count.
+         * 2. The vertex count of each morph target must equal the geometry's vertex count.
+         *
+         * @param level the level of detail (lod), only 0 can be specified
+         * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
+         * @param morphTargetBuffer specifies the morph target buffer
+         * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
+         * @param count number of vertices in the morph target buffer to read, must equal the geometry's count (for triangles, this should be a multiple of 3)
+         */
+        Builder& morphing(uint8_t level, size_t primitiveIndex,
+                MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept;
+        inline Builder& morphing(uint8_t level, size_t primitiveIndex,
+                MorphTargetBuffer* morphTargetBuffer) noexcept;
+
+        /**
          * Sets an ordering index for blended primitives that all live at the same Z value.
          *
          * @param primitiveIndex the primitive of interest
@@ -374,6 +394,11 @@ public:
             MaterialInstance const* materialInstance = nullptr;
             PrimitiveType type = PrimitiveType::TRIANGLES;
             uint16_t blendOrder = 0;
+            struct {
+                MorphTargetBuffer* buffer = nullptr;
+                size_t offset = 0;
+                size_t count = 0;
+            } morphing;
         };
     };
 
@@ -609,6 +634,12 @@ public:
     static Box computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
             size_t stride = sizeof(VECTOR)) noexcept;
 };
+
+RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer) noexcept {
+    return morphing(level, primitiveIndex, morphTargetBuffer, 0,
+            morphTargetBuffer->getVertexCount());
+}
 
 void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
         MorphTargetBuffer* morphTargetBuffer) {
