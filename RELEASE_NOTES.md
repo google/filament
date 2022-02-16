@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.19.2 (currently main branch)
+## v1.20.0 (currently main branch)
+
+- engine: Support rough screen-space reflections [⚠️ **Material breakage**].
 
 ## v1.19.1
 
