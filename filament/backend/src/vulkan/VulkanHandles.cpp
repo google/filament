@@ -112,9 +112,16 @@ static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachmen
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-// Note that the attachment structs are unused in this case in favor of VulkanSwapChain.
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
         mOffscreen(false), mSamples(1) {}
+
+void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
+    assert_invariant(!mOffscreen);
+    mColor[0] = swapChain.getColorAttachment();
+    mDepth = swapChain.getDepthAttachment();
+    width = swapChain.clientSize.width;
+    height = swapChain.clientSize.height;
+}
 
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
@@ -209,33 +216,30 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const {
-    const auto& extent = getExtent(currentSurface);
+void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
+    const auto& extent = getExtent();
     flipVertically(bounds, extent.height);
     clampToFramebuffer(bounds, extent.width, extent.height);
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const {
-    flipVertically(bounds, getExtent(currentSurface).height);
+void VulkanRenderTarget::transformClientRectToPlatform(VkViewport* bounds) const {
+    flipVertically(bounds, getExtent().height);
 }
 
-VkExtent2D VulkanRenderTarget::getExtent(VulkanSwapChain* currentSurface) const {
-    if (mOffscreen) {
-        return {width, height};
-    }
-    return currentSurface->clientSize;
+VkExtent2D VulkanRenderTarget::getExtent() const {
+    return {width, height};
 }
 
-VulkanAttachment VulkanRenderTarget::getColor(VulkanSwapChain* currentSurface, int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColorAttachment();
+VulkanAttachment VulkanRenderTarget::getColor(int target) const {
+    return mColor[target];
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getDepth(VulkanSwapChain* currentSurface) const {
-    return mOffscreen ? mDepth : currentSurface->getDepthAttachment();
+VulkanAttachment VulkanRenderTarget::getDepth() const {
+    return mDepth;
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {

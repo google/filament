@@ -46,7 +46,7 @@ struct VulkanAttachment {
     VkImageView view;
     VkDeviceMemory memory;
     VulkanTexture* texture = nullptr;
-    VkImageLayout layout;
+    VkImageLayout layout; // TODO remove
     uint8_t level;
     uint16_t layer;
 };
@@ -90,6 +90,7 @@ struct VulkanContext {
     bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
     VulkanSwapChain* currentSurface;
+    Handle<HwRenderTarget> defaultRenderTarget;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;
