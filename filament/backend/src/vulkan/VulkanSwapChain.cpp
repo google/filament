@@ -180,7 +180,7 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
             << ", " << surfaceFormat.colorSpace
             << ", " << imageCount
             << ", " << caps.currentTransform
-            << io::endl;
+            << io::endl << io::endl;
 
     createSemaphore(mContext.device, &imageAvailable);
     acquired = false;
