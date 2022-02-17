@@ -107,7 +107,7 @@ public:
         WORLD_TRANSFORM,        // 16 | instance of the Transform component
         VISIBILITY_STATE,       //  1 | visibility data of the component
         SKINNING_BUFFER,        //  8 | bones uniform buffer handle, count, offset
-        MORPHING_BUFFER,        //  8 | weights uniform buffer handle, count
+        MORPHING_BUFFER,        // 16 | weights uniform buffer handle, count, morph targets
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
         VISIBLE_MASK,           //  2 | each bit represents a visibility in a pass
         CHANNELS,               //  1 | currently light channels only

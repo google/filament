@@ -355,6 +355,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
         // calculate the per-primitive face winding order inversion
         const bool inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
+        const bool hasMorphing = soaVisibility[i].morphing;
+        const bool hasSkinningOrMorphing = soaVisibility[i].skinning || hasMorphing;
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
@@ -365,7 +367,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         static_assert(Variant::SPECIAL_SSR & Variant::SRE);
         variant.setShadowReceiver(
                 Variant::isSSRVariant(variant) || (soaVisibility[i].receiveShadows & hasShadowing));
-        variant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
+        variant.setSkinning(hasSkinningOrMorphing);
 
         if constexpr (isDepthPass) {
             cmdDepth.key = uint64_t(Pass::DEPTH);
@@ -374,8 +376,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
             cmdDepth.primitive.instanceCount = soaInstanceCount[i];
-            cmdDepth.primitive.materialVariant.setSkinning(
-                    soaVisibility[i].skinning || soaVisibility[i].morphing);
+            cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
         }
 
@@ -389,17 +390,18 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.
          */
-        for (auto const& primitive : primitives) {
+        for (size_t pi = 0, c = primitives.size(); pi < c; ++pi ) {
+            auto const& primitive = primitives[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
-            FMorphTargetBuffer const* const morphTargetBuffer = primitive.getMorphTargetBuffer();
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdColor.primitive.materialVariant = variant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
 
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;
-                if (UTILS_UNLIKELY(morphTargetBuffer)) {
-                    cmdColor.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
+                if (UTILS_UNLIKELY(hasMorphing)) {
+                    auto& morphTargets = morphing.targets[pi];
+                    cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
                 }
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
@@ -495,8 +497,9 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
                 cmdDepth.primitive.morphWeightBuffer = morphing.handle;
-                if (UTILS_UNLIKELY(morphTargetBuffer)) {
-                    cmdDepth.primitive.morphTargetBuffer = morphTargetBuffer->getHwHandle();
+                if (UTILS_UNLIKELY(hasMorphing)) {
+                    auto& morphTargets = morphing.targets[pi];
+                    cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
                 }
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
