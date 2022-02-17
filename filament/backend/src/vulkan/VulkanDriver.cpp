@@ -1013,9 +1013,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             fromVkImageLayout(getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
     VulkanDepthLayout finalDepthLayout = renderPassDepthLayout;
 
-    // If an uncleared depth buffer is attached but discarded at the end of the pass, then we should
-    // permit the shader to sample from it by transitioning the layout of all its subresources to a
-    // read-only layout. This is especially crucial for SSAO.
+    // Sometimes we need to permit the shader to sample the depth attachment by transitioning the
+    // layout of all its subresources to a read-only layout. This is especially crucial for SSAO.
     //
     // We do not use GENERAL here due to the following validation message:
     //
@@ -1026,8 +1025,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     //
     // https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-None-04584)
     //
-    if (depth.texture && any(params.flags.discardEnd & TargetBufferFlags::DEPTH) &&
-            !any(params.flags.clear & TargetBufferFlags::DEPTH)) {
+    if (params.readOnlyDepthStencil & 1) {
         depthFeedback = depth.texture;
         renderPassDepthLayout = VulkanDepthLayout::READ_ONLY;
     }

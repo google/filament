@@ -953,7 +953,14 @@ struct RenderPassParams {
      * For now only 2 subpasses are supported, so only the lower 8 bits are used, one for each color
      * attachment (see MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT).
      */
-    uint32_t subpassMask = 0;
+    uint16_t subpassMask = 0;
+
+    /**
+     * This mask makes a promise to the backend about read-only usage of the depth attachment (bit
+     * 0) and the stencil attachment (bit 1). Some backends need to know if writes are disabled in
+     * order to allow sampling from the depth attachment.
+     */
+    uint16_t readOnlyDepthStencil = 0;
 };
 
 struct PolygonOffset {
