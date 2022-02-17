@@ -271,10 +271,11 @@ vec4 evaluateLights(const MaterialInputs material) {
     // until the very end but it costs more ALUs on mobile. The gains are
     // currently not worth the extra operations
     vec3 color = vec3(0.0);
+    float alpha = 1.0;
 
     // We always evaluate the IBL as not having one is going to be uncommon,
     // it also saves 1 shader variant
-    evaluateIBL(material, pixel, color);
+    evaluateIBL(material, pixel, color, alpha);
 
 #if defined(HAS_DIRECTIONAL_LIGHTING)
     evaluateDirectionalLight(material, pixel, color);
@@ -290,7 +291,11 @@ vec4 evaluateLights(const MaterialInputs material) {
     color *= material.baseColor.a;
 #endif
 
+#if defined(BLEND_MODE_OPAQUE)
+    return vec4(color, alpha);
+#else
     return vec4(color, computeDiffuseAlpha(material.baseColor.a));
+#endif
 }
 
 void addEmissive(const MaterialInputs material, inout vec4 color) {

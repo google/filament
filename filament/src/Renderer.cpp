@@ -728,11 +728,13 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
             h = config.vp.height * config.scale.x;
         }
 
+        const TextureFormat format = (view.getBlendMode() == BlendMode::TRANSLUCENT) ? mHdrTranslucent : mHdrQualityMedium;
+        
         input = ppm.opaqueBlit(fg, input, {
                 .width = w,
                 .height = h,
                 .levels = roughnessLodCount,
-                .format = TextureFormat::R11F_G11F_B10F,
+                .format = format,
         });
 
         input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize);

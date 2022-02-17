@@ -508,7 +508,7 @@ void applyRefraction(
     const MaterialInputs material, 
     const PixelParams pixel,
     const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
-    inout vec3 color) {
+    inout vec3 color, inout float alpha) {
 
     Refraction ray;
 
@@ -549,6 +549,7 @@ void applyRefraction(
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
     vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
+    float at = 1.0;
 #else
     // compute the point where the ray exits the medium, if needed
     vec4 p = vec4(frameUniforms.clipFromWorldMatrix * vec4(ray.position, 1.0));
@@ -563,7 +564,9 @@ void applyRefraction(
     float tweakedPerceptualRoughness = perceptualRoughness;
     float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
 
-    vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
+    vec4 Fat = textureLod(light_ssr, p.xy, lod);
+    vec3 Ft = Fat.rgb;
+    float at = Fat.a;
 #endif
 
     // base color changes the amount of light passing through the boundary
@@ -571,6 +574,7 @@ void applyRefraction(
 
     // fresnel from the first interface
     Ft *= 1.0 - E;
+    at += (1.0 - at) * max3(E);
 
     // apply absorption
 #if defined(MATERIAL_HAS_ABSORPTION)
@@ -579,7 +583,8 @@ void applyRefraction(
 
     Fr *= material.specularIntensity * frameUniforms.iblLuminance;
     Fd *= frameUniforms.iblLuminance;
-    color.rgb += Fr + mix(Fd, Ft, pixel.transmission);
+    color += Fr + mix(Fd, Ft, pixel.transmission);
+    alpha *= mix(1.0, at, pixel.transmission);
 }
 #endif
 
@@ -587,15 +592,15 @@ void combineDiffuseAndSpecular(
         const MaterialInputs material, 
         const PixelParams pixel,
         const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
-        inout vec3 color) {
+        inout vec3 color, inout float alpha) {
 #if defined(HAS_REFRACTION)
-    applyRefraction(material, pixel, n, E, Fd, Fr, color);
+    applyRefraction(material, pixel, n, E, Fd, Fr, color, alpha);
 #else
-    color.rgb += (Fd + material.specularIntensity * Fr) * frameUniforms.iblLuminance;
+    color += (Fd + material.specularIntensity * Fr) * frameUniforms.iblLuminance;
 #endif
 }
 
-void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
+void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color, inout float alpha) {
     // specular layer
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
@@ -649,5 +654,5 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     evaluateClearCoatIBL(material, pixel, diffuseAO, interpolationCache, Fd, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
-    combineDiffuseAndSpecular(material, pixel, shading_normal, E, Fd, Fr, color);
+    combineDiffuseAndSpecular(material, pixel, shading_normal, E, Fd, Fr, color, alpha);
 }

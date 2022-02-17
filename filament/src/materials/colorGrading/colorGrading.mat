@@ -161,7 +161,10 @@ vec4 resolve() {
     }
 #else
     vec4 color = resolveAlphaFragment(ivec2(getUV()));
-    color.rgb /= color.a + FLT_EPS;
+    if (color.a == 0.0) {
+        color.a = max(FLT_EPS, max3(color.rgb));
+    }
+    color.rgb /= color.a;
     if (materialParams.bloom.x > 0.0) {
         color.rgb = bloom(color.rgb);
     }
@@ -170,7 +173,7 @@ vec4 resolve() {
         color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
     }
     color.rgb  = colorGrade(materialParams_lut, color.rgb);
-    color.rgb *= color.a + FLT_EPS;
+    color.rgb *= color.a;
 #endif
     return color;
 }
