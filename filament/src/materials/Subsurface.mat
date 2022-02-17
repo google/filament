@@ -2,6 +2,7 @@ material {
     name : Subsurface,
     shadingModel : subsurface,
     specularAntiAliasing : true,
+    postLightingBlending : transparent,
     parameters : [
         //////////////////////////////////////////////////////////////////////////////////////////////////
         // Attributes that may have a texture assigned to them. A single control to set their value when
@@ -37,7 +38,7 @@ material {
         {
             type : int,
             name : useRoughnessTexture
-        },        
+        },
         {
             type : sampler2d,
             name : roughnessTexture
@@ -59,7 +60,7 @@ material {
         {
             type : int,
             name : useClearCoatRoughnessTexture
-        },        
+        },
         {
             type : sampler2d,
             name : clearCoatRoughnessTexture
@@ -162,7 +163,7 @@ material {
         {
             type : float,
             name : thickness
-        },        
+        },
         {
             type : float,
             name : maxThickness
@@ -172,12 +173,12 @@ material {
             name : useWard
         },
         {
-            type : float,
-            name : ambient
+            type : float4,
+            name : ambientColor
         }
     ],
     variables: [
-        objectSpacePosition, 
+        objectSpacePosition,
         objectSpaceNormal
     ],
     quality : high

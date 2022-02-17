@@ -1,9 +1,10 @@
 material {
-    name : Refractive, 
-    shadingModel : lit, 
+    name : Refractive,
+    shadingModel : lit,
     specularAntiAliasing : true,
     refractionType : solid,
-    refractionMode : screenspace,    
+    refractionMode : screenspace,
+    postLightingBlending : transparent,
     parameters : [
         //////////////////////////////////////////////////////////////////////////////////////////////////
         // Attributes that may have a texture assigned to them. A single control to set their value when
@@ -39,7 +40,7 @@ material {
         {
             type : int,
             name : useRoughnessTexture
-        },        
+        },
         {
             type : sampler2d,
             name : roughnessTexture
@@ -48,11 +49,6 @@ material {
             type : float,
             name : roughness
         },
-
-        {
-            type : float,
-            name : reflectance
-        },        
 
         {
             type : int,
@@ -66,7 +62,7 @@ material {
         {
             type : int,
             name : useClearCoatRoughnessTexture
-        },        
+        },
         {
             type : sampler2d,
             name : clearCoatRoughnessTexture
@@ -119,7 +115,7 @@ material {
             type : float,
             name : thickness
         },
- 
+
         {
             type : int,
             name : useOcclusionTexture
@@ -180,7 +176,7 @@ material {
         {
             type : float,
             name : iorScale
-        },        
+        },
         {
             type : float,
             name : anisotropy
@@ -200,7 +196,7 @@ material {
         {
             type : float,
             name : maxThickness
-        },        
+        },
         {
             type : int,
             name : doDeriveAbsorption
@@ -214,12 +210,12 @@ material {
             name : useWard
         },
         {
-            type : float,
-            name : ambient
+            type : float4,
+            name : ambientColor
         }
     ],
     variables: [
-        objectSpacePosition, 
+        objectSpacePosition,
         objectSpaceNormal
     ],
     quality : high

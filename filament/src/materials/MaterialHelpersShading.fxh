@@ -8,7 +8,7 @@
 #define BLENDING_ENABLED
 #endif
 
-float sign_nozero(float f) {
+float SignNoZero(float f) {
     return f < 0.0 ? -1.0 : 1.0;
 }
 
@@ -77,8 +77,8 @@ vec4 TriplanarTexture(sampler2D tex, float scaler, highp vec3 pos, lowp vec3 nor
     // Depending on the resolution of the texture, we may want to multiply the texture coordinates
     vec3 queryPos = scaler * pos;
     vec3 weights = ComputeWeights(normal);
-    return weights.x * texture(tex, -queryPos.zy) + weights.y * texture(tex, queryPos.xz) +
-           weights.z * texture(tex, queryPos.xy * vec2(1, -1));
+    return weights.x * texture(tex, queryPos.yz * vec2(1, -1)) + weights.y * texture(tex, -queryPos.xz) +
+           weights.z * texture(tex, queryPos.yx);
 }
 
 vec3 UnpackNormal(vec2 packedNormal) {
@@ -95,27 +95,29 @@ vec3 UnpackNormal(vec3 packedNormal) {
 vec3 TriplanarNormalMap(sampler2D normalMap, float scaler, highp vec3 pos, lowp vec3 normal, float normalIntensity) {
     // Whiteout blend
     // Triplanar uvs
-    // We intentionally diverged from the original article and use 'pos.yz' below to align with triplanarTexture()
-    vec2 uvX = scaler * -pos.zy; // x facing plane
-    vec2 uvY = scaler * pos.xz; // y facing plane
-    vec2 uvZ = scaler * pos.xy * vec2(1, -1); // z facing plane
+    // We align with triplanarTexture(), and diverge from the article because we have a coordinate
+    // system mismatch between Shapr3D and Filament (and the article).
+    vec2 uvX = scaler * pos.yz * vec2(1, -1); // x facing plane
+    vec2 uvY = scaler * -pos.xz; // y facing plane
+    vec2 uvZ = scaler * pos.yx; // z facing plane
 
     // Tangent space normal maps
     // 2-channel XY TS normal texture: this saves 33% on storage
-    lowp vec3 tnormalX = UnpackNormal(texture(normalMap, uvX).xy) * vec3(sign_nozero(normal.x), 1, 1);
-    lowp vec3 tnormalY = UnpackNormal(texture(normalMap, uvY).xy) * vec3(sign_nozero(normal.y), 1, 1);
-    lowp vec3 tnormalZ = UnpackNormal(texture(normalMap, uvZ).xy) * vec3(sign_nozero(normal.z), 1, 1);
+    lowp vec3 tnormalX = UnpackNormal(texture(normalMap, uvX).xy) * vec3(SignNoZero(normal.x), 1, 1);
+    lowp vec3 tnormalY = UnpackNormal(texture(normalMap, uvY).xy) * vec3(SignNoZero(normal.y), 1, 1);
+    lowp vec3 tnormalZ = UnpackNormal(texture(normalMap, uvZ).xy) * vec3(SignNoZero(normal.z), 1, 1);
 
     // Swizzle world normals into tangent space and apply Whiteout blend
-    tnormalX = vec3(tnormalX.xy + normal.zy * vec2(-sign_nozero(normal.x), -1), abs(tnormalX.z) * abs(normal.x)) * vec3(normalIntensity, normalIntensity, 1);
-    tnormalY = vec3(tnormalY.xy + normal.xz * vec2(sign_nozero(normal.y), 1), abs(tnormalY.z) * abs(normal.y)) * vec3(normalIntensity, normalIntensity, 1);
-    tnormalZ = vec3(tnormalZ.xy + normal.xy * vec2(sign_nozero(normal.z), -1), abs(tnormalZ.z) * abs(normal.z)) * vec3(normalIntensity, normalIntensity, 1);
+    tnormalX = vec3(tnormalX.xy + normal.yz * vec2(SignNoZero(normal.x), 1), abs(tnormalX.z) * abs(normal.x)) * vec3(normalIntensity, normalIntensity, 1);
+    tnormalY = vec3(tnormalY.xy + normal.xz * vec2(-SignNoZero(normal.y), 1), abs(tnormalY.z) * abs(normal.y)) * vec3(normalIntensity, normalIntensity, 1);
+    tnormalZ = vec3(tnormalZ.xy + normal.yx * vec2(SignNoZero(normal.z), -1), abs(tnormalZ.z) * abs(normal.z)) * vec3(normalIntensity, normalIntensity, 1);
+
     // Compute blend weights
     vec3 blend = ComputeWeights(normal);
     // Swizzle tangent normals to match world orientation and triblend
-    return normalize(tnormalX.zyx * blend.x * vec3(sign_nozero(normal.x), 1, -sign_nozero(normal.x)) +
-                     tnormalY.xzy * blend.y * vec3(sign_nozero(normal.y), sign_nozero(normal.y), -1) +
-                     tnormalZ.xyz * blend.z * vec3(sign_nozero(normal.z), 1, sign_nozero(normal.z)));
+    return normalize(tnormalX.zxy * blend.x * vec3(SignNoZero(normal.x), SignNoZero(normal.x), 1)
+                     + tnormalY.xzy * blend.y * vec3(-SignNoZero(normal.y), SignNoZero(normal.y), 1)
+                     + tnormalZ.yxz * blend.z * vec3(-1, SignNoZero(normal.z), SignNoZero(normal.z)));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -134,7 +136,16 @@ void ApplyNormalMap(inout MaterialInputs material, inout FragmentData fragmentDa
                                            fragmentData.pos,
                                            fragmentData.normal,
                                            materialParams.normalIntensity);
+#if defined(SHAPR_USE_WORLD_NORMALS)
+        material.normal = normalWS;
+#else
         material.normal = normalWS * getWorldTangentFrame();
+#endif // SHAPR_USE_WORLD_NORMALS
+    } else {
+#if defined(SHAPR_USE_WORLD_NORMALS)
+        // We need normals to be in world space
+        material.normal = normalize(getWorldTangentFrame() * material.normal);
+#endif
     }
 #endif
 }
@@ -147,7 +158,16 @@ void ApplyClearCoatNormalMap(inout MaterialInputs material, inout FragmentData f
                                                     fragmentData.pos,
                                                     fragmentData.normal,
                                                     materialParams.clearCoatNormalIntensity);
+#if defined(SHAPR_USE_WORLD_NORMALS)
+        material.clearCoatNormal = clearCoatNormalWS;
+#else
         material.clearCoatNormal = clearCoatNormalWS * getWorldTangentFrame();
+#endif // SHAPR_USE_WORLD_NORMALS
+    } else {
+#if defined(SHAPR_USE_WORLD_NORMALS)
+        // We need normals to be in world space
+        material.clearCoatNormal = normalize(getWorldTangentFrame() * material.clearCoatNormal);
+#endif
     }
 #endif
 }
@@ -228,7 +248,7 @@ void ApplyReflectance(inout MaterialInputs material, inout FragmentData fragment
 }
 
 void ApplyMetallic(inout MaterialInputs material, inout FragmentData fragmentData) {
-    // Same as applyReflectance: cloth and specular glossiness explicitly do not have these properties.
+    // Cloth and specular glossiness explicitly do not have these properties.
 #if defined(MATERIAL_HAS_METALLIC) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     if (materialParams.useMetallicTexture == 1) {
         material.metallic = TriplanarTexture(materialParams_metallicTexture,
@@ -349,7 +369,7 @@ void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragment
     material.subsurfacePower = materialParams.subsurfacePower;
 #endif
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
-    material.postLightingColor.rgb = float3(materialParams.ambient);
+    material.postLightingColor = materialParams.ambientColor;
 #endif
 }
 
