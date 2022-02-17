@@ -950,8 +950,8 @@ struct RenderPassParams {
      * subpass. If this is zero, the render pass has only one subpass. The least significant bit
      * specifies that the first color attachment in the render target is a subpass input.
      *
-     * For now only 2 subpasses are supported, so only the lower 4 bits are used, one for each color
-     * attachment (see MRT::TARGET_COUNT).
+     * For now only 2 subpasses are supported, so only the lower 8 bits are used, one for each color
+     * attachment (see MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT).
      */
     uint32_t subpassMask = 0;
 };
