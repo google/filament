@@ -977,7 +977,11 @@ using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 using FrameCompletedCallback = void(*)(void* user);
 
 enum class Workaround : uint16_t {
-    SPLIT_EASU
+    // The EASU pass must split because shader compiler flattens early-exit branch
+    SPLIT_EASU,
+    // Backend allows feedback loop with ancillary buffers (depth/stencil) as long as they're read-only for
+    // the whole render pass.
+    ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP
 };
 
 } // namespace backend

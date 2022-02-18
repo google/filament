@@ -198,6 +198,11 @@ public:
         // As of Android R some qualcomm drivers invalidate buffers for the whole render pass
         // even if glInvalidateFramebuffer() is called at the end of it.
         bool invalidate_end_only_if_invalidate_start = false;
+
+        // GLES doesn't allow feedback loops even if writes are disabled. So take we the point of
+        // view that this is generally forbidden. However, this restriction is lifted on desktop
+        // GL and Vulkan and probably Metal.
+        bool allow_read_only_ancillary_feedback_loop = false;
     } bugs;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
@@ -233,6 +238,9 @@ public:
                     ""},
             {   bugs.invalidate_end_only_if_invalidate_start,
                     "invalidate_end_only_if_invalidate_start",
+                    ""},
+            {   bugs.allow_read_only_ancillary_feedback_loop,
+                    "allow_read_only_ancillary_feedback_loop",
                     ""},
     }};
 

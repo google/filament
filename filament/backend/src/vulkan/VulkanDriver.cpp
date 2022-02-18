@@ -827,6 +827,8 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
         case Workaround::SPLIT_EASU:
             // early exit condition is flattened in EASU code
             return deviceProperties.vendorID == 0x5143; // Qualcomm
+        case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
+            return true;
     }
     return false;
 }

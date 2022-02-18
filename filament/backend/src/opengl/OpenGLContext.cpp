@@ -69,7 +69,9 @@ OpenGLContext::OpenGLContext() noexcept {
         }
         initExtensionsGL(major, minor, exts);
         features.multisample_texture = true;
-    };
+        // feedback loops are allowed on GL desktop as long as writes are disabled
+        bugs.allow_read_only_ancillary_feedback_loop = true;
+    }
     assert_invariant(shaderModel != ShaderModel::UNKNOWN);
     mShaderModel = shaderModel;
 
@@ -103,6 +105,9 @@ OpenGLContext::OpenGLContext() noexcept {
                 bugs.invalidate_end_only_if_invalidate_start = false;
             }
         }
+
+        // qualcomm seems to have no problem with this (which is good for us)
+        bugs.allow_read_only_ancillary_feedback_loop = true;
     } else if (strstr(renderer, "Mali")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
@@ -115,9 +120,13 @@ OpenGLContext::OpenGLContext() noexcept {
         if (strstr(renderer, "Mali-G")) {
             // note: We have verified that timer queries work well at least on some Mali-G.
         }
+
+        // Mali seems to have no problem with this (which is good for us)
+        bugs.allow_read_only_ancillary_feedback_loop = true;
     } else if (strstr(renderer, "Intel")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
-    } else if (strstr(renderer, "PowerVR") || strstr(renderer, "Apple")) {
+    } else if (strstr(renderer, "PowerVR")) {
+    } else if (strstr(renderer, "Apple")) {
     } else if (strstr(renderer, "Tegra") || strstr(renderer, "GeForce") || strstr(renderer, "NV")) {
     } else if (strstr(renderer, "Vivante")) {
     } else if (strstr(renderer, "AMD") || strstr(renderer, "ATI")) {

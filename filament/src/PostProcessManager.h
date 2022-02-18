@@ -272,6 +272,7 @@ private:
     const math::float2 mHaltonSamples[16];
 
     bool mWorkaroundSplitEasu : 1;
+    bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;
 };
 
 } // namespace filament
