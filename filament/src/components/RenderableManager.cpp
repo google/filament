@@ -386,7 +386,7 @@ void FRenderableManager::create(
                     } else {
                         // initialize the bones to identity
                         auto* out = driver.allocatePod<PerRenderableUibBone>(boneCount);
-                        std::uninitialized_fill_n(out, boneCount, PerRenderableUibBone{});
+                        std::uninitialized_fill_n(out, boneCount, FSkinningBuffer::makeBone({}));
                         driver.updateBufferObject(bones.handle, {
                                 out, boneCount * sizeof(PerRenderableUibBone) }, 0);
                     }
