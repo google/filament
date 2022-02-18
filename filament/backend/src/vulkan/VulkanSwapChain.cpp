@@ -106,13 +106,30 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
         }
     }
 
-    clientSize = caps.currentExtent;
+    // Verify that our chosen present mode is supported. In practice all devices support the FIFO mode, but we
+    // check for it anyway for completeness.  (and to avoid validation warnings)
 
-    const auto compositionCaps = caps.supportedCompositeAlpha;
-    const auto compositeAlpha = (compositionCaps & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
-            VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    const VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    uint32_t presentModeCount = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(mContext.physicalDevice, surface, &presentModeCount, nullptr);
+    FixedCapacityVector<VkPresentModeKHR> presentModes(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(mContext.physicalDevice, surface, &presentModeCount, presentModes.data());
+    bool foundSuitablePresentMode = false;
+    for (VkPresentModeKHR mode : presentModes) {
+        if (mode == desiredPresentMode) {
+            foundSuitablePresentMode = true;
+            break;
+        }
+    }
+    ASSERT_POSTCONDITION(foundSuitablePresentMode, "Desired present mode is not supported by this device.");
 
     // Create the low-level swap chain.
+
+    clientSize = caps.currentExtent;
+
+    const VkCompositeAlphaFlagBitsKHR compositeAlpha = (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
+            VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
     VkSwapchainCreateInfoKHR createInfo {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface,
@@ -133,7 +150,7 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
         .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
 
         .compositeAlpha = compositeAlpha,
-        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+        .presentMode = desiredPresentMode,
         .clipped = VK_TRUE,
 
         // TODO: Setting the oldSwapchain parameter would avoid exiting and re-entering
