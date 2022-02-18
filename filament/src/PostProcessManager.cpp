@@ -760,7 +760,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
                 PipelineState pipeline(material.getPipelineState());
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
-                ssao.params.readOnlyDepthStencil = 1; // TODO: make this automatic
+                ssao.params.readOnlyDepthStencil = RenderPassParams::READONLY_DEPTH; // TODO: make this automatic
                 render(ssao, pipeline, driver);
             });
 

@@ -542,7 +542,7 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa, params);
+    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa, params.readOnlyDepthStencil);
     driver.endRenderPass();
 }
 
@@ -550,7 +550,7 @@ UTILS_NOINLINE // no need to be inlined
 void RenderPass::Executor::recordDriverCommands(FEngine& engine,
         backend::DriverApi& driver,
         const Command* first, const Command* last,
-        FScene::RenderableSoa const& soa, backend::RenderPassParams params) const noexcept {
+        FScene::RenderableSoa const& soa, uint16_t readOnlyDepthStencil) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
@@ -585,7 +585,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
             pipeline.rasterState = info.rasterState;
 
 #ifndef NDEBUG
-            const bool readOnlyDepthGuaranteed = params.readOnlyDepthStencil & 1;
+            const bool readOnlyDepthGuaranteed = readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH;
             assert_invariant(!readOnlyDepthGuaranteed || !pipeline.rasterState.depthWrite);
 #endif
 
