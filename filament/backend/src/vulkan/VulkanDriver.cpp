@@ -1025,7 +1025,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     //
     // https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-None-04584)
     //
-    if (params.readOnlyDepthStencil & 1) {
+    if (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
         depthFeedback = depth.texture;
         renderPassDepthLayout = VulkanDepthLayout::READ_ONLY;
     }

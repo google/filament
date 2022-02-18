@@ -961,6 +961,9 @@ struct RenderPassParams {
      * order to allow sampling from the depth attachment.
      */
     uint16_t readOnlyDepthStencil = 0;
+
+    static constexpr uint16_t READONLY_DEPTH = 1 << 0;
+    static constexpr uint16_t READONLY_STENCIL = 1 << 1;
 };
 
 struct PolygonOffset {

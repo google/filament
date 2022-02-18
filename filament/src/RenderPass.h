@@ -337,7 +337,7 @@ public:
 
         void recordDriverCommands(FEngine& engine, backend::DriverApi& driver,
                 const Command* first, const Command* last,
-                FScene::RenderableSoa const& soa, backend::RenderPassParams params) const noexcept;
+                FScene::RenderableSoa const& soa, uint16_t readOnlyDepthStencil) const noexcept;
 
     public:
         void execute(const char* name,
