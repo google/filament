@@ -317,6 +317,12 @@ UTILS_NOINLINE
 void PostProcessManager::render(FrameGraphResources::RenderPassInfo const& out,
         backend::PipelineState const& pipeline,
         DriverApi& driver) const noexcept {
+
+    assert_invariant(
+            ((out.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH)
+             && !pipeline.rasterState.depthWrite)
+            || !(out.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH));
+
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
     driver.beginRenderPass(out.target, out.params);
@@ -804,14 +810,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         float2{ options.ssct.depthBias, options.ssct.depthSlopeBias });
                 mi->setParameter("ssctSampleCount", uint32_t(options.ssct.sampleCount));
                 mi->setParameter("ssctRayCount",
-                        float2{ options.ssct.rayCount, 1.0 / options.ssct.rayCount });
+                        float2{ options.ssct.rayCount, 1.0f / options.ssct.rayCount });
 
                 mi->commit(driver);
                 mi->use(driver);
 
                 PipelineState pipeline(material.getPipelineState());
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::L;
-                ssao.params.readOnlyDepthStencil = RenderPassParams::READONLY_DEPTH; // TODO: make this automatic
+                assert_invariant(ssao.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH);
                 render(ssao, pipeline, driver);
             });
 
