@@ -1565,6 +1565,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
             return mContext.bugs.split_easu;
+        case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
+            return mContext.bugs.allow_read_only_ancillary_feedback_loop;
     }
     return false;
 }

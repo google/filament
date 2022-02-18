@@ -247,7 +247,10 @@ void PostProcessManager::init() noexcept {
     //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
     //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
 
-    mWorkaroundSplitEasu = driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
+    mWorkaroundSplitEasu =
+            driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
+    mWorkaroundAllowReadOnlyAncillaryFeedbackLoop =
+            driver.isWorkaroundNeeded(Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP);
 
     #pragma nounroll
     for (auto const& info : sMaterialList) {
@@ -642,6 +645,48 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
     const bool lowPassFilterEnabled = options.lowPassFilter != QualityLevel::LOW;
 
+    /*
+     * GLES considers there is a feedback loop when a buffer is used as both a texture and
+     * attachment, even if writes are not enabled. This restriction is lifted on desktop GL and
+     * Vulkan. The Metal situation is unclear.
+     * In this case, we need to duplicate the depth texture to use it as an attachment.
+     * The pass below that does this is automatically culled if not needed, which is decided by
+     * each backend.
+     */
+
+    struct DuplicateDepthPassData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto& duplicateDepthPass = fg.addPass<DuplicateDepthPassData>("Duplicate Depth Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                // read the depth as an attachment
+                data.input = builder.read(depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                auto desc = builder.getDescriptor(data.input);
+                desc.levels = 1; // only copy the base level
+                // create a new buffer for the copy
+                data.output = builder.createTexture("Depth Texture Copy", desc);
+                data.output = builder.write(data.output,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                builder.declareRenderPass("Depth Copy RenderTarget", {{ .depth = data.output }});
+            },
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
+                auto const& desc = resources.getDescriptor(data.input);
+                auto out = resources.getRenderPassInfo();
+                // create a temporary render target for source, needed for the blit.
+                auto inTarget = driver.createRenderTarget(TargetBufferFlags::DEPTH,
+                        desc.width, desc.height, desc.samples, {},
+                        resources.getTexture(data.input), {});
+                driver.blit(TargetBufferFlags::DEPTH,
+                        out.target, out.params.viewport,
+                        inTarget, out.params.viewport,
+                        SamplerMagFilter::NEAREST);
+                driver.destroyRenderTarget(inTarget);
+            });
+
     auto& SSAOPass = fg.addPass<SSAOPassData>("SSAO Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& desc = builder.getDescriptor(depth);
@@ -671,9 +716,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 // reading into it even though they were not written in the depth buffer.
                 // The bilateral filter in the blur pass will ignore pixels at infinity.
 
-                data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                auto depthAttachment = data.depth;
+                if (!mWorkaroundAllowReadOnlyAncillaryFeedbackLoop) {
+                    depthAttachment = duplicateDepthPass->output;
+                }
+
+                depthAttachment = builder.read(depthAttachment,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
                 builder.declareRenderPass("SSAO Target", {
-                        .attachments = { .color = { data.ao, data.bn }, .depth = data.depth },
+                        .attachments = { .color = { data.ao, data.bn }, .depth = depthAttachment },
                         .clearColor = { 1.0f },
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });

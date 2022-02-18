@@ -675,6 +675,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
             return false;
+        case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
+            return true;
     }
     return false;
 }
