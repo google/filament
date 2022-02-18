@@ -201,8 +201,8 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
          if (!AHardwareBuffer_fromHardwareBuffer_fn) {
             __android_log_print(ANDROID_LOG_WARN, "Filament", "AHardwareBuffer_fromHardwareBuffer is not available.");
             sHardwareBufferSupported = false;
+            return;
         }
-        return;
     }
 
     AHardwareBuffer* nativeBuffer = AHardwareBuffer_fromHardwareBuffer_fn(env, hwbuffer);
