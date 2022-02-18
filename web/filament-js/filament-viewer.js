@@ -17,20 +17,15 @@
 // If you are bundling this with rollup, webpack, or esbuild, the following URL should be trimmed.
 import { LitElement, html, css } from "https://unpkg.com/lit-element?module";
 
-// To allow the DOM to render before the Filament WASM module is ready, we maintain a little
-// queue of tasks that get invoked as soon as the module is done loading.
+// This little utility checks if the Filament module is ready for action.
+// If so, it immediately calls the given function. If not, it asks the Filament
+// loader to call it as soon as the module becomes ready.
 class FilamentTasks {
-    constructor() {
-        this.tasks = []
-        if (!Filament.Engine) {
-            Filament.init([], () => { for (const task of this.tasks) task(); });
-        }
-    }
     add(callback) {
-        if (!Filament.Engine) {
-            this.tasks.push(callback);
-        } else {
+        if (Filament.isReady) {
             callback();
+        } else {
+            Filament.init([], callback);
         }
     }
 }
