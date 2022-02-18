@@ -1238,7 +1238,6 @@ void VulkanDriver::nextSubpass(int) {
     ASSERT_PRECONDITION(mContext.currentRenderPass.currentSubpass == 0,
             "Only two subpasses are currently supported.");
 
-    assert_invariant(swapChain);
     assert_invariant(mCurrentRenderTarget);
     assert_invariant(mContext.currentRenderPass.subpassMask);
 
