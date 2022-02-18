@@ -542,7 +542,7 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa);
+    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa, params);
     driver.endRenderPass();
 }
 
@@ -550,7 +550,7 @@ UTILS_NOINLINE // no need to be inlined
 void RenderPass::Executor::recordDriverCommands(FEngine& engine,
         backend::DriverApi& driver,
         const Command* first, const Command* last,
-        FScene::RenderableSoa const& soa) const noexcept {
+        FScene::RenderableSoa const& soa, backend::RenderPassParams params) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
@@ -583,6 +583,12 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
+
+#ifndef NDEBUG
+            const bool readOnlyDepthGuaranteed = params.readOnlyDepthStencil & 1;
+            assert_invariant(!readOnlyDepthGuaranteed || !pipeline.rasterState.depthWrite);
+#endif
+
             if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
                 mi = info.mi;
