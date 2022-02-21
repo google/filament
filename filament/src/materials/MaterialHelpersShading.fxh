@@ -103,14 +103,14 @@ vec3 TriplanarNormalMap(sampler2D normalMap, float scaler, highp vec3 pos, lowp 
 
     // Tangent space normal maps
     // 2-channel XY TS normal texture: this saves 33% on storage
-    lowp vec3 tnormalX = UnpackNormal(texture(normalMap, uvX).xy) * vec3(SignNoZero(normal.x), 1, 1);
-    lowp vec3 tnormalY = UnpackNormal(texture(normalMap, uvY).xy) * vec3(SignNoZero(normal.y), 1, 1);
-    lowp vec3 tnormalZ = UnpackNormal(texture(normalMap, uvZ).xy) * vec3(SignNoZero(normal.z), 1, 1);
+    lowp vec3 tnormalX = UnpackNormal(texture(normalMap, uvX).xy) * vec3(SignNoZero(normal.x) * normalIntensity, normalIntensity, 1);
+    lowp vec3 tnormalY = UnpackNormal(texture(normalMap, uvY).xy) * vec3(SignNoZero(normal.y) * normalIntensity, normalIntensity, 1);
+    lowp vec3 tnormalZ = UnpackNormal(texture(normalMap, uvZ).xy) * vec3(SignNoZero(normal.z) * normalIntensity, normalIntensity, 1);
 
     // Swizzle world normals into tangent space and apply Whiteout blend
-    tnormalX = vec3(tnormalX.xy + normal.yz * vec2(SignNoZero(normal.x), 1), abs(tnormalX.z) * abs(normal.x)) * vec3(normalIntensity, normalIntensity, 1);
-    tnormalY = vec3(tnormalY.xy + normal.xz * vec2(-SignNoZero(normal.y), 1), abs(tnormalY.z) * abs(normal.y)) * vec3(normalIntensity, normalIntensity, 1);
-    tnormalZ = vec3(tnormalZ.xy + normal.yx * vec2(SignNoZero(normal.z), -1), abs(tnormalZ.z) * abs(normal.z)) * vec3(normalIntensity, normalIntensity, 1);
+    tnormalX = vec3(tnormalX.xy + normal.yz * vec2(SignNoZero(normal.x), 1), abs(tnormalX.z) * abs(normal.x));
+    tnormalY = vec3(tnormalY.xy + normal.xz * vec2(-SignNoZero(normal.y), 1), abs(tnormalY.z) * abs(normal.y));
+    tnormalZ = vec3(tnormalZ.xy + normal.yx * vec2(SignNoZero(normal.z), -1), abs(tnormalZ.z) * abs(normal.z));
 
     // Compute blend weights
     vec3 blend = ComputeWeights(normal);
