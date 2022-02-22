@@ -238,23 +238,18 @@ private:
 
         void terminate(FEngine& engine) noexcept;
 
-        FMaterial* getMaterial() const;
-        FMaterialInstance* getMaterialInstance() const;
+        FMaterial* getMaterial(FEngine& engine) const noexcept;
+        FMaterialInstance* getMaterialInstance(FEngine& engine) const noexcept;
 
-        backend::PipelineState getPipelineState(Variant::type_t variantKey = 0u) const noexcept;
+        backend::PipelineState getPipelineState(FEngine& engine,
+                Variant::type_t variantKey = 0u) const noexcept;
 
     private:
-        FMaterial* assertMaterial() const noexcept;
-        FMaterial* loadMaterial() const noexcept;
+        void loadMaterial(FEngine& engine) const noexcept;
 
         union {
-            struct {
-                mutable FMaterial* mMaterial;
-            };
-            struct {
-                FEngine* mEngine;
-                uint8_t const* mData;
-            };
+            mutable FMaterial* mMaterial;
+            uint8_t const* mData;
         };
         uint32_t mSize{};
         mutable bool mHasMaterial{};
@@ -269,7 +264,8 @@ private:
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
-    const math::float2 mHaltonSamples[16];
+    static const math::float2 sHaltonSamples[16];
+    math::float2 const* mHaltonSamples = sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
     bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;
