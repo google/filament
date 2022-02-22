@@ -372,7 +372,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool blending = blendModeTranslucent;
     // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
-    const bool needsAlphaChannel = (mSwapChain ? mSwapChain->isTransparent() : false) || blendModeTranslucent;
+    const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     ColorPassConfig config{
@@ -557,7 +557,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // the color pass itself + color-grading as subpass if needed
     FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, "Color Pass",
-            desc, config, colorGradingConfigForColor, pass.getExecutor(), view);
+            desc, config, colorGradingConfigForColor,
+            pass.getExecutor(), view);
 
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
