@@ -1125,8 +1125,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
 
     // The current command buffer now owns a reference to the render target and its attachments.
+    // Note that we must acquire parent textures, not sidecars.
     mDisposer.acquire(rt);
-    mDisposer.acquire(depth.texture);
+    mDisposer.acquire(rt->getDepth().texture);
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         mDisposer.acquire(rt->getColor(i).texture);
     }
