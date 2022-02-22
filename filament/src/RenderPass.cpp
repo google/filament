@@ -567,7 +567,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
         Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
-        auto const& customCommands = mCustomCommands;
+        auto customCommands = mCustomCommands.data();
 
         first--;
         while (++first != last) {
@@ -577,6 +577,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
 
             if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
                 uint32_t index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
+                assert_invariant(index < mCustomCommands.size());
                 customCommands[index]();
                 continue;
             }
