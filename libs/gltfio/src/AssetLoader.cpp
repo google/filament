@@ -634,6 +634,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
             return false;
         }
+        if (atype == cgltf_attribute_type_weights && index > 0) {
+            utils::slog.e << "Too many bone weights in " << name << utils::io::endl;
+            continue;
+        }
+        if (atype == cgltf_attribute_type_joints && index > 0) {
+            utils::slog.e << "Too many joints in " << name << utils::io::endl;
+            continue;
+        }
         if (atype == cgltf_attribute_type_texcoord) {
             if (index >= UvMapSize) {
                 utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
