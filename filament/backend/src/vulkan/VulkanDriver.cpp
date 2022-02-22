@@ -1020,6 +1020,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // Sometimes we need to permit the shader to sample the depth attachment by transitioning the
     // layout of all its subresources to a read-only layout. This is especially crucial for SSAO.
     //
+    // We cannot perform this transition using the render pass because the shaders in this render
+    // pass might sample from multiple miplevels.
+    //
     // We do not use GENERAL here due to the following validation message:
     //
     //   The Vulkan spec states: Image subresources used as attachments in the current render pass
@@ -1031,7 +1034,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     //
     if (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
         depthFeedback = depth.texture;
-        renderPassDepthLayout = VulkanDepthLayout::READ_ONLY;
+        VkImageSubresourceRange range = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = depth.texture->levels,
+            .baseArrayLayer = 0,
+            .layerCount = depth.texture->depth,
+        };
+        depth.texture->transitionLayout(cmdbuffer, range, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+        initialDepthLayout = renderPassDepthLayout = finalDepthLayout = VulkanDepthLayout::READ_ONLY;
     }
 
     if (depth.texture) {
@@ -1175,9 +1186,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     mContext.currentRenderPass = {
         .renderPass = renderPassInfo.renderPass,
-        .subpassMask = params.subpassMask,
+        .params = params,
         .currentSubpass = 0,
-        .depthFeedback = depthFeedback
     };
 }
 
@@ -1187,14 +1197,18 @@ void VulkanDriver::endRenderPass(int) {
 
     assert_invariant(mCurrentRenderTarget);
 
-    // In most cases, the image layout used during the render pass is the same as "finalLayout".
-    // i.e. there is no transition at the end. However one exception is depth, which can sometimes
-    // be transitioned from DEPTH_STENCIL_READ_ONLY_OPTIMAL to GENERAL. Here we detect this case
-    // and notify the texture wrapper for proper tracking.
-    VulkanTexture* depthFeedbackTexture = mContext.currentRenderPass.depthFeedback;
-    if (depthFeedbackTexture) {
+    // In some cases, depth needs to be transitioned from DEPTH_STENCIL_READ_ONLY_OPTIMAL back to
+    // GENERAL. We did not do this using the render pass because we need to change multiple mips.
+    if (mContext.currentRenderPass.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
         const VulkanAttachment& depth = mCurrentRenderTarget->getDepth();
-        depthFeedbackTexture->trackLayout(depth.level, depth.layer,
+        VkImageSubresourceRange range = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = depth.texture->levels,
+            .baseArrayLayer = 0,
+            .layerCount = depth.texture->depth,
+        };
+        depth.texture->transitionLayout(cmdbuffer, range,
                 getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
     }
 
@@ -1241,7 +1255,7 @@ void VulkanDriver::nextSubpass(int) {
             "Only two subpasses are currently supported.");
 
     assert_invariant(mCurrentRenderTarget);
-    assert_invariant(mContext.currentRenderPass.subpassMask);
+    assert_invariant(mContext.currentRenderPass.params.subpassMask);
 
     vkCmdNextSubpass(mContext.commands->get().cmdbuffer, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1249,7 +1263,7 @@ void VulkanDriver::nextSubpass(int) {
             ++mContext.currentRenderPass.currentSubpass);
 
     for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
-        if ((1 << i) & mContext.currentRenderPass.subpassMask) {
+        if ((1 << i) & mContext.currentRenderPass.params.subpassMask) {
             VulkanAttachment subpassInput = mCurrentRenderTarget->getColor(i);
             VkDescriptorImageInfo info = {
                 .imageView = subpassInput.getImageView(VK_IMAGE_ASPECT_COLOR_BIT),
@@ -1787,19 +1801,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 .imageView = texture->getPrimaryImageView(),
                 .imageLayout = texture->getPrimaryImageLayout()
             };
-
-            // TODO: it should not be necessary to use a custom image view here, instead we should
-            // transition all levels that need to be transitioned.
-            if (mContext.currentRenderPass.depthFeedback == texture) {
-                VkImageSubresourceRange range = {
-                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-                };
-                iInfo[bindingPoint].imageView = texture->getImageView(range);
-            }
         }
     }
 
