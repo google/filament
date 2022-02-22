@@ -214,7 +214,7 @@ int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const 
             continue;
         }
         // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
-        if (!(pass.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
+        if (!(pass.params.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
             count++;
         }
     }
