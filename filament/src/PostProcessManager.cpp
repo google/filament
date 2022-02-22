@@ -133,6 +133,7 @@ FMaterial* PostProcessManager::PostProcessMaterial::loadMaterial() const noexcep
     return mMaterial;
 }
 
+UTILS_NOINLINE
 FMaterial* PostProcessManager::PostProcessMaterial::assertMaterial() const noexcept {
     if (UTILS_UNLIKELY(!mHasMaterial)) {
         return loadMaterial();
@@ -140,6 +141,7 @@ FMaterial* PostProcessManager::PostProcessMaterial::assertMaterial() const noexc
     return mMaterial;
 }
 
+UTILS_NOINLINE
 PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(Variant::type_t variantKey) const noexcept {
     FMaterial* const material = assertMaterial();
     return {
@@ -149,11 +151,13 @@ PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(Variant:
     };
 }
 
+UTILS_NOINLINE
 FMaterial* PostProcessManager::PostProcessMaterial::getMaterial() const {
     assertMaterial();
     return mMaterial;
 }
 
+UTILS_NOINLINE
 FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance() const {
     FMaterial* const material = assertMaterial();
     return material->getDefaultInstance();
@@ -189,6 +193,7 @@ void PostProcessManager::registerPostProcessMaterial(utils::StaticString name, u
     mMaterialRegistry.try_emplace(name, mEngine, data, size);
 }
 
+UTILS_NOINLINE
 PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(utils::StaticString name) noexcept {
     assert_invariant(mMaterialRegistry.find(name) != mMaterialRegistry.end());
     return mMaterialRegistry[name];
