@@ -2,6 +2,7 @@ material {
     name : Transparent,
     blending : transparent,
     transparency : twoPassesTwoSides,
+    doubleSided: true,
     postLightingBlending : transparent,
     parameters : [
         //////////////////////////////////////////////////////////////////////////////////////////////////

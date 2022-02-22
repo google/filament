@@ -231,7 +231,7 @@ void ApplyOcclusion(inout MaterialInputs material, inout FragmentData fragmentDa
     } else {
         material.ambientOcclusion = materialParams.occlusion;
     }
-    material.ambientOcclusion = max(1.0 - materialParams.occlusionIntensity * (1.0 - material.ambientOcclusion), 0.0);
+    material.ambientOcclusion = clamp(1.0 - materialParams.occlusionIntensity * (1.0 - material.ambientOcclusion), 0.0, 1.0);
 #endif
 }
 
