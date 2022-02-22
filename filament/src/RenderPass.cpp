@@ -47,6 +47,7 @@ RenderPass::RenderPass(FEngine& engine,
 
 RenderPass::RenderPass(RenderPass const& rhs) = default;
 
+// this destructor is actually heavy because it inlines ~vector<>
 RenderPass::~RenderPass() noexcept = default;
 
 RenderPass::Command* RenderPass::append(size_t count) noexcept {
@@ -137,7 +138,7 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
 }
 
 void RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
-        std::function<void()> command) {
+        Executor::CustomCommandFn command) {
 
     assert((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
@@ -618,8 +619,8 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
             }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
-                // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
-                // and use bindUniformBufferRange which might be more efficient.
+                // Instead of using a UBO per primitive, we could also have a single UBO for all
+                // primitives and use bindUniformBufferRange which might be more efficient.
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphWeightBuffer);
 
@@ -634,5 +635,21 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+
+RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
+        : mEngine(pass->mEngine), mBegin(b), mEnd(e), mRenderableSoa(*pass->mRenderableSoa),
+          mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
+          mPolygonOffset(pass->mPolygonOffset),
+          mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {
+    assert_invariant(b >= pass->begin());
+    assert_invariant(e <= pass->end());
+}
+
+RenderPass::Executor::Executor(Executor const& rhs) = default;
+
+// this destructor is actually heavy because it inlines ~vector<>
+RenderPass::Executor::~Executor() noexcept = default;
 
 } // namespace filament
