@@ -35,9 +35,26 @@ void main() {
         // because we ensure the worldFromModelNormalMatrix pre-scales the normal such that
         // all its components are < 1.0. This prevents the bitangent to exceed the range of fp16
         // in the fragment shader, where we renormalize after interpolation
+        #if defined(IN_SHAPR_SHADER)
         vertex_worldTangent.xyz = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent.xyz;
+        #endif
         vertex_worldTangent.w = mesh_tangents.w;
         material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+
+        #if !defined(IN_SHAPR_SHADER)
+        // Compute the tangent according to Frisvad's paper
+        // see: https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
+        // We need to swap axes compared to the paper, to have the singularity at -Y (bottom in Filament coordinates)
+        // Handle the singularity
+        if (material.worldNormal.y < -0.9999999) {
+            vertex_worldTangent.xyz = vec3(0.0, 0.0, -1.0);
+        } else {
+            float a = 1.0 / (1.0 + material.worldNormal.y);
+            float b = -material.worldNormal.x * material.worldNormal.z * a;
+            vertex_worldTangent.xyz = vec3(1.0 - material.worldNormal.x * material.worldNormal.x * a, b, -material.worldNormal.x);
+        }
+        #endif
+
     #else // MATERIAL_NEEDS_TBN
         // Without anisotropy or normal mapping we only need the normal vector
         toTangentFrame(mesh_tangents, material.worldNormal);
