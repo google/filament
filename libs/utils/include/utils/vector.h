@@ -17,6 +17,7 @@
 #ifndef TNT_UTILS_VECTOR_H
 #define TNT_UTILS_VECTOR_H
 
+#include <algorithm>
 #include <vector>
 
 namespace utils {
