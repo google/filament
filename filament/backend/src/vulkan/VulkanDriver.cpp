@@ -1800,6 +1800,15 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 mDisposer.acquire(texture);
             }
 
+            if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VK_IMAGE_LAYOUT_UNDEFINED)) {
+#ifndef NDEBUG
+                utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
+                utils::slog.w << " in material '" << program->name.c_str() << "'";
+                utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
+#endif
+                texture = mContext.emptyTexture;
+            }
+
             const SamplerParams& samplerParams = boundSampler->s;
             VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
 
