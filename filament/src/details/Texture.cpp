@@ -180,6 +180,14 @@ size_t FTexture::getDepth(size_t level) const noexcept {
     return valueForLevel(level, mDepth);
 }
 
+void FTexture::setImage(FEngine& engine, size_t level,
+        Texture::PixelBufferDescriptor&& buffer) const {
+    setImage(engine, level, 0, 0,
+            uint32_t(getWidth(level)), uint32_t(getHeight(level)),
+            std::move(buffer));
+}
+
+UTILS_NOINLINE
 void FTexture::setImage(FEngine& engine,
         size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         Texture::PixelBufferDescriptor&& buffer) const {
@@ -242,10 +250,10 @@ void FTexture::setImage(FEngine& engine,
             uint8_t(level), xoffset, yoffset, width, height, std::move(buffer));
 }
 
-void FTexture::setImage(FEngine& engine,
-        size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+void FTexture::setImage(FEngine& engine, size_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
-        Texture::PixelBufferDescriptor&& buffer) const {
+        FTexture::PixelBufferDescriptor&& buffer) const {
 
     auto validateTarget = [](SamplerType sampler) -> bool {
         switch (sampler) {
