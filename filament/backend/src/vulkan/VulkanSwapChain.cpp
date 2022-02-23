@@ -29,14 +29,6 @@ namespace backend {
 bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
         currentSwapIndex = (currentSwapIndex + 1) % mColor.size();
-
-        // Next we perform a quick sanity check on layout for headless swap chains. It's easier to
-        // catch errors here than with validation. If this is the first time a particular image has
-        // been acquired, it should be in an UNDEFINED state. If this is not the first time, then it
-        // should be in the normal layout that we use for color attachments.
-        assert_invariant(this->getColorAttachment().layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-                this->getColorAttachment().layout == getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
-
         return true;
     }
 
@@ -51,11 +43,6 @@ bool VulkanSwapChain::acquire() {
         slog.w << "Vulkan Driver: Suboptimal swap chain." << io::endl;
         suboptimal = true;
     }
-
-    // Next perform a quick sanity check on the image layout. Similar to attachable textures, we
-    // immediately transition the swap chain image layout during the first render pass of the frame.
-    assert_invariant(this->getColorAttachment().layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-            this->getColorAttachment().layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // To ensure that the next command buffer submission does not write into the image before
     // it has been acquired, push the image available semaphore into the command buffer manager.
