@@ -29,7 +29,6 @@
 #include <utils/EntityManager.h>
 #include <utils/Range.h>
 #include <utils/Systrace.h>
-#include <utils/Zip2Iterator.h>
 
 #include <algorithm>
 
@@ -366,24 +365,29 @@ inline void FScene::computeLightRanges(
     }
 }
 
+UTILS_NOINLINE
 void FScene::addEntity(Entity entity) {
     mEntities.insert(entity);
 }
 
+UTILS_NOINLINE
 void FScene::addEntities(const Entity* entities, size_t count) {
     mEntities.insert(entities, entities + count);
 }
 
+UTILS_NOINLINE
 void FScene::remove(Entity entity) {
     mEntities.erase(entity);
 }
 
+UTILS_NOINLINE
 void FScene::removeEntities(const Entity* entities, size_t count) {
     for (size_t i = 0; i < count; ++i, ++entities) {
         remove(*entities);
     }
 }
 
+UTILS_NOINLINE
 size_t FScene::getRenderableCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager& em = engine.getEntityManager();
@@ -396,6 +400,7 @@ size_t FScene::getRenderableCount() const noexcept {
     return count;
 }
 
+UTILS_NOINLINE
 size_t FScene::getLightCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager& em = engine.getEntityManager();
@@ -408,10 +413,12 @@ size_t FScene::getLightCount() const noexcept {
     return count;
 }
 
+UTILS_NOINLINE
 bool FScene::hasEntity(Entity entity) const noexcept {
     return mEntities.find(entity) != mEntities.end();
 }
 
+UTILS_NOINLINE
 void FScene::setSkybox(FSkybox* skybox) noexcept {
     std::swap(mSkybox, skybox);
     if (skybox) {
@@ -442,6 +449,7 @@ bool FScene::hasContactShadows() const noexcept {
     return hasContactShadows && mHasContactShadows;
 }
 
+UTILS_NOINLINE
 void FScene::forEach(Invocable<void(utils::Entity)>&& functor) const noexcept {
     std::for_each(mEntities.begin(), mEntities.end(), std::move(functor));
 }
