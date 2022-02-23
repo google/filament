@@ -50,13 +50,14 @@ void FDebugRegistry::registerProperty(utils::StaticString name, void *p, Type ty
     }
 }
 
+UTILS_NOINLINE
 inline bool FDebugRegistry::hasProperty(const char *name) const noexcept {
     return const_cast<FDebugRegistry *>(this)->getPropertyAddress(name) != nullptr;
 }
 
 template<typename T>
 inline bool FDebugRegistry::setProperty(const char *name, T v) noexcept {
-    if (DEBUG_PROPERTIES_WRITABLE) {
+    if constexpr (DEBUG_PROPERTIES_WRITABLE) {
         T * const addr = static_cast<T *>(getPropertyAddress(name));
         if (addr) {
             *addr = v;
@@ -83,6 +84,7 @@ void FDebugRegistry::registerDataSource(StaticString name, void const* data, siz
     }
 }
 
+UTILS_NOINLINE
 DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
     StaticString key = StaticString::make(name, strlen(name));
     auto &dataSourceMap = mDataSourceMap;
