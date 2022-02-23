@@ -160,27 +160,4 @@ void FRenderTarget::terminate(FEngine& engine) {
     driver.destroyRenderTarget(mHandle);
 }
 
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-Texture* RenderTarget::getTexture(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).texture;
-}
-
-uint8_t RenderTarget::getMipLevel(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).mipLevel;
-}
-
-RenderTarget::CubemapFace RenderTarget::getFace(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).face;
-}
-
-uint32_t RenderTarget::getLayer(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).layer;
-}
-
-uint8_t RenderTarget::getSupportedColorAttachmentsCount() const noexcept {
-    return upcast(this)->getSupportedColorAttachmentsCount();
-}
-
 } // namespace filament

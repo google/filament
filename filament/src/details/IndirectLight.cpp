@@ -268,48 +268,4 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
    return getColorEstimate(mIrradianceCoefs.data(), direction);
 }
 
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-void IndirectLight::setIntensity(float intensity) noexcept {
-    upcast(this)->setIntensity(intensity);
-}
-
-float IndirectLight::getIntensity() const noexcept {
-    return upcast(this)->getIntensity();
-}
-
-void IndirectLight::setRotation(mat3f const& rotation) noexcept {
-    upcast(this)->setRotation(rotation);
-}
-
-const math::mat3f& IndirectLight::getRotation() const noexcept {
-    return upcast(this)->getRotation();
-}
-
-Texture const* IndirectLight::getReflectionsTexture() const noexcept {
-    return upcast(this)->getReflectionsTexture();
-}
-
-Texture const* IndirectLight::getIrradianceTexture() const noexcept {
-    return upcast(this)->getIrradianceTexture();
-}
-
-math::float3 IndirectLight::getDirectionEstimate() const noexcept {
-    return upcast(this)->getDirectionEstimate();
-}
-
-math::float4 IndirectLight::getColorEstimate(math::float3 direction) const noexcept {
-    return upcast(this)->getColorEstimate(direction);
-}
-
-math::float3 IndirectLight::getDirectionEstimate(const math::float3* sh) noexcept {
-    return FIndirectLight::getDirectionEstimate(sh);
-}
-
-math::float4 IndirectLight::getColorEstimate(const math::float3* sh, math::float3 direction) noexcept {
-    return FIndirectLight::getColorEstimate(sh, direction);
-}
-
 } // namespace filament

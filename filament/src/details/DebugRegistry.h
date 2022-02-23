@@ -60,11 +60,15 @@ public:
 
     void registerDataSource(utils::StaticString name, void const* data, size_t count) noexcept;
 
+#if !defined(_MSC_VER)
+private:
+#endif
+    template<typename T> bool getProperty(const char* name, T* p) const noexcept;
+    template<typename T> bool setProperty(const char* name, T v) noexcept;
+
 private:
     friend class DebugRegistry;
     void registerProperty(utils::StaticString name, void* p, Type type) noexcept;
-    template <typename T> bool getProperty(const char* name, T* p) const noexcept;
-    template <typename T> bool setProperty(const char* name, T v) noexcept;
     bool hasProperty(const char* name) const noexcept;
     void* getPropertyAddress(const char* name) noexcept;
     DataSource getDataSource(const char* name) const noexcept;

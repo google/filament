@@ -165,24 +165,5 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> 
             offset * sizeof(PerRenderableUibBone));
 }
 
-
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-void SkinningBuffer::setBones(Engine& engine,
-        RenderableManager::Bone const* transforms, size_t count, size_t offset) {
-    upcast(this)->setBones(upcast(engine), transforms, count, offset);
-}
-
-void SkinningBuffer::setBones(Engine& engine,
-        math::mat4f const* transforms, size_t count, size_t offset) {
-    upcast(this)->setBones(upcast(engine), transforms, count, offset);
-}
-
-size_t SkinningBuffer::getBoneCount() const noexcept {
-    return upcast(this)->getBoneCount();
-}
-
 } // namespace filament
 
