@@ -69,17 +69,4 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
     engine.getDriverApi().updateIndexBuffer(mHandle, std::move(buffer), byteOffset);
 }
 
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-void IndexBuffer::setBuffer(Engine& engine,
-        IndexBuffer::BufferDescriptor&& buffer, uint32_t byteOffset) {
-    upcast(this)->setBuffer(upcast(engine), std::move(buffer), byteOffset);
-}
-
-size_t IndexBuffer::getIndexCount() const noexcept {
-    return upcast(this)->getIndexCount();
-}
-
 } // namespace filament

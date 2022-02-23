@@ -67,17 +67,4 @@ void FBufferObject::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32
     engine.getDriverApi().updateBufferObject(mHandle, std::move(buffer), byteOffset);
 }
 
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-void BufferObject::setBuffer(Engine& engine,
-        BufferObject::BufferDescriptor&& buffer, uint32_t byteOffset) {
-    upcast(this)->setBuffer(upcast(engine), std::move(buffer), byteOffset);
-}
-
-size_t BufferObject::getByteCount() const noexcept {
-    return upcast(this)->getByteCount();
-}
-
 } // namespace filament

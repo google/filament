@@ -271,32 +271,5 @@ void FMorphTargetBuffer::updateDataAt(backend::DriverApi& driver,
     }
 }
 
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex,
-        math::float3 const* positions, size_t count, size_t offset) {
-    upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count, offset);
-}
-
-void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex,
-        math::float4 const* positions, size_t count, size_t offset) {
-    upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count, offset);
-}
-
-void MorphTargetBuffer::setTangentsAt(Engine& engine, size_t targetIndex,
-        math::short4 const* tangents, size_t count, size_t offset) {
-    upcast(this)->setTangentsAt(upcast(engine), targetIndex, tangents, count, offset);
-}
-
-size_t MorphTargetBuffer::getVertexCount() const noexcept {
-    return upcast(this)->getVertexCount();
-}
-
-size_t MorphTargetBuffer::getCount() const noexcept {
-    return upcast(this)->getCount();
-}
-
 } // namespace filament
 

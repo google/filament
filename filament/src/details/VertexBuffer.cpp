@@ -245,22 +245,4 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
     }
 }
 
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-size_t VertexBuffer::getVertexCount() const noexcept {
-    return upcast(this)->getVertexCount();
-}
-
-void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
-        backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
-    upcast(this)->setBufferAt(upcast(engine), bufferIndex, std::move(buffer), byteOffset);
-}
-
-void VertexBuffer::setBufferObjectAt(Engine& engine, uint8_t bufferIndex,
-        BufferObject const* bufferObject) {
-    upcast(this)->setBufferObjectAt(upcast(engine), bufferIndex, upcast(bufferObject));
-}
-
 } // namespace filament

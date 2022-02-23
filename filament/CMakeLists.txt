@@ -49,25 +49,45 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/Box.cpp
+        src/BufferObject.cpp
+        src/Camera.cpp
         src/Color.cpp
         src/ColorSpace.cpp
         src/Culler.cpp
         src/DFG.cpp
+        src/DebugRegistry.cpp
+        src/Engine.cpp
         src/Exposure.cpp
+        src/Fence.cpp
         src/FrameInfo.cpp
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
+        src/IndexBuffer.cpp
+        src/IndirectLight.cpp
+        src/Material.cpp
+        src/MaterialInstance.cpp
         src/MaterialParser.cpp
+        src/MorphTargetBuffer.cpp
         src/PerViewUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
+        src/RenderTarget.cpp
+        src/Renderer.cpp
         src/ResourceAllocator.cpp
+        src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
+        src/SkinningBuffer.cpp
+        src/Skybox.cpp
+        src/Stream.cpp
+        src/SwapChain.cpp
+        src/Texture.cpp
         src/ToneMapper.cpp
         src/UniformBuffer.cpp
+        src/VertexBuffer.cpp
+        src/View.cpp
         src/Viewport.cpp
         src/components/CameraManager.cpp
         src/components/LightManager.cpp

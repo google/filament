@@ -140,17 +140,4 @@ Fence::FenceStatus FFence::FenceSignal::wait(uint64_t timeout) noexcept {
     return FenceStatus::CONDITION_SATISFIED;
 }
 
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-FenceStatus Fence::waitAndDestroy(Fence* fence, Mode mode) {
-    return FFence::waitAndDestroy(upcast(fence), mode);
-}
-
-FenceStatus Fence::wait(Mode mode, uint64_t timeout) {
-    return upcast(this)->wait(mode, timeout);
-}
-
-
 } // namespace filament

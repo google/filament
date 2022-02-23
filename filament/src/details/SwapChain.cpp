@@ -42,16 +42,4 @@ void FSwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void
     mEngine.getDriverApi().setFrameCompletedCallback(mSwapChain, callback, user);
 }
 
-void* SwapChain::getNativeWindow() const noexcept {
-    return upcast(this)->getNativeWindow();
-}
-
-void SwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
-    return upcast(this)->setFrameScheduledCallback(callback, user);
-}
-
-void SwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
-    return upcast(this)->setFrameCompletedCallback(callback, user);
-}
-
 } // namespace filament
