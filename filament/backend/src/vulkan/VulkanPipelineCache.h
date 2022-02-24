@@ -67,6 +67,9 @@ public:
     static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 3;
     static constexpr uint32_t INITIAL_DESCRIPTOR_SET_POOL_SIZE = 512;
 
+    #pragma clang diagnostic push
+    #pragma clang diagnostic warning "-Wpadded"
+
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
     // as a vertex assembler configuration. For simplicity it contains fixed-size arrays and does
@@ -83,43 +86,40 @@ public:
     };
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
+    // The following states are omitted because Filament never changes them:
+    // >>> depthClampEnable, rasterizerDiscardEnable, depthBoundsTestEnable, stencilTestEnable
+    // >>> minSampleShading, alphaToOneEnable, sampleShadingEnable, minDepthBounds, maxDepthBounds,
+    // >>> depthBiasClamp, polygonMode, lineWidth
     struct RasterState {
-        struct {
-            VkBool32                                   depthClampEnable;
-            VkBool32                                   rasterizerDiscardEnable;
-            VkPolygonMode                              polygonMode;
-            VkCullModeFlags                            cullMode;
-            VkFrontFace                                frontFace;
-            VkBool32                                   depthBiasEnable;
-            float                                      depthBiasConstantFactor;
-            float                                      depthBiasClamp;
-            float                                      depthBiasSlopeFactor;
-            float                                      lineWidth;
-        } rasterization;                              // 40 bytes
-        VkPipelineColorBlendAttachmentState blending; // 32 bytes
-        struct {
-            VkBool32                                  depthTestEnable;
-            VkBool32                                  depthWriteEnable;
-            VkCompareOp                               depthCompareOp;
-            VkBool32                                  depthBoundsTestEnable;
-            VkBool32                                  stencilTestEnable;
-            float                                     minDepthBounds;
-            float                                     maxDepthBounds;
-        } depthStencil;                               // 28 bytes
-        struct {
-            VkSampleCountFlagBits                    rasterizationSamples;
-            VkBool32                                 sampleShadingEnable;
-            float                                    minSampleShading;
-            VkBool32                                 alphaToCoverageEnable;
-            VkBool32                                 alphaToOneEnable;
-        } multisampling;                             // 20 bytes
-        uint32_t colorTargetCount;
+        // 4 bytes
+        VkCullModeFlags       cullMode : 2;
+        VkFrontFace           frontFace : 2;
+        VkBool32              depthBiasEnable : 1;
+        VkBool32              blendEnable : 1;
+        VkBool32              depthWriteEnable : 1;
+        VkBool32              alphaToCoverageEnable : 1;
+        VkBlendFactor         srcColorBlendFactor : 5;
+        VkBlendFactor         dstColorBlendFactor : 5;
+        VkBlendFactor         srcAlphaBlendFactor : 5;
+        VkBlendFactor         dstAlphaBlendFactor : 5;
+        VkColorComponentFlags colorWriteMask : 4;
+
+        // 4 bytes:
+        uint8_t               rasterizationSamples;
+        uint8_t               colorTargetCount;
+        VkBlendOp             colorBlendOp : 3;
+        VkBlendOp             alphaBlendOp : 3;
+        VkCompareOp           depthCompareOp : 3;
+        uint8_t               padding0 : 7;
+
+        float                 depthBiasConstantFactor;
+        float                 depthBiasSlopeFactor;
     };
 
     static_assert(std::is_trivially_copyable<RasterState>::value,
             "RasterState must be a POD for fast hashing.");
 
-    static_assert(sizeof(RasterState) == 124, "RasterState must not have any padding.");
+    static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
     struct UniformBufferBinding {
         VkBuffer buffer;
@@ -212,25 +212,26 @@ private:
     // VkPipeline object.
     struct PipelineKey {
         VkShaderModule shaders[SHADER_MODULE_COUNT]; // 16 bytes
-        RasterState rasterState;                     // 124 bytes
         VkPrimitiveTopology topology;                // 4 bytes
+        uint32_t padding0;                           // 4 byte  TODO: remove?
         VkRenderPass renderPass;                     // 8 bytes
         uint16_t subpassIndex;                       // 2 bytes
-        uint16_t padding0;                           // 2 bytes
+        uint16_t padding1;                           // 2 bytes TODO: remove?
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 256 bytes
         VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 192 bytes
-        uint32_t padding1;                                                          // 4 bytes
+        RasterState rasterState;                     // 16 bytes
+        uint32_t padding2;                           // 4 bytes: TODO: remove?
     };
 
     static_assert(sizeof(VkVertexInputBindingDescription) == 12);
 
-    static_assert(offsetof(PipelineKey, rasterState)      == 16);
-    static_assert(offsetof(PipelineKey, topology)         == 140);
-    static_assert(offsetof(PipelineKey, renderPass)       == 144);
-    static_assert(offsetof(PipelineKey, subpassIndex)     == 152);
-    static_assert(offsetof(PipelineKey, vertexAttributes) == 156);
-    static_assert(offsetof(PipelineKey, vertexBuffers)    == 412);
-    static_assert(sizeof(PipelineKey) == 608, "PipelineKey must not have any padding.");
+    static_assert(offsetof(PipelineKey, topology)         == 16);
+    static_assert(offsetof(PipelineKey, renderPass)       == 24);
+    static_assert(offsetof(PipelineKey, subpassIndex)     == 32);
+    static_assert(offsetof(PipelineKey, vertexAttributes) == 36);
+    static_assert(offsetof(PipelineKey, vertexBuffers)    == 292);
+    static_assert(offsetof(PipelineKey, rasterState)      == 484);
+    static_assert(sizeof(PipelineKey) == 504, "PipelineKey must not have implicit padding.");
 
     static_assert(std::is_trivially_copyable<PipelineKey>::value,
             "PipelineKey must be a POD for fast hashing.");
@@ -323,6 +324,8 @@ private:
         //
         std::array<std::vector<VkDescriptorSet>, DESCRIPTOR_TYPE_COUNT> descriptorSetArenas;
     };
+
+    #pragma clang diagnostic pop
 
     // CACHE CONTAINERS
     // ----------------

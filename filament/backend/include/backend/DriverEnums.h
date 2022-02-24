@@ -809,7 +809,7 @@ struct Attribute {
 using AttributeArray = std::array<Attribute, MAX_VERTEX_ATTRIBUTE_COUNT>;
 
 //! Raster state descriptor
-struct RasterState {
+struct  RasterState {
 
     using CullingMode = backend::CullingMode;
     using DepthFunc = backend::SamplerCompareFunc;
