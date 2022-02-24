@@ -218,6 +218,8 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     // running into a sampler count limitation. TODO: check if these constraints can now be relaxed.
     bool clearCoatNeedsTexture = true;
 
+    bool volumeThicknessNeedsTexture = false;
+
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);
     mi->setParameter("metallicRoughnessUvMatrix", identity);
@@ -248,6 +250,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         }
         if (config->hasVolume) {
             clearCoatNeedsTexture = false;
+            volumeThicknessNeedsTexture = true;
             mi->setParameter("volumeThicknessUvMatrix", identity);
             mi->setParameter("volumeThicknessIndex",
                     getUvIndex(config->transmissionUV, config->hasVolumeThicknessTexture));
@@ -279,6 +282,9 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         mi->setParameter("clearCoatMap", mDummyTexture, sampler);
         mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
         mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
+    }
+    if (volumeThicknessNeedsTexture) {
+        mi->setParameter("volumeThicknessMap", mDummyTexture, sampler);
     }
     if (!config->hasClearCoat) {
         if (config->hasTransmission) {
