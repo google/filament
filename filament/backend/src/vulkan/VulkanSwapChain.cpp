@@ -28,14 +28,16 @@ namespace backend {
 
 bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
-        currentSwapIndex = (currentSwapIndex + 1) % mColor.size();
+        mCurrentSwapIndex = (mCurrentSwapIndex + 1) % mColor.size();
+
+        UTILS_UNUSED_IN_RELEASE const VkImageLayout layout = getColorTexture().getVkLayout(0, 0);
 
         // Next we perform a quick sanity check on layout for headless swap chains. It's easier to
         // catch errors here than with validation. If this is the first time a particular image has
         // been acquired, it should be in an UNDEFINED state. If this is not the first time, then it
         // should be in the normal layout that we use for color attachments.
-        assert_invariant(this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_UNDEFINED ||
-                this->getColorAttachment().getLayout() == getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
+        assert_invariant(layout == VK_IMAGE_LAYOUT_UNDEFINED ||
+                layout == getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
 
         return true;
     }
@@ -43,7 +45,7 @@ bool VulkanSwapChain::acquire() {
     // This immediately retrieves the index of the next available presentable image, and
     // asynchronously requests the GPU to trigger the "imageAvailable" semaphore.
     VkResult result = vkAcquireNextImageKHR(mContext.device, swapchain,
-            UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &currentSwapIndex);
+            UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &mCurrentSwapIndex);
 
     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
     // log messages or a loop of re-creations.
@@ -52,10 +54,12 @@ bool VulkanSwapChain::acquire() {
         suboptimal = true;
     }
 
+    UTILS_UNUSED_IN_RELEASE const VkImageLayout layout = getColorTexture().getVkLayout(0, 0);
+
     // Next perform a quick sanity check on the image layout. Similar to attachable textures, we
     // immediately transition the swap chain image layout during the first render pass of the frame.
-    assert_invariant(this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_UNDEFINED ||
-            this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    assert_invariant(layout == VK_IMAGE_LAYOUT_UNDEFINED ||
+            layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // To ensure that the next command buffer submission does not write into the image before
     // it has been acquired, push the image available semaphore into the command buffer manager.
@@ -213,7 +217,7 @@ void VulkanSwapChain::makePresentable() {
     if (headlessQueue) {
         return;
     }
-    VulkanTexture& texture = *mColor[currentSwapIndex];
+    VulkanTexture& texture = getColorTexture();
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -343,18 +347,12 @@ bool VulkanSwapChain::hasResized() const {
     return !equivalent(clientSize, surfaceCapabilities.currentExtent);
 }
 
-VulkanAttachment VulkanSwapChain::getColorAttachment() const {
-    VulkanTexture& tex = getColorTexture();
-    return VulkanAttachment { .texture = &tex, .level = 0, .layer = 0 };
-}
-
-VulkanAttachment VulkanSwapChain::getDepthAttachment() const {
-    VulkanTexture& tex = *this->mDepth.get();
-    return VulkanAttachment { .texture = &tex, .level = 0, .layer = 0 };
-}
-
 VulkanTexture& VulkanSwapChain::getColorTexture() const {
-    return *this->mColor[this->currentSwapIndex];
+    return *mColor[mCurrentSwapIndex];
+}
+
+VulkanTexture& VulkanSwapChain::getDepthTexture() const {
+    return *mDepth;
 }
 
 } // namespace filament

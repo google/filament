@@ -1361,13 +1361,14 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
     // Present the backbuffer after the most recent command buffer submission has finished.
     VkSemaphore renderingFinished = mContext.commands->acquireFinishedSignal();
+    uint32_t currentSwapIndex = surface.getSwapIndex();
     VkPresentInfoKHR presentInfo {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &renderingFinished,
         .swapchainCount = 1,
         .pSwapchains = &surface.swapchain,
-        .pImageIndices = &surface.currentSwapIndex,
+        .pImageIndices = &currentSwapIndex,
     };
     VkResult result = vkQueuePresentKHR(surface.presentQueue, &presentInfo);
 
