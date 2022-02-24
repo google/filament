@@ -60,7 +60,7 @@ struct VulkanRenderTarget : private HwRenderTarget {
     VulkanAttachment getMsaaColor(int target) const;
     VulkanAttachment getDepth() const;
     VulkanAttachment getMsaaDepth() const;
-    int getColorTargetCount(const VulkanRenderPass& pass) const;
+    uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
     bool hasDepth() const { return mDepth.texture; }
     bool isSwapChain() const { return !mOffscreen; }

@@ -359,15 +359,18 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     shaderStages[0].module = mPipelineRequirements.shaders[0];
     shaderStages[1].module = mPipelineRequirements.shaders[1];
 
-    // We don't store array sizes to save space, but it's quick to count all non-zero
-    // entries because these arrays have a small fixed-size capacity.
+    // Expand our size-optimized structs into the proper Vk structs.
     uint32_t numVertexAttribs = 0;
     uint32_t numVertexBuffers = 0;
+    VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT];
+    VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];
     for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
         if (mPipelineRequirements.vertexAttributes[i].format > 0) {
+            vertexAttributes[numVertexAttribs] = mPipelineRequirements.vertexAttributes[i];
             numVertexAttribs++;
         }
         if (mPipelineRequirements.vertexBuffers[i].stride > 0) {
+            vertexBuffers[numVertexBuffers] = mPipelineRequirements.vertexBuffers[i];
             numVertexBuffers++;
         }
     }
@@ -375,13 +378,13 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     VkPipelineVertexInputStateCreateInfo vertexInputState = {};
     vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputState.vertexBindingDescriptionCount = numVertexBuffers;
-    vertexInputState.pVertexBindingDescriptions = mPipelineRequirements.vertexBuffers;
+    vertexInputState.pVertexBindingDescriptions = vertexBuffers;
     vertexInputState.vertexAttributeDescriptionCount = numVertexAttribs;
-    vertexInputState.pVertexAttributeDescriptions = mPipelineRequirements.vertexAttributes;
+    vertexInputState.pVertexAttributeDescriptions = vertexAttributes;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
     inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssemblyState.topology = mPipelineRequirements.topology;
+    inputAssemblyState.topology = (VkPrimitiveTopology) mPipelineRequirements.topology;
 
     VkPipelineViewportStateCreateInfo viewportState = {};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -432,30 +435,28 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     const auto& raster = mPipelineRequirements.rasterState;
 
-    vkRaster.depthClampEnable = raster.rasterization.depthClampEnable;
-    vkRaster.rasterizerDiscardEnable = raster.rasterization.rasterizerDiscardEnable;
-    vkRaster.polygonMode = raster.rasterization.polygonMode;
-    vkRaster.cullMode = raster.rasterization.cullMode;
-    vkRaster.frontFace = raster.rasterization.frontFace;
-    vkRaster.depthBiasEnable = raster.rasterization.depthBiasEnable;
-    vkRaster.depthBiasConstantFactor = raster.rasterization.depthBiasConstantFactor;
-    vkRaster.depthBiasClamp = raster.rasterization.depthBiasClamp;
-    vkRaster.depthBiasSlopeFactor = raster.rasterization.depthBiasSlopeFactor;
-    vkRaster.lineWidth = raster.rasterization.lineWidth;
+    vkRaster.polygonMode = VK_POLYGON_MODE_FILL;
+    vkRaster.cullMode = raster.cullMode;
+    vkRaster.frontFace = raster.frontFace;
+    vkRaster.depthBiasEnable = raster.depthBiasEnable;
+    vkRaster.depthBiasConstantFactor = raster.depthBiasConstantFactor;
+    vkRaster.depthBiasClamp = 0.0f;
+    vkRaster.depthBiasSlopeFactor = raster.depthBiasSlopeFactor;
+    vkRaster.lineWidth = 1.0f;
 
-    vkMs.rasterizationSamples = raster.multisampling.rasterizationSamples;
-    vkMs.sampleShadingEnable = raster.multisampling.sampleShadingEnable;
-    vkMs.minSampleShading = raster.multisampling.minSampleShading;
-    vkMs.alphaToCoverageEnable = raster.multisampling.alphaToCoverageEnable;
-    vkMs.alphaToOneEnable = raster.multisampling.alphaToOneEnable;
+    vkMs.rasterizationSamples = (VkSampleCountFlagBits) raster.rasterizationSamples;
+    vkMs.sampleShadingEnable = VK_FALSE;
+    vkMs.minSampleShading = 0.0f;
+    vkMs.alphaToCoverageEnable = raster.alphaToCoverageEnable;
+    vkMs.alphaToOneEnable = VK_FALSE;
 
-    vkDs.depthTestEnable = raster.depthStencil.depthTestEnable;
-    vkDs.depthWriteEnable = raster.depthStencil.depthWriteEnable;
-    vkDs.depthCompareOp = raster.depthStencil.depthCompareOp;
-    vkDs.depthBoundsTestEnable = raster.depthStencil.depthBoundsTestEnable;
-    vkDs.stencilTestEnable = raster.depthStencil.stencilTestEnable;
-    vkDs.minDepthBounds = raster.depthStencil.minDepthBounds;
-    vkDs.maxDepthBounds = raster.depthStencil.maxDepthBounds;
+    vkDs.depthTestEnable = VK_TRUE;
+    vkDs.depthWriteEnable = raster.depthWriteEnable;
+    vkDs.depthCompareOp = getCompareOp(raster.depthCompareOp);
+    vkDs.depthBoundsTestEnable = VK_FALSE;
+    vkDs.stencilTestEnable = VK_FALSE;
+    vkDs.minDepthBounds = 0.0f;
+    vkDs.maxDepthBounds = 0.0f;
 
     pipelineCreateInfo.pColorBlendState = &colorBlendState;
     pipelineCreateInfo.pViewportState = &viewportState;
@@ -464,7 +465,14 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     // Filament assumes consistent blend state across all color attachments.
     colorBlendState.attachmentCount = mPipelineRequirements.rasterState.colorTargetCount;
     for (auto& target : colorBlendAttachments) {
-        target = mPipelineRequirements.rasterState.blending;
+        target.blendEnable = mPipelineRequirements.rasterState.blendEnable;
+        target.srcColorBlendFactor = mPipelineRequirements.rasterState.srcColorBlendFactor;
+        target.dstColorBlendFactor = mPipelineRequirements.rasterState.dstColorBlendFactor;
+        target.colorBlendOp = (VkBlendOp) mPipelineRequirements.rasterState.colorBlendOp;
+        target.srcAlphaBlendFactor = mPipelineRequirements.rasterState.srcAlphaBlendFactor;
+        target.dstAlphaBlendFactor = mPipelineRequirements.rasterState.dstAlphaBlendFactor;
+        target.alphaBlendOp = (VkBlendOp) mPipelineRequirements.rasterState.alphaBlendOp;
+        target.colorWriteMask = mPipelineRequirements.rasterState.colorWriteMask;
     }
 
     // There are no color attachments if there is no bound fragment shader.  (e.g. shadow map gen)
@@ -570,6 +578,7 @@ void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassInd
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {
+    assert_invariant(uint32_t(topology) <= 0xffffu);
     mPipelineRequirements.topology = topology;
 }
 
@@ -867,34 +876,18 @@ bool VulkanPipelineCache::DescEqual::operator()(const VulkanPipelineCache::Descr
 
 static VulkanPipelineCache::RasterState createDefaultRasterState() {
     return VulkanPipelineCache::RasterState {
-        .rasterization = {
-            .depthClampEnable = VK_FALSE,
-            .rasterizerDiscardEnable = VK_FALSE,
-            .polygonMode = VK_POLYGON_MODE_FILL,
-            .cullMode = VK_CULL_MODE_NONE,
-            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-            .depthBiasEnable = VK_FALSE,
-            .depthBiasConstantFactor = 0.0f,
-            .depthBiasClamp = 0.0f,
-            .depthBiasSlopeFactor = 0.0f,
-            .lineWidth = 1.0f,
-        },
-        .blending = {
-            .blendEnable = VK_FALSE,
-            .colorWriteMask = 0xf,
-        },
-        .depthStencil = {
-            .depthTestEnable = VK_TRUE,
-            .depthWriteEnable = VK_TRUE,
-            .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-            .depthBoundsTestEnable = VK_FALSE,
-            .stencilTestEnable = VK_FALSE,
-        },
-        .multisampling = {
-            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-            .alphaToCoverageEnable = true,
-        },
+        .cullMode = VK_CULL_MODE_NONE,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .blendEnable = VK_FALSE,
+        .depthWriteEnable = VK_TRUE,
+        .alphaToCoverageEnable = true,
+        .colorWriteMask = 0xf,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
         .colorTargetCount = 1,
+        .depthCompareOp = SamplerCompareFunc::LE,
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
     };
 }
 
