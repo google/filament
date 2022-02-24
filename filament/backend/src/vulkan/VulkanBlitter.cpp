@@ -222,6 +222,12 @@ void VulkanBlitter::lazyInit() noexcept {
     VkShaderModule fragmentShader = decode(VKSHADERS_BLITDEPTHFS_DATA, VKSHADERS_BLITDEPTHFS_SIZE);
     mDepthResolveProgram = new VulkanProgram(mContext, vertexShader, fragmentShader);
 
+    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+        utils::slog.d << "Created Shader Module for VulkanBlitter "
+                    << "shaders = (" << vertexShader << ", " << fragmentShader << ")"
+                    << utils::io::endl;
+    }
+
     static const float kTriangleVertices[] = {
         -1.0f, -1.0f,
         +1.0f, -1.0f,
