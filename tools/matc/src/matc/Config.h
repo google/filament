@@ -110,7 +110,7 @@ public:
         return mRawShaderMode;
     }
 
-    uint8_t getVariantFilter() const noexcept {
+    filament::UserVariantFilterMask getVariantFilter() const noexcept {
         return mVariantFilter;
     }
 
@@ -129,7 +129,7 @@ protected:
     OutputFormat mOutputFormat = OutputFormat::BLOB;
     TargetApi mTargetApi = (TargetApi) 0;
     std::unordered_map<std::string, std::string> mDefines;
-    uint8_t mVariantFilter = 0;
+    filament::UserVariantFilterMask mVariantFilter = 0;
 };
 
 }
