@@ -101,8 +101,8 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(
 
 void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     assert_invariant(!mOffscreen);
-    mColor[0] = swapChain.getColorAttachment();
-    mDepth = swapChain.getDepthAttachment();
+    mColor[0] = { .texture = &swapChain.getColorTexture() };
+    mDepth = { .texture = &swapChain.getDepthTexture() };
     width = swapChain.clientSize.width;
     height = swapChain.clientSize.height;
 }
