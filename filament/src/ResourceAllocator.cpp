@@ -205,7 +205,7 @@ void ResourceAllocator::gc() noexcept {
     //  - remove entries that are older than a certain age
     //      - remove only one entry per gc(),
     //      - unless we're at capacity
-    // - remove LRU entries until we're below capacity
+    // - remove LRU entries until we're below capacity (except most recent)
 
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
@@ -234,8 +234,9 @@ void ResourceAllocator::gc() noexcept {
         });
 
         // now remove entries until we're at capacity
+        // unless the entry was used in this frame
         auto curr = cache.begin();
-        while (mCacheSize >= CACHE_CAPACITY) {
+        while (mCacheSize >= CACHE_CAPACITY && curr->second.age < age) {
             // by construction this entry must exist
             purge(textureCache.find(curr->first));
             ++curr;
