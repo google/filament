@@ -235,6 +235,25 @@ void FEngine::init() {
     driverApi.setRenderPrimitiveRange(mFullScreenTriangleRph, PrimitiveType::TRIANGLES,
             0, 0, 2, (uint32_t)mFullScreenTriangleIb->getIndexCount());
 
+    // Compute a clip-space [-1 to 1] to texture space [0 to 1] matrix, taking into account
+    // backend differences.
+    const bool textureSpaceYFlipped = mBackend == Backend::METAL || mBackend == Backend::VULKAN;
+    if (textureSpaceYFlipped) {
+        mUvFromClipMatrix = mat4f(mat4f::row_major_init{
+                0.5f,  0.0f,   0.0f, 0.5f,
+                0.0f, -0.5f,   0.0f, 0.5f,
+                0.0f,  0.0f,   1.0f, 0.0f,
+                0.0f,  0.0f,   0.0f, 1.0f
+        });
+    } else {
+        mUvFromClipMatrix = mat4f(mat4f::row_major_init{
+                0.5f,  0.0f,   0.0f, 0.5f,
+                0.0f,  0.5f,   0.0f, 0.5f,
+                0.0f,  0.0f,   1.0f, 0.0f,
+                0.0f,  0.0f,   0.0f, 1.0f
+        });
+    }
+
     mDefaultIblTexture = upcast(Texture::Builder()
             .width(1).height(1).levels(1)
             .format(Texture::InternalFormat::RGBA8)

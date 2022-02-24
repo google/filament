@@ -78,7 +78,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
 #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
                 << ", variant = (" << utils::io::hex
-                << (int) builder.getVariant() << utils::io::dec << "), "
+                << (int) builder.getVariant().key() << utils::io::dec << "), "
                 << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
                 << utils::io::endl;
 #endif
@@ -227,7 +227,7 @@ VkExtent2D VulkanRenderTarget::getExtent(VulkanSwapChain* currentSurface) const 
 }
 
 VulkanAttachment VulkanRenderTarget::getColor(VulkanSwapChain* currentSurface, int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColor();
+    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColorAttachment();
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
@@ -235,7 +235,7 @@ VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
 }
 
 VulkanAttachment VulkanRenderTarget::getDepth(VulkanSwapChain* currentSurface) const {
-    return mOffscreen ? mDepth : currentSurface->depth;
+    return mOffscreen ? mDepth : currentSurface->getDepthAttachment();
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {

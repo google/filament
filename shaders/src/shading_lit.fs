@@ -206,15 +206,6 @@ void getSubsurfacePixelParams(const MaterialInputs material, inout PixelParams p
 #endif
 }
 
-void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams pixel) {
-#if defined(MATERIAL_HAS_ANISOTROPY)
-    vec3 direction = material.anisotropyDirection;
-    pixel.anisotropy = material.anisotropy;
-    pixel.anisotropicT = normalize(shading_tangentToWorld * direction);
-    pixel.anisotropicB = normalize(cross(getWorldGeometricNormalVector(), pixel.anisotropicT));
-#endif
-}
-
 void getEnergyCompensationPixelParams(inout PixelParams pixel) {
     // Pre-filtered DFG term used for image-based lighting
     pixel.dfg = prefilteredDFG(pixel.perceptualRoughness, shading_NoV);

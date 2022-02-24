@@ -18,7 +18,7 @@ float unpack(vec2 depth) {
 
 struct SSAOInterpolationCache {
     highp vec4 weights;
-#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
+#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED) || defined(MATERIAL_HAS_REFLECTIONS)
     highp vec2 uv;
 #endif
 };

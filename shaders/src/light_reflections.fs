@@ -2,7 +2,7 @@
 // Screen-space reflections
 //------------------------------------------------------------------------------
 
-#if defined(MATERIAL_HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
+#if defined(MATERIAL_HAS_REFLECTIONS)
 
 // Copied from depthUtils.fs
 highp float linearizeDepth(highp float depth) {
@@ -200,7 +200,7 @@ highp mat4 scaleMatrix(const highp float x, const highp float y) {
  *
  * If there is no hit, the return value is vec4(0).
  */
-vec4 evaluateScreenSpaceReflections(const PixelParams pixel, const vec3 wsRayDirection) {
+vec4 evaluateScreenSpaceReflections(const vec3 wsRayDirection) {
     vec4 Fr = vec4(0.0f);
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 
@@ -254,9 +254,10 @@ vec4 evaluateScreenSpaceReflections(const PixelParams pixel, const vec3 wsRayDir
         // note: vsDirection.z is the cos(vsDirection, view)
         fade *= (1.0 - max(0.0, vsDirection.z));
 
-        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0f).rgb, fade);
+        // we output a premultiplied alpha color because this is going to be mipmapped
+        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0).rgb * fade, fade);
     }
     return Fr;
 }
 
-#endif // screen-space reflections
+#endif // MATERIAL_HAS_REFLECTIONS

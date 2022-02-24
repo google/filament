@@ -95,7 +95,8 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
 }
 
 VulkanPipelineCache::~VulkanPipelineCache() {
-    destroyCache();
+    // This does nothing because VulkanDriver::terminate() calls destroyCache() in order to
+    // be explicit about teardown order of various components.
 }
 
 void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
@@ -144,11 +145,20 @@ void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
 bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
     DescriptorMap::iterator descriptorIter = mDescriptorSets.find(mDescriptorRequirements);
 
-    // Check if the required descriptors are already bound.
+    // Check if the required descriptors are already bound. If so, there's no need to do anything.
     if (DescEqual equals; UTILS_LIKELY(equals(mBoundDescriptor, mDescriptorRequirements))) {
-        assert_invariant(descriptorIter != mDescriptorSets.end());
-        descriptorIter.value().lastUsed = mCurrentTime;
-        return true;
+
+        // If the pipeline state during an app's first draw call happens to match the default state
+        // vector of the cache, then the cache is uninitialized and we should not return early.
+        if (UTILS_LIKELY(!mDescriptorSets.empty())) {
+
+            // Since the descriptors are already bound, they should be found in the cache.
+            assert_invariant(descriptorIter != mDescriptorSets.end());
+
+            // Update the LRU "time stamp" (really a count of cmd buf submissions) before returning.
+            descriptorIter.value().lastUsed = mCurrentTime;
+            return true;
+        }
     }
 
     // If a cached object exists, re-use it, otherwise create a new one.

@@ -171,7 +171,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
     // render target is supported, which has no associated texture.
     const VkImageLayout desiredLayout = dst.texture ?
             getDefaultImageLayout(dst.texture->usage) :
-            mContext.currentSurface->getColor().layout;
+            mContext.currentSurface->getColorAttachment().layout;
 
     transitionImageLayout(cmdbuffer, blitterTransitionHelper({
         .image = dst.image,
@@ -265,10 +265,14 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     // BEGIN RENDER PASS
     // -----------------
 
-    const VkImageLayout layout = getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT);
+    const VulkanDepthLayout layout =
+            fromVkImageLayout(getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
 
     const VulkanFboCache::RenderPassKey rpkey = {
-        .depthLayout = layout,
+        .initialColorLayoutMask = 0,
+        .initialDepthLayout = VulkanDepthLayout::UNDEFINED,
+        .renderPassDepthLayout = layout,
+        .finalDepthLayout = layout,
         .depthFormat = dst.format,
         .clear = {},
         .discardStart = TargetBufferFlags::DEPTH,
@@ -376,7 +380,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     samplers[0] = {
         .sampler = vksampler,
         .imageView = src.view,
-        .imageLayout = layout
+        .imageLayout = getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT)
     };
 
     mPipelineCache.bindSamplers(samplers);

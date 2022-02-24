@@ -20,7 +20,6 @@
 #include "GltfEnums.h"
 #include "FFilamentAsset.h"
 #include "TangentsJob.h"
-#include "MorphHelper.h"
 #include "upcast.h"
 
 #include <filament/BufferObject.h>
@@ -29,6 +28,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include <geometry/Transcoder.h>
 
@@ -96,7 +96,7 @@ struct ResourceLoader::Impl {
     bool mIgnoreBindTransform;
     std::string mGltfPath;
 
-    // This is used to calculate skinIndex when updateBoundingBoxes, so that the correspondency between 
+    // This is used to calculate skinIndex when updateBoundingBoxes, so that the correspondency between
     // cgltf_node* and FFilamentInstance::Skin can be retrieved. This pointer doesn't need to be freed.
     cgltf_skin* cgltfSkinBaseAddress;
 
@@ -502,18 +502,28 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
                     uploadCallback, uploadUserdata(asset)));
             slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
             continue;
-        }
-        assert(slot.indexBuffer);
-        if (accessor->component_type == cgltf_component_type_r_8u) {
-            const size_t size16 = size * 2;
-            uint16_t* data16 = (uint16_t*) malloc(size16);
-            convertBytesToShorts(data16, data, size);
-            IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
+        } else if (slot.indexBuffer) {
+            if (accessor->component_type == cgltf_component_type_r_8u) {
+                const size_t size16 = size * 2;
+                uint16_t* data16 = (uint16_t*) malloc(size16);
+                convertBytesToShorts(data16, data, size);
+                IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
+                slot.indexBuffer->setBuffer(engine, std::move(bd));
+                continue;
+            }
+            IndexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
             slot.indexBuffer->setBuffer(engine, std::move(bd));
             continue;
         }
-        IndexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
-        slot.indexBuffer->setBuffer(engine, std::move(bd));
+        assert(slot.morphTargetBuffer);
+        if (accessor->type == cgltf_type_vec3) {
+            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float3*) data, slot.morphTargetBuffer->getVertexCount());
+        } else {
+            assert_invariant(accessor->type == cgltf_type_vec4);
+            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float4*) data, slot.morphTargetBuffer->getVertexCount());
+        }
     }
 
     // Apply sparse data modifications to base arrays, then upload the result.
@@ -890,7 +900,43 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(Params {{ pair.first }, {vb, iter->second }});
+            jobParams.emplace_back(Params {{ pair.first }, {vb, nullptr, iter->second }});
+        }
+    }
+    // Create a job description for morph targets.
+    NodeMap& nodeMap = asset->isInstanced() ? asset->mInstances[0]->nodeMap : asset->mNodeMap;
+    for (auto iter : nodeMap) {
+        cgltf_node const* node = iter.first;
+        cgltf_mesh const* mesh = node->mesh;
+        if (UTILS_UNLIKELY(!mesh || !mesh->weights_count)) {
+            continue;
+        }
+        cgltf_primitive const* prims = mesh->primitives;
+        for (cgltf_size pindex = 0, pcount = mesh->primitives_count; pindex < pcount; ++pindex) {
+            const cgltf_primitive& prim = mesh->primitives[pindex];
+            const auto& gltfioPrim = asset->mMeshCache.at(mesh)[pindex];
+            MorphTargetBuffer* tb = gltfioPrim.targets;
+            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++ tindex) {
+                const cgltf_morph_target& target = prim.targets[tindex];
+                bool hasNormals = false;
+                for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
+                    const cgltf_attribute& attribute = target.attributes[aindex];
+                    const cgltf_accessor* accessor = attribute.data;
+                    const cgltf_attribute_type atype = attribute.type;
+                    if (atype != cgltf_attribute_type_tangent) {
+                        continue;
+                    }
+                    hasNormals = true;
+                    jobParams.emplace_back(Params { { &prim, (int) tindex },
+                                                    { nullptr, tb, (uint8_t) pindex } });
+                    break;
+                }
+                // Generate flat normals if necessary.
+                if (!hasNormals && !prim.material->unlit) {
+                    jobParams.emplace_back(Params { { &prim, (int) tindex },
+                                                    { nullptr, tb, (uint8_t) pindex } });
+                }
+            }
         }
     }
 
@@ -905,15 +951,20 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Finally, upload quaternions to the GPU from the main thread.
     for (Params& params : jobParams) {
-        BufferObject* bo = BufferObject::Builder()
-                .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
-        asset->mBufferObjects.push_back(bo);
-        bo->setBuffer(*mEngine, BufferDescriptor(
-                params.out.results, bo->getByteCount(), FREE_CALLBACK));
-        params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
+        if (params.context.vb) {
+            BufferObject* bo = BufferObject::Builder()
+                    .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
+            asset->mBufferObjects.push_back(bo);
+            bo->setBuffer(*mEngine, BufferDescriptor(
+                    params.out.results, bo->getByteCount(), FREE_CALLBACK));
+            params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
+        } else {
+            assert_invariant(params.context.tb);
+            params.context.tb->setTangentsAt(*mEngine, params.in.morphTargetIndex,
+                    params.out.results, params.out.vertexCount);
+            free(params.out.results);
+        }
     }
-
-    asset->mMorpher = new MorphHelper(asset, nullptr);
 }
 
 ResourceLoader::Impl::~Impl() {

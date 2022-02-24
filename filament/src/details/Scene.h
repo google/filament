@@ -72,6 +72,8 @@ public:
     size_t getLightCount() const noexcept;
     bool hasEntity(utils::Entity entity) const noexcept;
 
+    void forEach(utils::Invocable<void(utils::Entity)>&& functor) const noexcept;
+
 public:
     /*
      * Filaments-scope Public API

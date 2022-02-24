@@ -495,6 +495,13 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         builder.morphing(numMorphTargets);
     }
 
+    auto& morphTargetNames = mResult->mMorphTargetNames[entity];
+    assert_invariant(morphTargetNames.empty());
+    morphTargetNames.resize(numMorphTargets);
+    for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
+        morphTargetNames[i] = utils::StaticString::make(mesh->target_names[i]);
+    }
+
     const Aabb transformed = aabb.transform(worldTransform);
 
     // Expand the world-space bounding box.
@@ -535,6 +542,13 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             weights[i] = node->weights[i];
         }
         mRenderableManager.setMorphWeights(renderable, weights.data(), size);
+
+        // TODO: Set morph target buffers via builder.
+        outputPrim = mResult->mMeshCache[mesh].data();
+        for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim) {
+            MorphTargetBuffer* const morphTargetBuffer = outputPrim->targets;
+            mRenderableManager.setMorphTargetBufferAt(renderable, 0, index, morphTargetBuffer);
+        }
     }
 }
 
@@ -791,6 +805,35 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     for (size_t i = firstSlot; i < mResult->mBufferSlots.size(); ++i) {
         mResult->mBufferSlots[i].vertexBuffer = vertices;
+    }
+
+    if (targetsCount > 0) {
+        MorphTargetBuffer* targets = MorphTargetBuffer::Builder()
+                .vertexCount(vertexCount)
+                .count(targetsCount)
+                .build(*mEngine);
+        outPrim->targets = targets;
+        mResult->mMorphTargetBuffers.push_back(targets);
+        const cgltf_accessor* previous = nullptr;
+        for (int tindex = 0; tindex < targetsCount; ++tindex) {
+            const cgltf_morph_target& inTarget = inPrim->targets[tindex];
+            for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
+                const cgltf_attribute& attribute = inTarget.attributes[aindex];
+                const cgltf_accessor* accessor = attribute.data;
+                const cgltf_attribute_type atype = attribute.type;
+                if (atype == cgltf_attribute_type_position) {
+                    // All position attributes must have the same data type.
+                    assert_invariant(!previous || previous->component_type == accessor->component_type);
+                    assert_invariant(!previous || previous->type == accessor->type);
+                    previous = accessor;
+                    BufferSlot slot = { accessor };
+                    slot.morphTargetBuffer = targets;
+                    slot.bufferIndex = tindex;
+                    addBufferSlot(slot);
+                    break;
+                }
+            }
+        }
     }
 
     if (needsDummyData) {

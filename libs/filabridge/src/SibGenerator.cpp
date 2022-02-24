@@ -62,9 +62,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
     assert(sibPcf.getSize() == PerViewSib::SAMPLER_COUNT);
     assert(sibVsm.getSize() == PerViewSib::SAMPLER_COUNT);
 
-    Variant v(variant);
-
-    return v.hasVsm() ? sibVsm : sibPcf;
+    return Variant::isVSMVariant(variant) ? sibVsm : sibPcf;
 }
 
 SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Variant variant) noexcept {

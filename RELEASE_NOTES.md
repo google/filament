@@ -3,7 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.19.1 (currently main branch)
+## v1.20.1 (currently main branch)
+
+## v1.20.0
+
+- engine: Support rough screen-space reflections [⚠️ **Material breakage**].
+- engine: Added `Scene::forEach` API to iterate through a scene's entities.
+- engine: Fix incorrect normals with skinned models.
+- Vulkan: Fix segfault during shutdown.
+- WebGL: Support web apps that have multiple `FilamentViewer`s.
+- gltfio: Performance enhancements when loading models.
 
 ## v1.19.0
 

@@ -18,7 +18,6 @@
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
-#include "MorphHelper.h"
 #include "math.h"
 #include "upcast.h"
 
@@ -76,7 +75,6 @@ struct AnimatorImpl {
     RenderableManager* renderableManager;
     TransformManager* transformManager;
     vector<float> weights;
-    MorphHelper* morpher;
     void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst);
     void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
 };
@@ -221,8 +219,6 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
             }
         }
     }
-
-    mImpl->morpher = asset->mMorpher;
 }
 
 void Animator::addInstance(FFilamentInstance* instance) {

@@ -130,7 +130,7 @@ public:
     }
 
     float getFieldOfView(Camera::Fov direction) const noexcept {
-        // note: this is meaning less for an orthographic projection
+        // note: this is meaningless for an orthographic projection
         auto const& p = getProjectionMatrix();
         switch (direction) {
             case Fov::VERTICAL:

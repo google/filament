@@ -1050,7 +1050,7 @@ Type
 :    array of `string`
 
 Value
-:     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver` or `skinning`.
+:     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver`,`skinning` or `ssr`.
 
 Description
 :     Used to specify a list of shader variants that the application guarantees will never be
@@ -1068,6 +1068,7 @@ Description of the variants:
 - `skinning`, used when an object is animated using GPU skinning
 - `fog`, used when global fog is applied to the scene
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
+- `ssr`, used when screen-space reflections are enabled in the View
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -2337,6 +2338,7 @@ variants:
 - `skinning`, used when an object is animated using GPU skinning or vertex morphing
 - `fog`, used when global fog is applied to the scene
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
+- `ssr`, used when screen-space reflections are enabled in the View
 
 Example:
 ```

@@ -210,26 +210,6 @@ TEST_F(ViewSettingsTest, JsonTestMaterial) {
     ASSERT_PRED_FORMAT2(testing::IsSubstring, "\"baz\": [1, 2, 3]", serialized);
 }
 
-TEST_F(ViewSettingsTest, DefaultAutomationSpec) {
-    AutomationSpec* specs = AutomationSpec::generateDefaultTestCases();
-    ASSERT_TRUE(specs);
-    ASSERT_EQ(specs->size(), 66);
-
-    Settings settings;
-
-    ASSERT_TRUE(specs->get(0, &settings));
-    ASSERT_FALSE(settings.view.postProcessingEnabled);
-    ASSERT_EQ(settings.view.dithering, Dithering::TEMPORAL);
-
-    ASSERT_TRUE(specs->get(1, &settings));
-    ASSERT_TRUE(settings.view.postProcessingEnabled);
-
-    ASSERT_TRUE(specs->get(65, &settings));
-    ASSERT_FALSE(specs->get(66, &settings));
-
-    delete specs;
-}
-
 TEST_F(ViewSettingsTest, CustomAutomationSpec) {
     AutomationSpec* spec = AutomationSpec::generate(JSON_TEST_AUTOMATION,
             strlen(JSON_TEST_AUTOMATION));

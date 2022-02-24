@@ -46,6 +46,7 @@ set(SHADERS
         src/shading_model_standard.fs
         src/shading_model_subsurface.fs
         src/shading_parameters.fs
+        src/shading_reflections.fs
         src/shading_unlit.fs
         src/shadowing.fs
         src/vignette.fs
