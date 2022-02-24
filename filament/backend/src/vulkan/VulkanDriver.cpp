@@ -1125,6 +1125,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     if (depth.texture) {
         fbkey.depth = depth.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
         assert_invariant(fbkey.depth);
+
+        // Vulkan 1.1 does not support multisampled depth resolve.
+        assert_invariant(rt->getSamples() == 1 || any(rpkey.discardEnd & TargetBufferFlags::DEPTH));
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
