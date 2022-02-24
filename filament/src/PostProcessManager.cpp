@@ -1850,8 +1850,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
         // if we're scaling down by more than 2x, prescale the image with a blit to improve
         // performance. This is important on mobile/tilers.
         input = opaqueBlit(fg, input, {
-                .width = desc.width / 2,
-                .height = desc.height / 2,
+                .width = std::max(1u, desc.width / 2),
+                .height = std::max(1u, desc.height / 2),
                 .format = outFormat
         });
     }
@@ -1935,8 +1935,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.in = builder.sample(input);
                     data.out = builder.createTexture("Flare Texture", {
-                            .width  = width  / 2,
-                            .height = height / 2,
+                            .width  = std::max(1u, width  / 2),
+                            .height = std::max(1u, height / 2),
                             .format = outFormat
                     });
                     data.out = builder.declareRenderPass(data.out);
