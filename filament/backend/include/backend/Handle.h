@@ -18,13 +18,16 @@
 #define TNT_FILAMENT_BACKEND_HANDLE_H
 
 #include <utils/compiler.h>
+#if !defined(NDEBUG)
 #include <utils/Log.h>
+#endif
 #include <utils/debug.h>
+
+#include <stdint.h>
 
 #include <limits>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct HwBufferObject;
 struct HwFence;
@@ -41,7 +44,9 @@ struct HwTimerQuery;
 struct HwVertexBuffer;
 
 /*
- * A type handle to a h/w resource
+ * A handle to a backend resource. HandleBase is for internal use only.
+ * HandleBase *must* be a trivial for the purposes of calls, that is, it cannot have user-defined
+ * copy or move constructors.
  */
 
 //! \privatesection
@@ -53,41 +58,51 @@ public:
 
     constexpr HandleBase() noexcept: object(nullid) {}
 
-    explicit HandleBase(HandleId id) noexcept : object(id) {
-        assert_invariant(object != nullid); // usually means an uninitialized handle is used
-    }
-
-    HandleBase(HandleBase const& rhs) noexcept = default;
-    HandleBase(HandleBase&& rhs) noexcept : object(rhs.object) {
-        rhs.object = nullid;
-    }
-
-    HandleBase& operator=(HandleBase const& rhs) noexcept = default;
-    HandleBase& operator=(HandleBase&& rhs) noexcept {
-        std::swap(object, rhs.object);
-        return *this;
-    }
-
+    // whether this Handle is initialized
     explicit operator bool() const noexcept { return object != nullid; }
 
+    // clear the handle, this doesn't free associated resources
     void clear() noexcept { object = nullid; }
 
+    // compare handles
     bool operator==(const HandleBase& rhs) const noexcept { return object == rhs.object; }
     bool operator!=(const HandleBase& rhs) const noexcept { return object != rhs.object; }
+    bool operator<(const HandleBase& rhs) const noexcept { return object < rhs.object; }
+    bool operator<=(const HandleBase& rhs) const noexcept { return object <= rhs.object; }
+    bool operator>(const HandleBase& rhs) const noexcept { return object > rhs.object; }
+    bool operator>=(const HandleBase& rhs) const noexcept { return object >= rhs.object; }
 
     // get this handle's handleId
     HandleId getId() const noexcept { return object; }
 
+    // initialize a handle, for internal use only.
+    explicit HandleBase(HandleId id) noexcept : object(id) {
+        assert_invariant(object != nullid); // usually means an uninitialized handle is used
+    }
+
 protected:
+    HandleBase(HandleBase const& rhs) noexcept = default;
+
+private:
     HandleId object;
 };
 
-template <typename T>
+/**
+ * Type-safe handle to backend resources
+ * @tparam T Type of the resource
+ */
+template<typename T>
 struct Handle : public HandleBase {
-    using HandleBase::HandleBase;
 
+    Handle() noexcept = default;
+
+    Handle(Handle const& rhs) noexcept = default;
+
+    explicit Handle(HandleId id) noexcept : HandleBase(id) { }
+
+    // type-safe Handle cast
     template<typename B, typename = std::enable_if_t<std::is_base_of<T, B>::value> >
-    Handle(Handle<B> const& base) noexcept : HandleBase(base) { } // NOLINT(hicpp-explicit-conversions)
+    Handle(Handle<B> const& base) noexcept : HandleBase(base) { } // NOLINT(hicpp-explicit-conversions,google-explicit-constructor)
 
 private:
 #if !defined(NDEBUG)
@@ -112,7 +127,6 @@ using TextureHandle         = Handle<HwTexture>;
 using TimerQueryHandle      = Handle<HwTimerQuery>;
 using VertexBufferHandle    = Handle<HwVertexBuffer>;
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_HANDLE_H

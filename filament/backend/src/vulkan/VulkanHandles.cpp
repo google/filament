@@ -127,19 +127,16 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     mSamples = samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
             limits.framebufferColorSampleCounts);
 
-    // The sidecar textures need to have only 1 miplevel and 1 array slice.
-    const int level = 1;
-    const int depth = 1;
-
-    // Create sidecar MSAA textures for color attachments.
+    // Create sidecar MSAA textures for color attachments if they don't already exist.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         const VulkanAttachment& spec = color[index];
         VulkanTexture* texture = spec.texture;
         if (texture && texture->samples == 1) {
             VulkanTexture* msTexture = texture->getSidecar();
             if (UTILS_UNLIKELY(msTexture == nullptr)) {
-                msTexture = new VulkanTexture(context, texture->target, level,
-                        texture->format, samples, width, height, depth, texture->usage, stagePool);
+                msTexture = new VulkanTexture(context, texture->target, texture->levels,
+                        texture->format, samples, texture->width, texture->height, texture->depth,
+                        texture->usage, stagePool);
                 texture->setSidecar(msTexture);
             }
             mMsaaAttachments[index] = { .texture = msTexture };
@@ -159,11 +156,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         return;
     }
 
-    // Create sidecar MSAA texture for the depth attachment.
+    // Create sidecar MSAA texture for the depth attachment if it does not already exist.
     VulkanTexture* msTexture = depthTexture->getSidecar();
     if (UTILS_UNLIKELY(msTexture == nullptr)) {
-        msTexture = new VulkanTexture(context, depthTexture->target, level,
-                depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
+        msTexture = new VulkanTexture(context, depthTexture->target, depthTexture->levels,
+                depthTexture->format, samples, depthTexture->width, depthTexture->height,
+                depthTexture->depth, depthTexture->usage, stagePool);
         depthTexture->setSidecar(msTexture);
     }
 
@@ -214,7 +212,7 @@ int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const 
             continue;
         }
         // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
-        if (!(pass.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
+        if (!(pass.params.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
             count++;
         }
     }
