@@ -1386,7 +1386,6 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
 void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
     auto* bo = handle_cast<VulkanBufferObject*>(boh);
-    // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
     const VkDeviceSize size = VK_WHOLE_SIZE;
     mPipelineCache.bindUniformBuffer((uint32_t) index, bo->buffer.getGpuBuffer(), offset, size);
