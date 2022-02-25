@@ -536,22 +536,36 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     VulkanAttachment colorTargets[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (color[i].handle) {
-            colorTargets[i].texture = handle_cast<VulkanTexture*>(color[i].handle);
+            colorTargets[i] = {
+                .texture = handle_cast<VulkanTexture*>(color[i].handle),
+                .level = color[i].level,
+                .layer = color[i].layer,
+            };
+            UTILS_UNUSED_IN_RELEASE VkExtent2D extent = colorTargets[i].getExtent2D();
+            assert_invariant(extent.width >= width && extent.height >= height);
         }
-        colorTargets[i].level = color[i].level;
-        colorTargets[i].layer = color[i].layer;
     }
 
     VulkanAttachment depthStencil[2] = {};
-    TextureHandle handle = depth.handle;
-    depthStencil[0].texture = handle ? handle_cast<VulkanTexture*>(handle) : nullptr;
-    depthStencil[0].level = depth.level;
-    depthStencil[0].layer = depth.layer;
+    if (depth.handle) {
+        depthStencil[0] = {
+            .texture = handle_cast<VulkanTexture*>(depth.handle),
+            .level = depth.level,
+            .layer = depth.layer,
+        };
+        UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[0].getExtent2D();
+        assert_invariant(extent.width >= width && extent.height >= height);
+    }
 
-    handle = stencil.handle;
-    depthStencil[1].texture = handle ? handle_cast<VulkanTexture*>(handle) : nullptr;
-    depthStencil[1].level = stencil.level;
-    depthStencil[1].layer = stencil.layer;
+    if (stencil.handle) {
+        depthStencil[1] = {
+            .texture = handle_cast<VulkanTexture*>(stencil.handle),
+            .level = stencil.level,
+            .layer = stencil.layer,
+        };
+        UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[1].getExtent2D();
+        assert_invariant(extent.width >= width && extent.height >= height);
+    }
 
     auto renderTarget = construct<VulkanRenderTarget>(rth, mContext,
             width, height, samples, colorTargets, depthStencil, mStagePool);
@@ -1551,7 +1565,11 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     // Perform the copy into the staging area. At this point we know that the src layout is
     // TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
 
-    vkCmdCopyImage(cmdbuffer, srcTarget->getColor(0).getImage(),
+    UTILS_UNUSED_IN_RELEASE VkExtent2D srcExtent = srcAttachment.getExtent2D();
+    assert_invariant(imageCopyRegion.srcOffset.x + imageCopyRegion.extent.width <= srcExtent.width);
+    assert_invariant(imageCopyRegion.srcOffset.y + imageCopyRegion.extent.height <= srcExtent.height);
+
+    vkCmdCopyImage(cmdbuffer, srcAttachment.getImage(),
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_GENERAL,
             1, &imageCopyRegion);
 
@@ -1798,6 +1816,15 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             } else {
                 texture = handle_cast<VulkanTexture*>(boundSampler->t);
                 mDisposer.acquire(texture);
+            }
+
+            if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VK_IMAGE_LAYOUT_UNDEFINED)) {
+#ifndef NDEBUG
+                utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
+                utils::slog.w << " in material '" << program->name.c_str() << "'";
+                utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
+#endif
+                texture = mContext.emptyTexture;
             }
 
             const SamplerParams& samplerParams = boundSampler->s;

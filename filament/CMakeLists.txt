@@ -52,7 +52,6 @@ set(SRCS
         src/BufferObject.cpp
         src/Camera.cpp
         src/Color.cpp
-        src/ColorGrading.cpp
         src/ColorSpace.cpp
         src/Culler.cpp
         src/DFG.cpp
@@ -64,7 +63,6 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
-        src/fsr.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
@@ -95,6 +93,27 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/details/BufferObject.cpp
+        src/details/Camera.cpp
+        src/details/ColorGrading.cpp
+        src/details/DebugRegistry.cpp
+        src/details/Engine.cpp
+        src/details/Fence.cpp
+        src/details/IndexBuffer.cpp
+        src/details/IndirectLight.cpp
+        src/details/Material.cpp
+        src/details/MaterialInstance.cpp
+        src/details/MorphTargetBuffer.cpp
+        src/details/RenderTarget.cpp
+        src/details/Renderer.cpp
+        src/details/Scene.cpp
+        src/details/SkinningBuffer.cpp
+        src/details/Skybox.cpp
+        src/details/Stream.cpp
+        src/details/SwapChain.cpp
+        src/details/Texture.cpp
+        src/details/VertexBuffer.cpp
+        src/details/View.cpp
         src/fg2/Blackboard.cpp
         src/fg2/DependencyGraph.cpp
         src/fg2/FrameGraph.cpp
@@ -103,6 +122,7 @@ set(SRCS
         src/fg2/FrameGraphTexture.cpp
         src/fg2/PassNode.cpp
         src/fg2/ResourceNode.cpp
+        src/fsr.cpp
 )
 
 set(PRIVATE_HDRS

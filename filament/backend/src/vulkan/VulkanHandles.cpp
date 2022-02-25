@@ -75,13 +75,13 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
 
     // Make a copy of the binding map
     samplerGroupInfo = builder.getSamplerGroupInfo();
-#if FILAMENT_VULKAN_VERBOSE
-    utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
-                << ", variant = (" << utils::io::hex
-                << (int) builder.getVariant().key() << utils::io::dec << "), "
-                << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
-                << utils::io::endl;
-#endif
+    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+        utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
+                    << ", variant = (" << utils::io::hex
+                    << (int) builder.getVariant().key << utils::io::dec << "), "
+                    << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
+                    << utils::io::endl;
+    }
 }
 
 VulkanProgram::VulkanProgram(VulkanContext& context, VkShaderModule vs, VkShaderModule fs) noexcept :

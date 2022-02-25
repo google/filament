@@ -46,7 +46,8 @@ struct VulkanAttachment {
     VkImage getImage() const;
     VkFormat getFormat() const;
     VkImageLayout getLayout() const;
-    VkImageView getImageView(VkImageAspectFlags aspect);
+    VkExtent2D getExtent2D() const;
+    VkImageView getImageView(VkImageAspectFlags aspect) const;
 };
 
 struct VulkanTimestamps {

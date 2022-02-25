@@ -20,6 +20,8 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
+#include <algorithm> // for std::max
+
 #include <utils/Panic.h>
 #include <utils/FixedCapacityVector.h>
 
@@ -42,7 +44,12 @@ VkImageLayout VulkanAttachment::getLayout() const {
     return texture ? texture->getVkLayout(layer, level) : VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) {
+VkExtent2D VulkanAttachment::getExtent2D() const {
+    assert_invariant(texture);
+    return { std::max(1u, texture->width >> level), std::max(1u, texture->height >> level) };
+}
+
+VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) const {
     assert_invariant(texture);
     return texture->getAttachmentView(level, layer, aspect);
 }

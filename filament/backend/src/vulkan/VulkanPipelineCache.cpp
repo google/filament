@@ -476,10 +476,10 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     PipelineCacheEntry& bundle = mPipelines.emplace(
             std::make_pair(mPipelineRequirements, PipelineCacheEntry {})).first.value();
 
-    #if FILAMENT_VULKAN_VERBOSE
-    utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
-            << shaderStages[0].module << ", " << shaderStages[1].module << ")" << utils::io::endl;
-    #endif
+    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+        utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
+                << shaderStages[0].module << ", " << shaderStages[1].module << ")" << utils::io::endl;
+    }
     VkResult error = vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo,
             VKALLOC, &bundle.handle);
     assert_invariant(error == VK_SUCCESS);

@@ -222,6 +222,16 @@ void VulkanBlitter::lazyInit() noexcept {
     VkShaderModule fragmentShader = decode(VKSHADERS_BLITDEPTHFS_DATA, VKSHADERS_BLITDEPTHFS_SIZE);
     mDepthResolveProgram = new VulkanProgram(mContext, vertexShader, fragmentShader);
 
+    // Allocate one anonymous sampler at slot 0.
+    mDepthResolveProgram->samplerGroupInfo[0].samplers.reserve(1);
+    mDepthResolveProgram->samplerGroupInfo[0].samplers.resize(1);
+
+    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+        utils::slog.d << "Created Shader Module for VulkanBlitter "
+                    << "shaders = (" << vertexShader << ", " << fragmentShader << ")"
+                    << utils::io::endl;
+    }
+
     static const float kTriangleVertices[] = {
         -1.0f, -1.0f,
         +1.0f, -1.0f,
@@ -391,7 +401,10 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     };
 
     mPipelineCache.bindScissor(cmdbuffer, scissor);
-    mPipelineCache.bindPipeline(cmdbuffer);
+
+    if (!mPipelineCache.bindPipeline(cmdbuffer)) {
+        assert_invariant(false);
+    }
 
     vkCmdBindVertexBuffers(cmdbuffer, 0, 1, buffers, offsets);
     vkCmdDraw(cmdbuffer, 4, 1, 0, 0);

@@ -661,7 +661,7 @@ fun lookTowards(eye: Float3, forward: Float3, up: Float3 = Float3(z = 1.0f)): Ma
     val f = normalize(forward)
     val r = normalize(f x up)
     val u = normalize(r x f)
-    return Mat4(Float4(r), Float4(u), Float4(f), Float4(eye, 1.0f))
+    return Mat4(Float4(r), Float4(u), Float4(-f), Float4(eye, 1.0f))
 }
 
 fun perspective(fov: Float, ratio: Float, near: Float, far: Float): Mat4 {
