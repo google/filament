@@ -269,6 +269,12 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             bufferInfo.buffer = mDescriptorRequirements.uniformBuffers[binding];
             bufferInfo.offset = mDescriptorRequirements.uniformBufferOffsets[binding];
             bufferInfo.range = mDescriptorRequirements.uniformBufferSizes[binding];
+
+            // We store size with 32 bits, so our "WHOLE" sentinel is different from Vk.
+            if (bufferInfo.range == WHOLE_SIZE) {
+                bufferInfo.range = VK_WHOLE_SIZE;
+            }
+
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
             writeInfo.dstArrayElement = 0;
@@ -629,6 +635,14 @@ void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer unif
             bindingIndex, UBUFFER_BINDING_COUNT);
     auto& key = mDescriptorRequirements;
     key.uniformBuffers[bindingIndex] = uniformBuffer;
+
+    if (size == VK_WHOLE_SIZE) {
+        size = WHOLE_SIZE;
+    }
+
+    assert_invariant(offset <= 0xffffffffu);
+    assert_invariant(size <= 0xffffffffu);
+
     key.uniformBufferOffsets[bindingIndex] = offset;
     key.uniformBufferSizes[bindingIndex] = size;
 }

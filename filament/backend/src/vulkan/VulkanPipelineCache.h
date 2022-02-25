@@ -282,26 +282,33 @@ private:
             return *this;
         }
         operator VkDescriptorImageInfo() const { return { sampler, imageView, imageLayout }; }
+
+        // TODO: replace the 64-bit sampler handle with `uint32_t samplerParams` and remove the
+        // padding field. This is possible if we have access to the VulkanSamplerCache.
         VkSampler sampler;
+
         VkImageView imageView;
         VkImageLayout imageLayout;
         uint32_t padding;
     };
+
+    // We store size with 32 bits, so our "WHOLE" sentinel is different from Vk.
+    static const uint32_t WHOLE_SIZE = 0xffffffffu;
 
     // Represents all the Vulkan state that comprises a bound descriptor set.
     struct DescriptorKey {
         VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             // 0
         DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        // 64
         DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; // 832
-        VkDeviceSize uniformBufferOffsets[UBUFFER_BINDING_COUNT];   // 1024
-        VkDeviceSize uniformBufferSizes[UBUFFER_BINDING_COUNT];     // 1088
+        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       // 1024
+        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         // 1056
     };
 
     static_assert(offsetof(DescriptorKey, samplers)              == 64);
     static_assert(offsetof(DescriptorKey, inputAttachments)      == 832);
     static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1024);
-    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1088);
-    static_assert(sizeof(DescriptorKey) == 1152, "DescriptorKey must not have implicit padding.");
+    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1056);
+    static_assert(sizeof(DescriptorKey) == 1088, "DescriptorKey must not have implicit padding.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 
