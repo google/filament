@@ -36,6 +36,7 @@ using namespace math;
 
 ShadowMapManager::ShadowMapManager(FEngine& engine) { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // initialize our ShadowMap array in-place
+    UTILS_NOUNROLL
     for (auto& entry : mShadowMapCache) {
         new (&entry) ShadowMap(engine);
     }
@@ -48,6 +49,7 @@ ShadowMapManager::ShadowMapManager(FEngine& engine) { // NOLINT(cppcoreguideline
 
 ShadowMapManager::~ShadowMapManager() {
     // destroy the ShadowMap array in-place
+    UTILS_NOUNROLL
     for (auto& entry : mShadowMapCache) {
         std::launder(reinterpret_cast<ShadowMap*>(&entry))->~ShadowMap();
     }
