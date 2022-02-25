@@ -270,6 +270,8 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     // starting point.
     const bool clearCoatNeedsTexture = false;
 
+    const bool volumeThicknessNeedsTexture = true;
+
     #endif
 
     TextureSampler sampler;
