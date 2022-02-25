@@ -163,6 +163,7 @@ public:
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
     const FTexture* getDummyCubemap() const noexcept { return mDefaultIblTexture; }
     const FColorGrading* getDefaultColorGrading() const noexcept { return mDefaultColorGrading; }
+    FMorphTargetBuffer* getDummyMorphTargetBuffer() const { return mDummyMorphTargetBuffer; }
 
     backend::Handle<backend::HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
         return mFullScreenTriangleRph;
@@ -344,7 +345,6 @@ public:
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
     backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
-    backend::Handle<backend::HwSamplerGroup> getDummyMorphingSamplerGroup() const { return mDummyMorphingSamplerGroup; }
 
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
@@ -428,6 +428,7 @@ private:
     mutable FIndirectLight* mDefaultIbl = nullptr;
 
     mutable FColorGrading* mDefaultColorGrading = nullptr;
+    FMorphTargetBuffer* mDummyMorphTargetBuffer = nullptr;
 
     mutable utils::CountDownLatch mDriverBarrier;
 
@@ -439,7 +440,6 @@ private:
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
     backend::Handle<backend::HwTexture> mDummyOneIntegerTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
-    backend::Handle<backend::HwSamplerGroup> mDummyMorphingSamplerGroup;
 
     std::thread::id mMainThreadId{};
 

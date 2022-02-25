@@ -393,6 +393,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (size_t pi = 0, c = primitives.size(); pi < c; ++pi ) {
             auto const& primitive = primitives[pi];
+            auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
@@ -400,10 +401,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
 
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;
-                if (UTILS_UNLIKELY(hasMorphing)) {
-                    auto& morphTargets = morphing.targets[pi];
-                    cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
-                }
+                cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -498,10 +496,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
                 cmdDepth.primitive.morphWeightBuffer = morphing.handle;
-                if (UTILS_UNLIKELY(hasMorphing)) {
-                    auto& morphTargets = morphing.targets[pi];
-                    cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
-                }
+                cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
@@ -615,11 +610,8 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
                         skinning.handle,
                         skinning.offset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
-
-                if (!info.morphTargetBuffer) {
-                    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
-                            engine.getDummyMorphingSamplerGroup());
-                }
+                driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                        info.morphTargetBuffer);
             }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
@@ -627,12 +619,8 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
                 // primitives and use bindUniformBufferRange which might be more efficient.
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphWeightBuffer);
-
-                // When only skinning is enabled, morphTargetBuffer isn't created.
-                if (info.morphTargetBuffer) {
-                    driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
-                            info.morphTargetBuffer);
-                }
+                driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                        info.morphTargetBuffer);
             }
 
             driver.draw(pipeline, info.primitiveHandle, info.instanceCount);

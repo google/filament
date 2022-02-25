@@ -280,6 +280,9 @@ void FEngine::init() {
                     .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));
 
+    // Create a dummy morph target buffer.
+    mDummyMorphTargetBuffer = createMorphTargetBuffer(FMorphTargetBuffer::DummyMaterialBuilder());
+
     // create dummy textures we need throughout the engine
 
     mDummyOneTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -293,9 +296,6 @@ void FEngine::init() {
 
     mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
-
-    // dummy textures must be initialized before this call
-    mDummyMorphingSamplerGroup = FMorphTargetBuffer::createDummySampleGroup(*this);
 
     mPostProcessManager.init();
     mLightManager.init(*this);
@@ -350,6 +350,7 @@ void FEngine::shutdown() {
     destroy(mDefaultColorGrading);
 
     destroy(mDefaultMaterial);
+    destroy(mDummyMorphTargetBuffer);
 
     /*
      * clean-up after the user -- we call terminate on each "leaked" object and clear each list.
@@ -380,7 +381,6 @@ void FEngine::shutdown() {
     }
     cleanupResourceList(mFences);
 
-    driver.destroySamplerGroup(mDummyMorphingSamplerGroup);
     driver.destroyTexture(mDummyOneTexture);
     driver.destroyTexture(mDummyOneTextureArray);
     driver.destroyTexture(mDummyOneIntegerTextureArray);

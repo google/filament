@@ -395,6 +395,13 @@ void FRenderableManager::create(
             }
         }
 
+        // Create and initialize all needed MorphTargets. It's required to avoid branches in hot loops.
+        MorphTargets* morphTargets = new MorphTargets[entryCount];
+        for (size_t i = 0; i < entryCount; ++i) {
+            morphTargets[i] = { mEngine.getDummyMorphTargetBuffer(), 0, 0 };
+        }
+        mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
+
         // Even morphing isn't enabled, we should create morphig resources.
         // Because morphing shader code is generated when skinning is enabled.
         // You can see more detail at Variant::SKINNING_OR_MORPHING.
@@ -409,12 +416,13 @@ void FRenderableManager::create(
                         backend::BufferUsage::DYNAMIC),
                 .count = targetCount };
 
-            MorphTargets* morphTargets = new MorphTargets[entryCount];
             for (size_t i = 0; i < entryCount; ++i) {
                 const auto& morphing = builder->mEntries[i].morphing;
+                if (!morphing.buffer) {
+                    continue;
+                }
                 morphTargets[i] = { upcast(morphing.buffer), morphing.offset, morphing.count };
             }
-            mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
         }
     }
     engine.flushIfNeeded();
