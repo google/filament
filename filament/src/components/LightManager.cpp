@@ -226,6 +226,9 @@ void FLightManager::terminate() noexcept {
         }
     }
 }
+void FLightManager::gc(utils::EntityManager& em) noexcept {
+    mManager.gc(em);
+}
 
 void FLightManager::setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
     ShadowParams& params = mManager[i].shadowParams;
