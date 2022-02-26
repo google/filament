@@ -76,6 +76,8 @@ public:
     // free-up all resources
     void terminate() noexcept;
 
+    void gc(utils::EntityManager& em) noexcept;
+
     /*
      * Component Manager APIs
      */
@@ -91,10 +93,6 @@ public:
     void create(const RenderableManager::Builder& builder, utils::Entity entity);
 
     void destroy(utils::Entity e) noexcept;
-
-    void gc(utils::EntityManager& em) noexcept {
-        mManager.gc(em);
-    }
 
     inline void setAxisAlignedBoundingBox(Instance instance, const Box& aabb) noexcept;
 

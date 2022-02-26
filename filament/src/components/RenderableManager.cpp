@@ -454,6 +454,10 @@ void FRenderableManager::terminate() noexcept {
     }
 }
 
+void FRenderableManager::gc(utils::EntityManager& em) noexcept {
+    mManager.gc(em);
+}
+
 // This is basically a Renderable's destructor.
 void FRenderableManager::destroyComponent(Instance ci) noexcept {
     auto& manager = mManager;

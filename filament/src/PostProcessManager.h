@@ -65,6 +65,7 @@ public:
     };
 
     explicit PostProcessManager(FEngine& engine) noexcept;
+    ~PostProcessManager() noexcept;
 
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
