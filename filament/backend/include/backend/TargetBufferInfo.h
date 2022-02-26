@@ -34,12 +34,18 @@ public:
             : handle(h), level(level) { }
     // ctor for cubemaps
     TargetBufferInfo(Handle<HwTexture> h, uint8_t level, TextureCubemapFace face) noexcept
-            : handle(h), level(level), face(face) { }
+            : handle(h), level(level) {
+		//cannot initialize in the initializer list because this would cause the layer member to stop being zeroed and vulkan code depends on this
+	    this->face = face;
+    }
     // ctor for 3D textures
     TargetBufferInfo(Handle<HwTexture> h, uint8_t level, uint16_t layer) noexcept
             : handle(h), level(level), layer(layer) { }
 
-    explicit TargetBufferInfo(TextureCubemapFace face) noexcept : face(face) {}
+    explicit TargetBufferInfo(TextureCubemapFace face) noexcept {
+		//cannot initialize in the initializer list because this would cause the layer member to stop being zeroed and vulkan code depends on this
+	    this->face = face;
+    }
 
     explicit TargetBufferInfo(uint16_t layer) noexcept : layer(layer) {}
 
