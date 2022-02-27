@@ -167,6 +167,14 @@
 #   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
 #endif
 
+#if defined(_MSC_VER)
+// MSVC does not support loop unrolling hints
+#   define UTILS_NOUNROLL
+#else
+// C++11 allows pragmas to be specified as part of defines using the _Pragma syntax.
+#   define UTILS_NOUNROLL _Pragma("nounroll")
+#endif
+
 #if __has_feature(cxx_rtti) || defined(_CPPRTTI)
 #   define UTILS_HAS_RTTI 1
 #else

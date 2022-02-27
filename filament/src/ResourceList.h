@@ -97,7 +97,7 @@ class ResourceList : public ResourceListBase {
             "robin_set<void*> and robin_set<T*> are incompatible");
 
 public:
-    ResourceList(const char* name) noexcept : ResourceListBase(name) { }
+    explicit ResourceList(const char* name) noexcept : ResourceListBase(name) { }
 
     ~ResourceList() noexcept = default;
 

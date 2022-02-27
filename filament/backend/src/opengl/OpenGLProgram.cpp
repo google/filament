@@ -242,7 +242,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
     const bool isValid = mIsValid;
     GLuint program = gl.program;
     if (validShaderSet) {
-        #pragma nounroll
+        UTILS_NOUNROLL
         for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
             if (validShaderSet & (1U << i)) {
                 const GLuint shader = gl.shaders[i];
