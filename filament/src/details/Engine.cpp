@@ -275,7 +275,7 @@ void FEngine::init() {
                     .build(*const_cast<FEngine*>(this)));
 
     // Create a dummy morph target buffer.
-    mDummyMorphTargetBuffer = createMorphTargetBuffer(FMorphTargetBuffer::DummyMaterialBuilder());
+    mDummyMorphTargetBuffer = createMorphTargetBuffer(FMorphTargetBuffer::EmptyMorphTargetBuilder());
 
     // create dummy textures we need throughout the engine
 

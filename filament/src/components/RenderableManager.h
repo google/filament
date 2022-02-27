@@ -66,8 +66,8 @@ public:
 
     struct MorphTargets {
         FMorphTargetBuffer* buffer = nullptr;
-        size_t offset = 0;
-        size_t count = 0;
+        uint32_t offset = 0;
+        uint32_t count = 0;
     };
 
     explicit FRenderableManager(FEngine& engine) noexcept;
@@ -148,7 +148,7 @@ public:
     struct MorphingBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
         uint32_t count;
-        const MorphTargets* targets; // Pointer to Slice<MorphTargets> at a renderable.
+        MorphTargets const* targets; // Pointer to Slice<MorphTargets> at a renderable.
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
 

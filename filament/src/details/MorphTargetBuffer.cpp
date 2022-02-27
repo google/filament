@@ -95,7 +95,7 @@ inline size_t getSize<VertexAttribute::TANGENTS>(size_t vertexCount) noexcept {
             stride, height, 1);
 }
 
-FMorphTargetBuffer::DummyMaterialBuilder::DummyMaterialBuilder() {
+FMorphTargetBuffer::EmptyMorphTargetBuilder::EmptyMorphTargetBuilder() {
     mImpl->mVertexCount = 1;
     mImpl->mCount = 1;
 }

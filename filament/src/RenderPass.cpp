@@ -391,7 +391,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.
          */
-        for (size_t pi = 0, c = primitives.size(); pi < c; ++pi ) {
+        for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
             auto const& primitive = primitives[pi];
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
@@ -610,6 +610,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
                         skinning.handle,
                         skinning.offset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
+                // note: even if skinning is only enabled, binding morphTargetBuffer is needed.
                 driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
             }

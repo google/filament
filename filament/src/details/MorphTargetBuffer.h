@@ -37,9 +37,9 @@ class FEngine;
 
 class FMorphTargetBuffer : public MorphTargetBuffer {
 public:
-    class DummyMaterialBuilder : public MorphTargetBuffer::Builder {
+    class EmptyMorphTargetBuilder : public MorphTargetBuffer::Builder {
     public:
-        DummyMaterialBuilder();
+        EmptyMorphTargetBuilder();
     };
 
     FMorphTargetBuffer(FEngine& engine, const Builder& builder);

@@ -421,7 +421,8 @@ void FRenderableManager::create(
                 if (!morphing.buffer) {
                     continue;
                 }
-                morphTargets[i] = { upcast(morphing.buffer), morphing.offset, morphing.count };
+                morphTargets[i] = { upcast(morphing.buffer), (uint32_t)morphing.offset,
+                                    (uint32_t)morphing.count };
             }
         }
     }
@@ -664,7 +665,8 @@ void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level
 
         Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
         if (primitiveIndex < morphTargets.size()) {
-            morphTargets[primitiveIndex] = { morphTargetBuffer, offset, count };
+            morphTargets[primitiveIndex] = { morphTargetBuffer, (uint32_t)offset,
+                                             (uint32_t)count };
         }
     }
 }
