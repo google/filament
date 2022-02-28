@@ -1561,6 +1561,11 @@ bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
 }
 
+bool OpenGLDriver::isAutoDepthResolveSupported() {
+    // TODO: this should return true only for GLES3.1+ and EXT_multisampled_render_to_texture2
+    return true;
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:

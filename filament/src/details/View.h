@@ -217,6 +217,8 @@ public:
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
+        assert_invariant(!renderTarget || !mMultiSampleAntiAliasingOptions.enabled ||
+                !renderTarget->hasSampleableDepth());
         mRenderTarget = renderTarget;
     }
 

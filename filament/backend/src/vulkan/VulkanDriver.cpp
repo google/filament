@@ -839,6 +839,10 @@ bool VulkanDriver::isFrameTimeSupported() {
     return true;
 }
 
+bool VulkanDriver::isAutoDepthResolveSupported() {
+    return false;
+}
+
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     VkPhysicalDeviceProperties const& deviceProperties = mContext.physicalDeviceProperties;
     switch (workaround) {
@@ -1126,8 +1130,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         fbkey.depth = depth.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
         assert_invariant(fbkey.depth);
 
-        // Vulkan 1.1 does not support multisampled depth resolve.
-        assert_invariant(rt->getSamples() == 1 || any(rpkey.discardEnd & TargetBufferFlags::DEPTH));
+        // Vulkan 1.1 does not support multisampled depth resolve, so let's check here
+        // and assert if this is requested. (c.f. isAutoDepthResolveSupported)
+        // Reminder: Filament's backend API works like this:
+        // - If the RT is SS then all attachments must be SS.
+        // - If the RT is MS then all SS attachments are auto resolved if not discarded.
+        assert_invariant(!(rt->getSamples() > 1 &&
+                rt->getDepth().texture->samples == 1 &&
+                !any(rpkey.discardEnd & TargetBufferFlags::DEPTH)));
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 

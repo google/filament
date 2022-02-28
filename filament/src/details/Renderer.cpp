@@ -855,6 +855,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
+                DriverApi& driver = mEngine.getDriverApi();
+                const bool canResolveDepth = driver.isAutoDepthResolveSupported();
+
                 if (!data.depth) {
                     // clear newly allocated depth buffers, regardless of given clear flags
                     clearDepthFlags = TargetBufferFlags::DEPTH;
@@ -867,7 +870,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                             // MS, no need to allocate the depth buffer with MS, if the RT is MS,
                             // the tile depth buffer will be MS, but it'll be resolved to single
                             // sample automatically -- which is what we want.
-                            .samples = colorBufferDesc.samples,
+                            .samples = canResolveDepth ? colorBufferDesc.samples : uint8_t(config.msaa),
                             .format = TextureFormat::DEPTH32F,
                     });
                 }
