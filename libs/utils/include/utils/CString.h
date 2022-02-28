@@ -86,7 +86,7 @@ public:
     constexpr StaticString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
         : mString(other),
           mLength(size_type(N - 1)),
-          mHash(computeHash(other, N)) {
+          mHash(computeHash(other, N - 1)) {
               // we rely on inlining for computeHash. It would be nice to do this with constexpr
               // instead, but unfortunately 'other' is not constexpr once a parameter.
     }
@@ -98,7 +98,7 @@ public:
         mLength = size_type(N - 1);
         // we rely on inlining for computeHash. It would be nice to do this with constexpr
         // instead, but unfortunately 'other' is not constexpr once a parameter.
-        mHash = computeHash(other, N);
+        mHash = computeHash(other, N - 1);
         return *this;
     }
 
