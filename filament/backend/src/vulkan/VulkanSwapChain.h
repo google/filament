@@ -39,8 +39,8 @@ struct VulkanSwapChain : public HwSwapChain {
     void makePresentable();
     bool hasResized() const;
 
-    VulkanTexture& getColorTexture() const;
-    VulkanTexture& getDepthTexture() const;
+    VulkanTexture& getColorTexture();
+    VulkanTexture& getDepthTexture();
     uint32_t getSwapIndex() const { return mCurrentSwapIndex; }
 
     VkSurfaceKHR surface = {};
