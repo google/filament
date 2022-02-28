@@ -107,20 +107,23 @@ public:
     inline void setReceiveShadows(Instance instance, bool enable) noexcept;
     inline void setScreenSpaceContactShadows(Instance instance, bool enable) noexcept;
     inline void setCulling(Instance instance, bool enable) noexcept;
-    inline void setSkinning(Instance instance, bool enable) noexcept;
-    inline void setMorphing(Instance instance, bool enable) noexcept;
+
     inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
-    inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
-    inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
-    inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
+
+    inline void setSkinning(Instance instance, bool enable) noexcept;
+    void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
+    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
+    void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset);
+
+    inline void setMorphing(Instance instance, bool enable) noexcept;
     void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
-    inline size_t getMorphTargetCount(Instance instance) const noexcept;
-    inline void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
+    size_t getMorphTargetCount(Instance instance) const noexcept;
 
-    inline bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
+    void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
+    bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
 
     inline bool isShadowCaster(Instance instance) const noexcept;
     inline bool isShadowReceiver(Instance instance) const noexcept;
@@ -154,7 +157,7 @@ public:
         return mManager.getEntity(instance);
     }
 
-    inline size_t getLevelCount(Instance instance) const noexcept { return 1; }
+    inline size_t getLevelCount(Instance) const noexcept { return 1; }
     inline size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
             size_t primitiveIndex, FMaterialInstance const* materialInstance) noexcept;
