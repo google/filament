@@ -97,20 +97,18 @@ public:
         VkBool32              blendEnable : 1;
         VkBool32              depthWriteEnable : 1;
         VkBool32              alphaToCoverageEnable : 1;
-        VkBlendFactor         srcColorBlendFactor : 5;
+        VkBlendFactor         srcColorBlendFactor : 5; // offset = 1 byte
         VkBlendFactor         dstColorBlendFactor : 5;
         VkBlendFactor         srcAlphaBlendFactor : 5;
         VkBlendFactor         dstAlphaBlendFactor : 5;
         VkColorComponentFlags colorWriteMask : 4;
-        uint8_t               rasterizationSamples;
-        uint8_t               colorTargetCount;
-        uint8_t               padding0 : 2;
-        BlendEquation         colorBlendOp : 3;
-        BlendEquation         alphaBlendOp : 3;
-        SamplerCompareFunc    depthCompareOp : 3;
-        uint8_t               padding1 : 5;
-        float                 depthBiasConstantFactor;
-        float                 depthBiasSlopeFactor;
+        uint8_t               rasterizationSamples;    // offset = 4 bytes
+        uint8_t               colorTargetCount;        // offset = 5 bytes
+        BlendEquation         colorBlendOp : 4;        // offset = 6 bytes
+        BlendEquation         alphaBlendOp : 4;
+        SamplerCompareFunc    depthCompareOp;          // offset = 7 bytes
+        float                 depthBiasConstantFactor; // offset = 8 bytes
+        float                 depthBiasSlopeFactor;    // offset = 12 bytes
     };
 
     static_assert(std::is_trivially_copyable<RasterState>::value,
@@ -244,23 +242,18 @@ private:
     };
 
     // The pipeline key is a POD that represents all currently bound states that form the immutable
-    // VkPipeline object.
-    struct PipelineKey {
-        VkShaderModule shaders[SHADER_MODULE_COUNT]; // 0
-        VkRenderPass renderPass;                     // 16
-        uint16_t topology : 16;                      // 24
-        uint16_t subpassIndex;                       // 26
-        VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 28
-        VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 156
-        RasterState rasterState;                     // 284
-        uint32_t padding;                            // 300
+    // VkPipeline object. The size:offset comments below are expressed in bytes.
+    struct PipelineKey {                                                          // size : offset
+        VkShaderModule shaders[SHADER_MODULE_COUNT];                              //  16  : 0
+        VkRenderPass renderPass;                                                  //  8   : 16
+        uint16_t topology;                                                        //  2   : 24
+        uint16_t subpassIndex;                                                    //  2   : 26
+        VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; //  128 : 28
+        VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
+        RasterState rasterState;                                                  //  16  : 284
+        uint32_t padding;                                                         //  4   : 300
     };
 
-    static_assert(offsetof(PipelineKey, renderPass)       == 16);
-    static_assert(offsetof(PipelineKey, subpassIndex)     == 26);
-    static_assert(offsetof(PipelineKey, vertexAttributes) == 28);
-    static_assert(offsetof(PipelineKey, vertexBuffers)    == 156);
-    static_assert(offsetof(PipelineKey, rasterState)      == 284);
     static_assert(sizeof(PipelineKey) == 304, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;

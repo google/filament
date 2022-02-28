@@ -347,11 +347,11 @@ bool VulkanSwapChain::hasResized() const {
     return !equivalent(clientSize, surfaceCapabilities.currentExtent);
 }
 
-VulkanTexture& VulkanSwapChain::getColorTexture() const {
+VulkanTexture& VulkanSwapChain::getColorTexture() {
     return *mColor[mCurrentSwapIndex];
 }
 
-VulkanTexture& VulkanSwapChain::getDepthTexture() const {
+VulkanTexture& VulkanSwapChain::getDepthTexture() {
     return *mDepth;
 }
 
