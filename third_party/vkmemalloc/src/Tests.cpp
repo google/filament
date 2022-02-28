@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -34,12 +34,8 @@ static const char* CODE_DESCRIPTION = "Foo";
 
 extern VkCommandBuffer g_hTemporaryCommandBuffer;
 extern const VkAllocationCallbacks* g_Allocs;
-extern bool VK_KHR_buffer_device_address_enabled;
-extern bool VK_EXT_memory_priority_enabled;
-extern PFN_vkGetBufferDeviceAddressKHR g_vkGetBufferDeviceAddressKHR;
 void BeginSingleTimeCommands();
 void EndSingleTimeCommands();
-void SetDebugUtilsObjectName(VkObjectType type, uint64_t handle, const char* name);
 
 #ifndef VMA_DEBUG_MARGIN
     #define VMA_DEBUG_MARGIN 0
@@ -692,7 +688,6 @@ struct AllocInfo
     VmaAllocation m_Allocation = VK_NULL_HANDLE;
     VkBuffer m_Buffer = VK_NULL_HANDLE;
     VkImage m_Image = VK_NULL_HANDLE;
-    VkImageLayout m_ImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     uint32_t m_StartValue = 0;
     union
     {
@@ -700,17 +695,9 @@ struct AllocInfo
         VkImageCreateInfo m_ImageInfo;
     };
 
-    // After defragmentation.
-    VkBuffer m_NewBuffer = VK_NULL_HANDLE;
-    VkImage m_NewImage = VK_NULL_HANDLE;
-
     void CreateBuffer(
         const VkBufferCreateInfo& bufCreateInfo,
         const VmaAllocationCreateInfo& allocCreateInfo);
-    void CreateImage(
-        const VkImageCreateInfo& imageCreateInfo,
-        const VmaAllocationCreateInfo& allocCreateInfo,
-        VkImageLayout layout);
     void Destroy();
 };
 
@@ -722,28 +709,16 @@ void AllocInfo::CreateBuffer(
     VkResult res = vmaCreateBuffer(g_hAllocator, &bufCreateInfo, &allocCreateInfo, &m_Buffer, &m_Allocation, nullptr);
     TEST(res == VK_SUCCESS);
 }
-void AllocInfo::CreateImage(
-    const VkImageCreateInfo& imageCreateInfo,
-    const VmaAllocationCreateInfo& allocCreateInfo,
-    VkImageLayout layout)
-{
-    m_ImageInfo = imageCreateInfo;
-    m_ImageLayout = layout;
-    VkResult res = vmaCreateImage(g_hAllocator, &imageCreateInfo, &allocCreateInfo, &m_Image, &m_Allocation, nullptr);
-    TEST(res == VK_SUCCESS);
-}
 
 void AllocInfo::Destroy()
 {
     if(m_Image)
     {
-        assert(!m_Buffer);
         vkDestroyImage(g_hDevice, m_Image, g_Allocs);
         m_Image = VK_NULL_HANDLE;
     }
     if(m_Buffer)
     {
-        assert(!m_Image);
         vkDestroyBuffer(g_hDevice, m_Buffer, g_Allocs);
         m_Buffer = VK_NULL_HANDLE;
     }
@@ -929,88 +904,7 @@ static void UploadGpuData(const AllocInfo* allocInfo, size_t allocInfoCount)
         }
         else
         {
-            TEST(currAllocInfo.m_ImageInfo.format == VK_FORMAT_R8G8B8A8_UNORM && "Only RGBA8 images are currently supported.");
-            TEST(currAllocInfo.m_ImageInfo.mipLevels == 1 && "Only single mip images are currently supported.");
-
-            const VkDeviceSize size = (VkDeviceSize)currAllocInfo.m_ImageInfo.extent.width * currAllocInfo.m_ImageInfo.extent.height * sizeof(uint32_t);
-
-            VkBuffer stagingBuf = VK_NULL_HANDLE;
-            void* stagingBufMappedPtr = nullptr;
-            if(!stagingBufs.AcquireBuffer(size, stagingBuf, stagingBufMappedPtr))
-            {
-                TEST(cmdBufferStarted);
-                EndSingleTimeCommands();
-                stagingBufs.ReleaseAllBuffers();
-                cmdBufferStarted = false;
-
-                bool ok = stagingBufs.AcquireBuffer(size, stagingBuf, stagingBufMappedPtr);
-                TEST(ok);
-            }
-
-            // Fill staging buffer.
-            {
-                assert(size % sizeof(uint32_t) == 0);
-                uint32_t *stagingValPtr = (uint32_t *)stagingBufMappedPtr;
-                uint32_t val = currAllocInfo.m_StartValue;
-                for(size_t i = 0; i < size / sizeof(uint32_t); ++i)
-                {
-                    *stagingValPtr = val;
-                    ++stagingValPtr;
-                    ++val;
-                }
-            }
-            
-            // Issue copy command from staging buffer to destination buffer.
-            if(!cmdBufferStarted)
-            {
-                cmdBufferStarted = true;
-                BeginSingleTimeCommands();
-            }
-
-            
-            // Transfer to transfer dst layout
-            VkImageSubresourceRange subresourceRange = {
-                VK_IMAGE_ASPECT_COLOR_BIT,
-                0, VK_REMAINING_MIP_LEVELS,
-                0, VK_REMAINING_ARRAY_LAYERS
-            };
-            
-            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = 0;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = currAllocInfo.m_Image;
-            barrier.subresourceRange = subresourceRange;
-
-            vkCmdPipelineBarrier(g_hTemporaryCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
-                0, nullptr,
-                0, nullptr,
-                1, &barrier);
-
-            // Copy image date
-            VkBufferImageCopy copy = {};
-            copy.bufferOffset = 0;
-            copy.bufferRowLength = 0;
-            copy.bufferImageHeight = 0;
-            copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            copy.imageSubresource.layerCount = 1;
-            copy.imageExtent = currAllocInfo.m_ImageInfo.extent;
-
-            vkCmdCopyBufferToImage(g_hTemporaryCommandBuffer, stagingBuf, currAllocInfo.m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
-
-            // Transfer to desired layout
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout = currAllocInfo.m_ImageLayout;
-
-            vkCmdPipelineBarrier(g_hTemporaryCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
-                0, nullptr,
-                0, nullptr,
-                1, &barrier);
+            TEST(0 && "Images not currently supported.");
         }
     }
 
@@ -1722,6 +1616,7 @@ void TestDefragmentationFull()
 static void TestDefragmentationGpu()
 {
     wprintf(L"Test defragmentation GPU\n");
+    g_MemoryAliasingWarningEnabled = false;
 
     std::vector<AllocInfo> allocations;
 
@@ -1855,586 +1750,9 @@ static void TestDefragmentationGpu()
     {
         allocations[i].Destroy();
     }
+
+    g_MemoryAliasingWarningEnabled = true;
 }
-
-static void ProcessDefragmentationStepInfo(VmaDefragmentationPassInfo &stepInfo)
-{
-    std::vector<VkImageMemoryBarrier> beginImageBarriers;
-    std::vector<VkImageMemoryBarrier> finalizeImageBarriers;
-
-    VkPipelineStageFlags beginSrcStageMask = 0;
-    VkPipelineStageFlags beginDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-    VkPipelineStageFlags finalizeSrcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkPipelineStageFlags finalizeDstStageMask = 0;
-
-    bool wantsMemoryBarrier = false;
-
-    VkMemoryBarrier beginMemoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-    VkMemoryBarrier finalizeMemoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-
-    for(uint32_t i = 0; i < stepInfo.moveCount; ++i)
-    {
-        VmaAllocationInfo info;
-        vmaGetAllocationInfo(g_hAllocator, stepInfo.pMoves[i].allocation, &info);
-
-        AllocInfo *allocInfo = (AllocInfo *)info.pUserData;
-
-        if(allocInfo->m_Image)
-        {
-            VkImage newImage;
-
-            const VkResult result = vkCreateImage(g_hDevice, &allocInfo->m_ImageInfo, g_Allocs, &newImage);
-            TEST(result >= VK_SUCCESS);
-
-            vkBindImageMemory(g_hDevice, newImage, stepInfo.pMoves[i].memory, stepInfo.pMoves[i].offset);
-            allocInfo->m_NewImage = newImage;
-
-            // Keep track of our pipeline stages that we need to wait/signal on
-            beginSrcStageMask |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            finalizeDstStageMask |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-            // We need one pipeline barrier and two image layout transitions here
-            // First we'll have to turn our newly created image into VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-            // And the second one is turning the old image into VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-
-            VkImageSubresourceRange subresourceRange = {
-                VK_IMAGE_ASPECT_COLOR_BIT,
-                0, VK_REMAINING_MIP_LEVELS,
-                0, VK_REMAINING_ARRAY_LAYERS
-            };
-
-            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = newImage;
-            barrier.subresourceRange = subresourceRange;
-
-            beginImageBarriers.push_back(barrier);
-
-            // Second barrier to convert the existing image. This one actually needs a real barrier                         
-            barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            barrier.oldLayout = allocInfo->m_ImageLayout;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            barrier.image = allocInfo->m_Image;
-
-            beginImageBarriers.push_back(barrier);
-
-            // And lastly we need a barrier that turns our new image into the layout of the old one
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout = allocInfo->m_ImageLayout;
-            barrier.image = newImage;
-
-            finalizeImageBarriers.push_back(barrier);
-        }
-        else if(allocInfo->m_Buffer)
-        {
-            VkBuffer newBuffer;
-
-            const VkResult result = vkCreateBuffer(g_hDevice, &allocInfo->m_BufferInfo, g_Allocs, &newBuffer);
-            TEST(result >= VK_SUCCESS);
-
-            vkBindBufferMemory(g_hDevice, newBuffer, stepInfo.pMoves[i].memory, stepInfo.pMoves[i].offset);
-            allocInfo->m_NewBuffer = newBuffer;
-
-            // Keep track of our pipeline stages that we need to wait/signal on
-            beginSrcStageMask |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            finalizeDstStageMask |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-            beginMemoryBarrier.srcAccessMask |= VK_ACCESS_MEMORY_WRITE_BIT;
-            beginMemoryBarrier.dstAccessMask |= VK_ACCESS_TRANSFER_READ_BIT;
-
-            finalizeMemoryBarrier.srcAccessMask |= VK_ACCESS_TRANSFER_WRITE_BIT;
-            finalizeMemoryBarrier.dstAccessMask |= VK_ACCESS_MEMORY_READ_BIT;
-
-            wantsMemoryBarrier = true;
-        }
-    }
-
-    if(!beginImageBarriers.empty() || wantsMemoryBarrier)
-    {
-        const uint32_t memoryBarrierCount = wantsMemoryBarrier ? 1 : 0;
-
-        vkCmdPipelineBarrier(g_hTemporaryCommandBuffer, beginSrcStageMask, beginDstStageMask, 0,
-            memoryBarrierCount, &beginMemoryBarrier,
-            0, nullptr,
-            (uint32_t)beginImageBarriers.size(), beginImageBarriers.data());
-    }
-
-    for(uint32_t i = 0; i < stepInfo.moveCount; ++ i)
-    {
-        VmaAllocationInfo info;
-        vmaGetAllocationInfo(g_hAllocator, stepInfo.pMoves[i].allocation, &info);
-
-        AllocInfo *allocInfo = (AllocInfo *)info.pUserData;
-
-        if(allocInfo->m_Image)
-        {
-            std::vector<VkImageCopy> imageCopies;
-
-            // Copy all mips of the source image into the target image
-            VkOffset3D offset = { 0, 0, 0 };
-            VkExtent3D extent = allocInfo->m_ImageInfo.extent;
-
-            VkImageSubresourceLayers subresourceLayers = {
-                VK_IMAGE_ASPECT_COLOR_BIT,
-                0,
-                0, 1
-            };
-
-            for(uint32_t mip = 0; mip < allocInfo->m_ImageInfo.mipLevels; ++ mip)
-            {
-                subresourceLayers.mipLevel = mip;
-
-                VkImageCopy imageCopy{
-                    subresourceLayers,
-                    offset,
-                    subresourceLayers,
-                    offset,
-                    extent
-                };
-
-                imageCopies.push_back(imageCopy);
-
-                extent.width = std::max(uint32_t(1), extent.width >> 1);
-                extent.height = std::max(uint32_t(1), extent.height >> 1);
-                extent.depth = std::max(uint32_t(1), extent.depth >> 1);
-            }
-
-            vkCmdCopyImage(
-                g_hTemporaryCommandBuffer,
-                allocInfo->m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                allocInfo->m_NewImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                (uint32_t)imageCopies.size(), imageCopies.data());
-        }
-        else if(allocInfo->m_Buffer)
-        {
-            VkBufferCopy region = {
-                0,
-                0,
-                allocInfo->m_BufferInfo.size };
-
-            vkCmdCopyBuffer(g_hTemporaryCommandBuffer, 
-                allocInfo->m_Buffer, allocInfo->m_NewBuffer,
-                1, &region);
-        }
-    }
-
-    if(!finalizeImageBarriers.empty() || wantsMemoryBarrier)
-    {
-        const uint32_t memoryBarrierCount = wantsMemoryBarrier ? 1 : 0;
-
-        vkCmdPipelineBarrier(g_hTemporaryCommandBuffer, finalizeSrcStageMask, finalizeDstStageMask, 0,
-            memoryBarrierCount, &finalizeMemoryBarrier,
-            0, nullptr,
-            (uint32_t)finalizeImageBarriers.size(), finalizeImageBarriers.data());
-    }
-}
-
-
-static void TestDefragmentationIncrementalBasic()
-{
-    wprintf(L"Test defragmentation incremental basic\n");
-
-    std::vector<AllocInfo> allocations;
-
-    // Create that many allocations to surely fill 3 new blocks of 256 MB.
-    const std::array<uint32_t, 3> imageSizes = { 256, 512, 1024 };
-    const VkDeviceSize bufSizeMin = 5ull * 1024 * 1024;
-    const VkDeviceSize bufSizeMax = 10ull * 1024 * 1024;
-    const VkDeviceSize totalSize = 3ull * 256 * 1024 * 1024;
-    const size_t imageCount = totalSize / ((size_t)imageSizes[0] * imageSizes[0] * 4) / 2;
-    const size_t bufCount = (size_t)(totalSize / bufSizeMin) / 2;
-    const size_t percentToLeave = 30;
-    RandomNumberGenerator rand = { 234522 };
-
-    VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    allocCreateInfo.flags = 0;
-
-    // Create all intended images.
-    for(size_t i = 0; i < imageCount; ++i)
-    {
-        const uint32_t size = imageSizes[rand.Generate() % 3];
-
-        imageInfo.extent.width = size;
-        imageInfo.extent.height = size;
-
-        AllocInfo alloc;
-        alloc.CreateImage(imageInfo, allocCreateInfo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        alloc.m_StartValue = 0;
-
-        allocations.push_back(alloc);
-    }
-
-    // And all buffers
-    VkBufferCreateInfo bufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-
-    for(size_t i = 0; i < bufCount; ++i)
-    {
-        bufCreateInfo.size = align_up<VkDeviceSize>(bufSizeMin + rand.Generate() % (bufSizeMax - bufSizeMin), 16);
-        bufCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-        AllocInfo alloc;
-        alloc.CreateBuffer(bufCreateInfo, allocCreateInfo);
-        alloc.m_StartValue = 0;
-
-        allocations.push_back(alloc);
-    }
-
-    // Destroy some percentage of them.
-    {
-        const size_t allocationsToDestroy = round_div<size_t>((imageCount + bufCount) * (100 - percentToLeave), 100);
-        for(size_t i = 0; i < allocationsToDestroy; ++i)
-        {
-            const size_t index = rand.Generate() % allocations.size();
-            allocations[index].Destroy();
-            allocations.erase(allocations.begin() + index);
-        }
-    }
-
-    {
-        // Set our user data pointers. A real application should probably be more clever here
-        const size_t allocationCount = allocations.size();
-        for(size_t i = 0; i < allocationCount; ++i)
-        {
-            AllocInfo &alloc = allocations[i];
-            vmaSetAllocationUserData(g_hAllocator, alloc.m_Allocation, &alloc);
-        }
-    }
-
-    // Fill them with meaningful data.
-    UploadGpuData(allocations.data(), allocations.size());
-
-    wchar_t fileName[MAX_PATH];
-    swprintf_s(fileName, L"GPU_defragmentation_incremental_basic_A_before.json");
-    SaveAllocatorStatsToFile(fileName);
-
-    // Defragment using GPU only.
-    {
-        const size_t allocCount = allocations.size();
-
-        std::vector<VmaAllocation> allocationPtrs;
-
-        for(size_t i = 0; i < allocCount; ++i)
-        {
-            allocationPtrs.push_back(allocations[i].m_Allocation);
-        }
-
-        const size_t movableAllocCount = allocationPtrs.size();
-
-        VmaDefragmentationInfo2 defragInfo = {};
-        defragInfo.flags = VMA_DEFRAGMENTATION_FLAG_INCREMENTAL;
-        defragInfo.allocationCount = (uint32_t)movableAllocCount;
-        defragInfo.pAllocations = allocationPtrs.data();
-        defragInfo.maxGpuBytesToMove = VK_WHOLE_SIZE;
-        defragInfo.maxGpuAllocationsToMove = UINT32_MAX;
-
-        VmaDefragmentationStats stats = {};
-        VmaDefragmentationContext ctx = VK_NULL_HANDLE;
-        VkResult res = vmaDefragmentationBegin(g_hAllocator, &defragInfo, &stats, &ctx);
-        TEST(res >= VK_SUCCESS);
-
-        res = VK_NOT_READY;
-
-        std::vector<VmaDefragmentationPassMoveInfo> moveInfo;
-        moveInfo.resize(movableAllocCount);
-
-        while(res == VK_NOT_READY)
-        {
-            VmaDefragmentationPassInfo stepInfo = {};
-            stepInfo.pMoves = moveInfo.data();
-            stepInfo.moveCount = (uint32_t)moveInfo.size();
-
-            res = vmaBeginDefragmentationPass(g_hAllocator, ctx, &stepInfo);
-            TEST(res >= VK_SUCCESS);
-
-            BeginSingleTimeCommands();
-            std::vector<void*> newHandles;
-            ProcessDefragmentationStepInfo(stepInfo);
-            EndSingleTimeCommands();
-
-            res = vmaEndDefragmentationPass(g_hAllocator, ctx);
-            
-            // Destroy old buffers/images and replace them with new handles.
-            for(size_t i = 0; i < stepInfo.moveCount; ++i)
-            {
-                VmaAllocation const alloc = stepInfo.pMoves[i].allocation;
-                VmaAllocationInfo vmaAllocInfo;
-                vmaGetAllocationInfo(g_hAllocator, alloc, &vmaAllocInfo);
-                AllocInfo* allocInfo = (AllocInfo*)vmaAllocInfo.pUserData;
-                if(allocInfo->m_Buffer)
-                {
-                    assert(allocInfo->m_NewBuffer && !allocInfo->m_Image && !allocInfo->m_NewImage);
-                    vkDestroyBuffer(g_hDevice, allocInfo->m_Buffer, g_Allocs);
-                    allocInfo->m_Buffer = allocInfo->m_NewBuffer;
-                    allocInfo->m_NewBuffer = VK_NULL_HANDLE;
-                }
-                else if(allocInfo->m_Image)
-                {
-                    assert(allocInfo->m_NewImage && !allocInfo->m_Buffer && !allocInfo->m_NewBuffer);
-                    vkDestroyImage(g_hDevice, allocInfo->m_Image, g_Allocs);
-                    allocInfo->m_Image = allocInfo->m_NewImage;
-                    allocInfo->m_NewImage = VK_NULL_HANDLE;
-                }
-                else
-                    assert(0);
-            }
-        }
-
-        TEST(res >= VK_SUCCESS);
-        vmaDefragmentationEnd(g_hAllocator, ctx);
-
-        // If corruption detection is enabled, GPU defragmentation may not work on
-        // memory types that have this detection active, e.g. on Intel.
-#if !defined(VMA_DEBUG_DETECT_CORRUPTION) || VMA_DEBUG_DETECT_CORRUPTION == 0
-        TEST(stats.allocationsMoved > 0 && stats.bytesMoved > 0);
-        TEST(stats.deviceMemoryBlocksFreed > 0 && stats.bytesFreed > 0);
-#endif
-    }
-
-    //ValidateGpuData(allocations.data(), allocations.size());
-
-    swprintf_s(fileName, L"GPU_defragmentation_incremental_basic_B_after.json");
-    SaveAllocatorStatsToFile(fileName);
-
-    // Destroy all remaining buffers and images.
-    for(size_t i = allocations.size(); i--; )
-    {
-        allocations[i].Destroy();
-    }
-}
-
-void TestDefragmentationIncrementalComplex()
-{
-    wprintf(L"Test defragmentation incremental complex\n");
-    
-    std::vector<AllocInfo> allocations;
-
-    // Create that many allocations to surely fill 3 new blocks of 256 MB.
-    const std::array<uint32_t, 3> imageSizes = { 256, 512, 1024 };
-    const VkDeviceSize bufSizeMin = 5ull * 1024 * 1024;
-    const VkDeviceSize bufSizeMax = 10ull * 1024 * 1024;
-    const VkDeviceSize totalSize = 3ull * 256 * 1024 * 1024;
-    const size_t imageCount = (size_t)(totalSize / (imageSizes[0] * imageSizes[0] * 4)) / 2;
-    const size_t bufCount = (size_t)(totalSize / bufSizeMin) / 2;
-    const size_t percentToLeave = 30;
-    RandomNumberGenerator rand = { 234522 };
-
-    VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    allocCreateInfo.flags = 0;
-
-    // Create all intended images.
-    for(size_t i = 0; i < imageCount; ++i)
-    {
-        const uint32_t size = imageSizes[rand.Generate() % 3];
-
-        imageInfo.extent.width = size;
-        imageInfo.extent.height = size;
-
-        AllocInfo alloc;
-        alloc.CreateImage(imageInfo, allocCreateInfo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        alloc.m_StartValue = 0;
-
-        allocations.push_back(alloc);
-    }
-
-    // And all buffers
-    VkBufferCreateInfo bufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-
-    for(size_t i = 0; i < bufCount; ++i)
-    {
-        bufCreateInfo.size = align_up<VkDeviceSize>(bufSizeMin + rand.Generate() % (bufSizeMax - bufSizeMin), 16);
-        bufCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-        AllocInfo alloc;
-        alloc.CreateBuffer(bufCreateInfo, allocCreateInfo);
-        alloc.m_StartValue = 0;
-
-        allocations.push_back(alloc);
-    }
-
-    // Destroy some percentage of them.
-    {
-        const size_t allocationsToDestroy = round_div<size_t>((imageCount + bufCount) * (100 - percentToLeave), 100);
-        for(size_t i = 0; i < allocationsToDestroy; ++i)
-        {
-            const size_t index = rand.Generate() % allocations.size();
-            allocations[index].Destroy();
-            allocations.erase(allocations.begin() + index);
-        }
-    }
-
-    {
-        // Set our user data pointers. A real application should probably be more clever here
-        const size_t allocationCount = allocations.size();
-        for(size_t i = 0; i < allocationCount; ++i)
-        {
-            AllocInfo &alloc = allocations[i];
-            vmaSetAllocationUserData(g_hAllocator, alloc.m_Allocation, &alloc);
-        }
-    }
-
-    // Fill them with meaningful data.
-    UploadGpuData(allocations.data(), allocations.size());
-
-    wchar_t fileName[MAX_PATH];
-    swprintf_s(fileName, L"GPU_defragmentation_incremental_complex_A_before.json");
-    SaveAllocatorStatsToFile(fileName);
-
-    std::vector<AllocInfo> additionalAllocations;
-
-#define MakeAdditionalAllocation() \
-    do { \
-        { \
-            bufCreateInfo.size = align_up<VkDeviceSize>(bufSizeMin + rand.Generate() % (bufSizeMax - bufSizeMin), 16); \
-            bufCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT; \
-            \
-            AllocInfo alloc; \
-            alloc.CreateBuffer(bufCreateInfo, allocCreateInfo); \
-            \
-            additionalAllocations.push_back(alloc); \
-        } \
-    } while(0)
-
-    // Defragment using GPU only.
-    {
-        const size_t allocCount = allocations.size();
-
-        std::vector<VmaAllocation> allocationPtrs;
-
-        for(size_t i = 0; i < allocCount; ++i)
-        {
-            VmaAllocationInfo allocInfo = {};
-            vmaGetAllocationInfo(g_hAllocator, allocations[i].m_Allocation, &allocInfo);
-
-            allocationPtrs.push_back(allocations[i].m_Allocation);
-        }
-
-        const size_t movableAllocCount = allocationPtrs.size();
-
-        VmaDefragmentationInfo2 defragInfo = {};
-        defragInfo.flags = VMA_DEFRAGMENTATION_FLAG_INCREMENTAL;
-        defragInfo.allocationCount = (uint32_t)movableAllocCount;
-        defragInfo.pAllocations = allocationPtrs.data();
-        defragInfo.maxGpuBytesToMove = VK_WHOLE_SIZE;
-        defragInfo.maxGpuAllocationsToMove = UINT32_MAX;
-
-        VmaDefragmentationStats stats = {};
-        VmaDefragmentationContext ctx = VK_NULL_HANDLE;
-        VkResult res = vmaDefragmentationBegin(g_hAllocator, &defragInfo, &stats, &ctx);
-        TEST(res >= VK_SUCCESS);
-
-        res = VK_NOT_READY;
-
-        std::vector<VmaDefragmentationPassMoveInfo> moveInfo;
-        moveInfo.resize(movableAllocCount);
-
-        MakeAdditionalAllocation();
-
-        while(res == VK_NOT_READY)
-        {
-            VmaDefragmentationPassInfo stepInfo = {};
-            stepInfo.pMoves = moveInfo.data();
-            stepInfo.moveCount = (uint32_t)moveInfo.size();
-
-            res = vmaBeginDefragmentationPass(g_hAllocator, ctx, &stepInfo);
-            TEST(res >= VK_SUCCESS);
-
-            MakeAdditionalAllocation();
-
-            BeginSingleTimeCommands();
-            ProcessDefragmentationStepInfo(stepInfo);
-            EndSingleTimeCommands();
-
-            res = vmaEndDefragmentationPass(g_hAllocator, ctx);
-
-            // Destroy old buffers/images and replace them with new handles.
-            for(size_t i = 0; i < stepInfo.moveCount; ++i)
-            {
-                VmaAllocation const alloc = stepInfo.pMoves[i].allocation;
-                VmaAllocationInfo vmaAllocInfo;
-                vmaGetAllocationInfo(g_hAllocator, alloc, &vmaAllocInfo);
-                AllocInfo* allocInfo = (AllocInfo*)vmaAllocInfo.pUserData;
-                if(allocInfo->m_Buffer)
-                {
-                    assert(allocInfo->m_NewBuffer && !allocInfo->m_Image && !allocInfo->m_NewImage);
-                    vkDestroyBuffer(g_hDevice, allocInfo->m_Buffer, g_Allocs);
-                    allocInfo->m_Buffer = allocInfo->m_NewBuffer;
-                    allocInfo->m_NewBuffer = VK_NULL_HANDLE;
-                }
-                else if(allocInfo->m_Image)
-                {
-                    assert(allocInfo->m_NewImage && !allocInfo->m_Buffer && !allocInfo->m_NewBuffer);
-                    vkDestroyImage(g_hDevice, allocInfo->m_Image, g_Allocs);
-                    allocInfo->m_Image = allocInfo->m_NewImage;
-                    allocInfo->m_NewImage = VK_NULL_HANDLE;
-                }
-                else
-                    assert(0);
-            }
-
-            MakeAdditionalAllocation();
-        }
-
-        TEST(res >= VK_SUCCESS);
-        vmaDefragmentationEnd(g_hAllocator, ctx);
-
-        // If corruption detection is enabled, GPU defragmentation may not work on
-        // memory types that have this detection active, e.g. on Intel.
-#if !defined(VMA_DEBUG_DETECT_CORRUPTION) || VMA_DEBUG_DETECT_CORRUPTION == 0
-        TEST(stats.allocationsMoved > 0 && stats.bytesMoved > 0);
-        TEST(stats.deviceMemoryBlocksFreed > 0 && stats.bytesFreed > 0);
-#endif
-    }
-
-    //ValidateGpuData(allocations.data(), allocations.size());
-
-    swprintf_s(fileName, L"GPU_defragmentation_incremental_complex_B_after.json");
-    SaveAllocatorStatsToFile(fileName);
-
-    // Destroy all remaining buffers.
-    for(size_t i = allocations.size(); i--; )
-    {
-        allocations[i].Destroy();
-    }
-
-    for(size_t i = additionalAllocations.size(); i--; )
-    {
-        additionalAllocations[i].Destroy();
-    }
-}
-
 
 static void TestUserData()
 {
@@ -2621,24 +1939,9 @@ static void TestMemoryRequirements()
 
 }
 
-static void TestGetAllocatorInfo()
-{
-    wprintf(L"Test vnaGetAllocatorInfo\n");
-
-    VmaAllocatorInfo allocInfo = {};
-    vmaGetAllocatorInfo(g_hAllocator, &allocInfo);
-    TEST(allocInfo.instance == g_hVulkanInstance);
-    TEST(allocInfo.physicalDevice == g_hPhysicalDevice);
-    TEST(allocInfo.device == g_hDevice);
-}
-
 static void TestBasics()
 {
-    wprintf(L"Test basics\n");
-
     VkResult res;
-
-    TestGetAllocatorInfo();
 
     TestMemoryRequirements();
 
@@ -2684,41 +1987,6 @@ static void TestBasics()
     TestUserData();
 
     TestInvalidAllocations();
-}
-
-static void TestAllocationVersusResourceSize()
-{
-    wprintf(L"Test allocation versus resource size\n");
-
-    VkBufferCreateInfo bufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufCreateInfo.size = 22921; // Prime number
-    bufCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-
-    for(uint32_t i = 0; i < 2; ++i)
-    {
-        allocCreateInfo.flags = (i == 1) ? VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT : 0;
-
-        AllocInfo info;
-        info.CreateBuffer(bufCreateInfo, allocCreateInfo);
-        
-        VmaAllocationInfo allocInfo = {};
-        vmaGetAllocationInfo(g_hAllocator, info.m_Allocation, &allocInfo);
-        //wprintf(L"  Buffer size = %llu, allocation size = %llu\n", bufCreateInfo.size, allocInfo.size);
-
-        // Map and test accessing entire area of the allocation, not only the buffer.
-        void* mappedPtr = nullptr;
-        VkResult res = vmaMapMemory(g_hAllocator, info.m_Allocation, &mappedPtr);
-        TEST(res == VK_SUCCESS);
-
-        memset(mappedPtr, 0xCC, (size_t)allocInfo.size);
-
-        vmaUnmapMemory(g_hAllocator, info.m_Allocation);
-
-        info.Destroy();
-    }
 }
 
 static void TestPool_MinBlockCount()
@@ -2797,8 +2065,8 @@ static void TestPool_MinBlockCount()
 
 void TestHeapSizeLimit()
 {
-    const VkDeviceSize HEAP_SIZE_LIMIT = 100ull * 1024 * 1024; // 100 MB
-    const VkDeviceSize BLOCK_SIZE      =  10ull * 1024 * 1024; // 10 MB
+    const VkDeviceSize HEAP_SIZE_LIMIT = 200ull * 1024 * 1024; // 200 MB
+    const VkDeviceSize BLOCK_SIZE      =  20ull * 1024 * 1024; // 20 MB
 
     VkDeviceSize heapSizeLimit[VK_MAX_MEMORY_HEAPS];
     for(uint32_t i = 0; i < VK_MAX_MEMORY_HEAPS; ++i)
@@ -3798,72 +3066,6 @@ static void BenchmarkAlgorithmsCase(FILE* file,
     }
 }
 
-static void TestBufferDeviceAddress()
-{
-    wprintf(L"Test buffer device address\n");
-
-    assert(VK_KHR_buffer_device_address_enabled);
-
-    VkBufferCreateInfo bufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufCreateInfo.size = 0x10000;
-    bufCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT; // !!!
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-    for(uint32_t testIndex = 0; testIndex < 2; ++testIndex)
-    {
-        // 1st is placed, 2nd is dedicated.
-        if(testIndex == 1)
-            allocCreateInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-
-        BufferInfo bufInfo = {};
-        VkResult res = vmaCreateBuffer(g_hAllocator, &bufCreateInfo, &allocCreateInfo,
-            &bufInfo.Buffer, &bufInfo.Allocation, nullptr);
-        TEST(res == VK_SUCCESS);
-
-        VkBufferDeviceAddressInfoEXT bufferDeviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_EXT };
-        bufferDeviceAddressInfo.buffer = bufInfo.Buffer;
-        TEST(g_vkGetBufferDeviceAddressKHR != nullptr);
-        VkDeviceAddress addr = g_vkGetBufferDeviceAddressKHR(g_hDevice, &bufferDeviceAddressInfo);
-        TEST(addr != 0);
-
-        vmaDestroyBuffer(g_hAllocator, bufInfo.Buffer, bufInfo.Allocation);
-    }
-}
-
-static void TestMemoryPriority()
-{
-    wprintf(L"Test memory priority\n");
-
-    assert(VK_EXT_memory_priority_enabled);
-
-    VkBufferCreateInfo bufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufCreateInfo.size = 0x10000;
-    bufCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    allocCreateInfo.priority = 1.f;
-
-    for(uint32_t testIndex = 0; testIndex < 2; ++testIndex)
-    {
-        // 1st is placed, 2nd is dedicated.
-        if(testIndex == 1)
-            allocCreateInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-
-        BufferInfo bufInfo = {};
-        VkResult res = vmaCreateBuffer(g_hAllocator, &bufCreateInfo, &allocCreateInfo,
-            &bufInfo.Buffer, &bufInfo.Allocation, nullptr);
-        TEST(res == VK_SUCCESS);
-
-        // There is nothing we can do to validate the priority.
-
-        vmaDestroyBuffer(g_hAllocator, bufInfo.Buffer, bufInfo.Allocation);
-    }
-}
-
 static void BenchmarkAlgorithms(FILE* file)
 {
     wprintf(L"Benchmark algorithms\n");
@@ -4345,27 +3547,27 @@ static void TestPool_Benchmark(
             return sum + allocSize.Probability;
         });
 
-    VkBufferCreateInfo bufferTemplateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufferTemplateInfo.size = 256; // Whatever.
-    bufferTemplateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufferInfo.size = 256; // Whatever.
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    VkImageCreateInfo imageTemplateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    imageTemplateInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageTemplateInfo.extent.width = 256; // Whatever.
-    imageTemplateInfo.extent.height = 256; // Whatever.
-    imageTemplateInfo.extent.depth = 1;
-    imageTemplateInfo.mipLevels = 1;
-    imageTemplateInfo.arrayLayers = 1;
-    imageTemplateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-    imageTemplateInfo.tiling = VK_IMAGE_TILING_OPTIMAL; // LINEAR if CPU memory.
-    imageTemplateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    imageTemplateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; // TRANSFER_SRC if CPU memory.
-    imageTemplateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = 256; // Whatever.
+    imageInfo.extent.height = 256; // Whatever.
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL; // LINEAR if CPU memory.
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; // TRANSFER_SRC if CPU memory.
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
     uint32_t bufferMemoryTypeBits = UINT32_MAX;
     {
         VkBuffer dummyBuffer;
-        VkResult res = vkCreateBuffer(g_hDevice, &bufferTemplateInfo, g_Allocs, &dummyBuffer);
+        VkResult res = vkCreateBuffer(g_hDevice, &bufferInfo, g_Allocs, &dummyBuffer);
         TEST(res == VK_SUCCESS);
 
         VkMemoryRequirements memReq;
@@ -4378,7 +3580,7 @@ static void TestPool_Benchmark(
     uint32_t imageMemoryTypeBits = UINT32_MAX;
     {
         VkImage dummyImage;
-        VkResult res = vkCreateImage(g_hDevice, &imageTemplateInfo, g_Allocs, &dummyImage);
+        VkResult res = vkCreateImage(g_hDevice, &imageInfo, g_Allocs, &dummyImage);
         TEST(res == VK_SUCCESS);
 
         VkMemoryRequirements memReq;
@@ -4406,67 +3608,32 @@ static void TestPool_Benchmark(
         TEST(0);
 
     VmaPoolCreateInfo poolCreateInfo = {};
+    poolCreateInfo.memoryTypeIndex = 0;
     poolCreateInfo.minBlockCount = 1;
     poolCreateInfo.maxBlockCount = 1;
     poolCreateInfo.blockSize = config.PoolSize;
     poolCreateInfo.frameInUseCount = 1;
 
-    const VkPhysicalDeviceMemoryProperties* memProps = nullptr;
-    vmaGetMemoryProperties(g_hAllocator, &memProps);
+    VmaAllocationCreateInfo dummyAllocCreateInfo = {};
+    dummyAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    vmaFindMemoryTypeIndex(g_hAllocator, memoryTypeBits, &dummyAllocCreateInfo, &poolCreateInfo.memoryTypeIndex);
 
-    VmaPool pool = VK_NULL_HANDLE;
-    VkResult res;
-    // Loop over memory types because we sometimes allocate a big block here,
-    // while the most eligible DEVICE_LOCAL heap may be only 256 MB on some GPUs.
-    while(memoryTypeBits)
-    {
-        VmaAllocationCreateInfo dummyAllocCreateInfo = {};
-        dummyAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        vmaFindMemoryTypeIndex(g_hAllocator, memoryTypeBits, &dummyAllocCreateInfo, &poolCreateInfo.memoryTypeIndex);
-
-        const uint32_t heapIndex = memProps->memoryTypes[poolCreateInfo.memoryTypeIndex].heapIndex;
-        // Protection against validation layer error when trying to allocate a block larger than entire heap size,
-        // which may be only 256 MB on some platforms.
-        if(poolCreateInfo.blockSize * poolCreateInfo.minBlockCount < memProps->memoryHeaps[heapIndex].size)
-        {
-            res = vmaCreatePool(g_hAllocator, &poolCreateInfo, &pool);
-            if(res == VK_SUCCESS)
-                break;
-        }
-        memoryTypeBits &= ~(1u << poolCreateInfo.memoryTypeIndex);
-    }
-    TEST(pool);
+    VmaPool pool;
+    VkResult res = vmaCreatePool(g_hAllocator, &poolCreateInfo, &pool);
+    TEST(res == VK_SUCCESS);
 
     // Start time measurement - after creating pool and initializing data structures.
     time_point timeBeg = std::chrono::high_resolution_clock::now();
 
     ////////////////////////////////////////////////////////////////////////////////
     // ThreadProc
-    auto ThreadProc = [&config, allocationSizeProbabilitySum, pool](
+    auto ThreadProc = [&](
         PoolTestThreadResult* outThreadResult,
         uint32_t randSeed,
         HANDLE frameStartEvent,
         HANDLE frameEndEvent) -> void
     {
         RandomNumberGenerator threadRand{randSeed};
-        VkResult res = VK_SUCCESS;
-
-        VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        bufferInfo.size = 256; // Whatever.
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-        VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width = 256; // Whatever.
-        imageInfo.extent.height = 256; // Whatever.
-        imageInfo.extent.depth = 1;
-        imageInfo.mipLevels = 1;
-        imageInfo.arrayLayers = 1;
-        imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL; // LINEAR if CPU memory.
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-        imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; // TRANSFER_SRC if CPU memory.
-        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
         outThreadResult->AllocationTimeMin = duration::max();
         outThreadResult->AllocationTimeSum = duration::zero();
@@ -4483,62 +3650,16 @@ static void TestPool_Benchmark(
 
         struct Item
         {
-            VkDeviceSize BufferSize = 0;
-            VkExtent2D ImageSize = { 0, 0 };
-            VkBuffer Buf = VK_NULL_HANDLE;
-            VkImage Image = VK_NULL_HANDLE;
-            VmaAllocation Alloc = VK_NULL_HANDLE;
+            VkDeviceSize BufferSize;
+            VkExtent2D ImageSize;
+            VkBuffer Buf;
+            VkImage Image;
+            VmaAllocation Alloc;
             
-            Item() { }
-            Item(Item&& src) :
-                BufferSize(src.BufferSize), ImageSize(src.ImageSize), Buf(src.Buf), Image(src.Image), Alloc(src.Alloc)
-            {
-                src.BufferSize = 0;
-                src.ImageSize = {0, 0};
-                src.Buf = VK_NULL_HANDLE;
-                src.Image = VK_NULL_HANDLE;
-                src.Alloc = VK_NULL_HANDLE;
-            }
-            Item(const Item& src) = delete;
-            ~Item()
-            {
-                DestroyResources();
-            }
-            Item& operator=(Item&& src)
-            {
-                if(&src != this)
-                {
-                    DestroyResources();
-                    BufferSize = src.BufferSize; ImageSize = src.ImageSize;
-                    Buf = src.Buf; Image = src.Image; Alloc = src.Alloc;
-                    src.BufferSize = 0;
-                    src.ImageSize = {0, 0};
-                    src.Buf = VK_NULL_HANDLE;
-                    src.Image = VK_NULL_HANDLE;
-                    src.Alloc = VK_NULL_HANDLE;
-                }
-                return *this;
-            }
-            Item& operator=(const Item& src) = delete;
-            void DestroyResources()
-            {
-                if(Buf)
-                {
-                    assert(Image == VK_NULL_HANDLE);
-                    vmaDestroyBuffer(g_hAllocator, Buf, Alloc);
-                    Buf = VK_NULL_HANDLE;
-                }
-                else
-                {
-                    vmaDestroyImage(g_hAllocator, Image, Alloc);
-                    Image = VK_NULL_HANDLE;
-                }
-                Alloc = VK_NULL_HANDLE;
-            }
             VkDeviceSize CalcSizeBytes() const
             {
                 return BufferSize +
-                    4ull * ImageSize.width * ImageSize.height;
+                    ImageSize.width * ImageSize.height * 4;
             }
         };
         std::vector<Item> unusedItems, usedItems;
@@ -4580,13 +3701,11 @@ static void TestPool_Benchmark(
                 }
             }
 
-            unusedItems.push_back(std::move(item));
+            unusedItems.push_back(item);
         }
 
         auto Allocate = [&](Item& item) -> VkResult
         {
-            assert(item.Buf == VK_NULL_HANDLE && item.Image == VK_NULL_HANDLE && item.Alloc == VK_NULL_HANDLE);
-
             VmaAllocationCreateInfo allocCreateInfo = {};
             allocCreateInfo.pool = pool;
             allocCreateInfo.flags = VMA_ALLOCATION_CREATE_CAN_BECOME_LOST_BIT |
@@ -4595,14 +3714,8 @@ static void TestPool_Benchmark(
             if(item.BufferSize)
             {
                 bufferInfo.size = item.BufferSize;
-                VkResult res = VK_SUCCESS;
-                {
-                    PoolAllocationTimeRegisterObj timeRegisterObj(*outThreadResult);
-                    res = vmaCreateBuffer(g_hAllocator, &bufferInfo, &allocCreateInfo, &item.Buf, &item.Alloc, nullptr);
-                }
-                if(res == VK_SUCCESS)
-                    SetDebugUtilsObjectName(VK_OBJECT_TYPE_BUFFER, (uint64_t)item.Buf, "TestPool_Benchmark_Buffer");
-                return res;
+                PoolAllocationTimeRegisterObj timeRegisterObj(*outThreadResult);
+                return vmaCreateBuffer(g_hAllocator, &bufferInfo, &allocCreateInfo, &item.Buf, &item.Alloc, nullptr);
             }
             else
             {
@@ -4610,14 +3723,8 @@ static void TestPool_Benchmark(
 
                 imageInfo.extent.width = item.ImageSize.width;
                 imageInfo.extent.height = item.ImageSize.height;
-                VkResult res = VK_SUCCESS;
-                {
-                    PoolAllocationTimeRegisterObj timeRegisterObj(*outThreadResult);
-                    res = vmaCreateImage(g_hAllocator, &imageInfo, &allocCreateInfo, &item.Image, &item.Alloc, nullptr);
-                }
-                if(res == VK_SUCCESS)
-                    SetDebugUtilsObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)item.Image, "TestPool_Benchmark_Image");
-                return res;
+                PoolAllocationTimeRegisterObj timeRegisterObj(*outThreadResult);
+                return vmaCreateImage(g_hAllocator, &imageInfo, &allocCreateInfo, &item.Image, &item.Alloc, nullptr);
             }
         };
 
@@ -4632,10 +3739,8 @@ static void TestPool_Benchmark(
             for(size_t i = 0; i < bufsToMakeUnused; ++i)
             {
                 size_t index = threadRand.Generate() % usedItems.size();
-                auto it = usedItems.begin() + index;
-                Item item = std::move(*it);
-                usedItems.erase(it);
-                unusedItems.push_back(std::move(item));
+                unusedItems.push_back(usedItems[index]);
+                usedItems.erase(usedItems.begin() + index);
             }
 
             // Determine which bufs we want to use in this frame.
@@ -4646,19 +3751,15 @@ static void TestPool_Benchmark(
             while(usedBufCount < usedItems.size())
             {
                 size_t index = threadRand.Generate() % usedItems.size();
-                auto it = usedItems.begin() + index;
-                Item item = std::move(*it);
-                usedItems.erase(it);
-                unusedItems.push_back(std::move(item));
+                unusedItems.push_back(usedItems[index]);
+                usedItems.erase(usedItems.begin() + index);
             }
             // Move some unused to used.
             while(usedBufCount > usedItems.size())
             {
                 size_t index = threadRand.Generate() % unusedItems.size();
-                auto it = unusedItems.begin() + index;
-                Item item = std::move(*it);
-                unusedItems.erase(it);
-                usedItems.push_back(std::move(item));
+                usedItems.push_back(unusedItems[index]);
+                unusedItems.erase(unusedItems.begin() + index);
             }
 
             uint32_t touchExistingCount = 0;
@@ -4677,7 +3778,8 @@ static void TestPool_Benchmark(
                     ++outThreadResult->AllocationCount;
                     if(res != VK_SUCCESS)
                     {
-                        assert(item.Alloc == VK_NULL_HANDLE && item.Buf == VK_NULL_HANDLE && item.Image == VK_NULL_HANDLE);
+                        item.Alloc = VK_NULL_HANDLE;
+                        item.Buf = VK_NULL_HANDLE;
                         ++outThreadResult->FailedAllocationCount;
                         outThreadResult->FailedAllocationTotalSize += item.CalcSizeBytes();
                         ++createFailedCount;
@@ -4698,9 +3800,14 @@ static void TestPool_Benchmark(
                         // Destroy.
                         {
                             PoolDeallocationTimeRegisterObj timeRegisterObj(*outThreadResult);
-                            item.DestroyResources();
+                            if(item.Buf)
+                                vmaDestroyBuffer(g_hAllocator, item.Buf, item.Alloc);
+                            else
+                                vmaDestroyImage(g_hAllocator, item.Image, item.Alloc);
                             ++outThreadResult->DeallocationCount;
                         }
+                        item.Alloc = VK_NULL_HANDLE;
+                        item.Buf = VK_NULL_HANDLE;
 
                         ++outThreadResult->LostAllocationCount;
                         outThreadResult->LostAllocationTotalSize += item.CalcSizeBytes();
@@ -4711,7 +3818,6 @@ static void TestPool_Benchmark(
                         // Creation failed.
                         if(res != VK_SUCCESS)
                         {
-                            TEST(item.Alloc == VK_NULL_HANDLE && item.Buf == VK_NULL_HANDLE && item.Image == VK_NULL_HANDLE);
                             ++outThreadResult->FailedAllocationCount;
                             outThreadResult->FailedAllocationTotalSize += item.CalcSizeBytes();
                             ++createFailedCount;
@@ -4738,13 +3844,19 @@ static void TestPool_Benchmark(
         for(size_t i = usedItems.size(); i--; )
         {
             PoolDeallocationTimeRegisterObj timeRegisterObj(*outThreadResult);
-            usedItems[i].DestroyResources();
+            if(usedItems[i].Buf)
+                vmaDestroyBuffer(g_hAllocator, usedItems[i].Buf, usedItems[i].Alloc);
+            else
+                vmaDestroyImage(g_hAllocator, usedItems[i].Image, usedItems[i].Alloc);
             ++outThreadResult->DeallocationCount;
         }
         for(size_t i = unusedItems.size(); i--; )
         {
             PoolDeallocationTimeRegisterObj timeRegisterOb(*outThreadResult);
-            unusedItems[i].DestroyResources();
+            if(unusedItems[i].Buf)
+                vmaDestroyBuffer(g_hAllocator, unusedItems[i].Buf, unusedItems[i].Alloc);
+            else
+                vmaDestroyImage(g_hAllocator, unusedItems[i].Image, unusedItems[i].Alloc);
             ++outThreadResult->DeallocationCount;
         }
     };
@@ -5032,102 +4144,12 @@ static void TestMemoryUsage()
     }
 }
 
-static uint32_t FindDeviceCoherentMemoryTypeBits()
-{
-    VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(g_hPhysicalDevice, &memProps);
-
-    uint32_t memTypeBits = 0;
-    for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
-    {
-        if(memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD)
-            memTypeBits |= 1u << i;
-    }
-    return memTypeBits;
-}
-
-static void TestDeviceCoherentMemory()
-{
-    if(!VK_AMD_device_coherent_memory_enabled)
-        return;
-
-    uint32_t deviceCoherentMemoryTypeBits = FindDeviceCoherentMemoryTypeBits();
-    // Extension is enabled, feature is enabled, and the device still doesn't support any such memory type?
-    // OK then, so it's just fake!
-    if(deviceCoherentMemoryTypeBits == 0)
-        return;
-
-    wprintf(L"Testing device coherent memory...\n");
-
-    // 1. Try to allocate buffer from a memory type that is DEVICE_COHERENT.
-
-    VkBufferCreateInfo bufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufCreateInfo.size = 0x10000;
-    bufCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-    allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD;
-
-    AllocInfo alloc = {};
-    VmaAllocationInfo allocInfo = {};
-    VkResult res = vmaCreateBuffer(g_hAllocator, &bufCreateInfo, &allocCreateInfo, &alloc.m_Buffer, &alloc.m_Allocation, &allocInfo);
-
-    // Make sure it succeeded and was really created in such memory type.
-    TEST(res == VK_SUCCESS);
-    TEST((1u << allocInfo.memoryType) & deviceCoherentMemoryTypeBits);
-
-    alloc.Destroy();
-
-    // 2. Try to create a pool in such memory type.
-    {
-        VmaPoolCreateInfo poolCreateInfo = {};
-
-        res = vmaFindMemoryTypeIndex(g_hAllocator, UINT32_MAX, &allocCreateInfo, &poolCreateInfo.memoryTypeIndex);
-        TEST(res == VK_SUCCESS);
-        TEST((1u << poolCreateInfo.memoryTypeIndex) & deviceCoherentMemoryTypeBits);
-
-        VmaPool pool = VK_NULL_HANDLE;
-        res = vmaCreatePool(g_hAllocator, &poolCreateInfo, &pool);
-        TEST(res == VK_SUCCESS);
-
-        vmaDestroyPool(g_hAllocator, pool);
-    }
-
-    // 3. Try the same with a local allocator created without VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT.
-
-    VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    SetAllocatorCreateInfo(allocatorCreateInfo);
-    allocatorCreateInfo.flags &= ~VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT;
-    
-    VmaAllocator localAllocator = VK_NULL_HANDLE;
-    res = vmaCreateAllocator(&allocatorCreateInfo, &localAllocator);
-    TEST(res == VK_SUCCESS && localAllocator);
-
-    res = vmaCreateBuffer(localAllocator, &bufCreateInfo, &allocCreateInfo, &alloc.m_Buffer, &alloc.m_Allocation, &allocInfo);
-
-    // Make sure it failed.
-    TEST(res != VK_SUCCESS && !alloc.m_Buffer && !alloc.m_Allocation);
-
-    // 4. Try to find memory type.
-    {
-        uint32_t memTypeIndex = UINT_MAX;
-        res = vmaFindMemoryTypeIndex(localAllocator, UINT32_MAX, &allocCreateInfo, &memTypeIndex);
-        TEST(res != VK_SUCCESS);
-    }
-
-    vmaDestroyAllocator(localAllocator);
-}
-
 static void TestBudget()
 {
     wprintf(L"Testing budget...\n");
 
-    static const VkDeviceSize BUF_SIZE = 10ull * 1024 * 1024;
+    static const VkDeviceSize BUF_SIZE = 100ull * 1024 * 1024;
     static const uint32_t BUF_COUNT = 4;
-
-    const VkPhysicalDeviceMemoryProperties* memProps = {};
-    vmaGetMemoryProperties(g_hAllocator, &memProps);
 
     for(uint32_t testIndex = 0; testIndex < 2; ++testIndex)
     {
@@ -5136,10 +4158,8 @@ static void TestBudget()
         VmaBudget budgetBeg[VK_MAX_MEMORY_HEAPS] = {};
         vmaGetBudget(g_hAllocator, budgetBeg);
 
-        for(uint32_t i = 0; i < memProps->memoryHeapCount; ++i)
+        for(uint32_t i = 0; i < VK_MAX_MEMORY_HEAPS; ++i)
         {
-            TEST(budgetBeg[i].budget > 0);
-            TEST(budgetBeg[i].budget <= memProps->memoryHeaps[i].size);
             TEST(budgetBeg[i].allocationBytes <= budgetBeg[i].blockBytes);
         }
 
@@ -5187,7 +4207,7 @@ static void TestBudget()
         vmaGetBudget(g_hAllocator, budgetEnd);
 
         // CHECK
-        for(uint32_t i = 0; i < memProps->memoryHeapCount; ++i)
+        for(uint32_t i = 0; i < VK_MAX_MEMORY_HEAPS; ++i)
         {
             TEST(budgetEnd[i].allocationBytes <= budgetEnd[i].blockBytes);
             if(i == heapIndex)
@@ -5205,87 +4225,6 @@ static void TestBudget()
             }
         }
     }
-}
-
-static void TestAliasing()
-{
-    wprintf(L"Testing aliasing...\n");
-
-    /*
-    This is just a simple test, more like a code sample to demonstrate it's possible.
-    */
-
-    // A 512x512 texture to be sampled.
-    VkImageCreateInfo img1CreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    img1CreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    img1CreateInfo.extent.width = 512;
-    img1CreateInfo.extent.height = 512;
-    img1CreateInfo.extent.depth = 1;
-    img1CreateInfo.mipLevels = 10;
-    img1CreateInfo.arrayLayers = 1;
-    img1CreateInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-    img1CreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    img1CreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    img1CreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    img1CreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    // A full screen texture to be used as color attachment.
-    VkImageCreateInfo img2CreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    img2CreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    img2CreateInfo.extent.width = 1920;
-    img2CreateInfo.extent.height = 1080;
-    img2CreateInfo.extent.depth = 1;
-    img2CreateInfo.mipLevels = 1;
-    img2CreateInfo.arrayLayers = 1;
-    img2CreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-    img2CreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    img2CreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    img2CreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    img2CreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkImage img1 = VK_NULL_HANDLE;
-    ERR_GUARD_VULKAN(vkCreateImage(g_hDevice, &img1CreateInfo, g_Allocs, &img1));
-    VkImage img2 = VK_NULL_HANDLE;
-    ERR_GUARD_VULKAN(vkCreateImage(g_hDevice, &img2CreateInfo, g_Allocs, &img2));
-
-    VkMemoryRequirements img1MemReq = {};
-    vkGetImageMemoryRequirements(g_hDevice, img1, &img1MemReq);
-    VkMemoryRequirements img2MemReq = {};
-    vkGetImageMemoryRequirements(g_hDevice, img2, &img2MemReq);
-
-    VkMemoryRequirements finalMemReq = {};
-    finalMemReq.size = std::max(img1MemReq.size, img2MemReq.size);
-    finalMemReq.alignment = std::max(img1MemReq.alignment, img2MemReq.alignment);
-    finalMemReq.memoryTypeBits = img1MemReq.memoryTypeBits & img2MemReq.memoryTypeBits;
-    if(finalMemReq.memoryTypeBits != 0)
-    {
-        wprintf(L"  size: max(%llu, %llu) = %llu\n",
-            img1MemReq.size, img2MemReq.size, finalMemReq.size);
-        wprintf(L"  alignment: max(%llu, %llu) = %llu\n",
-            img1MemReq.alignment, img2MemReq.alignment, finalMemReq.alignment);
-        wprintf(L"  memoryTypeBits: %u & %u = %u\n",
-            img1MemReq.memoryTypeBits, img2MemReq.memoryTypeBits, finalMemReq.memoryTypeBits);
-
-        VmaAllocationCreateInfo allocCreateInfo = {};
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        VmaAllocation alloc = VK_NULL_HANDLE;
-        ERR_GUARD_VULKAN(vmaAllocateMemory(g_hAllocator, &finalMemReq, &allocCreateInfo, &alloc, nullptr));
-
-        ERR_GUARD_VULKAN(vmaBindImageMemory(g_hAllocator, alloc, img1));
-        ERR_GUARD_VULKAN(vmaBindImageMemory(g_hAllocator, alloc, img2));
-
-        // You can use img1, img2 here, but not at the same time!
-
-        vmaFreeMemory(g_hAllocator, alloc);
-    }
-    else
-    {
-        wprintf(L"  Textures cannot alias!\n");
-    }
-
-    vkDestroyImage(g_hDevice, img2, g_Allocs);
-    vkDestroyImage(g_hDevice, img1, g_Allocs);
 }
 
 static void TestMapping()
@@ -5775,16 +4714,16 @@ static void PerformCustomPoolTest(FILE* file)
     config.TotalItemCount = config.UsedItemCountMax * 10;
     config.UsedItemCountMin = config.UsedItemCountMax * 80 / 100;
 
+    g_MemoryAliasingWarningEnabled = false;
     PoolTestResult result = {};
     TestPool_Benchmark(result, config);
+    g_MemoryAliasingWarningEnabled = true;
 
     WritePoolTestResult(file, "Code desc", "Test desc", config, result);
 }
 
 static void PerformMainTests(FILE* file)
 {
-    wprintf(L"MAIN TESTS:\n");
-
     uint32_t repeatCount = 1;
     if(ConfigType >= CONFIG_TYPE_MAXIMUM) repeatCount = 3;
 
@@ -6050,8 +4989,6 @@ static void PerformMainTests(FILE* file)
 
 static void PerformPoolTests(FILE* file)
 {
-    wprintf(L"POOL TESTS:\n");
-
     const size_t AVG_RESOURCES_PER_POOL = 300;
 
     uint32_t repeatCount = 1;
@@ -6264,7 +5201,9 @@ static void PerformPoolTests(FILE* file)
                             printf("%s #%u\n", testDescription, (uint32_t)repeat);
 
                             PoolTestResult result{};
+                            g_MemoryAliasingWarningEnabled = false;
                             TestPool_Benchmark(result, config);
+                            g_MemoryAliasingWarningEnabled = true;
                             WritePoolTestResult(file, CODE_DESCRIPTION, testDescription, config, result);
                         }
                     }
@@ -6525,7 +5464,6 @@ void Test()
     // # Simple tests
 
     TestBasics();
-    TestAllocationVersusResourceSize();
     //TestGpuData(); // Not calling this because it's just testing the testing environment.
 #if VMA_DEBUG_MARGIN
     TestDebugMargin();
@@ -6538,9 +5476,7 @@ void Test()
     TestAllocationsInitialization();
 #endif
     TestMemoryUsage();
-    TestDeviceCoherentMemory();
     TestBudget();
-    TestAliasing();
     TestMapping();
     TestDeviceLocalMapped();
     TestMappingMultithreaded();
@@ -6550,11 +5486,6 @@ void Test()
 
     BasicTestBuddyAllocator();
     BasicTestAllocatePages();
-
-    if(VK_KHR_buffer_device_address_enabled)
-        TestBufferDeviceAddress();
-    if(VK_EXT_memory_priority_enabled)
-        TestMemoryPriority();
 
     {
         FILE* file;
@@ -6568,8 +5499,6 @@ void Test()
     TestDefragmentationFull();
     TestDefragmentationWholePool();
     TestDefragmentationGpu();
-    TestDefragmentationIncrementalBasic();
-    TestDefragmentationIncrementalComplex();
 
     // # Detailed tests
     FILE* file;
@@ -6586,7 +5515,7 @@ void Test()
     
     fclose(file);
     
-    wprintf(L"Done, all PASSED.\n");
+    wprintf(L"Done.\n");
 }
 
 #endif // #ifdef _WIN32

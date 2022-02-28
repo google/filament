@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -670,9 +670,8 @@ static uint32_t g_PhysicalDeviceIndex = 0;
 static RangeSequence<size_t> g_LineRanges;
 static bool g_UserDataEnabled = true;
 static bool g_MemStatsEnabled = false;
-VULKAN_EXTENSION_REQUEST g_VK_LAYER_KHRONOS_validation           = VULKAN_EXTENSION_REQUEST::DEFAULT;
-VULKAN_EXTENSION_REQUEST g_VK_EXT_memory_budget_request          = VULKAN_EXTENSION_REQUEST::DEFAULT;
-VULKAN_EXTENSION_REQUEST g_VK_AMD_device_coherent_memory_request = VULKAN_EXTENSION_REQUEST::DEFAULT;
+VULKAN_EXTENSION_REQUEST g_VK_LAYER_LUNARG_standard_validation = VULKAN_EXTENSION_REQUEST::DEFAULT;
+VULKAN_EXTENSION_REQUEST g_VK_EXT_memory_budget_request        = VULKAN_EXTENSION_REQUEST::DEFAULT;
 
 struct StatsAfterLineEntry
 {
@@ -809,8 +808,7 @@ static void VKAPI_CALL AllocateDeviceMemoryCallback(
     VmaAllocator      allocator,
     uint32_t          memoryType,
     VkDeviceMemory    memory,
-    VkDeviceSize      size,
-    void*             pUserData)
+    VkDeviceSize      size)
 {
     g_Statistics->RegisterDeviceMemoryAllocation(memoryType, size);
 }
@@ -820,8 +818,7 @@ static void VKAPI_CALL FreeDeviceMemoryCallback(
     VmaAllocator      allocator,
     uint32_t          memoryType,
     VkDeviceMemory    memory,
-    VkDeviceSize      size,
-    void*             pUserData)
+    VkDeviceSize      size)
 {
     // Nothing.
 }
@@ -1087,9 +1084,8 @@ private:
         Extension_VK_KHR_dedicated_allocation,
         Extension_VK_KHR_bind_memory2,
         Extension_VK_EXT_memory_budget,
-        Extension_VK_AMD_device_coherent_memory,
         Macro_VMA_DEBUG_ALWAYS_DEDICATED_MEMORY,
-        Macro_VMA_MIN_ALIGNMENT,
+        Macro_VMA_DEBUG_ALIGNMENT,
         Macro_VMA_DEBUG_MARGIN,
         Macro_VMA_DEBUG_INITIALIZE_ALLOCATIONS,
         Macro_VMA_DEBUG_DETECT_CORRUPTION,
@@ -1222,8 +1218,6 @@ bool ConfigurationParser::Parse(LineSplit& lineSplit)
                     SetOption(currLineNumber, OPTION::Extension_VK_KHR_bind_memory2, csvSplit.GetRange(2));
                 else if(StrRangeEq(subOptionName, "VK_EXT_memory_budget"))
                     SetOption(currLineNumber, OPTION::Extension_VK_EXT_memory_budget, csvSplit.GetRange(2));
-                else if(StrRangeEq(subOptionName, "VK_AMD_device_coherent_memory"))
-                    SetOption(currLineNumber, OPTION::Extension_VK_AMD_device_coherent_memory, csvSplit.GetRange(2));
                 else
                     printf("Line %zu: Unrecognized configuration option.\n", currLineNumber);
             }
@@ -1237,8 +1231,8 @@ bool ConfigurationParser::Parse(LineSplit& lineSplit)
                 const StrRange subOptionName = csvSplit.GetRange(1);
                 if(StrRangeEq(subOptionName, "VMA_DEBUG_ALWAYS_DEDICATED_MEMORY"))
                     SetOption(currLineNumber, OPTION::Macro_VMA_DEBUG_ALWAYS_DEDICATED_MEMORY, csvSplit.GetRange(2));
-                else if(StrRangeEq(subOptionName, "VMA_MIN_ALIGNMENT") || StrRangeEq(subOptionName, "VMA_DEBUG_ALIGNMENT"))
-                    SetOption(currLineNumber, OPTION::Macro_VMA_MIN_ALIGNMENT, csvSplit.GetRange(2));
+                else if(StrRangeEq(subOptionName, "VMA_DEBUG_ALIGNMENT"))
+                    SetOption(currLineNumber, OPTION::Macro_VMA_DEBUG_ALIGNMENT, csvSplit.GetRange(2));
                 else if(StrRangeEq(subOptionName, "VMA_DEBUG_MARGIN"))
                     SetOption(currLineNumber, OPTION::Macro_VMA_DEBUG_MARGIN, csvSplit.GetRange(2));
                 else if(StrRangeEq(subOptionName, "VMA_DEBUG_INITIALIZE_ALLOCATIONS"))
@@ -1494,16 +1488,53 @@ void ConfigurationParser::CompareMemProps(
 ////////////////////////////////////////////////////////////////////////////////
 // class Player
 
-static const char* const VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation";
+static const char* const VALIDATION_LAYER_NAME = "VK_LAYER_LUNARG_standard_validation";
 
-static VkBool32 VKAPI_PTR MyDebugReportCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
-    const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
-    void*                                            pUserData)
+static const bool g_MemoryAliasingWarningEnabled = false;
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(
+    VkDebugReportFlagsEXT flags,
+    VkDebugReportObjectTypeEXT objectType,
+    uint64_t object,
+    size_t location,
+    int32_t messageCode,
+    const char* pLayerPrefix,
+    const char* pMessage,
+    void* pUserData)
 {
-    assert(pCallbackData && pCallbackData->pMessageIdName && pCallbackData->pMessage);
-    printf("%s \xBA %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+    // "Non-linear image 0xebc91 is aliased with linear buffer 0xeb8e4 which may indicate a bug."
+    if(!g_MemoryAliasingWarningEnabled && flags == VK_DEBUG_REPORT_WARNING_BIT_EXT &&
+        (strstr(pMessage, " is aliased with non-linear ") || strstr(pMessage, " is aliased with linear ")))
+    {
+        return VK_FALSE;
+    }
+
+    // Ignoring because when VK_KHR_dedicated_allocation extension is enabled,
+    // vkGetBufferMemoryRequirements2KHR function is used instead, while Validation
+    // Layer seems to be unaware of it.
+    if (strstr(pMessage, "but vkGetBufferMemoryRequirements() has not been called on that buffer") != nullptr)
+    {
+        return VK_FALSE;
+    }
+    if (strstr(pMessage, "but vkGetImageMemoryRequirements() has not been called on that image") != nullptr)
+    {
+        return VK_FALSE;
+    }
+    
+    /*
+    "Mapping an image with layout VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL can result in undefined behavior if this memory is used by the device. Only GENERAL or PREINITIALIZED should be used."
+    Ignoring because we map entire VkDeviceMemory blocks, where different types of
+    images and buffers may end up together, especially on GPUs with unified memory
+    like Intel.
+    */
+    if(strstr(pMessage, "Mapping an image with layout") != nullptr &&
+        strstr(pMessage, "can result in undefined behavior if this memory is used by the device") != nullptr)
+    {
+        return VK_FALSE;
+    }
+
+    printf("%s \xBA %s\n", pLayerPrefix, pMessage);
+
     return VK_FALSE;
 }
 
@@ -1572,9 +1603,10 @@ private:
     const VkPhysicalDeviceProperties* m_DevProps = nullptr;
     const VkPhysicalDeviceMemoryProperties* m_MemProps = nullptr;
 
-    PFN_vkCreateDebugUtilsMessengerEXT m_vkCreateDebugUtilsMessengerEXT = nullptr;
-    PFN_vkDestroyDebugUtilsMessengerEXT m_vkDestroyDebugUtilsMessengerEXT = nullptr;
-    VkDebugUtilsMessengerEXT m_DebugUtilsMessenger = VK_NULL_HANDLE;
+    PFN_vkCreateDebugReportCallbackEXT m_pvkCreateDebugReportCallbackEXT;
+    PFN_vkDebugReportMessageEXT m_pvkDebugReportMessageEXT;
+    PFN_vkDestroyDebugReportCallbackEXT m_pvkDestroyDebugReportCallbackEXT;
+    VkDebugReportCallbackEXT m_hCallback;
 
     uint32_t m_VmaFrameIndex = 0;
 
@@ -1621,7 +1653,6 @@ private:
     int InitVulkan();
     void FinalizeVulkan();
     void RegisterDebugCallbacks();
-    void UnregisterDebugCallbacks();
 
     // If parmeter count doesn't match, issues warning and returns false.
     bool ValidateFunctionParameterCount(size_t lineNumber, const CsvSplit& csvSplit, size_t expectedParamCount, bool lastUnbound);
@@ -1981,7 +2012,7 @@ int Player::InitVulkan()
         IsLayerSupported(instanceLayerProps.data(), instanceLayerProps.size(), VALIDATION_LAYER_NAME);
 
     bool validationLayersEnabled = false;
-    switch(g_VK_LAYER_KHRONOS_validation)
+    switch(g_VK_LAYER_LUNARG_standard_validation)
     {
     case VULKAN_EXTENSION_REQUEST::DISABLED:
         break;
@@ -2016,24 +2047,16 @@ int Player::InitVulkan()
     if(validationLayersEnabled)
     {
         instanceLayers.push_back(VALIDATION_LAYER_NAME);
+        enabledInstanceExtensions.push_back("VK_EXT_debug_report");
     }
 
     bool VK_KHR_get_physical_device_properties2_enabled = false;
-    bool VK_EXT_debug_utils_enabled = false;
     for(const auto& extensionProperties : availableInstanceExtensions)
     {
         if(strcmp(extensionProperties.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
         {
             enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
             VK_KHR_get_physical_device_properties2_enabled = true;
-        }
-        else if(strcmp(extensionProperties.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
-        {
-            if(validationLayersEnabled)
-            {
-                enabledInstanceExtensions.push_back("VK_EXT_debug_utils");
-                VK_EXT_debug_utils_enabled = true;
-            }
         }
     }
 
@@ -2058,7 +2081,7 @@ int Player::InitVulkan()
         return RESULT_ERROR_VULKAN;
     }
 
-    if(VK_EXT_debug_utils_enabled)
+    if(validationLayersEnabled)
     {
         RegisterDebugCallbacks();
     }
@@ -2198,11 +2221,6 @@ int Player::InitVulkan()
         }
         break;
     default: assert(0);
-    }
-
-    if(g_VK_AMD_device_coherent_memory_request == VULKAN_EXTENSION_REQUEST::ENABLED)
-    {
-        printf("WARNING: AMD_device_coherent_memory requested but not currently supported by the player.\n");
     }
 
     if(m_MemoryBudgetEnabled)
@@ -2359,7 +2377,11 @@ void Player::FinalizeVulkan()
         m_Device = nullptr;
     }
 
-    UnregisterDebugCallbacks();
+    if(m_pvkDestroyDebugReportCallbackEXT && m_hCallback != VK_NULL_HANDLE)
+    {
+        m_pvkDestroyDebugReportCallbackEXT(m_VulkanInstance, m_hCallback, nullptr);
+        m_hCallback = VK_NULL_HANDLE;
+    }
 
     if(m_VulkanInstance != VK_NULL_HANDLE)
     {
@@ -2370,41 +2392,29 @@ void Player::FinalizeVulkan()
 
 void Player::RegisterDebugCallbacks()
 {
-    static const VkDebugUtilsMessageSeverityFlagsEXT DEBUG_UTILS_MESSENGER_MESSAGE_SEVERITY =
-        //VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-        //VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    static const VkDebugUtilsMessageTypeFlagsEXT DEBUG_UTILS_MESSENGER_MESSAGE_TYPE =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    m_pvkCreateDebugReportCallbackEXT =
+        reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>
+            (vkGetInstanceProcAddr(m_VulkanInstance, "vkCreateDebugReportCallbackEXT"));
+    m_pvkDebugReportMessageEXT =
+        reinterpret_cast<PFN_vkDebugReportMessageEXT>
+            (vkGetInstanceProcAddr(m_VulkanInstance, "vkDebugReportMessageEXT"));
+    m_pvkDestroyDebugReportCallbackEXT =
+        reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>
+            (vkGetInstanceProcAddr(m_VulkanInstance, "vkDestroyDebugReportCallbackEXT"));
+    assert(m_pvkCreateDebugReportCallbackEXT);
+    assert(m_pvkDebugReportMessageEXT);
+    assert(m_pvkDestroyDebugReportCallbackEXT);
 
-    m_vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-        m_VulkanInstance, "vkCreateDebugUtilsMessengerEXT");
-    m_vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-        m_VulkanInstance, "vkDestroyDebugUtilsMessengerEXT");
-    assert(m_vkCreateDebugUtilsMessengerEXT);
-    assert(m_vkDestroyDebugUtilsMessengerEXT);
+    VkDebugReportCallbackCreateInfoEXT callbackCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
+    callbackCreateInfo.flags = //VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+        VK_DEBUG_REPORT_ERROR_BIT_EXT |
+        VK_DEBUG_REPORT_WARNING_BIT_EXT |
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT /*|
+        VK_DEBUG_REPORT_DEBUG_BIT_EXT*/;
+    callbackCreateInfo.pfnCallback = &MyDebugReportCallback;
 
-    VkDebugUtilsMessengerCreateInfoEXT messengerCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    messengerCreateInfo.messageSeverity = DEBUG_UTILS_MESSENGER_MESSAGE_SEVERITY;
-    messengerCreateInfo.messageType = DEBUG_UTILS_MESSENGER_MESSAGE_TYPE;
-    messengerCreateInfo.pfnUserCallback = MyDebugReportCallback;
-    VkResult res = m_vkCreateDebugUtilsMessengerEXT(m_VulkanInstance, &messengerCreateInfo, nullptr, &m_DebugUtilsMessenger);
-    if(res != VK_SUCCESS)
-    {
-        printf("ERROR: vkCreateDebugUtilsMessengerEXT failed (%d)\n", res);
-        m_DebugUtilsMessenger = VK_NULL_HANDLE;
-    }
-}
-
-void Player::UnregisterDebugCallbacks()
-{
-    if(m_DebugUtilsMessenger)
-    {
-        m_vkDestroyDebugUtilsMessengerEXT(m_VulkanInstance, m_DebugUtilsMessenger, nullptr);
-    }
+    VkResult res = m_pvkCreateDebugReportCallbackEXT(m_VulkanInstance, &callbackCreateInfo, nullptr, &m_hCallback);
+    assert(res == VK_SUCCESS);
 }
 
 void Player::Defragment()
@@ -3683,8 +3693,7 @@ void Player::ExecuteResizeAllocation(size_t lineNumber, const CsvSplit& csvSplit
                 const auto it = m_Allocations.find(origPtr);
                 if(it != m_Allocations.end())
                 {
-                    // Do nothing - the function was deprecated and has been removed.
-                    //vmaResizeAllocation(m_Allocator, it->second.allocation, newSize);
+                    vmaResizeAllocation(m_Allocator, it->second.allocation, newSize);
                     UpdateMemStats();
                 }
                 else
@@ -3971,7 +3980,7 @@ static void PrintCommandLineSyntax()
         "    --PhysicalDevice <Index> - Choice of Vulkan physical device. Default: 0.\n"
         "    --UserData <Value> - 0 to disable or 1 to enable setting pUserData during playback.\n"
         "        Default is 1. Affects both creation of buffers and images, as well as calls to vmaSetAllocationUserData.\n"
-        "    --VK_LAYER_KHRONOS_validation <Value> - 0 to disable or 1 to enable validation layers.\n"
+        "    --VK_LAYER_LUNARG_standard_validation <Value> - 0 to disable or 1 to enable validation layers.\n"
         "        By default the layers are silently enabled if available.\n"
         "    --VK_EXT_memory_budget <Value> - 0 to disable or 1 to enable this extension.\n"
         "        By default the extension is silently enabled if available.\n"
@@ -4194,7 +4203,7 @@ static int main2(int argc, char** argv)
     cmdLineParser.RegisterOpt(CMD_LINE_OPT_PHYSICAL_DEVICE, "PhysicalDevice", true);
     cmdLineParser.RegisterOpt(CMD_LINE_OPT_USER_DATA, "UserData", true);
     cmdLineParser.RegisterOpt(CMD_LINE_OPT_VK_EXT_MEMORY_BUDGET, "VK_EXT_memory_budget", true);
-    cmdLineParser.RegisterOpt(CMD_LINE_OPT_VK_LAYER_KHRONOS_VALIDATION, VALIDATION_LAYER_NAME, true);
+    cmdLineParser.RegisterOpt(CMD_LINE_OPT_VK_LAYER_LUNARG_STANDARD_VALIDATION, VALIDATION_LAYER_NAME, true);
     cmdLineParser.RegisterOpt(CMD_LINE_OPT_MEM_STATS, "MemStats", true);
     cmdLineParser.RegisterOpt(CMD_LINE_OPT_DUMP_STATS_AFTER_LINE, "DumpStatsAfterLine", true);
     cmdLineParser.RegisterOpt(CMD_LINE_OPT_DEFRAGMENT_AFTER_LINE, "DefragmentAfterLine", true);
@@ -4268,12 +4277,12 @@ static int main2(int argc, char** argv)
                     }
                 }
                 break;
-            case CMD_LINE_OPT_VK_LAYER_KHRONOS_VALIDATION:
+            case CMD_LINE_OPT_VK_LAYER_LUNARG_STANDARD_VALIDATION:
                 {
                     bool newValue;
                     if(StrRangeToBool(StrRange(cmdLineParser.GetParameter()), newValue))
                     {
-                        g_VK_LAYER_KHRONOS_validation = newValue ?
+                        g_VK_LAYER_LUNARG_standard_validation = newValue ?
                             VULKAN_EXTENSION_REQUEST::ENABLED :
                             VULKAN_EXTENSION_REQUEST::DISABLED;
                     }

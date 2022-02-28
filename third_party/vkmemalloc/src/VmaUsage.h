@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -48,15 +48,18 @@ include all public interface declarations. Example:
 */
 
 //#define VMA_HEAVY_ASSERT(expr) assert(expr)
+//#define VMA_USE_STL_CONTAINERS 1
 //#define VMA_DEDICATED_ALLOCATION 0
 //#define VMA_DEBUG_MARGIN 16
 //#define VMA_DEBUG_DETECT_CORRUPTION 1
+//#define VMA_DEBUG_INITIALIZE_ALLOCATIONS 1
+//#define VMA_RECORDING_ENABLED 1
 //#define VMA_DEBUG_MIN_BUFFER_IMAGE_GRANULARITY 256
 //#define VMA_USE_STL_SHARED_MUTEX 0
+//#define VMA_DEBUG_GLOBAL_MUTEX 1
 //#define VMA_MEMORY_BUDGET 0
 
-#define VMA_VULKAN_VERSION 1002000 // Vulkan 1.2
-//#define VMA_VULKAN_VERSION 1001000 // Vulkan 1.1
+#define VMA_VULKAN_VERSION 1001000 // Vulkan 1.1
 //#define VMA_VULKAN_VERSION 1000000 // Vulkan 1.0
 
 /*
@@ -80,10 +83,9 @@ include all public interface declarations. Example:
     #pragma clang diagnostic ignored "-Wunused-private-field"
     #pragma clang diagnostic ignored "-Wunused-parameter"
     #pragma clang diagnostic ignored "-Wmissing-field-initializers"
-    #pragma clang diagnostic ignored "-Wnullability-completeness"
 #endif
 
-#include "../include/vk_mem_alloc.h"
+#include "vk_mem_alloc.h"
 
 #ifdef __clang__
     #pragma clang diagnostic pop
