@@ -1288,11 +1288,15 @@ void SimpleViewer::updateUserInterface() {
                             matInstance->setParameter("doDeriveSheenColor", 0);
                         }
                         matInstance->setParameter("subsurfaceColor", tweaks.mSubsurfaceColor.value);
+                        matInstance->setParameter("doDeriveSubsurfaceColor", tweaks.mSubsurfaceColor.useDerivedQuantity ? 1 : 0);
+                        matInstance->setParameter("subsurfaceTint", tweaks.mSubsurfaceTint.value * tweaks.mSubsurfaceIntensity.value);
                     } else if (tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface) {
                         matInstance->setParameter("thickness", tweaks.mThickness.value);
                         setTextureIfPresent(tweaks.mThickness.isFile, tweaks.mThickness.filename, "thickness");
                         matInstance->setParameter("subsurfaceColor", tweaks.mSubsurfaceColor.value);
+                        matInstance->setParameter("doDeriveSubsurfaceColor", tweaks.mSubsurfaceColor.useDerivedQuantity ? 1 : 0);
                         matInstance->setParameter("subsurfacePower", tweaks.mSubsurfacePower.value);
+                        matInstance->setParameter("subsurfaceTint", tweaks.mSubsurfaceTint.value * tweaks.mSubsurfaceIntensity.value);
                     }
 
                     if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {

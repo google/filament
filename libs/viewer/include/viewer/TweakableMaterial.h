@@ -111,7 +111,9 @@ public:
     TweakableProperty<float> mAnisotropy{}; // for metals
     TweakableProperty<filament::math::float3, false, false> mAnisotropyDirection{}; // for metals; not color
     
-    TweakableProperty<filament::math::float3> mSubsurfaceColor{}; // for cloth and subsurface
+    TweakablePropertyDerivable<filament::math::float3> mSubsurfaceColor{}; // for cloth and subsurface
+    TweakableProperty<filament::math::float3> mSubsurfaceTint{}; // for cloth and subsurface
+    TweakableProperty<float> mSubsurfaceIntensity{1.0f}; // for cloth and subsurface
     TweakableProperty<float> mSheenIntensity{1.0f}; // value multiplier for sheen color
     TweakablePropertyDerivable<filament::math::float3> mSheenColor{}; // for cloth
     TweakablePropertyTextured<float> mSheenRoughness{}; // for cloth

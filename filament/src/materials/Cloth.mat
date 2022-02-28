@@ -147,6 +147,14 @@ material {
             name : subsurfaceColor
         },
         {
+            type : float3,
+            name : subsurfaceTint,
+        },
+        {
+            type : int,
+            name : doDeriveSubsurfaceColor
+        },
+        {
             type : int,
             name : useWard
         },

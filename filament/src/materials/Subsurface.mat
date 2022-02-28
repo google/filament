@@ -148,6 +148,14 @@ material {
             name : subsurfaceColor
         },
         {
+            type : int,
+            name : doDeriveSubsurfaceColor
+        },
+        {
+            type : float3,
+            name : subsurfaceTint,
+        },
+        {
             type : float,
             name : subsurfacePower
         },

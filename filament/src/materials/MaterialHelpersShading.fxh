@@ -377,7 +377,13 @@ void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragment
     material.sheenColor *= materialParams.sheenIntensity;
 #endif
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR) && ( defined(SHADING_MODEL_SUBSURFACE) || defined(SHADING_MODEL_CLOTH) )
-    material.subsurfaceColor = materialParams.subsurfaceColor;
+    if (materialParams.doDeriveSubsurfaceColor == 1) {
+        material.subsurfaceColor = material.baseColor.rgb;
+    } else {
+        material.subsurfaceColor = materialParams.subsurfaceColor;
+    }
+    // note: this also incorporates the subsurface intensity, i.e. subsurfaceTint = subsurfaceTintColor * subsurfaceIntensity
+    material.subsurfaceColor *= materialParams.subsurfaceTint; 
 #endif
 #if defined(MATERIAL_HAS_SUBSURFACE_POWER) && defined(SHADING_MODEL_SUBSURFACE)
     material.subsurfacePower = materialParams.subsurfacePower;
