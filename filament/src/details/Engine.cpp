@@ -274,6 +274,9 @@ void FEngine::init() {
                     .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));
 
+    // Create a dummy morph target buffer.
+    mDummyMorphTargetBuffer = createMorphTargetBuffer(FMorphTargetBuffer::EmptyMorphTargetBuilder());
+
     // create dummy textures we need throughout the engine
 
     mDummyOneTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -310,9 +313,6 @@ void FEngine::init() {
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
             PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
-
-    // dummy textures must be initialized before this call
-    mDummyMorphingSamplerGroup = FMorphTargetBuffer::createDummySampleGroup(*this);
 
     mPostProcessManager.init();
     mLightManager.init(*this);
@@ -360,7 +360,7 @@ void FEngine::shutdown() {
     driver.destroyRenderPrimitive(mFullScreenTriangleRph);
     destroy(mFullScreenTriangleIb);
     destroy(mFullScreenTriangleVb);
-
+    destroy(mDummyMorphTargetBuffer);
     destroy(mDefaultIblTexture);
     destroy(mDefaultIbl);
 
@@ -397,7 +397,6 @@ void FEngine::shutdown() {
     }
     cleanupResourceList(mFences);
 
-    driver.destroySamplerGroup(mDummyMorphingSamplerGroup);
     driver.destroyTexture(mDummyOneTexture);
     driver.destroyTexture(mDummyOneTextureArray);
     driver.destroyTexture(mDummyOneIntegerTextureArray);

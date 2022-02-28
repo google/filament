@@ -64,6 +64,12 @@ public:
 
     static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
 
+    struct MorphTargets {
+        FMorphTargetBuffer* buffer = nullptr;
+        uint32_t offset = 0;
+        uint32_t count = 0;
+    };
+
     explicit FRenderableManager(FEngine& engine) noexcept;
     ~FRenderableManager();
 
@@ -142,6 +148,7 @@ public:
     struct MorphingBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
         uint32_t count;
+        MorphTargets const* targets; // Pointer to Slice<MorphTargets> at a renderable.
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
 
@@ -163,11 +170,15 @@ public:
     AttributeBitset getEnabledAttributesAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     inline utils::Slice<FRenderPrimitive> const& getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
     inline utils::Slice<FRenderPrimitive>& getRenderPrimitives(Instance instance, uint8_t level) noexcept;
+    inline utils::Slice<MorphTargets> const& getMorphTargets(Instance instance, uint8_t level) const noexcept;
+    inline utils::Slice<MorphTargets>& getMorphTargets(Instance instance, uint8_t level) noexcept;
 
 private:
     void destroyComponent(Instance ci) noexcept;
     static void destroyComponentPrimitives(FEngine& engine,
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
+    static void destroyComponentMorphTargets(FEngine& engine,
+            utils::Slice<MorphTargets>& morphTargets) noexcept;
 
     struct Bones {
         backend::Handle<backend::HwBufferObject> handle;
@@ -192,6 +203,7 @@ private:
         VISIBILITY,         // user data
         PRIMITIVES,         // user data
         BONES,              // filament data, UBO storing a pointer to the bones information
+        MORPH_TARGETS
     };
 
     using Base = utils::SingleInstanceComponentManager<
@@ -202,7 +214,8 @@ private:
             uint16_t,                        // INSTANCE_COUNT
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
-            Bones                            // BONES
+            Bones,                           // BONES
+            utils::Slice<MorphTargets>       // MORPH_TARGETS
     >;
 
     struct Sim : public Base {
@@ -225,6 +238,7 @@ private:
                 Field<VISIBILITY>       visibility;
                 Field<PRIMITIVES>       primitives;
                 Field<BONES>            bones;
+                Field<MORPH_TARGETS>    morphTargets;
             };
         };
 
@@ -369,7 +383,8 @@ inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexce
 FRenderableManager::MorphingBindingInfo
 FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
     MorphWeights const& morphWeights = mManager[instance].morphWeights;
-    return { morphWeights.handle, morphWeights.count };
+    utils::Slice<MorphTargets> const& morphTargets = getMorphTargets(instance, 0);
+    return { morphWeights.handle, morphWeights.count, morphTargets.data() };
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(
@@ -380,6 +395,16 @@ utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(
 utils::Slice<FRenderPrimitive>& FRenderableManager::getRenderPrimitives(
         Instance instance, uint8_t level) noexcept {
     return mManager[instance].primitives;
+}
+
+utils::Slice<FRenderableManager::MorphTargets> const& FRenderableManager::getMorphTargets(
+        Instance instance, uint8_t level) const noexcept {
+    return mManager[instance].morphTargets;
+}
+
+utils::Slice<FRenderableManager::MorphTargets>& FRenderableManager::getMorphTargets(
+        Instance instance, uint8_t level) noexcept {
+    return mManager[instance].morphTargets;
 }
 
 size_t FRenderableManager::getPrimitiveCount(Instance instance, uint8_t level) const noexcept {
