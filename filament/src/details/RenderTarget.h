@@ -59,6 +59,8 @@ public:
         return mSupportedColorAttachmentsCount;
     }
 
+    bool hasSampleableDepth() const noexcept;
+
 private:
     friend class RenderTarget;
     static constexpr size_t ATTACHMENT_COUNT = MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT + 1u;

@@ -671,6 +671,10 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
+bool MetalDriver::isAutoDepthResolveSupported() {
+    return true;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:

@@ -935,6 +935,7 @@ void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) 
 void FView::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
     options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
     mMultiSampleAntiAliasingOptions = options;
+    assert_invariant(!options.enabled || !mRenderTarget || !mRenderTarget->hasSampleableDepth());
 }
 
 void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {

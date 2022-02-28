@@ -160,4 +160,9 @@ void FRenderTarget::terminate(FEngine& engine) {
     driver.destroyRenderTarget(mHandle);
 }
 
+bool FRenderTarget::hasSampleableDepth() const noexcept {
+    const FTexture* depth = mAttachments[(size_t)AttachmentPoint::DEPTH].texture;
+    return depth && (depth->getUsage() & TextureUsage::SAMPLEABLE) == TextureUsage::SAMPLEABLE;
+}
+
 } // namespace filament
