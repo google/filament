@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ enum CMD_LINE_OPT
     CMD_LINE_OPT_USER_DATA,
     CMD_LINE_OPT_VK_KHR_DEDICATED_ALLOCATION,
     CMD_LINE_OPT_VK_EXT_MEMORY_BUDGET,
-    CMD_LINE_OPT_VK_LAYER_KHRONOS_VALIDATION,
+    CMD_LINE_OPT_VK_LAYER_LUNARG_STANDARD_VALIDATION,
     CMD_LINE_OPT_MEM_STATS,
     CMD_LINE_OPT_DUMP_STATS_AFTER_LINE,
     CMD_LINE_OPT_DEFRAGMENT_AFTER_LINE,
