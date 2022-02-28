@@ -65,6 +65,7 @@ set(SRCS
         src/Frustum.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
+        src/LightManager.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
@@ -74,6 +75,7 @@ set(SRCS
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
+        src/RenderableManager.cpp
         src/Renderer.cpp
         src/ResourceAllocator.cpp
         src/Scene.cpp
@@ -85,6 +87,7 @@ set(SRCS
         src/SwapChain.cpp
         src/Texture.cpp
         src/ToneMapper.cpp
+        src/TransformManager.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/View.cpp
