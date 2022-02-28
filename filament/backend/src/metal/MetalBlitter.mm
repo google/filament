@@ -390,7 +390,7 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
             .srcOffset = { sourceRegion.origin.x, sourceRegion.origin.y }
     };
 
-    [encoder setVertexBytes:vertices length:(sizeof(math::float4) * 3) atIndex:0];
+    [encoder setVertexBytes:vertices length:(sizeof(math::float2) * 3) atIndex:0];
     [encoder setFragmentBytes:&fargs length:sizeof(FragmentArgs) atIndex:0];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [encoder endEncoding];
