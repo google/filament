@@ -1281,8 +1281,10 @@ void SimpleViewer::updateUserInterface() {
                     if (tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth) {
                         if (tweaks.mSheenColor.useDerivedQuantity) {
                             matInstance->setParameter("doDeriveSheenColor", 1);
+                            matInstance->setParameter("sheenIntensity", tweaks.mSheenIntensity.value);
                         } else {
                             matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
+                            matInstance->setParameter("sheenIntensity", 1.0f);
                             matInstance->setParameter("doDeriveSheenColor", 0);
                         }
                         matInstance->setParameter("subsurfaceColor", tweaks.mSubsurfaceColor.value);
@@ -1300,9 +1302,11 @@ void SimpleViewer::updateUserInterface() {
 
                         if (tweaks.mSheenColor.useDerivedQuantity) {
                             matInstance->setParameter("doDeriveSheenColor", 1);
+                            matInstance->setParameter("sheenIntensity", tweaks.mSheenIntensity.value);
                         }
                         else {
                             matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
+                            matInstance->setParameter("sheenIntensity", 1.0f);
                             matInstance->setParameter("doDeriveSheenColor", 0);
                         }
                         if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque) {

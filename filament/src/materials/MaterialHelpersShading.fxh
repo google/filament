@@ -371,11 +371,12 @@ void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragment
     material.anisotropyDirection = materialParams.anisotropyDirection;
 #endif
 #if defined(MATERIAL_HAS_SHEEN_COLOR) && !defined(SHADING_MODEL_SUBSURFACE) && defined(BLENDING_DISABLED)
-    // Subsurface is not using sheen color but the others are
+    // Subsurface and transparent are not using sheen color but the others are
     material.sheenColor =
         (materialParams.doDeriveSheenColor == 1) ? sqrt(material.baseColor.rgb) : materialParams.sheenColor;
+    material.sheenColor *= materialParams.sheenIntensity;
 #endif
-#if defined(MATERIAL_HAS_SUBSURFACE_COLOR) && defined(SHADING_MODEL_SUBSURFACE)
+#if defined(MATERIAL_HAS_SUBSURFACE_COLOR) && ( defined(SHADING_MODEL_SUBSURFACE) || defined(SHADING_MODEL_CLOTH) )
     material.subsurfaceColor = materialParams.subsurfaceColor;
 #endif
 #if defined(MATERIAL_HAS_SUBSURFACE_POWER) && defined(SHADING_MODEL_SUBSURFACE)
