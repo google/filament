@@ -588,18 +588,18 @@ fun rotation(quaternion: Quaternion): Mat4 {
     return Mat4(
             Float4(
                 1.0f - 2.0f * (n.y * n.y + n.z * n.z),
-                2.0f * (n.x * n.y - n.z * n.w),
-                2.0f * (n.x * n.z + n.y * n.w)
-            ),
-            Float4(
                 2.0f * (n.x * n.y + n.z * n.w),
-                1.0f - 2.0f * (n.x * n.x + n.z * n.z),
-                2.0f * (n.y * n.z - n.x * n.w)
+                2.0f * (n.x * n.z - n.y * n.w),
             ),
             Float4(
-                2.0f * (n.x * n.z - n.y * n.w),
+                2.0f * (n.x * n.y - n.z * n.w),
+                1.0f - 2.0f * (n.x * n.x + n.z * n.z),
                 2.0f * (n.y * n.z + n.x * n.w),
-                1.0f - 2.0f * (n.x * n.x + n.y * n.y)
+            ),
+            Float4(
+                2.0f * (n.x * n.z + n.y * n.w),
+                2.0f * (n.y * n.z - n.x * n.w),
+                1.0f - 2.0f * (n.x * n.x + n.y * n.y),
             )
     )
 }
