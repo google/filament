@@ -69,6 +69,7 @@ set(SRCS
         src/sstream.cpp
         src/string.cpp
         src/Systrace.cpp
+        src/ThreadUtils.cpp
 )
 
 if (WIN32)

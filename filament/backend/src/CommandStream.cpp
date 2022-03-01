@@ -61,7 +61,7 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
           mDriver(&driver),
           mCurrentBuffer(&buffer)
 #ifndef NDEBUG
-          , mThreadId(std::this_thread::get_id())
+          , mThreadId(ThreadUtils::getThreadId())
 #endif
 {
 #ifdef __ANDROID__

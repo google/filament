@@ -78,6 +78,7 @@ set(SRCS
         src/RenderableManager.cpp
         src/Renderer.cpp
         src/ResourceAllocator.cpp
+        src/ResourceList.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
