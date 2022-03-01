@@ -45,10 +45,11 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
-#include <utils/debug.h>
+#include <utils/ThreadUtils.h>
 
 #include <memory>
 
@@ -133,7 +134,7 @@ FEngine* FEngine::getEngine(void* token) {
 
     FEngine* instance = static_cast<FEngine*>(token);
 
-    ASSERT_PRECONDITION(instance->mMainThreadId == std::this_thread::get_id(),
+    ASSERT_PRECONDITION(ThreadUtils::isThisThread(instance->mMainThreadId),
             "Engine::createAsync() and Engine::getEngine() must be called on the same thread.");
 
     // we use mResourceAllocator as a proxy for "am I already initialized"
@@ -180,7 +181,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
-        mMainThreadId(std::this_thread::get_id())
+        mMainThreadId(ThreadUtils::getThreadId())
 {
     // we're assuming we're on the main thread here.
     // (it may not be the case)
@@ -333,7 +334,7 @@ FEngine::~FEngine() noexcept {
 void FEngine::shutdown() {
     SYSTRACE_CALL();
 
-    ASSERT_PRECONDITION(std::this_thread::get_id() == mMainThreadId,
+    ASSERT_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId),
             "Engine::shutdown() called from the wrong thread!");
 
 #ifndef NDEBUG
@@ -375,27 +376,28 @@ void FEngine::shutdown() {
      */
 
     // try to destroy objects in the inverse dependency
-    cleanupResourceList(mRenderers);
-    cleanupResourceList(mViews);
-    cleanupResourceList(mScenes);
-    cleanupResourceList(mSkyboxes);
-    cleanupResourceList(mColorGradings);
+    cleanupResourceList(std::move(mRenderers));
+    cleanupResourceList(std::move(mViews));
+    cleanupResourceList(std::move(mScenes));
+    cleanupResourceList(std::move(mSkyboxes));
+    cleanupResourceList(std::move(mColorGradings));
 
     // this must be done after Skyboxes and before materials
     destroy(mSkyboxMaterial);
 
-    cleanupResourceList(mBufferObjects);
-    cleanupResourceList(mIndexBuffers);
-    cleanupResourceList(mMorphTargetBuffers);
-    cleanupResourceList(mSkinningBuffers);
-    cleanupResourceList(mVertexBuffers);
-    cleanupResourceList(mTextures);
-    cleanupResourceList(mRenderTargets);
-    cleanupResourceList(mMaterials);
+    cleanupResourceList(std::move(mBufferObjects));
+    cleanupResourceList(std::move(mIndexBuffers));
+    cleanupResourceList(std::move(mMorphTargetBuffers));
+    cleanupResourceList(std::move(mSkinningBuffers));
+    cleanupResourceList(std::move(mVertexBuffers));
+    cleanupResourceList(std::move(mTextures));
+    cleanupResourceList(std::move(mRenderTargets));
+    cleanupResourceList(std::move(mMaterials));
     for (auto& item : mMaterialInstances) {
-        cleanupResourceList(item.second);
+        cleanupResourceList(std::move(item.second));
     }
-    cleanupResourceList(mFences);
+
+    cleanupResourceListLocked(mFenceListLock, std::move(mFences));
 
     driver.destroyTexture(mDummyOneTexture);
     driver.destroyTexture(mDummyOneTextureArray);
@@ -441,16 +443,17 @@ void FEngine::prepare() {
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped is the UBO hasn't changed. Still we could have a lot of these.
     FEngine::DriverApi& driver = getDriverApi();
-    for (auto& materialInstanceList : mMaterialInstances) {
-        for (const auto& item : materialInstanceList.second) {
+
+    for (auto& materialInstanceList: mMaterialInstances) {
+        materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
             item->commit(driver);
-        }
+        });
     }
 
     // Commit default material instances.
-    for (const auto& material : mMaterials) {
+    mMaterials.forEach([&driver](FMaterial* material) {
         material->getDefaultInstance()->commit(driver);
-    }
+    });
 }
 
 void FEngine::gc() {
@@ -480,11 +483,12 @@ void FEngine::flushAndWait() {
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && !defined(NDEBUG)
 
     // then create a fence that will trigger when we're past the finish() above
     size_t tryCount = 8;
     FFence* fence = FEngine::createFence(FFence::Type::SOFT);
+    UTILS_NOUNROLL
     do {
         FenceStatus status = fence->wait(FFence::Mode::FLUSH,250000000u);
         // if the fence didn't trigger after 250ms, check that the command queue thread is still
@@ -603,7 +607,7 @@ const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
  * Object created from a Builder
  */
 
-template <typename T>
+template<typename T>
 inline T* FEngine::create(ResourceList<T>& list, typename T::Builder const& builder) noexcept {
     T* p = mHeapAllocator.make<T>(*this, builder);
     list.insert(p);
@@ -704,6 +708,7 @@ FView* FEngine::createView() noexcept {
 FFence* FEngine::createFence(FFence::Type type) noexcept {
     FFence* p = mHeapAllocator.make<FFence>(*this, type);
     if (p) {
+        std::lock_guard guard(mFenceListLock);
         mFences.insert(p);
     }
     return p;
@@ -766,32 +771,71 @@ void FEngine::createLight(const LightManager::Builder& builder, Entity entity) {
 
 // -----------------------------------------------------------------------------------------------
 
-template<typename T, typename L>
-void FEngine::cleanupResourceList(ResourceList<T, L>& list) {
-    if (!list.empty()) {
+template<typename T>
+UTILS_NOINLINE
+void FEngine::cleanupResourceList(ResourceList<T>&& list) {
+    if (UTILS_UNLIKELY(!list.empty())) {
 #ifndef NDEBUG
         slog.d << "cleaning up " << list.size()
                << " leaked " << CallStack::typeName<T>().c_str() << io::endl;
 #endif
-        // Move the list (copy-and-clear). We can only modify/access the list from this
-        // thread, because it's not thread-safe.
-        auto copy(list.getListAndClear());
-        for (T* item : copy) {
+        list.forEach([this, &allocator = mHeapAllocator](T* item) {
             item->terminate(*this);
-            mHeapAllocator.destroy(item);
-        }
+            allocator.destroy(item);
+        });
+        list.clear();
     }
+}
+template<typename T, typename Lock>
+UTILS_NOINLINE
+void FEngine::cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list) {
+    // copy the list with the lock held, then proceed as usual
+    lock.lock();
+    auto copy(std::move(list));
+    lock.unlock();
+    cleanupResourceList(std::move(copy));
 }
 
 // -----------------------------------------------------------------------------------------------
 
-template<typename T, typename L>
-bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T, L>& list) {
+template<typename T>
+UTILS_ALWAYS_INLINE
+inline bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
     if (ptr == nullptr) return true;
     bool success = list.remove(ptr);
+
+#if UTILS_HAS_RTTI
+    auto typeName = CallStack::typeName<T>();
+    const char * const typeNameCStr = typeName.c_str();
+#else
+    const char * const typeNameCStr = "<no-rtti>";
+#endif
+
     if (ASSERT_PRECONDITION_NON_FATAL(success,
-            "Object %s at %p doesn't exist (double free?)",
-            CallStack::typeName<T>().c_str(), ptr)) {
+            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr)) {
+        const_cast<T*>(ptr)->terminate(*this);
+        mHeapAllocator.destroy(const_cast<T*>(ptr));
+    }
+    return success;
+}
+
+template<typename T, typename Lock>
+UTILS_ALWAYS_INLINE
+inline bool FEngine::terminateAndDestroyLocked(Lock& lock, const T* ptr, ResourceList<T>& list) {
+    if (ptr == nullptr) return true;
+    lock.lock();
+    bool success = list.remove(ptr);
+    lock.unlock();
+
+#if UTILS_HAS_RTTI
+    auto typeName = CallStack::typeName<T>();
+    const char * const typeNameCStr = typeName.c_str();
+#else
+    const char * const typeNameCStr = "<no-rtti>";
+#endif
+
+    if (ASSERT_PRECONDITION_NON_FATAL(success,
+            "Object %s at %p doesn't exist (double free?)", typeNameCStr, ptr)) {
         const_cast<T*>(ptr)->terminate(*this);
         mHeapAllocator.destroy(const_cast<T*>(ptr));
     }
@@ -800,71 +844,88 @@ bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T, L>& list) {
 
 // -----------------------------------------------------------------------------------------------
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FBufferObject* p) {
     return terminateAndDestroy(p, mBufferObjects);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FVertexBuffer* p) {
     return terminateAndDestroy(p, mVertexBuffers);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FIndexBuffer* p) {
     return terminateAndDestroy(p, mIndexBuffers);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FSkinningBuffer* p) {
     return terminateAndDestroy(p, mSkinningBuffers);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FMorphTargetBuffer* p) {
     return terminateAndDestroy(p, mMorphTargetBuffers);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FRenderer* p) {
     return terminateAndDestroy(p, mRenderers);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FScene* p) {
     return terminateAndDestroy(p, mScenes);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FSkybox* p) {
     return terminateAndDestroy(p, mSkyboxes);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FColorGrading* p) {
     return terminateAndDestroy(p, mColorGradings);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FTexture* p) {
     return terminateAndDestroy(p, mTextures);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FRenderTarget* p) {
     return terminateAndDestroy(p, mRenderTargets);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FView* p) {
     return terminateAndDestroy(p, mViews);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FIndirectLight* p) {
     return terminateAndDestroy(p, mIndirectLights);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FFence* p) {
-    return terminateAndDestroy(p, mFences);
+    return terminateAndDestroyLocked(mFenceListLock, p, mFences);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FSwapChain* p) {
     return terminateAndDestroy(p, mSwapChains);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FStream* p) {
     return terminateAndDestroy(p, mStreams);
 }
 
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FMaterial* ptr) {
     if (ptr == nullptr) return true;
     auto pos = mMaterialInstances.find(ptr);
@@ -879,6 +940,7 @@ bool FEngine::destroy(const FMaterial* ptr) {
     return terminateAndDestroy(ptr, mMaterials);
 }
 
+UTILS_NOINLINE
 bool FEngine::destroy(const FMaterialInstance* ptr) {
     if (ptr == nullptr) return true;
     auto pos = mMaterialInstances.find(ptr->getMaterial());
@@ -891,6 +953,7 @@ bool FEngine::destroy(const FMaterialInstance* ptr) {
     return true;
 }
 
+UTILS_NOINLINE
 void FEngine::destroy(Entity e) {
     mRenderableManager.destroy(e);
     mLightManager.destroy(e);

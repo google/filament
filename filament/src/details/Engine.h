@@ -354,11 +354,17 @@ private:
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
 
-    template<typename T, typename L>
-    bool terminateAndDestroy(const T* p, ResourceList<T, L>& list);
+    template<typename T>
+    bool terminateAndDestroy(const T* p, ResourceList<T>& list);
 
-    template<typename T, typename L>
-    void cleanupResourceList(ResourceList<T, L>& list);
+    template<typename T, typename Lock>
+    bool terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>& list);
+
+    template<typename T>
+    void cleanupResourceList(ResourceList<T>&& list);
+
+    template<typename T, typename Lock>
+    void cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list);
 
     backend::Driver* mDriver = nullptr;
 
@@ -385,7 +391,6 @@ private:
     ResourceList<FRenderer> mRenderers{ "Renderer" };
     ResourceList<FView> mViews{ "View" };
     ResourceList<FScene> mScenes{ "Scene" };
-    ResourceList<FFence, utils::LockingPolicy::SpinLock> mFences{"Fence"};
     ResourceList<FSwapChain> mSwapChains{ "SwapChain" };
     ResourceList<FStream> mStreams{ "Stream" };
     ResourceList<FIndexBuffer> mIndexBuffers{ "IndexBuffer" };
@@ -398,6 +403,10 @@ private:
     ResourceList<FSkybox> mSkyboxes{ "Skybox" };
     ResourceList<FColorGrading> mColorGradings{ "ColorGrading" };
     ResourceList<FRenderTarget> mRenderTargets{ "RenderTarget" };
+
+    // the fence list is accessed from multiple threads
+    utils::SpinLock mFenceListLock;
+    ResourceList<FFence> mFences{"Fence"};
 
     mutable uint32_t mMaterialId = 0;
 

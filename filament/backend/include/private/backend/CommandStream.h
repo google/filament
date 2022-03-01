@@ -38,6 +38,7 @@
 
 
 #include <utils/compiler.h>
+#include <utils/ThreadUtils.h>
 
 #include <functional>
 #include <tuple>
@@ -284,7 +285,7 @@ public:
     // Call this first in the render loop.
     inline void debugThreading() noexcept {
 #ifndef NDEBUG
-        mThreadId = std::this_thread::get_id();
+        mThreadId = utils::ThreadUtils::getThreadId();
 #endif
     }
 
@@ -313,7 +314,7 @@ public:
 
 private:
     inline void* allocateCommand(size_t size) {
-        assert_invariant(mThreadId == std::this_thread::get_id());
+        assert_invariant(utils::ThreadUtils::isThisThread(mThreadId));
         return mCurrentBuffer->allocate(size);
     }
 };
