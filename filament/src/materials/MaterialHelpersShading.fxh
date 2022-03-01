@@ -361,13 +361,14 @@ void ApplyShaprScalars(inout MaterialInputs material, inout FragmentData fragmen
 }
 
 // As all-black cloth materials require positive sheen contribution in order to be visible (read: not pitch black),
-// this function is re-normalizing the final luminance (estimate) of the auto-computed sheen color if it would be
-// too dark otherwise. We do have to do this re-normalization to avoid (or minimize, really) the hue shifts. 
+// this function should be re-normalizing the final luminance (estimate) of the auto-computed sheen color if it 
+// would be too dark otherwise. However, we'd still need to cater for the special case of denormal and all-black
+// incoming colors, so I've ultimately decided to just clamp the result of the sqrt.
 vec3 BaseColorToSheenColor(vec3 baseColor) {
-    const float LUMINANCE_THRESHOLD = sqrt(2.5e-3);
-    vec3 result = sqrt(baseColor.rgb);
-    float luminance = max(max(result.r, result.g), result.b);
-    return ( luminance < LUMINANCE_THRESHOLD ) ? result * ( LUMINANCE_THRESHOLD / luminance ) : result;
+    //  This epsilon is selected such that visuals on Cloth are cca. matching a perfectly black, roughness = 1 Opaque material
+    const float LUMINANCE_THRESHOLD = sqrt(5e-3);
+    vec3 result = max( sqrt(baseColor.rgb), vec3(LUMINANCE_THRESHOLD) );
+    return result;
 }
 
 void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragmentData) {
