@@ -399,7 +399,18 @@ private:
     // The descriptor set pool starts out with a decent number of descriptor sets.  The cache can
     // grow the pool by re-creating it with a larger size.  See growDescriptorPool().
     VkDescriptorPool mDescriptorPool;
+
+    // This describes the number of descriptor sets in mDescriptorPool. Note that this needs to be
+    // multiplied by DESCRIPTOR_TYPE_COUNT to get the actual number of descriptor sets. Also note
+    // that the number of low-level "descriptors" (not descriptor *sets*) is actually much more than
+    // this size. It can be computed only by factoring in UBUFFER_BINDING_COUNT etc.
     uint32_t mDescriptorPoolSize = INITIAL_DESCRIPTOR_SET_POOL_SIZE;
+
+    // To get the actual number of descriptor sets that have been allocated from the pool,
+    // take the sum of mDescriptorArenasCount (these are inactive descriptor sets) and the
+    // number of entries in the mDescriptorPool map (active descriptor sets). Multiply the result by
+    // DESCRIPTOR_TYPE_COUNT.
+    uint32_t mDescriptorArenasCount = 0;
 
     // After a growth event (i.e. when the VkDescriptorPool is replaced with a bigger version), all
     // currently used descriptors are moved into the "extinct" sets so that they can be safely
