@@ -232,9 +232,18 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
     // are no longer used. This occurs during the cleanup phase during command buffer submission.
     auto& descriptorSetArenas = layoutCacheEntry->descriptorSetArenas;
     if (descriptorSetArenas[0].empty()) {
-        if (mDescriptorSets.size() >= mDescriptorPoolSize) {
+
+        // If allocating a new descriptor set from the pool would cause it to overflow, then
+        // recreate the pool. The number of descriptor sets that have already been allocated from
+        // the pool is the sum of the "active" descriptor sets (mDescriptorSets) and the "dormant"
+        // descriptor sets (mDescriptorArenasCount).
+        //
+        // NOTE: technically both sides of the inequality below should be multiplied by
+        // DESCRIPTOR_TYPE_COUNT to get the true number of descriptor sets.
+        if (mDescriptorSets.size() + mDescriptorArenasCount + 1 > mDescriptorPoolSize) {
             growDescriptorPool();
         }
+
         VkDescriptorSetAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = mDescriptorPool;
@@ -251,6 +260,8 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             descriptorCacheEntry.handles[i] = descriptorSetArenas[i].back();
             descriptorSetArenas[i].pop_back();
         }
+        assert_invariant(mDescriptorArenasCount > 0);
+        mDescriptorArenasCount--;
     }
 
     // Rewrite every binding in the new descriptor sets.
@@ -704,6 +715,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
             for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
                 arenas[i].push_back(cacheEntry.handles[i]);
             }
+            ++mDescriptorArenasCount;
             iter = mDescriptorSets.erase(iter);
         } else {
             ++iter;
@@ -737,6 +749,12 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
                 }
 #endif
                 vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
+            }
+            auto& arenas = iter->second.descriptorSetArenas;
+            assert_invariant(mDescriptorArenasCount >= arenas[0].size());
+            mDescriptorArenasCount -= arenas[0].size();
+            for (auto& arena : arenas) {
+                vkFreeDescriptorSets(mDevice, mDescriptorPool, arena.size(), arena.data());
             }
             iter = mPipelineLayouts.erase(iter);
         } else {
@@ -839,6 +857,7 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
             arena.clear();
         }
     }
+    mDescriptorArenasCount = 0;
 
     // Move all in-use descriptors from the primary cache into an "extinct" list, so that they will
     // later be destroyed rather than reclaimed.
