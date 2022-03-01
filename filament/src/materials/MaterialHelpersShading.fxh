@@ -360,6 +360,16 @@ void ApplyShaprScalars(inout MaterialInputs material, inout FragmentData fragmen
     material.useWard = (materialParams.useWard == 1) ? true : false;
 }
 
+// As all-black cloth materials require positive sheen contribution in order to be visible (read: not pitch black),
+// this function is re-normalizing the final luminance (estimate) of the auto-computed sheen color if it would be
+// too dark otherwise. We do have to do this re-normalization to avoid (or minimize, really) the hue shifts. 
+vec3 BaseColorToSheenColor(vec3 baseColor) {
+    const float LUMINANCE_THRESHOLD = sqrt(2.5e-3);
+    vec3 result = sqrt(baseColor.rgb);
+    float luminance = max(max(result.r, result.g), result.b);
+    return ( luminance < LUMINANCE_THRESHOLD ) ? result * ( LUMINANCE_THRESHOLD / luminance ) : result;
+}
+
 void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragmentData) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     material.clearCoat = materialParams.clearCoat;
@@ -372,8 +382,8 @@ void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragment
 #endif
 #if defined(MATERIAL_HAS_SHEEN_COLOR) && !defined(SHADING_MODEL_SUBSURFACE) && defined(BLENDING_DISABLED)
     // Subsurface and transparent are not using sheen color but the others are
-    material.sheenColor =
-        (materialParams.doDeriveSheenColor == 1) ? sqrt(material.baseColor.rgb) : materialParams.sheenColor;
+    material.sheenColor = 
+        (materialParams.doDeriveSheenColor == 1) ? BaseColorToSheenColor(material.baseColor.rgb) : materialParams.sheenColor;
     material.sheenColor *= materialParams.sheenIntensity;
 #endif
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR) && ( defined(SHADING_MODEL_SUBSURFACE) || defined(SHADING_MODEL_CLOTH) )
