@@ -349,7 +349,7 @@ VulkanAttachment VulkanSwapChain::getColorAttachment() const {
 }
 
 VulkanAttachment VulkanSwapChain::getDepthAttachment() const {
-    VulkanTexture& tex = *this->mDepth.get();
+    VulkanTexture& tex = *this->mDepth;
     return VulkanAttachment { .texture = &tex, .level = 0, .layer = 0 };
 }
 
