@@ -611,40 +611,40 @@ fun quaternion(m: Mat4): Quaternion {
     val trace = m.x.x + m.y.y + m.z.z
     return normalize(
         when {
-            trace > 0 -> {
-                val s = sqrt(trace + 1.0f) * 2.0f
+            trace > 0.0f -> {
+                val s = 2.0f * sqrt(trace + 1.0f)
                 Quaternion(
-                    (m.z.y - m.y.z) / s,
-                    (m.x.z - m.z.x) / s,
-                    (m.y.x - m.x.y) / s,
+                    (m.y.z - m.z.y) / s,
+                    (m.z.x - m.x.z) / s,
+                    (m.x.y - m.y.x) / s,
                     0.25f * s
                 )
             }
             m.x.x > m.y.y && m.x.x > m.z.z -> {
-                val s = sqrt(1.0f + m.x.x - m.y.y - m.z.z) * 2.0f
+                val s = 2.0f * sqrt(1.0f + m.x.x - m.y.y - m.z.z)
                 Quaternion(
                     0.25f * s,
-                    (m.x.y + m.y.x) / s,
-                    (m.x.z + m.z.x) / s,
-                    (m.z.y - m.y.z) / s
+                    (m.y.x + m.x.y) / s,
+                    (m.z.x + m.x.z) / s,
+                    (m.y.z - m.z.y) / s
                 )
             }
             m.y.y > m.z.z -> {
-                val s = sqrt(1.0f + m.y.y - m.x.x - m.z.z) * 2.0f
+                val s = 2.0f * sqrt(1.0f + m.y.y - m.x.x - m.z.z)
                 Quaternion(
-                    (m.x.y + m.y.x) / s,
+                    (m.y.x + m.x.y) / s,
                     0.25f * s,
-                    (m.y.z + m.z.y) / s,
-                    (m.x.z - m.z.x) / s
+                    (m.z.y + m.y.z) / s,
+                    (m.z.x - m.x.z) / s
                 )
             }
             else -> {
-                val s = sqrt(1.0f + m.z.z - m.x.x - m.y.y) * 2.0f
+                val s = 2.0f * sqrt(1.0f + m.z.z - m.x.x - m.y.y)
                 Quaternion(
-                    (m.y.x - m.x.y) / s,
-                    (m.x.z + m.z.x) / s,
-                    (m.y.z + m.z.y) / s,
-                    0.25f * s
+                    (m.z.x + m.x.z) / s,
+                    (m.z.y + m.y.z) / s,
+                    0.25f * s,
+                    (m.x.y - m.y.x) / s
                 )
             }
         }

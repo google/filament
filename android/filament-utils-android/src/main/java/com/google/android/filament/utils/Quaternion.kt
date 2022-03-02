@@ -266,11 +266,11 @@ fun normalize(q: Quaternion): Quaternion {
     return Quaternion(q.x * l, q.y * l, q.z * l, q.w * l)
 }
 
-fun conjugate(q: Quaternion): Quaternion = Quaternion(q.w, -q.x, -q.y, -q.z)
+fun conjugate(q: Quaternion): Quaternion = Quaternion(-q.x, -q.y, -q.z, q.w)
 
 fun inverse(q: Quaternion): Quaternion {
     val d = 1.0f / dot(q, q)
-    return Quaternion(q.w * d, -q.x * d, -q.y * d, -q.w * d)
+    return Quaternion(-q.x * d, -q.y * d, -q.z * d, q.w * d)
 }
 
 fun cross(a: Quaternion, b: Quaternion): Quaternion {
