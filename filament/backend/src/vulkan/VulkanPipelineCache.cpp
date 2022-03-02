@@ -221,10 +221,7 @@ void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scisso
 VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptorSets() noexcept {
     PipelineLayoutCacheEntry* layoutCacheEntry = getOrCreatePipelineLayout();
 
-    DescriptorCacheEntry& descriptorCacheEntry = mDescriptorSets.emplace(
-            std::make_pair(mDescriptorRequirements, DescriptorCacheEntry {})).first.value();
-
-    descriptorCacheEntry.pipelineLayout = mLayoutRequirements;
+    DescriptorCacheEntry descriptorCacheEntry = { .pipelineLayout = mLayoutRequirements };
 
     // Each of the arenas for this particular layout are guaranteed to have the same size. Check
     // the first arena to see if any descriptor sets are available that can be re-claimed. If not,
@@ -345,7 +342,8 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
         writeInfo.dstBinding = binding;
     }
     vkUpdateDescriptorSets(mDevice, nwrites, writes, 0, nullptr);
-    return &descriptorCacheEntry;
+
+    return &mDescriptorSets.emplace(mDescriptorRequirements, descriptorCacheEntry).first.value();
 }
 
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {
@@ -498,22 +496,21 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         colorBlendState.attachmentCount = 0;
     }
 
-    PipelineCacheEntry& bundle = mPipelines.emplace(
-            std::make_pair(mPipelineRequirements, PipelineCacheEntry {})).first.value();
+    PipelineCacheEntry cacheEntry = {};
 
     if constexpr (FILAMENT_VULKAN_VERBOSE) {
         utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
                 << shaderStages[0].module << ", " << shaderStages[1].module << ")" << utils::io::endl;
     }
     VkResult error = vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo,
-            VKALLOC, &bundle.handle);
+            VKALLOC, &cacheEntry.handle);
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
         utils::slog.e << "vkCreateGraphicsPipelines error " << error << utils::io::endl;
         return nullptr;
     }
 
-    return &bundle;
+    return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
 VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreatePipelineLayout() noexcept {
@@ -522,8 +519,7 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
         return &iter.value();
     }
 
-    PipelineLayoutCacheEntry& cacheEntry = mPipelineLayouts.emplace(
-            mLayoutRequirements, PipelineLayoutCacheEntry{}).first.value();
+    PipelineLayoutCacheEntry cacheEntry = {};
 
     VkDescriptorSetLayoutBinding binding = {};
     binding.descriptorCount = 1; // NOTE: We never use arrays-of-blocks.
@@ -571,10 +567,13 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
     pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.setLayoutCount = cacheEntry.descriptorSetLayouts.size();
     pPipelineLayoutCreateInfo.pSetLayouts = cacheEntry.descriptorSetLayouts.data();
-    VkResult error = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC,
+    VkResult result = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC,
             &cacheEntry.handle);
-    assert_invariant(error == VK_SUCCESS);
-    return error == VK_SUCCESS ? &cacheEntry : nullptr;
+    if (UTILS_UNLIKELY(result != VK_SUCCESS)) {
+        return nullptr;
+    }
+    return &mPipelineLayouts.emplace(mLayoutRequirements, cacheEntry).first.value();
+
 }
 
 void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
