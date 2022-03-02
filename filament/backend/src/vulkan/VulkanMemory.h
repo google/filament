@@ -19,9 +19,6 @@
 
 #include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundef"
 #include "vk_mem_alloc.h"
-#pragma clang diagnostic pop
 
 #endif // TNT_FILAMENT_DRIVER_VULKANMEMORY_H
