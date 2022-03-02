@@ -47,6 +47,7 @@ RenderPass::RenderPass(FEngine& engine,
 
 RenderPass::RenderPass(RenderPass const& rhs) = default;
 
+// this destructor is actually heavy because it inlines ~vector<>
 RenderPass::~RenderPass() noexcept = default;
 
 RenderPass::Command* RenderPass::append(size_t count) noexcept {
@@ -137,7 +138,7 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
 }
 
 void RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
-        std::function<void()> command) {
+        Executor::CustomCommandFn command) {
 
     assert((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
@@ -291,6 +292,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
     auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
+    auto const* const UTILS_RESTRICT soaInstanceCount  = soa.data<FScene::INSTANCE_COUNT>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
@@ -357,6 +359,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
+        cmdColor.primitive.instanceCount = soaInstanceCount[i];
 
         // if we are already a SSR variant, the SRE bit is already set,
         // there is no harm setting it again
@@ -371,6 +374,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
             cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
+            cmdDepth.primitive.instanceCount = soaInstanceCount[i];
             cmdDepth.primitive.materialVariant.setSkinning(
                     soaVisibility[i].skinning || soaVisibility[i].morphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
@@ -539,7 +543,7 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa);
+    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa, params.readOnlyDepthStencil);
     driver.endRenderPass();
 }
 
@@ -547,7 +551,7 @@ UTILS_NOINLINE // no need to be inlined
 void RenderPass::Executor::recordDriverCommands(FEngine& engine,
         backend::DriverApi& driver,
         const Command* first, const Command* last,
-        FScene::RenderableSoa const& soa) const noexcept {
+        FScene::RenderableSoa const& soa, uint16_t readOnlyDepthStencil) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
@@ -563,7 +567,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
         Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
-        auto const& customCommands = mCustomCommands;
+        auto customCommands = mCustomCommands.data();
 
         first--;
         while (++first != last) {
@@ -573,6 +577,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
 
             if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
                 uint32_t index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
+                assert_invariant(index < mCustomCommands.size());
                 customCommands[index]();
                 continue;
             }
@@ -580,6 +585,12 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
+
+#ifndef NDEBUG
+            const bool readOnlyDepthGuaranteed = readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH;
+            assert_invariant(!readOnlyDepthGuaranteed || !pipeline.rasterState.depthWrite);
+#endif
+
             if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
                 mi = info.mi;
@@ -609,8 +620,8 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
             }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
-                // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
-                // and use bindUniformBufferRange which might be more efficient.
+                // Instead of using a UBO per primitive, we could also have a single UBO for all
+                // primitives and use bindUniformBufferRange which might be more efficient.
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphWeightBuffer);
 
@@ -621,9 +632,25 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
                 }
             }
 
-            driver.draw(pipeline, info.primitiveHandle);
+            driver.draw(pipeline, info.primitiveHandle, info.instanceCount);
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+
+RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
+        : mEngine(pass->mEngine), mBegin(b), mEnd(e), mRenderableSoa(*pass->mRenderableSoa),
+          mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
+          mPolygonOffset(pass->mPolygonOffset),
+          mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {
+    assert_invariant(b >= pass->begin());
+    assert_invariant(e <= pass->end());
+}
+
+RenderPass::Executor::Executor(Executor const& rhs) = default;
+
+// this destructor is actually heavy because it inlines ~vector<>
+RenderPass::Executor::~Executor() noexcept = default;
 
 } // namespace filament

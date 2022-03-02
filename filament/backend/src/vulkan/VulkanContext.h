@@ -39,16 +39,15 @@ struct VulkanSwapChain;
 struct VulkanTexture;
 class VulkanStagePool;
 
-// TODO: make this as lean as possible, it makes VulkanRenderTarget very big (currently 880 bytes).
 struct VulkanAttachment {
-    VkFormat format;
-    VkImage image;
-    VkImageView view;
-    VkDeviceMemory memory;
     VulkanTexture* texture = nullptr;
-    VkImageLayout layout;
-    uint8_t level;
-    uint16_t layer;
+    uint8_t level = 0;
+    uint16_t layer = 0;
+    VkImage getImage() const;
+    VkFormat getFormat() const;
+    VkImageLayout getLayout() const;
+    VkExtent2D getExtent2D() const;
+    VkImageView getImageView(VkImageAspectFlags aspect) const;
 };
 
 struct VulkanTimestamps {
@@ -59,9 +58,8 @@ struct VulkanTimestamps {
 
 struct VulkanRenderPass {
     VkRenderPass renderPass;
-    uint32_t subpassMask;
+    RenderPassParams params;
     int currentSubpass;
-    VulkanTexture* depthFeedback;
 };
 
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
@@ -90,6 +88,7 @@ struct VulkanContext {
     bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
     VulkanSwapChain* currentSurface;
+    Handle<HwRenderTarget> defaultRenderTarget;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;

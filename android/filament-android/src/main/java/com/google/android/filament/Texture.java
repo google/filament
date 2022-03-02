@@ -542,7 +542,7 @@ public class Texture {
          * @param alignment     Alignment in bytes.
          * @return              Size of the buffer in bytes.
          */
-        static int computeDataSize(@NonNull Format format, @NonNull Type type,
+        public static int computeDataSize(@NonNull Format format, @NonNull Type type,
                 int stride, int height, @IntRange(from = 1, to = 8) int alignment) {
             if (type == Type.COMPRESSED) {
                 return 0;

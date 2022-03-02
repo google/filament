@@ -259,12 +259,6 @@ void FEngine::init() {
             .format(Texture::InternalFormat::RGBA8)
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
             .build(*this));
-    static uint32_t pixel = 0;
-    Texture::PixelBufferDescriptor buffer(
-            &pixel, 4, // 4 bytes in 1 RGBA pixel
-            Texture::Format::RGBA, Texture::Type::UBYTE);
-    Texture::FaceOffsets offsets = {};
-    mDefaultIblTexture->setImage(*this, 0, std::move(buffer), offsets);
 
     // 3 bands = 9 float3
     const float sh[9 * 3] = { 0.0f };
@@ -288,11 +282,34 @@ void FEngine::init() {
     mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
-    mDummyOneIntegerTextureArray =  driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+    mDummyOneIntegerTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8I, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
+    // initialize the dummy textures so that their contents are not undefined
+
+    using PixelBufferDescriptor = Texture::PixelBufferDescriptor;
+
+    static const uint32_t zeroes = 0;
+    static const uint32_t ones = 0xffffffff;
+    static const uint32_t signedOnes = 0x7f7f7f7f;
+
+    mDefaultIblTexture->setImage(*this, 0,
+            PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE), {});
+
+    driverApi.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1,
+            PixelBufferDescriptor(&ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
+
+    driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
+            PixelBufferDescriptor(&ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
+
+    driverApi.update3DImage(mDummyOneIntegerTextureArray, 0, 0, 0, 0, 1, 1, 1,
+            PixelBufferDescriptor(&signedOnes, 4, Texture::Format::RGBA_INTEGER, Texture::Type::BYTE));
+
+    driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
+            PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
 
     // dummy textures must be initialized before this call
     mDummyMorphingSamplerGroup = FMorphTargetBuffer::createDummySampleGroup(*this);

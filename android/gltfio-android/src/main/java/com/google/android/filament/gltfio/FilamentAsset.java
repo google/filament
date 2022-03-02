@@ -217,6 +217,13 @@ public class FilamentAsset {
     }
 
     /**
+     * Get the target name at target index in the given entity.
+     */
+    public String getMorphTargetNameAt(@Entity int entity, int targetIndex) {
+        return nGetMorphTargetNameAt(getNativeObject(), entity, targetIndex);
+    }
+
+    /**
      * Gets resource URIs for all externally-referenced buffers.
      */
     public @NonNull String[] getResourceUris() {
@@ -265,6 +272,7 @@ public class FilamentAsset {
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
+    private static native String nGetMorphTargetNameAt(long nativeAsset, int entity, int targetIndex);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
     private static native void nReleaseSourceData(long nativeAsset);

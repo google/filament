@@ -17,7 +17,10 @@
 #include "VulkanContext.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
+#include "VulkanTexture.h"
 #include "VulkanUtility.h"
+
+#include <algorithm> // for std::max
 
 #include <utils/Panic.h>
 #include <utils/FixedCapacityVector.h>
@@ -28,6 +31,28 @@ using utils::FixedCapacityVector;
 
 namespace filament {
 namespace backend {
+
+VkImage VulkanAttachment::getImage() const {
+    return texture ? texture->getVkImage() : VK_NULL_HANDLE;
+}
+
+VkFormat VulkanAttachment::getFormat() const {
+    return texture ? texture->getVkFormat() : VK_FORMAT_UNDEFINED;
+}
+
+VkImageLayout VulkanAttachment::getLayout() const {
+    return texture ? texture->getVkLayout(layer, level) : VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
+VkExtent2D VulkanAttachment::getExtent2D() const {
+    assert_invariant(texture);
+    return { std::max(1u, texture->width >> level), std::max(1u, texture->height >> level) };
+}
+
+VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) const {
+    assert_invariant(texture);
+    return texture->getAttachmentView(level, layer, aspect);
+}
 
 void VulkanContext::selectPhysicalDevice() {
     uint32_t physicalDeviceCount = 0;
@@ -265,7 +290,6 @@ void VulkanContext::createLogicalDevice() {
         .physicalDevice = physicalDevice,
         .device = device,
         .pVulkanFunctions = &funcs,
-        .pRecordSettings = nullptr,
         .instance = instance
     };
     vmaCreateAllocator(&allocatorInfo, &allocator);

@@ -53,17 +53,18 @@ struct VulkanRenderTarget : private HwRenderTarget {
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget(VulkanContext& context);
 
-    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const;
-    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const;
-    VkExtent2D getExtent(VulkanSwapChain* currentSurface) const;
-    VulkanAttachment getColor(VulkanSwapChain* currentSurface, int target) const;
+    void transformClientRectToPlatform(VkRect2D* bounds) const;
+    void transformClientRectToPlatform(VkViewport* bounds) const;
+    VkExtent2D getExtent() const;
+    VulkanAttachment getColor(int target) const;
     VulkanAttachment getMsaaColor(int target) const;
-    VulkanAttachment getDepth(VulkanSwapChain* currentSurface) const;
+    VulkanAttachment getDepth() const;
     VulkanAttachment getMsaaDepth() const;
     int getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
-    bool hasDepth() const { return mDepth.format != VK_FORMAT_UNDEFINED; }
+    bool hasDepth() const { return mDepth.texture; }
     bool isSwapChain() const { return !mOffscreen; }
+    void bindToSwapChain(VulkanSwapChain& surf);
 
 private:
     VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};

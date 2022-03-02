@@ -446,6 +446,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
 
     // glTF spec says that all primitives MUST have the same number of morph targets in the same order.
     const cgltf_size numMorphTargets = mesh->weights_count;
+    builder.morphing(numMorphTargets);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
     for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim, ++inputPrim) {
@@ -489,10 +490,11 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         // facilities for these parameters, which is not a huge loss since some of the buffer
         // view and accessor features already have this functionality.
         builder.geometry(index, primType, outputPrim->vertices, outputPrim->indices);
-    }
 
-    if (numMorphTargets > 0) {
-        builder.morphing(numMorphTargets);
+        if (numMorphTargets) {
+            assert_invariant(outputPrim->targets);
+            builder.morphing(0, index, outputPrim->targets);
+        }
     }
 
     auto& morphTargetNames = mResult->mMorphTargetNames[entity];
@@ -542,13 +544,6 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             weights[i] = node->weights[i];
         }
         mRenderableManager.setMorphWeights(renderable, weights.data(), size);
-
-        // TODO: Set morph target buffers via builder.
-        outputPrim = mResult->mMeshCache[mesh].data();
-        for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim) {
-            MorphTargetBuffer* const morphTargetBuffer = outputPrim->targets;
-            mRenderableManager.setMorphTargetBufferAt(renderable, 0, index, morphTargetBuffer);
-        }
     }
 }
 
@@ -638,6 +633,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         if (!getVertexAttrType(atype, &semantic)) {
             utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
             return false;
+        }
+        if (atype == cgltf_attribute_type_weights && index > 0) {
+            utils::slog.e << "Too many bone weights in " << name << utils::io::endl;
+            continue;
+        }
+        if (atype == cgltf_attribute_type_joints && index > 0) {
+            utils::slog.e << "Too many joints in " << name << utils::io::endl;
+            continue;
         }
         if (atype == cgltf_attribute_type_texcoord) {
             if (index >= UvMapSize) {

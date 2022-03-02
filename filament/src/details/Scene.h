@@ -111,6 +111,7 @@ public:
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
         VISIBLE_MASK,           //  2 | each bit represents a visibility in a pass
         CHANNELS,               //  1 | currently light channels only
+        INSTANCE_COUNT,         //  2 | draw instance count
 
         // These are not needed anymore after culling
         LAYERS,                 //  1 | layers
@@ -133,6 +134,7 @@ public:
             math::float3,                               // WORLD_AABB_CENTER
             VisibleMaskType,                            // VISIBLE_MASK
             uint8_t,                                    // CHANNELS
+            uint16_t,                                   // INSTANCE_COUNT
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT
             utils::Slice<FRenderPrimitive>,             // PRIMITIVES

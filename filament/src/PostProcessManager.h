@@ -139,11 +139,16 @@ public:
             bool translucent) noexcept;
 
     // Temporal Anti-aliasing
-    void prepareTaa(FrameHistory& frameHistory, CameraInfo const& cameraInfo,
-            TemporalAntiAliasingOptions const& taaOptions) const noexcept;
+    void prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
+            CameraInfo* inoutCameraInfo,
+            PerViewUniforms& uniforms) const noexcept;
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 
@@ -214,6 +219,10 @@ private:
             PostProcessMaterial const& material,
             backend::DriverApi& driver) const noexcept;
 
+    void render(FrameGraphResources::RenderPassInfo const& out,
+            backend::PipelineState const& pipeline,
+            backend::DriverApi& driver) const noexcept;
+
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept;
@@ -229,23 +238,18 @@ private:
 
         void terminate(FEngine& engine) noexcept;
 
-        FMaterial* getMaterial() const;
-        FMaterialInstance* getMaterialInstance() const;
+        FMaterial* getMaterial(FEngine& engine) const noexcept;
+        FMaterialInstance* getMaterialInstance(FEngine& engine) const noexcept;
 
-        backend::PipelineState getPipelineState(Variant::type_t variantKey = 0u) const noexcept;
+        backend::PipelineState getPipelineState(FEngine& engine,
+                Variant::type_t variantKey = 0u) const noexcept;
 
     private:
-        FMaterial* assertMaterial() const noexcept;
-        FMaterial* loadMaterial() const noexcept;
+        void loadMaterial(FEngine& engine) const noexcept;
 
         union {
-            struct {
-                mutable FMaterial* mMaterial;
-            };
-            struct {
-                FEngine* mEngine;
-                uint8_t const* mData;
-            };
+            mutable FMaterial* mMaterial;
+            uint8_t const* mData;
         };
         uint32_t mSize{};
         mutable bool mHasMaterial{};
@@ -260,9 +264,11 @@ private:
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
-    const math::float2 mHaltonSamples[16];
+    static const math::float2 sHaltonSamples[16];
+    math::float2 const* mHaltonSamples = sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
+    bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;
 };
 
 } // namespace filament

@@ -220,8 +220,9 @@ public:
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
         backend::RasterState rasterState;                               // 4 bytes
         uint16_t index = 0;                                             // 2 bytes
+        uint16_t instanceCount;                                         // 2 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[13 - sizeof(void*)] = {};                      // 5 bytes (9)
+        uint8_t reserved[11 - sizeof(void*)] = {};                      // 3 bytes (7)
     };
     static_assert(sizeof(PrimitiveInfo) == 32);
 
@@ -293,10 +294,6 @@ public:
     // the current camera, geometry and flags set. This can be called multiple times if needed.
     void appendCommands(CommandTypeFlags commandTypeFlags) noexcept;
 
-    // Appends a custom command.
-    void appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
-            std::function<void()> command);
-
     // sorts commands, then trims sentinels
     void sortCommands() noexcept;
 
@@ -325,20 +322,15 @@ public:
         const backend::PolygonOffset mPolygonOffset;
         const bool mPolygonOffsetOverride;
 
-        Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-                : mEngine(pass->mEngine), mBegin(b), mEnd(e), mRenderableSoa(*pass->mRenderableSoa),
-                  mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
-                  mPolygonOffset(pass->mPolygonOffset),
-                  mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {
-            assert_invariant(b >= pass->begin());
-            assert_invariant(e <= pass->end());
-        }
+        Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
 
         void recordDriverCommands(FEngine& engine, backend::DriverApi& driver,
                 const Command* first, const Command* last,
-                FScene::RenderableSoa const& soa) const noexcept;
+                FScene::RenderableSoa const& soa, uint16_t readOnlyDepthStencil) const noexcept;
 
     public:
+        Executor(Executor const& rhs);
+        ~Executor() noexcept;
         void execute(const char* name,
                 backend::Handle<backend::HwRenderTarget> renderTarget,
                 backend::RenderPassParams params) const noexcept;
@@ -353,6 +345,11 @@ public:
     Executor getExecutor(Command const* b, Command const* e) const {
         return { this, b, e };
     }
+
+    // Appends a custom command.
+    void appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
+            Executor::CustomCommandFn command);
+
 
 private:
     friend class FRenderer;
@@ -386,10 +383,6 @@ private:
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
-
-    using CustomCommandFn = std::function<void()>;
-    using CustomCommandVector = std::vector<CustomCommandFn,
-            utils::STLAllocator<CustomCommandFn, LinearAllocatorArena>>;
 
     // a reference to the Engine, mostly to get to things like JobSystem
     FEngine& mEngine;
@@ -431,7 +424,7 @@ private:
     backend::PolygonOffset mPolygonOffset{};
 
     // a vector for our custom commands
-    mutable CustomCommandVector mCustomCommands;
+    mutable Executor::CustomCommandVector mCustomCommands;
 };
 
 } // namespace filament

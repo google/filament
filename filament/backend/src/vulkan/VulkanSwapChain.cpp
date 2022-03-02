@@ -29,6 +29,14 @@ namespace backend {
 bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
         currentSwapIndex = (currentSwapIndex + 1) % mColor.size();
+
+        // Next we perform a quick sanity check on layout for headless swap chains. It's easier to
+        // catch errors here than with validation. If this is the first time a particular image has
+        // been acquired, it should be in an UNDEFINED state. If this is not the first time, then it
+        // should be in the normal layout that we use for color attachments.
+        assert_invariant(this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_UNDEFINED ||
+                this->getColorAttachment().getLayout() == getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
+
         return true;
     }
 
@@ -43,6 +51,11 @@ bool VulkanSwapChain::acquire() {
         slog.w << "Vulkan Driver: Suboptimal swap chain." << io::endl;
         suboptimal = true;
     }
+
+    // Next perform a quick sanity check on the image layout. Similar to attachable textures, we
+    // immediately transition the swap chain image layout during the first render pass of the frame.
+    assert_invariant(this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_UNDEFINED ||
+            this->getColorAttachment().getLayout() == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // To ensure that the next command buffer submission does not write into the image before
     // it has been acquired, push the image available semaphore into the command buffer manager.
@@ -93,13 +106,30 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
         }
     }
 
-    clientSize = caps.currentExtent;
+    // Verify that our chosen present mode is supported. In practice all devices support the FIFO mode, but we
+    // check for it anyway for completeness.  (and to avoid validation warnings)
 
-    const auto compositionCaps = caps.supportedCompositeAlpha;
-    const auto compositeAlpha = (compositionCaps & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
-            VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    const VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    uint32_t presentModeCount = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(mContext.physicalDevice, surface, &presentModeCount, nullptr);
+    FixedCapacityVector<VkPresentModeKHR> presentModes(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(mContext.physicalDevice, surface, &presentModeCount, presentModes.data());
+    bool foundSuitablePresentMode = false;
+    for (VkPresentModeKHR mode : presentModes) {
+        if (mode == desiredPresentMode) {
+            foundSuitablePresentMode = true;
+            break;
+        }
+    }
+    ASSERT_POSTCONDITION(foundSuitablePresentMode, "Desired present mode is not supported by this device.");
 
     // Create the low-level swap chain.
+
+    clientSize = caps.currentExtent;
+
+    const VkCompositeAlphaFlagBitsKHR compositeAlpha = (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
+            VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
     VkSwapchainCreateInfoKHR createInfo {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface,
@@ -120,7 +150,7 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
         .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
 
         .compositeAlpha = compositeAlpha,
-        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+        .presentMode = desiredPresentMode,
         .clipped = VK_TRUE,
 
         // TODO: Setting the oldSwapchain parameter would avoid exiting and re-entering
@@ -150,7 +180,7 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
             << ", " << surfaceFormat.colorSpace
             << ", " << imageCount
             << ", " << caps.currentTransform
-            << io::endl;
+            << io::endl << io::endl;
 
     createSemaphore(mContext.device, &imageAvailable);
     acquired = false;
@@ -315,30 +345,12 @@ bool VulkanSwapChain::hasResized() const {
 
 VulkanAttachment VulkanSwapChain::getColorAttachment() const {
     VulkanTexture& tex = getColorTexture();
-    return VulkanAttachment {
-        .format = tex.getVkFormat(),
-        .image = tex.getVkImage(),
-        .view = tex.getAttachmentView(0, 0, VK_IMAGE_ASPECT_COLOR_BIT),
-        .memory = VK_NULL_HANDLE,
-        .texture = &tex,
-        .layout = tex.getVkLayout(0, 0),
-        .level = 0,
-        .layer = 0,
-    };
+    return VulkanAttachment { .texture = &tex, .level = 0, .layer = 0 };
 }
 
 VulkanAttachment VulkanSwapChain::getDepthAttachment() const {
-    VulkanTexture& tex = *this->mDepth.get();
-    return VulkanAttachment {
-        .format = tex.getVkFormat(),
-        .image = tex.getVkImage(),
-        .view = tex.getAttachmentView(0, 0, VK_IMAGE_ASPECT_DEPTH_BIT),
-        .memory = VK_NULL_HANDLE,
-        .texture = &tex,
-        .layout = tex.getVkLayout(0, 0),
-        .level = 0,
-        .layer = 0,
-    };
+    VulkanTexture& tex = *this->mDepth;
+    return VulkanAttachment { .texture = &tex, .level = 0, .layer = 0 };
 }
 
 VulkanTexture& VulkanSwapChain::getColorTexture() const {

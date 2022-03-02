@@ -285,6 +285,22 @@ public class RenderableManager {
         }
 
         /**
+         * Specifies the number of draw instance of this renderable. The default is 1 instance and
+         * the maximum number of instances allowed is 65535. 0 is invalid.
+         * All instances are culled using the same bounding box, so care must be taken to make
+         * sure all instances render inside the specified bounding box.
+         * The material can use getInstanceIndex() in the vertex shader to get the instance index and
+         * possibly adjust the position or transform.
+         *
+         * @param instanceCount the number of instances silently clamped between 1 and 65535.
+         */
+        @NonNull
+        public Builder instances(@IntRange(from = 1, to = 65535) int instanceCount) {
+            nBuilderInstances(mNativeBuilder, instanceCount);
+            return this;
+        }
+
+        /**
          * Controls if this renderable casts shadows, false by default.
          *
          * If the View's shadow type is set to {@link View.ShadowType#VSM}, castShadows should only
@@ -422,6 +438,45 @@ public class RenderableManager {
         @NonNull
         public Builder morphing(@IntRange(from = 0, to = 255) int targetCount) {
             nBuilderMorphing(mNativeBuilder, targetCount);
+            return this;
+        }
+
+        /**
+         * Specifies the morph target buffer for a primitive.
+         *
+         * The morph target buffer must have an associated renderable and geometry. Two conditions
+         * must be met:
+         * 1. The number of morph targets in the buffer must equal the renderable's morph target
+         *    count.
+         * 2. The vertex count of each morph target must equal the geometry's vertex count.
+         *
+         * @param level the level of detail (lod), only 0 can be specified
+         * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
+         * @param morphTargetBuffer specifies the morph target buffer
+         * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
+         * @param count number of vertices in the morph target buffer to read, must equal the geometry's count (for triangles, this should be a multiple of 3)
+         */
+        @NonNull
+        public Builder morphing(@IntRange(from = 0) int level,
+                                @IntRange(from = 0) int primitiveIndex,
+                                @NonNull MorphTargetBuffer morphTargetBuffer,
+                                @IntRange(from = 0) int offset,
+                                @IntRange(from = 0) int count) {
+            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
+                    morphTargetBuffer.getNativeObject(), offset, count);
+            return this;
+        }
+
+        /**
+         * Utility method to specify morph target buffer for a primitive.
+         * For details, see the {@link RenderableManager.Builder#morphing}.
+         */
+        @NonNull
+        public Builder morphing(@IntRange(from = 0) int level,
+                                @IntRange(from = 0) int primitiveIndex,
+                                @NonNull MorphTargetBuffer morphTargetBuffer) {
+            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
+                    morphTargetBuffer.getNativeObject(), 0, morphTargetBuffer.getVertexCount());
             return this;
         }
 
@@ -809,8 +864,10 @@ public class RenderableManager {
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
     private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
+    private static native void nBuilderSetMorphTargetBufferAt(long nativeBuilder, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
+    private static native void nBuilderInstances(long nativeRenderableManager, int instances);
 
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);

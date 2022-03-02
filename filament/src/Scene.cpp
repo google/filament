@@ -142,6 +142,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
                     worldAABB.center,               // WORLD_AABB_CENTER
                     0,                              // VISIBLE_MASK
                     rcm.getChannels(ri),            // CHANNELS
+                    rcm.getInstanceCount(ri),       // INSTANCE_COUNT
                     rcm.getLayerMask(ri),           // LAYERS
                     worldAABB.halfExtent,           // WORLD_AABB_EXTENT
                     {},                             // PRIMITIVES

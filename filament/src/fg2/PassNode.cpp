@@ -138,8 +138,12 @@ void RenderPassNode::resolve() noexcept {
          */
 
         ImportedRenderTarget* pImportedRenderTarget = nullptr;
-        rt.backend.params.flags.discardStart = backend::TargetBufferFlags::NONE;
-        rt.backend.params.flags.discardEnd   = backend::TargetBufferFlags::NONE;
+        rt.backend.params.flags.discardStart    = TargetBufferFlags::NONE;
+        rt.backend.params.flags.discardEnd      = TargetBufferFlags::NONE;
+        rt.backend.params.readOnlyDepthStencil  = 0;
+
+        constexpr size_t DEPTH_INDEX = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 0;
+        constexpr size_t STENCIL_INDEX = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1;
 
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2; i++) {
             if (rt.descriptor.attachments.array[i]) {
@@ -149,6 +153,13 @@ void RenderPassNode::resolve() noexcept {
 
                 if (!rt.outgoing[i] || !rt.outgoing[i]->hasActiveReaders()) {
                     rt.backend.params.flags.discardEnd |= target;
+                }
+                if (!rt.outgoing[i] || !rt.outgoing[i]->hasWriterPass()) {
+                    if (i == DEPTH_INDEX) {
+                        rt.backend.params.readOnlyDepthStencil |= RenderPassParams::READONLY_DEPTH;
+                    } else if (i == STENCIL_INDEX) {
+                        rt.backend.params.readOnlyDepthStencil |= RenderPassParams::READONLY_STENCIL;
+                    }
                 }
                 if (!rt.incoming[i] || !rt.incoming[i]->hasActiveWriters()) {
                     rt.backend.params.flags.discardStart |= target;

@@ -39,57 +39,58 @@ struct BlitterUniforms {
 };
 
 void VulkanBlitter::blitColor(BlitArgs args) {
-    const VulkanAttachment src = args.srcTarget->getColor(mContext.currentSurface, args.targetIndex);
-    const VulkanAttachment dst = args.dstTarget->getColor(mContext.currentSurface, 0);
+    const VulkanAttachment src = args.srcTarget->getColor(args.targetIndex);
+    const VulkanAttachment dst = args.dstTarget->getColor(0);
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
 #if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
     const VkPhysicalDevice gpu = mContext.physicalDevice;
     VkFormatProperties info;
-    vkGetPhysicalDeviceFormatProperties(gpu, src.format, &info);
+    vkGetPhysicalDeviceFormatProperties(gpu, src.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT,
             "Source format is not blittable")) {
         return;
     }
-    vkGetPhysicalDeviceFormatProperties(gpu, dst.format, &info);
+    vkGetPhysicalDeviceFormatProperties(gpu, dst.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT,
             "Destination format is not blittable")) {
         return;
     }
 #endif
 
-    blitFast(aspect, args.filter, args.srcTarget->getExtent(mContext.currentSurface), src, dst,
+    blitFast(aspect, args.filter, args.srcTarget->getExtent(), src, dst,
             args.srcRectPair, args.dstRectPair);
 }
 
 void VulkanBlitter::blitDepth(BlitArgs args) {
-    VulkanSwapChain* const sc = mContext.currentSurface;
-    const VulkanAttachment src = args.srcTarget->getDepth(sc);
-    const VulkanAttachment dst = args.dstTarget->getDepth(sc);
+    const VulkanAttachment src = args.srcTarget->getDepth();
+    const VulkanAttachment dst = args.dstTarget->getDepth();
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 #if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
     const VkPhysicalDevice gpu = mContext.physicalDevice;
     VkFormatProperties info;
-    vkGetPhysicalDeviceFormatProperties(gpu, src.format, &info);
+    vkGetPhysicalDeviceFormatProperties(gpu, src.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT,
             "Depth format is not blittable")) {
         return;
     }
-    vkGetPhysicalDeviceFormatProperties(gpu, dst.format, &info);
+    vkGetPhysicalDeviceFormatProperties(gpu, dst.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT,
             "Depth format is not blittable")) {
         return;
     }
 #endif
 
-    if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
-        blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(sc), src, dst, args.srcRectPair,
-            args.dstRectPair);
+    assert_invariant(src.texture && dst.texture);
+
+    if (src.texture->samples > 1 && dst.texture->samples == 1) {
+        blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
+                args.dstRectPair);
         return;
     }
 
-    blitFast(aspect, args.filter, args.srcTarget->getExtent(sc), src, dst, args.srcRectPair,
+    blitFast(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
             args.dstRectPair);
 }
 
@@ -129,12 +130,10 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
-    const VkImageLayout srcLayout = src.texture ?
-        getDefaultImageLayout(src.texture->usage) :
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    const VkImageLayout srcLayout = getDefaultImageLayout(src.texture->usage);
 
     transitionImageLayout(cmdbuffer, {
-        src.image,
+        src.getImage(),
         srcLayout,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         srcRange,
@@ -143,7 +142,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
     });
 
     transitionImageLayout(cmdbuffer, {
-        dst.image,
+        dst.getImage(),
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         dstRange,
@@ -151,32 +150,26 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
     });
 
-    if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
+    if (src.texture->samples > 1 && dst.texture->samples == 1) {
         assert_invariant(aspect != VK_IMAGE_ASPECT_DEPTH_BIT && "Resolve with depth is not yet supported.");
-        vkCmdResolveImage(cmdbuffer, src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
+        vkCmdResolveImage(cmdbuffer, src.getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.getImage(),
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, resolveRegions);
     } else {
-        vkCmdBlitImage(cmdbuffer, src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
+        vkCmdBlitImage(cmdbuffer, src.getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.getImage(),
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, filter);
     }
 
     transitionImageLayout(cmdbuffer, blitterTransitionHelper({
-        .image = src.image,
+        .image = src.getImage(),
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         .newLayout = srcLayout,
         .subresources = srcRange
     }));
 
-    // Determine the desired texture layout for the destination while ensuring that the default
-    // render target is supported, which has no associated texture.
-    const VkImageLayout desiredLayout = dst.texture ?
-            getDefaultImageLayout(dst.texture->usage) :
-            mContext.currentSurface->getColorAttachment().layout;
-
     transitionImageLayout(cmdbuffer, blitterTransitionHelper({
-        .image = dst.image,
+        .image = dst.getImage(),
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .newLayout = desiredLayout,
+        .newLayout = getDefaultImageLayout(dst.texture->usage),
         .subresources = dstRange,
     }));
 }
@@ -229,6 +222,12 @@ void VulkanBlitter::lazyInit() noexcept {
     VkShaderModule fragmentShader = decode(VKSHADERS_BLITDEPTHFS_DATA, VKSHADERS_BLITDEPTHFS_SIZE);
     mDepthResolveProgram = new VulkanProgram(mContext, vertexShader, fragmentShader);
 
+    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+        utils::slog.d << "Created Shader Module for VulkanBlitter "
+                    << "shaders = (" << vertexShader << ", " << fragmentShader << ")"
+                    << utils::io::endl;
+    }
+
     static const float kTriangleVertices[] = {
         -1.0f, -1.0f,
         +1.0f, -1.0f,
@@ -273,7 +272,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
         .initialDepthLayout = VulkanDepthLayout::UNDEFINED,
         .renderPassDepthLayout = layout,
         .finalDepthLayout = layout,
-        .depthFormat = dst.format,
+        .depthFormat = dst.getFormat(),
         .clear = {},
         .discardStart = TargetBufferFlags::DEPTH,
         .samples = 1,
@@ -290,7 +289,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
         .samples = rpkey.samples,
         .color = {},
         .resolve = {},
-        .depth = dst.view,
+        .depth = dst.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT),
     };
     const VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
@@ -379,7 +378,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
 
     samplers[0] = {
         .sampler = vksampler,
-        .imageView = src.view,
+        .imageView = src.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT),
         .imageLayout = getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT)
     };
 

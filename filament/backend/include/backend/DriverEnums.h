@@ -950,10 +950,20 @@ struct RenderPassParams {
      * subpass. If this is zero, the render pass has only one subpass. The least significant bit
      * specifies that the first color attachment in the render target is a subpass input.
      *
-     * For now only 2 subpasses are supported, so only the lower 4 bits are used, one for each color
-     * attachment (see MRT::TARGET_COUNT).
+     * For now only 2 subpasses are supported, so only the lower 8 bits are used, one for each color
+     * attachment (see MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT).
      */
-    uint32_t subpassMask = 0;
+    uint16_t subpassMask = 0;
+
+    /**
+     * This mask makes a promise to the backend about read-only usage of the depth attachment (bit
+     * 0) and the stencil attachment (bit 1). Some backends need to know if writes are disabled in
+     * order to allow sampling from the depth attachment.
+     */
+    uint16_t readOnlyDepthStencil = 0;
+
+    static constexpr uint16_t READONLY_DEPTH = 1 << 0;
+    static constexpr uint16_t READONLY_STENCIL = 1 << 1;
 };
 
 struct PolygonOffset {
@@ -967,7 +977,11 @@ using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 using FrameCompletedCallback = void(*)(void* user);
 
 enum class Workaround : uint16_t {
-    SPLIT_EASU
+    // The EASU pass must split because shader compiler flattens early-exit branch
+    SPLIT_EASU,
+    // Backend allows feedback loop with ancillary buffers (depth/stencil) as long as they're read-only for
+    // the whole render pass.
+    ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP
 };
 
 } // namespace backend
