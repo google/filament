@@ -128,7 +128,7 @@ static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const
                 << "\"shaderModel\": \"" << toString(item.shaderModel) << "\", "
                 << "\"pipelineStage\": \"" << ps << "\", "
                 << "\"variantString\": \"" << variantString << "\", "
-                << "\"variant\": \"" << std::hex << +item.variant.key << std::dec << "\" }"
+                << "\"variant\": " << +item.variant.key << " }"
             << ((i == info.size() - 1) ? "\n" : ",\n");
     }
 }
@@ -241,13 +241,11 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
             return false;
     }
     json << "\"";
-    json << std::hex;
     for (size_t variant = 0; variant < activeVariants.size(); variant++) {
         if (activeVariants[variant]) {
             json << ", " << variant;
         }
     }
-    json << std::dec;
     json << "]";
     mJsonString = CString(json.str().c_str());
     return true;

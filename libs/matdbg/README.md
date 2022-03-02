@@ -167,8 +167,8 @@ Returns an array with all information (except shader source) for all known mater
     "shading": { "model": "unlit", "vertex_domain": "object", ... },
     "raster":  { "blending": "transparent", "color_write": "true", ... },
     "opengl": [
-        { "index": " 0", "shaderModel": "gl41", "pipelineStage": "vertex  ", "variantString": "", "variant": "0" },
-        { "index": " 1", "shaderModel": "gl41", "pipelineStage": "fragment", "variantString": "", "variant": "0" },
+        { "index": " 0", "shaderModel": "gl41", "pipelineStage": "vertex  ", "variantString": "", "variant": 0 },
+        { "index": " 1", "shaderModel": "gl41", "pipelineStage": "fragment", "variantString": "", "variant": 0 },
     ],
     "vulkan": [],
     "metal": [],
@@ -183,6 +183,8 @@ Returns an array with all information (except shader source) for all known mater
 Some of the returned data may seem redundant (e.g. the `index` and `variantString` fields) but
 these allow the client to be very simple by passing the raw JSON into [mustache][4] templates.
 Moreover it helps prevent duplication of knowledge between C++ and JavaScript.
+
+This format of this message is also used for the in-browser "database" of materials.
 
 ---
 

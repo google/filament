@@ -79,6 +79,7 @@ public:
 
     backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
+        assert_invariant(variant.key < VARIANT_COUNT);
         mActivePrograms.set(variant.key);
         if (UTILS_UNLIKELY(mPendingEdits.load())) {
             const_cast<FMaterial*>(this)->applyPendingEdits();
@@ -89,8 +90,6 @@ public:
     }
     backend::Program getProgramBuilderWithVariants(Variant variant, Variant vertexVariant,
             Variant fragmentVariant) const noexcept;
-    backend::Handle<backend::HwProgram> createAndCacheProgram(backend::Program&& p,
-            Variant variant) const noexcept;
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
@@ -168,10 +167,14 @@ private:
     backend::Handle<backend::HwProgram> getSurfaceProgramSlow(Variant variant) const noexcept;
     backend::Handle<backend::HwProgram> getPostProcessProgramSlow(Variant variant) const noexcept;
 
+    backend::Handle<backend::HwProgram> createAndCacheProgram(backend::Program&& p,
+            Variant variant) const noexcept;
+
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
 #if FILAMENT_ENABLE_MATDBG
+    // TODO: this should be protected with a mutex
     mutable VariantList mActivePrograms;
 #endif
 
