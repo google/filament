@@ -95,6 +95,11 @@ inline size_t getSize<VertexAttribute::TANGENTS>(size_t vertexCount) noexcept {
             stride, height, 1);
 }
 
+FMorphTargetBuffer::EmptyMorphTargetBuilder::EmptyMorphTargetBuilder() {
+    mImpl->mVertexCount = 1;
+    mImpl->mCount = 1;
+}
+
 FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
         : mVertexCount(builder->mVertexCount),
           mCount(builder->mCount) {
@@ -128,16 +133,6 @@ void FMorphTargetBuffer::terminate(FEngine& engine) {
     driver.destroySamplerGroup(mSbHandle);
     driver.destroyTexture(mTbHandle);
     driver.destroyTexture(mPbHandle);
-}
-
-Handle<HwSamplerGroup> FMorphTargetBuffer::createDummySampleGroup(FEngine& engine) noexcept {
-    DriverApi& driver = engine.getDriverApi();
-    Handle<HwSamplerGroup> sgh = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
-    backend::SamplerGroup group(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
-    group.setSampler(PerRenderPrimitiveMorphingSib::POSITIONS, engine.getOneTextureArray(), {});
-    group.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS, engine.getOneIntegerTextureArray(), {});
-    driver.updateSamplerGroup(sgh, std::move(group.toCommandStream()));
-    return sgh;
 }
 
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,

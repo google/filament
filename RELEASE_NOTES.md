@@ -3,9 +3,18 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.2 (currently main branch)
+## v1.20.3 (currently main branch)
+
+## v1.20.2
 
 ## v1.20.1
+
+- engine: Binary size improvements.
+- engine: Add basic support for instanced renderables [**NEW API**].
+- engine: Fix, first imaged passsed to `Stream::SetAcquiredImage` is ignored and leaked.
+- Vulkan: Robustness improvements.
+- Java: Fix, lookAt z axis negated.
+- gltfio: Be graceful when model has > 4 weights per vert.
 
 ## v1.20.0
 

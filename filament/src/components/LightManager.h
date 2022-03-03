@@ -44,6 +44,8 @@ public:
 
     void terminate() noexcept;
 
+    void gc(utils::EntityManager& em) noexcept;
+
     size_t getComponentCount() const noexcept {
         return mManager.getComponentCount();
     }
@@ -65,10 +67,6 @@ public:
     void destroy(utils::Entity e) noexcept;
 
     void prepare(backend::DriverApi& driver) const noexcept;
-
-    void gc(utils::EntityManager& em) noexcept {
-        mManager.gc(em);
-    }
 
     struct LightType {
         Type type : 3;

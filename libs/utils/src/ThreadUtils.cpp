@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANMEMORY_H
-#define TNT_FILAMENT_DRIVER_VULKANMEMORY_H
+#include "utils/ThreadUtils.h"
 
-#include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
+#include <utils/compiler.h>
 
-#include "vk_mem_alloc.h"
+namespace utils {
 
-#endif // TNT_FILAMENT_DRIVER_VULKANMEMORY_H
+UTILS_NOINLINE
+std::thread::id ThreadUtils::getThreadId() noexcept {
+    return std::this_thread::get_id();
+}
+
+bool ThreadUtils::isThisThread(std::thread::id id) noexcept {
+    return getThreadId() == id;
+}
+
+} // namespace utils

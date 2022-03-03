@@ -171,25 +171,26 @@ function queryActiveShaders() {
     fetch("api/active").then(function(response) {
         return response.json();
     }).then(function(activeMaterials) {
+        // The only active materials are the ones with active variants.
         for (matid in gMaterialDatabase) {
             const material = gMaterialDatabase[matid];
-            material.active = matid in activeMaterials;
+            material.active = false;
         }
         for (matid in activeMaterials) {
             const material = gMaterialDatabase[matid];
             const activeBackend = activeMaterials[matid][0];
             const activeShaders = activeMaterials[matid].slice(1);
             for (const shader of material[activeBackend]) {
-                const variant = parseInt(shader.variant);
-                shader.active = activeShaders.indexOf(variant) > -1;
+                shader.active = activeShaders.indexOf(shader.variant) > -1;
+                material.active = material.active || shader.active;
             }
         }
         renderMaterialList();
         renderMaterialDetail();
     })
-    .catch((error) => {
-        // This is expected to fail when the server is hosted from matinfo instead of Engine, since
-        // there are no active shaders in that situation.
+    .catch(error => {
+        // This can occur if the JSON is invalid.
+        console.error(error);
     });
 }
 
@@ -488,6 +489,10 @@ function init() {
     Mustache.parse(matListTemplate.innerHTML);
 
     startSocket();
+
+    // Poll for active shaders once every second.
+    // Take care not to poll more frequently than the frame rate. Active variants are determined
+    // by the list of variants that were fetched between this query and the previous query.
     setInterval(queryActiveShaders, 1000);
 }
 

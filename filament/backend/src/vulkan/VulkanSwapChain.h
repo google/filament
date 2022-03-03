@@ -38,11 +38,10 @@ struct VulkanSwapChain : public HwSwapChain {
     void destroy();
     void makePresentable();
     bool hasResized() const;
-    VulkanAttachment getColorAttachment() const; // TODO: remove
-    VulkanAttachment getDepthAttachment() const; // TODO: remove
-    VulkanTexture& getColorTexture() const;
 
-    // TODO: privatize more fields
+    VulkanTexture& getColorTexture();
+    VulkanTexture& getDepthTexture();
+    uint32_t getSwapIndex() const { return mCurrentSwapIndex; }
 
     VkSurfaceKHR surface = {};
     VkSwapchainKHR swapchain = {};
@@ -50,7 +49,6 @@ struct VulkanSwapChain : public HwSwapChain {
     VkExtent2D clientSize = {};
     VkQueue presentQueue = {};
     VkQueue headlessQueue = {};
-    uint32_t currentSwapIndex = {};
 
     // This is signaled when vkAcquireNextImageKHR succeeds, and is waited on by the first
     // submission.
@@ -64,6 +62,7 @@ struct VulkanSwapChain : public HwSwapChain {
 
 private:
     VulkanContext& mContext;
+    uint32_t mCurrentSwapIndex = 0u;
 
     // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
     // in a swap chain.

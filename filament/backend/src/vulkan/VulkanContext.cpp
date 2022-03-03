@@ -290,7 +290,6 @@ void VulkanContext::createLogicalDevice() {
         .physicalDevice = physicalDevice,
         .device = device,
         .pVulkanFunctions = &funcs,
-        .pRecordSettings = nullptr,
         .instance = instance
     };
     vmaCreateAllocator(&allocatorInfo, &allocator);

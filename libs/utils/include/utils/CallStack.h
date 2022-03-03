@@ -69,7 +69,7 @@ public:
    /** Demangles a C++ type name */
     static utils::CString demangleTypeName(const char* mangled);
 
-    template <typename T>
+    template<typename T>
     static utils::CString typeName() {
 #if UTILS_HAS_RTTI
         return demangleTypeName(typeid(T).name());

@@ -237,7 +237,7 @@ protected:
         size_t count = getComponentCount();
         size_t aliveInARow = 0;
         default_random_engine& rng = mRng;
-        #pragma nounroll
+        UTILS_NOUNROLL
         while (count && aliveInARow < ratio) {
             // note: using the modulo favorizes lower number
             size_t i = rng() % count;

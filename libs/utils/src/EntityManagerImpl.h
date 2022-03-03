@@ -48,6 +48,7 @@ public:
     using EntityManager::create;
     using EntityManager::destroy;
 
+    UTILS_NOINLINE
     void create(size_t n, Entity* entities) {
         Entity::Type index{};
         auto& freeList = mFreeList;
@@ -86,6 +87,7 @@ public:
         mCurrentIndex = currentIndex;
     }
 
+    UTILS_NOINLINE
     void destroy(size_t n, Entity* entities) noexcept {
         auto& freeList = mFreeList;
         uint8_t* const gens = mGens;
@@ -137,15 +139,6 @@ public:
         mListeners.erase(l);
     }
 
-    utils::FixedCapacityVector<EntityManager::Listener*> getListeners() const noexcept {
-        std::lock_guard<Mutex> lock(mListenerLock);
-        tsl::robin_set<Listener*> const& listeners = mListeners;
-        utils::FixedCapacityVector<EntityManager::Listener*> result(listeners.size());
-        result.resize(result.capacity()); // unfortunately this memset()
-        std::copy(listeners.begin(), listeners.end(), result.begin());
-        return result; // the c++ standard guarantees a move
-    }
-
 #if FILAMENT_UTILS_TRACK_ENTITIES
     std::vector<Entity> getActiveEntities() const {
         std::vector<Entity> result(mDebugActiveEntities.size());
@@ -166,6 +159,15 @@ public:
 #endif
 
 private:
+    utils::FixedCapacityVector<EntityManager::Listener*> getListeners() const noexcept {
+        std::lock_guard<Mutex> lock(mListenerLock);
+        tsl::robin_set<Listener*> const& listeners = mListeners;
+        utils::FixedCapacityVector<EntityManager::Listener*> result(listeners.size());
+        result.resize(result.capacity()); // unfortunately this memset()
+        std::copy(listeners.begin(), listeners.end(), result.begin());
+        return result; // the c++ standard guarantees a move
+    }
+
     uint32_t mCurrentIndex = 1;
 
     // stores indices that got freed

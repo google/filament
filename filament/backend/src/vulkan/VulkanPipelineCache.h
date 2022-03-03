@@ -67,6 +67,9 @@ public:
     static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 3;
     static constexpr uint32_t INITIAL_DESCRIPTOR_SET_POOL_SIZE = 512;
 
+    #pragma clang diagnostic push
+    #pragma clang diagnostic warning "-Wpadded"
+
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
     // as a vertex assembler configuration. For simplicity it contains fixed-size arrays and does
@@ -83,43 +86,35 @@ public:
     };
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
+    // The following states are omitted because Filament never changes them:
+    // >>> depthClampEnable, rasterizerDiscardEnable, depthBoundsTestEnable, stencilTestEnable
+    // >>> minSampleShading, alphaToOneEnable, sampleShadingEnable, minDepthBounds, maxDepthBounds,
+    // >>> depthBiasClamp, polygonMode, lineWidth
     struct RasterState {
-        struct {
-            VkBool32                                   depthClampEnable;
-            VkBool32                                   rasterizerDiscardEnable;
-            VkPolygonMode                              polygonMode;
-            VkCullModeFlags                            cullMode;
-            VkFrontFace                                frontFace;
-            VkBool32                                   depthBiasEnable;
-            float                                      depthBiasConstantFactor;
-            float                                      depthBiasClamp;
-            float                                      depthBiasSlopeFactor;
-            float                                      lineWidth;
-        } rasterization;                              // 40 bytes
-        VkPipelineColorBlendAttachmentState blending; // 32 bytes
-        struct {
-            VkBool32                                  depthTestEnable;
-            VkBool32                                  depthWriteEnable;
-            VkCompareOp                               depthCompareOp;
-            VkBool32                                  depthBoundsTestEnable;
-            VkBool32                                  stencilTestEnable;
-            float                                     minDepthBounds;
-            float                                     maxDepthBounds;
-        } depthStencil;                               // 28 bytes
-        struct {
-            VkSampleCountFlagBits                    rasterizationSamples;
-            VkBool32                                 sampleShadingEnable;
-            float                                    minSampleShading;
-            VkBool32                                 alphaToCoverageEnable;
-            VkBool32                                 alphaToOneEnable;
-        } multisampling;                             // 20 bytes
-        uint32_t colorTargetCount;
+        VkCullModeFlags       cullMode : 2;
+        VkFrontFace           frontFace : 2;
+        VkBool32              depthBiasEnable : 1;
+        VkBool32              blendEnable : 1;
+        VkBool32              depthWriteEnable : 1;
+        VkBool32              alphaToCoverageEnable : 1;
+        VkBlendFactor         srcColorBlendFactor : 5; // offset = 1 byte
+        VkBlendFactor         dstColorBlendFactor : 5;
+        VkBlendFactor         srcAlphaBlendFactor : 5;
+        VkBlendFactor         dstAlphaBlendFactor : 5;
+        VkColorComponentFlags colorWriteMask : 4;
+        uint8_t               rasterizationSamples;    // offset = 4 bytes
+        uint8_t               colorTargetCount;        // offset = 5 bytes
+        BlendEquation         colorBlendOp : 4;        // offset = 6 bytes
+        BlendEquation         alphaBlendOp : 4;
+        SamplerCompareFunc    depthCompareOp;          // offset = 7 bytes
+        float                 depthBiasConstantFactor; // offset = 8 bytes
+        float                 depthBiasSlopeFactor;    // offset = 12 bytes
     };
 
     static_assert(std::is_trivially_copyable<RasterState>::value,
             "RasterState must be a POD for fast hashing.");
 
-    static_assert(sizeof(RasterState) == 124, "RasterState must not have any padding.");
+    static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
     struct UniformBufferBinding {
         VkBuffer buffer;
@@ -208,32 +203,58 @@ private:
     // PIPELINE CACHE KEY
     // ------------------
 
-    // The pipeline key is a POD that represents all currently bound states that form the immutable
-    // VkPipeline object.
-    struct PipelineKey {
-        VkShaderModule shaders[SHADER_MODULE_COUNT]; // 16 bytes
-        RasterState rasterState;                     // 124 bytes
-        VkPrimitiveTopology topology;                // 4 bytes
-        VkRenderPass renderPass;                     // 8 bytes
-        uint16_t subpassIndex;                       // 2 bytes
-        uint16_t padding0;                           // 2 bytes
-        VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 256 bytes
-        VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 192 bytes
-        uint32_t padding1;                                                          // 4 bytes
+    // Equivalent to VkVertexInputAttributeDescription but half as big.
+    struct VertexInputAttributeDescription {
+        VertexInputAttributeDescription& operator=(const VkVertexInputAttributeDescription& that) {
+            assert_invariant(that.location <= 0xffu);
+            assert_invariant(that.binding <= 0xffu);
+            assert_invariant(uint32_t(that.format) <= 0xffffu);
+            location = that.location;
+            binding = that.binding;
+            format = that.format;
+            offset = that.offset;
+            return *this;
+        }
+        operator VkVertexInputAttributeDescription() const {
+            return { location, binding, VkFormat(format), offset };
+        }
+        uint8_t     location;
+        uint8_t     binding;
+        uint16_t    format;
+        uint32_t    offset;
     };
 
-    static_assert(sizeof(VkVertexInputBindingDescription) == 12);
+    // Equivalent to VkVertexInputBindingDescription but not as big.
+    struct VertexInputBindingDescription {
+        VertexInputBindingDescription& operator=(const VkVertexInputBindingDescription& that) {
+            assert_invariant(that.binding <= 0xffffu);
+            binding = that.binding;
+            stride = that.stride;
+            inputRate = that.inputRate;
+            return *this;
+        }
+        operator VkVertexInputBindingDescription() const {
+            return { binding, stride, (VkVertexInputRate) inputRate };
+        }
+        uint16_t    binding;
+        uint16_t    inputRate;
+        uint32_t    stride;
+    };
 
-    static_assert(offsetof(PipelineKey, rasterState)      == 16);
-    static_assert(offsetof(PipelineKey, topology)         == 140);
-    static_assert(offsetof(PipelineKey, renderPass)       == 144);
-    static_assert(offsetof(PipelineKey, subpassIndex)     == 152);
-    static_assert(offsetof(PipelineKey, vertexAttributes) == 156);
-    static_assert(offsetof(PipelineKey, vertexBuffers)    == 412);
-    static_assert(sizeof(PipelineKey) == 608, "PipelineKey must not have any padding.");
+    // The pipeline key is a POD that represents all currently bound states that form the immutable
+    // VkPipeline object. The size:offset comments below are expressed in bytes.
+    struct PipelineKey {                                                          // size : offset
+        VkShaderModule shaders[SHADER_MODULE_COUNT];                              //  16  : 0
+        VkRenderPass renderPass;                                                  //  8   : 16
+        uint16_t topology;                                                        //  2   : 24
+        uint16_t subpassIndex;                                                    //  2   : 26
+        VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; //  128 : 28
+        VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
+        RasterState rasterState;                                                  //  16  : 284
+        uint32_t padding;                                                         //  4   : 300
+    };
 
-    static_assert(std::is_trivially_copyable<PipelineKey>::value,
-            "PipelineKey must be a POD for fast hashing.");
+    static_assert(sizeof(PipelineKey) == 304, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
 
@@ -244,11 +265,9 @@ private:
     // DESCRIPTOR SET CACHE KEY
     // ------------------------
 
-    #pragma pack(push, 1)
-
     // Equivalent to VkDescriptorImageInfo but with explicit padding.
-    struct UTILS_PACKED DescriptorImageInfo {
-        DescriptorImageInfo& operator=(VkDescriptorImageInfo& that) {
+    struct DescriptorImageInfo {
+        DescriptorImageInfo& operator=(const VkDescriptorImageInfo& that) {
             sampler = that.sampler;
             imageView = that.imageView;
             imageLayout = that.imageLayout;
@@ -256,30 +275,41 @@ private:
             return *this;
         }
         operator VkDescriptorImageInfo() const { return { sampler, imageView, imageLayout }; }
+
+        // TODO: replace the 64-bit sampler handle with `uint32_t samplerParams` and remove the
+        // padding field. This is possible if we have access to the VulkanSamplerCache.
         VkSampler sampler;
+
         VkImageView imageView;
         VkImageLayout imageLayout;
         uint32_t padding;
     };
 
+    // We store size with 32 bits, so our "WHOLE" sentinel is different from Vk.
+    static const uint32_t WHOLE_SIZE = 0xffffffffu;
+
     // Represents all the Vulkan state that comprises a bound descriptor set.
-    struct UTILS_PACKED DescriptorKey {
-        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];
-        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];
-        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT];
-        VkDeviceSize uniformBufferOffsets[UBUFFER_BINDING_COUNT];
-        VkDeviceSize uniformBufferSizes[UBUFFER_BINDING_COUNT];
+    struct DescriptorKey {
+        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             // 0
+        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        // 64
+        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; // 832
+        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       // 1024
+        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         // 1056
     };
 
-    #pragma pack(pop)
-
-    static_assert(std::is_trivially_copyable<DescriptorKey>::value, "DescriptorKey must be a POD.");
+    static_assert(offsetof(DescriptorKey, samplers)              == 64);
+    static_assert(offsetof(DescriptorKey, inputAttachments)      == 832);
+    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1024);
+    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1056);
+    static_assert(sizeof(DescriptorKey) == 1088, "DescriptorKey must not have implicit padding.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 
     struct DescEqual {
         bool operator()(const DescriptorKey& k1, const DescriptorKey& k2) const;
     };
+
+    #pragma clang diagnostic pop
 
     // CACHE ENTRY STRUCTS
     // -------------------
@@ -369,7 +399,18 @@ private:
     // The descriptor set pool starts out with a decent number of descriptor sets.  The cache can
     // grow the pool by re-creating it with a larger size.  See growDescriptorPool().
     VkDescriptorPool mDescriptorPool;
+
+    // This describes the number of descriptor sets in mDescriptorPool. Note that this needs to be
+    // multiplied by DESCRIPTOR_TYPE_COUNT to get the actual number of descriptor sets. Also note
+    // that the number of low-level "descriptors" (not descriptor *sets*) is actually much more than
+    // this size. It can be computed only by factoring in UBUFFER_BINDING_COUNT etc.
     uint32_t mDescriptorPoolSize = INITIAL_DESCRIPTOR_SET_POOL_SIZE;
+
+    // To get the actual number of descriptor sets that have been allocated from the pool,
+    // take the sum of mDescriptorArenasCount (these are inactive descriptor sets) and the
+    // number of entries in the mDescriptorPool map (active descriptor sets). Multiply the result by
+    // DESCRIPTOR_TYPE_COUNT.
+    uint32_t mDescriptorArenasCount = 0;
 
     // After a growth event (i.e. when the VkDescriptorPool is replaced with a bigger version), all
     // currently used descriptors are moved into the "extinct" sets so that they can be safely

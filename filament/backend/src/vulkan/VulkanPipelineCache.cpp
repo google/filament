@@ -221,10 +221,7 @@ void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scisso
 VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptorSets() noexcept {
     PipelineLayoutCacheEntry* layoutCacheEntry = getOrCreatePipelineLayout();
 
-    DescriptorCacheEntry& descriptorCacheEntry = mDescriptorSets.emplace(
-            std::make_pair(mDescriptorRequirements, DescriptorCacheEntry {})).first.value();
-
-    descriptorCacheEntry.pipelineLayout = mLayoutRequirements;
+    DescriptorCacheEntry descriptorCacheEntry = { .pipelineLayout = mLayoutRequirements };
 
     // Each of the arenas for this particular layout are guaranteed to have the same size. Check
     // the first arena to see if any descriptor sets are available that can be re-claimed. If not,
@@ -232,9 +229,18 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
     // are no longer used. This occurs during the cleanup phase during command buffer submission.
     auto& descriptorSetArenas = layoutCacheEntry->descriptorSetArenas;
     if (descriptorSetArenas[0].empty()) {
-        if (mDescriptorSets.size() >= mDescriptorPoolSize) {
+
+        // If allocating a new descriptor set from the pool would cause it to overflow, then
+        // recreate the pool. The number of descriptor sets that have already been allocated from
+        // the pool is the sum of the "active" descriptor sets (mDescriptorSets) and the "dormant"
+        // descriptor sets (mDescriptorArenasCount).
+        //
+        // NOTE: technically both sides of the inequality below should be multiplied by
+        // DESCRIPTOR_TYPE_COUNT to get the true number of descriptor sets.
+        if (mDescriptorSets.size() + mDescriptorArenasCount + 1 > mDescriptorPoolSize) {
             growDescriptorPool();
         }
+
         VkDescriptorSetAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = mDescriptorPool;
@@ -251,6 +257,8 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             descriptorCacheEntry.handles[i] = descriptorSetArenas[i].back();
             descriptorSetArenas[i].pop_back();
         }
+        assert_invariant(mDescriptorArenasCount > 0);
+        mDescriptorArenasCount--;
     }
 
     // Rewrite every binding in the new descriptor sets.
@@ -269,6 +277,12 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             bufferInfo.buffer = mDescriptorRequirements.uniformBuffers[binding];
             bufferInfo.offset = mDescriptorRequirements.uniformBufferOffsets[binding];
             bufferInfo.range = mDescriptorRequirements.uniformBufferSizes[binding];
+
+            // We store size with 32 bits, so our "WHOLE" sentinel is different from Vk.
+            if (bufferInfo.range == WHOLE_SIZE) {
+                bufferInfo.range = VK_WHOLE_SIZE;
+            }
+
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
             writeInfo.dstArrayElement = 0;
@@ -328,7 +342,8 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
         writeInfo.dstBinding = binding;
     }
     vkUpdateDescriptorSets(mDevice, nwrites, writes, 0, nullptr);
-    return &descriptorCacheEntry;
+
+    return &mDescriptorSets.emplace(mDescriptorRequirements, descriptorCacheEntry).first.value();
 }
 
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {
@@ -359,15 +374,18 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     shaderStages[0].module = mPipelineRequirements.shaders[0];
     shaderStages[1].module = mPipelineRequirements.shaders[1];
 
-    // We don't store array sizes to save space, but it's quick to count all non-zero
-    // entries because these arrays have a small fixed-size capacity.
+    // Expand our size-optimized structs into the proper Vk structs.
     uint32_t numVertexAttribs = 0;
     uint32_t numVertexBuffers = 0;
+    VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT];
+    VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];
     for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
         if (mPipelineRequirements.vertexAttributes[i].format > 0) {
+            vertexAttributes[numVertexAttribs] = mPipelineRequirements.vertexAttributes[i];
             numVertexAttribs++;
         }
         if (mPipelineRequirements.vertexBuffers[i].stride > 0) {
+            vertexBuffers[numVertexBuffers] = mPipelineRequirements.vertexBuffers[i];
             numVertexBuffers++;
         }
     }
@@ -375,13 +393,13 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     VkPipelineVertexInputStateCreateInfo vertexInputState = {};
     vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputState.vertexBindingDescriptionCount = numVertexBuffers;
-    vertexInputState.pVertexBindingDescriptions = mPipelineRequirements.vertexBuffers;
+    vertexInputState.pVertexBindingDescriptions = vertexBuffers;
     vertexInputState.vertexAttributeDescriptionCount = numVertexAttribs;
-    vertexInputState.pVertexAttributeDescriptions = mPipelineRequirements.vertexAttributes;
+    vertexInputState.pVertexAttributeDescriptions = vertexAttributes;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
     inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssemblyState.topology = mPipelineRequirements.topology;
+    inputAssemblyState.topology = (VkPrimitiveTopology) mPipelineRequirements.topology;
 
     VkPipelineViewportStateCreateInfo viewportState = {};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -432,30 +450,28 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     const auto& raster = mPipelineRequirements.rasterState;
 
-    vkRaster.depthClampEnable = raster.rasterization.depthClampEnable;
-    vkRaster.rasterizerDiscardEnable = raster.rasterization.rasterizerDiscardEnable;
-    vkRaster.polygonMode = raster.rasterization.polygonMode;
-    vkRaster.cullMode = raster.rasterization.cullMode;
-    vkRaster.frontFace = raster.rasterization.frontFace;
-    vkRaster.depthBiasEnable = raster.rasterization.depthBiasEnable;
-    vkRaster.depthBiasConstantFactor = raster.rasterization.depthBiasConstantFactor;
-    vkRaster.depthBiasClamp = raster.rasterization.depthBiasClamp;
-    vkRaster.depthBiasSlopeFactor = raster.rasterization.depthBiasSlopeFactor;
-    vkRaster.lineWidth = raster.rasterization.lineWidth;
+    vkRaster.polygonMode = VK_POLYGON_MODE_FILL;
+    vkRaster.cullMode = raster.cullMode;
+    vkRaster.frontFace = raster.frontFace;
+    vkRaster.depthBiasEnable = raster.depthBiasEnable;
+    vkRaster.depthBiasConstantFactor = raster.depthBiasConstantFactor;
+    vkRaster.depthBiasClamp = 0.0f;
+    vkRaster.depthBiasSlopeFactor = raster.depthBiasSlopeFactor;
+    vkRaster.lineWidth = 1.0f;
 
-    vkMs.rasterizationSamples = raster.multisampling.rasterizationSamples;
-    vkMs.sampleShadingEnable = raster.multisampling.sampleShadingEnable;
-    vkMs.minSampleShading = raster.multisampling.minSampleShading;
-    vkMs.alphaToCoverageEnable = raster.multisampling.alphaToCoverageEnable;
-    vkMs.alphaToOneEnable = raster.multisampling.alphaToOneEnable;
+    vkMs.rasterizationSamples = (VkSampleCountFlagBits) raster.rasterizationSamples;
+    vkMs.sampleShadingEnable = VK_FALSE;
+    vkMs.minSampleShading = 0.0f;
+    vkMs.alphaToCoverageEnable = raster.alphaToCoverageEnable;
+    vkMs.alphaToOneEnable = VK_FALSE;
 
-    vkDs.depthTestEnable = raster.depthStencil.depthTestEnable;
-    vkDs.depthWriteEnable = raster.depthStencil.depthWriteEnable;
-    vkDs.depthCompareOp = raster.depthStencil.depthCompareOp;
-    vkDs.depthBoundsTestEnable = raster.depthStencil.depthBoundsTestEnable;
-    vkDs.stencilTestEnable = raster.depthStencil.stencilTestEnable;
-    vkDs.minDepthBounds = raster.depthStencil.minDepthBounds;
-    vkDs.maxDepthBounds = raster.depthStencil.maxDepthBounds;
+    vkDs.depthTestEnable = VK_TRUE;
+    vkDs.depthWriteEnable = raster.depthWriteEnable;
+    vkDs.depthCompareOp = getCompareOp(raster.depthCompareOp);
+    vkDs.depthBoundsTestEnable = VK_FALSE;
+    vkDs.stencilTestEnable = VK_FALSE;
+    vkDs.minDepthBounds = 0.0f;
+    vkDs.maxDepthBounds = 0.0f;
 
     pipelineCreateInfo.pColorBlendState = &colorBlendState;
     pipelineCreateInfo.pViewportState = &viewportState;
@@ -464,7 +480,14 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     // Filament assumes consistent blend state across all color attachments.
     colorBlendState.attachmentCount = mPipelineRequirements.rasterState.colorTargetCount;
     for (auto& target : colorBlendAttachments) {
-        target = mPipelineRequirements.rasterState.blending;
+        target.blendEnable = mPipelineRequirements.rasterState.blendEnable;
+        target.srcColorBlendFactor = mPipelineRequirements.rasterState.srcColorBlendFactor;
+        target.dstColorBlendFactor = mPipelineRequirements.rasterState.dstColorBlendFactor;
+        target.colorBlendOp = (VkBlendOp) mPipelineRequirements.rasterState.colorBlendOp;
+        target.srcAlphaBlendFactor = mPipelineRequirements.rasterState.srcAlphaBlendFactor;
+        target.dstAlphaBlendFactor = mPipelineRequirements.rasterState.dstAlphaBlendFactor;
+        target.alphaBlendOp = (VkBlendOp) mPipelineRequirements.rasterState.alphaBlendOp;
+        target.colorWriteMask = mPipelineRequirements.rasterState.colorWriteMask;
     }
 
     // There are no color attachments if there is no bound fragment shader.  (e.g. shadow map gen)
@@ -473,22 +496,21 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         colorBlendState.attachmentCount = 0;
     }
 
-    PipelineCacheEntry& bundle = mPipelines.emplace(
-            std::make_pair(mPipelineRequirements, PipelineCacheEntry {})).first.value();
+    PipelineCacheEntry cacheEntry = {};
 
     if constexpr (FILAMENT_VULKAN_VERBOSE) {
         utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
                 << shaderStages[0].module << ", " << shaderStages[1].module << ")" << utils::io::endl;
     }
     VkResult error = vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo,
-            VKALLOC, &bundle.handle);
+            VKALLOC, &cacheEntry.handle);
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
         utils::slog.e << "vkCreateGraphicsPipelines error " << error << utils::io::endl;
         return nullptr;
     }
 
-    return &bundle;
+    return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
 VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreatePipelineLayout() noexcept {
@@ -497,8 +519,7 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
         return &iter.value();
     }
 
-    PipelineLayoutCacheEntry& cacheEntry = mPipelineLayouts.emplace(
-            mLayoutRequirements, PipelineLayoutCacheEntry{}).first.value();
+    PipelineLayoutCacheEntry cacheEntry = {};
 
     VkDescriptorSetLayoutBinding binding = {};
     binding.descriptorCount = 1; // NOTE: We never use arrays-of-blocks.
@@ -546,10 +567,13 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
     pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.setLayoutCount = cacheEntry.descriptorSetLayouts.size();
     pPipelineLayoutCreateInfo.pSetLayouts = cacheEntry.descriptorSetLayouts.data();
-    VkResult error = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC,
+    VkResult result = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC,
             &cacheEntry.handle);
-    assert_invariant(error == VK_SUCCESS);
-    return error == VK_SUCCESS ? &cacheEntry : nullptr;
+    if (UTILS_UNLIKELY(result != VK_SUCCESS)) {
+        return nullptr;
+    }
+    return &mPipelineLayouts.emplace(mLayoutRequirements, cacheEntry).first.value();
+
 }
 
 void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
@@ -570,6 +594,7 @@ void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassInd
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {
+    assert_invariant(uint32_t(topology) <= 0xffffu);
     mPipelineRequirements.topology = topology;
 }
 
@@ -620,6 +645,14 @@ void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer unif
             bindingIndex, UBUFFER_BINDING_COUNT);
     auto& key = mDescriptorRequirements;
     key.uniformBuffers[bindingIndex] = uniformBuffer;
+
+    if (size == VK_WHOLE_SIZE) {
+        size = WHOLE_SIZE;
+    }
+
+    assert_invariant(offset <= 0xffffffffu);
+    assert_invariant(size <= 0xffffffffu);
+
     key.uniformBufferOffsets[bindingIndex] = offset;
     key.uniformBufferSizes[bindingIndex] = size;
 }
@@ -681,6 +714,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
             for (uint32_t i = 0; i < DESCRIPTOR_TYPE_COUNT; ++i) {
                 arenas[i].push_back(cacheEntry.handles[i]);
             }
+            ++mDescriptorArenasCount;
             iter = mDescriptorSets.erase(iter);
         } else {
             ++iter;
@@ -714,6 +748,12 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
                 }
 #endif
                 vkDestroyDescriptorSetLayout(mDevice, setLayout, VKALLOC);
+            }
+            auto& arenas = iter->second.descriptorSetArenas;
+            assert_invariant(mDescriptorArenasCount >= arenas[0].size());
+            mDescriptorArenasCount -= arenas[0].size();
+            for (auto& arena : arenas) {
+                vkFreeDescriptorSets(mDevice, mDescriptorPool, arena.size(), arena.data());
             }
             iter = mPipelineLayouts.erase(iter);
         } else {
@@ -816,6 +856,7 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
             arena.clear();
         }
     }
+    mDescriptorArenasCount = 0;
 
     // Move all in-use descriptors from the primary cache into an "extinct" list, so that they will
     // later be destroyed rather than reclaimed.
@@ -867,34 +908,18 @@ bool VulkanPipelineCache::DescEqual::operator()(const VulkanPipelineCache::Descr
 
 static VulkanPipelineCache::RasterState createDefaultRasterState() {
     return VulkanPipelineCache::RasterState {
-        .rasterization = {
-            .depthClampEnable = VK_FALSE,
-            .rasterizerDiscardEnable = VK_FALSE,
-            .polygonMode = VK_POLYGON_MODE_FILL,
-            .cullMode = VK_CULL_MODE_NONE,
-            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-            .depthBiasEnable = VK_FALSE,
-            .depthBiasConstantFactor = 0.0f,
-            .depthBiasClamp = 0.0f,
-            .depthBiasSlopeFactor = 0.0f,
-            .lineWidth = 1.0f,
-        },
-        .blending = {
-            .blendEnable = VK_FALSE,
-            .colorWriteMask = 0xf,
-        },
-        .depthStencil = {
-            .depthTestEnable = VK_TRUE,
-            .depthWriteEnable = VK_TRUE,
-            .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-            .depthBoundsTestEnable = VK_FALSE,
-            .stencilTestEnable = VK_FALSE,
-        },
-        .multisampling = {
-            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-            .alphaToCoverageEnable = true,
-        },
+        .cullMode = VK_CULL_MODE_NONE,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .blendEnable = VK_FALSE,
+        .depthWriteEnable = VK_TRUE,
+        .alphaToCoverageEnable = true,
+        .colorWriteMask = 0xf,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
         .colorTargetCount = 1,
+        .depthCompareOp = SamplerCompareFunc::LE,
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
     };
 }
 
