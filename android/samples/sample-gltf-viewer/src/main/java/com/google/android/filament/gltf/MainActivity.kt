@@ -36,6 +36,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.RandomAccessFile
+import java.net.URI
 import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -118,7 +119,7 @@ class MainActivity : Activity() {
         }
 
         // FXAA is pretty cheap and helps a lot
-        view.antiAliasing = View.AntiAliasing.FXAA;
+        view.antiAliasing = View.AntiAliasing.FXAA
 
         // ambient occlusion is the cheapest effect that adds a lot of quality
         view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
@@ -217,13 +218,13 @@ class MainActivity : Activity() {
 
                 val sky = Skybox.Builder().environment(skyboxTexture).build(engine)
 
-                specularFilter.destroy();
-                equirectToCubemap.destroy();
-                context.destroy();
+                specularFilter.destroy()
+                equirectToCubemap.destroy()
+                context.destroy()
 
                 // destroy the previous IBl
-                engine.destroyIndirectLight(modelViewer.scene.indirectLight!!);
-                engine.destroySkybox(modelViewer.scene.skybox!!);
+                engine.destroyIndirectLight(modelViewer.scene.indirectLight!!)
+                engine.destroySkybox(modelViewer.scene.skybox!!)
 
                 modelViewer.scene.skybox = sky
                 modelViewer.scene.indirectLight = ibl
@@ -243,7 +244,7 @@ class MainActivity : Activity() {
         val (zipStream, zipFile) = withContext(Dispatchers.IO) {
             val file = File.createTempFile("incoming", "zip", cacheDir)
             val raf = RandomAccessFile(file, "rw")
-            raf.getChannel().write(message.buffer);
+            raf.channel.write(message.buffer)
             message.buffer = null
             raf.seek(0)
             Pair(FileInputStream(file), file)
@@ -298,19 +299,16 @@ class MainActivity : Activity() {
 
         // The gltf is often not at the root level (e.g. if a folder is zipped) so
         // we need to extract its path in order to resolve the embedded uri strings.
-        var gltfPrefix = gltfPath!!.substringBeforeLast('/', "")
-        if (gltfPrefix.isNotEmpty()) {
-            gltfPrefix += "/"
-        }
+        var prefix = URI(gltfPath!!).resolve("..")
 
         withContext(Dispatchers.Main) {
             if (gltfPath!!.endsWith(".glb")) {
                 modelViewer.loadModelGlb(gltfBuffer)
             } else {
                 modelViewer.loadModelGltf(gltfBuffer) { uri ->
-                    val path = gltfPrefix + uri
+                    val path = prefix.resolve(uri).toString()
                     if (!pathToBufferMapping.contains(path)) {
-                        Log.e(TAG, "Could not find $path in the zip.")
+                        Log.e(TAG, "Could not find '$uri' in zip using prefix '$prefix'")
                         setStatusText("Zip is missing $path")
                     }
                     pathToBufferMapping[path]
@@ -343,12 +341,10 @@ class MainActivity : Activity() {
         clearStatusText()
         titlebarHint.text = message.label
         CoroutineScope(Dispatchers.IO).launch {
-            if (message.label.endsWith(".zip")) {
-                loadZip(message)
-            } else if (message.label.endsWith(".hdr")) {
-                loadHdr(message)
-            } else {
-                loadGlb(message)
+            when {
+                message.label.endsWith(".zip") -> loadZip(message)
+                message.label.endsWith(".hdr") -> loadHdr(message)
+                else -> loadGlb(message)
             }
         }
     }
