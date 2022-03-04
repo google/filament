@@ -3,7 +3,7 @@
 TweakableMaterial::TweakableMaterial() {
     mSpecularIntensity.value = 1.0f;    
     mAnisotropyDirection.value = { 1.0f, 0.0f, 0.0f };
-    mSubsurfaceColor.value = { 1.0f, 1.0f, 1.0f };
+    mSubsurfaceColor.value = { 0.0f, 0.0f, 0.0f };
     mSubsurfaceTint.value = { 1.0f, 1.0f, 1.0f };
     mMaxThickness.value = 1.0f;
     mIor.value = 1.5f;
@@ -120,7 +120,7 @@ void TweakableMaterial::fromJson(const json& source) {
 
     readValueFromJson(source, "isSheenColorDerived", mSheenColor.useDerivedQuantity, false);
     readValueFromJson(source, "sheenIntensity", mSheenIntensity, 1.0f);
-    readValueFromJson<filament::math::float3, true>(source, "subsurfaceColor", mSubsurfaceColor, { 1.0f, 1.0f, 1.0f });
+    readValueFromJson<filament::math::float3, true>(source, "subsurfaceColor", mSubsurfaceColor, { 0.0f, 0.0f, 0.0f });
     readValueFromJson(source, "isSubsurfaceColorDerived", mSubsurfaceColor.useDerivedQuantity, false);
     readValueFromJson<filament::math::float3, true>(source, "subsurfaceTint", mSubsurfaceTint, { 1.0f, 1.0f, 1.0f });
     readValueFromJson(source, "subsurfaceIntensity", mSubsurfaceIntensity.value, 1.0f);
@@ -190,7 +190,7 @@ void TweakableMaterial::resetWithType(MaterialType newType) {
     resetMemberToValue(mAnisotropy, {});
     resetMemberToValue(mAnisotropyDirection, { 1.0f, 0.0f, 0.0f });
 
-    resetMemberToValue(mSubsurfaceColor, { 1.0f, 1.0f, 1.0f });
+    resetMemberToValue(mSubsurfaceColor, { 0.0f, 0.0f, 0.0f });
     resetMemberToValue(mSubsurfaceTint, { 1.0f, 1.0f, 1.0f });
     resetMemberToValue(mSubsurfaceIntensity, 1.0f);
     resetMemberToValue(mSheenColor, {});
