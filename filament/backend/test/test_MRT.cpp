@@ -101,7 +101,7 @@ TEST_F(BackendTest, MRT) {
                 512,                                       // width
                 512,                                       // height
                 1,                                         // samples
-                { textureA, textureB }, // color
+                {{textureA },{textureB }}, // color
                 {},                                        // depth
                 {});                                       // stencil
 

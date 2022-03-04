@@ -133,7 +133,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         info.handle = t->getHwHandle();
         info.level  = attachment.mipLevel;
         if (t->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP) {
-            info.face = attachment.face;
+            info.layer = +attachment.face;
         } else {
             info.layer = attachment.layer;
         }
