@@ -426,9 +426,9 @@ io::ostream& operator<<(io::ostream& out, const RasterState& rs) {
 
 io::ostream& operator<<(io::ostream& out, const TargetBufferInfo& tbi) {
     return out << "TargetBufferInfo{"
-    << "h=" << tbi.handle
+    << "handle=" << tbi.handle
     << ", level=" << tbi.level
-    << ", face=" << tbi.face << "}";
+    << ", layer=" << tbi.layer << "}";
 }
 
 io::ostream& operator<<(io::ostream& out, const PolygonOffset& po) {

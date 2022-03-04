@@ -251,7 +251,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         // level (at least for OpenGL).
         Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
                 TargetBufferFlags::COLOR, t.getRenderTargetSize(),
-                t.getRenderTargetSize(), t.samples, TargetBufferInfo(texture, t.mipLevel), {},
+                t.getRenderTargetSize(), t.samples, {{ texture, uint8_t(t.mipLevel) }}, {},
                 {});
 
         TrianglePrimitive triangle(getDriverApi());
@@ -290,7 +290,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             RenderPassParams p = params;
             Handle<HwRenderTarget> mipLevelOneRT = getDriverApi().createRenderTarget(
                     TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1,
-                    TargetBufferInfo(texture, 0), {},
+                    {{ texture }}, {},
                     {});
             p.clearColor = {1.f, 0.f, 0.f, 1.f};
             getDriverApi().beginRenderPass(mipLevelOneRT, p);
@@ -378,7 +378,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             renderTargetSize,                          // width
             renderTargetSize,                          // height
             1,                                         // samples
-            TargetBufferInfo(texture, 0),              // color
+            {{ texture }},                             // color
             {},                                        // depth
             {});                                       // stencil
 

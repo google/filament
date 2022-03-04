@@ -185,8 +185,8 @@ TEST_F(BackendTest, CubemapMinify) {
     const TextureCubemapFace srcFace = TextureCubemapFace::NEGATIVE_Y;
     const TextureCubemapFace dstFace = TextureCubemapFace::NEGATIVE_Y;
 
-    const TargetBufferInfo srcInfo = { texture, srcLevel, srcFace };
-    const TargetBufferInfo dstInfo = { texture, dstLevel, dstFace };
+    const TargetBufferInfo srcInfo = { texture, srcLevel, +srcFace };
+    const TargetBufferInfo dstInfo = { texture, dstLevel, +dstFace };
 
     Handle<HwRenderTarget> srcRenderTarget;
     srcRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
@@ -425,14 +425,14 @@ TEST_F(BackendTest, DepthMinify) {
     Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
             TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH,
             kSrcTexWidth >> level, kSrcTexHeight >> level, 1,
-            { srcColorTexture, level, 0 },
-            { srcDepthTexture, level, 0 }, {});
+            {{ srcColorTexture, level }},
+            { srcDepthTexture, level }, {});
 
     Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget(
             TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH,
             kDstTexWidth >> level, kDstTexHeight >> level, 1,
-            { dstColorTexture, level, 0 },
-            { dstDepthTexture, level, 0 }, {});
+            {{ dstColorTexture, level }},
+            { dstDepthTexture, level }, {});
 
     // Prep for rendering.
     RenderPassParams params = {};
@@ -555,11 +555,11 @@ TEST_F(BackendTest, ColorResolve) {
 
     // Create a 4-sample render target with the 4-sample texture.
     Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR, kSrcTexWidth, kSrcTexHeight, kSampleCount, { srcColorTexture }, {}, {});
+            TargetBufferFlags::COLOR, kSrcTexWidth, kSrcTexHeight, kSampleCount,{{ srcColorTexture }}, {}, {});
 
     // Create a 1-sample render target with the 1-sample texture.
     Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR, kDstTexWidth, kDstTexHeight, 1, { dstColorTexture }, {}, {});
+            TargetBufferFlags::COLOR, kDstTexWidth, kDstTexHeight, 1, {{ dstColorTexture }}, {}, {});
 
     // Prep for rendering.
     RenderPassParams params = {};
@@ -672,12 +672,12 @@ TEST_F(BackendTest, DepthResolve) {
     // Create a 4-sample render target with 4-sample textures.
     Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
             TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcTexWidth, kSrcTexHeight,
-            kSampleCount, { srcColorTexture }, { srcDepthTexture }, {});
+            kSampleCount, {{ srcColorTexture }}, { srcDepthTexture }, {});
 
     // Create a 1-sample render target with 1-sample textures.
     Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget(
             TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kDstTexWidth, kDstTexHeight,
-            1, { dstColorTexture }, { dstDepthTexture }, {});
+            1, {{ dstColorTexture }}, { dstDepthTexture }, {});
 
     // Prep for rendering.
     RenderPassParams params = {};

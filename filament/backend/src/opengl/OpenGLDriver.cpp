@@ -785,7 +785,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                 // note: multi-sampled textures can't have mipmaps
                 break;
             case SamplerType::SAMPLER_CUBEMAP:
-                target = getCubemapTarget(binfo.face);
+                target = getCubemapTarget(binfo.layer);
                 // note: cubemaps can't be multi-sampled
                 break;
             default:
@@ -1912,9 +1912,9 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
-#pragma nounroll
+            UTILS_NOUNROLL
             for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                GLenum target = getCubemapTarget(face);
                 glTexSubImage2D(target, GLint(level), 0, 0,
                         width, height, glFormat, glType,
                         static_cast<uint8_t const*>(p.buffer) + offsets[face]);
@@ -1997,9 +1997,9 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
-#pragma nounroll
+            UTILS_NOUNROLL
             for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                GLenum target = getCubemapTarget(face);
                 glCompressedTexSubImage2D(target, GLint(level), 0, 0,
                         width, height, t->gl.internalFormat,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
