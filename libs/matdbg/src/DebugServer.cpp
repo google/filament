@@ -144,7 +144,7 @@ public:
         std::string uri(request->local_uri);
 
         const auto error = [request](int line) {
-            slog.e << "DebugServer: 404 at line " <<  line << ": " << request->query_string
+            slog.e << "DebugServer: 404 at line " <<  line << ": " << request->local_uri
                     << io::endl;
             return false;
         };
@@ -160,6 +160,14 @@ public:
             mServer->updateActiveVariants();
             mg_printf(conn, kSuccessHeader.c_str(), "application/json");
             mg_printf(conn, "{");
+
+            // If the backend has not been resolved to Vulkan, Metal, etc, then return an empty
+            // list. This can occur if the server is matinfo rather than an actual Filament session.
+            if (mServer->mBackend == backend::Backend::DEFAULT) {
+                mg_printf(conn, "}");
+                return true;
+            }
+
             int index = 0;
             for (const auto& pair : mServer->mMaterialRecords) {
                 const auto& record = pair.second;

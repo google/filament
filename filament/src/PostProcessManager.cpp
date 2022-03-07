@@ -182,6 +182,8 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
          mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
 }
 
+PostProcessManager::~PostProcessManager() noexcept = default;
+
 UTILS_NOINLINE
 void PostProcessManager::registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size) {
     mMaterialRegistry.try_emplace(name, mEngine, data, size);
@@ -3043,6 +3045,5 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
     return depthMipmapPass->in;
 }
-
 
 } // namespace filament

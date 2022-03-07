@@ -242,32 +242,19 @@ public:
         return mAntiAliasing;
     }
 
-    void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
-        options.feedback = math::clamp(options.feedback, 0.0f, 1.0f);
-        options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
-        mTemporalAntiAliasingOptions = options;
-    }
+    void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept ;
 
     const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
         return mTemporalAntiAliasingOptions;
     }
 
-    void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
-        options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
-        mMultiSampleAntiAliasingOptions = options;
-    }
+    void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
 
     const MultiSampleAntiAliasingOptions& getMultiSampleAntiAliasingOptions() const noexcept {
         return mMultiSampleAntiAliasingOptions;
     }
 
-    void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
-        options.thickness = std::max(0.0f, options.thickness);
-        options.bias = std::max(0.0f, options.bias);
-        options.maxDistance = std::max(0.0f, options.maxDistance);
-        options.stride = std::max(1.0f, options.stride);
-        mScreenSpaceReflectionsOptions = options;
-    }
+    void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept;
 
     const ScreenSpaceReflectionsOptions& getScreenSpaceReflectionsOptions() const noexcept {
         return mScreenSpaceReflectionsOptions;
@@ -326,27 +313,7 @@ public:
         return mAmbientOcclusionOptions.enabled ? AmbientOcclusion::SSAO : AmbientOcclusion::NONE;
     }
 
-    void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
-        options.radius = math::max(0.0f, options.radius);
-        options.power = std::max(0.0f, options.power);
-        options.bias = math::clamp(options.bias, 0.0f, 0.1f);
-        // snap to the closer of 0.5 or 1.0
-        options.resolution = std::floor(
-                math::clamp(options.resolution * 2.0f, 1.0f, 2.0f) + 0.5f) * 0.5f;
-        options.intensity = std::max(0.0f, options.intensity);
-        options.bilateralThreshold = std::max(0.0f, options.bilateralThreshold);
-        options.minHorizonAngleRad = math::clamp(options.minHorizonAngleRad, 0.0f, math::f::PI_2);
-        options.ssct.lightConeRad = math::clamp(options.ssct.lightConeRad, 0.0f, math::f::PI_2);
-        options.ssct.shadowDistance = std::max(0.0f, options.ssct.shadowDistance);
-        options.ssct.contactDistanceMax = std::max(0.0f, options.ssct.contactDistanceMax);
-        options.ssct.intensity = std::max(0.0f, options.ssct.intensity);
-        options.ssct.lightDirection = normalize(options.ssct.lightDirection);
-        options.ssct.depthBias = std::max(0.0f, options.ssct.depthBias);
-        options.ssct.depthSlopeBias = std::max(0.0f, options.ssct.depthSlopeBias);
-        options.ssct.sampleCount = math::clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
-        options.ssct.rayCount = math::clamp((unsigned)options.ssct.rayCount, 1u, 255u);
-        mAmbientOcclusionOptions = options;
-    }
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept;
 
     ShadowType getShadowType() const noexcept {
         return mShadowType;
@@ -364,11 +331,7 @@ public:
         return mVsmShadowOptions;
     }
 
-    void setSoftShadowOptions(SoftShadowOptions options) noexcept {
-        options.penumbraScale = std::max(0.0f, options.penumbraScale);
-        options.penumbraRatioScale = std::max(1.0f, options.penumbraRatioScale);
-        mSoftShadowOptions = options;
-    }
+    void setSoftShadowOptions(SoftShadowOptions options) noexcept;
 
     SoftShadowOptions getSoftShadowOptions() const noexcept {
         return mSoftShadowOptions;
@@ -378,49 +341,25 @@ public:
         return mAmbientOcclusionOptions;
     }
 
-    void setBloomOptions(BloomOptions options) noexcept {
-        options.dirtStrength = math::saturate(options.dirtStrength);
-        options.levels = math::clamp(options.levels, uint8_t(3), uint8_t(11));
-        options.resolution = math::clamp(options.resolution, 1u << options.levels, 2048u);
-        options.anamorphism = math::clamp(options.anamorphism, 1.0f/32.0f, 32.0f);
-        options.highlight = std::max(10.0f, options.highlight);
-        mBloomOptions = options;
-    }
+    void setBloomOptions(BloomOptions options) noexcept;
 
     BloomOptions getBloomOptions() const noexcept {
         return mBloomOptions;
     }
 
-    void setFogOptions(FogOptions options) noexcept {
-        options.distance = std::max(0.0f, options.distance);
-        options.maximumOpacity = math::clamp(options.maximumOpacity, 0.0f, 1.0f);
-        options.density = std::max(0.0f, options.density);
-        options.heightFalloff = std::max(0.0f, options.heightFalloff);
-        options.inScatteringSize = options.inScatteringSize;
-        options.inScatteringStart = std::max(0.0f, options.inScatteringStart);
-        mFogOptions = options;
-    }
+    void setFogOptions(FogOptions options) noexcept;
 
     FogOptions getFogOptions() const noexcept {
         return mFogOptions;
     }
 
-    void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
-        options.cocScale = std::max(0.0f, options.cocScale);
-        options.maxApertureDiameter = std::max(0.0f, options.maxApertureDiameter);
-        mDepthOfFieldOptions = options;
-    }
+    void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept;
 
     DepthOfFieldOptions getDepthOfFieldOptions() const noexcept {
         return mDepthOfFieldOptions;
     }
 
-    void setVignetteOptions(VignetteOptions options) noexcept {
-        options.roundness = math::saturate(options.roundness);
-        options.midPoint = math::saturate(options.midPoint);
-        options.feather = math::clamp(options.feather, 0.05f, 1.0f);
-        mVignetteOptions = options;
-    }
+    void setVignetteOptions(VignetteOptions options) noexcept;
 
     VignetteOptions getVignetteOptions() const noexcept {
         return mVignetteOptions;
@@ -483,12 +422,7 @@ public:
 
     // create the picking query
     View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-            View::PickingQueryResultCallback callback) noexcept {
-        FPickingQuery* pQuery = FPickingQuery::get(x, y, handler, callback);
-        pQuery->next = mActivePickingQueriesList;
-        mActivePickingQueriesList = pQuery;
-        return *pQuery;
-    }
+            View::PickingQueryResultCallback callback) noexcept;
 
     void executePickingQueries(backend::DriverApi& driver,
             backend::RenderTargetHandle handle, float scale) noexcept;

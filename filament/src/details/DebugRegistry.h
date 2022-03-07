@@ -34,34 +34,44 @@ class FDebugRegistry : public DebugRegistry {
 public:
     FDebugRegistry() noexcept;
 
-    bool hasProperty(const char* name) const noexcept;
+    void registerProperty(utils::StaticString name, bool* p) noexcept {
+        registerProperty(name, p, BOOL);
+    }
 
-    void* getPropertyAddress(const char* name) noexcept;
+    void registerProperty(utils::StaticString name, int* p) noexcept {
+        registerProperty(name, p, INT);
+    }
 
-    template <typename T>
-    bool setProperty(const char* name, T v) noexcept;
+    void registerProperty(utils::StaticString name, float* p) noexcept {
+        registerProperty(name, p, FLOAT);
+    }
 
-    template <typename T>
-    bool getProperty(const char* name, T* p) const noexcept;
+    void registerProperty(utils::StaticString name, math::float2* p) noexcept {
+        registerProperty(name, p, FLOAT2);
+    }
 
-    template <typename T>
-    void registerProperty(utils::StaticString name, T* p) noexcept {
-        Type type = BOOL;
-        if (std::is_same<T, bool>::value)           type = BOOL;
-        if (std::is_same<T, int>::value)            type = INT;
-        if (std::is_same<T, float>::value)          type = FLOAT;
-        if (std::is_same<T, math::float2>::value)   type = FLOAT2;
-        if (std::is_same<T, math::float3>::value)   type = FLOAT3;
-        if (std::is_same<T, math::float4>::value)   type = FLOAT4;
-        registerProperty(name, p, type);
+    void registerProperty(utils::StaticString name, math::float3* p) noexcept {
+        registerProperty(name, p, FLOAT3);
+    }
+
+    void registerProperty(utils::StaticString name, math::float4* p) noexcept {
+        registerProperty(name, p, FLOAT4);
     }
 
     void registerDataSource(utils::StaticString name, void const* data, size_t count) noexcept;
 
-    DataSource getDataSource(const char* name) const noexcept;
+#if !defined(_MSC_VER)
+private:
+#endif
+    template<typename T> bool getProperty(const char* name, T* p) const noexcept;
+    template<typename T> bool setProperty(const char* name, T v) noexcept;
 
 private:
+    friend class DebugRegistry;
     void registerProperty(utils::StaticString name, void* p, Type type) noexcept;
+    bool hasProperty(const char* name) const noexcept;
+    void* getPropertyAddress(const char* name) noexcept;
+    DataSource getDataSource(const char* name) const noexcept;
     std::unordered_map<utils::StaticString, void*> mPropertyMap;
     std::unordered_map<utils::StaticString, DataSource> mDataSourceMap;
 };

@@ -222,6 +222,10 @@ void VulkanBlitter::lazyInit() noexcept {
     VkShaderModule fragmentShader = decode(VKSHADERS_BLITDEPTHFS_DATA, VKSHADERS_BLITDEPTHFS_SIZE);
     mDepthResolveProgram = new VulkanProgram(mContext, vertexShader, fragmentShader);
 
+    // Allocate one anonymous sampler at slot 0.
+    mDepthResolveProgram->samplerGroupInfo[0].samplers.reserve(1);
+    mDepthResolveProgram->samplerGroupInfo[0].samplers.resize(1);
+
     if constexpr (FILAMENT_VULKAN_VERBOSE) {
         utils::slog.d << "Created Shader Module for VulkanBlitter "
                     << "shaders = (" << vertexShader << ", " << fragmentShader << ")"
@@ -328,33 +332,24 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     mPipelineCache.bindProgram(*mDepthResolveProgram);
     mPipelineCache.bindPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 
-    mContext.rasterState.depthStencil = {
-        .depthTestEnable = VK_TRUE,
-        .depthWriteEnable = true,
-        .depthCompareOp = VK_COMPARE_OP_ALWAYS,
-        .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE,
-    };
-    mContext.rasterState.multisampling = {
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-        .alphaToCoverageEnable = false,
-    };
-    mContext.rasterState.blending = {
-        .blendEnable = VK_FALSE,
-        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-        .colorBlendOp = VK_BLEND_OP_ADD,
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-        .alphaBlendOp = VK_BLEND_OP_ADD,
-        .colorWriteMask = (VkColorComponentFlags) 0,
-    };
-    auto& vkraster = mContext.rasterState.rasterization;
+    auto& vkraster = mContext.rasterState;
+    vkraster.depthWriteEnable = true;
+    vkraster.depthCompareOp = SamplerCompareFunc::A;
+    vkraster.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+    vkraster.alphaToCoverageEnable = false,
+    vkraster.blendEnable = VK_FALSE,
+    vkraster.srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+    vkraster.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+    vkraster.colorBlendOp = BlendEquation::ADD,
+    vkraster.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+    vkraster.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+    vkraster.alphaBlendOp = BlendEquation::ADD,
+    vkraster.colorWriteMask = (VkColorComponentFlags) 0,
     vkraster.cullMode = VK_CULL_MODE_NONE;
     vkraster.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     vkraster.depthBiasEnable = VK_FALSE;
-    mContext.rasterState.colorTargetCount = 0;
-    mPipelineCache.bindRasterState(mContext.rasterState);
+    vkraster.colorTargetCount = 0;
+    mPipelineCache.bindRasterState(vkraster);
 
     VulkanPipelineCache::VertexArray varray = {};
     VkBuffer buffers[1] = {};
@@ -397,7 +392,10 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     };
 
     mPipelineCache.bindScissor(cmdbuffer, scissor);
-    mPipelineCache.bindPipeline(cmdbuffer);
+
+    if (!mPipelineCache.bindPipeline(cmdbuffer)) {
+        assert_invariant(false);
+    }
 
     vkCmdBindVertexBuffers(cmdbuffer, 0, 1, buffers, offsets);
     vkCmdDraw(cmdbuffer, 4, 1, 0, 0);

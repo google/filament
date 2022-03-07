@@ -321,11 +321,12 @@ void FRenderableManager::create(
         // create and initialize all needed RenderPrimitives
         using size_type = Slice<FRenderPrimitive>::size_type;
         Builder::Entry const * const entries = builder->mEntries.data();
-        FRenderPrimitive* rp = new FRenderPrimitive[builder->mEntries.size()];
-        for (size_t i = 0, c = builder->mEntries.size(); i < c; ++i) {
+        const size_t entryCount = builder->mEntries.size();
+        FRenderPrimitive* rp = new FRenderPrimitive[entryCount];
+        for (size_t i = 0; i < entryCount; ++i) {
             rp[i].init(driver, entries[i]);
         }
-        setPrimitives(ci, { rp, size_type(builder->mEntries.size()) });
+        setPrimitives(ci, { rp, size_type(entryCount) });
 
         setAxisAlignedBoundingBox(ci, builder->mAABB);
         setLayerMask(ci, builder->mLayerMask);
@@ -394,6 +395,13 @@ void FRenderableManager::create(
             }
         }
 
+        // Create and initialize all needed MorphTargets. It's required to avoid branches in hot loops.
+        MorphTargets* morphTargets = new MorphTargets[entryCount];
+        for (size_t i = 0; i < entryCount; ++i) {
+            morphTargets[i] = { mEngine.getDummyMorphTargetBuffer(), 0, 0 };
+        }
+        mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
+
         // Even morphing isn't enabled, we should create morphig resources.
         // Because morphing shader code is generated when skinning is enabled.
         // You can see more detail at Variant::SKINNING_OR_MORPHING.
@@ -408,9 +416,13 @@ void FRenderableManager::create(
                         backend::BufferUsage::DYNAMIC),
                 .count = targetCount };
 
-            for (size_t i = 0, c = builder->mEntries.size(); i < c; ++i) {
+            for (size_t i = 0; i < entryCount; ++i) {
                 const auto& morphing = builder->mEntries[i].morphing;
-                rp[i].set(upcast(morphing.buffer));
+                if (!morphing.buffer) {
+                    continue;
+                }
+                morphTargets[i] = { upcast(morphing.buffer), (uint32_t)morphing.offset,
+                                    (uint32_t)morphing.count };
             }
         }
     }
@@ -442,6 +454,10 @@ void FRenderableManager::terminate() noexcept {
     }
 }
 
+void FRenderableManager::gc(utils::EntityManager& em) noexcept {
+    mManager.gc(em);
+}
+
 // This is basically a Renderable's destructor.
 void FRenderableManager::destroyComponent(Instance ci) noexcept {
     auto& manager = mManager;
@@ -451,6 +467,7 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
 
     // See create(RenderableManager::Builder&, Entity)
     destroyComponentPrimitives(engine, manager[ci].primitives);
+    destroyComponentMorphTargets(engine, manager[ci].morphTargets);
 
     // destroy the bones structures if any
     Bones const& bones = manager[ci].bones;
@@ -471,6 +488,11 @@ void FRenderableManager::destroyComponentPrimitives(
         primitive.terminate(engine);
     }
     delete[] primitives.data();
+}
+
+void FRenderableManager::destroyComponentMorphTargets(FEngine& engine,
+        utils::Slice<MorphTargets>& morphTargets) noexcept {
+    delete[] morphTargets.data();
 }
 
 void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
@@ -645,9 +667,10 @@ void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level
                 "Only %d morph targets can be set (count=%d)",
                 morphWeights.count, morphTargetBuffer->getCount());
 
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
-        if (primitiveIndex < primitives.size()) {
-            primitives[primitiveIndex].set(morphTargetBuffer);
+        Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
+        if (primitiveIndex < morphTargets.size()) {
+            morphTargets[primitiveIndex] = { morphTargetBuffer, (uint32_t)offset,
+                                             (uint32_t)count };
         }
     }
 }
@@ -678,139 +701,6 @@ bool FRenderableManager::getLightChannel(Instance ci, unsigned int channel) cons
         }
     }
     return false;
-}
-
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
-
-bool RenderableManager::hasComponent(utils::Entity e) const noexcept {
-    return upcast(this)->hasComponent(e);
-}
-
-RenderableManager::Instance
-RenderableManager::getInstance(utils::Entity e) const noexcept {
-    return upcast(this)->getInstance(e);
-}
-
-void RenderableManager::destroy(utils::Entity e) noexcept {
-    return upcast(this)->destroy(e);
-}
-
-void RenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box& aabb) noexcept {
-    upcast(this)->setAxisAlignedBoundingBox(instance, aabb);
-}
-
-void RenderableManager::setLayerMask(Instance instance, uint8_t select, uint8_t values) noexcept {
-    upcast(this)->setLayerMask(instance, select, values);
-}
-
-void RenderableManager::setPriority(Instance instance, uint8_t priority) noexcept {
-    upcast(this)->setPriority(instance, priority);
-}
-
-void RenderableManager::setCulling(Instance instance, bool enable) noexcept {
-    upcast(this)->setCulling(instance, enable);
-}
-
-void RenderableManager::setCastShadows(Instance instance, bool enable) noexcept {
-    upcast(this)->setCastShadows(instance, enable);
-}
-
-void RenderableManager::setReceiveShadows(Instance instance, bool enable) noexcept {
-    upcast(this)->setReceiveShadows(instance, enable);
-}
-
-void RenderableManager::setScreenSpaceContactShadows(Instance instance, bool enable) noexcept {
-    upcast(this)->setScreenSpaceContactShadows(instance, enable);
-}
-
-bool RenderableManager::isShadowCaster(Instance instance) const noexcept {
-    return upcast(this)->isShadowCaster(instance);
-}
-
-bool RenderableManager::isShadowReceiver(Instance instance) const noexcept {
-    return upcast(this)->isShadowReceiver(instance);
-}
-
-const Box& RenderableManager::getAxisAlignedBoundingBox(Instance instance) const noexcept {
-    return upcast(this)->getAxisAlignedBoundingBox(instance);
-}
-
-uint8_t RenderableManager::getLayerMask(Instance instance) const noexcept {
-    return upcast(this)->getLayerMask(instance);
-}
-
-size_t RenderableManager::getPrimitiveCount(Instance instance) const noexcept {
-    return upcast(this)->getPrimitiveCount(instance, 0);
-}
-
-void RenderableManager::setMaterialInstanceAt(Instance instance,
-        size_t primitiveIndex, MaterialInstance const* materialInstance) noexcept {
-    upcast(this)->setMaterialInstanceAt(instance, 0, primitiveIndex, upcast(materialInstance));
-}
-
-MaterialInstance* RenderableManager::getMaterialInstanceAt(
-        Instance instance, size_t primitiveIndex) const noexcept {
-    return upcast(this)->getMaterialInstanceAt(instance, 0, primitiveIndex);
-}
-
-void RenderableManager::setBlendOrderAt(Instance instance, size_t primitiveIndex, uint16_t order) noexcept {
-    upcast(this)->setBlendOrderAt(instance, 0, primitiveIndex, order);
-}
-
-AttributeBitset RenderableManager::getEnabledAttributesAt(Instance instance, size_t primitiveIndex) const noexcept {
-    return upcast(this)->getEnabledAttributesAt(instance, 0, primitiveIndex);
-}
-
-void RenderableManager::setGeometryAt(Instance instance, size_t primitiveIndex,
-        PrimitiveType type, VertexBuffer* vertices, IndexBuffer* indices,
-        size_t offset, size_t count) noexcept {
-    upcast(this)->setGeometryAt(instance, 0, primitiveIndex,
-            type, upcast(vertices), upcast(indices), offset, count);
-}
-
-void RenderableManager::setGeometryAt(RenderableManager::Instance instance, size_t primitiveIndex,
-        RenderableManager::PrimitiveType type, size_t offset, size_t count) noexcept {
-    upcast(this)->setGeometryAt(instance, 0, primitiveIndex, type, offset, count);
-}
-
-void RenderableManager::setBones(Instance instance,
-        RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) {
-    upcast(this)->setBones(instance, transforms, boneCount, offset);
-}
-
-void RenderableManager::setBones(Instance instance,
-        mat4f const* transforms, size_t boneCount, size_t offset) {
-    upcast(this)->setBones(instance, transforms, boneCount, offset);
-}
-
-void RenderableManager::setSkinningBuffer(Instance instance,
-        SkinningBuffer* skinningBuffer, size_t count, size_t offset) {
-    upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
-}
-
-void RenderableManager::setMorphWeights(Instance instance, float const* weights,
-        size_t count, size_t offset) {
-    upcast(this)->setMorphWeights(instance, weights, count, offset);
-}
-
-void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-        MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) {
-    upcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex,
-            upcast(morphTargetBuffer), offset, count);
-}
-
-size_t RenderableManager::getMorphTargetCount(Instance instance) const noexcept {
-    return upcast(this)->getMorphTargetCount(instance);
-}
-
-void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {
-    upcast(this)->setLightChannel(instance, channel, enable);
-}
-
-bool RenderableManager::getLightChannel(Instance instance, unsigned int channel) const noexcept {
-    return upcast(this)->getLightChannel(instance, channel);
 }
 
 } // namespace filament

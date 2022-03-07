@@ -1361,13 +1361,14 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
     // Present the backbuffer after the most recent command buffer submission has finished.
     VkSemaphore renderingFinished = mContext.commands->acquireFinishedSignal();
+    uint32_t currentSwapIndex = surface.getSwapIndex();
     VkPresentInfoKHR presentInfo {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &renderingFinished,
         .swapchainCount = 1,
         .pSwapchains = &surface.swapchain,
-        .pImageIndices = &surface.currentSwapIndex,
+        .pImageIndices = &currentSwapIndex,
     };
     VkResult result = vkQueuePresentKHR(surface.presentQueue, &presentInfo);
 
@@ -1385,7 +1386,6 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
 void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
     auto* bo = handle_cast<VulkanBufferObject*>(boh);
-    // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
     const VkDeviceSize size = VK_WHOLE_SIZE;
     mPipelineCache.bindUniformBuffer((uint32_t) index, bo->buffer.getGpuBuffer(), offset, size);
@@ -1689,38 +1689,25 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     const VulkanRenderTarget* rt = mCurrentRenderTarget;
 
-    mContext.rasterState.depthStencil = {
-        .depthTestEnable = VK_TRUE,
-        .depthWriteEnable = (VkBool32) rasterState.depthWrite,
-        .depthCompareOp = getCompareOp(rasterState.depthFunc),
-        .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE,
-    };
-
-    mContext.rasterState.multisampling = {
-        .rasterizationSamples = (VkSampleCountFlagBits) rt->getSamples(),
-        .alphaToCoverageEnable = rasterState.alphaToCoverage,
-    };
-
-    mContext.rasterState.blending = {
-        .blendEnable = (VkBool32) rasterState.hasBlending(),
-        .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
-        .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
-        .colorBlendOp = (VkBlendOp) rasterState.blendEquationRGB,
-        .srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha),
-        .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
-        .alphaBlendOp =  (VkBlendOp) rasterState.blendEquationAlpha,
-        .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
-    };
-
-    auto& vkraster = mContext.rasterState.rasterization;
+    auto& vkraster = mContext.rasterState;
     vkraster.cullMode = getCullMode(rasterState.culling);
     vkraster.frontFace = getFrontFace(rasterState.inverseFrontFaces);
-    vkraster.depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? VK_TRUE : VK_FALSE;
+    vkraster.depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false;
     vkraster.depthBiasConstantFactor = depthOffset.constant;
     vkraster.depthBiasSlopeFactor = depthOffset.slope;
-
-    mContext.rasterState.colorTargetCount = rt->getColorTargetCount(mContext.currentRenderPass);
+    vkraster.blendEnable = rasterState.hasBlending();
+    vkraster.srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB);
+    vkraster.dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB);
+    vkraster.colorBlendOp = rasterState.blendEquationRGB;
+    vkraster.srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha);
+    vkraster.dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha);
+    vkraster.alphaBlendOp =  rasterState.blendEquationAlpha;
+    vkraster.colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0);
+    vkraster.depthWriteEnable = rasterState.depthWrite;
+    vkraster.depthCompareOp = rasterState.depthFunc;
+    vkraster.rasterizationSamples = rt->getSamples();
+    vkraster.alphaToCoverageEnable = rasterState.alphaToCoverage;
+    vkraster.colorTargetCount = rt->getColorTargetCount(mContext.currentRenderPass);
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
     VulkanPipelineCache::VertexArray varray = {};

@@ -43,19 +43,14 @@
 #   error "invalid debug level"
 #endif
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 template<typename ConcreteDriver>
 class ConcreteDispatcher final : public Dispatcher {
 public:
     // initialize the dispatch table
-    explicit ConcreteDispatcher() noexcept : Dispatcher() {
-#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
-#define DECL_DRIVER_API(methodName, paramsDecl, params)                 methodName##_ = &ConcreteDispatcher::methodName;
-#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) methodName##_ = &ConcreteDispatcher::methodName;
-#include "private/backend/DriverAPI.inc"
-    }
+    ConcreteDispatcher() noexcept;
+
 private:
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
@@ -75,7 +70,16 @@ private:
 #include "private/backend/DriverAPI.inc"
 };
 
-} // namespace backend
-} // namespace filament
+template<typename ConcreteDriver>
+UTILS_NOINLINE
+ConcreteDispatcher<ConcreteDriver>::ConcreteDispatcher() noexcept : Dispatcher() {
+#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
+#define DECL_DRIVER_API(methodName, paramsDecl, params)                 methodName##_ = &ConcreteDispatcher::methodName;
+#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) methodName##_ = &ConcreteDispatcher::methodName;
+#include "private/backend/DriverAPI.inc"
+}
+
+
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_DRIVER_COMMANDSTREAM_DISPATCHER_H

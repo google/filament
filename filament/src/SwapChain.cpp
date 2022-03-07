@@ -16,31 +16,7 @@
 
 #include "details/SwapChain.h"
 
-#include "details/Engine.h"
-
 namespace filament {
-
-FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags)
-        : mEngine(engine), mNativeWindow(nativeWindow), mConfigFlags(flags) {
-    mSwapChain = engine.getDriverApi().createSwapChain(nativeWindow, flags);
-}
-
-FSwapChain::FSwapChain(FEngine& engine, uint32_t width, uint32_t height, uint64_t flags)
-        : mEngine(engine), mConfigFlags(flags) {
-    mSwapChain = engine.getDriverApi().createSwapChainHeadless(width, height, flags);
-}
-
-void FSwapChain::terminate(FEngine& engine) noexcept {
-    engine.getDriverApi().destroySwapChain(mSwapChain);
-}
-
-void FSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
-    mEngine.getDriverApi().setFrameScheduledCallback(mSwapChain, callback, user);
-}
-
-void FSwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
-    mEngine.getDriverApi().setFrameCompletedCallback(mSwapChain, callback, user);
-}
 
 void* SwapChain::getNativeWindow() const noexcept {
     return upcast(this)->getNativeWindow();

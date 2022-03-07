@@ -48,36 +48,16 @@ class FIndirectLight;
 class FRenderer;
 class FSkybox;
 
-
 class FScene : public Scene {
-public:
-
-    /*
-     * User Public API
-     */
-
-    void setSkybox(FSkybox* skybox) noexcept;
-    FSkybox const* getSkybox() const noexcept { return mSkybox; }
-    FSkybox* getSkybox() noexcept { return mSkybox; }
-
-    void setIndirectLight(FIndirectLight const* ibl) noexcept { mIndirectLight = ibl; }
-    FIndirectLight const* getIndirectLight() const noexcept { return mIndirectLight; }
-
-    void addEntity(utils::Entity entity);
-    void addEntities(const utils::Entity* entities, size_t count);
-    void remove(utils::Entity entity);
-    void removeEntities(const utils::Entity* entities, size_t count);
-
-    size_t getRenderableCount() const noexcept;
-    size_t getLightCount() const noexcept;
-    bool hasEntity(utils::Entity entity) const noexcept;
-
-    void forEach(utils::Invocable<void(utils::Entity)>&& functor) const noexcept;
-
 public:
     /*
      * Filaments-scope Public API
      */
+
+    FSkybox* getSkybox() noexcept { return mSkybox; }
+    FSkybox const* getSkybox() const noexcept { return mSkybox; }
+
+    FIndirectLight const* getIndirectLight() const noexcept { return mIndirectLight; }
 
     // the directional light is always stored first in the LightSoA, so we need to account
     // for that in a few places.
@@ -91,8 +71,7 @@ public:
     void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena,
             backend::Handle<backend::HwBufferObject> lightUbh) noexcept;
 
-
-    filament::backend::Handle<backend::HwBufferObject> getRenderableUBO() const noexcept {
+    backend::Handle<backend::HwBufferObject> getRenderableUBO() const noexcept {
         return mRenderableViewUbh;
     }
 
@@ -107,7 +86,7 @@ public:
         WORLD_TRANSFORM,        // 16 | instance of the Transform component
         VISIBILITY_STATE,       //  1 | visibility data of the component
         SKINNING_BUFFER,        //  8 | bones uniform buffer handle, count, offset
-        MORPHING_BUFFER,        //  8 | weights uniform buffer handle, count
+        MORPHING_BUFFER,        // 16 | weights uniform buffer handle, count, morph targets
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
         VISIBLE_MASK,           //  2 | each bit represents a visibility in a pass
         CHANNELS,               //  1 | currently light channels only
@@ -198,6 +177,18 @@ public:
     bool hasContactShadows() const noexcept;
 
 private:
+    friend class Scene;
+    void setSkybox(FSkybox* skybox) noexcept;
+    void setIndirectLight(FIndirectLight const* ibl) noexcept { mIndirectLight = ibl; }
+    void addEntity(utils::Entity entity);
+    void addEntities(const utils::Entity* entities, size_t count);
+    void remove(utils::Entity entity);
+    void removeEntities(const utils::Entity* entities, size_t count);
+    size_t getRenderableCount() const noexcept;
+    size_t getLightCount() const noexcept;
+    bool hasEntity(utils::Entity entity) const noexcept;
+    void forEach(utils::Invocable<void(utils::Entity)>&& functor) const noexcept;
+
     static inline void computeLightRanges(math::float2* zrange,
             CameraInfo const& camera, const math::float4* spheres, size_t count) noexcept;
 

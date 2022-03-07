@@ -101,8 +101,8 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(
 
 void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     assert_invariant(!mOffscreen);
-    mColor[0] = swapChain.getColorAttachment();
-    mDepth = swapChain.getDepthAttachment();
+    mColor[0] = { .texture = &swapChain.getColorTexture() };
+    mDepth = { .texture = &swapChain.getDepthTexture() };
     width = swapChain.clientSize.width;
     height = swapChain.clientSize.height;
 }
@@ -202,12 +202,12 @@ VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
     return mMsaaDepthAttachment;
 }
 
-int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
+uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
     if (!mOffscreen) {
         return 1;
     }
-    int count = 0;
-    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
+    uint8_t count = 0;
+    for (uint8_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (!mColor[i].texture) {
             continue;
         }

@@ -20,82 +20,9 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#ifndef NDEBUG
-#   define DEBUG_PROPERTIES_WRITABLE true
-#else
-#   define DEBUG_PROPERTIES_WRITABLE false
-#endif
-
-using namespace filament::math;
-using namespace utils;
-
 namespace filament {
 
-FDebugRegistry::FDebugRegistry() noexcept = default;
-
-UTILS_NOINLINE
-void *FDebugRegistry::getPropertyAddress(const char *name) noexcept {
-    StaticString key = StaticString::make(name, strlen(name));
-    auto &propertyMap = mPropertyMap;
-    if (propertyMap.find(key) == propertyMap.end()) {
-        return nullptr;
-    }
-    return propertyMap[key];
-}
-
-void FDebugRegistry::registerProperty(utils::StaticString name, void *p, Type type) noexcept {
-    auto& propertyMap = mPropertyMap;
-    if (propertyMap.find(name) == propertyMap.end()) {
-        propertyMap[name] = p;
-    }
-}
-
-inline bool FDebugRegistry::hasProperty(const char *name) const noexcept {
-    return const_cast<FDebugRegistry *>(this)->getPropertyAddress(name) != nullptr;
-}
-
-template<typename T>
-inline bool FDebugRegistry::setProperty(const char *name, T v) noexcept {
-    if (DEBUG_PROPERTIES_WRITABLE) {
-        T * const addr = static_cast<T *>(getPropertyAddress(name));
-        if (addr) {
-            *addr = v;
-            return true;
-        }
-    }
-    return false;
-}
-
-template <typename T>
-inline bool FDebugRegistry::getProperty(const char* name, T* UTILS_RESTRICT p) const noexcept {
-    T const * const addr = static_cast<T *>(const_cast<FDebugRegistry *>(this)->getPropertyAddress(name));
-    if (addr) {
-        *p = *addr;
-        return true;
-    }
-    return false;
-}
-
-void FDebugRegistry::registerDataSource(StaticString name, void const* data, size_t count) noexcept {
-    auto& dataSourceMap = mDataSourceMap;
-    if (dataSourceMap.find(name) == dataSourceMap.end()) {
-        dataSourceMap[name] = { data, count };
-    }
-}
-
-DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
-    StaticString key = StaticString::make(name, strlen(name));
-    auto &dataSourceMap = mDataSourceMap;
-    auto const& it = dataSourceMap.find(key);
-    if (it == dataSourceMap.end()) {
-        return { nullptr, 0u };
-    }
-    return it->second;
-}
-
-// ------------------------------------------------------------------------------------------------
-// Trampoline calling into private implementation
-// ------------------------------------------------------------------------------------------------
+using namespace math;
 
 bool DebugRegistry::hasProperty(const char* name) const noexcept {
     return upcast(this)->hasProperty(name);
