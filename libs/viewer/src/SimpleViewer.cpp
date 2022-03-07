@@ -1457,21 +1457,19 @@ void SimpleViewer::updateUserInterface() {
             }
 
             if (iblOptions.iblTechnique == 1) {
-                static float radius = iblOptions.widthDiv2;
-                ImGui::SliderFloat("Sphere radius", &iblOptions.widthDiv2, 0.0f, 256.0f);
-                iblOptions.widthDiv2 = radius;
+                static float radius = std::sqrt(iblOptions.iblHalfExtents.x);
+                ImGui::SliderFloat("Sphere radius", &radius, 0.0f, 256.0f);
+                iblOptions.iblHalfExtents.x = radius * radius;
             }
             else if (iblOptions.iblTechnique == 2) {
-                static float width = 2.0f * iblOptions.widthDiv2;
-                static float height = 2.0f * iblOptions.heightDiv2;
-                static float depth = 2.0f * iblOptions.depthDiv2;
-                ImGui::SliderFloat("Box width", &width, 0.0f, 256.0f);
-                ImGui::SliderFloat("Box height", &height, 0.0f, 256.0f);
-                ImGui::SliderFloat("Box depth", &depth, 0.0f, 256.0f);
+                static filament::math::float3 iblCenter = iblOptions.iblCenter;
+                static filament::math::float3 iblHalfExtents = iblOptions.iblHalfExtents;
 
-                iblOptions.widthDiv2  = width / 2.0f;
-                iblOptions.heightDiv2 = height / 2.0f;
-                iblOptions.depthDiv2  = depth / 2.0f;
+                ImGui::SliderFloat3("Box center", iblCenter.v, -10.0f, 10.0f);
+                ImGui::SliderFloat3("Box half extents", iblHalfExtents.v, -10.0f, 10.0f);
+
+                iblOptions.iblCenter = iblCenter;
+                iblOptions.iblHalfExtents = iblHalfExtents;
             }
         }
         if (ImGui::CollapsingHeader("Sunlight")) {

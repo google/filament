@@ -704,12 +704,18 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->postProcessingEnabled);
         } else if (compare(tok, jsonChunk, "iblTechnique") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTechnique);
-        } else if (compare(tok, jsonChunk, "widthDiv2") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.widthDiv2);
-        } else if (compare(tok, jsonChunk, "heightDiv2") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.heightDiv2);
-        } else if (compare(tok, jsonChunk, "depthDiv2") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.depthDiv2);
+        } else if (compare(tok, jsonChunk, "iblCenterX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.x);
+        } else if (compare(tok, jsonChunk, "iblCenterY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.y);
+        } else if (compare(tok, jsonChunk, "iblCenterZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.z);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.x);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.y);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.z);
         } else {
             slog.w << "Invalid view setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1476,9 +1482,12 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
         << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
         << "\"iblTechnique\": " << to_string(in.iblOptions.iblTechnique) << "\n"
-        << "\"widthDiv2\": " << to_string(in.iblOptions.widthDiv2) << "\n"
-        << "\"heightDiv2\": " << to_string(in.iblOptions.heightDiv2) << "\n"
-        << "\"depthDiv2\": " << to_string(in.iblOptions.depthDiv2) << "\n"
+        << "\"iblCenterX\": " << to_string(in.iblOptions.iblCenter.x) << "\n"
+        << "\"iblCenterY\": " << to_string(in.iblOptions.iblCenter.y) << "\n"
+        << "\"iblCenterZ\": " << to_string(in.iblOptions.iblCenter.z) << "\n"
+        << "\"iblHalfExtentsX\": " << to_string(in.iblOptions.iblHalfExtents.x) << "\n"
+        << "\"iblHalfExtentsY\": " << to_string(in.iblOptions.iblHalfExtents.y) << "\n"
+        << "\"iblHalfExtentsZ\": " << to_string(in.iblOptions.iblHalfExtents.z) << "\n"
         << "}";
     
 }

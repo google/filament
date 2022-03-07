@@ -357,13 +357,11 @@ struct VsmShadowOptions {
     float lightBleedReduction = 0.15f;
 };
 
-struct IblOptions {
-    // 0: infinite cubemap IBL, 1: finite sphere IBL, 2: finite cube IBL
-    uint32_t iblTechnique = 0;
+struct IblOptions {    
+    uint32_t iblTechnique = 0; // 0: infinite cubemap IBL, 1: finite sphere IBL, 2: finite cube IBL
 
-    float widthDiv2  = 3.4f;
-    float heightDiv2 = 2.4f;
-    float depthDiv2  = 1.8f;
+    math::float3 iblCenter;       // center of the sphere or IBL AABB
+    math::float3 iblHalfExtents;  // .x is radius for sphere; otherwise the half extents of the box along the X, Y, Z axes
 };
 
 } // namespace filament
