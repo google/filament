@@ -36,6 +36,21 @@ vec2 solveQuadratic(float A, float B, float C)
     return roots;
 }
 
+vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
+    vec3 tMin = (boxMin - rayOrigin) / rayDir;
+    vec3 tMax = (boxMax - rayOrigin) / rayDir;
+    vec3 t1 = min(tMin, tMax);
+    vec3 t2 = max(tMin, tMax);
+    float tNear = max(max(t1.x, t1.y), t1.z);
+    float tFar = min(min(t2.x, t2.y), t2.z);
+    return vec2(tNear, tFar);
+}
+
+// Assume: a <= b
+float getSmallestPositive(float a, float b) {
+    return a >= 0.0 ? a : b;
+}
+
 vec3 decodeDataForIBL(const vec4 data) {
     return data.rgb;
 }
@@ -187,6 +202,38 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
     vec3 r = shading_reflected;
 #endif
     return getSpecularDominantDirection(n, r, pixel.roughness);
+}
+
+// This function returns an IBL lookup direction, taking into account the current IBL type (e.g. infinite spherical, finite/local sphere/box).
+vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelParams pixel, const vec3 normal) {
+    if (frameUniforms.iblTechnique == 0u) return getReflectedVector(pixel, normal);
+
+    // intersect the ray ray_pos + t * ray_dir with the finite geometry; done in the coordinate system of the finite geometry
+    vec3 ray_pos = getWorldPosition() + getWorldOffset() - frameUniforms.iblCenter;
+    vec3 ray_dir = normalize(reflect(-shading_view.xyz, normal.xyz));
+
+    vec3  r  = vec3(0.0); // resulting direction
+    float t0 = -1.0f;     // intersection parameter between ray and finite IBL geometry
+    
+    if (frameUniforms.iblTechnique == 1u) {
+        float R2 = frameUniforms.iblHalfExtents.r; // we store the squared radius to shave off a multiplication here
+        float A = 1.0; // in general, this should be dot(ray_dir, ray_dir) but we have just normalized it a couple of lines ago
+        float B = 2.0 * dot(ray_pos, ray_dir);
+        float C = dot(ray_pos, ray_pos) - R2;
+        vec2 roots = solveQuadratic(A, B, C);
+        t0 = getSmallestPositive(roots.x, roots.y);
+    }
+    else if (frameUniforms.iblTechnique == 2u) {
+        vec2 roots = intersectAABB(ray_pos, ray_dir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
+
+        t0 = getSmallestPositive(roots.x, roots.y);
+    }
+
+    // translate results back to world space
+    vec3 intersection_point = ( t0 < 0.0 ) ? getReflectedVector(pixel, shading_normal) : frameUniforms.iblCenter + ray_pos + t0 * ray_dir;
+    r = normalize(intersection_point);
+
+    return r;
 }
 
 //------------------------------------------------------------------------------
@@ -443,11 +490,12 @@ void evaluateClearCoatIBL(const MaterialInputs material, const PixelParams pixel
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
     float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
-    vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
+    vec3 clearCoatR = GetAdjustedReflectedDirection(material, pixel, shading_clearCoatNormal);
 #else
     float clearCoatNoV = shading_NoV;
     vec3 clearCoatR = shading_reflected;
 #endif
+
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
@@ -619,64 +667,13 @@ void combineDiffuseAndSpecular(
 #endif
 }
 
-vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
-    vec3 tMin = (boxMin - rayOrigin) / rayDir;
-    vec3 tMax = (boxMax - rayOrigin) / rayDir;
-    vec3 t1 = min(tMin, tMax);
-    vec3 t2 = max(tMin, tMax);
-    float tNear = max(max(t1.x, t1.y), t1.z);
-    float tFar = min(min(t2.x, t2.y), t2.z);
-    return vec2(tNear, tFar);
-}
-
-// Assume: a <= b
-float getSmallestPositive(float a, float b) {
-    return a >= 0.0 ? a : b;
-}
-
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color, inout float alpha) {
     // specular layer
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
+    vec3 r = GetAdjustedReflectedDirection(material, pixel, shading_normal);
 
-    // intersect ray from shading_position via shading_view
-    //vec3 r = getReflectedVector(pixel, shading_normal);
-    //vec3 v = normalize(reflect(-shading_view.xyz, shading_normal.xyz));
-
-    vec3 r = vec3(0.0);
-    if (frameUniforms.iblTechnique == 0u) {
-        r = getReflectedVector(pixel, shading_normal);
-    } 
-    else if (frameUniforms.iblTechnique == 1u) {
-        // intersect the ray ray_pos + t * ray_dir with the sphere:
-        vec3 ray_pos = getWorldPosition() + getWorldOffset();;
-        vec3 ray_dir = normalize(reflect(-shading_view.xyz, shading_normal.xyz));
-        
-        float R = frameUniforms.iblWidthDiv2;
-        float A = dot(ray_dir, ray_dir);
-        float B = 2.0*dot(ray_pos, ray_dir);
-        float C = dot(ray_pos, ray_pos) - R*R;
-        vec2 roots = solveQuadratic(A, B, C);
-
-        float t0 = getSmallestPositive(roots.x, roots.y);
-
-        vec3 intersection_point = ray_pos + t0 * ray_dir; //( t0 < 0.0 ) ? getReflectedVector(pixel, shading_normal) : ray_pos + t0 * ray_dir;
-        r = normalize(intersection_point);
-    }
-    else if (frameUniforms.iblTechnique == 2u) {
-        // intersect the ray ray_pos + t * ray_dir with the box:
-        vec3 ray_pos = getWorldPosition() + getWorldOffset();;
-        vec3 ray_dir = normalize(reflect(-shading_view.xyz, shading_normal.xyz));
-        vec3 studioHalfDims = vec3(frameUniforms.iblWidthDiv2, frameUniforms.iblHeightDiv2, frameUniforms.iblDepthDiv2);
-
-        vec2 roots = intersectAABB(ray_pos, ray_dir, -studioHalfDims, studioHalfDims);
-
-        float t0 = getSmallestPositive(roots.x, roots.y);
-
-        vec3 intersection_point = ray_pos + t0 * ray_dir; //( t0 < 0.0 ) ? getReflectedVector(pixel, shading_normal) : ray_pos + t0 * ray_dir;
-        r = normalize(intersection_point);
-    }
     Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
