@@ -3,9 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.3 (currently main branch)
+## v1.20.4 (currently main branch)
+
+## v1.20.3
 
 ## v1.20.2
+
+- engine: Binary size optimizations.
+- engine: Fix, Mat4 from Quaternion was transposed.
+- Vulkan: Internal bug fixes and robustness improvements.
+- Vulkan: Reduced log spam.
 
 ## v1.20.1
 
