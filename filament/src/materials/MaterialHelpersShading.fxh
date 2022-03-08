@@ -360,6 +360,17 @@ void ApplyShaprScalars(inout MaterialInputs material, inout FragmentData fragmen
     material.useWard = (materialParams.useWard == 1) ? true : false;
 }
 
+// As all-black cloth materials require positive sheen contribution in order to be visible (read: not pitch black),
+// this function should be re-normalizing the final luminance (estimate) of the auto-computed sheen color if it 
+// would be too dark otherwise. However, we'd still need to cater for the special case of denormal and all-black
+// incoming colors, so I've ultimately decided to just clamp the result of the sqrt.
+vec3 BaseColorToSheenColor(vec3 baseColor) {
+    //  This epsilon is selected such that visuals on Cloth are cca. matching a perfectly black, roughness = 1 Opaque material
+    const float LUMINANCE_THRESHOLD = sqrt(5e-3);
+    vec3 result = max( sqrt(baseColor.rgb), vec3(LUMINANCE_THRESHOLD) );
+    return result;
+}
+
 void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragmentData) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     material.clearCoat = materialParams.clearCoat;
@@ -371,12 +382,19 @@ void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragment
     material.anisotropyDirection = materialParams.anisotropyDirection;
 #endif
 #if defined(MATERIAL_HAS_SHEEN_COLOR) && !defined(SHADING_MODEL_SUBSURFACE) && defined(BLENDING_DISABLED)
-    // Subsurface is not using sheen color but the others are
-    material.sheenColor =
-        (materialParams.doDeriveSheenColor == 1) ? sqrt(material.baseColor.rgb) : materialParams.sheenColor;
+    // Subsurface and transparent are not using sheen color but the others are
+    material.sheenColor = 
+        (materialParams.doDeriveSheenColor == 1) ? BaseColorToSheenColor(material.baseColor.rgb) : materialParams.sheenColor;
+    material.sheenColor *= materialParams.sheenIntensity;
 #endif
-#if defined(MATERIAL_HAS_SUBSURFACE_COLOR) && defined(SHADING_MODEL_SUBSURFACE)
-    material.subsurfaceColor = materialParams.subsurfaceColor;
+#if defined(MATERIAL_HAS_SUBSURFACE_COLOR) && ( defined(SHADING_MODEL_SUBSURFACE) || defined(SHADING_MODEL_CLOTH) )
+    if (materialParams.doDeriveSubsurfaceColor == 1) {
+        material.subsurfaceColor = material.baseColor.rgb;
+    } else {
+        material.subsurfaceColor = materialParams.subsurfaceColor;
+    }
+    // note: this also incorporates the subsurface intensity, i.e. subsurfaceTint = subsurfaceTintColor * subsurfaceIntensity
+    material.subsurfaceColor *= materialParams.subsurfaceTint; 
 #endif
 #if defined(MATERIAL_HAS_SUBSURFACE_POWER) && defined(SHADING_MODEL_SUBSURFACE)
     material.subsurfacePower = materialParams.subsurfacePower;
