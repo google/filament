@@ -128,7 +128,7 @@ public:
     }
 
     // constructs a quaternion from orig to dest.
-    // it returns the shortest arc and orig and dest must be normalized.
+    // it returns the shortest arc and `from` and `to` must be normalized.
     template<typename A, typename B, typename = enable_if_arithmetic_t<A, B>>
     constexpr static TQuaternion MATH_PURE fromDirectedRotation(const TVec3<A>& from, const TVec3<B>& to) {
         // see the implementation of glm/gtx/quaternion.hpp
