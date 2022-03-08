@@ -3,6 +3,8 @@
 TweakableMaterial::TweakableMaterial() {
     mSpecularIntensity.value = 1.0f;    
     mAnisotropyDirection.value = { 1.0f, 0.0f, 0.0f };
+    mSubsurfaceColor.value = { 0.0f, 0.0f, 0.0f };
+    mSubsurfaceTint.value = { 1.0f, 1.0f, 1.0f };
     mMaxThickness.value = 1.0f;
     mIor.value = 1.5f;
     mIorScale.value = 1.0f;
@@ -50,7 +52,11 @@ json TweakableMaterial::toJson() {
     result["anisotropyDirection"] = mAnisotropyDirection.value;
 
     result["sheenColor"] = mSheenColor.value;
+    result["sheenIntensity"] = mSheenIntensity.value;
     result["subsurfaceColor"] = mSubsurfaceColor.value;
+    result["isSubsurfaceColorDerived"] = mSubsurfaceColor.useDerivedQuantity;
+    result["subsurfaceTint"] = mSubsurfaceTint.value;
+    result["subsurfaceIntensity"] = mSubsurfaceIntensity.value;
     result["isSheenColorDerived"] = mSheenColor.useDerivedQuantity;
     result["subsurfacePower"] = mSubsurfacePower.value;
     writeTexturedToJson(result, "sheenRoughness", mSheenRoughness);
@@ -113,7 +119,11 @@ void TweakableMaterial::fromJson(const json& source) {
     readValueFromJson<filament::math::float3, true, true>(source, "sheenColor", mSheenColor, { 0.0f, 0.0f, 0.0f });
 
     readValueFromJson(source, "isSheenColorDerived", mSheenColor.useDerivedQuantity, false);
+    readValueFromJson(source, "sheenIntensity", mSheenIntensity, 1.0f);
     readValueFromJson<filament::math::float3, true>(source, "subsurfaceColor", mSubsurfaceColor, { 0.0f, 0.0f, 0.0f });
+    readValueFromJson(source, "isSubsurfaceColorDerived", mSubsurfaceColor.useDerivedQuantity, false);
+    readValueFromJson<filament::math::float3, true>(source, "subsurfaceTint", mSubsurfaceTint, { 1.0f, 1.0f, 1.0f });
+    readValueFromJson(source, "subsurfaceIntensity", mSubsurfaceIntensity.value, 1.0f);
     readValueFromJson(source, "subsurfacePower", mSubsurfacePower, 1.0f);
 
     readValueFromJson<filament::math::float3, true, true>(source, "absorption", mAbsorption, { 0.0f, 0.0f, 0.0f });
@@ -180,8 +190,11 @@ void TweakableMaterial::resetWithType(MaterialType newType) {
     resetMemberToValue(mAnisotropy, {});
     resetMemberToValue(mAnisotropyDirection, { 1.0f, 0.0f, 0.0f });
 
-    resetMemberToValue(mSubsurfaceColor, {});
+    resetMemberToValue(mSubsurfaceColor, { 0.0f, 0.0f, 0.0f });
+    resetMemberToValue(mSubsurfaceTint, { 1.0f, 1.0f, 1.0f });
+    resetMemberToValue(mSubsurfaceIntensity, 1.0f);
     resetMemberToValue(mSheenColor, {});
+    resetMemberToValue(mSheenIntensity, {});
     resetMemberToValue(mSheenRoughness, {});
 
     resetMemberToValue(mSubsurfacePower, 1.0f);
@@ -274,6 +287,9 @@ void TweakableMaterial::drawUI(const std::string& header) {
     case MaterialType::Opaque: {
         if (ImGui::CollapsingHeader("Sheen settings")) {
             mSheenColor.addWidget("sheen color");
+            if (mSheenColor.useDerivedQuantity) {
+                mSheenIntensity.addWidget("auto-sheen intensity");
+            }
             mSheenRoughness.addWidget("sheen roughness");
             if (mSheenRoughness.isFile) enqueueTextureRequest(mSheenRoughness);
         }
@@ -317,13 +333,21 @@ void TweakableMaterial::drawUI(const std::string& header) {
     case MaterialType::Cloth: {
         if (ImGui::CollapsingHeader("Cloth settings")) {
             mSubsurfaceColor.addWidget("subsurface color");
+            mSubsurfaceTint.addWidget("subsurface tint");
+            mSubsurfaceIntensity.addWidget("subsurface intensity");
+
             mSheenColor.addWidget("sheen color");
+            if (mSheenColor.useDerivedQuantity) {
+                mSheenIntensity.addWidget("auto-sheen intensity");
+            }
         }
         break;
     }
     case MaterialType::Subsurface: {
         if (ImGui::CollapsingHeader("Subsurface settings")) {
             mSubsurfaceColor.addWidget("subsurface color");
+            mSubsurfaceTint.addWidget("subsurface tint");
+            mSubsurfaceIntensity.addWidget("subsurface intensity");
 
             mSubsurfacePower.addWidget("subsurface power", 0.125f, 16.0f);
 

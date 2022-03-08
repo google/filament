@@ -139,8 +139,20 @@ material {
             name : sheenColor
         },
         {
+            type : float,
+            name : sheenIntensity
+        },
+        {
             type : float3,
             name : subsurfaceColor
+        },
+        {
+            type : float3,
+            name : subsurfaceTint,
+        },
+        {
+            type : int,
+            name : doDeriveSubsurfaceColor
         },
         {
             type : int,

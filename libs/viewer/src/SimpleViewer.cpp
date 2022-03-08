@@ -1281,16 +1281,22 @@ void SimpleViewer::updateUserInterface() {
                     if (tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth) {
                         if (tweaks.mSheenColor.useDerivedQuantity) {
                             matInstance->setParameter("doDeriveSheenColor", 1);
+                            matInstance->setParameter("sheenIntensity", tweaks.mSheenIntensity.value);
                         } else {
                             matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
+                            matInstance->setParameter("sheenIntensity", 1.0f);
                             matInstance->setParameter("doDeriveSheenColor", 0);
                         }
                         matInstance->setParameter("subsurfaceColor", tweaks.mSubsurfaceColor.value);
+                        matInstance->setParameter("doDeriveSubsurfaceColor", tweaks.mSubsurfaceColor.useDerivedQuantity ? 1 : 0);
+                        matInstance->setParameter("subsurfaceTint", tweaks.mSubsurfaceTint.value * tweaks.mSubsurfaceIntensity.value);
                     } else if (tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface) {
                         matInstance->setParameter("thickness", tweaks.mThickness.value);
                         setTextureIfPresent(tweaks.mThickness.isFile, tweaks.mThickness.filename, "thickness");
                         matInstance->setParameter("subsurfaceColor", tweaks.mSubsurfaceColor.value);
+                        matInstance->setParameter("doDeriveSubsurfaceColor", tweaks.mSubsurfaceColor.useDerivedQuantity ? 1 : 0);
                         matInstance->setParameter("subsurfacePower", tweaks.mSubsurfacePower.value);
+                        matInstance->setParameter("subsurfaceTint", tweaks.mSubsurfaceTint.value * tweaks.mSubsurfaceIntensity.value);
                     }
 
                     if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
@@ -1300,9 +1306,11 @@ void SimpleViewer::updateUserInterface() {
 
                         if (tweaks.mSheenColor.useDerivedQuantity) {
                             matInstance->setParameter("doDeriveSheenColor", 1);
+                            matInstance->setParameter("sheenIntensity", tweaks.mSheenIntensity.value);
                         }
                         else {
                             matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
+                            matInstance->setParameter("sheenIntensity", 1.0f);
                             matInstance->setParameter("doDeriveSheenColor", 0);
                         }
                         if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque) {

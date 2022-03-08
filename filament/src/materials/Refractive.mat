@@ -195,6 +195,10 @@ material {
         },
         {
             type : float,
+            name : sheenIntensity
+        },
+        {
+            type : float,
             name : maxThickness
         },
         {
