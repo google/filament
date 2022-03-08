@@ -81,6 +81,10 @@ struct VulkanTexture : public HwTexture {
     // Gets or creates a cached VkImageView for a range of miplevels and array layers.
     VkImageView getImageView(VkImageSubresourceRange range);
 
+    // Returns the preferred data plane of interest for all image views.
+    // For now this always returns either DEPTH or COLOR.
+    VkImageAspectFlags getImageAspect() const;
+
 private:
 
     void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
@@ -88,7 +92,6 @@ private:
 
     VulkanTexture* mSidecarMSAA = nullptr;
     const VkFormat mVkFormat;
-    const VkImageAspectFlags mAspect;
     const VkImageViewType mViewType;
     const VkComponentMapping mSwizzle;
     VkImage mTextureImage = VK_NULL_HANDLE;

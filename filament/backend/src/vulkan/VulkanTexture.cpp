@@ -33,8 +33,6 @@ VulkanTexture::VulkanTexture(VulkanContext& context, VkImage image, VkFormat for
         uint32_t width, uint32_t height, TextureUsage tusage, VulkanStagePool& stagePool) :
         HwTexture(SamplerType::SAMPLER_2D, 1, samples, width, height, 1, TextureFormat::UNUSED, tusage),
         mVkFormat(format),
-        mAspect(any(usage & TextureUsage::DEPTH_ATTACHMENT) ? VK_IMAGE_ASPECT_DEPTH_BIT :
-            VK_IMAGE_ASPECT_COLOR_BIT),
         mViewType(getImageViewType(target)),
         mSwizzle({}),
         mTextureImage(image),
@@ -49,9 +47,6 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         // Vulkan does not support 24-bit depth, use the official fallback format.
         mVkFormat(tformat == TextureFormat::DEPTH24 ? context.finalDepthFormat :
                 backend::getVkFormat(tformat)),
-
-        mAspect(any(usage & TextureUsage::DEPTH_ATTACHMENT) ? VK_IMAGE_ASPECT_DEPTH_BIT :
-            VK_IMAGE_ASPECT_COLOR_BIT),
 
         mViewType(getImageViewType(target)),
 
@@ -169,7 +164,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     ASSERT_POSTCONDITION(!error, "Unable to bind image.");
 
     // Spec out the "primary" VkImageView that shaders use to sample from the image.
-    mPrimaryViewRange.aspectMask = mAspect;
+    mPrimaryViewRange.aspectMask = getImageAspect();
     mPrimaryViewRange.baseMipLevel = 0;
     mPrimaryViewRange.levelCount = levels;
     mPrimaryViewRange.baseArrayLayer = 0;
@@ -191,7 +186,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     // because we do not know how many layers and levels will actually be used.
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
         const uint32_t layers = mPrimaryViewRange.layerCount;
-        VkImageSubresourceRange range = { mAspect, 0, levels, 0, layers };
+        VkImageSubresourceRange range = { getImageAspect(), 0, levels, 0, layers };
         VkImageLayout layout = getDefaultImageLayout(usage);
         VkCommandBuffer commands = mContext.commands->get().cmdbuffer;
         transitionLayout(commands, range, layout);
@@ -257,7 +252,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     };
 
     VkImageSubresourceRange transitionRange = {
-        .aspectMask = mAspect,
+        .aspectMask = getImageAspect(),
         .baseMipLevel = miplevel,
         .levelCount = 1,
         .baseArrayLayer = 0,
@@ -299,14 +294,16 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
 
     const VkOffset3D rect[2] { {0, 0, 0}, {int32_t(width), int32_t(height), 1} };
 
+    const VkImageAspectFlags aspect = getImageAspect();
+
     const VkImageBlit blitRegions[1] = {{
-        .srcSubresource = { mAspect, 0, 0, 1 },
+        .srcSubresource = { aspect, 0, 0, 1 },
         .srcOffsets = { rect[0], rect[1] },
-        .dstSubresource = { mAspect, uint32_t(miplevel), layer, 1 },
+        .dstSubresource = { aspect, uint32_t(miplevel), layer, 1 },
         .dstOffsets = { rect[0], rect[1] }
     }};
 
-    const VkImageSubresourceRange range = { mAspect, miplevel, 1, 0, 1 };
+    const VkImageSubresourceRange range = { aspect, miplevel, 1, 0, 1 };
 
     transitionLayout(cmdbuffer, range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -340,7 +337,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     const uint32_t width = std::max(1u, this->width >> miplevel);
     const uint32_t height = std::max(1u, this->height >> miplevel);
 
-    const VkImageSubresourceRange range = { mAspect, miplevel, 1, 0, 6 };
+    const VkImageSubresourceRange range = { getImageAspect(), miplevel, 1, 0, 6 };
     const VkImageLayout textureLayout = getDefaultImageLayout(usage);
 
     transitionLayout(cmdbuffer, range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -417,6 +414,11 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range) {
     vkCreateImageView(mContext.device, &viewInfo, VKALLOC, &imageView);
     mCachedImageViews.emplace(range, imageView);
     return imageView;
+}
+
+VkImageAspectFlags VulkanTexture::getImageAspect() const {
+    return isDepthFormat(mVkFormat) ? VK_IMAGE_ASPECT_DEPTH_BIT :
+            VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
 void VulkanTexture::transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
