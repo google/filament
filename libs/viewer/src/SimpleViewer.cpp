@@ -1453,7 +1453,8 @@ void SimpleViewer::updateUserInterface() {
             ImGui::SliderAngle("IBL rotation", &light.iblRotation);
 
             ImGui::SliderFloat("IBL tint intensity", &mSettings.ibl.iblTintAndIntensity.w, 0.0f, 1.0f);
-            ImGui::SliderFloat4("IBL tint params", mSettings.ibl.iblTintParams.v, 0.0f, 5.0f);
+            ImGui::SliderFloat("IBL tint end", &mSettings.ibl.iblTintParams.y, 0.0f, 4.0f);
+            //ImGui::SliderFloat4("IBL tint params", mSettings.ibl.iblTintParams.v, 0.0f, 5.0f);
 
             if (ImGui::RadioButton("Infinite", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_INFINITE)) {
                 iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_INFINITE;
