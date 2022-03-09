@@ -445,7 +445,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     Aabb aabb;
 
     // glTF spec says that all primitives MUST have the same number of morph targets in the same order.
-    const cgltf_size numMorphTargets = mesh->weights_count;
+    const cgltf_size numMorphTargets = inputPrim ? inputPrim->targets_count : 0;
     builder.morphing(numMorphTargets);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
@@ -455,7 +455,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             slog.e << "Unsupported primitive type in " << name << io::endl;
         }
 
-        if (numMorphTargets > 0 && inputPrim->targets_count != numMorphTargets) {
+        if (numMorphTargets != inputPrim->targets_count) {
             slog.e << "Sister primitives must all have the same number of morph targets."
                    << io::endl;
             mError = true;
@@ -535,8 +535,8 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     // node weights are provided, they override the ones specified on the mesh.
     if (numMorphTargets > 0) {
         RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
-        const auto size = std::min(MAX_MORPH_TARGETS, std::max(mesh->weights_count, node->weights_count));
-        std::vector<float> weights(size);
+        const auto size = std::min(MAX_MORPH_TARGETS, numMorphTargets);
+        FixedCapacityVector<float> weights(size, 0.0f);
         for (cgltf_size i = 0, c = std::min(size, mesh->weights_count); i < c; ++i) {
             weights[i] = mesh->weights[i];
         }
