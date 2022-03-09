@@ -89,7 +89,7 @@ struct VulkanContext {
     bool portabilitySubsetSupported = false;
     bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
-    VulkanSwapChain* currentSurface;
+    VulkanSwapChain* currentSwapChain;
     tsl::robin_set<VulkanRenderTarget*> defaultRenderTargets;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;

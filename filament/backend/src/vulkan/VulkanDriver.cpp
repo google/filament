@@ -710,8 +710,8 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
         swapChain.destroy();
 
         vkDestroySurfaceKHR(mContext.instance, swapChain.surface, VKALLOC);
-        if (mContext.currentSurface == &swapChain) {
-            mContext.currentSurface = nullptr;
+        if (mContext.currentSwapChain == &swapChain) {
+            mContext.currentSwapChain = nullptr;
         }
 
         destruct<VulkanSwapChain>(sch);
@@ -1017,7 +1017,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
     if (rt->isSwapChain()) {
-        VulkanSwapChain* const sc = mContext.currentSurface;
+        VulkanSwapChain* const sc = mContext.currentSwapChain;
         assert_invariant(sc);
         if (sc->firstRenderPass) {
             discardStart |= TargetBufferFlags::COLOR;
@@ -1322,65 +1322,65 @@ void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
                                   "Vulkan driver does not support distinct draw/read swap chains.");
-    VulkanSwapChain& surf = *handle_cast<VulkanSwapChain*>(drawSch);
-    mContext.currentSurface = &surf;
+    VulkanSwapChain& swapChain = *handle_cast<VulkanSwapChain*>(drawSch);
+    mContext.currentSwapChain = &swapChain;
 
     // Leave early if the swap chain image has already been acquired but not yet presented.
-    if (surf.acquired) {
-        surf.bindToDefaultRenderTargets();
+    if (swapChain.acquired) {
+        swapChain.bindToDefaultRenderTargets();
         return;
     }
 
     // Query the surface caps to see if it has been resized.  This handles not just resized windows,
     // but also screen rotation on Android and dragging between low DPI and high DPI monitors.
-    if (surf.hasResized()) {
+    if (swapChain.hasResized()) {
         refreshSwapChain();
     }
 
     // Call vkAcquireNextImageKHR and insert its signal semaphore into the command manager's
     // dependency chain.
-    surf.acquire();
+    swapChain.acquire();
 
-    surf.bindToDefaultRenderTargets();
+    swapChain.bindToDefaultRenderTargets();
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
-    VulkanSwapChain& surface = *handle_cast<VulkanSwapChain*>(sch);
+    VulkanSwapChain& swapChain = *handle_cast<VulkanSwapChain*>(sch);
 
     // Before swapping, transition the current swap chain image to the PRESENT layout. This cannot
     // be done as part of the render pass because it does not know if it is last pass in the frame.
-    surface.makePresentable();
+    swapChain.makePresentable();
 
     if (mContext.commands->flush()) {
         collectGarbage();
     }
 
-    surface.firstRenderPass = true;
+    swapChain.firstRenderPass = true;
 
-    if (surface.headlessQueue) {
+    if (swapChain.headlessQueue) {
         return;
     }
 
-    surface.acquired = false;
+    swapChain.acquired = false;
 
     // Present the backbuffer after the most recent command buffer submission has finished.
     VkSemaphore renderingFinished = mContext.commands->acquireFinishedSignal();
-    uint32_t currentSwapIndex = surface.getSwapIndex();
+    uint32_t currentSwapIndex = swapChain.getSwapIndex();
     VkPresentInfoKHR presentInfo {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &renderingFinished,
         .swapchainCount = 1,
-        .pSwapchains = &surface.swapchain,
+        .pSwapchains = &swapChain.swapchain,
         .pImageIndices = &currentSwapIndex,
     };
-    VkResult result = vkQueuePresentKHR(surface.presentQueue, &presentInfo);
+    VkResult result = vkQueuePresentKHR(swapChain.presentQueue, &presentInfo);
 
     // On Android Q and above, a suboptimal surface is always reported after screen rotation:
     // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
-    if (result == VK_SUBOPTIMAL_KHR && !surface.suboptimal) {
+    if (result == VK_SUBOPTIMAL_KHR && !swapChain.suboptimal) {
         utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
-        surface.suboptimal = true;
+        swapChain.suboptimal = true;
     }
 
     // The surface can be "out of date" when it has been resized, which is not an error.
@@ -1896,11 +1896,11 @@ void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void VulkanDriver::refreshSwapChain() {
-    VulkanSwapChain& surface = *mContext.currentSurface;
+    VulkanSwapChain& swapChain = *mContext.currentSwapChain;
 
-    assert_invariant(!surface.headlessQueue && "Resizing headless swap chains is not supported.");
-    surface.destroy();
-    surface.create(mStagePool);
+    assert_invariant(!swapChain.headlessQueue && "Resizing headless swap chains is not supported.");
+    swapChain.destroy();
+    swapChain.create(mStagePool);
 
     mFramebufferCache.reset();
 }
