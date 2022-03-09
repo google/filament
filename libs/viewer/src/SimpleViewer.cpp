@@ -1466,17 +1466,18 @@ void SimpleViewer::updateUserInterface() {
 
             if (iblOptions.iblTechnique == 1) {
                 static float radius = std::sqrt(iblOptions.iblHalfExtents.x);
+
+                ImGui::SliderFloat3("Sphere center", iblOptions.iblCenter.v, -10.0f, 10.0f);
                 ImGui::SliderFloat("Sphere radius", &radius, 0.0f, 256.0f);
+
                 iblOptions.iblHalfExtents.x = radius * radius;
             }
             else if (iblOptions.iblTechnique == 2) {
-                static filament::math::float3 iblCenter = iblOptions.iblCenter;
                 static filament::math::float3 iblHalfExtents = iblOptions.iblHalfExtents;
 
-                ImGui::SliderFloat3("Box center", iblCenter.v, -10.0f, 10.0f);
+                ImGui::SliderFloat3("Box center", iblOptions.iblCenter.v, -10.0f, 10.0f);
                 ImGui::SliderFloat3("Box half extents", iblHalfExtents.v, -10.0f, 10.0f);
 
-                iblOptions.iblCenter = iblCenter;
                 iblOptions.iblHalfExtents = iblHalfExtents;
             }
         }
