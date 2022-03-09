@@ -74,10 +74,7 @@ public class FilamentInstance {
     }
 
     /**
-     * Creates or retrieves the <code>Animator</code> for this instance.
-     *
-     * <p>When calling this for the first time, this must be called after
-     * {@link ResourceLoader#loadResources}.</p>
+     * Retrieves the <code>Animator</code> for this instance.
      */
     public @NonNull Animator getAnimator() {
         if (mAnimator != null) {

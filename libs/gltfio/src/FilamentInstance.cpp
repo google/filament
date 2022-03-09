@@ -26,19 +26,14 @@ using namespace utils;
 
 namespace gltfio {
 
-Animator* FFilamentInstance::getAnimator() noexcept {
-    if (!animator) {
-        if (!owner->mResourcesLoaded) {
-            slog.e << "Cannot create animator before resource loading." << io::endl;
-            return nullptr;
-        }
-        if (!owner->mSourceAsset) {
-            slog.e << "Cannot create animator from frozen asset." << io::endl;
-            return nullptr;
-        }
-        animator = new Animator(owner, this);
-    }
+Animator* FFilamentInstance::getAnimator() const noexcept {
+    assert_invariant(animator);
     return animator;
+}
+
+void FFilamentInstance::createAnimator() {
+    assert_invariant(animator == nullptr);
+    animator = new Animator(owner, this);
 }
 
 FilamentAsset* FilamentInstance::getAsset() const noexcept {

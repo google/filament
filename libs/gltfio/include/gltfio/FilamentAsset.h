@@ -194,14 +194,14 @@ public:
     const char* getExtras(utils::Entity entity = {}) const noexcept;
 
     /**
-     * Lazily creates the animation engine or returns it from the cache.
+     * Returns the animation engine.
      *
      * The animator is owned by the asset and should not be manually deleted.
-     * The first time this is called, it must be called before FilamentAsset::releaseSourceData().
+     * Must be called after loadResources or asyncBeginLoad, otherwise returns null.
      * If the asset is instanced, this returns a "primary" animator that controls all instances.
      * To animate each instance individually, use \see FilamentInstance.
      */
-    Animator* getAnimator() noexcept;
+    Animator* getAnimator() const noexcept;
 
     /**
      * Get the target name at target index in the given entity.
@@ -223,7 +223,6 @@ public:
      * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
      *
      * This should only be called after ResourceLoader::loadResources().
-     * If using Animator, this should be called after getAnimator().
      * If this is an instanced asset, this prevents creation of new instances.
      */
     void releaseSourceData() noexcept;

@@ -60,7 +60,6 @@ import java.nio.Buffer;
  *     }
  *     resourceLoader.loadResources(filamentAsset)
  *     resourceLoader.destroy()
- *     animator = asset.getAnimator()
  *     filamentAsset.releaseSourceData();
  *
  *     scene.addEntities(filamentAsset.entities)

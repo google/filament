@@ -191,7 +191,7 @@ struct FFilamentAsset : public FilamentAsset {
     size_t getEntitiesByPrefix(const char* prefix, utils::Entity* entities,
             size_t maxCount) const noexcept;
 
-    Animator* getAnimator() noexcept;
+    Animator* getAnimator() const noexcept { return mAnimator; }
 
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
@@ -227,6 +227,8 @@ struct FFilamentAsset : public FilamentAsset {
     bool isInstanced() const {
         return mInstances.size() > 0;
     }
+
+    void createAnimators();
 
     filament::Engine* mEngine;
     utils::NameComponentManager* mNameManager;

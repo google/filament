@@ -54,7 +54,8 @@ struct FFilamentInstance : public FilamentInstance {
     FFilamentAsset* owner;
     SkinVector skins;
     NodeMap nodeMap;
-    Animator* getAnimator() noexcept;
+    void createAnimator();
+    Animator* getAnimator() const noexcept;
 };
 
 FILAMENT_UPCAST(FilamentInstance)
