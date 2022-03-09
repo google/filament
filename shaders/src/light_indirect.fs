@@ -17,7 +17,7 @@
 // IBL utilities
 //------------------------------------------------------------------------------
 
-void swap(inout float a, inout float b)
+void Swap(inout float a, inout float b)
 {
     float tmp = a;
     a = b;
@@ -26,28 +26,27 @@ void swap(inout float a, inout float b)
 
 // Returns the two roots of Ax^2 + Bx + C = 0, assuming that A != 0
 // The returned roots (if finite) satisfy roots.x <= roots.y
-vec2 solveQuadratic(float A, float B, float C)
+vec2 SolveQuadratic(float A, float B, float C)
 {
     // From Numerical Recipes in C
     float q = -0.5 * (B + sign(B) * sqrt(B * B - 4.0 * A * C));
     vec2 roots = vec2(q / A, C / q);
-    if (roots.x > roots.y)
-        swap(roots.x, roots.y);
+    if (roots.x > roots.y) Swap(roots.x, roots.y);
     return roots;
 }
 
-vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
+vec2 IntersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
     vec3 tMin = (boxMin - rayOrigin) / rayDir;
     vec3 tMax = (boxMax - rayOrigin) / rayDir;
     vec3 t1 = min(tMin, tMax);
     vec3 t2 = max(tMin, tMax);
-    float tNear = max(max(t1.x, t1.y), t1.z);
-    float tFar = min(min(t2.x, t2.y), t2.z);
+    float tNear = max3(t1);
+    float tFar = min3(t2);
     return vec2(tNear, tFar);
 }
 
 // Assume: a <= b
-float getSmallestPositive(float a, float b) {
+float GetSmallestPositive(float a, float b) {
     return a >= 0.0 ? a : b;
 }
 
@@ -210,7 +209,7 @@ vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelPar
 
     // intersect the ray ray_pos + t * ray_dir with the finite geometry; done in the coordinate system of the finite geometry
     vec3 ray_pos = getWorldPosition() + getWorldOffset() - frameUniforms.iblCenter;
-    vec3 ray_dir = normalize(reflect(-shading_view.xyz, normal.xyz));
+    vec3 ray_dir = getReflectedVector(pixel, normal);
 
     vec3  r  = vec3(0.0); // resulting direction
     float t0 = -1.0f;     // intersection parameter between ray and finite IBL geometry
@@ -220,17 +219,16 @@ vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelPar
         float A = 1.0; // in general, this should be dot(ray_dir, ray_dir) but we have just normalized it a couple of lines ago
         float B = 2.0 * dot(ray_pos, ray_dir);
         float C = dot(ray_pos, ray_pos) - R2;
-        vec2 roots = solveQuadratic(A, B, C);
-        t0 = getSmallestPositive(roots.x, roots.y);
+        vec2 roots = SolveQuadratic(A, B, C);
+        t0 = GetSmallestPositive(roots.x, roots.y);
     }
     else if (frameUniforms.iblTechnique == 2u) {
-        vec2 roots = intersectAABB(ray_pos, ray_dir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
-
-        t0 = getSmallestPositive(roots.x, roots.y);
+        vec2 roots = IntersectAABB(ray_pos, ray_dir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
+        t0 = GetSmallestPositive(roots.x, roots.y);
     }
 
     // translate results back to world space
-    vec3 intersection_point = ( t0 < 0.0 ) ? getReflectedVector(pixel, shading_normal) : frameUniforms.iblCenter + ray_pos + t0 * ray_dir;
+    vec3 intersection_point = ( t0 >= 0.0 ) ? ray_pos + t0 * ray_dir : getReflectedVector(pixel, shading_normal);
     r = normalize(intersection_point);
 
     return r;
