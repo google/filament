@@ -59,6 +59,7 @@ struct VulkanTimestamps {
 };
 
 struct VulkanRenderPass {
+    VulkanRenderTarget* renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
     int currentSubpass;

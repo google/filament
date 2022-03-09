@@ -1006,8 +1006,7 @@ void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 }
 
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
-    mCurrentRenderTarget = handle_cast<VulkanRenderTarget*>(rth);
-    VulkanRenderTarget* const rt = mCurrentRenderTarget;
+    VulkanRenderTarget* const rt = handle_cast<VulkanRenderTarget*>(rth);
 
     const VkExtent2D extent = rt->getExtent();
     assert_invariant(extent.width > 0 && extent.height > 0);
@@ -1208,10 +1207,11 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .maxDepth = params.depthRange.far
     };
 
-    mCurrentRenderTarget->transformClientRectToPlatform(&viewport);
+    rt->transformClientRectToPlatform(&viewport);
     vkCmdSetViewport(cmdbuffer, 0, 1, &viewport);
 
     mContext.currentRenderPass = {
+        .renderTarget = rt,
         .renderPass = renderPassInfo.renderPass,
         .params = params,
         .currentSubpass = 0,
@@ -1222,12 +1222,13 @@ void VulkanDriver::endRenderPass(int) {
     VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     vkCmdEndRenderPass(cmdbuffer);
 
-    assert_invariant(mCurrentRenderTarget);
+    VulkanRenderTarget* rt = mContext.currentRenderPass.renderTarget;
+    assert_invariant(rt);
 
     // In some cases, depth needs to be transitioned from DEPTH_STENCIL_READ_ONLY_OPTIMAL back to
     // GENERAL. We did not do this using the render pass because we need to change multiple mips.
     if (mContext.currentRenderPass.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
-        const VulkanAttachment& depth = mCurrentRenderTarget->getDepth();
+        const VulkanAttachment& depth = rt->getDepth();
         VkImageSubresourceRange range = {
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .baseMipLevel = 0,
@@ -1250,14 +1251,14 @@ void VulkanDriver::endRenderPass(int) {
     // seems to be insufficient on Mali devices. To work around this we are adding a more aggressive
     // TOP_OF_PIPE barrier.
 
-    if (!mCurrentRenderTarget->isSwapChain()) {
+    if (!rt->isSwapChain()) {
         VkMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
             .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         };
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        if (mCurrentRenderTarget->hasDepth()) {
+        if (rt->hasDepth()) {
             barrier.srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             srcStageMask |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         }
@@ -1267,13 +1268,13 @@ void VulkanDriver::endRenderPass(int) {
                 0, 1, &barrier, 0, nullptr, 0, nullptr);
     }
 
-    mCurrentRenderTarget = VK_NULL_HANDLE;
     if (mContext.currentRenderPass.currentSubpass > 0) {
         for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
             mPipelineCache.bindInputAttachment(i, {});
         }
         mContext.currentRenderPass.currentSubpass = 0;
     }
+    mContext.currentRenderPass.renderTarget = nullptr;
     mContext.currentRenderPass.renderPass = VK_NULL_HANDLE;
 }
 
@@ -1281,7 +1282,8 @@ void VulkanDriver::nextSubpass(int) {
     ASSERT_PRECONDITION(mContext.currentRenderPass.currentSubpass == 0,
             "Only two subpasses are currently supported.");
 
-    assert_invariant(mCurrentRenderTarget);
+    VulkanRenderTarget* renderTarget = mContext.currentRenderPass.renderTarget;
+    assert_invariant(renderTarget);
     assert_invariant(mContext.currentRenderPass.params.subpassMask);
 
     vkCmdNextSubpass(mContext.commands->get().cmdbuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -1291,7 +1293,7 @@ void VulkanDriver::nextSubpass(int) {
 
     for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
         if ((1 << i) & mContext.currentRenderPass.params.subpassMask) {
-            VulkanAttachment subpassInput = mCurrentRenderTarget->getColor(i);
+            VulkanAttachment subpassInput = renderTarget->getColor(i);
             VkDescriptorImageInfo info = {
                 .imageView = subpassInput.getImageView(VK_IMAGE_ASPECT_COLOR_BIT),
                 .imageLayout = subpassInput.getLayout(),
@@ -1691,7 +1693,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     // Update the VK raster state.
 
-    const VulkanRenderTarget* rt = mCurrentRenderTarget;
+    const VulkanRenderTarget* rt = mContext.currentRenderPass.renderTarget;
 
     auto& vkraster = mContext.rasterState;
     vkraster.cullMode = getCullMode(rasterState.culling);
