@@ -94,9 +94,6 @@ struct AssetConfiguration {
  * // Load buffers and textures from disk.
  * ResourceLoader({engine, ".", true}).loadResources(asset);
  *
- * // Obtain the simple animation interface.
- * Animator* animator = asset->getAnimator();
- *
  * // Free the glTF hierarchy as it is no longer needed.
  * asset->releaseSourceData();
  *
@@ -105,8 +102,8 @@ struct AssetConfiguration {
  *
  * // Execute the render loop and play the first animation.
  * do {
- *      animator->applyAnimation(0, time);
- *      animator->updateBoneMatrices();
+ *      asset->getAnimator()->applyAnimation(0, time);
+ *      asset->getAnimator()->updateBoneMatrices();
  *      if (renderer->beginFrame(swapChain)) {
  *          renderer->render(view);
  *          renderer->endFrame();

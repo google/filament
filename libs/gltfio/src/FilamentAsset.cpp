@@ -83,19 +83,12 @@ const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
     return iter == mNodeExtras.cend() ? nullptr : iter->second.c_str();
 }
 
-Animator* FFilamentAsset::getAnimator() noexcept {
-    if (!mAnimator) {
-        if (!mResourcesLoaded) {
-            slog.e << "Cannot create animator before resource loading." << io::endl;
-            return nullptr;
-        }
-        if (!mSourceAsset) {
-            slog.e << "Cannot create animator from frozen asset." << io::endl;
-            return nullptr;
-        }
-        mAnimator = new Animator(this, nullptr);
+void FFilamentAsset::createAnimators() {
+    assert_invariant(mAnimator == nullptr);
+    mAnimator = new Animator(this, nullptr);
+    for (FFilamentInstance* instance : mInstances) {
+        instance->createAnimator();
     }
-    return mAnimator;
 }
 
 const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
@@ -292,7 +285,7 @@ const char* FilamentAsset::getExtras(Entity entity) const noexcept {
     return upcast(this)->getExtras(entity);
 }
 
-Animator* FilamentAsset::getAnimator() noexcept {
+Animator* FilamentAsset::getAnimator() const noexcept {
     return upcast(this)->getAnimator();
 }
 

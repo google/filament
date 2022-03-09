@@ -539,6 +539,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
     // Finally, create Filament Textures and begin loading image files.
     asset->mResourcesLoaded = pImpl->createTextures(async);
+
+    asset->createAnimators();
+
     return asset->mResourcesLoaded;
 }
 

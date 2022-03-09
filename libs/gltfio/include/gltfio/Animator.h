@@ -80,6 +80,11 @@ private:
 
     Animator(FFilamentAsset* asset, FFilamentInstance* instance);
     ~Animator();
+
+    Animator(const Animator& animator) = delete;
+    Animator(Animator&& animator) = delete;
+    Animator& operator=(const Animator&) = delete;
+
     AnimatorImpl* mImpl;
 };
 

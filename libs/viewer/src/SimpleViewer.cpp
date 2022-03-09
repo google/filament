@@ -972,8 +972,7 @@ void SimpleViewer::updateUserInterface() {
 
         // We do not yet support animation selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
-        if (mAnimator && mAnimator->getAnimationCount() > 0 &&
-                ImGui::CollapsingHeader("Animation")) {
+        if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;
             ImGui::RadioButton("Disable", &selectedAnimation, 0);
@@ -992,7 +991,7 @@ void SimpleViewer::updateUserInterface() {
         }
 
         if (mCurrentMorphingEntity && ImGui::CollapsingHeader("Morphing")) {
-            const bool isAnimating = mCurrentAnimation > 0 && mAnimator && mAnimator->getAnimationCount() > 0;
+            const bool isAnimating = mCurrentAnimation > 0 && mAnimator->getAnimationCount() > 0;
             if (isAnimating) {
                 ImGui::BeginDisabled();
             }
