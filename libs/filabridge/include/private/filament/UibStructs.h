@@ -130,15 +130,20 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmLightBleedReduction;
     float vsmReserved0;
 
-    math::float3 iblCenter;      // center of the sphere or IBL AABB
-    float lodBias;
-    math::float3 iblHalfExtents; // .x is radius squared for sphere; otherwise the half extents of the box along the X, Y, Z axes
-    uint32_t iblTechnique;       // 0: infinite cubemap IBL, 1: (origin centered) finite sphere IBL, 2: (origin centered) finite cube IBL
+    math::float3 iblCenter;           // center of the sphere or IBL AABB
+    float lodBias;                    // moved here for padding reasons
+
+    math::float3 iblHalfExtents;      // .x is radius squared for sphere; otherwise the half extents of the box along the X, Y, Z axes
+    uint32_t iblTechnique;            // 0: infinite cubemap IBL, 1: (origin centered) finite sphere IBL, 2: (origin centered) finite cube IBL
+
+    math::float4 iblTintAndIntensity; // .rgb is IBL tint, .a is the intensity of the tint
+
+    math::float4 iblTintParams; 
 
     math::mat4f iblRotation; // contains the IBL's rotation
 
     // bring PerViewUib to 2 KiB
-    math::float4 arrayPadding[52];
+    math::float4 arrayPadding[50];
 };
 
 // 2 KiB == 128 float4s

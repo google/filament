@@ -1452,6 +1452,9 @@ void SimpleViewer::updateUserInterface() {
             ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
             ImGui::SliderAngle("IBL rotation", &light.iblRotation);
 
+            ImGui::SliderFloat("IBL tint intensity", &mSettings.ibl.iblTintAndIntensity.w, 0.0f, 1.0f);
+            ImGui::SliderFloat4("IBL tint params", mSettings.ibl.iblTintParams.v, 0.0f, 5.0f);
+
             if (ImGui::RadioButton("Infinite", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_INFINITE)) {
                 iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_INFINITE;
             }
@@ -1645,7 +1648,17 @@ void SimpleViewer::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
-    mIndirectLight->setIblOptions(mSettings.lighting.iblOptions);
+
+    // Set IBL options
+    {        
+        float intensity = mSettings.ibl.iblTintAndIntensity.w;
+        filament::math::float3 linearBgColor = filament::Color::toLinear(mSettings.viewer.backgroundColor);
+        mSettings.ibl.iblTintAndIntensity.r = linearBgColor.r;
+        mSettings.ibl.iblTintAndIntensity.g = linearBgColor.g;
+        mSettings.ibl.iblTintAndIntensity.b = linearBgColor.b;
+        mSettings.ibl.iblTintAndIntensity.a = intensity;
+        mView->setIblOptions(mSettings.ibl);
+    }
 
     if (light.enableSunlight) {
         mScene->addEntity(mSunlight);

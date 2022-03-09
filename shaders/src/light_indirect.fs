@@ -148,6 +148,52 @@ vec3 zUpToIblDirection(vec3 r) {
 #endif
 }
 
+/*float AffineMap(float a, float b, float x) {
+    return clamp((x - a) / (b - a), 0.0, 1.0);
+}*/
+
+float OverlayBlend(float a, float b) {
+    if (frameUniforms.iblTintParams.x < 1.0) {
+        return a*b;
+    }
+    if (frameUniforms.iblTintParams.x < 2.0) {
+        return (a > 1.0) ? a + 2.0 * b : ( a < 0.5 ) ? 2.0 * a * b : 1.0 - 2.0 * (1.0 - a) * (1.0 - b);
+    }
+    if (frameUniforms.iblTintParams.x < 3.0) {
+        float T = frameUniforms.iblTintParams.y;
+        float K = frameUniforms.iblTintParams.z;
+        return (a < T) ? a / T * b : (a - T)/(K - T) + b;
+    }
+    if (frameUniforms.iblTintParams.x < 4.0) {
+        float T = frameUniforms.iblTintParams.w;
+        return mix(a/T*b, a, smoothstep(0.0, T, a));
+    }
+
+    return a;
+    //return (a > 1.0) ? a + 2.0 * b : ( a < 0.5 ) ? 2.0 * a * b : 1.0 - 2.0 * (1.0 - a) * (1.0 - b);
+}
+vec3 OverlayBlend(vec3 a, vec3 b) {
+    return vec3(OverlayBlend(a.x, b.x), OverlayBlend(a.y, b.y), OverlayBlend(a.z, b.z) );
+}
+
+vec3 TintIbl(vec3 color) {
+    // Tint weight goes from 1 to 0 as incoming luminance estimate traverses from TINT_THRESHOLD - TINT_SPAN to TINT_THRESHOLD + TINT_SPAN.
+    /*float TINT_THRESHOLD = frameUniforms.iblTintAndIntensity.a;
+    const float TINT_SPAN      = 0.2;
+
+    vec3  tintedColor       = color * frameUniforms.iblTintAndIntensity.rgb;
+    float luminanceEstimate = max(max(color.r, color.g), color.b);
+    float tintWeight        = AffineMap(TINT_THRESHOLD - TINT_SPAN, TINT_THRESHOLD + TINT_SPAN, luminanceEstimate);
+
+    // Implement the Overlay blend (https://en.wikipedia.org/wiki/Blend_modes#Overlay) assuming that the client side has applied an
+    // opacity-fades-to-white transform to the tint color already (i.e. if opacity is 1, we apply the direct tint color and we gradually
+    // interpolate it to white as the opacity decreases). 
+    return mix(tintedColor, color, tintWeight);*/
+
+    return mix( color, OverlayBlend(color, frameUniforms.iblTintAndIntensity.rgb), frameUniforms.iblTintAndIntensity.w );
+    //return color;
+}
+
 float perceptualRoughnessToLod(float perceptualRoughness) {
     // The mapping below is a quadratic fit for log2(perceptualRoughness)+iblRoughnessOneLevel when
     // iblRoughnessOneLevel is 4. We found empirically that this mapping works very well for
@@ -157,12 +203,12 @@ float perceptualRoughnessToLod(float perceptualRoughness) {
 
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
     float lod = perceptualRoughnessToLod(perceptualRoughness);
-    return decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod));
+    return TintIbl(decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod)));
 }
 
 vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
     float lod = frameUniforms.iblRoughnessOneLevel * roughness;
-    return decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod + offset));
+    return TintIbl(decodeDataForIBL(textureLod(light_iblSpecular, zUpToIblDirection(r), lod + offset)));
 }
 
 vec3 getSpecularDominantDirection(const vec3 n, const vec3 r, float roughness) {

@@ -708,6 +708,36 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->vsmShadowOptions);
         } else if (compare(tok, jsonChunk, "postProcessingEnabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->postProcessingEnabled);
+        } else if (compare(tok, jsonChunk, "iblTechnique") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTechnique);
+        } else if (compare(tok, jsonChunk, "iblCenterX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.x);
+        } else if (compare(tok, jsonChunk, "iblCenterY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.y);
+        } else if (compare(tok, jsonChunk, "iblCenterZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.z);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.x);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.y);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.z);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityR") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.x);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityG") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.y);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityB") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.z);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityA") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.w);
+        } else if (compare(tok, jsonChunk, "iblTintParamsX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintParams.x);
+        } else if (compare(tok, jsonChunk, "iblTintParamsY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintParams.y);
+        } else if (compare(tok, jsonChunk, "iblTintParamsZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintParams.z);
+        } else if (compare(tok, jsonChunk, "iblTintParamsW") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintParams.w);
         } else {
             slog.w << "Invalid view setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1495,6 +1525,21 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"shadowType\": " << (in.shadowType) << ",\n"
         << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
         << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
+        << "\"iblTechnique\": " << to_string(in.iblOptions.iblTechnique) << "\n"
+        << "\"iblCenterX\": " << to_string(in.iblOptions.iblCenter.x) << "\n"
+        << "\"iblCenterY\": " << to_string(in.iblOptions.iblCenter.y) << "\n"
+        << "\"iblCenterZ\": " << to_string(in.iblOptions.iblCenter.z) << "\n"
+        << "\"iblHalfExtentsX\": " << to_string(in.iblOptions.iblHalfExtents.x) << "\n"
+        << "\"iblHalfExtentsY\": " << to_string(in.iblOptions.iblHalfExtents.y) << "\n"
+        << "\"iblHalfExtentsZ\": " << to_string(in.iblOptions.iblHalfExtents.z) << "\n"
+        << "\"iblTintAndIntensityR\": " << to_string(in.iblOptions.iblTintAndIntensity.x) << "\n"
+        << "\"iblTintAndIntensityG\": " << to_string(in.iblOptions.iblTintAndIntensity.y) << "\n"
+        << "\"iblTintAndIntensityB\": " << to_string(in.iblOptions.iblTintAndIntensity.z) << "\n"
+        << "\"iblTintAndIntensityA\": " << to_string(in.iblOptions.iblTintAndIntensity.w) << "\n"
+        << "\"iblTintParamsX\": " << to_string(in.iblOptions.iblTintAndIntensity.x) << "\n"
+        << "\"iblTintParamsY\": " << to_string(in.iblOptions.iblTintAndIntensity.y) << "\n"
+        << "\"iblTintParamsZ\": " << to_string(in.iblOptions.iblTintAndIntensity.z) << "\n"
+        << "\"iblTintParamsW\": " << to_string(in.iblOptions.iblTintAndIntensity.w) << "\n"
         << "}";
     
 }
