@@ -20,11 +20,8 @@
 #include "VulkanPipelineCache.h"
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
-#include "VulkanDisposer.h"
 
-#include <backend/DriverEnums.h>
-
-#include <utils/Condition.h>
+#include <utils/bitset.h>
 #include <utils/Slice.h>
 #include <utils/Mutex.h>
 
@@ -88,8 +85,8 @@ struct VulkanContext {
     bool portabilitySubsetSupported = false;
     bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
-    VulkanSwapChain* currentSurface;
-    Handle<HwRenderTarget> defaultRenderTarget;
+    VulkanSwapChain* currentSwapChain;
+    VulkanRenderTarget* defaultRenderTarget;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;
