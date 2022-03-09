@@ -2,6 +2,11 @@
 // Image based lighting configuration
 //------------------------------------------------------------------------------
 
+// IBL techniques
+#define IBL_TECHNIQUE_INFINITE      0u
+#define IBL_TECHNIQUE_FINITE_SPHERE 1u
+#define IBL_TECHNIQUE_FINITE_BOX    2u
+
 // Number of spherical harmonics bands (1, 2 or 3)
 #define SPHERICAL_HARMONICS_BANDS           3
 
@@ -205,7 +210,7 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 
 // This function returns an IBL lookup direction, taking into account the current IBL type (e.g. infinite spherical, finite/local sphere/box).
 vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelParams pixel, const vec3 normal) {
-    if (frameUniforms.iblTechnique == 0u) return getReflectedVector(pixel, normal);
+    if (frameUniforms.iblTechnique == IBL_TECHNIQUE_INFINITE) return getReflectedVector(pixel, normal);
 
     // intersect the ray ray_pos + t * ray_dir with the finite geometry; done in the coordinate system of the finite geometry
     vec3 ray_pos = getWorldPosition() + getWorldOffset() - frameUniforms.iblCenter;
@@ -214,7 +219,7 @@ vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelPar
     vec3  r  = vec3(0.0); // resulting direction
     float t0 = -1.0f;     // intersection parameter between ray and finite IBL geometry
     
-    if (frameUniforms.iblTechnique == 1u) {
+    if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_SPHERE) {
         float R2 = frameUniforms.iblHalfExtents.r; // we store the squared radius to shave off a multiplication here
         float A = 1.0; // in general, this should be dot(ray_dir, ray_dir) but we have just normalized it a couple of lines ago
         float B = 2.0 * dot(ray_pos, ray_dir);
@@ -222,7 +227,7 @@ vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelPar
         vec2 roots = SolveQuadratic(A, B, C);
         t0 = GetSmallestPositive(roots.x, roots.y);
     }
-    else if (frameUniforms.iblTechnique == 2u) {
+    else if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_BOX) {
         vec2 roots = IntersectAABB(ray_pos, ray_dir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
         t0 = GetSmallestPositive(roots.x, roots.y);
     }
