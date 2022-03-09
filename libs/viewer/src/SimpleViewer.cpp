@@ -42,10 +42,9 @@ using namespace filament::math;
 namespace filament {
 namespace viewer {
 
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset) {
-    using namespace filament::math;
-    auto minpt = bounds.min;
-    auto maxpt = bounds.max;
+mat4f fitIntoUnitCube(const Aabb& bounds, float zoffset) {
+    float3 minpt = bounds.min;
+    float3 maxpt = bounds.max;
     float maxExtent;
     maxExtent = std::max(maxpt.x - minpt.x, maxpt.y - minpt.y);
     maxExtent = std::max(maxExtent, maxpt.z - minpt.z);
@@ -469,9 +468,6 @@ void SimpleViewer::updateIndirectLight() {
 }
 
 void SimpleViewer::applyAnimation(double currentTime) {
-    if (!mAnimator) {
-        return;
-    }
     static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
     if (mResetAnimation) {

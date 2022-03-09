@@ -378,9 +378,11 @@ class FilamentViewer extends LitElement {
 
     _updateAsset() {
         // Invoke the first glTF animation if it exists.
-        if (this.animator && this.animator.getAnimationCount() > 0) {
-            const ms = Date.now() - this.animationStartTime;
-            this.animator.applyAnimation(0, ms / 1000);
+        if (this.animator) {
+            if (this.animator.getAnimationCount() > 0) {
+                const ms = Date.now() - this.animationStartTime;
+                this.animator.applyAnimation(0, ms / 1000);
+            }
             this.animator.updateBoneMatrices();
         }
 
