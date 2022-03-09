@@ -77,7 +77,6 @@ public:
     using AmbientOcclusionOptions = AmbientOcclusionOptions;
     using TemporalAntiAliasingOptions = TemporalAntiAliasingOptions;
     using VsmShadowOptions = VsmShadowOptions;
-    using IblOptions = IblOptions;
 
     /**
      * Sets the View's name. Only useful for debugging.
@@ -558,20 +557,6 @@ public:
      * See setFrontFaceWindingInverted() for more information.
      */
     bool isFrontFaceWindingInverted() const noexcept;
-
-    /**
-     * Sets IBL lookup options.
-     *
-     * @param options Options for IBL lookup settings.
-     */
-    void setIblOptions(IblOptions const& options) noexcept;
-
-    /**
-     * Gets IBL lookup options.
-     *
-     * @return IBL lookup options.
-     */
-    IblOptions const& getIblOptions() const noexcept;
 
     // for debugging...
 

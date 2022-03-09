@@ -103,6 +103,12 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, float* v
     return i + 1;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, IblOptions::IblTechnique* val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
+    *val = static_cast<IblOptions::IblTechnique>(strtod(jsonChunk + tokens[i].start, nullptr));
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, float* vals, int size) {
     CHECK_TOKTYPE(tokens[i], JSMN_ARRAY);
     if (tokens[i].size != size) {
@@ -702,20 +708,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->vsmShadowOptions);
         } else if (compare(tok, jsonChunk, "postProcessingEnabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->postProcessingEnabled);
-        } else if (compare(tok, jsonChunk, "iblTechnique") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTechnique);
-        } else if (compare(tok, jsonChunk, "iblCenterX") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.x);
-        } else if (compare(tok, jsonChunk, "iblCenterY") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.y);
-        } else if (compare(tok, jsonChunk, "iblCenterZ") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.z);
-        } else if (compare(tok, jsonChunk, "iblHalfExtentsX") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.x);
-        } else if (compare(tok, jsonChunk, "iblHalfExtentsY") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.y);
-        } else if (compare(tok, jsonChunk, "iblHalfExtentsZ") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.z);
         } else {
             slog.w << "Invalid view setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -863,6 +855,20 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->skyIntensity);
         } else if (compare(tok, jsonChunk, "iblRotation") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblRotation);
+        } else if (compare(tok, jsonChunk, "iblTechnique") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTechnique);
+        } else if (compare(tok, jsonChunk, "iblCenterX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.x);
+        } else if (compare(tok, jsonChunk, "iblCenterY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.y);
+        } else if (compare(tok, jsonChunk, "iblCenterZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.z);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.x);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.y);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.z);
         } else {
             slog.w << "Invalid light setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -997,7 +1003,6 @@ void applySettings(const ViewSettings& settings, View* dest) {
     dest->setShadowType(settings.shadowType);
     dest->setVsmShadowOptions(settings.vsmShadowOptions);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
-    dest->setIblOptions(settings.iblOptions);
 }
 
 template <typename T>
@@ -1031,6 +1036,8 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
     if (ibl) {
         ibl->setIntensity(settings.iblIntensity);
         ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
+        ibl->setIblOptions(settings.iblOptions);
+
     }
     if (scene->getSkybox())
     {
@@ -1396,6 +1403,13 @@ static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
         << "\"iblIntensity\": " << (in.iblIntensity) << ",\n"
         << "\"skyIntensity\": " << (in.skyIntensity) << ",\n"
         << "\"iblRotation\": " << (in.iblRotation) << "\n"
+        << "\"iblTechnique\": " << static_cast<uint32_t>(in.iblOptions.iblTechnique) << "\n"
+        << "\"iblCenterX\": " << in.iblOptions.iblCenter.x << "\n"
+        << "\"iblCenterY\": " << in.iblOptions.iblCenter.y << "\n"
+        << "\"iblCenterZ\": " << in.iblOptions.iblCenter.z << "\n"
+        << "\"iblHalfExtentsX\": " << in.iblOptions.iblHalfExtents.x << "\n"
+        << "\"iblHalfExtentsY\": " << in.iblOptions.iblHalfExtents.y << "\n"
+        << "\"iblHalfExtentsZ\": " << in.iblOptions.iblHalfExtents.z << "\n"
         << "}";
 }
 
@@ -1481,13 +1495,6 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"shadowType\": " << (in.shadowType) << ",\n"
         << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
         << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
-        << "\"iblTechnique\": " << to_string(in.iblOptions.iblTechnique) << "\n"
-        << "\"iblCenterX\": " << to_string(in.iblOptions.iblCenter.x) << "\n"
-        << "\"iblCenterY\": " << to_string(in.iblOptions.iblCenter.y) << "\n"
-        << "\"iblCenterZ\": " << to_string(in.iblOptions.iblCenter.z) << "\n"
-        << "\"iblHalfExtentsX\": " << to_string(in.iblOptions.iblHalfExtents.x) << "\n"
-        << "\"iblHalfExtentsY\": " << to_string(in.iblOptions.iblHalfExtents.y) << "\n"
-        << "\"iblHalfExtentsZ\": " << to_string(in.iblOptions.iblHalfExtents.z) << "\n"
         << "}";
     
 }

@@ -166,7 +166,6 @@ struct ViewSettings {
     DynamicLightingSettings dynamicLighting;
     ShadowType shadowType = ShadowType::PCF;
     VsmShadowOptions vsmShadowOptions;
-    IblOptions iblOptions{};
     bool postProcessingEnabled = true;
 };
 
@@ -192,6 +191,7 @@ struct LightSettings {
     float skyIntensity = 30000.0f;
     float iblRotation = 0.0f;
     Skybox::SkyboxType skyboxType = Skybox::SkyboxType::ENVIRONMENT;
+    IblOptions iblOptions{};
 };
 
 struct ViewerOptions {
@@ -215,7 +215,6 @@ struct Settings {
     MaterialSettings material;
     LightSettings lighting;
     ViewerOptions viewer;
-    IblOptions ibl;
 };
 
 } // namespace viewer

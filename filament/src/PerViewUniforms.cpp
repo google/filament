@@ -216,7 +216,7 @@ void PerViewUniforms::prepareDirectionalLight(
 
 void PerViewUniforms::prepareIblLight(const IblOptions& options) noexcept {
     auto& s = mPerViewUb.edit();
-    s.iblTechnique = options.iblTechnique;
+    s.iblTechnique = static_cast<uint32_t>(options.iblTechnique);
     s.iblCenter = options.iblCenter;
     s.iblHalfExtents = options.iblHalfExtents;
 }
