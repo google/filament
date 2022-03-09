@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "VulkanHandles.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
 
@@ -354,6 +355,13 @@ VulkanTexture& VulkanSwapChain::getColorTexture() {
 VulkanTexture& VulkanSwapChain::getDepthTexture() {
     return *mDepth;
 }
+
+void VulkanSwapChain::bindToDefaultRenderTargets() {
+    for (VulkanRenderTarget* rt : mContext.defaultRenderTargets) {
+        rt->bindToSwapChain(*this);
+    }
+}
+
 
 } // namespace filament
 } // namespace backend

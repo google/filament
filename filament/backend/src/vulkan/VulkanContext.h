@@ -28,6 +28,8 @@
 #include <utils/Slice.h>
 #include <utils/Mutex.h>
 
+#include <tsl/robin_set.h>
+
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
 
@@ -88,7 +90,7 @@ struct VulkanContext {
     bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
     VulkanSwapChain* currentSurface;
-    Handle<HwRenderTarget> defaultRenderTarget;
+    tsl::robin_set<VulkanRenderTarget*> defaultRenderTargets;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;

@@ -50,8 +50,8 @@ struct VulkanRenderTarget : private HwRenderTarget {
             VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], VulkanAttachment depthStencil[2],
             VulkanStagePool& stagePool);
 
-    // Creates a special "default" render target (i.e. associated with the swap chain)
-    explicit VulkanRenderTarget(VulkanContext& context);
+    // Creates a special "default" render target (i.e. associated with a swap chain)
+    explicit VulkanRenderTarget();
 
     void transformClientRectToPlatform(VkRect2D* bounds) const;
     void transformClientRectToPlatform(VkViewport* bounds) const;

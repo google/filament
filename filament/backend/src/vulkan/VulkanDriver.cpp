@@ -324,10 +324,6 @@ void VulkanDriver::terminate() {
     delete mContext.commands;
     delete mContext.emptyTexture;
 
-    if (mContext.defaultRenderTarget) {
-        destruct<VulkanRenderTarget>(mContext.defaultRenderTarget);
-    }
-
     mBlitter.shutdown();
 
     // Allow the stage pool and disposer to clean up.
@@ -525,9 +521,11 @@ void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
 }
 
 void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
-    assert_invariant(!mContext.defaultRenderTarget);
-    mContext.defaultRenderTarget = rth;
-    construct<VulkanRenderTarget>(rth, mContext);
+    VulkanRenderTarget* renderTarget = construct<VulkanRenderTarget>(rth);
+    mContext.defaultRenderTargets.insert(renderTarget);
+    mDisposer.createDisposable(renderTarget, [this, rth] () {
+        destruct<VulkanRenderTarget>(rth);
+    });
 }
 
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
@@ -576,10 +574,9 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
 void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     if (rth) {
-        if (UTILS_LIKELY(mContext.defaultRenderTarget != rth)) {
-            VulkanRenderTarget* rt = handle_cast<VulkanRenderTarget*>(rth);
-            mDisposer.removeReference(rt);
-        }
+        VulkanRenderTarget* rt = handle_cast<VulkanRenderTarget*>(rth);
+        mDisposer.removeReference(rt);
+        mContext.defaultRenderTargets.erase(rt);
     }
 }
 
@@ -709,11 +706,11 @@ void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
 
 void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
-        VulkanSwapChain& surfaceContext = *handle_cast<VulkanSwapChain*>(sch);
-        surfaceContext.destroy();
+        VulkanSwapChain& swapChain = *handle_cast<VulkanSwapChain*>(sch);
+        swapChain.destroy();
 
-        vkDestroySurfaceKHR(mContext.instance, surfaceContext.surface, VKALLOC);
-        if (mContext.currentSurface == &surfaceContext) {
+        vkDestroySurfaceKHR(mContext.instance, swapChain.surface, VKALLOC);
+        if (mContext.currentSurface == &swapChain) {
             mContext.currentSurface = nullptr;
         }
 
@@ -1330,10 +1327,7 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 
     // Leave early if the swap chain image has already been acquired but not yet presented.
     if (surf.acquired) {
-        if (UTILS_LIKELY(mContext.defaultRenderTarget)) {
-            VulkanRenderTarget* rt = handle_cast<VulkanRenderTarget*>(mContext.defaultRenderTarget);
-            rt->bindToSwapChain(surf);
-        }
+        surf.bindToDefaultRenderTargets();
         return;
     }
 
@@ -1347,10 +1341,7 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     // dependency chain.
     surf.acquire();
 
-    if (UTILS_LIKELY(mContext.defaultRenderTarget)) {
-        VulkanRenderTarget* rt = handle_cast<VulkanRenderTarget*>(mContext.defaultRenderTarget);
-        rt->bindToSwapChain(surf);
-    }
+    surf.bindToDefaultRenderTargets();
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {

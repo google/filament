@@ -43,6 +43,8 @@ struct VulkanSwapChain : public HwSwapChain {
     VulkanTexture& getDepthTexture();
     uint32_t getSwapIndex() const { return mCurrentSwapIndex; }
 
+    void bindToDefaultRenderTargets();
+
     VkSurfaceKHR surface = {};
     VkSwapchainKHR swapchain = {};
     VkSurfaceFormatKHR surfaceFormat = {};
