@@ -98,6 +98,7 @@ class ModelViewer(
 
     private var swapChain: SwapChain? = null
     private var assetLoader: AssetLoader
+    private var materialProvider: MaterialProvider
     private var resourceLoader: ResourceLoader
     private val readyRenderables = IntArray(128) // add up to 128 entities at a time
 
@@ -113,7 +114,8 @@ class ModelViewer(
         view.scene = scene
         view.camera = camera
 
-        assetLoader = AssetLoader(engine, UbershaderLoader(engine), EntityManager.get())
+        materialProvider = UbershaderLoader(engine)
+        assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
         resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes, ignoreBindTransform)
 
         // Always add a direct light source since it is required for shadowing.
@@ -316,6 +318,8 @@ class ModelViewer(
 
                 destroyModel()
                 assetLoader.destroy()
+                materialProvider.destroyMaterials()
+                materialProvider.destroy()
                 resourceLoader.destroy()
 
                 engine.destroyEntity(light)

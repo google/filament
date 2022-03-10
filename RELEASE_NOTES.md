@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.20.4 (currently main branch)
 
+- gltfio: Java clients must now destroy the MaterialProvider [⚠️ **API Change**].
+
 ## v1.20.3
 
 ## v1.20.2
