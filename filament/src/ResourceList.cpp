@@ -16,6 +16,10 @@
 
 #include "ResourceList.h"
 
+#include <utils/Log.h>
+
+#include <algorithm>
+
 namespace filament {
 
 ResourceListBase::ResourceListBase(const char* typeName)
