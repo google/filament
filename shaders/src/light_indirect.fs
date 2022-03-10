@@ -210,30 +210,32 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 
 // This function returns an IBL lookup direction, taking into account the current IBL type (e.g. infinite spherical, finite/local sphere/box).
 vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelParams pixel, const vec3 normal) {
-    if (frameUniforms.iblTechnique == IBL_TECHNIQUE_INFINITE) return getReflectedVector(pixel, normal);
+    vec3 defaultReflected = getReflectedVector(pixel, normal);
 
-    // intersect the ray ray_pos + t * ray_dir with the finite geometry; done in the coordinate system of the finite geometry
-    vec3 ray_pos = getWorldPosition() + getWorldOffset() - frameUniforms.iblCenter;
-    vec3 ray_dir = getReflectedVector(pixel, normal);
+    if (frameUniforms.iblTechnique == IBL_TECHNIQUE_INFINITE) return defaultReflected;
+
+    // intersect the ray rayPos + t * rayDir with the finite geometry; done in the coordinate system of the finite geometry
+    vec3 rayPos = getWorldPosition() + getWorldOffset() - frameUniforms.iblCenter;
+    vec3 rayDir = defaultReflected;
 
     vec3  r  = vec3(0.0); // resulting direction
     float t0 = -1.0f;     // intersection parameter between ray and finite IBL geometry
     
     if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_SPHERE) {
         float R2 = frameUniforms.iblHalfExtents.r; // we store the squared radius to shave off a multiplication here
-        float A = 1.0; // in general, this should be dot(ray_dir, ray_dir) but we have just normalized it a couple of lines ago
-        float B = 2.0 * dot(ray_pos, ray_dir);
-        float C = dot(ray_pos, ray_pos) - R2;
+        float A = 1.0; // in general, this should be dot(rayDir, rayDir) but we have just normalized it a couple of lines ago
+        float B = 2.0 * dot(rayPos, rayDir);
+        float C = dot(rayPos, rayPos) - R2;
         vec2 roots = SolveQuadratic(A, B, C);
         t0 = GetSmallestPositive(roots.x, roots.y);
     }
     else if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_BOX) {
-        vec2 roots = IntersectAABB(ray_pos, ray_dir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
+        vec2 roots = IntersectAABB(rayPos, rayDir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
         t0 = GetSmallestPositive(roots.x, roots.y);
     }
 
     // translate results back to world space
-    vec3 intersection_point = ( t0 >= 0.0 ) ? ray_pos + t0 * ray_dir : getReflectedVector(pixel, shading_normal);
+    vec3 intersection_point = ( t0 >= 0.0 ) ? rayPos + t0 * rayDir : defaultReflected;
     r = normalize(intersection_point);
 
     return r;
