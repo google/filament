@@ -69,7 +69,7 @@ FRenderer::FRenderer(FEngine& engine) :
 void FRenderer::init() noexcept {
     DriverApi& driver = mEngine.getDriverApi();
     mUserEpoch = mEngine.getEngineEpoch();
-    mRenderTarget = driver.createDefaultRenderTarget();
+    mRenderTarget = mEngine.getDefaultRenderTarget();
     mIsRGB8Supported = driver.isRenderTargetFormatSupported(TextureFormat::RGB8);
 
     // our default HDR translucent format, fallback to LDR if not supported by the backend
@@ -118,7 +118,6 @@ void FRenderer::terminate(FEngine& engine) {
     // Here we would cleanly free resources we've allocated or we own, in particular we would
     // shut down threads if we created any.
     DriverApi& driver = engine.getDriverApi();
-    driver.destroyRenderTarget(mRenderTarget);
 
     // before we can destroy this Renderer's resources, we must make sure
     // that all pending commands have been executed (as they could reference data in this
