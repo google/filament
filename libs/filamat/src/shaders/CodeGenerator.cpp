@@ -235,10 +235,13 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderType ty
             }
         }
 
-        out << SHADERS_INPUTS_VS_DATA;
+        out << SHADERS_ATTRIBUTES_VS_DATA;
+
+        generateDefine(out, "VARYING", "out");
     } else if (type == ShaderType::FRAGMENT) {
-        out << SHADERS_INPUTS_FS_DATA;
+        generateDefine(out, "VARYING", "in");
     }
+    out << SHADERS_VARYINGS_GLSL_DATA;
     return out;
 }
 
