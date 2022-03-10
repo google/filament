@@ -12,6 +12,7 @@ endif()
 # ==================================================================================================
 set(SHADERS
         src/ambient_occlusion.fs
+        src/attributes.vs
         src/brdf.fs
         src/common_getters.fs
         src/common_graphics.fs
@@ -25,8 +26,6 @@ set(SHADERS
         src/fog.fs
         src/getters.fs
         src/getters.vs
-        src/inputs.fs
-        src/inputs.vs
         src/light_directional.fs
         src/light_indirect.fs
         src/light_reflections.fs
@@ -49,6 +48,7 @@ set(SHADERS
         src/shading_reflections.fs
         src/shading_unlit.fs
         src/shadowing.fs
+        src/varyings.glsl
         src/vignette.fs
 )
 

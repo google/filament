@@ -1,3 +1,7 @@
+//------------------------------------------------------------------------------
+// Attributes
+//------------------------------------------------------------------------------
+
 layout(location = LOCATION_POSITION) in vec4 mesh_position;
 
 #if defined(HAS_ATTRIBUTE_TANGENTS)
@@ -54,29 +58,4 @@ layout(location = LOCATION_CUSTOM6) in vec4 mesh_custom6;
 
 #if defined(HAS_ATTRIBUTE_CUSTOM7)
 layout(location = LOCATION_CUSTOM7) in vec4 mesh_custom7;
-#endif
-
-LAYOUT_LOCATION(4) out highp vec4 vertex_worldPosition;
-
-#if defined(HAS_ATTRIBUTE_TANGENTS)
-LAYOUT_LOCATION(5) SHADING_INTERPOLATION out mediump vec3 vertex_worldNormal;
-#if defined(MATERIAL_NEEDS_TBN)
-LAYOUT_LOCATION(6) SHADING_INTERPOLATION out mediump vec4 vertex_worldTangent;
-#endif
-#endif
-
-LAYOUT_LOCATION(7) out highp vec4 vertex_position;
-
-#if defined(HAS_ATTRIBUTE_COLOR)
-LAYOUT_LOCATION(9) out mediump vec4 vertex_color;
-#endif
-
-#if defined(HAS_ATTRIBUTE_UV0) && !defined(HAS_ATTRIBUTE_UV1)
-LAYOUT_LOCATION(10) out highp vec2 vertex_uv01;
-#elif defined(HAS_ATTRIBUTE_UV1)
-LAYOUT_LOCATION(10) out highp vec4 vertex_uv01;
-#endif
-
-#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
-LAYOUT_LOCATION(11) out highp vec4 vertex_lightSpacePosition;
 #endif
