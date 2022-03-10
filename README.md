@@ -63,7 +63,7 @@ steps:
 1. Find the [commit](https://github.com/google/filament/commits/main) you're interested in.
 2. Click the green check mark under the commit message.
 3. Click on the _Details_ link for the platform you're interested in.
-4. On the top right, click on the _Artifacts_ dropdown and choose an artifact.
+4. On the top left click _Summary_, then in the _Artifacts_ section choose the desired artifact.
 
 ## Documentation
 
