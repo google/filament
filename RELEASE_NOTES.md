@@ -7,6 +7,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.20.3
 
+- Java: Fix URI bug in Android Viewer sample when dropping some zips.
+- Vulkan: Fix "uninitialized texture" warnings from the Vulkan backend.
+
 ## v1.20.2
 
 - engine: Binary size optimizations.
