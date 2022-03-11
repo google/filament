@@ -15,10 +15,10 @@
  */
 
 #include <gltfio/Animator.h>
+#include <gltfio/math.h>
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
-#include "math.h"
 #include "upcast.h"
 
 #include <filament/MaterialEnums.h>
