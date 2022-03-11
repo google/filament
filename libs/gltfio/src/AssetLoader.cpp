@@ -17,6 +17,7 @@
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/MaterialProvider.h>
+#include <gltfio/math.h>
 
 #include "FFilamentAsset.h"
 #include "GltfEnums.h"
@@ -51,7 +52,6 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
-#include "math.h"
 #include "upcast.h"
 
 using namespace filament;

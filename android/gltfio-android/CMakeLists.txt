@@ -32,6 +32,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
         ${GLTFIO_DIR}/include/gltfio/FilamentAsset.h
         ${GLTFIO_DIR}/include/gltfio/FilamentInstance.h
+        ${GLTFIO_DIR}/include/gltfio/math.h
 
         ${GLTFIO_DIR}/src/Animator.cpp
         ${GLTFIO_DIR}/src/AssetLoader.cpp
@@ -51,7 +52,6 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/UbershaderLoader.cpp
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
-        ${GLTFIO_DIR}/src/math.h
         ${GLTFIO_DIR}/src/upcast.h
         ${GLTFIO_DIR}/src/Image.cpp
 
