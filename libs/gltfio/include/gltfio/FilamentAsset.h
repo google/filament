@@ -204,6 +204,26 @@ public:
     Animator* getAnimator() const noexcept;
 
     /**
+     * Gets the number of skins.
+     */
+    size_t getSkinCount() const noexcept;
+
+    /**
+     * Get the skin name at skin index.
+     */
+    const char* getSkinNameAt(size_t skinIndex) const noexcept;
+
+    /**
+     * Get the number of joints at skin index.
+     */
+    size_t getJointCountAt(size_t skinIndex) const noexcept;
+
+    /**
+     * Get joints at skin index.
+     */
+    const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
+
+    /**
      * Get the target name at target index in the given entity.
      */
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;

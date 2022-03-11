@@ -193,6 +193,14 @@ struct FFilamentAsset : public FilamentAsset {
 
     Animator* getAnimator() const noexcept { return mAnimator; }
 
+    size_t getSkinCount() const noexcept;
+
+    const char* getSkinNameAt(size_t skinIndex) const noexcept;
+
+    size_t getJointCountAt(size_t skinIndex) const noexcept;
+
+    const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
+
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
     utils::Entity getWireframe() noexcept;
