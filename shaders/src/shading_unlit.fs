@@ -34,6 +34,8 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     color.a = computeMaskedAlpha(color.a);
     if (color.a <= 0.0) {
         discard;
+    } else {
+        color.a = 1.0;
     }
 #endif
 

@@ -2,29 +2,39 @@
 // Lighting
 //------------------------------------------------------------------------------
 
+#if defined(BLEND_MODE_MASKED)
+float computeMaskedAlpha(float a) {
+    // Use derivatives to smooth alpha tested edges
+    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
+}
+
 float computeDiffuseAlpha(float a) {
-#if defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE) || defined(BLEND_MODE_MASKED)
+    // If we reach this point in the code, we already know that the fragment is not discarded due
+    // to the threshold factor. Therefore we can just output 1.0, which prevents a "punch thru"
+    // effect from occuring.
+    return 1.0;
+}
+
+void applyAlphaMask(inout vec4 baseColor) {
+    baseColor.a = computeMaskedAlpha(baseColor.a);
+    if (baseColor.a <= 0.0) {
+        discard;
+    }
+}
+
+#else // not masked
+
+float computeDiffuseAlpha(float a) {
+#if defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)
     return a;
 #else
     return 1.0;
 #endif
 }
 
-#if defined(BLEND_MODE_MASKED)
-float computeMaskedAlpha(float a) {
-    // Use derivatives to smooth alpha tested edges
-    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
-}
-#endif
+void applyAlphaMask(inout vec4 baseColor) {}
 
-void applyAlphaMask(inout vec4 baseColor) {
-#if defined(BLEND_MODE_MASKED)
-    baseColor.a = computeMaskedAlpha(baseColor.a);
-    if (baseColor.a <= 0.0) {
-        discard;
-    }
 #endif
-}
 
 #if defined(GEOMETRIC_SPECULAR_AA)
 float normalFiltering(float perceptualRoughness, const vec3 worldNormal) {
