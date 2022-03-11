@@ -214,8 +214,14 @@ void PerViewUniforms::prepareDirectionalLight(
     }
 }
 
-void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
-        float intensity, float exposure) noexcept {
+void PerViewUniforms::prepareIblLight(const IblOptions& options) noexcept {
+    auto& s = mPerViewUb.edit();
+    s.iblTechnique = static_cast<uint32_t>(options.iblTechnique);
+    s.iblCenter = options.iblCenter;
+    s.iblHalfExtents = options.iblHalfExtents;
+}
+
+void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl, float intensity, float exposure) noexcept {
     auto& engine = mEngine;
     auto& s = mPerViewUb.edit();
 
