@@ -99,3 +99,26 @@ $ xcodegen
 
 within a sample folder to re-generate the Xcode project. You may need to close and re-open the
 project in Xcode to see changes take effect.
+
+## Sources Debug
+If you want to source debug filament on the iOS platform, the following command can be run at the
+root of the Filament source tree:
+
+```
+$ ./build.sh -p desktop -i release         # build required desktop tools (matc, resgen, etc)
+$ cmake . \
+-B out-ios \
+-G Xcode \
+-DCMAKE_TOOLCHAIN_FILE=third_party/clang/iOS.cmake \
+-DPLATFORM=OS64COMBINED \
+-DIMPORT_EXECUTABLES_DIR=build-ios \
+-DCMAKE_BUILD_TYPE=Debug \
+-DIOS=1 \
+-DPLATFORM_NAME=iphoneos \
+-DIOS_ARCH=arm64 \
+-DIMPORT_EXECUTABLES_DIR=out \
+-DCMAKE_XCODE_GENERATE_SCHEME=ON \
+-DIOS_DEBUG_SAMPLES=1
+```
+You can open `out-ios/TNT.xcodeproj` with xcode for source debugging, and here are the three 
+corresponding demos, `hello-triangle`, `hello-pbr` and `hello-gltf`.

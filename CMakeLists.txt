@@ -727,6 +727,12 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/specular-color)
 endif()
 
+if (IOS AND IOS_DEBUG_SAMPLES)
+    add_subdirectory(${FILAMENT}/ios/samples/hello-triangle)
+    add_subdirectory(${FILAMENT}/ios/samples/hello-pbr)
+    add_subdirectory(${FILAMENT}/ios/samples/hello-gltf)
+endif()
+
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
 if (NOT CMAKE_CROSSCOMPILING)
     export(TARGETS matc cmgen filamesh mipgen resgen glslminifier FILE ${IMPORT_EXECUTABLES})

@@ -1,0 +1,59 @@
+cmake_minimum_required(VERSION 3.12)
+
+set(APP_NAME hello_gltf)
+
+project(${APP_NAME})
+
+# resources
+set(RESOURCE_DIR ${hello_gltf_SOURCE_DIR}/hello-gltf/SupportFiles/Base.lproj)
+file(GLOB_RECURSE RESOURCES
+    "${RESOURCE_DIR}/*.storyboard"
+)
+list(APPEND RESOURCES ${CMAKE_SOURCE_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb)
+
+# sources
+file(GLOB_RECURSE SOURCES
+    "${hello_gltf_SOURCE_DIR}/hello-gltf/*.h"
+    "${hello_gltf_SOURCE_DIR}/hello-gltf/*.m"
+    "${hello_gltf_SOURCE_DIR}/hello-gltf/*.cpp"
+    "${hello_gltf_SOURCE_DIR}/hello-gltf/*.mm"
+)
+list(APPEND SOURCES ${hello_gltf_SOURCE_DIR}/hello-gltf/SupportFiles/Resources.S)
+
+
+set(BUILD_RESOURCE_NAME "build_resource")
+add_custom_command(
+    OUTPUT
+        ${BUILD_RESOURCE_NAME}
+    COMMAND cd ${hello_gltf_SOURCE_DIR}
+    COMMAND export PROJECT_DIR=${hello_gltf_SOURCE_DIR}
+    COMMAND sh build-resources.sh
+)
+
+add_executable(${APP_NAME} MACOSX_BUNDLE
+    ${SOURCES} ${BUILD_RESOURCE_NAME}
+    ${RESOURCES}
+)
+
+set_target_properties(${APP_NAME} PROPERTIES
+    MACOSX_BUNDLE_INFO_PLIST ${hello_gltf_SOURCE_DIR}/hello-gltf/SupportFiles/Info.plist
+    RESOURCE "${RESOURCES}"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "google.filament.hello-gltf"
+    XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
+    XCODE_ATTRIBUTE_COPY_PHASE_STRIP NO
+    XCODE_EMBED_FRAMEWORKS_CODE_SIGN_ON_COPY ON
+    XCODE_EMBED_FRAMEWORKS_REMOVE_HEADERS_ON_COPY ON
+    XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES  
+)
+
+target_link_libraries(${APP_NAME} PRIVATE filament image gltfio_core)
+target_include_directories(${APP_NAME} PRIVATE "generated")
+target_include_directories(${APP_NAME} PRIVATE "hello-gltf")
+target_compile_definitions(${APP_NAME} PRIVATE FILAMENT_APP_USE_METAL=1)
+target_link_libraries(${APP_NAME} PUBLIC
+    "-framework UIKit"
+    "-framework CoreGraphics"
+    "-framework QuartzCore"
+    "-framework OpenGLES"
+    "-framework Metal"
+)

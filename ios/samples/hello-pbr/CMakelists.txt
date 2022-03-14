@@ -1,0 +1,64 @@
+cmake_minimum_required(VERSION 3.12)
+
+set(APP_NAME hello_pbr)
+
+# Set your deployment target version of iOS
+set(DEPLOYMENT_TARGET 11.0)
+
+project(${APP_NAME})
+
+# resources
+set(RESOURCE_DIR ${hello_pbr_SOURCE_DIR}/hello-pbr/Base.lproj)
+file(GLOB_RECURSE RESOURCES
+    "${RESOURCE_DIR}/*.storyboard"
+)
+
+# sources
+file(GLOB_RECURSE SOURCES
+    "${hello_pbr_SOURCE_DIR}/hello-pbr/*.h"
+    "${hello_pbr_SOURCE_DIR}/hello-pbr/*.m"
+    "${hello_pbr_SOURCE_DIR}/hello-pbr/*.cpp"
+    "${hello_pbr_SOURCE_DIR}/hello-pbr/*.mm"
+)
+list(APPEND SOURCES ${hello_pbr_SOURCE_DIR}/hello-pbr/Resources.S)
+
+
+set(BUILD_RESOURCE_NAME "build_resource")
+add_custom_command(
+    OUTPUT
+        ${BUILD_RESOURCE_NAME}
+    COMMAND cd ${hello_pbr_SOURCE_DIR}
+    COMMAND export PROJECT_DIR=${hello_pbr_SOURCE_DIR}
+    COMMAND sh build-resources.sh
+)
+
+add_executable(${APP_NAME} MACOSX_BUNDLE
+    ${SOURCES} ${BUILD_RESOURCE_NAME}
+    ${RESOURCES}
+)
+
+set_target_properties(${APP_NAME} PROPERTIES
+    MACOSX_BUNDLE_INFO_PLIST ${hello_pbr_SOURCE_DIR}/hello-pbr/Info.plist
+    RESOURCE "${RESOURCES}"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "google.filament.hello-pbr"
+    XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
+    XCODE_ATTRIBUTE_COPY_PHASE_STRIP NO
+    XCODE_EMBED_FRAMEWORKS_CODE_SIGN_ON_COPY ON
+    XCODE_EMBED_FRAMEWORKS_REMOVE_HEADERS_ON_COPY ON
+    XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES  
+    XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
+)
+
+set_target_properties(meshoptimizer PROPERTIES
+    XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
+)
+target_link_libraries(${APP_NAME} PRIVATE filament filameshio image)
+target_include_directories(${APP_NAME} PRIVATE "generated")
+target_compile_definitions(${APP_NAME} PRIVATE FILAMENT_APP_USE_METAL=1)
+target_link_libraries(${APP_NAME} PUBLIC
+    "-framework UIKit"
+    "-framework CoreGraphics"
+    "-framework QuartzCore"
+    "-framework OpenGLES"
+    "-framework Metal"
+)
