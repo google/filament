@@ -220,15 +220,13 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             mRasterState.blendFunctionDstAlpha = BlendFunction::ZERO;
             mRasterState.depthWrite = true;
             break;
+        // Do not change this behavior without checking for regressions with AlphaBlendModeTest
+        // and TextureLinearInterpolationTest, with and without View::BlendMode::TRANSLUCENT.
         case BlendingMode::MASKED:
-            // This leaves destination alpha intact if it is already opaque, but makes it opaque if
-            // it is already semi-transparent. This is usually what you want when drawing a scene.
-            // Do not change this behavior without checking for regressions with AlphaBlendModeTest
-            // and TextureLinearInterpolationTest, with and without View::BlendMode::TRANSLUCENT.
             mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
-            mRasterState.blendFunctionSrcAlpha = BlendFunction::SRC_ALPHA;
-            mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;
-            mRasterState.blendFunctionDstAlpha = BlendFunction::ONE;
+            mRasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+            mRasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
+            mRasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
             mRasterState.depthWrite = true;
             break;
         case BlendingMode::TRANSPARENT:
