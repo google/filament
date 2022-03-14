@@ -133,7 +133,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         info.handle = t->getHwHandle();
         info.level  = attachment.mipLevel;
         if (t->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP) {
-            info.face = attachment.face;
+            info.layer = +attachment.face;
         } else {
             info.layer = attachment.layer;
         }
@@ -158,6 +158,11 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
 void FRenderTarget::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     driver.destroyRenderTarget(mHandle);
+}
+
+bool FRenderTarget::hasSampleableDepth() const noexcept {
+    const FTexture* depth = mAttachments[(size_t)AttachmentPoint::DEPTH].texture;
+    return depth && (depth->getUsage() & TextureUsage::SAMPLEABLE) == TextureUsage::SAMPLEABLE;
 }
 
 } // namespace filament

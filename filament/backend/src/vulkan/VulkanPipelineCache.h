@@ -309,6 +309,8 @@ private:
         bool operator()(const DescriptorKey& k1, const DescriptorKey& k2) const;
     };
 
+    #pragma clang diagnostic pop
+
     // CACHE ENTRY STRUCTS
     // -------------------
 
@@ -351,8 +353,6 @@ private:
         //
         std::array<std::vector<VkDescriptorSet>, DESCRIPTOR_TYPE_COUNT> descriptorSetArenas;
     };
-
-    #pragma clang diagnostic pop
 
     // CACHE CONTAINERS
     // ----------------

@@ -640,6 +640,10 @@ enum class TextureCubemapFace : uint8_t {
     NEGATIVE_Z = 5, //!< -z face
 };
 
+inline constexpr int operator +(TextureCubemapFace rhs) noexcept {
+    return int(rhs);
+}
+
 //! Face offsets for all faces of a cubemap
 struct FaceOffsets {
     using size_type = size_t;

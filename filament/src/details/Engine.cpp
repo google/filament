@@ -278,6 +278,11 @@ void FEngine::init() {
     // Create a dummy morph target buffer.
     mDummyMorphTargetBuffer = createMorphTargetBuffer(FMorphTargetBuffer::EmptyMorphTargetBuilder());
 
+    float3 dummyPositions[1] = {};
+    short4 dummyTangents[1] = {};
+    mDummyMorphTargetBuffer->setPositionsAt(*this, 0, dummyPositions, 1, 0);
+    mDummyMorphTargetBuffer->setTangentsAt(*this, 0, dummyTangents, 1, 0);
+
     // create dummy textures we need throughout the engine
 
     mDummyOneTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,

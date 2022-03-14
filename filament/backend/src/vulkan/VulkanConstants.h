@@ -37,6 +37,13 @@
 //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
 // }
 //
+// If gradle claims that your NDK is not installed, try checking what versions you have with
+// `ls $ANDROID_HOME/ndk` then direct gradle by adding something like this to the "android" section:
+//
+//     ndkVersion "23.1.7779620"
+//
+// Also consider changing the root `gradle.properties` to point to a debug build, although this is
+// not required for validation if you change the definition of VK_ENABLE_VALIDATION below.
 #if defined(NDEBUG)
 #define VK_ENABLE_VALIDATION 0
 #else

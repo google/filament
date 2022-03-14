@@ -686,7 +686,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 // create a temporary render target for source, needed for the blit.
                 auto inTarget = driver.createRenderTarget(TargetBufferFlags::DEPTH,
                         desc.width, desc.height, desc.samples, {},
-                        resources.getTexture(data.input), {});
+                        { resources.getTexture(data.input) }, {});
                 driver.blit(TargetBufferFlags::DEPTH,
                         out.target, out.params.viewport,
                         inTarget, out.params.viewport,
@@ -2965,7 +2965,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevelNoCheck(Fram
                 if (data.usage == FrameGraphTexture::Usage::COLOR_ATTACHMENT) {
                     inRt = driver.createRenderTarget(data.inFlags,
                             out.params.viewport.width, out.params.viewport.height,
-                            inDesc.samples, { in }, {}, {});
+                            inDesc.samples, {{ in }}, {}, {});
                 }
                 if (data.usage == FrameGraphTexture::Usage::DEPTH_ATTACHMENT) {
                     inRt = driver.createRenderTarget(data.inFlags,

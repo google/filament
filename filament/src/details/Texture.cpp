@@ -452,16 +452,18 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
 
     switch (mTarget) {
         case SamplerType::SAMPLER_2D:
-            generateMipsForLayer(TargetBufferInfo{ 0 });
+            generateMipsForLayer({});
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
+            UTILS_NOUNROLL
             for (uint16_t layer = 0, c = mDepth; layer < c; ++layer) {
-                generateMipsForLayer(TargetBufferInfo{ layer });
+                generateMipsForLayer({ .layer = layer });
             }
             break;
         case SamplerType::SAMPLER_CUBEMAP:
+            UTILS_NOUNROLL
             for (uint8_t face = 0; face < 6; ++face) {
-                generateMipsForLayer(TargetBufferInfo{ TextureCubemapFace(face) });
+                generateMipsForLayer({ .layer = face });
             }
             break;
         case SamplerType::SAMPLER_EXTERNAL:

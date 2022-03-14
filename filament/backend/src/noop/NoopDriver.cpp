@@ -168,6 +168,10 @@ bool NoopDriver::isFrameTimeSupported() {
     return true;
 }
 
+bool NoopDriver::isAutoDepthResolveSupported() {
+    return true;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround workaround) {
     return false;
 }
