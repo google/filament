@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.20.4 (currently main branch)
 
+- New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
+
 ## v1.20.3
 
 ## v1.20.2

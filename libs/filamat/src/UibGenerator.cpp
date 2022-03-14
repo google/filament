@@ -52,7 +52,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("lightColorIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("lightFarAttenuationParams",1, UniformInterfaceBlock::Type::FLOAT2)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("needsAlphaChannel",       1, UniformInterfaceBlock::Type::FLOAT)
             .add("lightChannels",           1, UniformInterfaceBlock::Type::UINT)
             .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
             .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)

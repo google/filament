@@ -34,7 +34,11 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     color.a = computeMaskedAlpha(color.a);
     if (color.a <= 0.0) {
         discard;
-    } else {
+    }
+
+    // Output 1.0 for translucent view to prevent "punch through" artifacts. We do not do this
+    // for opaque views to enable proper usage of ALPHA_TO_COVERAGE.
+    if (frameUniforms.needsAlphaChannel == 1.0) {
         color.a = 1.0;
     }
 #endif
