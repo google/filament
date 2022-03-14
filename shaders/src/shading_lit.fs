@@ -10,9 +10,10 @@ float computeMaskedAlpha(float a) {
 
 float computeDiffuseAlpha(float a) {
     // If we reach this point in the code, we already know that the fragment is not discarded due
-    // to the threshold factor. Therefore we can just output 1.0, which prevents a "punch thru"
-    // effect from occuring.
-    return 1.0;
+    // to the threshold factor. Therefore we can just output 1.0, which prevents a "punch through"
+    // effect from occuring. We do this only for TRANSLUCENT views in order to prevent breakage
+    // of ALPHA_TO_COVERAGE.
+    return (frameUniforms.needsAlphaChannel == 1.0) ? 1.0 : a;
 }
 
 void applyAlphaMask(inout vec4 baseColor) {

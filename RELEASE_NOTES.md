@@ -9,6 +9,8 @@ A new header is inserted each time a *tag* is created.
 
 - gltfio: Java clients must now destroy the MaterialProvider [⚠️ **API Change**].
 
+- New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
+
 ## v1.20.3
 
 - Java: Fix URI bug in Android Viewer sample when dropping some zips.

@@ -407,7 +407,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 }
 
 void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
-        filament::Viewport const& viewport, float4 const& userTime) noexcept {
+        filament::Viewport const& viewport, float4 const& userTime, bool needsAlphaChannel) noexcept {
     JobSystem& js = engine.getJobSystem();
 
     /*
@@ -576,6 +576,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     mPerViewUniforms.prepareTime(userTime);
     mPerViewUniforms.prepareFog(mViewingCameraInfo, mFogOptions);
     mPerViewUniforms.prepareTemporalNoise(mTemporalAntiAliasingOptions);
+    mPerViewUniforms.prepareBlending(needsAlphaChannel);
 
     // set uniforms and samplers
     bindPerViewUniformsAndSamplers(driver);

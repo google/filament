@@ -260,7 +260,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         return;
     }
 
-    view.prepare(engine, driver, arena, svp, getShaderUserTime());
+    const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
+    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
+    // buffers with an alpha channel.
+    const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
+    view.prepare(engine, driver, arena, svp, getShaderUserTime(), needsAlphaChannel);
 
     view.prepareUpscaler(scale);
 
@@ -367,11 +371,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     .keepOverrideEnd = keepOverrideEndFlags
             }, viewRenderTarget);
 
-    const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
     const bool blending = blendModeTranslucent;
-    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
-    // buffers with an alpha channel.
-    const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     ColorPassConfig config{
