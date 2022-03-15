@@ -36,7 +36,7 @@ private const val kSensitivity = 100f
 /**
  * Helps render glTF models into a [SurfaceView] or [TextureView] with an orbit controller.
  *
- * `ModelViewer` owns a Filament engine, renderer, swapchain, view, and scene. It allows clients
+ * `ModelViewer` owns a Filament renderer, swapchain, view, and scene. It allows clients
  * to access these objects via read-only properties. The viewer can display only one glTF scene
  * at a time, which can be scaled and translated into the viewing frustum by calling
  * [transformToUnitCube]. All ECS entities can be accessed and modified via the [asset] property.
@@ -59,7 +59,7 @@ private const val kSensitivity = 100f
  * See `sample-gltf-viewer` for a usage example.
  */
 class ModelViewer(
-        val engine: Engine,
+        private val engine: Engine,
         private val uiHelper: UiHelper
 ) : android.view.View.OnTouchListener {
     var asset: FilamentAsset? = null
@@ -136,7 +136,7 @@ class ModelViewer(
 
     constructor(
             surfaceView: SurfaceView,
-            engine: Engine = Engine.create(),
+            engine: Engine,
             uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
             manipulator: Manipulator? = null
     ) : this(engine, uiHelper) {
@@ -156,7 +156,7 @@ class ModelViewer(
     @Suppress("unused")
     constructor(
             textureView: TextureView,
-            engine: Engine = Engine.create(),
+            engine: Engine,
             uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
             manipulator: Manipulator? = null
     ) : this(engine, uiHelper) {
@@ -330,8 +330,6 @@ class ModelViewer(
                 EntityManager.get().destroy(camera.entity)
 
                 EntityManager.get().destroy(light)
-
-                engine.destroy()
             }
         })
     }

@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.20.5 (currently main branch)
 
+- Android ModelViewer no longer owns the Engine; requires clients to pass one in [⚠️ **API Change**].
+
 ## v1.20.4
 
 - gltfio: Java clients must now destroy the MaterialProvider [⚠️ **API Change**].

@@ -24,6 +24,7 @@ import android.view.*
 import android.view.GestureDetector
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.filament.Engine
 import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
@@ -65,6 +66,7 @@ class MainActivity : Activity() {
     private var loadStartTime = 0L
     private var loadStartFence: Fence? = null
     private val viewerContent = AutomationEngine.ViewerContent()
+    private var engine: Engine? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,10 +80,11 @@ class MainActivity : Activity() {
 
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
 
-        modelViewer = ModelViewer(surfaceView)
+        engine = engine ?: Engine.create()
+        modelViewer = ModelViewer(surfaceView, engine!!)
         viewerContent.view = modelViewer.view
         viewerContent.sunlight = modelViewer.light
-        viewerContent.lightManager = modelViewer.engine.lightManager
+        viewerContent.lightManager = engine!!.lightManager
         viewerContent.scene = modelViewer.scene
         viewerContent.renderer = modelViewer.renderer
 
@@ -146,7 +149,7 @@ class MainActivity : Activity() {
     }
 
     private fun createIndirectLight() {
-        val engine = modelViewer.engine
+        val engine = this.engine!!
         val scene = modelViewer.scene
         val ibl = "default_env"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
@@ -190,13 +193,13 @@ class MainActivity : Activity() {
             modelViewer.loadModelGlb(message.buffer)
             updateRootTransform()
             loadStartTime = System.nanoTime()
-            loadStartFence = modelViewer.engine.createFence()
+            loadStartFence = engine!!.createFence()
         }
     }
 
     private suspend fun loadHdr(message: RemoteServer.ReceivedMessage) {
         withContext(Dispatchers.Main) {
-            val engine = modelViewer.engine
+            val engine = engine!!
             val equirect = HDRLoader.createTexture(engine, message.buffer)
             if (equirect == null) {
                 setStatusText("Could not decode HDR file.")
@@ -299,7 +302,7 @@ class MainActivity : Activity() {
 
         // The gltf is often not at the root level (e.g. if a folder is zipped) so
         // we need to extract its path in order to resolve the embedded uri strings.
-        var prefix = URI(gltfPath!!).resolve("..")
+        val prefix = URI(gltfPath!!).resolve("..")
 
         withContext(Dispatchers.Main) {
             if (gltfPath!!.endsWith(".glb")) {
@@ -316,7 +319,7 @@ class MainActivity : Activity() {
             }
             updateRootTransform()
             loadStartTime = System.nanoTime()
-            loadStartFence = modelViewer.engine.createFence()
+            loadStartFence = engine!!.createFence()
         }
     }
 
@@ -353,7 +356,7 @@ class MainActivity : Activity() {
         val json = StandardCharsets.UTF_8.decode(message.buffer).toString()
         viewerContent.assetLights = modelViewer.asset?.lightEntities
         automation.applySettings(json, viewerContent)
-        modelViewer.view.colorGrading = automation.getColorGrading(modelViewer.engine)
+        modelViewer.view.colorGrading = automation.getColorGrading(engine!!)
         modelViewer.cameraFocalLength = automation.viewerOptions.cameraFocalLength
         updateRootTransform()
     }
@@ -376,7 +379,7 @@ class MainActivity : Activity() {
                     val end = System.nanoTime()
                     val total = (end - loadStartTime) / 1_000_000
                     Log.i(TAG, "The Filament backend took $total ms to load the model geometry.")
-                    modelViewer.engine.destroyFence(it)
+                    engine!!.destroyFence(it)
                     loadStartFence = null
                 }
             }
