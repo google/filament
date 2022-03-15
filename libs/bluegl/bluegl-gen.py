@@ -167,7 +167,7 @@ void unbind%(gl_suffix)s();
 
 def generateDefineHeader(api, functions, include_dir):
     suffix = api['suffix'] if api['suffix'] != 'Core' else ''
-    src_file = os.path.join(include_dir, 'bluegl', 'BlueGLWindowsDefines%s.h' % suffix)
+    src_file = os.path.join(include_dir, 'bluegl', 'BlueGLDefines%s.h' % suffix)
 
     print('Generating Windows define header %s...' % src_file)
 

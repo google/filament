@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 
 #if defined(WIN32)
-#include <bluegl/BlueGLWindowsDefines.h>
+#include <bluegl/BlueGLDefines.h>
 #endif
 #include <bluegl/BlueGL.h>
 
