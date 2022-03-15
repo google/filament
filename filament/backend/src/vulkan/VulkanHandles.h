@@ -51,7 +51,7 @@ struct VulkanRenderTarget : private HwRenderTarget {
             VulkanStagePool& stagePool);
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
-    explicit VulkanRenderTarget(VulkanContext& context);
+    explicit VulkanRenderTarget();
 
     void transformClientRectToPlatform(VkRect2D* bounds) const;
     void transformClientRectToPlatform(VkViewport* bounds) const;
