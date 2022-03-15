@@ -96,8 +96,7 @@ VulkanProgram::~VulkanProgram() {
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
-        mOffscreen(false), mSamples(1) {}
+VulkanRenderTarget::VulkanRenderTarget() : HwRenderTarget(0, 0), mOffscreen(false), mSamples(1) {}
 
 void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     assert_invariant(!mOffscreen);

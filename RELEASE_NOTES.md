@@ -3,9 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.4 (currently main branch)
+## v1.20.5 (currently main branch)
+
+## v1.20.4
+
+- gltfio: Java clients must now destroy the MaterialProvider [⚠️ **API Change**].
 
 ## v1.20.3
+
+- Java: Fix URI bug in Android Viewer sample when dropping some zips.
+- Vulkan: Fix "uninitialized texture" warnings from the Vulkan backend.
 
 ## v1.20.2
 
