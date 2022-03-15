@@ -169,7 +169,7 @@ def generateDefineHeader(api, functions, include_dir):
     suffix = api['suffix'] if api['suffix'] != 'Core' else ''
     src_file = os.path.join(include_dir, 'bluegl', 'BlueGLDefines%s.h' % suffix)
 
-    print('Generating Windows define header %s...' % src_file)
+    print('Generating define header %s...' % src_file)
 
     header = '''/*
  * Copyright (C) %(year)d The Android Open Source Project
@@ -284,16 +284,16 @@ def generateProxies(api, functions, output_dir, platforms):
     code = {
         'Linux': '''
 .global %(function)s
-.type %(function)s, %%function
-%(function)s:
+.type bluegl_%(function)s, %%function
+bluegl_%(function)s:
     mov __blue_gl%(suffix)s_%(function)s@GOTPCREL(%%rip), %%r11
     jmp *(%%r11)
 ''',
         'LinuxAArch64': '''
 	.align	2
-	.global	%(function)s
-	.type	%(function)s, %%function
-%(function)s:
+	.global	bluegl_%(function)s
+	.type	bluegl_%(function)s, %%function
+bluegl_%(function)s:
 	adrp	x16, :got:__blue_gl%(suffix)s_%(function)s
 	ldr	x16, [x16, #:got_lo12:__blue_gl%(suffix)s_%(function)s]
 	ldr	x16, [x16]
@@ -301,15 +301,15 @@ def generateProxies(api, functions, output_dir, platforms):
 	.size	%(function)s, .-%(function)s
 ''',
         'Darwin': '''
-.private_extern _%(function)s
-_%(function)s:
+.private_extern _bluegl_%(function)s
+_bluegl_%(function)s:
     mov ___blue_gl%(suffix)s_%(function)s@GOTPCREL(%%rip), %%r11
     jmp *(%%r11)
 ''',
         'DarwinAArch64': '''
-.private_extern _%(function)s
+.private_extern _bluegl_%(function)s
 	.align	2
-_%(function)s:
+_bluegl_%(function)s:
 	adrp	x16, ___blue_gl%(suffix)s_%(function)s@GOTPAGE
 	ldr	x16, [x16, ___blue_gl%(suffix)s_%(function)s@GOTPAGEOFF]
 	ldr	x16, [x16]
