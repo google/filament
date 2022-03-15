@@ -436,8 +436,11 @@ bool Froxelizer::update() noexcept {
             // orthographic projection
             // z_view = (1 - z_screen) * (near - far) - near
             // z_view = z_screen * (far - near) - far
-            mParamsZ[0] =       -1.0f / (Pz * mZLightFar);  // -(far-near) / mZLightFar
-            mParamsZ[1] = (0.5f - Pw) / (Pz * mZLightFar);  //         far / mZLightFar
+            // our ortho matrix is in inverted-DX convention
+            //   Pz =   1 / (far - near)
+            //   Pw = far / (far - near)
+            mParamsZ[0] = -1.0f / (Pz * mZLightFar);  // -(far-near) / mZLightFar
+            mParamsZ[1] =    Pw / (Pz * mZLightFar);  //         far / mZLightFar
             mParamsZ[2] = mLinearizer;
         }
         uniformsNeedUpdating = true;
