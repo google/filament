@@ -1,0 +1,19 @@
+name: opengl-with-metal
+options:
+    bundleIdPrefix: ${DEVELOPMENT_TEAM}.google.filament
+include: ../app-template.yml
+targets:
+    opengl-with-metal:
+        templates:
+            - FilamentApp
+        preBuildScripts:
+            - path: build-materials.sh
+              name: Build Materials
+              inputFiles:
+                - $(SRCROOT)/Materials/SampleExternalTexture.mat
+              outputFiles:
+                - $(SRCROOT)/generated/SampleExternalTexture.inc
+        settings:
+          configs:
+            metal:
+              GCC_PREPROCESSOR_DEFINITIONS: ["GLES_SILENCE_DEPRECATION"]

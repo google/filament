@@ -1,0 +1,21 @@
+material {
+    name : SampleExternalTexture,
+    requires : [
+        color
+    ],
+    parameters : [
+        {
+            type : samplerExternal,
+            name : texture
+        }
+    ],
+    shadingModel : unlit,
+    culling : none
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = texture(materialParams_texture, getColor().rg).rgb;
+    }
+}
