@@ -229,6 +229,10 @@ set(MATERIAL_SRCS
         src/materials/separableGaussianBlur2.mat
         src/materials/separableGaussianBlur3.mat
         src/materials/separableGaussianBlur4.mat
+        src/materials/separableGaussianBlur1L.mat
+        src/materials/separableGaussianBlur2L.mat
+        src/materials/separableGaussianBlur3L.mat
+        src/materials/separableGaussianBlur4L.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
         src/materials/vsmMipmap.mat

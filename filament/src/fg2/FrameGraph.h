@@ -168,6 +168,18 @@ public:
         }
 
         /**
+         * Retrieves the subresource descriptor associated to a resource
+         * @tparam RESOURCE Type of the resource
+         * @param handle    Handle to a virtual resource
+         * @return          Reference to the subresource descriptor
+         */
+        template<typename RESOURCE>
+        typename RESOURCE::SubResourceDescriptor const& getSubResourceDescriptor(FrameGraphId<RESOURCE> handle) const {
+            return static_cast<Resource<RESOURCE> const*>(
+                    mFrameGraph.getResource(handle))->subResourceDescriptor;
+        }
+
+        /**
          * Retrieves the name of a resource
          * @param handle    Handle to a virtual resource
          * @return          C string to the name of the resource
@@ -355,6 +367,17 @@ public:
     template<typename RESOURCE>
     typename RESOURCE::Descriptor const& getDescriptor(FrameGraphId<RESOURCE> handle) const {
         return static_cast<Resource<RESOURCE> const*>(getResource(handle))->descriptor;
+    }
+
+    /**
+     * Retrieves the descriptor associated to a resource
+     * @tparam RESOURCE Type of the resource
+     * @param handle    Handle to a virtual resource
+     * @return          Reference to the descriptor
+     */
+    template<typename RESOURCE>
+    typename RESOURCE::SubResourceDescriptor const& getSubResourceDescriptor(FrameGraphId<RESOURCE> handle) const {
+        return static_cast<Resource<RESOURCE> const*>(getResource(handle))->subResourceDescriptor;
     }
 
     /**

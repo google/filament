@@ -315,8 +315,8 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                 kernelWidth = kernelWidth * 4 + 5;
                 const float ratio = float(kernelWidth + 1) / sigma;
                 ppm.gaussianBlurPass(fg,
-                        shadowPass->tempBlurSrc, 0,
-                        shadows, 0, layer,
+                        shadowPass->tempBlurSrc,
+                        shadows,
                         false, kernelWidth, ratio);
             }
 
