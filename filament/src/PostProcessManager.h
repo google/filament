@@ -180,8 +180,8 @@ public:
             math::float4 clearColor, bool finalize) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> output,
             bool reinhard, size_t kernelWidth, float sigma) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const;
