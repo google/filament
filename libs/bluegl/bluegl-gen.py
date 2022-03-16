@@ -283,7 +283,7 @@ def generateProxies(api, functions, output_dir, platforms):
 
     code = {
         'Linux': '''
-.global %(function)s
+.global bluegl_%(function)s
 .type bluegl_%(function)s, %%function
 bluegl_%(function)s:
     mov __blue_gl%(suffix)s_%(function)s@GOTPCREL(%%rip), %%r11
