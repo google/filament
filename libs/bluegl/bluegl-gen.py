@@ -298,7 +298,7 @@ bluegl_%(function)s:
 	ldr	x16, [x16, #:got_lo12:__blue_gl%(suffix)s_%(function)s]
 	ldr	x16, [x16]
 	br	x16
-	.size	%(function)s, .-%(function)s
+	.size	bluegl_%(function)s, .-bluegl_%(function)s
 ''',
         'Darwin': '''
 .private_extern _bluegl_%(function)s

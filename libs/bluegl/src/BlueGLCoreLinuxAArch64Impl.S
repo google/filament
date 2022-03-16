@@ -27,7 +27,7 @@ bluegl_glMultiDrawArraysIndirectBindlessCountNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawArraysIndirectBindlessCountNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawArraysIndirectBindlessCountNV, .-glMultiDrawArraysIndirectBindlessCountNV
+	.size	bluegl_glMultiDrawArraysIndirectBindlessCountNV, .-bluegl_glMultiDrawArraysIndirectBindlessCountNV
 
 	.align	2
 	.global	bluegl_glCopyTexImage1D
@@ -37,7 +37,7 @@ bluegl_glCopyTexImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexImage1D, .-glCopyTexImage1D
+	.size	bluegl_glCopyTexImage1D, .-bluegl_glCopyTexImage1D
 
 	.align	2
 	.global	bluegl_glGetListParameterivSGIX
@@ -47,7 +47,7 @@ bluegl_glGetListParameterivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetListParameterivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetListParameterivSGIX, .-glGetListParameterivSGIX
+	.size	bluegl_glGetListParameterivSGIX, .-bluegl_glGetListParameterivSGIX
 
 	.align	2
 	.global	bluegl_glProgramUniform1i64ARB
@@ -57,7 +57,7 @@ bluegl_glProgramUniform1i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1i64ARB, .-glProgramUniform1i64ARB
+	.size	bluegl_glProgramUniform1i64ARB, .-bluegl_glProgramUniform1i64ARB
 
 	.align	2
 	.global	bluegl_glVertexArrayElementBuffer
@@ -67,7 +67,7 @@ bluegl_glVertexArrayElementBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayElementBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayElementBuffer, .-glVertexArrayElementBuffer
+	.size	bluegl_glVertexArrayElementBuffer, .-bluegl_glVertexArrayElementBuffer
 
 	.align	2
 	.global	bluegl_glHintPGI
@@ -77,7 +77,7 @@ bluegl_glHintPGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glHintPGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glHintPGI, .-glHintPGI
+	.size	bluegl_glHintPGI, .-bluegl_glHintPGI
 
 	.align	2
 	.global	bluegl_glStencilMaskSeparate
@@ -87,7 +87,7 @@ bluegl_glStencilMaskSeparate:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilMaskSeparate]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilMaskSeparate, .-glStencilMaskSeparate
+	.size	bluegl_glStencilMaskSeparate, .-bluegl_glStencilMaskSeparate
 
 	.align	2
 	.global	bluegl_glGetFramebufferAttachmentParameterivEXT
@@ -97,7 +97,7 @@ bluegl_glGetFramebufferAttachmentParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFramebufferAttachmentParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFramebufferAttachmentParameterivEXT, .-glGetFramebufferAttachmentParameterivEXT
+	.size	bluegl_glGetFramebufferAttachmentParameterivEXT, .-bluegl_glGetFramebufferAttachmentParameterivEXT
 
 	.align	2
 	.global	bluegl_glTextureStorage3DMultisample
@@ -107,7 +107,7 @@ bluegl_glTextureStorage3DMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage3DMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage3DMultisample, .-glTextureStorage3DMultisample
+	.size	bluegl_glTextureStorage3DMultisample, .-bluegl_glTextureStorage3DMultisample
 
 	.align	2
 	.global	bluegl_glGetIntegerIndexedvEXT
@@ -117,7 +117,7 @@ bluegl_glGetIntegerIndexedvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetIntegerIndexedvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetIntegerIndexedvEXT, .-glGetIntegerIndexedvEXT
+	.size	bluegl_glGetIntegerIndexedvEXT, .-bluegl_glGetIntegerIndexedvEXT
 
 	.align	2
 	.global	bluegl_glTextureParameterfv
@@ -127,7 +127,7 @@ bluegl_glTextureParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterfv, .-glTextureParameterfv
+	.size	bluegl_glTextureParameterfv, .-bluegl_glTextureParameterfv
 
 	.align	2
 	.global	bluegl_glTexRenderbufferNV
@@ -137,7 +137,7 @@ bluegl_glTexRenderbufferNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexRenderbufferNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexRenderbufferNV, .-glTexRenderbufferNV
+	.size	bluegl_glTexRenderbufferNV, .-bluegl_glTexRenderbufferNV
 
 	.align	2
 	.global	bluegl_glFrustumxOES
@@ -147,7 +147,7 @@ bluegl_glFrustumxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFrustumxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFrustumxOES, .-glFrustumxOES
+	.size	bluegl_glFrustumxOES, .-bluegl_glFrustumxOES
 
 	.align	2
 	.global	bluegl_glProgramUniform4ui64ARB
@@ -157,7 +157,7 @@ bluegl_glProgramUniform4ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4ui64ARB, .-glProgramUniform4ui64ARB
+	.size	bluegl_glProgramUniform4ui64ARB, .-bluegl_glProgramUniform4ui64ARB
 
 	.align	2
 	.global	bluegl_glInstrumentsBufferSGIX
@@ -167,7 +167,7 @@ bluegl_glInstrumentsBufferSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInstrumentsBufferSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInstrumentsBufferSGIX, .-glInstrumentsBufferSGIX
+	.size	bluegl_glInstrumentsBufferSGIX, .-bluegl_glInstrumentsBufferSGIX
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2sARB
@@ -177,7 +177,7 @@ bluegl_glMultiTexCoord2sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2sARB, .-glMultiTexCoord2sARB
+	.size	bluegl_glMultiTexCoord2sARB, .-bluegl_glMultiTexCoord2sARB
 
 	.align	2
 	.global	bluegl_glProgramEnvParameter4fARB
@@ -187,7 +187,7 @@ bluegl_glProgramEnvParameter4fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameter4fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameter4fARB, .-glProgramEnvParameter4fARB
+	.size	bluegl_glProgramEnvParameter4fARB, .-bluegl_glProgramEnvParameter4fARB
 
 	.align	2
 	.global	bluegl_glCompressedTexSubImage3D
@@ -197,7 +197,7 @@ bluegl_glCompressedTexSubImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexSubImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexSubImage3D, .-glCompressedTexSubImage3D
+	.size	bluegl_glCompressedTexSubImage3D, .-bluegl_glCompressedTexSubImage3D
 
 	.align	2
 	.global	bluegl_glTexCoordP3uiv
@@ -207,7 +207,7 @@ bluegl_glTexCoordP3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP3uiv, .-glTexCoordP3uiv
+	.size	bluegl_glTexCoordP3uiv, .-bluegl_glTexCoordP3uiv
 
 	.align	2
 	.global	bluegl_glSecondaryColor3hvNV
@@ -217,7 +217,7 @@ bluegl_glSecondaryColor3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3hvNV, .-glSecondaryColor3hvNV
+	.size	bluegl_glSecondaryColor3hvNV, .-bluegl_glSecondaryColor3hvNV
 
 	.align	2
 	.global	bluegl_glTextureStorage3DEXT
@@ -227,7 +227,7 @@ bluegl_glTextureStorage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage3DEXT, .-glTextureStorage3DEXT
+	.size	bluegl_glTextureStorage3DEXT, .-bluegl_glTextureStorage3DEXT
 
 	.align	2
 	.global	bluegl_glUniform4uiEXT
@@ -237,7 +237,7 @@ bluegl_glUniform4uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4uiEXT, .-glUniform4uiEXT
+	.size	bluegl_glUniform4uiEXT, .-bluegl_glUniform4uiEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3ui64ARB
@@ -247,7 +247,7 @@ bluegl_glProgramUniform3ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3ui64ARB, .-glProgramUniform3ui64ARB
+	.size	bluegl_glProgramUniform3ui64ARB, .-bluegl_glProgramUniform3ui64ARB
 
 	.align	2
 	.global	bluegl_glVertexArrayBindVertexBufferEXT
@@ -257,7 +257,7 @@ bluegl_glVertexArrayBindVertexBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayBindVertexBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayBindVertexBufferEXT, .-glVertexArrayBindVertexBufferEXT
+	.size	bluegl_glVertexArrayBindVertexBufferEXT, .-bluegl_glVertexArrayBindVertexBufferEXT
 
 	.align	2
 	.global	bluegl_glUniform3uiEXT
@@ -267,7 +267,7 @@ bluegl_glUniform3uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3uiEXT, .-glUniform3uiEXT
+	.size	bluegl_glUniform3uiEXT, .-bluegl_glUniform3uiEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI3uivEXT
@@ -277,7 +277,7 @@ bluegl_glVertexAttribI3uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3uivEXT, .-glVertexAttribI3uivEXT
+	.size	bluegl_glVertexAttribI3uivEXT, .-bluegl_glVertexAttribI3uivEXT
 
 	.align	2
 	.global	bluegl_glGetnMapfv
@@ -287,7 +287,7 @@ bluegl_glGetnMapfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMapfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMapfv, .-glGetnMapfv
+	.size	bluegl_glGetnMapfv, .-bluegl_glGetnMapfv
 
 	.align	2
 	.global	bluegl_glTransformFeedbackBufferRange
@@ -297,7 +297,7 @@ bluegl_glTransformFeedbackBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformFeedbackBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformFeedbackBufferRange, .-glTransformFeedbackBufferRange
+	.size	bluegl_glTransformFeedbackBufferRange, .-bluegl_glTransformFeedbackBufferRange
 
 	.align	2
 	.global	bluegl_glPathGlyphsNV
@@ -307,7 +307,7 @@ bluegl_glPathGlyphsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathGlyphsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathGlyphsNV, .-glPathGlyphsNV
+	.size	bluegl_glPathGlyphsNV, .-bluegl_glPathGlyphsNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3fv
@@ -317,7 +317,7 @@ bluegl_glSecondaryColor3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3fv, .-glSecondaryColor3fv
+	.size	bluegl_glSecondaryColor3fv, .-bluegl_glSecondaryColor3fv
 
 	.align	2
 	.global	bluegl_glGetCombinerInputParameterivNV
@@ -327,7 +327,7 @@ bluegl_glGetCombinerInputParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCombinerInputParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCombinerInputParameterivNV, .-glGetCombinerInputParameterivNV
+	.size	bluegl_glGetCombinerInputParameterivNV, .-bluegl_glGetCombinerInputParameterivNV
 
 	.align	2
 	.global	bluegl_glEndPerfMonitorAMD
@@ -337,7 +337,7 @@ bluegl_glEndPerfMonitorAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndPerfMonitorAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndPerfMonitorAMD, .-glEndPerfMonitorAMD
+	.size	bluegl_glEndPerfMonitorAMD, .-bluegl_glEndPerfMonitorAMD
 
 	.align	2
 	.global	bluegl_glVertexP4ui
@@ -347,7 +347,7 @@ bluegl_glVertexP4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexP4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexP4ui, .-glVertexP4ui
+	.size	bluegl_glVertexP4ui, .-bluegl_glVertexP4ui
 
 	.align	2
 	.global	bluegl_glDrawElementsInstancedBaseInstance
@@ -357,7 +357,7 @@ bluegl_glDrawElementsInstancedBaseInstance:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsInstancedBaseInstance]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsInstancedBaseInstance, .-glDrawElementsInstancedBaseInstance
+	.size	bluegl_glDrawElementsInstancedBaseInstance, .-bluegl_glDrawElementsInstancedBaseInstance
 
 	.align	2
 	.global	bluegl_glMultTransposeMatrixdARB
@@ -367,7 +367,7 @@ bluegl_glMultTransposeMatrixdARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultTransposeMatrixdARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultTransposeMatrixdARB, .-glMultTransposeMatrixdARB
+	.size	bluegl_glMultTransposeMatrixdARB, .-bluegl_glMultTransposeMatrixdARB
 
 	.align	2
 	.global	bluegl_glVertexAttribL4dEXT
@@ -377,7 +377,7 @@ bluegl_glVertexAttribL4dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4dEXT, .-glVertexAttribL4dEXT
+	.size	bluegl_glVertexAttribL4dEXT, .-bluegl_glVertexAttribL4dEXT
 
 	.align	2
 	.global	bluegl_glGetTextureParameterivEXT
@@ -387,7 +387,7 @@ bluegl_glGetTextureParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameterivEXT, .-glGetTextureParameterivEXT
+	.size	bluegl_glGetTextureParameterivEXT, .-bluegl_glGetTextureParameterivEXT
 
 	.align	2
 	.global	bluegl_glCoverStrokePathInstancedNV
@@ -397,7 +397,7 @@ bluegl_glCoverStrokePathInstancedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCoverStrokePathInstancedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCoverStrokePathInstancedNV, .-glCoverStrokePathInstancedNV
+	.size	bluegl_glCoverStrokePathInstancedNV, .-bluegl_glCoverStrokePathInstancedNV
 
 	.align	2
 	.global	bluegl_glDeformSGIX
@@ -407,7 +407,7 @@ bluegl_glDeformSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeformSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeformSGIX, .-glDeformSGIX
+	.size	bluegl_glDeformSGIX, .-bluegl_glDeformSGIX
 
 	.align	2
 	.global	bluegl_glUniform2ui64NV
@@ -417,7 +417,7 @@ bluegl_glUniform2ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2ui64NV, .-glUniform2ui64NV
+	.size	bluegl_glUniform2ui64NV, .-bluegl_glUniform2ui64NV
 
 	.align	2
 	.global	bluegl_glCopyPathNV
@@ -427,7 +427,7 @@ bluegl_glCopyPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyPathNV, .-glCopyPathNV
+	.size	bluegl_glCopyPathNV, .-bluegl_glCopyPathNV
 
 	.align	2
 	.global	bluegl_glVertexAttribP4ui
@@ -437,7 +437,7 @@ bluegl_glVertexAttribP4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP4ui, .-glVertexAttribP4ui
+	.size	bluegl_glVertexAttribP4ui, .-bluegl_glVertexAttribP4ui
 
 	.align	2
 	.global	bluegl_glIsBuffer
@@ -447,7 +447,7 @@ bluegl_glIsBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsBuffer, .-glIsBuffer
+	.size	bluegl_glIsBuffer, .-bluegl_glIsBuffer
 
 	.align	2
 	.global	bluegl_glGetMultisamplefv
@@ -457,7 +457,7 @@ bluegl_glGetMultisamplefv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultisamplefv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultisamplefv, .-glGetMultisamplefv
+	.size	bluegl_glGetMultisamplefv, .-bluegl_glGetMultisamplefv
 
 	.align	2
 	.global	bluegl_glCompressedMultiTexSubImage3DEXT
@@ -467,7 +467,7 @@ bluegl_glCompressedMultiTexSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedMultiTexSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedMultiTexSubImage3DEXT, .-glCompressedMultiTexSubImage3DEXT
+	.size	bluegl_glCompressedMultiTexSubImage3DEXT, .-bluegl_glCompressedMultiTexSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glVDPAURegisterOutputSurfaceNV
@@ -477,7 +477,7 @@ bluegl_glVDPAURegisterOutputSurfaceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAURegisterOutputSurfaceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAURegisterOutputSurfaceNV, .-glVDPAURegisterOutputSurfaceNV
+	.size	bluegl_glVDPAURegisterOutputSurfaceNV, .-bluegl_glVDPAURegisterOutputSurfaceNV
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4fv
@@ -487,7 +487,7 @@ bluegl_glProgramUniformMatrix4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4fv, .-glProgramUniformMatrix4fv
+	.size	bluegl_glProgramUniformMatrix4fv, .-bluegl_glProgramUniformMatrix4fv
 
 	.align	2
 	.global	bluegl_glProgramUniform4fEXT
@@ -497,7 +497,7 @@ bluegl_glProgramUniform4fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4fEXT, .-glProgramUniform4fEXT
+	.size	bluegl_glProgramUniform4fEXT, .-bluegl_glProgramUniform4fEXT
 
 	.align	2
 	.global	bluegl_glCoverStrokePathNV
@@ -507,7 +507,7 @@ bluegl_glCoverStrokePathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCoverStrokePathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCoverStrokePathNV, .-glCoverStrokePathNV
+	.size	bluegl_glCoverStrokePathNV, .-bluegl_glCoverStrokePathNV
 
 	.align	2
 	.global	bluegl_glTextureImage2DMultisampleNV
@@ -517,7 +517,7 @@ bluegl_glTextureImage2DMultisampleNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureImage2DMultisampleNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureImage2DMultisampleNV, .-glTextureImage2DMultisampleNV
+	.size	bluegl_glTextureImage2DMultisampleNV, .-bluegl_glTextureImage2DMultisampleNV
 
 	.align	2
 	.global	bluegl_glVertex3bOES
@@ -527,7 +527,7 @@ bluegl_glVertex3bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex3bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex3bOES, .-glVertex3bOES
+	.size	bluegl_glVertex3bOES, .-bluegl_glVertex3bOES
 
 	.align	2
 	.global	bluegl_glTessellationFactorAMD
@@ -537,7 +537,7 @@ bluegl_glTessellationFactorAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTessellationFactorAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTessellationFactorAMD, .-glTessellationFactorAMD
+	.size	bluegl_glTessellationFactorAMD, .-bluegl_glTessellationFactorAMD
 
 	.align	2
 	.global	bluegl_glDebugMessageControl
@@ -547,7 +547,7 @@ bluegl_glDebugMessageControl:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageControl]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageControl, .-glDebugMessageControl
+	.size	bluegl_glDebugMessageControl, .-bluegl_glDebugMessageControl
 
 	.align	2
 	.global	bluegl_glIsObjectBufferATI
@@ -557,7 +557,7 @@ bluegl_glIsObjectBufferATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsObjectBufferATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsObjectBufferATI, .-glIsObjectBufferATI
+	.size	bluegl_glIsObjectBufferATI, .-bluegl_glIsObjectBufferATI
 
 	.align	2
 	.global	bluegl_glProgramUniform4iEXT
@@ -567,7 +567,7 @@ bluegl_glProgramUniform4iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4iEXT, .-glProgramUniform4iEXT
+	.size	bluegl_glProgramUniform4iEXT, .-bluegl_glProgramUniform4iEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4ubNV
@@ -577,7 +577,7 @@ bluegl_glVertexAttrib4ubNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4ubNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4ubNV, .-glVertexAttrib4ubNV
+	.size	bluegl_glVertexAttrib4ubNV, .-bluegl_glVertexAttrib4ubNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib2svARB
@@ -587,7 +587,7 @@ bluegl_glVertexAttrib2svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2svARB, .-glVertexAttrib2svARB
+	.size	bluegl_glVertexAttrib2svARB, .-bluegl_glVertexAttrib2svARB
 
 	.align	2
 	.global	bluegl_glMinSampleShadingARB
@@ -597,7 +597,7 @@ bluegl_glMinSampleShadingARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMinSampleShadingARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMinSampleShadingARB, .-glMinSampleShadingARB
+	.size	bluegl_glMinSampleShadingARB, .-bluegl_glMinSampleShadingARB
 
 	.align	2
 	.global	bluegl_glSpriteParameteriSGIX
@@ -607,7 +607,7 @@ bluegl_glSpriteParameteriSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSpriteParameteriSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSpriteParameteriSGIX, .-glSpriteParameteriSGIX
+	.size	bluegl_glSpriteParameteriSGIX, .-bluegl_glSpriteParameteriSGIX
 
 	.align	2
 	.global	bluegl_glFragmentMaterialfSGIX
@@ -617,7 +617,7 @@ bluegl_glFragmentMaterialfSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentMaterialfSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentMaterialfSGIX, .-glFragmentMaterialfSGIX
+	.size	bluegl_glFragmentMaterialfSGIX, .-bluegl_glFragmentMaterialfSGIX
 
 	.align	2
 	.global	bluegl_glVDPAUGetSurfaceivNV
@@ -627,7 +627,7 @@ bluegl_glVDPAUGetSurfaceivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUGetSurfaceivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUGetSurfaceivNV, .-glVDPAUGetSurfaceivNV
+	.size	bluegl_glVDPAUGetSurfaceivNV, .-bluegl_glVDPAUGetSurfaceivNV
 
 	.align	2
 	.global	bluegl_glGetnMapiv
@@ -637,7 +637,7 @@ bluegl_glGetnMapiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMapiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMapiv, .-glGetnMapiv
+	.size	bluegl_glGetnMapiv, .-bluegl_glGetnMapiv
 
 	.align	2
 	.global	bluegl_glGetInternalformatSampleivNV
@@ -647,7 +647,7 @@ bluegl_glGetInternalformatSampleivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInternalformatSampleivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInternalformatSampleivNV, .-glGetInternalformatSampleivNV
+	.size	bluegl_glGetInternalformatSampleivNV, .-bluegl_glGetInternalformatSampleivNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib4ubv
@@ -657,7 +657,7 @@ bluegl_glVertexAttrib4ubv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4ubv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4ubv, .-glVertexAttrib4ubv
+	.size	bluegl_glVertexAttrib4ubv, .-bluegl_glVertexAttrib4ubv
 
 	.align	2
 	.global	bluegl_glGetBufferParameteriv
@@ -667,7 +667,7 @@ bluegl_glGetBufferParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferParameteriv, .-glGetBufferParameteriv
+	.size	bluegl_glGetBufferParameteriv, .-bluegl_glGetBufferParameteriv
 
 	.align	2
 	.global	bluegl_glVertexAttribs4hvNV
@@ -677,7 +677,7 @@ bluegl_glVertexAttribs4hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs4hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs4hvNV, .-glVertexAttribs4hvNV
+	.size	bluegl_glVertexAttribs4hvNV, .-bluegl_glVertexAttribs4hvNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib4NubvARB
@@ -687,7 +687,7 @@ bluegl_glVertexAttrib4NubvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4NubvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4NubvARB, .-glVertexAttrib4NubvARB
+	.size	bluegl_glVertexAttrib4NubvARB, .-bluegl_glVertexAttrib4NubvARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3hvNV
@@ -697,7 +697,7 @@ bluegl_glMultiTexCoord3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3hvNV, .-glMultiTexCoord3hvNV
+	.size	bluegl_glMultiTexCoord3hvNV, .-bluegl_glMultiTexCoord3hvNV
 
 	.align	2
 	.global	bluegl_glMatrixPushEXT
@@ -707,7 +707,7 @@ bluegl_glMatrixPushEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixPushEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixPushEXT, .-glMatrixPushEXT
+	.size	bluegl_glMatrixPushEXT, .-bluegl_glMatrixPushEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2fEXT
@@ -717,7 +717,7 @@ bluegl_glProgramUniform2fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2fEXT, .-glProgramUniform2fEXT
+	.size	bluegl_glProgramUniform2fEXT, .-bluegl_glProgramUniform2fEXT
 
 	.align	2
 	.global	bluegl_glMultiDrawElementsIndirectBindlessNV
@@ -727,7 +727,7 @@ bluegl_glMultiDrawElementsIndirectBindlessNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementsIndirectBindlessNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementsIndirectBindlessNV, .-glMultiDrawElementsIndirectBindlessNV
+	.size	bluegl_glMultiDrawElementsIndirectBindlessNV, .-bluegl_glMultiDrawElementsIndirectBindlessNV
 
 	.align	2
 	.global	bluegl_glBlitFramebuffer
@@ -737,7 +737,7 @@ bluegl_glBlitFramebuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlitFramebuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlitFramebuffer, .-glBlitFramebuffer
+	.size	bluegl_glBlitFramebuffer, .-bluegl_glBlitFramebuffer
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP2ui
@@ -747,7 +747,7 @@ bluegl_glMultiTexCoordP2ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP2ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP2ui, .-glMultiTexCoordP2ui
+	.size	bluegl_glMultiTexCoordP2ui, .-bluegl_glMultiTexCoordP2ui
 
 	.align	2
 	.global	bluegl_glColorPointerListIBM
@@ -757,7 +757,7 @@ bluegl_glColorPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorPointerListIBM, .-glColorPointerListIBM
+	.size	bluegl_glColorPointerListIBM, .-bluegl_glColorPointerListIBM
 
 	.align	2
 	.global	bluegl_glVertexAttribL4d
@@ -767,7 +767,7 @@ bluegl_glVertexAttribL4d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4d, .-glVertexAttribL4d
+	.size	bluegl_glVertexAttribL4d, .-bluegl_glVertexAttribL4d
 
 	.align	2
 	.global	bluegl_glGetFragmentMaterialfvSGIX
@@ -777,7 +777,7 @@ bluegl_glGetFragmentMaterialfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFragmentMaterialfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFragmentMaterialfvSGIX, .-glGetFragmentMaterialfvSGIX
+	.size	bluegl_glGetFragmentMaterialfvSGIX, .-bluegl_glGetFragmentMaterialfvSGIX
 
 	.align	2
 	.global	bluegl_glGetProgramLocalParameterIuivNV
@@ -787,7 +787,7 @@ bluegl_glGetProgramLocalParameterIuivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramLocalParameterIuivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramLocalParameterIuivNV, .-glGetProgramLocalParameterIuivNV
+	.size	bluegl_glGetProgramLocalParameterIuivNV, .-bluegl_glGetProgramLocalParameterIuivNV
 
 	.align	2
 	.global	bluegl_glGetTexEnvxvOES
@@ -797,7 +797,7 @@ bluegl_glGetTexEnvxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexEnvxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexEnvxvOES, .-glGetTexEnvxvOES
+	.size	bluegl_glGetTexEnvxvOES, .-bluegl_glGetTexEnvxvOES
 
 	.align	2
 	.global	bluegl_glUniformMatrix3dv
@@ -807,7 +807,7 @@ bluegl_glUniformMatrix3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix3dv, .-glUniformMatrix3dv
+	.size	bluegl_glUniformMatrix3dv, .-bluegl_glUniformMatrix3dv
 
 	.align	2
 	.global	bluegl_glGetVertexAttribLdvEXT
@@ -817,7 +817,7 @@ bluegl_glGetVertexAttribLdvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribLdvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribLdvEXT, .-glGetVertexAttribLdvEXT
+	.size	bluegl_glGetVertexAttribLdvEXT, .-bluegl_glGetVertexAttribLdvEXT
 
 	.align	2
 	.global	bluegl_glInvalidateBufferSubData
@@ -827,7 +827,7 @@ bluegl_glInvalidateBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateBufferSubData, .-glInvalidateBufferSubData
+	.size	bluegl_glInvalidateBufferSubData, .-bluegl_glInvalidateBufferSubData
 
 	.align	2
 	.global	bluegl_glResumeTransformFeedback
@@ -837,7 +837,7 @@ bluegl_glResumeTransformFeedback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResumeTransformFeedback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResumeTransformFeedback, .-glResumeTransformFeedback
+	.size	bluegl_glResumeTransformFeedback, .-bluegl_glResumeTransformFeedback
 
 	.align	2
 	.global	bluegl_glInsertEventMarkerEXT
@@ -847,7 +847,7 @@ bluegl_glInsertEventMarkerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInsertEventMarkerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInsertEventMarkerEXT, .-glInsertEventMarkerEXT
+	.size	bluegl_glInsertEventMarkerEXT, .-bluegl_glInsertEventMarkerEXT
 
 	.align	2
 	.global	bluegl_glTessellationModeAMD
@@ -857,7 +857,7 @@ bluegl_glTessellationModeAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTessellationModeAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTessellationModeAMD, .-glTessellationModeAMD
+	.size	bluegl_glTessellationModeAMD, .-bluegl_glTessellationModeAMD
 
 	.align	2
 	.global	bluegl_glFinishAsyncSGIX
@@ -867,7 +867,7 @@ bluegl_glFinishAsyncSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFinishAsyncSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFinishAsyncSGIX, .-glFinishAsyncSGIX
+	.size	bluegl_glFinishAsyncSGIX, .-bluegl_glFinishAsyncSGIX
 
 	.align	2
 	.global	bluegl_glGetPerfMonitorCounterDataAMD
@@ -877,7 +877,7 @@ bluegl_glGetPerfMonitorCounterDataAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfMonitorCounterDataAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfMonitorCounterDataAMD, .-glGetPerfMonitorCounterDataAMD
+	.size	bluegl_glGetPerfMonitorCounterDataAMD, .-bluegl_glGetPerfMonitorCounterDataAMD
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1d
@@ -887,7 +887,7 @@ bluegl_glMultiTexCoord1d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1d, .-glMultiTexCoord1d
+	.size	bluegl_glMultiTexCoord1d, .-bluegl_glMultiTexCoord1d
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1f
@@ -897,7 +897,7 @@ bluegl_glMultiTexCoord1f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1f, .-glMultiTexCoord1f
+	.size	bluegl_glMultiTexCoord1f, .-bluegl_glMultiTexCoord1f
 
 	.align	2
 	.global	bluegl_glGetMultiTexParameterivEXT
@@ -907,7 +907,7 @@ bluegl_glGetMultiTexParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexParameterivEXT, .-glGetMultiTexParameterivEXT
+	.size	bluegl_glGetMultiTexParameterivEXT, .-bluegl_glGetMultiTexParameterivEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x4fvEXT
@@ -917,7 +917,7 @@ bluegl_glProgramUniformMatrix3x4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x4fvEXT, .-glProgramUniformMatrix3x4fvEXT
+	.size	bluegl_glProgramUniformMatrix3x4fvEXT, .-bluegl_glProgramUniformMatrix3x4fvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI2i
@@ -927,7 +927,7 @@ bluegl_glVertexAttribI2i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2i, .-glVertexAttribI2i
+	.size	bluegl_glVertexAttribI2i, .-bluegl_glVertexAttribI2i
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1i
@@ -937,7 +937,7 @@ bluegl_glMultiTexCoord1i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1i, .-glMultiTexCoord1i
+	.size	bluegl_glMultiTexCoord1i, .-bluegl_glMultiTexCoord1i
 
 	.align	2
 	.global	bluegl_glMakeTextureHandleResidentARB
@@ -947,7 +947,7 @@ bluegl_glMakeTextureHandleResidentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeTextureHandleResidentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeTextureHandleResidentARB, .-glMakeTextureHandleResidentARB
+	.size	bluegl_glMakeTextureHandleResidentARB, .-bluegl_glMakeTextureHandleResidentARB
 
 	.align	2
 	.global	bluegl_glLoadProgramNV
@@ -957,7 +957,7 @@ bluegl_glLoadProgramNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadProgramNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadProgramNV, .-glLoadProgramNV
+	.size	bluegl_glLoadProgramNV, .-bluegl_glLoadProgramNV
 
 	.align	2
 	.global	bluegl_glWriteMaskEXT
@@ -967,7 +967,7 @@ bluegl_glWriteMaskEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWriteMaskEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWriteMaskEXT, .-glWriteMaskEXT
+	.size	bluegl_glWriteMaskEXT, .-bluegl_glWriteMaskEXT
 
 	.align	2
 	.global	bluegl_glGetGraphicsResetStatus
@@ -977,7 +977,7 @@ bluegl_glGetGraphicsResetStatus:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetGraphicsResetStatus]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetGraphicsResetStatus, .-glGetGraphicsResetStatus
+	.size	bluegl_glGetGraphicsResetStatus, .-bluegl_glGetGraphicsResetStatus
 
 	.align	2
 	.global	bluegl_glIsEnabled
@@ -987,7 +987,7 @@ bluegl_glIsEnabled:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsEnabled]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsEnabled, .-glIsEnabled
+	.size	bluegl_glIsEnabled, .-bluegl_glIsEnabled
 
 	.align	2
 	.global	bluegl_glStencilOp
@@ -997,7 +997,7 @@ bluegl_glStencilOp:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilOp]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilOp, .-glStencilOp
+	.size	bluegl_glStencilOp, .-bluegl_glStencilOp
 
 	.align	2
 	.global	bluegl_glFramebufferTexture2D
@@ -1007,7 +1007,7 @@ bluegl_glFramebufferTexture2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTexture2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTexture2D, .-glFramebufferTexture2D
+	.size	bluegl_glFramebufferTexture2D, .-bluegl_glFramebufferTexture2D
 
 	.align	2
 	.global	bluegl_glGetFragmentLightfvSGIX
@@ -1017,7 +1017,7 @@ bluegl_glGetFragmentLightfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFragmentLightfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFragmentLightfvSGIX, .-glGetFragmentLightfvSGIX
+	.size	bluegl_glGetFragmentLightfvSGIX, .-bluegl_glGetFragmentLightfvSGIX
 
 	.align	2
 	.global	bluegl_glListParameterfSGIX
@@ -1027,7 +1027,7 @@ bluegl_glListParameterfSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glListParameterfSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glListParameterfSGIX, .-glListParameterfSGIX
+	.size	bluegl_glListParameterfSGIX, .-bluegl_glListParameterfSGIX
 
 	.align	2
 	.global	bluegl_glMapNamedBufferRange
@@ -1037,7 +1037,7 @@ bluegl_glMapNamedBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapNamedBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapNamedBufferRange, .-glMapNamedBufferRange
+	.size	bluegl_glMapNamedBufferRange, .-bluegl_glMapNamedBufferRange
 
 	.align	2
 	.global	bluegl_glNamedFramebufferRenderbufferEXT
@@ -1047,7 +1047,7 @@ bluegl_glNamedFramebufferRenderbufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferRenderbufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferRenderbufferEXT, .-glNamedFramebufferRenderbufferEXT
+	.size	bluegl_glNamedFramebufferRenderbufferEXT, .-bluegl_glNamedFramebufferRenderbufferEXT
 
 	.align	2
 	.global	bluegl_glFragmentLightModelfSGIX
@@ -1057,7 +1057,7 @@ bluegl_glFragmentLightModelfSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightModelfSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightModelfSGIX, .-glFragmentLightModelfSGIX
+	.size	bluegl_glFragmentLightModelfSGIX, .-bluegl_glFragmentLightModelfSGIX
 
 	.align	2
 	.global	bluegl_glIndexPointerEXT
@@ -1067,7 +1067,7 @@ bluegl_glIndexPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIndexPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIndexPointerEXT, .-glIndexPointerEXT
+	.size	bluegl_glIndexPointerEXT, .-bluegl_glIndexPointerEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayAttribIFormat
@@ -1077,7 +1077,7 @@ bluegl_glVertexArrayAttribIFormat:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayAttribIFormat]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayAttribIFormat, .-glVertexArrayAttribIFormat
+	.size	bluegl_glVertexArrayAttribIFormat, .-bluegl_glVertexArrayAttribIFormat
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN
@@ -1087,7 +1087,7 @@ bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN, .-glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN
+	.size	bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN, .-bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glReplacementCodeubvSUN
@@ -1097,7 +1097,7 @@ bluegl_glReplacementCodeubvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeubvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeubvSUN, .-glReplacementCodeubvSUN
+	.size	bluegl_glReplacementCodeubvSUN, .-bluegl_glReplacementCodeubvSUN
 
 	.align	2
 	.global	bluegl_glGenFramebuffers
@@ -1107,7 +1107,7 @@ bluegl_glGenFramebuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenFramebuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenFramebuffers, .-glGenFramebuffers
+	.size	bluegl_glGenFramebuffers, .-bluegl_glGenFramebuffers
 
 	.align	2
 	.global	bluegl_glPixelMapx
@@ -1117,7 +1117,7 @@ bluegl_glPixelMapx:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelMapx]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelMapx, .-glPixelMapx
+	.size	bluegl_glPixelMapx, .-bluegl_glPixelMapx
 
 	.align	2
 	.global	bluegl_glTexSubImage3DEXT
@@ -1127,7 +1127,7 @@ bluegl_glTexSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexSubImage3DEXT, .-glTexSubImage3DEXT
+	.size	bluegl_glTexSubImage3DEXT, .-bluegl_glTexSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glGetAttachedShaders
@@ -1137,7 +1137,7 @@ bluegl_glGetAttachedShaders:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetAttachedShaders]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetAttachedShaders, .-glGetAttachedShaders
+	.size	bluegl_glGetAttachedShaders, .-bluegl_glGetAttachedShaders
 
 	.align	2
 	.global	bluegl_glGetPixelTexGenParameterfvSGIS
@@ -1147,7 +1147,7 @@ bluegl_glGetPixelTexGenParameterfvSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPixelTexGenParameterfvSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPixelTexGenParameterfvSGIS, .-glGetPixelTexGenParameterfvSGIS
+	.size	bluegl_glGetPixelTexGenParameterfvSGIS, .-bluegl_glGetPixelTexGenParameterfvSGIS
 
 	.align	2
 	.global	bluegl_glProgramLocalParameters4fvEXT
@@ -1157,7 +1157,7 @@ bluegl_glProgramLocalParameters4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameters4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameters4fvEXT, .-glProgramLocalParameters4fvEXT
+	.size	bluegl_glProgramLocalParameters4fvEXT, .-bluegl_glProgramLocalParameters4fvEXT
 
 	.align	2
 	.global	bluegl_glGetDebugMessageLogAMD
@@ -1167,7 +1167,7 @@ bluegl_glGetDebugMessageLogAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDebugMessageLogAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDebugMessageLogAMD, .-glGetDebugMessageLogAMD
+	.size	bluegl_glGetDebugMessageLogAMD, .-bluegl_glGetDebugMessageLogAMD
 
 	.align	2
 	.global	bluegl_glVertexStream4sATI
@@ -1177,7 +1177,7 @@ bluegl_glVertexStream4sATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4sATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4sATI, .-glVertexStream4sATI
+	.size	bluegl_glVertexStream4sATI, .-bluegl_glVertexStream4sATI
 
 	.align	2
 	.global	bluegl_glDeleteVertexArrays
@@ -1187,7 +1187,7 @@ bluegl_glDeleteVertexArrays:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteVertexArrays]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteVertexArrays, .-glDeleteVertexArrays
+	.size	bluegl_glDeleteVertexArrays, .-bluegl_glDeleteVertexArrays
 
 	.align	2
 	.global	bluegl_glGetnMapdvARB
@@ -1197,7 +1197,7 @@ bluegl_glGetnMapdvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMapdvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMapdvARB, .-glGetnMapdvARB
+	.size	bluegl_glGetnMapdvARB, .-bluegl_glGetnMapdvARB
 
 	.align	2
 	.global	bluegl_glOrthofOES
@@ -1207,7 +1207,7 @@ bluegl_glOrthofOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glOrthofOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glOrthofOES, .-glOrthofOES
+	.size	bluegl_glOrthofOES, .-bluegl_glOrthofOES
 
 	.align	2
 	.global	bluegl_glViewportArrayv
@@ -1217,7 +1217,7 @@ bluegl_glViewportArrayv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glViewportArrayv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glViewportArrayv, .-glViewportArrayv
+	.size	bluegl_glViewportArrayv, .-bluegl_glViewportArrayv
 
 	.align	2
 	.global	bluegl_glDrawElementArrayATI
@@ -1227,7 +1227,7 @@ bluegl_glDrawElementArrayATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementArrayATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementArrayATI, .-glDrawElementArrayATI
+	.size	bluegl_glDrawElementArrayATI, .-bluegl_glDrawElementArrayATI
 
 	.align	2
 	.global	bluegl_glGetPathColorGenfvNV
@@ -1237,7 +1237,7 @@ bluegl_glGetPathColorGenfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathColorGenfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathColorGenfvNV, .-glGetPathColorGenfvNV
+	.size	bluegl_glGetPathColorGenfvNV, .-bluegl_glGetPathColorGenfvNV
 
 	.align	2
 	.global	bluegl_glWindowPos3iMESA
@@ -1247,7 +1247,7 @@ bluegl_glWindowPos3iMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3iMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3iMESA, .-glWindowPos3iMESA
+	.size	bluegl_glWindowPos3iMESA, .-bluegl_glWindowPos3iMESA
 
 	.align	2
 	.global	bluegl_glColor4ubVertex2fSUN
@@ -1257,7 +1257,7 @@ bluegl_glColor4ubVertex2fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4ubVertex2fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4ubVertex2fSUN, .-glColor4ubVertex2fSUN
+	.size	bluegl_glColor4ubVertex2fSUN, .-bluegl_glColor4ubVertex2fSUN
 
 	.align	2
 	.global	bluegl_glTexCoord2fColor3fVertex3fSUN
@@ -1267,7 +1267,7 @@ bluegl_glTexCoord2fColor3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fColor3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fColor3fVertex3fSUN, .-glTexCoord2fColor3fVertex3fSUN
+	.size	bluegl_glTexCoord2fColor3fVertex3fSUN, .-bluegl_glTexCoord2fColor3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glUniform3ui64ARB
@@ -1277,7 +1277,7 @@ bluegl_glUniform3ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3ui64ARB, .-glUniform3ui64ARB
+	.size	bluegl_glUniform3ui64ARB, .-bluegl_glUniform3ui64ARB
 
 	.align	2
 	.global	bluegl_glSecondaryColor3ubvEXT
@@ -1287,7 +1287,7 @@ bluegl_glSecondaryColor3ubvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3ubvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3ubvEXT, .-glSecondaryColor3ubvEXT
+	.size	bluegl_glSecondaryColor3ubvEXT, .-bluegl_glSecondaryColor3ubvEXT
 
 	.align	2
 	.global	bluegl_glGetNamedBufferSubDataEXT
@@ -1297,7 +1297,7 @@ bluegl_glGetNamedBufferSubDataEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferSubDataEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferSubDataEXT, .-glGetNamedBufferSubDataEXT
+	.size	bluegl_glGetNamedBufferSubDataEXT, .-bluegl_glGetNamedBufferSubDataEXT
 
 	.align	2
 	.global	bluegl_glConvolutionFilter2D
@@ -1307,7 +1307,7 @@ bluegl_glConvolutionFilter2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionFilter2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionFilter2D, .-glConvolutionFilter2D
+	.size	bluegl_glConvolutionFilter2D, .-bluegl_glConvolutionFilter2D
 
 	.align	2
 	.global	bluegl_glMemoryBarrierByRegion
@@ -1317,7 +1317,7 @@ bluegl_glMemoryBarrierByRegion:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMemoryBarrierByRegion]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMemoryBarrierByRegion, .-glMemoryBarrierByRegion
+	.size	bluegl_glMemoryBarrierByRegion, .-bluegl_glMemoryBarrierByRegion
 
 	.align	2
 	.global	bluegl_glTexCoord2fNormal3fVertex3fSUN
@@ -1327,7 +1327,7 @@ bluegl_glTexCoord2fNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fNormal3fVertex3fSUN, .-glTexCoord2fNormal3fVertex3fSUN
+	.size	bluegl_glTexCoord2fNormal3fVertex3fSUN, .-bluegl_glTexCoord2fNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glMatrixRotatedEXT
@@ -1337,7 +1337,7 @@ bluegl_glMatrixRotatedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixRotatedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixRotatedEXT, .-glMatrixRotatedEXT
+	.size	bluegl_glMatrixRotatedEXT, .-bluegl_glMatrixRotatedEXT
 
 	.align	2
 	.global	bluegl_glIsProgramNV
@@ -1347,7 +1347,7 @@ bluegl_glIsProgramNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsProgramNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsProgramNV, .-glIsProgramNV
+	.size	bluegl_glIsProgramNV, .-bluegl_glIsProgramNV
 
 	.align	2
 	.global	bluegl_glUniform2dv
@@ -1357,7 +1357,7 @@ bluegl_glUniform2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2dv, .-glUniform2dv
+	.size	bluegl_glUniform2dv, .-bluegl_glUniform2dv
 
 	.align	2
 	.global	bluegl_glDepthBoundsEXT
@@ -1367,7 +1367,7 @@ bluegl_glDepthBoundsEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthBoundsEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthBoundsEXT, .-glDepthBoundsEXT
+	.size	bluegl_glDepthBoundsEXT, .-bluegl_glDepthBoundsEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4hvNV
@@ -1377,7 +1377,7 @@ bluegl_glVertexAttrib4hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4hvNV, .-glVertexAttrib4hvNV
+	.size	bluegl_glVertexAttrib4hvNV, .-bluegl_glVertexAttrib4hvNV
 
 	.align	2
 	.global	bluegl_glColorFragmentOp1ATI
@@ -1387,7 +1387,7 @@ bluegl_glColorFragmentOp1ATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorFragmentOp1ATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorFragmentOp1ATI, .-glColorFragmentOp1ATI
+	.size	bluegl_glColorFragmentOp1ATI, .-bluegl_glColorFragmentOp1ATI
 
 	.align	2
 	.global	bluegl_glGetPointerv
@@ -1397,7 +1397,7 @@ bluegl_glGetPointerv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPointerv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPointerv, .-glGetPointerv
+	.size	bluegl_glGetPointerv, .-bluegl_glGetPointerv
 
 	.align	2
 	.global	bluegl_glVertexBindingDivisor
@@ -1407,7 +1407,7 @@ bluegl_glVertexBindingDivisor:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexBindingDivisor]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexBindingDivisor, .-glVertexBindingDivisor
+	.size	bluegl_glVertexBindingDivisor, .-bluegl_glVertexBindingDivisor
 
 	.align	2
 	.global	bluegl_glGetUniformfv
@@ -1417,7 +1417,7 @@ bluegl_glGetUniformfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformfv, .-glGetUniformfv
+	.size	bluegl_glGetUniformfv, .-bluegl_glGetUniformfv
 
 	.align	2
 	.global	bluegl_glGetUniformuiv
@@ -1427,7 +1427,7 @@ bluegl_glGetUniformuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformuiv, .-glGetUniformuiv
+	.size	bluegl_glGetUniformuiv, .-bluegl_glGetUniformuiv
 
 	.align	2
 	.global	bluegl_glWindowPos3ivMESA
@@ -1437,7 +1437,7 @@ bluegl_glWindowPos3ivMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3ivMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3ivMESA, .-glWindowPos3ivMESA
+	.size	bluegl_glWindowPos3ivMESA, .-bluegl_glWindowPos3ivMESA
 
 	.align	2
 	.global	bluegl_glGetnUniformfvARB
@@ -1447,7 +1447,7 @@ bluegl_glGetnUniformfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformfvARB, .-glGetnUniformfvARB
+	.size	bluegl_glGetnUniformfvARB, .-bluegl_glGetnUniformfvARB
 
 	.align	2
 	.global	bluegl_glArrayObjectATI
@@ -1457,7 +1457,7 @@ bluegl_glArrayObjectATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glArrayObjectATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glArrayObjectATI, .-glArrayObjectATI
+	.size	bluegl_glArrayObjectATI, .-bluegl_glArrayObjectATI
 
 	.align	2
 	.global	bluegl_glClearColorxOES
@@ -1467,7 +1467,7 @@ bluegl_glClearColorxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearColorxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearColorxOES, .-glClearColorxOES
+	.size	bluegl_glClearColorxOES, .-bluegl_glClearColorxOES
 
 	.align	2
 	.global	bluegl_glPNTrianglesiATI
@@ -1477,7 +1477,7 @@ bluegl_glPNTrianglesiATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPNTrianglesiATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPNTrianglesiATI, .-glPNTrianglesiATI
+	.size	bluegl_glPNTrianglesiATI, .-bluegl_glPNTrianglesiATI
 
 	.align	2
 	.global	bluegl_glSampleMaskIndexedNV
@@ -1487,7 +1487,7 @@ bluegl_glSampleMaskIndexedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSampleMaskIndexedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSampleMaskIndexedNV, .-glSampleMaskIndexedNV
+	.size	bluegl_glSampleMaskIndexedNV, .-bluegl_glSampleMaskIndexedNV
 
 	.align	2
 	.global	bluegl_glCompileShaderIncludeARB
@@ -1497,7 +1497,7 @@ bluegl_glCompileShaderIncludeARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompileShaderIncludeARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompileShaderIncludeARB, .-glCompileShaderIncludeARB
+	.size	bluegl_glCompileShaderIncludeARB, .-bluegl_glCompileShaderIncludeARB
 
 	.align	2
 	.global	bluegl_glDrawElementsInstanced
@@ -1507,7 +1507,7 @@ bluegl_glDrawElementsInstanced:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsInstanced]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsInstanced, .-glDrawElementsInstanced
+	.size	bluegl_glDrawElementsInstanced, .-bluegl_glDrawElementsInstanced
 
 	.align	2
 	.global	bluegl_glVertexStream4svATI
@@ -1517,7 +1517,7 @@ bluegl_glVertexStream4svATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4svATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4svATI, .-glVertexStream4svATI
+	.size	bluegl_glVertexStream4svATI, .-bluegl_glVertexStream4svATI
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4iARB
@@ -1527,7 +1527,7 @@ bluegl_glMultiTexCoord4iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4iARB, .-glMultiTexCoord4iARB
+	.size	bluegl_glMultiTexCoord4iARB, .-bluegl_glMultiTexCoord4iARB
 
 	.align	2
 	.global	bluegl_glVariantfvEXT
@@ -1537,7 +1537,7 @@ bluegl_glVariantfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantfvEXT, .-glVariantfvEXT
+	.size	bluegl_glVariantfvEXT, .-bluegl_glVariantfvEXT
 
 	.align	2
 	.global	bluegl_glMatrixLoadfEXT
@@ -1547,7 +1547,7 @@ bluegl_glMatrixLoadfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoadfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoadfEXT, .-glMatrixLoadfEXT
+	.size	bluegl_glMatrixLoadfEXT, .-bluegl_glMatrixLoadfEXT
 
 	.align	2
 	.global	bluegl_glLoadIdentityDeformationMapSGIX
@@ -1557,7 +1557,7 @@ bluegl_glLoadIdentityDeformationMapSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadIdentityDeformationMapSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadIdentityDeformationMapSGIX, .-glLoadIdentityDeformationMapSGIX
+	.size	bluegl_glLoadIdentityDeformationMapSGIX, .-bluegl_glLoadIdentityDeformationMapSGIX
 
 	.align	2
 	.global	bluegl_glGetRenderbufferParameteriv
@@ -1567,7 +1567,7 @@ bluegl_glGetRenderbufferParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetRenderbufferParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetRenderbufferParameteriv, .-glGetRenderbufferParameteriv
+	.size	bluegl_glGetRenderbufferParameteriv, .-bluegl_glGetRenderbufferParameteriv
 
 	.align	2
 	.global	bluegl_glNamedRenderbufferStorage
@@ -1577,7 +1577,7 @@ bluegl_glNamedRenderbufferStorage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedRenderbufferStorage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedRenderbufferStorage, .-glNamedRenderbufferStorage
+	.size	bluegl_glNamedRenderbufferStorage, .-bluegl_glNamedRenderbufferStorage
 
 	.align	2
 	.global	bluegl_glProgramPathFragmentInputGenNV
@@ -1587,7 +1587,7 @@ bluegl_glProgramPathFragmentInputGenNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramPathFragmentInputGenNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramPathFragmentInputGenNV, .-glProgramPathFragmentInputGenNV
+	.size	bluegl_glProgramPathFragmentInputGenNV, .-bluegl_glProgramPathFragmentInputGenNV
 
 	.align	2
 	.global	bluegl_glFogCoordPointerListIBM
@@ -1597,7 +1597,7 @@ bluegl_glFogCoordPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordPointerListIBM, .-glFogCoordPointerListIBM
+	.size	bluegl_glFogCoordPointerListIBM, .-bluegl_glFogCoordPointerListIBM
 
 	.align	2
 	.global	bluegl_glFenceSync
@@ -1607,7 +1607,7 @@ bluegl_glFenceSync:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFenceSync]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFenceSync, .-glFenceSync
+	.size	bluegl_glFenceSync, .-bluegl_glFenceSync
 
 	.align	2
 	.global	bluegl_glGetVertexAttribIivEXT
@@ -1617,7 +1617,7 @@ bluegl_glGetVertexAttribIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribIivEXT, .-glGetVertexAttribIivEXT
+	.size	bluegl_glGetVertexAttribIivEXT, .-bluegl_glGetVertexAttribIivEXT
 
 	.align	2
 	.global	bluegl_glFramebufferDrawBuffersEXT
@@ -1627,7 +1627,7 @@ bluegl_glFramebufferDrawBuffersEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferDrawBuffersEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferDrawBuffersEXT, .-glFramebufferDrawBuffersEXT
+	.size	bluegl_glFramebufferDrawBuffersEXT, .-bluegl_glFramebufferDrawBuffersEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribs4fvNV
@@ -1637,7 +1637,7 @@ bluegl_glVertexAttribs4fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs4fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs4fvNV, .-glVertexAttribs4fvNV
+	.size	bluegl_glVertexAttribs4fvNV, .-bluegl_glVertexAttribs4fvNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib3sv
@@ -1647,7 +1647,7 @@ bluegl_glVertexAttrib3sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3sv, .-glVertexAttrib3sv
+	.size	bluegl_glVertexAttrib3sv, .-bluegl_glVertexAttrib3sv
 
 	.align	2
 	.global	bluegl_glGetQueryObjecti64vEXT
@@ -1657,7 +1657,7 @@ bluegl_glGetQueryObjecti64vEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjecti64vEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjecti64vEXT, .-glGetQueryObjecti64vEXT
+	.size	bluegl_glGetQueryObjecti64vEXT, .-bluegl_glGetQueryObjecti64vEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform4uiEXT
@@ -1667,7 +1667,7 @@ bluegl_glProgramUniform4uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4uiEXT, .-glProgramUniform4uiEXT
+	.size	bluegl_glProgramUniform4uiEXT, .-bluegl_glProgramUniform4uiEXT
 
 	.align	2
 	.global	bluegl_glValidateProgramPipeline
@@ -1677,7 +1677,7 @@ bluegl_glValidateProgramPipeline:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glValidateProgramPipeline]
 	ldr	x16, [x16]
 	br	x16
-	.size	glValidateProgramPipeline, .-glValidateProgramPipeline
+	.size	bluegl_glValidateProgramPipeline, .-bluegl_glValidateProgramPipeline
 
 	.align	2
 	.global	bluegl_glVertexAttrib3hvNV
@@ -1687,7 +1687,7 @@ bluegl_glVertexAttrib3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3hvNV, .-glVertexAttrib3hvNV
+	.size	bluegl_glVertexAttrib3hvNV, .-bluegl_glVertexAttrib3hvNV
 
 	.align	2
 	.global	bluegl_glTexPageCommitmentARB
@@ -1697,7 +1697,7 @@ bluegl_glTexPageCommitmentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexPageCommitmentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexPageCommitmentARB, .-glTexPageCommitmentARB
+	.size	bluegl_glTexPageCommitmentARB, .-bluegl_glTexPageCommitmentARB
 
 	.align	2
 	.global	bluegl_glGetInstrumentsSGIX
@@ -1707,7 +1707,7 @@ bluegl_glGetInstrumentsSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInstrumentsSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInstrumentsSGIX, .-glGetInstrumentsSGIX
+	.size	bluegl_glGetInstrumentsSGIX, .-bluegl_glGetInstrumentsSGIX
 
 	.align	2
 	.global	bluegl_glWindowPos3dvARB
@@ -1717,7 +1717,7 @@ bluegl_glWindowPos3dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3dvARB, .-glWindowPos3dvARB
+	.size	bluegl_glWindowPos3dvARB, .-bluegl_glWindowPos3dvARB
 
 	.align	2
 	.global	bluegl_glStencilStrokePathInstancedNV
@@ -1727,7 +1727,7 @@ bluegl_glStencilStrokePathInstancedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilStrokePathInstancedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilStrokePathInstancedNV, .-glStencilStrokePathInstancedNV
+	.size	bluegl_glStencilStrokePathInstancedNV, .-bluegl_glStencilStrokePathInstancedNV
 
 	.align	2
 	.global	bluegl_glTexEnvxvOES
@@ -1737,7 +1737,7 @@ bluegl_glTexEnvxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexEnvxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexEnvxvOES, .-glTexEnvxvOES
+	.size	bluegl_glTexEnvxvOES, .-bluegl_glTexEnvxvOES
 
 	.align	2
 	.global	bluegl_glProgramUniform2i64NV
@@ -1747,7 +1747,7 @@ bluegl_glProgramUniform2i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2i64NV, .-glProgramUniform2i64NV
+	.size	bluegl_glProgramUniform2i64NV, .-bluegl_glProgramUniform2i64NV
 
 	.align	2
 	.global	bluegl_glVertex2xOES
@@ -1757,7 +1757,7 @@ bluegl_glVertex2xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex2xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex2xOES, .-glVertex2xOES
+	.size	bluegl_glVertex2xOES, .-bluegl_glVertex2xOES
 
 	.align	2
 	.global	bluegl_glGenSamplers
@@ -1767,7 +1767,7 @@ bluegl_glGenSamplers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenSamplers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenSamplers, .-glGenSamplers
+	.size	bluegl_glGenSamplers, .-bluegl_glGenSamplers
 
 	.align	2
 	.global	bluegl_glProgramEnvParameterI4iNV
@@ -1777,7 +1777,7 @@ bluegl_glProgramEnvParameterI4iNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameterI4iNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameterI4iNV, .-glProgramEnvParameterI4iNV
+	.size	bluegl_glProgramEnvParameterI4iNV, .-bluegl_glProgramEnvParameterI4iNV
 
 	.align	2
 	.global	bluegl_glVertexAttribs2fvNV
@@ -1787,7 +1787,7 @@ bluegl_glVertexAttribs2fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs2fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs2fvNV, .-glVertexAttribs2fvNV
+	.size	bluegl_glVertexAttribs2fvNV, .-bluegl_glVertexAttribs2fvNV
 
 	.align	2
 	.global	bluegl_glDrawTransformFeedbackInstanced
@@ -1797,7 +1797,7 @@ bluegl_glDrawTransformFeedbackInstanced:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawTransformFeedbackInstanced]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawTransformFeedbackInstanced, .-glDrawTransformFeedbackInstanced
+	.size	bluegl_glDrawTransformFeedbackInstanced, .-bluegl_glDrawTransformFeedbackInstanced
 
 	.align	2
 	.global	bluegl_glStencilThenCoverStrokePathNV
@@ -1807,7 +1807,7 @@ bluegl_glStencilThenCoverStrokePathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilThenCoverStrokePathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilThenCoverStrokePathNV, .-glStencilThenCoverStrokePathNV
+	.size	bluegl_glStencilThenCoverStrokePathNV, .-bluegl_glStencilThenCoverStrokePathNV
 
 	.align	2
 	.global	bluegl_glDeleteVertexArraysAPPLE
@@ -1817,7 +1817,7 @@ bluegl_glDeleteVertexArraysAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteVertexArraysAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteVertexArraysAPPLE, .-glDeleteVertexArraysAPPLE
+	.size	bluegl_glDeleteVertexArraysAPPLE, .-bluegl_glDeleteVertexArraysAPPLE
 
 	.align	2
 	.global	bluegl_glGetNamedBufferParameterui64vNV
@@ -1827,7 +1827,7 @@ bluegl_glGetNamedBufferParameterui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferParameterui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferParameterui64vNV, .-glGetNamedBufferParameterui64vNV
+	.size	bluegl_glGetNamedBufferParameterui64vNV, .-bluegl_glGetNamedBufferParameterui64vNV
 
 	.align	2
 	.global	bluegl_glQueryMatrixxOES
@@ -1837,7 +1837,7 @@ bluegl_glQueryMatrixxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glQueryMatrixxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glQueryMatrixxOES, .-glQueryMatrixxOES
+	.size	bluegl_glQueryMatrixxOES, .-bluegl_glQueryMatrixxOES
 
 	.align	2
 	.global	bluegl_glTranslatexOES
@@ -1847,7 +1847,7 @@ bluegl_glTranslatexOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTranslatexOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTranslatexOES, .-glTranslatexOES
+	.size	bluegl_glTranslatexOES, .-bluegl_glTranslatexOES
 
 	.align	2
 	.global	bluegl_glDrawTransformFeedback
@@ -1857,7 +1857,7 @@ bluegl_glDrawTransformFeedback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawTransformFeedback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawTransformFeedback, .-glDrawTransformFeedback
+	.size	bluegl_glDrawTransformFeedback, .-bluegl_glDrawTransformFeedback
 
 	.align	2
 	.global	bluegl_glTexCoord2fColor4fNormal3fVertex3fvSUN
@@ -1867,7 +1867,7 @@ bluegl_glTexCoord2fColor4fNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fColor4fNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fColor4fNormal3fVertex3fvSUN, .-glTexCoord2fColor4fNormal3fVertex3fvSUN
+	.size	bluegl_glTexCoord2fColor4fNormal3fVertex3fvSUN, .-bluegl_glTexCoord2fColor4fNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glVDPAURegisterVideoSurfaceNV
@@ -1877,7 +1877,7 @@ bluegl_glVDPAURegisterVideoSurfaceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAURegisterVideoSurfaceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAURegisterVideoSurfaceNV, .-glVDPAURegisterVideoSurfaceNV
+	.size	bluegl_glVDPAURegisterVideoSurfaceNV, .-bluegl_glVDPAURegisterVideoSurfaceNV
 
 	.align	2
 	.global	bluegl_glGetTexParameterIuiv
@@ -1887,7 +1887,7 @@ bluegl_glGetTexParameterIuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameterIuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameterIuiv, .-glGetTexParameterIuiv
+	.size	bluegl_glGetTexParameterIuiv, .-bluegl_glGetTexParameterIuiv
 
 	.align	2
 	.global	bluegl_glVertexStream2iATI
@@ -1897,7 +1897,7 @@ bluegl_glVertexStream2iATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2iATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2iATI, .-glVertexStream2iATI
+	.size	bluegl_glVertexStream2iATI, .-bluegl_glVertexStream2iATI
 
 	.align	2
 	.global	bluegl_glVertexAttrib4Nbv
@@ -1907,7 +1907,7 @@ bluegl_glVertexAttrib4Nbv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4Nbv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4Nbv, .-glVertexAttrib4Nbv
+	.size	bluegl_glVertexAttrib4Nbv, .-bluegl_glVertexAttrib4Nbv
 
 	.align	2
 	.global	bluegl_glListParameteriSGIX
@@ -1917,7 +1917,7 @@ bluegl_glListParameteriSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glListParameteriSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glListParameteriSGIX, .-glListParameteriSGIX
+	.size	bluegl_glListParameteriSGIX, .-bluegl_glListParameteriSGIX
 
 	.align	2
 	.global	bluegl_glBlendColorxOES
@@ -1927,7 +1927,7 @@ bluegl_glBlendColorxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendColorxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendColorxOES, .-glBlendColorxOES
+	.size	bluegl_glBlendColorxOES, .-bluegl_glBlendColorxOES
 
 	.align	2
 	.global	bluegl_glUniformui64vNV
@@ -1937,7 +1937,7 @@ bluegl_glUniformui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformui64vNV, .-glUniformui64vNV
+	.size	bluegl_glUniformui64vNV, .-bluegl_glUniformui64vNV
 
 	.align	2
 	.global	bluegl_glIsSync
@@ -1947,7 +1947,7 @@ bluegl_glIsSync:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsSync]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsSync, .-glIsSync
+	.size	bluegl_glIsSync, .-bluegl_glIsSync
 
 	.align	2
 	.global	bluegl_glFogCoordhvNV
@@ -1957,7 +1957,7 @@ bluegl_glFogCoordhvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordhvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordhvNV, .-glFogCoordhvNV
+	.size	bluegl_glFogCoordhvNV, .-bluegl_glFogCoordhvNV
 
 	.align	2
 	.global	bluegl_glFramebufferTextureLayerEXT
@@ -1967,7 +1967,7 @@ bluegl_glFramebufferTextureLayerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureLayerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureLayerEXT, .-glFramebufferTextureLayerEXT
+	.size	bluegl_glFramebufferTextureLayerEXT, .-bluegl_glFramebufferTextureLayerEXT
 
 	.align	2
 	.global	bluegl_glGetObjectPtrLabel
@@ -1977,7 +1977,7 @@ bluegl_glGetObjectPtrLabel:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectPtrLabel]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectPtrLabel, .-glGetObjectPtrLabel
+	.size	bluegl_glGetObjectPtrLabel, .-bluegl_glGetObjectPtrLabel
 
 	.align	2
 	.global	bluegl_glTextureParameteri
@@ -1987,7 +1987,7 @@ bluegl_glTextureParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameteri, .-glTextureParameteri
+	.size	bluegl_glTextureParameteri, .-bluegl_glTextureParameteri
 
 	.align	2
 	.global	bluegl_glTextureParameterf
@@ -1997,7 +1997,7 @@ bluegl_glTextureParameterf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterf, .-glTextureParameterf
+	.size	bluegl_glTextureParameterf, .-bluegl_glTextureParameterf
 
 	.align	2
 	.global	bluegl_glUniformMatrix2x3dv
@@ -2007,7 +2007,7 @@ bluegl_glUniformMatrix2x3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix2x3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix2x3dv, .-glUniformMatrix2x3dv
+	.size	bluegl_glUniformMatrix2x3dv, .-bluegl_glUniformMatrix2x3dv
 
 	.align	2
 	.global	bluegl_glFramebufferDrawBufferEXT
@@ -2017,7 +2017,7 @@ bluegl_glFramebufferDrawBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferDrawBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferDrawBufferEXT, .-glFramebufferDrawBufferEXT
+	.size	bluegl_glFramebufferDrawBufferEXT, .-bluegl_glFramebufferDrawBufferEXT
 
 	.align	2
 	.global	bluegl_glCopyColorSubTable
@@ -2027,7 +2027,7 @@ bluegl_glCopyColorSubTable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyColorSubTable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyColorSubTable, .-glCopyColorSubTable
+	.size	bluegl_glCopyColorSubTable, .-bluegl_glCopyColorSubTable
 
 	.align	2
 	.global	bluegl_glVertexAttribL3d
@@ -2037,7 +2037,7 @@ bluegl_glVertexAttribL3d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3d, .-glVertexAttribL3d
+	.size	bluegl_glVertexAttribL3d, .-bluegl_glVertexAttribL3d
 
 	.align	2
 	.global	bluegl_glPathParameterfNV
@@ -2047,7 +2047,7 @@ bluegl_glPathParameterfNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathParameterfNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathParameterfNV, .-glPathParameterfNV
+	.size	bluegl_glPathParameterfNV, .-bluegl_glPathParameterfNV
 
 	.align	2
 	.global	bluegl_glMatrixLoadTranspose3x3fNV
@@ -2057,7 +2057,7 @@ bluegl_glMatrixLoadTranspose3x3fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoadTranspose3x3fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoadTranspose3x3fNV, .-glMatrixLoadTranspose3x3fNV
+	.size	bluegl_glMatrixLoadTranspose3x3fNV, .-bluegl_glMatrixLoadTranspose3x3fNV
 
 	.align	2
 	.global	bluegl_glWindowPos2iv
@@ -2067,7 +2067,7 @@ bluegl_glWindowPos2iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2iv, .-glWindowPos2iv
+	.size	bluegl_glWindowPos2iv, .-bluegl_glWindowPos2iv
 
 	.align	2
 	.global	bluegl_glDrawRangeElementsEXT
@@ -2077,7 +2077,7 @@ bluegl_glDrawRangeElementsEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawRangeElementsEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawRangeElementsEXT, .-glDrawRangeElementsEXT
+	.size	bluegl_glDrawRangeElementsEXT, .-bluegl_glDrawRangeElementsEXT
 
 	.align	2
 	.global	bluegl_glColor4xOES
@@ -2087,7 +2087,7 @@ bluegl_glColor4xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4xOES, .-glColor4xOES
+	.size	bluegl_glColor4xOES, .-bluegl_glColor4xOES
 
 	.align	2
 	.global	bluegl_glFogCoordd
@@ -2097,7 +2097,7 @@ bluegl_glFogCoordd:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordd]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordd, .-glFogCoordd
+	.size	bluegl_glFogCoordd, .-bluegl_glFogCoordd
 
 	.align	2
 	.global	bluegl_glProgramUniform1ui
@@ -2107,7 +2107,7 @@ bluegl_glProgramUniform1ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1ui, .-glProgramUniform1ui
+	.size	bluegl_glProgramUniform1ui, .-bluegl_glProgramUniform1ui
 
 	.align	2
 	.global	bluegl_glDeleteBuffersARB
@@ -2117,7 +2117,7 @@ bluegl_glDeleteBuffersARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteBuffersARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteBuffersARB, .-glDeleteBuffersARB
+	.size	bluegl_glDeleteBuffersARB, .-bluegl_glDeleteBuffersARB
 
 	.align	2
 	.global	bluegl_glUnmapBufferARB
@@ -2127,7 +2127,7 @@ bluegl_glUnmapBufferARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUnmapBufferARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUnmapBufferARB, .-glUnmapBufferARB
+	.size	bluegl_glUnmapBufferARB, .-bluegl_glUnmapBufferARB
 
 	.align	2
 	.global	bluegl_glCopyTexImage2D
@@ -2137,7 +2137,7 @@ bluegl_glCopyTexImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexImage2D, .-glCopyTexImage2D
+	.size	bluegl_glCopyTexImage2D, .-bluegl_glCopyTexImage2D
 
 	.align	2
 	.global	bluegl_glMaterialxOES
@@ -2147,7 +2147,7 @@ bluegl_glMaterialxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMaterialxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMaterialxOES, .-glMaterialxOES
+	.size	bluegl_glMaterialxOES, .-bluegl_glMaterialxOES
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x4fvEXT
@@ -2157,7 +2157,7 @@ bluegl_glProgramUniformMatrix2x4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x4fvEXT, .-glProgramUniformMatrix2x4fvEXT
+	.size	bluegl_glProgramUniformMatrix2x4fvEXT, .-bluegl_glProgramUniformMatrix2x4fvEXT
 
 	.align	2
 	.global	bluegl_glTestObjectAPPLE
@@ -2167,7 +2167,7 @@ bluegl_glTestObjectAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTestObjectAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTestObjectAPPLE, .-glTestObjectAPPLE
+	.size	bluegl_glTestObjectAPPLE, .-bluegl_glTestObjectAPPLE
 
 	.align	2
 	.global	bluegl_glRenderbufferStorageEXT
@@ -2177,7 +2177,7 @@ bluegl_glRenderbufferStorageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRenderbufferStorageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRenderbufferStorageEXT, .-glRenderbufferStorageEXT
+	.size	bluegl_glRenderbufferStorageEXT, .-bluegl_glRenderbufferStorageEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribL1ui64ARB
@@ -2187,7 +2187,7 @@ bluegl_glVertexAttribL1ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1ui64ARB, .-glVertexAttribL1ui64ARB
+	.size	bluegl_glVertexAttribL1ui64ARB, .-bluegl_glVertexAttribL1ui64ARB
 
 	.align	2
 	.global	bluegl_glEndFragmentShaderATI
@@ -2197,7 +2197,7 @@ bluegl_glEndFragmentShaderATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndFragmentShaderATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndFragmentShaderATI, .-glEndFragmentShaderATI
+	.size	bluegl_glEndFragmentShaderATI, .-bluegl_glEndFragmentShaderATI
 
 	.align	2
 	.global	bluegl_glPathParameterivNV
@@ -2207,7 +2207,7 @@ bluegl_glPathParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathParameterivNV, .-glPathParameterivNV
+	.size	bluegl_glPathParameterivNV, .-bluegl_glPathParameterivNV
 
 	.align	2
 	.global	bluegl_glUniform4uiv
@@ -2217,7 +2217,7 @@ bluegl_glUniform4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4uiv, .-glUniform4uiv
+	.size	bluegl_glUniform4uiv, .-bluegl_glUniform4uiv
 
 	.align	2
 	.global	bluegl_glFrameZoomSGIX
@@ -2227,7 +2227,7 @@ bluegl_glFrameZoomSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFrameZoomSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFrameZoomSGIX, .-glFrameZoomSGIX
+	.size	bluegl_glFrameZoomSGIX, .-bluegl_glFrameZoomSGIX
 
 	.align	2
 	.global	bluegl_glSecondaryColor3fEXT
@@ -2237,7 +2237,7 @@ bluegl_glSecondaryColor3fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3fEXT, .-glSecondaryColor3fEXT
+	.size	bluegl_glSecondaryColor3fEXT, .-bluegl_glSecondaryColor3fEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribL1dv
@@ -2247,7 +2247,7 @@ bluegl_glVertexAttribL1dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1dv, .-glVertexAttribL1dv
+	.size	bluegl_glVertexAttribL1dv, .-bluegl_glVertexAttribL1dv
 
 	.align	2
 	.global	bluegl_glNormalStream3svATI
@@ -2257,7 +2257,7 @@ bluegl_glNormalStream3svATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3svATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3svATI, .-glNormalStream3svATI
+	.size	bluegl_glNormalStream3svATI, .-bluegl_glNormalStream3svATI
 
 	.align	2
 	.global	bluegl_glPathStencilFuncNV
@@ -2267,7 +2267,7 @@ bluegl_glPathStencilFuncNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathStencilFuncNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathStencilFuncNV, .-glPathStencilFuncNV
+	.size	bluegl_glPathStencilFuncNV, .-bluegl_glPathStencilFuncNV
 
 	.align	2
 	.global	bluegl_glSetInvariantEXT
@@ -2277,7 +2277,7 @@ bluegl_glSetInvariantEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSetInvariantEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSetInvariantEXT, .-glSetInvariantEXT
+	.size	bluegl_glSetInvariantEXT, .-bluegl_glSetInvariantEXT
 
 	.align	2
 	.global	bluegl_glGetTexBumpParameterivATI
@@ -2287,7 +2287,7 @@ bluegl_glGetTexBumpParameterivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexBumpParameterivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexBumpParameterivATI, .-glGetTexBumpParameterivATI
+	.size	bluegl_glGetTexBumpParameterivATI, .-bluegl_glGetTexBumpParameterivATI
 
 	.align	2
 	.global	bluegl_glBlendEquationSeparateEXT
@@ -2297,7 +2297,7 @@ bluegl_glBlendEquationSeparateEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationSeparateEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationSeparateEXT, .-glBlendEquationSeparateEXT
+	.size	bluegl_glBlendEquationSeparateEXT, .-bluegl_glBlendEquationSeparateEXT
 
 	.align	2
 	.global	bluegl_glEndOcclusionQueryNV
@@ -2307,7 +2307,7 @@ bluegl_glEndOcclusionQueryNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndOcclusionQueryNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndOcclusionQueryNV, .-glEndOcclusionQueryNV
+	.size	bluegl_glEndOcclusionQueryNV, .-bluegl_glEndOcclusionQueryNV
 
 	.align	2
 	.global	bluegl_glScissorArrayv
@@ -2317,7 +2317,7 @@ bluegl_glScissorArrayv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glScissorArrayv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glScissorArrayv, .-glScissorArrayv
+	.size	bluegl_glScissorArrayv, .-bluegl_glScissorArrayv
 
 	.align	2
 	.global	bluegl_glMapTexture2DINTEL
@@ -2327,7 +2327,7 @@ bluegl_glMapTexture2DINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapTexture2DINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapTexture2DINTEL, .-glMapTexture2DINTEL
+	.size	bluegl_glMapTexture2DINTEL, .-bluegl_glMapTexture2DINTEL
 
 	.align	2
 	.global	bluegl_glGetVertexAttribArrayObjectfvATI
@@ -2337,7 +2337,7 @@ bluegl_glGetVertexAttribArrayObjectfvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribArrayObjectfvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribArrayObjectfvATI, .-glGetVertexAttribArrayObjectfvATI
+	.size	bluegl_glGetVertexAttribArrayObjectfvATI, .-bluegl_glGetVertexAttribArrayObjectfvATI
 
 	.align	2
 	.global	bluegl_glVertexAttrib4ubvNV
@@ -2347,7 +2347,7 @@ bluegl_glVertexAttrib4ubvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4ubvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4ubvNV, .-glVertexAttrib4ubvNV
+	.size	bluegl_glVertexAttrib4ubvNV, .-bluegl_glVertexAttrib4ubvNV
 
 	.align	2
 	.global	bluegl_glPointParameterfvARB
@@ -2357,7 +2357,7 @@ bluegl_glPointParameterfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterfvARB, .-glPointParameterfvARB
+	.size	bluegl_glPointParameterfvARB, .-bluegl_glPointParameterfvARB
 
 	.align	2
 	.global	bluegl_glTagSampleBufferSGIX
@@ -2367,7 +2367,7 @@ bluegl_glTagSampleBufferSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTagSampleBufferSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTagSampleBufferSGIX, .-glTagSampleBufferSGIX
+	.size	bluegl_glTagSampleBufferSGIX, .-bluegl_glTagSampleBufferSGIX
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4dvEXT
@@ -2377,7 +2377,7 @@ bluegl_glProgramUniformMatrix4dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4dvEXT, .-glProgramUniformMatrix4dvEXT
+	.size	bluegl_glProgramUniformMatrix4dvEXT, .-bluegl_glProgramUniformMatrix4dvEXT
 
 	.align	2
 	.global	bluegl_glGetnColorTable
@@ -2387,7 +2387,7 @@ bluegl_glGetnColorTable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnColorTable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnColorTable, .-glGetnColorTable
+	.size	bluegl_glGetnColorTable, .-bluegl_glGetnColorTable
 
 	.align	2
 	.global	bluegl_glFramebufferTextureLayerARB
@@ -2397,7 +2397,7 @@ bluegl_glFramebufferTextureLayerARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureLayerARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureLayerARB, .-glFramebufferTextureLayerARB
+	.size	bluegl_glFramebufferTextureLayerARB, .-bluegl_glFramebufferTextureLayerARB
 
 	.align	2
 	.global	bluegl_glVertexAttribL2dvEXT
@@ -2407,7 +2407,7 @@ bluegl_glVertexAttribL2dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2dvEXT, .-glVertexAttribL2dvEXT
+	.size	bluegl_glVertexAttribL2dvEXT, .-bluegl_glVertexAttribL2dvEXT
 
 	.align	2
 	.global	bluegl_glGetCombinerStageParameterfvNV
@@ -2417,7 +2417,7 @@ bluegl_glGetCombinerStageParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCombinerStageParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCombinerStageParameterfvNV, .-glGetCombinerStageParameterfvNV
+	.size	bluegl_glGetCombinerStageParameterfvNV, .-bluegl_glGetCombinerStageParameterfvNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP1uiv
@@ -2427,7 +2427,7 @@ bluegl_glMultiTexCoordP1uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP1uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP1uiv, .-glMultiTexCoordP1uiv
+	.size	bluegl_glMultiTexCoordP1uiv, .-bluegl_glMultiTexCoordP1uiv
 
 	.align	2
 	.global	bluegl_glMapBuffer
@@ -2437,7 +2437,7 @@ bluegl_glMapBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapBuffer, .-glMapBuffer
+	.size	bluegl_glMapBuffer, .-bluegl_glMapBuffer
 
 	.align	2
 	.global	bluegl_glSecondaryColor3d
@@ -2447,7 +2447,7 @@ bluegl_glSecondaryColor3d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3d, .-glSecondaryColor3d
+	.size	bluegl_glSecondaryColor3d, .-bluegl_glSecondaryColor3d
 
 	.align	2
 	.global	bluegl_glSecondaryColor3f
@@ -2457,7 +2457,7 @@ bluegl_glSecondaryColor3f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3f, .-glSecondaryColor3f
+	.size	bluegl_glSecondaryColor3f, .-bluegl_glSecondaryColor3f
 
 	.align	2
 	.global	bluegl_glVertexAttribLFormat
@@ -2467,7 +2467,7 @@ bluegl_glVertexAttribLFormat:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribLFormat]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribLFormat, .-glVertexAttribLFormat
+	.size	bluegl_glVertexAttribLFormat, .-bluegl_glVertexAttribLFormat
 
 	.align	2
 	.global	bluegl_glSecondaryColor3b
@@ -2477,7 +2477,7 @@ bluegl_glSecondaryColor3b:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3b]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3b, .-glSecondaryColor3b
+	.size	bluegl_glSecondaryColor3b, .-bluegl_glSecondaryColor3b
 
 	.align	2
 	.global	bluegl_glVertexStream1fATI
@@ -2487,7 +2487,7 @@ bluegl_glVertexStream1fATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1fATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1fATI, .-glVertexStream1fATI
+	.size	bluegl_glVertexStream1fATI, .-bluegl_glVertexStream1fATI
 
 	.align	2
 	.global	bluegl_glCoverageModulationNV
@@ -2497,7 +2497,7 @@ bluegl_glCoverageModulationNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCoverageModulationNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCoverageModulationNV, .-glCoverageModulationNV
+	.size	bluegl_glCoverageModulationNV, .-bluegl_glCoverageModulationNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3i
@@ -2507,7 +2507,7 @@ bluegl_glSecondaryColor3i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3i, .-glSecondaryColor3i
+	.size	bluegl_glSecondaryColor3i, .-bluegl_glSecondaryColor3i
 
 	.align	2
 	.global	bluegl_glDeleteSync
@@ -2517,7 +2517,7 @@ bluegl_glDeleteSync:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteSync]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteSync, .-glDeleteSync
+	.size	bluegl_glDeleteSync, .-bluegl_glDeleteSync
 
 	.align	2
 	.global	bluegl_glGetProgramParameterfvNV
@@ -2527,7 +2527,7 @@ bluegl_glGetProgramParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramParameterfvNV, .-glGetProgramParameterfvNV
+	.size	bluegl_glGetProgramParameterfvNV, .-bluegl_glGetProgramParameterfvNV
 
 	.align	2
 	.global	bluegl_glMaxShaderCompilerThreadsARB
@@ -2537,7 +2537,7 @@ bluegl_glMaxShaderCompilerThreadsARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMaxShaderCompilerThreadsARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMaxShaderCompilerThreadsARB, .-glMaxShaderCompilerThreadsARB
+	.size	bluegl_glMaxShaderCompilerThreadsARB, .-bluegl_glMaxShaderCompilerThreadsARB
 
 	.align	2
 	.global	bluegl_glUniformMatrix4x2dv
@@ -2547,7 +2547,7 @@ bluegl_glUniformMatrix4x2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix4x2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix4x2dv, .-glUniformMatrix4x2dv
+	.size	bluegl_glUniformMatrix4x2dv, .-bluegl_glUniformMatrix4x2dv
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribLOffsetEXT
@@ -2557,7 +2557,7 @@ bluegl_glVertexArrayVertexAttribLOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribLOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribLOffsetEXT, .-glVertexArrayVertexAttribLOffsetEXT
+	.size	bluegl_glVertexArrayVertexAttribLOffsetEXT, .-bluegl_glVertexArrayVertexAttribLOffsetEXT
 
 	.align	2
 	.global	bluegl_glSecondaryColor3s
@@ -2567,7 +2567,7 @@ bluegl_glSecondaryColor3s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3s, .-glSecondaryColor3s
+	.size	bluegl_glSecondaryColor3s, .-bluegl_glSecondaryColor3s
 
 	.align	2
 	.global	bluegl_glIsImageHandleResidentNV
@@ -2577,7 +2577,7 @@ bluegl_glIsImageHandleResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsImageHandleResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsImageHandleResidentNV, .-glIsImageHandleResidentNV
+	.size	bluegl_glIsImageHandleResidentNV, .-bluegl_glIsImageHandleResidentNV
 
 	.align	2
 	.global	bluegl_glUniform3iv
@@ -2587,7 +2587,7 @@ bluegl_glUniform3iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3iv, .-glUniform3iv
+	.size	bluegl_glUniform3iv, .-bluegl_glUniform3iv
 
 	.align	2
 	.global	bluegl_glVertexAttribL3i64vNV
@@ -2597,7 +2597,7 @@ bluegl_glVertexAttribL3i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3i64vNV, .-glVertexAttribL3i64vNV
+	.size	bluegl_glVertexAttribL3i64vNV, .-bluegl_glVertexAttribL3i64vNV
 
 	.align	2
 	.global	bluegl_glPolygonMode
@@ -2607,7 +2607,7 @@ bluegl_glPolygonMode:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPolygonMode]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPolygonMode, .-glPolygonMode
+	.size	bluegl_glPolygonMode, .-bluegl_glPolygonMode
 
 	.align	2
 	.global	bluegl_glProgramUniform4iv
@@ -2617,7 +2617,7 @@ bluegl_glProgramUniform4iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4iv, .-glProgramUniform4iv
+	.size	bluegl_glProgramUniform4iv, .-bluegl_glProgramUniform4iv
 
 	.align	2
 	.global	bluegl_glVertexAttrib1dvARB
@@ -2627,7 +2627,7 @@ bluegl_glVertexAttrib1dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1dvARB, .-glVertexAttrib1dvARB
+	.size	bluegl_glVertexAttrib1dvARB, .-bluegl_glVertexAttrib1dvARB
 
 	.align	2
 	.global	bluegl_glTextureSubImage2DEXT
@@ -2637,7 +2637,7 @@ bluegl_glTextureSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureSubImage2DEXT, .-glTextureSubImage2DEXT
+	.size	bluegl_glTextureSubImage2DEXT, .-bluegl_glTextureSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glIsVertexArrayAPPLE
@@ -2647,7 +2647,7 @@ bluegl_glIsVertexArrayAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsVertexArrayAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsVertexArrayAPPLE, .-glIsVertexArrayAPPLE
+	.size	bluegl_glIsVertexArrayAPPLE, .-bluegl_glIsVertexArrayAPPLE
 
 	.align	2
 	.global	bluegl_glUseProgram
@@ -2657,7 +2657,7 @@ bluegl_glUseProgram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUseProgram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUseProgram, .-glUseProgram
+	.size	bluegl_glUseProgram, .-bluegl_glUseProgram
 
 	.align	2
 	.global	bluegl_glGetProgramInfoLog
@@ -2667,7 +2667,7 @@ bluegl_glGetProgramInfoLog:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramInfoLog]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramInfoLog, .-glGetProgramInfoLog
+	.size	bluegl_glGetProgramInfoLog, .-bluegl_glGetProgramInfoLog
 
 	.align	2
 	.global	bluegl_glProgramEnvParametersI4uivNV
@@ -2677,7 +2677,7 @@ bluegl_glProgramEnvParametersI4uivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParametersI4uivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParametersI4uivNV, .-glProgramEnvParametersI4uivNV
+	.size	bluegl_glProgramEnvParametersI4uivNV, .-bluegl_glProgramEnvParametersI4uivNV
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribLFormatEXT
@@ -2687,7 +2687,7 @@ bluegl_glVertexArrayVertexAttribLFormatEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribLFormatEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribLFormatEXT, .-glVertexArrayVertexAttribLFormatEXT
+	.size	bluegl_glVertexArrayVertexAttribLFormatEXT, .-bluegl_glVertexArrayVertexAttribLFormatEXT
 
 	.align	2
 	.global	bluegl_glUniform3fvARB
@@ -2697,7 +2697,7 @@ bluegl_glUniform3fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3fvARB, .-glUniform3fvARB
+	.size	bluegl_glUniform3fvARB, .-bluegl_glUniform3fvARB
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x2fvEXT
@@ -2707,7 +2707,7 @@ bluegl_glProgramUniformMatrix3x2fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x2fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x2fvEXT, .-glProgramUniformMatrix3x2fvEXT
+	.size	bluegl_glProgramUniformMatrix3x2fvEXT, .-bluegl_glProgramUniformMatrix3x2fvEXT
 
 	.align	2
 	.global	bluegl_glCopyTextureSubImage3DEXT
@@ -2717,7 +2717,7 @@ bluegl_glCopyTextureSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureSubImage3DEXT, .-glCopyTextureSubImage3DEXT
+	.size	bluegl_glCopyTextureSubImage3DEXT, .-bluegl_glCopyTextureSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glBindBufferBaseNV
@@ -2727,7 +2727,7 @@ bluegl_glBindBufferBaseNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferBaseNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferBaseNV, .-glBindBufferBaseNV
+	.size	bluegl_glBindBufferBaseNV, .-bluegl_glBindBufferBaseNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2bvOES
@@ -2737,7 +2737,7 @@ bluegl_glMultiTexCoord2bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2bvOES, .-glMultiTexCoord2bvOES
+	.size	bluegl_glMultiTexCoord2bvOES, .-bluegl_glMultiTexCoord2bvOES
 
 	.align	2
 	.global	bluegl_glUniform3i64vARB
@@ -2747,7 +2747,7 @@ bluegl_glUniform3i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3i64vARB, .-glUniform3i64vARB
+	.size	bluegl_glUniform3i64vARB, .-bluegl_glUniform3i64vARB
 
 	.align	2
 	.global	bluegl_glTextureLightEXT
@@ -2757,7 +2757,7 @@ bluegl_glTextureLightEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureLightEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureLightEXT, .-glTextureLightEXT
+	.size	bluegl_glTextureLightEXT, .-bluegl_glTextureLightEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3dARB
@@ -2767,7 +2767,7 @@ bluegl_glMultiTexCoord3dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3dARB, .-glMultiTexCoord3dARB
+	.size	bluegl_glMultiTexCoord3dARB, .-bluegl_glMultiTexCoord3dARB
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTextureEXT
@@ -2777,7 +2777,7 @@ bluegl_glNamedFramebufferTextureEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTextureEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTextureEXT, .-glNamedFramebufferTextureEXT
+	.size	bluegl_glNamedFramebufferTextureEXT, .-bluegl_glNamedFramebufferTextureEXT
 
 	.align	2
 	.global	bluegl_glEvalCoord2xvOES
@@ -2787,7 +2787,7 @@ bluegl_glEvalCoord2xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEvalCoord2xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEvalCoord2xvOES, .-glEvalCoord2xvOES
+	.size	bluegl_glEvalCoord2xvOES, .-bluegl_glEvalCoord2xvOES
 
 	.align	2
 	.global	bluegl_glBindFragDataLocationEXT
@@ -2797,7 +2797,7 @@ bluegl_glBindFragDataLocationEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindFragDataLocationEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindFragDataLocationEXT, .-glBindFragDataLocationEXT
+	.size	bluegl_glBindFragDataLocationEXT, .-bluegl_glBindFragDataLocationEXT
 
 	.align	2
 	.global	bluegl_glTexImage2DMultisampleCoverageNV
@@ -2807,7 +2807,7 @@ bluegl_glTexImage2DMultisampleCoverageNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage2DMultisampleCoverageNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage2DMultisampleCoverageNV, .-glTexImage2DMultisampleCoverageNV
+	.size	bluegl_glTexImage2DMultisampleCoverageNV, .-bluegl_glTexImage2DMultisampleCoverageNV
 
 	.align	2
 	.global	bluegl_glGetAttribLocationARB
@@ -2817,7 +2817,7 @@ bluegl_glGetAttribLocationARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetAttribLocationARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetAttribLocationARB, .-glGetAttribLocationARB
+	.size	bluegl_glGetAttribLocationARB, .-bluegl_glGetAttribLocationARB
 
 	.align	2
 	.global	bluegl_glDeleteShader
@@ -2827,7 +2827,7 @@ bluegl_glDeleteShader:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteShader]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteShader, .-glDeleteShader
+	.size	bluegl_glDeleteShader, .-bluegl_glDeleteShader
 
 	.align	2
 	.global	bluegl_glVertexAttrib1fARB
@@ -2837,7 +2837,7 @@ bluegl_glVertexAttrib1fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1fARB, .-glVertexAttrib1fARB
+	.size	bluegl_glVertexAttrib1fARB, .-bluegl_glVertexAttrib1fARB
 
 	.align	2
 	.global	bluegl_glTexCoord2fColor4ubVertex3fSUN
@@ -2847,7 +2847,7 @@ bluegl_glTexCoord2fColor4ubVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fColor4ubVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fColor4ubVertex3fSUN, .-glTexCoord2fColor4ubVertex3fSUN
+	.size	bluegl_glTexCoord2fColor4ubVertex3fSUN, .-bluegl_glTexCoord2fColor4ubVertex3fSUN
 
 	.align	2
 	.global	bluegl_glCopyTextureSubImage1D
@@ -2857,7 +2857,7 @@ bluegl_glCopyTextureSubImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureSubImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureSubImage1D, .-glCopyTextureSubImage1D
+	.size	bluegl_glCopyTextureSubImage1D, .-bluegl_glCopyTextureSubImage1D
 
 	.align	2
 	.global	bluegl_glTextureParameteriEXT
@@ -2867,7 +2867,7 @@ bluegl_glTextureParameteriEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameteriEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameteriEXT, .-glTextureParameteriEXT
+	.size	bluegl_glTextureParameteriEXT, .-bluegl_glTextureParameteriEXT
 
 	.align	2
 	.global	bluegl_glMapParameterfvNV
@@ -2877,7 +2877,7 @@ bluegl_glMapParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapParameterfvNV, .-glMapParameterfvNV
+	.size	bluegl_glMapParameterfvNV, .-bluegl_glMapParameterfvNV
 
 	.align	2
 	.global	bluegl_glTextureParameterIuiv
@@ -2887,7 +2887,7 @@ bluegl_glTextureParameterIuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterIuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterIuiv, .-glTextureParameterIuiv
+	.size	bluegl_glTextureParameterIuiv, .-bluegl_glTextureParameterIuiv
 
 	.align	2
 	.global	bluegl_glGetMinmaxParameterivEXT
@@ -2897,7 +2897,7 @@ bluegl_glGetMinmaxParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMinmaxParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMinmaxParameterivEXT, .-glGetMinmaxParameterivEXT
+	.size	bluegl_glGetMinmaxParameterivEXT, .-bluegl_glGetMinmaxParameterivEXT
 
 	.align	2
 	.global	bluegl_glGetVideoi64vNV
@@ -2907,7 +2907,7 @@ bluegl_glGetVideoi64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideoi64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideoi64vNV, .-glGetVideoi64vNV
+	.size	bluegl_glGetVideoi64vNV, .-bluegl_glGetVideoi64vNV
 
 	.align	2
 	.global	bluegl_glWindowPos3sARB
@@ -2917,7 +2917,7 @@ bluegl_glWindowPos3sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3sARB, .-glWindowPos3sARB
+	.size	bluegl_glWindowPos3sARB, .-bluegl_glWindowPos3sARB
 
 	.align	2
 	.global	bluegl_glGetConvolutionParameterfv
@@ -2927,7 +2927,7 @@ bluegl_glGetConvolutionParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetConvolutionParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetConvolutionParameterfv, .-glGetConvolutionParameterfv
+	.size	bluegl_glGetConvolutionParameterfv, .-bluegl_glGetConvolutionParameterfv
 
 	.align	2
 	.global	bluegl_glUniform2ui
@@ -2937,7 +2937,7 @@ bluegl_glUniform2ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2ui, .-glUniform2ui
+	.size	bluegl_glUniform2ui, .-bluegl_glUniform2ui
 
 	.align	2
 	.global	bluegl_glVertexAttribI3i
@@ -2947,7 +2947,7 @@ bluegl_glVertexAttribI3i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3i, .-glVertexAttribI3i
+	.size	bluegl_glVertexAttribI3i, .-bluegl_glVertexAttribI3i
 
 	.align	2
 	.global	bluegl_glTexCoord2xOES
@@ -2957,7 +2957,7 @@ bluegl_glTexCoord2xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2xOES, .-glTexCoord2xOES
+	.size	bluegl_glTexCoord2xOES, .-bluegl_glTexCoord2xOES
 
 	.align	2
 	.global	bluegl_glVertexAttribFormat
@@ -2967,7 +2967,7 @@ bluegl_glVertexAttribFormat:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribFormat]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribFormat, .-glVertexAttribFormat
+	.size	bluegl_glVertexAttribFormat, .-bluegl_glVertexAttribFormat
 
 	.align	2
 	.global	bluegl_glGetProgramivARB
@@ -2977,7 +2977,7 @@ bluegl_glGetProgramivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramivARB, .-glGetProgramivARB
+	.size	bluegl_glGetProgramivARB, .-bluegl_glGetProgramivARB
 
 	.align	2
 	.global	bluegl_glPathGlyphRangeNV
@@ -2987,7 +2987,7 @@ bluegl_glPathGlyphRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathGlyphRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathGlyphRangeNV, .-glPathGlyphRangeNV
+	.size	bluegl_glPathGlyphRangeNV, .-bluegl_glPathGlyphRangeNV
 
 	.align	2
 	.global	bluegl_glVertexAttribI4usv
@@ -2997,7 +2997,7 @@ bluegl_glVertexAttribI4usv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4usv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4usv, .-glVertexAttribI4usv
+	.size	bluegl_glVertexAttribI4usv, .-bluegl_glVertexAttribI4usv
 
 	.align	2
 	.global	bluegl_glTexParameterf
@@ -3007,7 +3007,7 @@ bluegl_glTexParameterf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterf, .-glTexParameterf
+	.size	bluegl_glTexParameterf, .-bluegl_glTexParameterf
 
 	.align	2
 	.global	bluegl_glVertexAttribBinding
@@ -3017,7 +3017,7 @@ bluegl_glVertexAttribBinding:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribBinding]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribBinding, .-glVertexAttribBinding
+	.size	bluegl_glVertexAttribBinding, .-bluegl_glVertexAttribBinding
 
 	.align	2
 	.global	bluegl_glGetHistogramParameteriv
@@ -3027,7 +3027,7 @@ bluegl_glGetHistogramParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHistogramParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHistogramParameteriv, .-glGetHistogramParameteriv
+	.size	bluegl_glGetHistogramParameteriv, .-bluegl_glGetHistogramParameteriv
 
 	.align	2
 	.global	bluegl_glTexParameteri
@@ -3037,7 +3037,7 @@ bluegl_glTexParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameteri, .-glTexParameteri
+	.size	bluegl_glTexParameteri, .-bluegl_glTexParameteri
 
 	.align	2
 	.global	bluegl_glGetShaderSource
@@ -3047,7 +3047,7 @@ bluegl_glGetShaderSource:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetShaderSource]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetShaderSource, .-glGetShaderSource
+	.size	bluegl_glGetShaderSource, .-bluegl_glGetShaderSource
 
 	.align	2
 	.global	bluegl_glFramebufferSampleLocationsfvNV
@@ -3057,7 +3057,7 @@ bluegl_glFramebufferSampleLocationsfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferSampleLocationsfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferSampleLocationsfvNV, .-glFramebufferSampleLocationsfvNV
+	.size	bluegl_glFramebufferSampleLocationsfvNV, .-bluegl_glFramebufferSampleLocationsfvNV
 
 	.align	2
 	.global	bluegl_glGetNextPerfQueryIdINTEL
@@ -3067,7 +3067,7 @@ bluegl_glGetNextPerfQueryIdINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNextPerfQueryIdINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNextPerfQueryIdINTEL, .-glGetNextPerfQueryIdINTEL
+	.size	bluegl_glGetNextPerfQueryIdINTEL, .-bluegl_glGetNextPerfQueryIdINTEL
 
 	.align	2
 	.global	bluegl_glTextureBufferEXT
@@ -3077,7 +3077,7 @@ bluegl_glTextureBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureBufferEXT, .-glTextureBufferEXT
+	.size	bluegl_glTextureBufferEXT, .-bluegl_glTextureBufferEXT
 
 	.align	2
 	.global	bluegl_glGetMultiTexImageEXT
@@ -3087,7 +3087,7 @@ bluegl_glGetMultiTexImageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexImageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexImageEXT, .-glGetMultiTexImageEXT
+	.size	bluegl_glGetMultiTexImageEXT, .-bluegl_glGetMultiTexImageEXT
 
 	.align	2
 	.global	bluegl_glGetPathCoordsNV
@@ -3097,7 +3097,7 @@ bluegl_glGetPathCoordsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathCoordsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathCoordsNV, .-glGetPathCoordsNV
+	.size	bluegl_glGetPathCoordsNV, .-bluegl_glGetPathCoordsNV
 
 	.align	2
 	.global	bluegl_glGenProgramPipelines
@@ -3107,7 +3107,7 @@ bluegl_glGenProgramPipelines:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenProgramPipelines]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenProgramPipelines, .-glGenProgramPipelines
+	.size	bluegl_glGenProgramPipelines, .-bluegl_glGenProgramPipelines
 
 	.align	2
 	.global	bluegl_glBufferParameteriAPPLE
@@ -3117,7 +3117,7 @@ bluegl_glBufferParameteriAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferParameteriAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferParameteriAPPLE, .-glBufferParameteriAPPLE
+	.size	bluegl_glBufferParameteriAPPLE, .-bluegl_glBufferParameteriAPPLE
 
 	.align	2
 	.global	bluegl_glTexStorageSparseAMD
@@ -3127,7 +3127,7 @@ bluegl_glTexStorageSparseAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexStorageSparseAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexStorageSparseAMD, .-glTexStorageSparseAMD
+	.size	bluegl_glTexStorageSparseAMD, .-bluegl_glTexStorageSparseAMD
 
 	.align	2
 	.global	bluegl_glGetNamedBufferParameteriv
@@ -3137,7 +3137,7 @@ bluegl_glGetNamedBufferParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferParameteriv, .-glGetNamedBufferParameteriv
+	.size	bluegl_glGetNamedBufferParameteriv, .-bluegl_glGetNamedBufferParameteriv
 
 	.align	2
 	.global	bluegl_glTransformFeedbackVaryingsEXT
@@ -3147,7 +3147,7 @@ bluegl_glTransformFeedbackVaryingsEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformFeedbackVaryingsEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformFeedbackVaryingsEXT, .-glTransformFeedbackVaryingsEXT
+	.size	bluegl_glTransformFeedbackVaryingsEXT, .-bluegl_glTransformFeedbackVaryingsEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribP1uiv
@@ -3157,7 +3157,7 @@ bluegl_glVertexAttribP1uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP1uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP1uiv, .-glVertexAttribP1uiv
+	.size	bluegl_glVertexAttribP1uiv, .-bluegl_glVertexAttribP1uiv
 
 	.align	2
 	.global	bluegl_glLinkProgram
@@ -3167,7 +3167,7 @@ bluegl_glLinkProgram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLinkProgram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLinkProgram, .-glLinkProgram
+	.size	bluegl_glLinkProgram, .-bluegl_glLinkProgram
 
 	.align	2
 	.global	bluegl_glGetObjectLabel
@@ -3177,7 +3177,7 @@ bluegl_glGetObjectLabel:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectLabel]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectLabel, .-glGetObjectLabel
+	.size	bluegl_glGetObjectLabel, .-bluegl_glGetObjectLabel
 
 	.align	2
 	.global	bluegl_glVertexPointerEXT
@@ -3187,7 +3187,7 @@ bluegl_glVertexPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexPointerEXT, .-glVertexPointerEXT
+	.size	bluegl_glVertexPointerEXT, .-bluegl_glVertexPointerEXT
 
 	.align	2
 	.global	bluegl_glDebugMessageCallbackARB
@@ -3197,7 +3197,7 @@ bluegl_glDebugMessageCallbackARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageCallbackARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageCallbackARB, .-glDebugMessageCallbackARB
+	.size	bluegl_glDebugMessageCallbackARB, .-bluegl_glDebugMessageCallbackARB
 
 	.align	2
 	.global	bluegl_glGetString
@@ -3207,7 +3207,7 @@ bluegl_glGetString:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetString]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetString, .-glGetString
+	.size	bluegl_glGetString, .-bluegl_glGetString
 
 	.align	2
 	.global	bluegl_glGetPathParameterfvNV
@@ -3217,7 +3217,7 @@ bluegl_glGetPathParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathParameterfvNV, .-glGetPathParameterfvNV
+	.size	bluegl_glGetPathParameterfvNV, .-bluegl_glGetPathParameterfvNV
 
 	.align	2
 	.global	bluegl_glLightxvOES
@@ -3227,7 +3227,7 @@ bluegl_glLightxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLightxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLightxvOES, .-glLightxvOES
+	.size	bluegl_glLightxvOES, .-bluegl_glLightxvOES
 
 	.align	2
 	.global	bluegl_glEndQuery
@@ -3237,7 +3237,7 @@ bluegl_glEndQuery:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndQuery]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndQuery, .-glEndQuery
+	.size	bluegl_glEndQuery, .-bluegl_glEndQuery
 
 	.align	2
 	.global	bluegl_glSecondaryColor3uiv
@@ -3247,7 +3247,7 @@ bluegl_glSecondaryColor3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3uiv, .-glSecondaryColor3uiv
+	.size	bluegl_glSecondaryColor3uiv, .-bluegl_glSecondaryColor3uiv
 
 	.align	2
 	.global	bluegl_glPrioritizeTexturesxOES
@@ -3257,7 +3257,7 @@ bluegl_glPrioritizeTexturesxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPrioritizeTexturesxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPrioritizeTexturesxOES, .-glPrioritizeTexturesxOES
+	.size	bluegl_glPrioritizeTexturesxOES, .-bluegl_glPrioritizeTexturesxOES
 
 	.align	2
 	.global	bluegl_glFramebufferParameteri
@@ -3267,7 +3267,7 @@ bluegl_glFramebufferParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferParameteri, .-glFramebufferParameteri
+	.size	bluegl_glFramebufferParameteri, .-bluegl_glFramebufferParameteri
 
 	.align	2
 	.global	bluegl_glTexCoord3hNV
@@ -3277,7 +3277,7 @@ bluegl_glTexCoord3hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord3hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord3hNV, .-glTexCoord3hNV
+	.size	bluegl_glTexCoord3hNV, .-bluegl_glTexCoord3hNV
 
 	.align	2
 	.global	bluegl_glMultiModeDrawElementsIBM
@@ -3287,7 +3287,7 @@ bluegl_glMultiModeDrawElementsIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiModeDrawElementsIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiModeDrawElementsIBM, .-glMultiModeDrawElementsIBM
+	.size	bluegl_glMultiModeDrawElementsIBM, .-bluegl_glMultiModeDrawElementsIBM
 
 	.align	2
 	.global	bluegl_glVertexAttribI2ui
@@ -3297,7 +3297,7 @@ bluegl_glVertexAttribI2ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2ui, .-glVertexAttribI2ui
+	.size	bluegl_glVertexAttribI2ui, .-bluegl_glVertexAttribI2ui
 
 	.align	2
 	.global	bluegl_glUniform2iARB
@@ -3307,7 +3307,7 @@ bluegl_glUniform2iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2iARB, .-glUniform2iARB
+	.size	bluegl_glUniform2iARB, .-bluegl_glUniform2iARB
 
 	.align	2
 	.global	bluegl_glColorPointervINTEL
@@ -3317,7 +3317,7 @@ bluegl_glColorPointervINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorPointervINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorPointervINTEL, .-glColorPointervINTEL
+	.size	bluegl_glColorPointervINTEL, .-bluegl_glColorPointervINTEL
 
 	.align	2
 	.global	bluegl_glDeleteTextures
@@ -3327,7 +3327,7 @@ bluegl_glDeleteTextures:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteTextures]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteTextures, .-glDeleteTextures
+	.size	bluegl_glDeleteTextures, .-bluegl_glDeleteTextures
 
 	.align	2
 	.global	bluegl_glGetMinmaxParameterfvEXT
@@ -3337,7 +3337,7 @@ bluegl_glGetMinmaxParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMinmaxParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMinmaxParameterfvEXT, .-glGetMinmaxParameterfvEXT
+	.size	bluegl_glGetMinmaxParameterfvEXT, .-bluegl_glGetMinmaxParameterfvEXT
 
 	.align	2
 	.global	bluegl_glWindowPos3sMESA
@@ -3347,7 +3347,7 @@ bluegl_glWindowPos3sMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3sMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3sMESA, .-glWindowPos3sMESA
+	.size	bluegl_glWindowPos3sMESA, .-bluegl_glWindowPos3sMESA
 
 	.align	2
 	.global	bluegl_glVertexAttrib4f
@@ -3357,7 +3357,7 @@ bluegl_glVertexAttrib4f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4f, .-glVertexAttrib4f
+	.size	bluegl_glVertexAttrib4f, .-bluegl_glVertexAttrib4f
 
 	.align	2
 	.global	bluegl_glNamedFramebufferParameteri
@@ -3367,7 +3367,7 @@ bluegl_glNamedFramebufferParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferParameteri, .-glNamedFramebufferParameteri
+	.size	bluegl_glNamedFramebufferParameteri, .-bluegl_glNamedFramebufferParameteri
 
 	.align	2
 	.global	bluegl_glTexCoord2fVertex3fvSUN
@@ -3377,7 +3377,7 @@ bluegl_glTexCoord2fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fVertex3fvSUN, .-glTexCoord2fVertex3fvSUN
+	.size	bluegl_glTexCoord2fVertex3fvSUN, .-bluegl_glTexCoord2fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glReplacementCodeusSUN
@@ -3387,7 +3387,7 @@ bluegl_glReplacementCodeusSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeusSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeusSUN, .-glReplacementCodeusSUN
+	.size	bluegl_glReplacementCodeusSUN, .-bluegl_glReplacementCodeusSUN
 
 	.align	2
 	.global	bluegl_glGetNamedFramebufferParameteriv
@@ -3397,7 +3397,7 @@ bluegl_glGetNamedFramebufferParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedFramebufferParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedFramebufferParameteriv, .-glGetNamedFramebufferParameteriv
+	.size	bluegl_glGetNamedFramebufferParameteriv, .-bluegl_glGetNamedFramebufferParameteriv
 
 	.align	2
 	.global	bluegl_glVertexStream1fvATI
@@ -3407,7 +3407,7 @@ bluegl_glVertexStream1fvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1fvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1fvATI, .-glVertexStream1fvATI
+	.size	bluegl_glVertexStream1fvATI, .-bluegl_glVertexStream1fvATI
 
 	.align	2
 	.global	bluegl_glCreateVertexArrays
@@ -3417,7 +3417,7 @@ bluegl_glCreateVertexArrays:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateVertexArrays]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateVertexArrays, .-glCreateVertexArrays
+	.size	bluegl_glCreateVertexArrays, .-bluegl_glCreateVertexArrays
 
 	.align	2
 	.global	bluegl_glBeginConditionalRender
@@ -3427,7 +3427,7 @@ bluegl_glBeginConditionalRender:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginConditionalRender]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginConditionalRender, .-glBeginConditionalRender
+	.size	bluegl_glBeginConditionalRender, .-bluegl_glBeginConditionalRender
 
 	.align	2
 	.global	bluegl_glConvolutionFilter1D
@@ -3437,7 +3437,7 @@ bluegl_glConvolutionFilter1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionFilter1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionFilter1D, .-glConvolutionFilter1D
+	.size	bluegl_glConvolutionFilter1D, .-bluegl_glConvolutionFilter1D
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3fARB
@@ -3447,7 +3447,7 @@ bluegl_glMultiTexCoord3fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3fARB, .-glMultiTexCoord3fARB
+	.size	bluegl_glMultiTexCoord3fARB, .-bluegl_glMultiTexCoord3fARB
 
 	.align	2
 	.global	bluegl_glGetQueryObjectuivARB
@@ -3457,7 +3457,7 @@ bluegl_glGetQueryObjectuivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjectuivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjectuivARB, .-glGetQueryObjectuivARB
+	.size	bluegl_glGetQueryObjectuivARB, .-bluegl_glGetQueryObjectuivARB
 
 	.align	2
 	.global	bluegl_glScalexOES
@@ -3467,7 +3467,7 @@ bluegl_glScalexOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glScalexOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glScalexOES, .-glScalexOES
+	.size	bluegl_glScalexOES, .-bluegl_glScalexOES
 
 	.align	2
 	.global	bluegl_glSamplerParameteri
@@ -3477,7 +3477,7 @@ bluegl_glSamplerParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplerParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplerParameteri, .-glSamplerParameteri
+	.size	bluegl_glSamplerParameteri, .-bluegl_glSamplerParameteri
 
 	.align	2
 	.global	bluegl_glSamplerParameterf
@@ -3487,7 +3487,7 @@ bluegl_glSamplerParameterf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplerParameterf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplerParameterf, .-glSamplerParameterf
+	.size	bluegl_glSamplerParameterf, .-bluegl_glSamplerParameterf
 
 	.align	2
 	.global	bluegl_glShaderOp1EXT
@@ -3497,7 +3497,7 @@ bluegl_glShaderOp1EXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glShaderOp1EXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glShaderOp1EXT, .-glShaderOp1EXT
+	.size	bluegl_glShaderOp1EXT, .-bluegl_glShaderOp1EXT
 
 	.align	2
 	.global	bluegl_glBeginVideoCaptureNV
@@ -3507,7 +3507,7 @@ bluegl_glBeginVideoCaptureNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginVideoCaptureNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginVideoCaptureNV, .-glBeginVideoCaptureNV
+	.size	bluegl_glBeginVideoCaptureNV, .-bluegl_glBeginVideoCaptureNV
 
 	.align	2
 	.global	bluegl_glUniform1f
@@ -3517,7 +3517,7 @@ bluegl_glUniform1f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1f, .-glUniform1f
+	.size	bluegl_glUniform1f, .-bluegl_glUniform1f
 
 	.align	2
 	.global	bluegl_glUniform1d
@@ -3527,7 +3527,7 @@ bluegl_glUniform1d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1d, .-glUniform1d
+	.size	bluegl_glUniform1d, .-bluegl_glUniform1d
 
 	.align	2
 	.global	bluegl_glClearColorIiEXT
@@ -3537,7 +3537,7 @@ bluegl_glClearColorIiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearColorIiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearColorIiEXT, .-glClearColorIiEXT
+	.size	bluegl_glClearColorIiEXT, .-bluegl_glClearColorIiEXT
 
 	.align	2
 	.global	bluegl_glGetCompressedTexImage
@@ -3547,7 +3547,7 @@ bluegl_glGetCompressedTexImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCompressedTexImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCompressedTexImage, .-glGetCompressedTexImage
+	.size	bluegl_glGetCompressedTexImage, .-bluegl_glGetCompressedTexImage
 
 	.align	2
 	.global	bluegl_glDetailTexFuncSGIS
@@ -3557,7 +3557,7 @@ bluegl_glDetailTexFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDetailTexFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDetailTexFuncSGIS, .-glDetailTexFuncSGIS
+	.size	bluegl_glDetailTexFuncSGIS, .-bluegl_glDetailTexFuncSGIS
 
 	.align	2
 	.global	bluegl_glUniform1i
@@ -3567,7 +3567,7 @@ bluegl_glUniform1i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1i, .-glUniform1i
+	.size	bluegl_glUniform1i, .-bluegl_glUniform1i
 
 	.align	2
 	.global	bluegl_glSetFenceNV
@@ -3577,7 +3577,7 @@ bluegl_glSetFenceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSetFenceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSetFenceNV, .-glSetFenceNV
+	.size	bluegl_glSetFenceNV, .-bluegl_glSetFenceNV
 
 	.align	2
 	.global	bluegl_glColorTableParameterivSGI
@@ -3587,7 +3587,7 @@ bluegl_glColorTableParameterivSGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorTableParameterivSGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorTableParameterivSGI, .-glColorTableParameterivSGI
+	.size	bluegl_glColorTableParameterivSGI, .-bluegl_glColorTableParameterivSGI
 
 	.align	2
 	.global	bluegl_glCullFace
@@ -3597,7 +3597,7 @@ bluegl_glCullFace:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCullFace]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCullFace, .-glCullFace
+	.size	bluegl_glCullFace, .-bluegl_glCullFace
 
 	.align	2
 	.global	bluegl_glDeleteFencesAPPLE
@@ -3607,7 +3607,7 @@ bluegl_glDeleteFencesAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteFencesAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteFencesAPPLE, .-glDeleteFencesAPPLE
+	.size	bluegl_glDeleteFencesAPPLE, .-bluegl_glDeleteFencesAPPLE
 
 	.align	2
 	.global	bluegl_glProgramUniform4i
@@ -3617,7 +3617,7 @@ bluegl_glProgramUniform4i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4i, .-glProgramUniform4i
+	.size	bluegl_glProgramUniform4i, .-bluegl_glProgramUniform4i
 
 	.align	2
 	.global	bluegl_glUniformHandleui64ARB
@@ -3627,7 +3627,7 @@ bluegl_glUniformHandleui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformHandleui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformHandleui64ARB, .-glUniformHandleui64ARB
+	.size	bluegl_glUniformHandleui64ARB, .-bluegl_glUniformHandleui64ARB
 
 	.align	2
 	.global	bluegl_glProgramUniform4f
@@ -3637,7 +3637,7 @@ bluegl_glProgramUniform4f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4f, .-glProgramUniform4f
+	.size	bluegl_glProgramUniform4f, .-bluegl_glProgramUniform4f
 
 	.align	2
 	.global	bluegl_glViewportIndexedf
@@ -3647,7 +3647,7 @@ bluegl_glViewportIndexedf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glViewportIndexedf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glViewportIndexedf, .-glViewportIndexedf
+	.size	bluegl_glViewportIndexedf, .-bluegl_glViewportIndexedf
 
 	.align	2
 	.global	bluegl_glProgramUniform4d
@@ -3657,7 +3657,7 @@ bluegl_glProgramUniform4d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4d, .-glProgramUniform4d
+	.size	bluegl_glProgramUniform4d, .-bluegl_glProgramUniform4d
 
 	.align	2
 	.global	bluegl_glTexCoord1xOES
@@ -3667,7 +3667,7 @@ bluegl_glTexCoord1xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord1xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord1xOES, .-glTexCoord1xOES
+	.size	bluegl_glTexCoord1xOES, .-bluegl_glTexCoord1xOES
 
 	.align	2
 	.global	bluegl_glVertexStream3ivATI
@@ -3677,7 +3677,7 @@ bluegl_glVertexStream3ivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3ivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3ivATI, .-glVertexStream3ivATI
+	.size	bluegl_glVertexStream3ivATI, .-bluegl_glVertexStream3ivATI
 
 	.align	2
 	.global	bluegl_glVertexAttribI2uiv
@@ -3687,7 +3687,7 @@ bluegl_glVertexAttribI2uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2uiv, .-glVertexAttribI2uiv
+	.size	bluegl_glVertexAttribI2uiv, .-bluegl_glVertexAttribI2uiv
 
 	.align	2
 	.global	bluegl_glEndQueryARB
@@ -3697,7 +3697,7 @@ bluegl_glEndQueryARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndQueryARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndQueryARB, .-glEndQueryARB
+	.size	bluegl_glEndQueryARB, .-bluegl_glEndQueryARB
 
 	.align	2
 	.global	bluegl_glGetConvolutionParameterxvOES
@@ -3707,7 +3707,7 @@ bluegl_glGetConvolutionParameterxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetConvolutionParameterxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetConvolutionParameterxvOES, .-glGetConvolutionParameterxvOES
+	.size	bluegl_glGetConvolutionParameterxvOES, .-bluegl_glGetConvolutionParameterxvOES
 
 	.align	2
 	.global	bluegl_glVertexAttrib4uivARB
@@ -3717,7 +3717,7 @@ bluegl_glVertexAttrib4uivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4uivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4uivARB, .-glVertexAttrib4uivARB
+	.size	bluegl_glVertexAttrib4uivARB, .-bluegl_glVertexAttrib4uivARB
 
 	.align	2
 	.global	bluegl_glResumeTransformFeedbackNV
@@ -3727,7 +3727,7 @@ bluegl_glResumeTransformFeedbackNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResumeTransformFeedbackNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResumeTransformFeedbackNV, .-glResumeTransformFeedbackNV
+	.size	bluegl_glResumeTransformFeedbackNV, .-bluegl_glResumeTransformFeedbackNV
 
 	.align	2
 	.global	bluegl_glAttachShader
@@ -3737,7 +3737,7 @@ bluegl_glAttachShader:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAttachShader]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAttachShader, .-glAttachShader
+	.size	bluegl_glAttachShader, .-bluegl_glAttachShader
 
 	.align	2
 	.global	bluegl_glColor4hNV
@@ -3747,7 +3747,7 @@ bluegl_glColor4hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4hNV, .-glColor4hNV
+	.size	bluegl_glColor4hNV, .-bluegl_glColor4hNV
 
 	.align	2
 	.global	bluegl_glTexCoord2fColor4ubVertex3fvSUN
@@ -3757,7 +3757,7 @@ bluegl_glTexCoord2fColor4ubVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fColor4ubVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fColor4ubVertex3fvSUN, .-glTexCoord2fColor4ubVertex3fvSUN
+	.size	bluegl_glTexCoord2fColor4ubVertex3fvSUN, .-bluegl_glTexCoord2fColor4ubVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glQueryCounter
@@ -3767,7 +3767,7 @@ bluegl_glQueryCounter:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glQueryCounter]
 	ldr	x16, [x16]
 	br	x16
-	.size	glQueryCounter, .-glQueryCounter
+	.size	bluegl_glQueryCounter, .-bluegl_glQueryCounter
 
 	.align	2
 	.global	bluegl_glFogCoordPointer
@@ -3777,7 +3777,7 @@ bluegl_glFogCoordPointer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordPointer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordPointer, .-glFogCoordPointer
+	.size	bluegl_glFogCoordPointer, .-bluegl_glFogCoordPointer
 
 	.align	2
 	.global	bluegl_glGetFogFuncSGIS
@@ -3787,7 +3787,7 @@ bluegl_glGetFogFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFogFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFogFuncSGIS, .-glGetFogFuncSGIS
+	.size	bluegl_glGetFogFuncSGIS, .-bluegl_glGetFogFuncSGIS
 
 	.align	2
 	.global	bluegl_glUnmapNamedBuffer
@@ -3797,7 +3797,7 @@ bluegl_glUnmapNamedBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUnmapNamedBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUnmapNamedBuffer, .-glUnmapNamedBuffer
+	.size	bluegl_glUnmapNamedBuffer, .-bluegl_glUnmapNamedBuffer
 
 	.align	2
 	.global	bluegl_glTexCoord4bvOES
@@ -3807,7 +3807,7 @@ bluegl_glTexCoord4bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4bvOES, .-glTexCoord4bvOES
+	.size	bluegl_glTexCoord4bvOES, .-bluegl_glTexCoord4bvOES
 
 	.align	2
 	.global	bluegl_glVertexAttrib3fARB
@@ -3817,7 +3817,7 @@ bluegl_glVertexAttrib3fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3fARB, .-glVertexAttrib3fARB
+	.size	bluegl_glVertexAttrib3fARB, .-bluegl_glVertexAttrib3fARB
 
 	.align	2
 	.global	bluegl_glRasterPos2xOES
@@ -3827,7 +3827,7 @@ bluegl_glRasterPos2xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRasterPos2xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRasterPos2xOES, .-glRasterPos2xOES
+	.size	bluegl_glRasterPos2xOES, .-bluegl_glRasterPos2xOES
 
 	.align	2
 	.global	bluegl_glColor4ubVertex2fvSUN
@@ -3837,7 +3837,7 @@ bluegl_glColor4ubVertex2fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4ubVertex2fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4ubVertex2fvSUN, .-glColor4ubVertex2fvSUN
+	.size	bluegl_glColor4ubVertex2fvSUN, .-bluegl_glColor4ubVertex2fvSUN
 
 	.align	2
 	.global	bluegl_glSecondaryColor3dv
@@ -3847,7 +3847,7 @@ bluegl_glSecondaryColor3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3dv, .-glSecondaryColor3dv
+	.size	bluegl_glSecondaryColor3dv, .-bluegl_glSecondaryColor3dv
 
 	.align	2
 	.global	bluegl_glVertexAttribI4sv
@@ -3857,7 +3857,7 @@ bluegl_glVertexAttribI4sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4sv, .-glVertexAttribI4sv
+	.size	bluegl_glVertexAttribI4sv, .-bluegl_glVertexAttribI4sv
 
 	.align	2
 	.global	bluegl_glDrawTransformFeedbackStreamInstanced
@@ -3867,7 +3867,7 @@ bluegl_glDrawTransformFeedbackStreamInstanced:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawTransformFeedbackStreamInstanced]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawTransformFeedbackStreamInstanced, .-glDrawTransformFeedbackStreamInstanced
+	.size	bluegl_glDrawTransformFeedbackStreamInstanced, .-bluegl_glDrawTransformFeedbackStreamInstanced
 
 	.align	2
 	.global	bluegl_glVertexAttribL3ui64vNV
@@ -3877,7 +3877,7 @@ bluegl_glVertexAttribL3ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3ui64vNV, .-glVertexAttribL3ui64vNV
+	.size	bluegl_glVertexAttribL3ui64vNV, .-bluegl_glVertexAttribL3ui64vNV
 
 	.align	2
 	.global	bluegl_glSpriteParameterfSGIX
@@ -3887,7 +3887,7 @@ bluegl_glSpriteParameterfSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSpriteParameterfSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSpriteParameterfSGIX, .-glSpriteParameterfSGIX
+	.size	bluegl_glSpriteParameterfSGIX, .-bluegl_glSpriteParameterfSGIX
 
 	.align	2
 	.global	bluegl_glBindVideoCaptureStreamTextureNV
@@ -3897,7 +3897,7 @@ bluegl_glBindVideoCaptureStreamTextureNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindVideoCaptureStreamTextureNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindVideoCaptureStreamTextureNV, .-glBindVideoCaptureStreamTextureNV
+	.size	bluegl_glBindVideoCaptureStreamTextureNV, .-bluegl_glBindVideoCaptureStreamTextureNV
 
 	.align	2
 	.global	bluegl_glTexParameterIuiv
@@ -3907,7 +3907,7 @@ bluegl_glTexParameterIuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterIuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterIuiv, .-glTexParameterIuiv
+	.size	bluegl_glTexParameterIuiv, .-bluegl_glTexParameterIuiv
 
 	.align	2
 	.global	bluegl_glFlushPixelDataRangeNV
@@ -3917,7 +3917,7 @@ bluegl_glFlushPixelDataRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushPixelDataRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushPixelDataRangeNV, .-glFlushPixelDataRangeNV
+	.size	bluegl_glFlushPixelDataRangeNV, .-bluegl_glFlushPixelDataRangeNV
 
 	.align	2
 	.global	bluegl_glWindowPos3fv
@@ -3927,7 +3927,7 @@ bluegl_glWindowPos3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3fv, .-glWindowPos3fv
+	.size	bluegl_glWindowPos3fv, .-bluegl_glWindowPos3fv
 
 	.align	2
 	.global	bluegl_glVertexAttribLFormatNV
@@ -3937,7 +3937,7 @@ bluegl_glVertexAttribLFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribLFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribLFormatNV, .-glVertexAttribLFormatNV
+	.size	bluegl_glVertexAttribLFormatNV, .-bluegl_glVertexAttribLFormatNV
 
 	.align	2
 	.global	bluegl_glMap2xOES
@@ -3947,7 +3947,7 @@ bluegl_glMap2xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMap2xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMap2xOES, .-glMap2xOES
+	.size	bluegl_glMap2xOES, .-bluegl_glMap2xOES
 
 	.align	2
 	.global	bluegl_glGetColorTableSGI
@@ -3957,7 +3957,7 @@ bluegl_glGetColorTableSGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableSGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableSGI, .-glGetColorTableSGI
+	.size	bluegl_glGetColorTableSGI, .-bluegl_glGetColorTableSGI
 
 	.align	2
 	.global	bluegl_glGetCompressedTexImageARB
@@ -3967,7 +3967,7 @@ bluegl_glGetCompressedTexImageARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCompressedTexImageARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCompressedTexImageARB, .-glGetCompressedTexImageARB
+	.size	bluegl_glGetCompressedTexImageARB, .-bluegl_glGetCompressedTexImageARB
 
 	.align	2
 	.global	bluegl_glConvolutionParameteri
@@ -3977,7 +3977,7 @@ bluegl_glConvolutionParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameteri, .-glConvolutionParameteri
+	.size	bluegl_glConvolutionParameteri, .-bluegl_glConvolutionParameteri
 
 	.align	2
 	.global	bluegl_glVertexWeighthNV
@@ -3987,7 +3987,7 @@ bluegl_glVertexWeighthNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexWeighthNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexWeighthNV, .-glVertexWeighthNV
+	.size	bluegl_glVertexWeighthNV, .-bluegl_glVertexWeighthNV
 
 	.align	2
 	.global	bluegl_glConvolutionParameterf
@@ -3997,7 +3997,7 @@ bluegl_glConvolutionParameterf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameterf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameterf, .-glConvolutionParameterf
+	.size	bluegl_glConvolutionParameterf, .-bluegl_glConvolutionParameterf
 
 	.align	2
 	.global	bluegl_glVertexAttribI4ubvEXT
@@ -4007,7 +4007,7 @@ bluegl_glVertexAttribI4ubvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4ubvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4ubvEXT, .-glVertexAttribI4ubvEXT
+	.size	bluegl_glVertexAttribI4ubvEXT, .-bluegl_glVertexAttribI4ubvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib1dNV
@@ -4017,7 +4017,7 @@ bluegl_glVertexAttrib1dNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1dNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1dNV, .-glVertexAttrib1dNV
+	.size	bluegl_glVertexAttrib1dNV, .-bluegl_glVertexAttrib1dNV
 
 	.align	2
 	.global	bluegl_glUnmapObjectBufferATI
@@ -4027,7 +4027,7 @@ bluegl_glUnmapObjectBufferATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUnmapObjectBufferATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUnmapObjectBufferATI, .-glUnmapObjectBufferATI
+	.size	bluegl_glUnmapObjectBufferATI, .-bluegl_glUnmapObjectBufferATI
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameterI4uiEXT
@@ -4037,7 +4037,7 @@ bluegl_glNamedProgramLocalParameterI4uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameterI4uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameterI4uiEXT, .-glNamedProgramLocalParameterI4uiEXT
+	.size	bluegl_glNamedProgramLocalParameterI4uiEXT, .-bluegl_glNamedProgramLocalParameterI4uiEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform1iEXT
@@ -4047,7 +4047,7 @@ bluegl_glProgramUniform1iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1iEXT, .-glProgramUniform1iEXT
+	.size	bluegl_glProgramUniform1iEXT, .-bluegl_glProgramUniform1iEXT
 
 	.align	2
 	.global	bluegl_glDeleteQueriesARB
@@ -4057,7 +4057,7 @@ bluegl_glDeleteQueriesARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteQueriesARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteQueriesARB, .-glDeleteQueriesARB
+	.size	bluegl_glDeleteQueriesARB, .-bluegl_glDeleteQueriesARB
 
 	.align	2
 	.global	bluegl_glClearNamedBufferDataEXT
@@ -4067,7 +4067,7 @@ bluegl_glClearNamedBufferDataEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedBufferDataEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedBufferDataEXT, .-glClearNamedBufferDataEXT
+	.size	bluegl_glClearNamedBufferDataEXT, .-bluegl_glClearNamedBufferDataEXT
 
 	.align	2
 	.global	bluegl_glWindowPos3svARB
@@ -4077,7 +4077,7 @@ bluegl_glWindowPos3svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3svARB, .-glWindowPos3svARB
+	.size	bluegl_glWindowPos3svARB, .-bluegl_glWindowPos3svARB
 
 	.align	2
 	.global	bluegl_glTextureStorage3D
@@ -4087,7 +4087,7 @@ bluegl_glTextureStorage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage3D, .-glTextureStorage3D
+	.size	bluegl_glTextureStorage3D, .-bluegl_glTextureStorage3D
 
 	.align	2
 	.global	bluegl_glGenPathsNV
@@ -4097,7 +4097,7 @@ bluegl_glGenPathsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenPathsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenPathsNV, .-glGenPathsNV
+	.size	bluegl_glGenPathsNV, .-bluegl_glGenPathsNV
 
 	.align	2
 	.global	bluegl_glStringMarkerGREMEDY
@@ -4107,7 +4107,7 @@ bluegl_glStringMarkerGREMEDY:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStringMarkerGREMEDY]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStringMarkerGREMEDY, .-glStringMarkerGREMEDY
+	.size	bluegl_glStringMarkerGREMEDY, .-bluegl_glStringMarkerGREMEDY
 
 	.align	2
 	.global	bluegl_glIsTransformFeedback
@@ -4117,7 +4117,7 @@ bluegl_glIsTransformFeedback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsTransformFeedback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsTransformFeedback, .-glIsTransformFeedback
+	.size	bluegl_glIsTransformFeedback, .-bluegl_glIsTransformFeedback
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x3dvEXT
@@ -4127,7 +4127,7 @@ bluegl_glProgramUniformMatrix2x3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x3dvEXT, .-glProgramUniformMatrix2x3dvEXT
+	.size	bluegl_glProgramUniformMatrix2x3dvEXT, .-bluegl_glProgramUniformMatrix2x3dvEXT
 
 	.align	2
 	.global	bluegl_glGetObjectLabelEXT
@@ -4137,7 +4137,7 @@ bluegl_glGetObjectLabelEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectLabelEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectLabelEXT, .-glGetObjectLabelEXT
+	.size	bluegl_glGetObjectLabelEXT, .-bluegl_glGetObjectLabelEXT
 
 	.align	2
 	.global	bluegl_glUniformHandleui64vNV
@@ -4147,7 +4147,7 @@ bluegl_glUniformHandleui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformHandleui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformHandleui64vNV, .-glUniformHandleui64vNV
+	.size	bluegl_glUniformHandleui64vNV, .-bluegl_glUniformHandleui64vNV
 
 	.align	2
 	.global	bluegl_glIsProgramPipeline
@@ -4157,7 +4157,7 @@ bluegl_glIsProgramPipeline:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsProgramPipeline]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsProgramPipeline, .-glIsProgramPipeline
+	.size	bluegl_glIsProgramPipeline, .-bluegl_glIsProgramPipeline
 
 	.align	2
 	.global	bluegl_glGetNamedProgramStringEXT
@@ -4167,7 +4167,7 @@ bluegl_glGetNamedProgramStringEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedProgramStringEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedProgramStringEXT, .-glGetNamedProgramStringEXT
+	.size	bluegl_glGetNamedProgramStringEXT, .-bluegl_glGetNamedProgramStringEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4sNV
@@ -4177,7 +4177,7 @@ bluegl_glVertexAttrib4sNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4sNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4sNV, .-glVertexAttrib4sNV
+	.size	bluegl_glVertexAttrib4sNV, .-bluegl_glVertexAttrib4sNV
 
 	.align	2
 	.global	bluegl_glProgramLocalParameter4dvARB
@@ -4187,7 +4187,7 @@ bluegl_glProgramLocalParameter4dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameter4dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameter4dvARB, .-glProgramLocalParameter4dvARB
+	.size	bluegl_glProgramLocalParameter4dvARB, .-bluegl_glProgramLocalParameter4dvARB
 
 	.align	2
 	.global	bluegl_glFogCoordFormatNV
@@ -4197,7 +4197,7 @@ bluegl_glFogCoordFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordFormatNV, .-glFogCoordFormatNV
+	.size	bluegl_glFogCoordFormatNV, .-bluegl_glFogCoordFormatNV
 
 	.align	2
 	.global	bluegl_glUniformMatrix3fv
@@ -4207,7 +4207,7 @@ bluegl_glUniformMatrix3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix3fv, .-glUniformMatrix3fv
+	.size	bluegl_glUniformMatrix3fv, .-bluegl_glUniformMatrix3fv
 
 	.align	2
 	.global	bluegl_glGetnMapfvARB
@@ -4217,7 +4217,7 @@ bluegl_glGetnMapfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMapfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMapfvARB, .-glGetnMapfvARB
+	.size	bluegl_glGetnMapfvARB, .-bluegl_glGetnMapfvARB
 
 	.align	2
 	.global	bluegl_glGetnUniformfv
@@ -4227,7 +4227,7 @@ bluegl_glGetnUniformfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformfv, .-glGetnUniformfv
+	.size	bluegl_glGetnUniformfv, .-bluegl_glGetnUniformfv
 
 	.align	2
 	.global	bluegl_glVertexAttribL2dv
@@ -4237,7 +4237,7 @@ bluegl_glVertexAttribL2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2dv, .-glVertexAttribL2dv
+	.size	bluegl_glVertexAttribL2dv, .-bluegl_glVertexAttribL2dv
 
 	.align	2
 	.global	bluegl_glVertexWeightPointerEXT
@@ -4247,7 +4247,7 @@ bluegl_glVertexWeightPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexWeightPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexWeightPointerEXT, .-glVertexWeightPointerEXT
+	.size	bluegl_glVertexWeightPointerEXT, .-bluegl_glVertexWeightPointerEXT
 
 	.align	2
 	.global	bluegl_glTangent3sEXT
@@ -4257,7 +4257,7 @@ bluegl_glTangent3sEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3sEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3sEXT, .-glTangent3sEXT
+	.size	bluegl_glTangent3sEXT, .-bluegl_glTangent3sEXT
 
 	.align	2
 	.global	bluegl_glSecondaryColorPointer
@@ -4267,7 +4267,7 @@ bluegl_glSecondaryColorPointer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColorPointer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColorPointer, .-glSecondaryColorPointer
+	.size	bluegl_glSecondaryColorPointer, .-bluegl_glSecondaryColorPointer
 
 	.align	2
 	.global	bluegl_glGetNamedStringARB
@@ -4277,7 +4277,7 @@ bluegl_glGetNamedStringARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedStringARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedStringARB, .-glGetNamedStringARB
+	.size	bluegl_glGetNamedStringARB, .-bluegl_glGetNamedStringARB
 
 	.align	2
 	.global	bluegl_glBufferPageCommitmentARB
@@ -4287,7 +4287,7 @@ bluegl_glBufferPageCommitmentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferPageCommitmentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferPageCommitmentARB, .-glBufferPageCommitmentARB
+	.size	bluegl_glBufferPageCommitmentARB, .-bluegl_glBufferPageCommitmentARB
 
 	.align	2
 	.global	bluegl_glVertexAttribL2d
@@ -4297,7 +4297,7 @@ bluegl_glVertexAttribL2d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2d, .-glVertexAttribL2d
+	.size	bluegl_glVertexAttribL2d, .-bluegl_glVertexAttribL2d
 
 	.align	2
 	.global	bluegl_glStencilFunc
@@ -4307,7 +4307,7 @@ bluegl_glStencilFunc:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilFunc]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilFunc, .-glStencilFunc
+	.size	bluegl_glStencilFunc, .-bluegl_glStencilFunc
 
 	.align	2
 	.global	bluegl_glGetVertexAttribdvNV
@@ -4317,7 +4317,7 @@ bluegl_glGetVertexAttribdvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribdvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribdvNV, .-glGetVertexAttribdvNV
+	.size	bluegl_glGetVertexAttribdvNV, .-bluegl_glGetVertexAttribdvNV
 
 	.align	2
 	.global	bluegl_glGetQueryBufferObjectiv
@@ -4327,7 +4327,7 @@ bluegl_glGetQueryBufferObjectiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryBufferObjectiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryBufferObjectiv, .-glGetQueryBufferObjectiv
+	.size	bluegl_glGetQueryBufferObjectiv, .-bluegl_glGetQueryBufferObjectiv
 
 	.align	2
 	.global	bluegl_glTexGenxOES
@@ -4337,7 +4337,7 @@ bluegl_glTexGenxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexGenxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexGenxOES, .-glTexGenxOES
+	.size	bluegl_glTexGenxOES, .-bluegl_glTexGenxOES
 
 	.align	2
 	.global	bluegl_glLightEnviSGIX
@@ -4347,7 +4347,7 @@ bluegl_glLightEnviSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLightEnviSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLightEnviSGIX, .-glLightEnviSGIX
+	.size	bluegl_glLightEnviSGIX, .-bluegl_glLightEnviSGIX
 
 	.align	2
 	.global	bluegl_glGetProgramPipelineiv
@@ -4357,7 +4357,7 @@ bluegl_glGetProgramPipelineiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramPipelineiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramPipelineiv, .-glGetProgramPipelineiv
+	.size	bluegl_glGetProgramPipelineiv, .-bluegl_glGetProgramPipelineiv
 
 	.align	2
 	.global	bluegl_glVertexStream2ivATI
@@ -4367,7 +4367,7 @@ bluegl_glVertexStream2ivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2ivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2ivATI, .-glVertexStream2ivATI
+	.size	bluegl_glVertexStream2ivATI, .-bluegl_glVertexStream2ivATI
 
 	.align	2
 	.global	bluegl_glGetColorTableEXT
@@ -4377,7 +4377,7 @@ bluegl_glGetColorTableEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableEXT, .-glGetColorTableEXT
+	.size	bluegl_glGetColorTableEXT, .-bluegl_glGetColorTableEXT
 
 	.align	2
 	.global	bluegl_glGetShaderInfoLog
@@ -4387,7 +4387,7 @@ bluegl_glGetShaderInfoLog:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetShaderInfoLog]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetShaderInfoLog, .-glGetShaderInfoLog
+	.size	bluegl_glGetShaderInfoLog, .-bluegl_glGetShaderInfoLog
 
 	.align	2
 	.global	bluegl_glGetOcclusionQueryuivNV
@@ -4397,7 +4397,7 @@ bluegl_glGetOcclusionQueryuivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetOcclusionQueryuivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetOcclusionQueryuivNV, .-glGetOcclusionQueryuivNV
+	.size	bluegl_glGetOcclusionQueryuivNV, .-bluegl_glGetOcclusionQueryuivNV
 
 	.align	2
 	.global	bluegl_glInvalidateNamedFramebufferSubData
@@ -4407,7 +4407,7 @@ bluegl_glInvalidateNamedFramebufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateNamedFramebufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateNamedFramebufferSubData, .-glInvalidateNamedFramebufferSubData
+	.size	bluegl_glInvalidateNamedFramebufferSubData, .-bluegl_glInvalidateNamedFramebufferSubData
 
 	.align	2
 	.global	bluegl_glVertexAttribL1i64NV
@@ -4417,7 +4417,7 @@ bluegl_glVertexAttribL1i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1i64NV, .-glVertexAttribL1i64NV
+	.size	bluegl_glVertexAttribL1i64NV, .-bluegl_glVertexAttribL1i64NV
 
 	.align	2
 	.global	bluegl_glVDPAUInitNV
@@ -4427,7 +4427,7 @@ bluegl_glVDPAUInitNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUInitNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUInitNV, .-glVDPAUInitNV
+	.size	bluegl_glVDPAUInitNV, .-bluegl_glVDPAUInitNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib1hvNV
@@ -4437,7 +4437,7 @@ bluegl_glVertexAttrib1hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1hvNV, .-glVertexAttrib1hvNV
+	.size	bluegl_glVertexAttrib1hvNV, .-bluegl_glVertexAttrib1hvNV
 
 	.align	2
 	.global	bluegl_glVertexAttribI4i
@@ -4447,7 +4447,7 @@ bluegl_glVertexAttribI4i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4i, .-glVertexAttribI4i
+	.size	bluegl_glVertexAttribI4i, .-bluegl_glVertexAttribI4i
 
 	.align	2
 	.global	bluegl_glGetIntegerui64i_vNV
@@ -4457,7 +4457,7 @@ bluegl_glGetIntegerui64i_vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetIntegerui64i_vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetIntegerui64i_vNV, .-glGetIntegerui64i_vNV
+	.size	bluegl_glGetIntegerui64i_vNV, .-bluegl_glGetIntegerui64i_vNV
 
 	.align	2
 	.global	bluegl_glImageTransformParameterfvHP
@@ -4467,7 +4467,7 @@ bluegl_glImageTransformParameterfvHP:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glImageTransformParameterfvHP]
 	ldr	x16, [x16]
 	br	x16
-	.size	glImageTransformParameterfvHP, .-glImageTransformParameterfvHP
+	.size	bluegl_glImageTransformParameterfvHP, .-bluegl_glImageTransformParameterfvHP
 
 	.align	2
 	.global	bluegl_glEdgeFlagFormatNV
@@ -4477,7 +4477,7 @@ bluegl_glEdgeFlagFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEdgeFlagFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEdgeFlagFormatNV, .-glEdgeFlagFormatNV
+	.size	bluegl_glEdgeFlagFormatNV, .-bluegl_glEdgeFlagFormatNV
 
 	.align	2
 	.global	bluegl_glUniformHandleui64NV
@@ -4487,7 +4487,7 @@ bluegl_glUniformHandleui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformHandleui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformHandleui64NV, .-glUniformHandleui64NV
+	.size	bluegl_glUniformHandleui64NV, .-bluegl_glUniformHandleui64NV
 
 	.align	2
 	.global	bluegl_glDebugMessageInsertAMD
@@ -4497,7 +4497,7 @@ bluegl_glDebugMessageInsertAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageInsertAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageInsertAMD, .-glDebugMessageInsertAMD
+	.size	bluegl_glDebugMessageInsertAMD, .-bluegl_glDebugMessageInsertAMD
 
 	.align	2
 	.global	bluegl_glVertexAttribI4ivEXT
@@ -4507,7 +4507,7 @@ bluegl_glVertexAttribI4ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4ivEXT, .-glVertexAttribI4ivEXT
+	.size	bluegl_glVertexAttribI4ivEXT, .-bluegl_glVertexAttribI4ivEXT
 
 	.align	2
 	.global	bluegl_glTexImage4DSGIS
@@ -4517,7 +4517,7 @@ bluegl_glTexImage4DSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage4DSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage4DSGIS, .-glTexImage4DSGIS
+	.size	bluegl_glTexImage4DSGIS, .-bluegl_glTexImage4DSGIS
 
 	.align	2
 	.global	bluegl_glBlendEquationSeparate
@@ -4527,7 +4527,7 @@ bluegl_glBlendEquationSeparate:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationSeparate]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationSeparate, .-glBlendEquationSeparate
+	.size	bluegl_glBlendEquationSeparate, .-bluegl_glBlendEquationSeparate
 
 	.align	2
 	.global	bluegl_glDrawElementsInstancedARB
@@ -4537,7 +4537,7 @@ bluegl_glDrawElementsInstancedARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsInstancedARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsInstancedARB, .-glDrawElementsInstancedARB
+	.size	bluegl_glDrawElementsInstancedARB, .-bluegl_glDrawElementsInstancedARB
 
 	.align	2
 	.global	bluegl_glGetSubroutineIndex
@@ -4547,7 +4547,7 @@ bluegl_glGetSubroutineIndex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSubroutineIndex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSubroutineIndex, .-glGetSubroutineIndex
+	.size	bluegl_glGetSubroutineIndex, .-bluegl_glGetSubroutineIndex
 
 	.align	2
 	.global	bluegl_glVertexAttrib2sv
@@ -4557,7 +4557,7 @@ bluegl_glVertexAttrib2sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2sv, .-glVertexAttrib2sv
+	.size	bluegl_glVertexAttrib2sv, .-bluegl_glVertexAttrib2sv
 
 	.align	2
 	.global	bluegl_glSamplePatternSGIS
@@ -4567,7 +4567,7 @@ bluegl_glSamplePatternSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplePatternSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplePatternSGIS, .-glSamplePatternSGIS
+	.size	bluegl_glSamplePatternSGIS, .-bluegl_glSamplePatternSGIS
 
 	.align	2
 	.global	bluegl_glVertex3hNV
@@ -4577,7 +4577,7 @@ bluegl_glVertex3hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex3hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex3hNV, .-glVertex3hNV
+	.size	bluegl_glVertex3hNV, .-bluegl_glVertex3hNV
 
 	.align	2
 	.global	bluegl_glRasterPos3xvOES
@@ -4587,7 +4587,7 @@ bluegl_glRasterPos3xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRasterPos3xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRasterPos3xvOES, .-glRasterPos3xvOES
+	.size	bluegl_glRasterPos3xvOES, .-bluegl_glRasterPos3xvOES
 
 	.align	2
 	.global	bluegl_glCompressedTextureImage1DEXT
@@ -4597,7 +4597,7 @@ bluegl_glCompressedTextureImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureImage1DEXT, .-glCompressedTextureImage1DEXT
+	.size	bluegl_glCompressedTextureImage1DEXT, .-bluegl_glCompressedTextureImage1DEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribL3dv
@@ -4607,7 +4607,7 @@ bluegl_glVertexAttribL3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3dv, .-glVertexAttribL3dv
+	.size	bluegl_glVertexAttribL3dv, .-bluegl_glVertexAttribL3dv
 
 	.align	2
 	.global	bluegl_glMaterialxvOES
@@ -4617,7 +4617,7 @@ bluegl_glMaterialxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMaterialxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMaterialxvOES, .-glMaterialxvOES
+	.size	bluegl_glMaterialxvOES, .-bluegl_glMaterialxvOES
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameter4fEXT
@@ -4627,7 +4627,7 @@ bluegl_glNamedProgramLocalParameter4fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameter4fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameter4fEXT, .-glNamedProgramLocalParameter4fEXT
+	.size	bluegl_glNamedProgramLocalParameter4fEXT, .-bluegl_glNamedProgramLocalParameter4fEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribL1dEXT
@@ -4637,7 +4637,7 @@ bluegl_glVertexAttribL1dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1dEXT, .-glVertexAttribL1dEXT
+	.size	bluegl_glVertexAttribL1dEXT, .-bluegl_glVertexAttribL1dEXT
 
 	.align	2
 	.global	bluegl_glGetnUniformdvARB
@@ -4647,7 +4647,7 @@ bluegl_glGetnUniformdvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformdvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformdvARB, .-glGetnUniformdvARB
+	.size	bluegl_glGetnUniformdvARB, .-bluegl_glGetnUniformdvARB
 
 	.align	2
 	.global	bluegl_glSecondaryColor3bEXT
@@ -4657,7 +4657,7 @@ bluegl_glSecondaryColor3bEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3bEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3bEXT, .-glSecondaryColor3bEXT
+	.size	bluegl_glSecondaryColor3bEXT, .-bluegl_glSecondaryColor3bEXT
 
 	.align	2
 	.global	bluegl_glBeginPerfQueryINTEL
@@ -4667,7 +4667,7 @@ bluegl_glBeginPerfQueryINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginPerfQueryINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginPerfQueryINTEL, .-glBeginPerfQueryINTEL
+	.size	bluegl_glBeginPerfQueryINTEL, .-bluegl_glBeginPerfQueryINTEL
 
 	.align	2
 	.global	bluegl_glProgramUniform1uivEXT
@@ -4677,7 +4677,7 @@ bluegl_glProgramUniform1uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1uivEXT, .-glProgramUniform1uivEXT
+	.size	bluegl_glProgramUniform1uivEXT, .-bluegl_glProgramUniform1uivEXT
 
 	.align	2
 	.global	bluegl_glTextureImage3DEXT
@@ -4687,7 +4687,7 @@ bluegl_glTextureImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureImage3DEXT, .-glTextureImage3DEXT
+	.size	bluegl_glTextureImage3DEXT, .-bluegl_glTextureImage3DEXT
 
 	.align	2
 	.global	bluegl_glDeleteBuffers
@@ -4697,7 +4697,7 @@ bluegl_glDeleteBuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteBuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteBuffers, .-glDeleteBuffers
+	.size	bluegl_glDeleteBuffers, .-bluegl_glDeleteBuffers
 
 	.align	2
 	.global	bluegl_glBindProgramPipeline
@@ -4707,7 +4707,7 @@ bluegl_glBindProgramPipeline:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindProgramPipeline]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindProgramPipeline, .-glBindProgramPipeline
+	.size	bluegl_glBindProgramPipeline, .-bluegl_glBindProgramPipeline
 
 	.align	2
 	.global	bluegl_glScissor
@@ -4717,7 +4717,7 @@ bluegl_glScissor:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glScissor]
 	ldr	x16, [x16]
 	br	x16
-	.size	glScissor, .-glScissor
+	.size	bluegl_glScissor, .-bluegl_glScissor
 
 	.align	2
 	.global	bluegl_glGetBooleanv
@@ -4727,7 +4727,7 @@ bluegl_glGetBooleanv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBooleanv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBooleanv, .-glGetBooleanv
+	.size	bluegl_glGetBooleanv, .-bluegl_glGetBooleanv
 
 	.align	2
 	.global	bluegl_glWindowPos4fvMESA
@@ -4737,7 +4737,7 @@ bluegl_glWindowPos4fvMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4fvMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4fvMESA, .-glWindowPos4fvMESA
+	.size	bluegl_glWindowPos4fvMESA, .-bluegl_glWindowPos4fvMESA
 
 	.align	2
 	.global	bluegl_glVertexAttribIPointerEXT
@@ -4747,7 +4747,7 @@ bluegl_glVertexAttribIPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribIPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribIPointerEXT, .-glVertexAttribIPointerEXT
+	.size	bluegl_glVertexAttribIPointerEXT, .-bluegl_glVertexAttribIPointerEXT
 
 	.align	2
 	.global	bluegl_glProgramBufferParametersfvNV
@@ -4757,7 +4757,7 @@ bluegl_glProgramBufferParametersfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramBufferParametersfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramBufferParametersfvNV, .-glProgramBufferParametersfvNV
+	.size	bluegl_glProgramBufferParametersfvNV, .-bluegl_glProgramBufferParametersfvNV
 
 	.align	2
 	.global	bluegl_glAlphaFuncxOES
@@ -4767,7 +4767,7 @@ bluegl_glAlphaFuncxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAlphaFuncxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAlphaFuncxOES, .-glAlphaFuncxOES
+	.size	bluegl_glAlphaFuncxOES, .-bluegl_glAlphaFuncxOES
 
 	.align	2
 	.global	bluegl_glMultiDrawArraysIndirectAMD
@@ -4777,7 +4777,7 @@ bluegl_glMultiDrawArraysIndirectAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawArraysIndirectAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawArraysIndirectAMD, .-glMultiDrawArraysIndirectAMD
+	.size	bluegl_glMultiDrawArraysIndirectAMD, .-bluegl_glMultiDrawArraysIndirectAMD
 
 	.align	2
 	.global	bluegl_glNormalStream3ivATI
@@ -4787,7 +4787,7 @@ bluegl_glNormalStream3ivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3ivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3ivATI, .-glNormalStream3ivATI
+	.size	bluegl_glNormalStream3ivATI, .-bluegl_glNormalStream3ivATI
 
 	.align	2
 	.global	bluegl_glTextureImage3DMultisampleNV
@@ -4797,7 +4797,7 @@ bluegl_glTextureImage3DMultisampleNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureImage3DMultisampleNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureImage3DMultisampleNV, .-glTextureImage3DMultisampleNV
+	.size	bluegl_glTextureImage3DMultisampleNV, .-bluegl_glTextureImage3DMultisampleNV
 
 	.align	2
 	.global	bluegl_glProgramUniform4uivEXT
@@ -4807,7 +4807,7 @@ bluegl_glProgramUniform4uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4uivEXT, .-glProgramUniform4uivEXT
+	.size	bluegl_glProgramUniform4uivEXT, .-bluegl_glProgramUniform4uivEXT
 
 	.align	2
 	.global	bluegl_glGetVertexAttribArrayObjectivATI
@@ -4817,7 +4817,7 @@ bluegl_glGetVertexAttribArrayObjectivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribArrayObjectivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribArrayObjectivATI, .-glGetVertexAttribArrayObjectivATI
+	.size	bluegl_glGetVertexAttribArrayObjectivATI, .-bluegl_glGetVertexAttribArrayObjectivATI
 
 	.align	2
 	.global	bluegl_glPollInstrumentsSGIX
@@ -4827,7 +4827,7 @@ bluegl_glPollInstrumentsSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPollInstrumentsSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPollInstrumentsSGIX, .-glPollInstrumentsSGIX
+	.size	bluegl_glPollInstrumentsSGIX, .-bluegl_glPollInstrumentsSGIX
 
 	.align	2
 	.global	bluegl_glGetTextureLevelParameteriv
@@ -4837,7 +4837,7 @@ bluegl_glGetTextureLevelParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureLevelParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureLevelParameteriv, .-glGetTextureLevelParameteriv
+	.size	bluegl_glGetTextureLevelParameteriv, .-bluegl_glGetTextureLevelParameteriv
 
 	.align	2
 	.global	bluegl_glGetStringi
@@ -4847,7 +4847,7 @@ bluegl_glGetStringi:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetStringi]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetStringi, .-glGetStringi
+	.size	bluegl_glGetStringi, .-bluegl_glGetStringi
 
 	.align	2
 	.global	bluegl_glWindowPos3f
@@ -4857,7 +4857,7 @@ bluegl_glWindowPos3f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3f, .-glWindowPos3f
+	.size	bluegl_glWindowPos3f, .-bluegl_glWindowPos3f
 
 	.align	2
 	.global	bluegl_glMapControlPointsNV
@@ -4867,7 +4867,7 @@ bluegl_glMapControlPointsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapControlPointsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapControlPointsNV, .-glMapControlPointsNV
+	.size	bluegl_glMapControlPointsNV, .-bluegl_glMapControlPointsNV
 
 	.align	2
 	.global	bluegl_glGetVertexArrayIndexediv
@@ -4877,7 +4877,7 @@ bluegl_glGetVertexArrayIndexediv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexArrayIndexediv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexArrayIndexediv, .-glGetVertexArrayIndexediv
+	.size	bluegl_glGetVertexArrayIndexediv, .-bluegl_glGetVertexArrayIndexediv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1hNV
@@ -4887,7 +4887,7 @@ bluegl_glMultiTexCoord1hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1hNV, .-glMultiTexCoord1hNV
+	.size	bluegl_glMultiTexCoord1hNV, .-bluegl_glMultiTexCoord1hNV
 
 	.align	2
 	.global	bluegl_glPointParameterfv
@@ -4897,7 +4897,7 @@ bluegl_glPointParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterfv, .-glPointParameterfv
+	.size	bluegl_glPointParameterfv, .-bluegl_glPointParameterfv
 
 	.align	2
 	.global	bluegl_glUniformMatrix2fvARB
@@ -4907,7 +4907,7 @@ bluegl_glUniformMatrix2fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix2fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix2fvARB, .-glUniformMatrix2fvARB
+	.size	bluegl_glUniformMatrix2fvARB, .-bluegl_glUniformMatrix2fvARB
 
 	.align	2
 	.global	bluegl_glUniform2fv
@@ -4917,7 +4917,7 @@ bluegl_glUniform2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2fv, .-glUniform2fv
+	.size	bluegl_glUniform2fv, .-bluegl_glUniform2fv
 
 	.align	2
 	.global	bluegl_glVertexPointerListIBM
@@ -4927,7 +4927,7 @@ bluegl_glVertexPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexPointerListIBM, .-glVertexPointerListIBM
+	.size	bluegl_glVertexPointerListIBM, .-bluegl_glVertexPointerListIBM
 
 	.align	2
 	.global	bluegl_glGetMultiTexGenfvEXT
@@ -4937,7 +4937,7 @@ bluegl_glGetMultiTexGenfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexGenfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexGenfvEXT, .-glGetMultiTexGenfvEXT
+	.size	bluegl_glGetMultiTexGenfvEXT, .-bluegl_glGetMultiTexGenfvEXT
 
 	.align	2
 	.global	bluegl_glGetMinmaxEXT
@@ -4947,7 +4947,7 @@ bluegl_glGetMinmaxEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMinmaxEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMinmaxEXT, .-glGetMinmaxEXT
+	.size	bluegl_glGetMinmaxEXT, .-bluegl_glGetMinmaxEXT
 
 	.align	2
 	.global	bluegl_glIsFenceNV
@@ -4957,7 +4957,7 @@ bluegl_glIsFenceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsFenceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsFenceNV, .-glIsFenceNV
+	.size	bluegl_glIsFenceNV, .-bluegl_glIsFenceNV
 
 	.align	2
 	.global	bluegl_glMatrixFrustumEXT
@@ -4967,7 +4967,7 @@ bluegl_glMatrixFrustumEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixFrustumEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixFrustumEXT, .-glMatrixFrustumEXT
+	.size	bluegl_glMatrixFrustumEXT, .-bluegl_glMatrixFrustumEXT
 
 	.align	2
 	.global	bluegl_glDispatchComputeIndirect
@@ -4977,7 +4977,7 @@ bluegl_glDispatchComputeIndirect:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDispatchComputeIndirect]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDispatchComputeIndirect, .-glDispatchComputeIndirect
+	.size	bluegl_glDispatchComputeIndirect, .-bluegl_glDispatchComputeIndirect
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4bOES
@@ -4987,7 +4987,7 @@ bluegl_glMultiTexCoord4bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4bOES, .-glMultiTexCoord4bOES
+	.size	bluegl_glMultiTexCoord4bOES, .-bluegl_glMultiTexCoord4bOES
 
 	.align	2
 	.global	bluegl_glProgramEnvParameter4dARB
@@ -4997,7 +4997,7 @@ bluegl_glProgramEnvParameter4dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameter4dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameter4dARB, .-glProgramEnvParameter4dARB
+	.size	bluegl_glProgramEnvParameter4dARB, .-bluegl_glProgramEnvParameter4dARB
 
 	.align	2
 	.global	bluegl_glBindBufferRange
@@ -5007,7 +5007,7 @@ bluegl_glBindBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferRange, .-glBindBufferRange
+	.size	bluegl_glBindBufferRange, .-bluegl_glBindBufferRange
 
 	.align	2
 	.global	bluegl_glGetUniformi64vNV
@@ -5017,7 +5017,7 @@ bluegl_glGetUniformi64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformi64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformi64vNV, .-glGetUniformi64vNV
+	.size	bluegl_glGetUniformi64vNV, .-bluegl_glGetUniformi64vNV
 
 	.align	2
 	.global	bluegl_glGetUniformdv
@@ -5027,7 +5027,7 @@ bluegl_glGetUniformdv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformdv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformdv, .-glGetUniformdv
+	.size	bluegl_glGetUniformdv, .-bluegl_glGetUniformdv
 
 	.align	2
 	.global	bluegl_glGetMultiTexLevelParameterfvEXT
@@ -5037,7 +5037,7 @@ bluegl_glGetMultiTexLevelParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexLevelParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexLevelParameterfvEXT, .-glGetMultiTexLevelParameterfvEXT
+	.size	bluegl_glGetMultiTexLevelParameterfvEXT, .-bluegl_glGetMultiTexLevelParameterfvEXT
 
 	.align	2
 	.global	bluegl_glFinalCombinerInputNV
@@ -5047,7 +5047,7 @@ bluegl_glFinalCombinerInputNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFinalCombinerInputNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFinalCombinerInputNV, .-glFinalCombinerInputNV
+	.size	bluegl_glFinalCombinerInputNV, .-bluegl_glFinalCombinerInputNV
 
 	.align	2
 	.global	bluegl_glCullParameterdvEXT
@@ -5057,7 +5057,7 @@ bluegl_glCullParameterdvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCullParameterdvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCullParameterdvEXT, .-glCullParameterdvEXT
+	.size	bluegl_glCullParameterdvEXT, .-bluegl_glCullParameterdvEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4s
@@ -5067,7 +5067,7 @@ bluegl_glMultiTexCoord4s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4s, .-glMultiTexCoord4s
+	.size	bluegl_glMultiTexCoord4s, .-bluegl_glMultiTexCoord4s
 
 	.align	2
 	.global	bluegl_glMapVertexAttrib1fAPPLE
@@ -5077,7 +5077,7 @@ bluegl_glMapVertexAttrib1fAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapVertexAttrib1fAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapVertexAttrib1fAPPLE, .-glMapVertexAttrib1fAPPLE
+	.size	bluegl_glMapVertexAttrib1fAPPLE, .-bluegl_glMapVertexAttrib1fAPPLE
 
 	.align	2
 	.global	bluegl_glTangent3fvEXT
@@ -5087,7 +5087,7 @@ bluegl_glTangent3fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3fvEXT, .-glTangent3fvEXT
+	.size	bluegl_glTangent3fvEXT, .-bluegl_glTangent3fvEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3fvEXT
@@ -5097,7 +5097,7 @@ bluegl_glProgramUniform3fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3fvEXT, .-glProgramUniform3fvEXT
+	.size	bluegl_glProgramUniform3fvEXT, .-bluegl_glProgramUniform3fvEXT
 
 	.align	2
 	.global	bluegl_glTexCoord2bOES
@@ -5107,7 +5107,7 @@ bluegl_glTexCoord2bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2bOES, .-glTexCoord2bOES
+	.size	bluegl_glTexCoord2bOES, .-bluegl_glTexCoord2bOES
 
 	.align	2
 	.global	bluegl_glGetVertexArrayPointervEXT
@@ -5117,7 +5117,7 @@ bluegl_glGetVertexArrayPointervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexArrayPointervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexArrayPointervEXT, .-glGetVertexArrayPointervEXT
+	.size	bluegl_glGetVertexArrayPointervEXT, .-bluegl_glGetVertexArrayPointervEXT
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactorubSUN
@@ -5127,7 +5127,7 @@ bluegl_glGlobalAlphaFactorubSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactorubSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactorubSUN, .-glGlobalAlphaFactorubSUN
+	.size	bluegl_glGlobalAlphaFactorubSUN, .-bluegl_glGlobalAlphaFactorubSUN
 
 	.align	2
 	.global	bluegl_glVertexAttribL1ui64NV
@@ -5137,7 +5137,7 @@ bluegl_glVertexAttribL1ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1ui64NV, .-glVertexAttribL1ui64NV
+	.size	bluegl_glVertexAttribL1ui64NV, .-bluegl_glVertexAttribL1ui64NV
 
 	.align	2
 	.global	bluegl_glPointParameterfSGIS
@@ -5147,7 +5147,7 @@ bluegl_glPointParameterfSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterfSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterfSGIS, .-glPointParameterfSGIS
+	.size	bluegl_glPointParameterfSGIS, .-bluegl_glPointParameterfSGIS
 
 	.align	2
 	.global	bluegl_glGetImageTransformParameterivHP
@@ -5157,7 +5157,7 @@ bluegl_glGetImageTransformParameterivHP:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetImageTransformParameterivHP]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetImageTransformParameterivHP, .-glGetImageTransformParameterivHP
+	.size	bluegl_glGetImageTransformParameterivHP, .-bluegl_glGetImageTransformParameterivHP
 
 	.align	2
 	.global	bluegl_glColorSubTableEXT
@@ -5167,7 +5167,7 @@ bluegl_glColorSubTableEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorSubTableEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorSubTableEXT, .-glColorSubTableEXT
+	.size	bluegl_glColorSubTableEXT, .-bluegl_glColorSubTableEXT
 
 	.align	2
 	.global	bluegl_glPixelTexGenParameterfvSGIS
@@ -5177,7 +5177,7 @@ bluegl_glPixelTexGenParameterfvSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTexGenParameterfvSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTexGenParameterfvSGIS, .-glPixelTexGenParameterfvSGIS
+	.size	bluegl_glPixelTexGenParameterfvSGIS, .-bluegl_glPixelTexGenParameterfvSGIS
 
 	.align	2
 	.global	bluegl_glClientWaitSync
@@ -5187,7 +5187,7 @@ bluegl_glClientWaitSync:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClientWaitSync]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClientWaitSync, .-glClientWaitSync
+	.size	bluegl_glClientWaitSync, .-bluegl_glClientWaitSync
 
 	.align	2
 	.global	bluegl_glQueryObjectParameteruiAMD
@@ -5197,7 +5197,7 @@ bluegl_glQueryObjectParameteruiAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glQueryObjectParameteruiAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glQueryObjectParameteruiAMD, .-glQueryObjectParameteruiAMD
+	.size	bluegl_glQueryObjectParameteruiAMD, .-bluegl_glQueryObjectParameteruiAMD
 
 	.align	2
 	.global	bluegl_glVertexAttribs1fvNV
@@ -5207,7 +5207,7 @@ bluegl_glVertexAttribs1fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs1fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs1fvNV, .-glVertexAttribs1fvNV
+	.size	bluegl_glVertexAttribs1fvNV, .-bluegl_glVertexAttribs1fvNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib4NusvARB
@@ -5217,7 +5217,7 @@ bluegl_glVertexAttrib4NusvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4NusvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4NusvARB, .-glVertexAttrib4NusvARB
+	.size	bluegl_glVertexAttrib4NusvARB, .-bluegl_glVertexAttrib4NusvARB
 
 	.align	2
 	.global	bluegl_glVariantPointerEXT
@@ -5227,7 +5227,7 @@ bluegl_glVariantPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantPointerEXT, .-glVariantPointerEXT
+	.size	bluegl_glVariantPointerEXT, .-bluegl_glVariantPointerEXT
 
 	.align	2
 	.global	bluegl_glNamedFramebufferParameteriEXT
@@ -5237,7 +5237,7 @@ bluegl_glNamedFramebufferParameteriEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferParameteriEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferParameteriEXT, .-glNamedFramebufferParameteriEXT
+	.size	bluegl_glNamedFramebufferParameteriEXT, .-bluegl_glNamedFramebufferParameteriEXT
 
 	.align	2
 	.global	bluegl_glBlendFunciARB
@@ -5247,7 +5247,7 @@ bluegl_glBlendFunciARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFunciARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFunciARB, .-glBlendFunciARB
+	.size	bluegl_glBlendFunciARB, .-bluegl_glBlendFunciARB
 
 	.align	2
 	.global	bluegl_glInvalidateTexImage
@@ -5257,7 +5257,7 @@ bluegl_glInvalidateTexImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateTexImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateTexImage, .-glInvalidateTexImage
+	.size	bluegl_glInvalidateTexImage, .-bluegl_glInvalidateTexImage
 
 	.align	2
 	.global	bluegl_glProgramEnvParametersI4ivNV
@@ -5267,7 +5267,7 @@ bluegl_glProgramEnvParametersI4ivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParametersI4ivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParametersI4ivNV, .-glProgramEnvParametersI4ivNV
+	.size	bluegl_glProgramEnvParametersI4ivNV, .-bluegl_glProgramEnvParametersI4ivNV
 
 	.align	2
 	.global	bluegl_glPathGlyphIndexArrayNV
@@ -5277,7 +5277,7 @@ bluegl_glPathGlyphIndexArrayNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathGlyphIndexArrayNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathGlyphIndexArrayNV, .-glPathGlyphIndexArrayNV
+	.size	bluegl_glPathGlyphIndexArrayNV, .-bluegl_glPathGlyphIndexArrayNV
 
 	.align	2
 	.global	bluegl_glCopyImageSubData
@@ -5287,7 +5287,7 @@ bluegl_glCopyImageSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyImageSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyImageSubData, .-glCopyImageSubData
+	.size	bluegl_glCopyImageSubData, .-bluegl_glCopyImageSubData
 
 	.align	2
 	.global	bluegl_glGetUniformSubroutineuiv
@@ -5297,7 +5297,7 @@ bluegl_glGetUniformSubroutineuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformSubroutineuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformSubroutineuiv, .-glGetUniformSubroutineuiv
+	.size	bluegl_glGetUniformSubroutineuiv, .-bluegl_glGetUniformSubroutineuiv
 
 	.align	2
 	.global	bluegl_glBindVertexBuffer
@@ -5307,7 +5307,7 @@ bluegl_glBindVertexBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindVertexBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindVertexBuffer, .-glBindVertexBuffer
+	.size	bluegl_glBindVertexBuffer, .-bluegl_glBindVertexBuffer
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1iARB
@@ -5317,7 +5317,7 @@ bluegl_glMultiTexCoord1iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1iARB, .-glMultiTexCoord1iARB
+	.size	bluegl_glMultiTexCoord1iARB, .-bluegl_glMultiTexCoord1iARB
 
 	.align	2
 	.global	bluegl_glDebugMessageInsert
@@ -5327,7 +5327,7 @@ bluegl_glDebugMessageInsert:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageInsert]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageInsert, .-glDebugMessageInsert
+	.size	bluegl_glDebugMessageInsert, .-bluegl_glDebugMessageInsert
 
 	.align	2
 	.global	bluegl_glBeginVertexShaderEXT
@@ -5337,7 +5337,7 @@ bluegl_glBeginVertexShaderEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginVertexShaderEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginVertexShaderEXT, .-glBeginVertexShaderEXT
+	.size	bluegl_glBeginVertexShaderEXT, .-bluegl_glBeginVertexShaderEXT
 
 	.align	2
 	.global	bluegl_glIsVariantEnabledEXT
@@ -5347,7 +5347,7 @@ bluegl_glIsVariantEnabledEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsVariantEnabledEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsVariantEnabledEXT, .-glIsVariantEnabledEXT
+	.size	bluegl_glIsVariantEnabledEXT, .-bluegl_glIsVariantEnabledEXT
 
 	.align	2
 	.global	bluegl_glPassThroughxOES
@@ -5357,7 +5357,7 @@ bluegl_glPassThroughxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPassThroughxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPassThroughxOES, .-glPassThroughxOES
+	.size	bluegl_glPassThroughxOES, .-bluegl_glPassThroughxOES
 
 	.align	2
 	.global	bluegl_glIsSampler
@@ -5367,7 +5367,7 @@ bluegl_glIsSampler:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsSampler]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsSampler, .-glIsSampler
+	.size	bluegl_glIsSampler, .-bluegl_glIsSampler
 
 	.align	2
 	.global	bluegl_glConservativeRasterParameterfNV
@@ -5377,7 +5377,7 @@ bluegl_glConservativeRasterParameterfNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConservativeRasterParameterfNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConservativeRasterParameterfNV, .-glConservativeRasterParameterfNV
+	.size	bluegl_glConservativeRasterParameterfNV, .-bluegl_glConservativeRasterParameterfNV
 
 	.align	2
 	.global	bluegl_glMultiTexGenivEXT
@@ -5387,7 +5387,7 @@ bluegl_glMultiTexGenivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexGenivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexGenivEXT, .-glMultiTexGenivEXT
+	.size	bluegl_glMultiTexGenivEXT, .-bluegl_glMultiTexGenivEXT
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTexture2DEXT
@@ -5397,7 +5397,7 @@ bluegl_glNamedFramebufferTexture2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTexture2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTexture2DEXT, .-glNamedFramebufferTexture2DEXT
+	.size	bluegl_glNamedFramebufferTexture2DEXT, .-bluegl_glNamedFramebufferTexture2DEXT
 
 	.align	2
 	.global	bluegl_glGetTexParameterxvOES
@@ -5407,7 +5407,7 @@ bluegl_glGetTexParameterxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameterxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameterxvOES, .-glGetTexParameterxvOES
+	.size	bluegl_glGetTexParameterxvOES, .-bluegl_glGetTexParameterxvOES
 
 	.align	2
 	.global	bluegl_glCheckFramebufferStatus
@@ -5417,7 +5417,7 @@ bluegl_glCheckFramebufferStatus:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCheckFramebufferStatus]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCheckFramebufferStatus, .-glCheckFramebufferStatus
+	.size	bluegl_glCheckFramebufferStatus, .-bluegl_glCheckFramebufferStatus
 
 	.align	2
 	.global	bluegl_glDrawElementArrayAPPLE
@@ -5427,7 +5427,7 @@ bluegl_glDrawElementArrayAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementArrayAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementArrayAPPLE, .-glDrawElementArrayAPPLE
+	.size	bluegl_glDrawElementArrayAPPLE, .-bluegl_glDrawElementArrayAPPLE
 
 	.align	2
 	.global	bluegl_glFragmentLightivSGIX
@@ -5437,7 +5437,7 @@ bluegl_glFragmentLightivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightivSGIX, .-glFragmentLightivSGIX
+	.size	bluegl_glFragmentLightivSGIX, .-bluegl_glFragmentLightivSGIX
 
 	.align	2
 	.global	bluegl_glNamedBufferStorageEXT
@@ -5447,7 +5447,7 @@ bluegl_glNamedBufferStorageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferStorageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferStorageEXT, .-glNamedBufferStorageEXT
+	.size	bluegl_glNamedBufferStorageEXT, .-bluegl_glNamedBufferStorageEXT
 
 	.align	2
 	.global	bluegl_glBindImageTexture
@@ -5457,7 +5457,7 @@ bluegl_glBindImageTexture:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindImageTexture]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindImageTexture, .-glBindImageTexture
+	.size	bluegl_glBindImageTexture, .-bluegl_glBindImageTexture
 
 	.align	2
 	.global	bluegl_glIsPathNV
@@ -5467,7 +5467,7 @@ bluegl_glIsPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsPathNV, .-glIsPathNV
+	.size	bluegl_glIsPathNV, .-bluegl_glIsPathNV
 
 	.align	2
 	.global	bluegl_glDrawRangeElements
@@ -5477,7 +5477,7 @@ bluegl_glDrawRangeElements:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawRangeElements]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawRangeElements, .-glDrawRangeElements
+	.size	bluegl_glDrawRangeElements, .-bluegl_glDrawRangeElements
 
 	.align	2
 	.global	bluegl_glMultiTexCoordPointerEXT
@@ -5487,7 +5487,7 @@ bluegl_glMultiTexCoordPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordPointerEXT, .-glMultiTexCoordPointerEXT
+	.size	bluegl_glMultiTexCoordPointerEXT, .-bluegl_glMultiTexCoordPointerEXT
 
 	.align	2
 	.global	bluegl_glSamplerParameterIiv
@@ -5497,7 +5497,7 @@ bluegl_glSamplerParameterIiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplerParameterIiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplerParameterIiv, .-glSamplerParameterIiv
+	.size	bluegl_glSamplerParameterIiv, .-bluegl_glSamplerParameterIiv
 
 	.align	2
 	.global	bluegl_glSyncTextureINTEL
@@ -5507,7 +5507,7 @@ bluegl_glSyncTextureINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSyncTextureINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSyncTextureINTEL, .-glSyncTextureINTEL
+	.size	bluegl_glSyncTextureINTEL, .-bluegl_glSyncTextureINTEL
 
 	.align	2
 	.global	bluegl_glCreateSamplers
@@ -5517,7 +5517,7 @@ bluegl_glCreateSamplers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateSamplers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateSamplers, .-glCreateSamplers
+	.size	bluegl_glCreateSamplers, .-bluegl_glCreateSamplers
 
 	.align	2
 	.global	bluegl_glCombinerParameterfNV
@@ -5527,7 +5527,7 @@ bluegl_glCombinerParameterfNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCombinerParameterfNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCombinerParameterfNV, .-glCombinerParameterfNV
+	.size	bluegl_glCombinerParameterfNV, .-bluegl_glCombinerParameterfNV
 
 	.align	2
 	.global	bluegl_glGetArrayObjectivATI
@@ -5537,7 +5537,7 @@ bluegl_glGetArrayObjectivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetArrayObjectivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetArrayObjectivATI, .-glGetArrayObjectivATI
+	.size	bluegl_glGetArrayObjectivATI, .-bluegl_glGetArrayObjectivATI
 
 	.align	2
 	.global	bluegl_glVertexStream3fvATI
@@ -5547,7 +5547,7 @@ bluegl_glVertexStream3fvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3fvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3fvATI, .-glVertexStream3fvATI
+	.size	bluegl_glVertexStream3fvATI, .-bluegl_glVertexStream3fvATI
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4i
@@ -5557,7 +5557,7 @@ bluegl_glMultiTexCoord4i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4i, .-glMultiTexCoord4i
+	.size	bluegl_glMultiTexCoord4i, .-bluegl_glMultiTexCoord4i
 
 	.align	2
 	.global	bluegl_glSampleMapATI
@@ -5567,7 +5567,7 @@ bluegl_glSampleMapATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSampleMapATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSampleMapATI, .-glSampleMapATI
+	.size	bluegl_glSampleMapATI, .-bluegl_glSampleMapATI
 
 	.align	2
 	.global	bluegl_glVertexAttrib4bvARB
@@ -5577,7 +5577,7 @@ bluegl_glVertexAttrib4bvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4bvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4bvARB, .-glVertexAttrib4bvARB
+	.size	bluegl_glVertexAttrib4bvARB, .-bluegl_glVertexAttrib4bvARB
 
 	.align	2
 	.global	bluegl_glBinormal3ivEXT
@@ -5587,7 +5587,7 @@ bluegl_glBinormal3ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3ivEXT, .-glBinormal3ivEXT
+	.size	bluegl_glBinormal3ivEXT, .-bluegl_glBinormal3ivEXT
 
 	.align	2
 	.global	bluegl_glMultiDrawArraysIndirectCountARB
@@ -5597,7 +5597,7 @@ bluegl_glMultiDrawArraysIndirectCountARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawArraysIndirectCountARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawArraysIndirectCountARB, .-glMultiDrawArraysIndirectCountARB
+	.size	bluegl_glMultiDrawArraysIndirectCountARB, .-bluegl_glMultiDrawArraysIndirectCountARB
 
 	.align	2
 	.global	bluegl_glUniformBufferEXT
@@ -5607,7 +5607,7 @@ bluegl_glUniformBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformBufferEXT, .-glUniformBufferEXT
+	.size	bluegl_glUniformBufferEXT, .-bluegl_glUniformBufferEXT
 
 	.align	2
 	.global	bluegl_glWindowPos2ivMESA
@@ -5617,7 +5617,7 @@ bluegl_glWindowPos2ivMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2ivMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2ivMESA, .-glWindowPos2ivMESA
+	.size	bluegl_glWindowPos2ivMESA, .-bluegl_glWindowPos2ivMESA
 
 	.align	2
 	.global	bluegl_glVertexAttribL1d
@@ -5627,7 +5627,7 @@ bluegl_glVertexAttribL1d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1d, .-glVertexAttribL1d
+	.size	bluegl_glVertexAttribL1d, .-bluegl_glVertexAttribL1d
 
 	.align	2
 	.global	bluegl_glMultiTexSubImage1DEXT
@@ -5637,7 +5637,7 @@ bluegl_glMultiTexSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexSubImage1DEXT, .-glMultiTexSubImage1DEXT
+	.size	bluegl_glMultiTexSubImage1DEXT, .-bluegl_glMultiTexSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI3uiv
@@ -5647,7 +5647,7 @@ bluegl_glVertexAttribI3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3uiv, .-glVertexAttribI3uiv
+	.size	bluegl_glVertexAttribI3uiv, .-bluegl_glVertexAttribI3uiv
 
 	.align	2
 	.global	bluegl_glBufferDataARB
@@ -5657,7 +5657,7 @@ bluegl_glBufferDataARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferDataARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferDataARB, .-glBufferDataARB
+	.size	bluegl_glBufferDataARB, .-bluegl_glBufferDataARB
 
 	.align	2
 	.global	bluegl_glVertexAttribIFormat
@@ -5667,7 +5667,7 @@ bluegl_glVertexAttribIFormat:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribIFormat]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribIFormat, .-glVertexAttribIFormat
+	.size	bluegl_glVertexAttribIFormat, .-bluegl_glVertexAttribIFormat
 
 	.align	2
 	.global	bluegl_glCreateFramebuffers
@@ -5677,7 +5677,7 @@ bluegl_glCreateFramebuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateFramebuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateFramebuffers, .-glCreateFramebuffers
+	.size	bluegl_glCreateFramebuffers, .-bluegl_glCreateFramebuffers
 
 	.align	2
 	.global	bluegl_glVertexAttribL2i64vNV
@@ -5687,7 +5687,7 @@ bluegl_glVertexAttribL2i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2i64vNV, .-glVertexAttribL2i64vNV
+	.size	bluegl_glVertexAttribL2i64vNV, .-bluegl_glVertexAttribL2i64vNV
 
 	.align	2
 	.global	bluegl_glNormalStream3dvATI
@@ -5697,7 +5697,7 @@ bluegl_glNormalStream3dvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3dvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3dvATI, .-glNormalStream3dvATI
+	.size	bluegl_glNormalStream3dvATI, .-bluegl_glNormalStream3dvATI
 
 	.align	2
 	.global	bluegl_glVertexAttribs4dvNV
@@ -5707,7 +5707,7 @@ bluegl_glVertexAttribs4dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs4dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs4dvNV, .-glVertexAttribs4dvNV
+	.size	bluegl_glVertexAttribs4dvNV, .-bluegl_glVertexAttribs4dvNV
 
 	.align	2
 	.global	bluegl_glUniform3i64vNV
@@ -5717,7 +5717,7 @@ bluegl_glUniform3i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3i64vNV, .-glUniform3i64vNV
+	.size	bluegl_glUniform3i64vNV, .-bluegl_glUniform3i64vNV
 
 	.align	2
 	.global	bluegl_glPathTexGenNV
@@ -5727,7 +5727,7 @@ bluegl_glPathTexGenNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathTexGenNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathTexGenNV, .-glPathTexGenNV
+	.size	bluegl_glPathTexGenNV, .-bluegl_glPathTexGenNV
 
 	.align	2
 	.global	bluegl_glUniform2uivEXT
@@ -5737,7 +5737,7 @@ bluegl_glUniform2uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2uivEXT, .-glUniform2uivEXT
+	.size	bluegl_glUniform2uivEXT, .-bluegl_glUniform2uivEXT
 
 	.align	2
 	.global	bluegl_glMultiDrawElementsIndirect
@@ -5747,7 +5747,7 @@ bluegl_glMultiDrawElementsIndirect:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementsIndirect]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementsIndirect, .-glMultiDrawElementsIndirect
+	.size	bluegl_glMultiDrawElementsIndirect, .-bluegl_glMultiDrawElementsIndirect
 
 	.align	2
 	.global	bluegl_glStencilThenCoverStrokePathInstancedNV
@@ -5757,7 +5757,7 @@ bluegl_glStencilThenCoverStrokePathInstancedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilThenCoverStrokePathInstancedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilThenCoverStrokePathInstancedNV, .-glStencilThenCoverStrokePathInstancedNV
+	.size	bluegl_glStencilThenCoverStrokePathInstancedNV, .-bluegl_glStencilThenCoverStrokePathInstancedNV
 
 	.align	2
 	.global	bluegl_glBindBuffer
@@ -5767,7 +5767,7 @@ bluegl_glBindBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBuffer, .-glBindBuffer
+	.size	bluegl_glBindBuffer, .-bluegl_glBindBuffer
 
 	.align	2
 	.global	bluegl_glMakeImageHandleResidentNV
@@ -5777,7 +5777,7 @@ bluegl_glMakeImageHandleResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeImageHandleResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeImageHandleResidentNV, .-glMakeImageHandleResidentNV
+	.size	bluegl_glMakeImageHandleResidentNV, .-bluegl_glMakeImageHandleResidentNV
 
 	.align	2
 	.global	bluegl_glUniformMatrix2x4fv
@@ -5787,7 +5787,7 @@ bluegl_glUniformMatrix2x4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix2x4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix2x4fv, .-glUniformMatrix2x4fv
+	.size	bluegl_glUniformMatrix2x4fv, .-bluegl_glUniformMatrix2x4fv
 
 	.align	2
 	.global	bluegl_glGetMultiTexParameterfvEXT
@@ -5797,7 +5797,7 @@ bluegl_glGetMultiTexParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexParameterfvEXT, .-glGetMultiTexParameterfvEXT
+	.size	bluegl_glGetMultiTexParameterfvEXT, .-bluegl_glGetMultiTexParameterfvEXT
 
 	.align	2
 	.global	bluegl_glDepthRangeIndexed
@@ -5807,7 +5807,7 @@ bluegl_glDepthRangeIndexed:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthRangeIndexed]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthRangeIndexed, .-glDepthRangeIndexed
+	.size	bluegl_glDepthRangeIndexed, .-bluegl_glDepthRangeIndexed
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1s
@@ -5817,7 +5817,7 @@ bluegl_glMultiTexCoord1s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1s, .-glMultiTexCoord1s
+	.size	bluegl_glMultiTexCoord1s, .-bluegl_glMultiTexCoord1s
 
 	.align	2
 	.global	bluegl_glMatrixScalefEXT
@@ -5827,7 +5827,7 @@ bluegl_glMatrixScalefEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixScalefEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixScalefEXT, .-glMatrixScalefEXT
+	.size	bluegl_glMatrixScalefEXT, .-bluegl_glMatrixScalefEXT
 
 	.align	2
 	.global	bluegl_glGetError
@@ -5837,7 +5837,7 @@ bluegl_glGetError:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetError]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetError, .-glGetError
+	.size	bluegl_glGetError, .-bluegl_glGetError
 
 	.align	2
 	.global	bluegl_glBindTextureUnitParameterEXT
@@ -5847,7 +5847,7 @@ bluegl_glBindTextureUnitParameterEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTextureUnitParameterEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTextureUnitParameterEXT, .-glBindTextureUnitParameterEXT
+	.size	bluegl_glBindTextureUnitParameterEXT, .-bluegl_glBindTextureUnitParameterEXT
 
 	.align	2
 	.global	bluegl_glDrawCommandsStatesNV
@@ -5857,7 +5857,7 @@ bluegl_glDrawCommandsStatesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawCommandsStatesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawCommandsStatesNV, .-glDrawCommandsStatesNV
+	.size	bluegl_glDrawCommandsStatesNV, .-bluegl_glDrawCommandsStatesNV
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiNormal3fVertex3fvSUN
@@ -5867,7 +5867,7 @@ bluegl_glReplacementCodeuiNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiNormal3fVertex3fvSUN, .-glReplacementCodeuiNormal3fVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiNormal3fVertex3fvSUN, .-bluegl_glReplacementCodeuiNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glDeletePerfQueryINTEL
@@ -5877,7 +5877,7 @@ bluegl_glDeletePerfQueryINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeletePerfQueryINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeletePerfQueryINTEL, .-glDeletePerfQueryINTEL
+	.size	bluegl_glDeletePerfQueryINTEL, .-bluegl_glDeletePerfQueryINTEL
 
 	.align	2
 	.global	bluegl_glGetUniformivARB
@@ -5887,7 +5887,7 @@ bluegl_glGetUniformivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformivARB, .-glGetUniformivARB
+	.size	bluegl_glGetUniformivARB, .-bluegl_glGetUniformivARB
 
 	.align	2
 	.global	bluegl_glGetActiveUniformARB
@@ -5897,7 +5897,7 @@ bluegl_glGetActiveUniformARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveUniformARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveUniformARB, .-glGetActiveUniformARB
+	.size	bluegl_glGetActiveUniformARB, .-bluegl_glGetActiveUniformARB
 
 	.align	2
 	.global	bluegl_glDeleteOcclusionQueriesNV
@@ -5907,7 +5907,7 @@ bluegl_glDeleteOcclusionQueriesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteOcclusionQueriesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteOcclusionQueriesNV, .-glDeleteOcclusionQueriesNV
+	.size	bluegl_glDeleteOcclusionQueriesNV, .-bluegl_glDeleteOcclusionQueriesNV
 
 	.align	2
 	.global	bluegl_glVertexAttribI3ivEXT
@@ -5917,7 +5917,7 @@ bluegl_glVertexAttribI3ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3ivEXT, .-glVertexAttribI3ivEXT
+	.size	bluegl_glVertexAttribI3ivEXT, .-bluegl_glVertexAttribI3ivEXT
 
 	.align	2
 	.global	bluegl_glGetTexLevelParameterfv
@@ -5927,7 +5927,7 @@ bluegl_glGetTexLevelParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexLevelParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexLevelParameterfv, .-glGetTexLevelParameterfv
+	.size	bluegl_glGetTexLevelParameterfv, .-bluegl_glGetTexLevelParameterfv
 
 	.align	2
 	.global	bluegl_glVertexAttribI1ivEXT
@@ -5937,7 +5937,7 @@ bluegl_glVertexAttribI1ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1ivEXT, .-glVertexAttribI1ivEXT
+	.size	bluegl_glVertexAttribI1ivEXT, .-bluegl_glVertexAttribI1ivEXT
 
 	.align	2
 	.global	bluegl_glCreateSyncFromCLeventARB
@@ -5947,7 +5947,7 @@ bluegl_glCreateSyncFromCLeventARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateSyncFromCLeventARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateSyncFromCLeventARB, .-glCreateSyncFromCLeventARB
+	.size	bluegl_glCreateSyncFromCLeventARB, .-bluegl_glCreateSyncFromCLeventARB
 
 	.align	2
 	.global	bluegl_glGetnColorTableARB
@@ -5957,7 +5957,7 @@ bluegl_glGetnColorTableARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnColorTableARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnColorTableARB, .-glGetnColorTableARB
+	.size	bluegl_glGetnColorTableARB, .-bluegl_glGetnColorTableARB
 
 	.align	2
 	.global	bluegl_glUniform4i64ARB
@@ -5967,7 +5967,7 @@ bluegl_glUniform4i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4i64ARB, .-glUniform4i64ARB
+	.size	bluegl_glUniform4i64ARB, .-bluegl_glUniform4i64ARB
 
 	.align	2
 	.global	bluegl_glGetnUniformui64vARB
@@ -5977,7 +5977,7 @@ bluegl_glGetnUniformui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformui64vARB, .-glGetnUniformui64vARB
+	.size	bluegl_glGetnUniformui64vARB, .-bluegl_glGetnUniformui64vARB
 
 	.align	2
 	.global	bluegl_glVertexAttribI1uiEXT
@@ -5987,7 +5987,7 @@ bluegl_glVertexAttribI1uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1uiEXT, .-glVertexAttribI1uiEXT
+	.size	bluegl_glVertexAttribI1uiEXT, .-bluegl_glVertexAttribI1uiEXT
 
 	.align	2
 	.global	bluegl_glLoadTransposeMatrixdARB
@@ -5997,7 +5997,7 @@ bluegl_glLoadTransposeMatrixdARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadTransposeMatrixdARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadTransposeMatrixdARB, .-glLoadTransposeMatrixdARB
+	.size	bluegl_glLoadTransposeMatrixdARB, .-bluegl_glLoadTransposeMatrixdARB
 
 	.align	2
 	.global	bluegl_glProgramUniform2ui
@@ -6007,7 +6007,7 @@ bluegl_glProgramUniform2ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2ui, .-glProgramUniform2ui
+	.size	bluegl_glProgramUniform2ui, .-bluegl_glProgramUniform2ui
 
 	.align	2
 	.global	bluegl_glProgramUniform4ui
@@ -6017,7 +6017,7 @@ bluegl_glProgramUniform4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4ui, .-glProgramUniform4ui
+	.size	bluegl_glProgramUniform4ui, .-bluegl_glProgramUniform4ui
 
 	.align	2
 	.global	bluegl_glStencilMask
@@ -6027,7 +6027,7 @@ bluegl_glStencilMask:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilMask]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilMask, .-glStencilMask
+	.size	bluegl_glStencilMask, .-bluegl_glStencilMask
 
 	.align	2
 	.global	bluegl_glResetHistogramEXT
@@ -6037,7 +6037,7 @@ bluegl_glResetHistogramEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResetHistogramEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResetHistogramEXT, .-glResetHistogramEXT
+	.size	bluegl_glResetHistogramEXT, .-bluegl_glResetHistogramEXT
 
 	.align	2
 	.global	bluegl_glLightxOES
@@ -6047,7 +6047,7 @@ bluegl_glLightxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLightxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLightxOES, .-glLightxOES
+	.size	bluegl_glLightxOES, .-bluegl_glLightxOES
 
 	.align	2
 	.global	bluegl_glNamedBufferData
@@ -6057,7 +6057,7 @@ bluegl_glNamedBufferData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferData, .-glNamedBufferData
+	.size	bluegl_glNamedBufferData, .-bluegl_glNamedBufferData
 
 	.align	2
 	.global	bluegl_glVertexStream3sATI
@@ -6067,7 +6067,7 @@ bluegl_glVertexStream3sATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3sATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3sATI, .-glVertexStream3sATI
+	.size	bluegl_glVertexStream3sATI, .-bluegl_glVertexStream3sATI
 
 	.align	2
 	.global	bluegl_glVertexAttrib3fvARB
@@ -6077,7 +6077,7 @@ bluegl_glVertexAttrib3fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3fvARB, .-glVertexAttrib3fvARB
+	.size	bluegl_glVertexAttrib3fvARB, .-bluegl_glVertexAttrib3fvARB
 
 	.align	2
 	.global	bluegl_glClearNamedBufferSubData
@@ -6087,7 +6087,7 @@ bluegl_glClearNamedBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedBufferSubData, .-glClearNamedBufferSubData
+	.size	bluegl_glClearNamedBufferSubData, .-bluegl_glClearNamedBufferSubData
 
 	.align	2
 	.global	bluegl_glProgramUniformHandleui64ARB
@@ -6097,7 +6097,7 @@ bluegl_glProgramUniformHandleui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformHandleui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformHandleui64ARB, .-glProgramUniformHandleui64ARB
+	.size	bluegl_glProgramUniformHandleui64ARB, .-bluegl_glProgramUniformHandleui64ARB
 
 	.align	2
 	.global	bluegl_glUniform3iARB
@@ -6107,7 +6107,7 @@ bluegl_glUniform3iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3iARB, .-glUniform3iARB
+	.size	bluegl_glUniform3iARB, .-bluegl_glUniform3iARB
 
 	.align	2
 	.global	bluegl_glCreateProgramObjectARB
@@ -6117,7 +6117,7 @@ bluegl_glCreateProgramObjectARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateProgramObjectARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateProgramObjectARB, .-glCreateProgramObjectARB
+	.size	bluegl_glCreateProgramObjectARB, .-bluegl_glCreateProgramObjectARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1dvARB
@@ -6127,7 +6127,7 @@ bluegl_glMultiTexCoord1dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1dvARB, .-glMultiTexCoord1dvARB
+	.size	bluegl_glMultiTexCoord1dvARB, .-bluegl_glMultiTexCoord1dvARB
 
 	.align	2
 	.global	bluegl_glGetObjectParameterfvARB
@@ -6137,7 +6137,7 @@ bluegl_glGetObjectParameterfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectParameterfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectParameterfvARB, .-glGetObjectParameterfvARB
+	.size	bluegl_glGetObjectParameterfvARB, .-bluegl_glGetObjectParameterfvARB
 
 	.align	2
 	.global	bluegl_glListDrawCommandsStatesClientNV
@@ -6147,7 +6147,7 @@ bluegl_glListDrawCommandsStatesClientNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glListDrawCommandsStatesClientNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glListDrawCommandsStatesClientNV, .-glListDrawCommandsStatesClientNV
+	.size	bluegl_glListDrawCommandsStatesClientNV, .-bluegl_glListDrawCommandsStatesClientNV
 
 	.align	2
 	.global	bluegl_glMultiTexImage2DEXT
@@ -6157,7 +6157,7 @@ bluegl_glMultiTexImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexImage2DEXT, .-glMultiTexImage2DEXT
+	.size	bluegl_glMultiTexImage2DEXT, .-bluegl_glMultiTexImage2DEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform1i64NV
@@ -6167,7 +6167,7 @@ bluegl_glProgramUniform1i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1i64NV, .-glProgramUniform1i64NV
+	.size	bluegl_glProgramUniform1i64NV, .-bluegl_glProgramUniform1i64NV
 
 	.align	2
 	.global	bluegl_glGetObjectBufferivATI
@@ -6177,7 +6177,7 @@ bluegl_glGetObjectBufferivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectBufferivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectBufferivATI, .-glGetObjectBufferivATI
+	.size	bluegl_glGetObjectBufferivATI, .-bluegl_glGetObjectBufferivATI
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1fvARB
@@ -6187,7 +6187,7 @@ bluegl_glMultiTexCoord1fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1fvARB, .-glMultiTexCoord1fvARB
+	.size	bluegl_glMultiTexCoord1fvARB, .-bluegl_glMultiTexCoord1fvARB
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiColor4ubVertex3fvSUN
@@ -6197,7 +6197,7 @@ bluegl_glReplacementCodeuiColor4ubVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiColor4ubVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiColor4ubVertex3fvSUN, .-glReplacementCodeuiColor4ubVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiColor4ubVertex3fvSUN, .-bluegl_glReplacementCodeuiColor4ubVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glBlendFuncSeparateINGR
@@ -6207,7 +6207,7 @@ bluegl_glBlendFuncSeparateINGR:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFuncSeparateINGR]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFuncSeparateINGR, .-glBlendFuncSeparateINGR
+	.size	bluegl_glBlendFuncSeparateINGR, .-bluegl_glBlendFuncSeparateINGR
 
 	.align	2
 	.global	bluegl_glGetVideoCaptureStreamfvNV
@@ -6217,7 +6217,7 @@ bluegl_glGetVideoCaptureStreamfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideoCaptureStreamfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideoCaptureStreamfvNV, .-glGetVideoCaptureStreamfvNV
+	.size	bluegl_glGetVideoCaptureStreamfvNV, .-bluegl_glGetVideoCaptureStreamfvNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib2fARB
@@ -6227,7 +6227,7 @@ bluegl_glVertexAttrib2fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2fARB, .-glVertexAttrib2fARB
+	.size	bluegl_glVertexAttrib2fARB, .-bluegl_glVertexAttrib2fARB
 
 	.align	2
 	.global	bluegl_glGetCompressedTextureSubImage
@@ -6237,7 +6237,7 @@ bluegl_glGetCompressedTextureSubImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCompressedTextureSubImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCompressedTextureSubImage, .-glGetCompressedTextureSubImage
+	.size	bluegl_glGetCompressedTextureSubImage, .-bluegl_glGetCompressedTextureSubImage
 
 	.align	2
 	.global	bluegl_glCopyImageSubDataNV
@@ -6247,7 +6247,7 @@ bluegl_glCopyImageSubDataNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyImageSubDataNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyImageSubDataNV, .-glCopyImageSubDataNV
+	.size	bluegl_glCopyImageSubDataNV, .-bluegl_glCopyImageSubDataNV
 
 	.align	2
 	.global	bluegl_glPixelStoref
@@ -6257,7 +6257,7 @@ bluegl_glPixelStoref:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelStoref]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelStoref, .-glPixelStoref
+	.size	bluegl_glPixelStoref, .-bluegl_glPixelStoref
 
 	.align	2
 	.global	bluegl_glVertexStream1iATI
@@ -6267,7 +6267,7 @@ bluegl_glVertexStream1iATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1iATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1iATI, .-glVertexStream1iATI
+	.size	bluegl_glVertexStream1iATI, .-bluegl_glVertexStream1iATI
 
 	.align	2
 	.global	bluegl_glPatchParameterfv
@@ -6277,7 +6277,7 @@ bluegl_glPatchParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPatchParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPatchParameterfv, .-glPatchParameterfv
+	.size	bluegl_glPatchParameterfv, .-bluegl_glPatchParameterfv
 
 	.align	2
 	.global	bluegl_glIsFramebufferEXT
@@ -6287,7 +6287,7 @@ bluegl_glIsFramebufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsFramebufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsFramebufferEXT, .-glIsFramebufferEXT
+	.size	bluegl_glIsFramebufferEXT, .-bluegl_glIsFramebufferEXT
 
 	.align	2
 	.global	bluegl_glTextureStorage2D
@@ -6297,7 +6297,7 @@ bluegl_glTextureStorage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage2D, .-glTextureStorage2D
+	.size	bluegl_glTextureStorage2D, .-bluegl_glTextureStorage2D
 
 	.align	2
 	.global	bluegl_glProgramUniform1ui64ARB
@@ -6307,7 +6307,7 @@ bluegl_glProgramUniform1ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1ui64ARB, .-glProgramUniform1ui64ARB
+	.size	bluegl_glProgramUniform1ui64ARB, .-bluegl_glProgramUniform1ui64ARB
 
 	.align	2
 	.global	bluegl_glTexBufferRange
@@ -6317,7 +6317,7 @@ bluegl_glTexBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexBufferRange, .-glTexBufferRange
+	.size	bluegl_glTexBufferRange, .-bluegl_glTexBufferRange
 
 	.align	2
 	.global	bluegl_glGetPixelTexGenParameterivSGIS
@@ -6327,7 +6327,7 @@ bluegl_glGetPixelTexGenParameterivSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPixelTexGenParameterivSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPixelTexGenParameterivSGIS, .-glGetPixelTexGenParameterivSGIS
+	.size	bluegl_glGetPixelTexGenParameterivSGIS, .-bluegl_glGetPixelTexGenParameterivSGIS
 
 	.align	2
 	.global	bluegl_glTextureSubImage3DEXT
@@ -6337,7 +6337,7 @@ bluegl_glTextureSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureSubImage3DEXT, .-glTextureSubImage3DEXT
+	.size	bluegl_glTextureSubImage3DEXT, .-bluegl_glTextureSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform1uiEXT
@@ -6347,7 +6347,7 @@ bluegl_glProgramUniform1uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1uiEXT, .-glProgramUniform1uiEXT
+	.size	bluegl_glProgramUniform1uiEXT, .-bluegl_glProgramUniform1uiEXT
 
 	.align	2
 	.global	bluegl_glUniform2i64NV
@@ -6357,7 +6357,7 @@ bluegl_glUniform2i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2i64NV, .-glUniform2i64NV
+	.size	bluegl_glUniform2i64NV, .-bluegl_glUniform2i64NV
 
 	.align	2
 	.global	bluegl_glVertexAttribI3ui
@@ -6367,7 +6367,7 @@ bluegl_glVertexAttribI3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3ui, .-glVertexAttribI3ui
+	.size	bluegl_glVertexAttribI3ui, .-bluegl_glVertexAttribI3ui
 
 	.align	2
 	.global	bluegl_glSampleMaskSGIS
@@ -6377,7 +6377,7 @@ bluegl_glSampleMaskSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSampleMaskSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSampleMaskSGIS, .-glSampleMaskSGIS
+	.size	bluegl_glSampleMaskSGIS, .-bluegl_glSampleMaskSGIS
 
 	.align	2
 	.global	bluegl_glVertexAttrib4NivARB
@@ -6387,7 +6387,7 @@ bluegl_glVertexAttrib4NivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4NivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4NivARB, .-glVertexAttrib4NivARB
+	.size	bluegl_glVertexAttrib4NivARB, .-bluegl_glVertexAttrib4NivARB
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactorfSUN
@@ -6397,7 +6397,7 @@ bluegl_glGlobalAlphaFactorfSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactorfSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactorfSUN, .-glGlobalAlphaFactorfSUN
+	.size	bluegl_glGlobalAlphaFactorfSUN, .-bluegl_glGlobalAlphaFactorfSUN
 
 	.align	2
 	.global	bluegl_glBlendEquationSeparateIndexedAMD
@@ -6407,7 +6407,7 @@ bluegl_glBlendEquationSeparateIndexedAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationSeparateIndexedAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationSeparateIndexedAMD, .-glBlendEquationSeparateIndexedAMD
+	.size	bluegl_glBlendEquationSeparateIndexedAMD, .-bluegl_glBlendEquationSeparateIndexedAMD
 
 	.align	2
 	.global	bluegl_glGetPerfCounterInfoINTEL
@@ -6417,7 +6417,7 @@ bluegl_glGetPerfCounterInfoINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfCounterInfoINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfCounterInfoINTEL, .-glGetPerfCounterInfoINTEL
+	.size	bluegl_glGetPerfCounterInfoINTEL, .-bluegl_glGetPerfCounterInfoINTEL
 
 	.align	2
 	.global	bluegl_glProgramLocalParameterI4uiNV
@@ -6427,7 +6427,7 @@ bluegl_glProgramLocalParameterI4uiNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameterI4uiNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameterI4uiNV, .-glProgramLocalParameterI4uiNV
+	.size	bluegl_glProgramLocalParameterI4uiNV, .-bluegl_glProgramLocalParameterI4uiNV
 
 	.align	2
 	.global	bluegl_glPixelZoomxOES
@@ -6437,7 +6437,7 @@ bluegl_glPixelZoomxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelZoomxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelZoomxOES, .-glPixelZoomxOES
+	.size	bluegl_glPixelZoomxOES, .-bluegl_glPixelZoomxOES
 
 	.align	2
 	.global	bluegl_glGetCombinerOutputParameterivNV
@@ -6447,7 +6447,7 @@ bluegl_glGetCombinerOutputParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCombinerOutputParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCombinerOutputParameterivNV, .-glGetCombinerOutputParameterivNV
+	.size	bluegl_glGetCombinerOutputParameterivNV, .-bluegl_glGetCombinerOutputParameterivNV
 
 	.align	2
 	.global	bluegl_glRasterPos2xvOES
@@ -6457,7 +6457,7 @@ bluegl_glRasterPos2xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRasterPos2xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRasterPos2xvOES, .-glRasterPos2xvOES
+	.size	bluegl_glRasterPos2xvOES, .-bluegl_glRasterPos2xvOES
 
 	.align	2
 	.global	bluegl_glProgramLocalParametersI4ivNV
@@ -6467,7 +6467,7 @@ bluegl_glProgramLocalParametersI4ivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParametersI4ivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParametersI4ivNV, .-glProgramLocalParametersI4ivNV
+	.size	bluegl_glProgramLocalParametersI4ivNV, .-bluegl_glProgramLocalParametersI4ivNV
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexBuffers
@@ -6477,7 +6477,7 @@ bluegl_glVertexArrayVertexBuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexBuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexBuffers, .-glVertexArrayVertexBuffers
+	.size	bluegl_glVertexArrayVertexBuffers, .-bluegl_glVertexArrayVertexBuffers
 
 	.align	2
 	.global	bluegl_glUniform1ui64NV
@@ -6487,7 +6487,7 @@ bluegl_glUniform1ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1ui64NV, .-glUniform1ui64NV
+	.size	bluegl_glUniform1ui64NV, .-bluegl_glUniform1ui64NV
 
 	.align	2
 	.global	bluegl_glProgramParameteri
@@ -6497,7 +6497,7 @@ bluegl_glProgramParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameteri, .-glProgramParameteri
+	.size	bluegl_glProgramParameteri, .-bluegl_glProgramParameteri
 
 	.align	2
 	.global	bluegl_glGetProgramParameterdvNV
@@ -6507,7 +6507,7 @@ bluegl_glGetProgramParameterdvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramParameterdvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramParameterdvNV, .-glGetProgramParameterdvNV
+	.size	bluegl_glGetProgramParameterdvNV, .-bluegl_glGetProgramParameterdvNV
 
 	.align	2
 	.global	bluegl_glVertexStream2dvATI
@@ -6517,7 +6517,7 @@ bluegl_glVertexStream2dvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2dvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2dvATI, .-glVertexStream2dvATI
+	.size	bluegl_glVertexStream2dvATI, .-bluegl_glVertexStream2dvATI
 
 	.align	2
 	.global	bluegl_glPathStencilDepthOffsetNV
@@ -6527,7 +6527,7 @@ bluegl_glPathStencilDepthOffsetNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathStencilDepthOffsetNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathStencilDepthOffsetNV, .-glPathStencilDepthOffsetNV
+	.size	bluegl_glPathStencilDepthOffsetNV, .-bluegl_glPathStencilDepthOffsetNV
 
 	.align	2
 	.global	bluegl_glIsStateNV
@@ -6537,7 +6537,7 @@ bluegl_glIsStateNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsStateNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsStateNV, .-glIsStateNV
+	.size	bluegl_glIsStateNV, .-bluegl_glIsStateNV
 
 	.align	2
 	.global	bluegl_glVertexAttribL2dEXT
@@ -6547,7 +6547,7 @@ bluegl_glVertexAttribL2dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2dEXT, .-glVertexAttribL2dEXT
+	.size	bluegl_glVertexAttribL2dEXT, .-bluegl_glVertexAttribL2dEXT
 
 	.align	2
 	.global	bluegl_glGetImageTransformParameterfvHP
@@ -6557,7 +6557,7 @@ bluegl_glGetImageTransformParameterfvHP:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetImageTransformParameterfvHP]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetImageTransformParameterfvHP, .-glGetImageTransformParameterfvHP
+	.size	bluegl_glGetImageTransformParameterfvHP, .-bluegl_glGetImageTransformParameterfvHP
 
 	.align	2
 	.global	bluegl_glVertex3xOES
@@ -6567,7 +6567,7 @@ bluegl_glVertex3xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex3xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex3xOES, .-glVertex3xOES
+	.size	bluegl_glVertex3xOES, .-bluegl_glVertex3xOES
 
 	.align	2
 	.global	bluegl_glFogFuncSGIS
@@ -6577,7 +6577,7 @@ bluegl_glFogFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogFuncSGIS, .-glFogFuncSGIS
+	.size	bluegl_glFogFuncSGIS, .-bluegl_glFogFuncSGIS
 
 	.align	2
 	.global	bluegl_glWeightPointerARB
@@ -6587,7 +6587,7 @@ bluegl_glWeightPointerARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightPointerARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightPointerARB, .-glWeightPointerARB
+	.size	bluegl_glWeightPointerARB, .-bluegl_glWeightPointerARB
 
 	.align	2
 	.global	bluegl_glFinishFenceNV
@@ -6597,7 +6597,7 @@ bluegl_glFinishFenceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFinishFenceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFinishFenceNV, .-glFinishFenceNV
+	.size	bluegl_glFinishFenceNV, .-bluegl_glFinishFenceNV
 
 	.align	2
 	.global	bluegl_glDepthRangexOES
@@ -6607,7 +6607,7 @@ bluegl_glDepthRangexOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthRangexOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthRangexOES, .-glDepthRangexOES
+	.size	bluegl_glDepthRangexOES, .-bluegl_glDepthRangexOES
 
 	.align	2
 	.global	bluegl_glEnableVertexArrayAttribEXT
@@ -6617,7 +6617,7 @@ bluegl_glEnableVertexArrayAttribEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableVertexArrayAttribEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableVertexArrayAttribEXT, .-glEnableVertexArrayAttribEXT
+	.size	bluegl_glEnableVertexArrayAttribEXT, .-bluegl_glEnableVertexArrayAttribEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2uivEXT
@@ -6627,7 +6627,7 @@ bluegl_glProgramUniform2uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2uivEXT, .-glProgramUniform2uivEXT
+	.size	bluegl_glProgramUniform2uivEXT, .-bluegl_glProgramUniform2uivEXT
 
 	.align	2
 	.global	bluegl_glGetDoubleIndexedvEXT
@@ -6637,7 +6637,7 @@ bluegl_glGetDoubleIndexedvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDoubleIndexedvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDoubleIndexedvEXT, .-glGetDoubleIndexedvEXT
+	.size	bluegl_glGetDoubleIndexedvEXT, .-bluegl_glGetDoubleIndexedvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib3fvNV
@@ -6647,7 +6647,7 @@ bluegl_glVertexAttrib3fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3fvNV, .-glVertexAttrib3fvNV
+	.size	bluegl_glVertexAttrib3fvNV, .-bluegl_glVertexAttrib3fvNV
 
 	.align	2
 	.global	bluegl_glVertexAttribL1ui64vNV
@@ -6657,7 +6657,7 @@ bluegl_glVertexAttribL1ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1ui64vNV, .-glVertexAttribL1ui64vNV
+	.size	bluegl_glVertexAttribL1ui64vNV, .-bluegl_glVertexAttribL1ui64vNV
 
 	.align	2
 	.global	bluegl_glWindowPos2fMESA
@@ -6667,7 +6667,7 @@ bluegl_glWindowPos2fMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2fMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2fMESA, .-glWindowPos2fMESA
+	.size	bluegl_glWindowPos2fMESA, .-bluegl_glWindowPos2fMESA
 
 	.align	2
 	.global	bluegl_glCopyConvolutionFilter1DEXT
@@ -6677,7 +6677,7 @@ bluegl_glCopyConvolutionFilter1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyConvolutionFilter1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyConvolutionFilter1DEXT, .-glCopyConvolutionFilter1DEXT
+	.size	bluegl_glCopyConvolutionFilter1DEXT, .-bluegl_glCopyConvolutionFilter1DEXT
 
 	.align	2
 	.global	bluegl_glWindowPos2sv
@@ -6687,7 +6687,7 @@ bluegl_glWindowPos2sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2sv, .-glWindowPos2sv
+	.size	bluegl_glWindowPos2sv, .-bluegl_glWindowPos2sv
 
 	.align	2
 	.global	bluegl_glBindFramebufferEXT
@@ -6697,7 +6697,7 @@ bluegl_glBindFramebufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindFramebufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindFramebufferEXT, .-glBindFramebufferEXT
+	.size	bluegl_glBindFramebufferEXT, .-bluegl_glBindFramebufferEXT
 
 	.align	2
 	.global	bluegl_glCreateShader
@@ -6707,7 +6707,7 @@ bluegl_glCreateShader:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateShader]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateShader, .-glCreateShader
+	.size	bluegl_glCreateShader, .-bluegl_glCreateShader
 
 	.align	2
 	.global	bluegl_glGetColorTableParameterfvEXT
@@ -6717,7 +6717,7 @@ bluegl_glGetColorTableParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableParameterfvEXT, .-glGetColorTableParameterfvEXT
+	.size	bluegl_glGetColorTableParameterfvEXT, .-bluegl_glGetColorTableParameterfvEXT
 
 	.align	2
 	.global	bluegl_glGenRenderbuffers
@@ -6727,7 +6727,7 @@ bluegl_glGenRenderbuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenRenderbuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenRenderbuffers, .-glGenRenderbuffers
+	.size	bluegl_glGenRenderbuffers, .-bluegl_glGenRenderbuffers
 
 	.align	2
 	.global	bluegl_glCopyTexSubImage2D
@@ -6737,7 +6737,7 @@ bluegl_glCopyTexSubImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexSubImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexSubImage2D, .-glCopyTexSubImage2D
+	.size	bluegl_glCopyTexSubImage2D, .-bluegl_glCopyTexSubImage2D
 
 	.align	2
 	.global	bluegl_glVertexAttrib4ubvARB
@@ -6747,7 +6747,7 @@ bluegl_glVertexAttrib4ubvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4ubvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4ubvARB, .-glVertexAttrib4ubvARB
+	.size	bluegl_glVertexAttrib4ubvARB, .-bluegl_glVertexAttrib4ubvARB
 
 	.align	2
 	.global	bluegl_glDrawTextureNV
@@ -6757,7 +6757,7 @@ bluegl_glDrawTextureNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawTextureNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawTextureNV, .-glDrawTextureNV
+	.size	bluegl_glDrawTextureNV, .-bluegl_glDrawTextureNV
 
 	.align	2
 	.global	bluegl_glVertexStream2dATI
@@ -6767,7 +6767,7 @@ bluegl_glVertexStream2dATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2dATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2dATI, .-glVertexStream2dATI
+	.size	bluegl_glVertexStream2dATI, .-bluegl_glVertexStream2dATI
 
 	.align	2
 	.global	bluegl_glGetCombinerInputParameterfvNV
@@ -6777,7 +6777,7 @@ bluegl_glGetCombinerInputParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCombinerInputParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCombinerInputParameterfvNV, .-glGetCombinerInputParameterfvNV
+	.size	bluegl_glGetCombinerInputParameterfvNV, .-bluegl_glGetCombinerInputParameterfvNV
 
 	.align	2
 	.global	bluegl_glBlendFuncSeparate
@@ -6787,7 +6787,7 @@ bluegl_glBlendFuncSeparate:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFuncSeparate]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFuncSeparate, .-glBlendFuncSeparate
+	.size	bluegl_glBlendFuncSeparate, .-bluegl_glBlendFuncSeparate
 
 	.align	2
 	.global	bluegl_glPointParameterfARB
@@ -6797,7 +6797,7 @@ bluegl_glPointParameterfARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterfARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterfARB, .-glPointParameterfARB
+	.size	bluegl_glPointParameterfARB, .-bluegl_glPointParameterfARB
 
 	.align	2
 	.global	bluegl_glUniform1fvARB
@@ -6807,7 +6807,7 @@ bluegl_glUniform1fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1fvARB, .-glUniform1fvARB
+	.size	bluegl_glUniform1fvARB, .-bluegl_glUniform1fvARB
 
 	.align	2
 	.global	bluegl_glCopyTexSubImage1D
@@ -6817,7 +6817,7 @@ bluegl_glCopyTexSubImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexSubImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexSubImage1D, .-glCopyTexSubImage1D
+	.size	bluegl_glCopyTexSubImage1D, .-bluegl_glCopyTexSubImage1D
 
 	.align	2
 	.global	bluegl_glGetVariantFloatvEXT
@@ -6827,7 +6827,7 @@ bluegl_glGetVariantFloatvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVariantFloatvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVariantFloatvEXT, .-glGetVariantFloatvEXT
+	.size	bluegl_glGetVariantFloatvEXT, .-bluegl_glGetVariantFloatvEXT
 
 	.align	2
 	.global	bluegl_glVertexP2ui
@@ -6837,7 +6837,7 @@ bluegl_glVertexP2ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexP2ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexP2ui, .-glVertexP2ui
+	.size	bluegl_glVertexP2ui, .-bluegl_glVertexP2ui
 
 	.align	2
 	.global	bluegl_glWindowPos2dMESA
@@ -6847,7 +6847,7 @@ bluegl_glWindowPos2dMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2dMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2dMESA, .-glWindowPos2dMESA
+	.size	bluegl_glWindowPos2dMESA, .-bluegl_glWindowPos2dMESA
 
 	.align	2
 	.global	bluegl_glCompressedTexSubImage1DARB
@@ -6857,7 +6857,7 @@ bluegl_glCompressedTexSubImage1DARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexSubImage1DARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexSubImage1DARB, .-glCompressedTexSubImage1DARB
+	.size	bluegl_glCompressedTexSubImage1DARB, .-bluegl_glCompressedTexSubImage1DARB
 
 	.align	2
 	.global	bluegl_glGetTextureImageEXT
@@ -6867,7 +6867,7 @@ bluegl_glGetTextureImageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureImageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureImageEXT, .-glGetTextureImageEXT
+	.size	bluegl_glGetTextureImageEXT, .-bluegl_glGetTextureImageEXT
 
 	.align	2
 	.global	bluegl_glPointSize
@@ -6877,7 +6877,7 @@ bluegl_glPointSize:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointSize]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointSize, .-glPointSize
+	.size	bluegl_glPointSize, .-bluegl_glPointSize
 
 	.align	2
 	.global	bluegl_glBindTextureUnit
@@ -6887,7 +6887,7 @@ bluegl_glBindTextureUnit:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTextureUnit]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTextureUnit, .-glBindTextureUnit
+	.size	bluegl_glBindTextureUnit, .-bluegl_glBindTextureUnit
 
 	.align	2
 	.global	bluegl_glProgramEnvParameterI4uiNV
@@ -6897,7 +6897,7 @@ bluegl_glProgramEnvParameterI4uiNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameterI4uiNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameterI4uiNV, .-glProgramEnvParameterI4uiNV
+	.size	bluegl_glProgramEnvParameterI4uiNV, .-bluegl_glProgramEnvParameterI4uiNV
 
 	.align	2
 	.global	bluegl_glGetProgramPipelineInfoLog
@@ -6907,7 +6907,7 @@ bluegl_glGetProgramPipelineInfoLog:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramPipelineInfoLog]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramPipelineInfoLog, .-glGetProgramPipelineInfoLog
+	.size	bluegl_glGetProgramPipelineInfoLog, .-bluegl_glGetProgramPipelineInfoLog
 
 	.align	2
 	.global	bluegl_glProgramUniform4i64vARB
@@ -6917,7 +6917,7 @@ bluegl_glProgramUniform4i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4i64vARB, .-glProgramUniform4i64vARB
+	.size	bluegl_glProgramUniform4i64vARB, .-bluegl_glProgramUniform4i64vARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4Nuiv
@@ -6927,7 +6927,7 @@ bluegl_glVertexAttrib4Nuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4Nuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4Nuiv, .-glVertexAttrib4Nuiv
+	.size	bluegl_glVertexAttrib4Nuiv, .-bluegl_glVertexAttrib4Nuiv
 
 	.align	2
 	.global	bluegl_glRenderbufferStorage
@@ -6937,7 +6937,7 @@ bluegl_glRenderbufferStorage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRenderbufferStorage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRenderbufferStorage, .-glRenderbufferStorage
+	.size	bluegl_glRenderbufferStorage, .-bluegl_glRenderbufferStorage
 
 	.align	2
 	.global	bluegl_glWaitSync
@@ -6947,7 +6947,7 @@ bluegl_glWaitSync:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWaitSync]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWaitSync, .-glWaitSync
+	.size	bluegl_glWaitSync, .-bluegl_glWaitSync
 
 	.align	2
 	.global	bluegl_glUniform3i
@@ -6957,7 +6957,7 @@ bluegl_glUniform3i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3i, .-glUniform3i
+	.size	bluegl_glUniform3i, .-bluegl_glUniform3i
 
 	.align	2
 	.global	bluegl_glBlendEquationSeparatei
@@ -6967,7 +6967,7 @@ bluegl_glBlendEquationSeparatei:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationSeparatei]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationSeparatei, .-glBlendEquationSeparatei
+	.size	bluegl_glBlendEquationSeparatei, .-bluegl_glBlendEquationSeparatei
 
 	.align	2
 	.global	bluegl_glVertexAttrib2hvNV
@@ -6977,7 +6977,7 @@ bluegl_glVertexAttrib2hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2hvNV, .-glVertexAttrib2hvNV
+	.size	bluegl_glVertexAttrib2hvNV, .-bluegl_glVertexAttrib2hvNV
 
 	.align	2
 	.global	bluegl_glTextureParameterivEXT
@@ -6987,7 +6987,7 @@ bluegl_glTextureParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterivEXT, .-glTextureParameterivEXT
+	.size	bluegl_glTextureParameterivEXT, .-bluegl_glTextureParameterivEXT
 
 	.align	2
 	.global	bluegl_glUniform3d
@@ -6997,7 +6997,7 @@ bluegl_glUniform3d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3d, .-glUniform3d
+	.size	bluegl_glUniform3d, .-bluegl_glUniform3d
 
 	.align	2
 	.global	bluegl_glUniform3f
@@ -7007,7 +7007,7 @@ bluegl_glUniform3f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3f, .-glUniform3f
+	.size	bluegl_glUniform3f, .-bluegl_glUniform3f
 
 	.align	2
 	.global	bluegl_glActiveProgramEXT
@@ -7017,7 +7017,7 @@ bluegl_glActiveProgramEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glActiveProgramEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glActiveProgramEXT, .-glActiveProgramEXT
+	.size	bluegl_glActiveProgramEXT, .-bluegl_glActiveProgramEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3uiv
@@ -7027,7 +7027,7 @@ bluegl_glProgramUniform3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3uiv, .-glProgramUniform3uiv
+	.size	bluegl_glProgramUniform3uiv, .-bluegl_glProgramUniform3uiv
 
 	.align	2
 	.global	bluegl_glUniform3ui64vARB
@@ -7037,7 +7037,7 @@ bluegl_glUniform3ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3ui64vARB, .-glUniform3ui64vARB
+	.size	bluegl_glUniform3ui64vARB, .-bluegl_glUniform3ui64vARB
 
 	.align	2
 	.global	bluegl_glProgramUniform1ui64vARB
@@ -7047,7 +7047,7 @@ bluegl_glProgramUniform1ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1ui64vARB, .-glProgramUniform1ui64vARB
+	.size	bluegl_glProgramUniform1ui64vARB, .-bluegl_glProgramUniform1ui64vARB
 
 	.align	2
 	.global	bluegl_glTextureParameterfEXT
@@ -7057,7 +7057,7 @@ bluegl_glTextureParameterfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterfEXT, .-glTextureParameterfEXT
+	.size	bluegl_glTextureParameterfEXT, .-bluegl_glTextureParameterfEXT
 
 	.align	2
 	.global	bluegl_glDeformationMap3dSGIX
@@ -7067,7 +7067,7 @@ bluegl_glDeformationMap3dSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeformationMap3dSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeformationMap3dSGIX, .-glDeformationMap3dSGIX
+	.size	bluegl_glDeformationMap3dSGIX, .-bluegl_glDeformationMap3dSGIX
 
 	.align	2
 	.global	bluegl_glSetFragmentShaderConstantATI
@@ -7077,7 +7077,7 @@ bluegl_glSetFragmentShaderConstantATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSetFragmentShaderConstantATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSetFragmentShaderConstantATI, .-glSetFragmentShaderConstantATI
+	.size	bluegl_glSetFragmentShaderConstantATI, .-bluegl_glSetFragmentShaderConstantATI
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTextureLayerEXT
@@ -7087,7 +7087,7 @@ bluegl_glNamedFramebufferTextureLayerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTextureLayerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTextureLayerEXT, .-glNamedFramebufferTextureLayerEXT
+	.size	bluegl_glNamedFramebufferTextureLayerEXT, .-bluegl_glNamedFramebufferTextureLayerEXT
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiSUN
@@ -7097,7 +7097,7 @@ bluegl_glReplacementCodeuiSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiSUN, .-glReplacementCodeuiSUN
+	.size	bluegl_glReplacementCodeuiSUN, .-bluegl_glReplacementCodeuiSUN
 
 	.align	2
 	.global	bluegl_glVertexAttrib4sARB
@@ -7107,7 +7107,7 @@ bluegl_glVertexAttrib4sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4sARB, .-glVertexAttrib4sARB
+	.size	bluegl_glVertexAttrib4sARB, .-bluegl_glVertexAttrib4sARB
 
 	.align	2
 	.global	bluegl_glWeightusvARB
@@ -7117,7 +7117,7 @@ bluegl_glWeightusvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightusvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightusvARB, .-glWeightusvARB
+	.size	bluegl_glWeightusvARB, .-bluegl_glWeightusvARB
 
 	.align	2
 	.global	bluegl_glGetFragDataIndex
@@ -7127,7 +7127,7 @@ bluegl_glGetFragDataIndex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFragDataIndex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFragDataIndex, .-glGetFragDataIndex
+	.size	bluegl_glGetFragDataIndex, .-bluegl_glGetFragDataIndex
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiNormal3fVertex3fSUN
@@ -7137,7 +7137,7 @@ bluegl_glReplacementCodeuiNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiNormal3fVertex3fSUN, .-glReplacementCodeuiNormal3fVertex3fSUN
+	.size	bluegl_glReplacementCodeuiNormal3fVertex3fSUN, .-bluegl_glReplacementCodeuiNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2xOES
@@ -7147,7 +7147,7 @@ bluegl_glMultiTexCoord2xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2xOES, .-glMultiTexCoord2xOES
+	.size	bluegl_glMultiTexCoord2xOES, .-bluegl_glMultiTexCoord2xOES
 
 	.align	2
 	.global	bluegl_glTexCoord2fVertex3fSUN
@@ -7157,7 +7157,7 @@ bluegl_glTexCoord2fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fVertex3fSUN, .-glTexCoord2fVertex3fSUN
+	.size	bluegl_glTexCoord2fVertex3fSUN, .-bluegl_glTexCoord2fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glPolygonOffsetEXT
@@ -7167,7 +7167,7 @@ bluegl_glPolygonOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPolygonOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPolygonOffsetEXT, .-glPolygonOffsetEXT
+	.size	bluegl_glPolygonOffsetEXT, .-bluegl_glPolygonOffsetEXT
 
 	.align	2
 	.global	bluegl_glWeightPathsNV
@@ -7177,7 +7177,7 @@ bluegl_glWeightPathsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightPathsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightPathsNV, .-glWeightPathsNV
+	.size	bluegl_glWeightPathsNV, .-bluegl_glWeightPathsNV
 
 	.align	2
 	.global	bluegl_glCombinerStageParameterfvNV
@@ -7187,7 +7187,7 @@ bluegl_glCombinerStageParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCombinerStageParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCombinerStageParameterfvNV, .-glCombinerStageParameterfvNV
+	.size	bluegl_glCombinerStageParameterfvNV, .-bluegl_glCombinerStageParameterfvNV
 
 	.align	2
 	.global	bluegl_glPointParameterfEXT
@@ -7197,7 +7197,7 @@ bluegl_glPointParameterfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterfEXT, .-glPointParameterfEXT
+	.size	bluegl_glPointParameterfEXT, .-bluegl_glPointParameterfEXT
 
 	.align	2
 	.global	bluegl_glCopyTexImage1DEXT
@@ -7207,7 +7207,7 @@ bluegl_glCopyTexImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexImage1DEXT, .-glCopyTexImage1DEXT
+	.size	bluegl_glCopyTexImage1DEXT, .-bluegl_glCopyTexImage1DEXT
 
 	.align	2
 	.global	bluegl_glMatrixMultfEXT
@@ -7217,7 +7217,7 @@ bluegl_glMatrixMultfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixMultfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixMultfEXT, .-glMatrixMultfEXT
+	.size	bluegl_glMatrixMultfEXT, .-bluegl_glMatrixMultfEXT
 
 	.align	2
 	.global	bluegl_glCompressedTextureSubImage3DEXT
@@ -7227,7 +7227,7 @@ bluegl_glCompressedTextureSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureSubImage3DEXT, .-glCompressedTextureSubImage3DEXT
+	.size	bluegl_glCompressedTextureSubImage3DEXT, .-bluegl_glCompressedTextureSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glGetTexLevelParameterxvOES
@@ -7237,7 +7237,7 @@ bluegl_glGetTexLevelParameterxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexLevelParameterxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexLevelParameterxvOES, .-glGetTexLevelParameterxvOES
+	.size	bluegl_glGetTexLevelParameterxvOES, .-bluegl_glGetTexLevelParameterxvOES
 
 	.align	2
 	.global	bluegl_glVertexAttribL3dvEXT
@@ -7247,7 +7247,7 @@ bluegl_glVertexAttribL3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3dvEXT, .-glVertexAttribL3dvEXT
+	.size	bluegl_glVertexAttribL3dvEXT, .-bluegl_glVertexAttribL3dvEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP4ui
@@ -7257,7 +7257,7 @@ bluegl_glMultiTexCoordP4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP4ui, .-glMultiTexCoordP4ui
+	.size	bluegl_glMultiTexCoordP4ui, .-bluegl_glMultiTexCoordP4ui
 
 	.align	2
 	.global	bluegl_glGetTextureLevelParameterivEXT
@@ -7267,7 +7267,7 @@ bluegl_glGetTextureLevelParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureLevelParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureLevelParameterivEXT, .-glGetTextureLevelParameterivEXT
+	.size	bluegl_glGetTextureLevelParameterivEXT, .-bluegl_glGetTextureLevelParameterivEXT
 
 	.align	2
 	.global	bluegl_glAlphaFragmentOp2ATI
@@ -7277,7 +7277,7 @@ bluegl_glAlphaFragmentOp2ATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAlphaFragmentOp2ATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAlphaFragmentOp2ATI, .-glAlphaFragmentOp2ATI
+	.size	bluegl_glAlphaFragmentOp2ATI, .-bluegl_glAlphaFragmentOp2ATI
 
 	.align	2
 	.global	bluegl_glDeleteFramebuffers
@@ -7287,7 +7287,7 @@ bluegl_glDeleteFramebuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteFramebuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteFramebuffers, .-glDeleteFramebuffers
+	.size	bluegl_glDeleteFramebuffers, .-bluegl_glDeleteFramebuffers
 
 	.align	2
 	.global	bluegl_glDrawArrays
@@ -7297,7 +7297,7 @@ bluegl_glDrawArrays:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawArrays]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawArrays, .-glDrawArrays
+	.size	bluegl_glDrawArrays, .-bluegl_glDrawArrays
 
 	.align	2
 	.global	bluegl_glGetnTexImageARB
@@ -7307,7 +7307,7 @@ bluegl_glGetnTexImageARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnTexImageARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnTexImageARB, .-glGetnTexImageARB
+	.size	bluegl_glGetnTexImageARB, .-bluegl_glGetnTexImageARB
 
 	.align	2
 	.global	bluegl_glClear
@@ -7317,7 +7317,7 @@ bluegl_glClear:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClear]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClear, .-glClear
+	.size	bluegl_glClear, .-bluegl_glClear
 
 	.align	2
 	.global	bluegl_glVertexArrayParameteriAPPLE
@@ -7327,7 +7327,7 @@ bluegl_glVertexArrayParameteriAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayParameteriAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayParameteriAPPLE, .-glVertexArrayParameteriAPPLE
+	.size	bluegl_glVertexArrayParameteriAPPLE, .-bluegl_glVertexArrayParameteriAPPLE
 
 	.align	2
 	.global	bluegl_glBlendFuncSeparateiARB
@@ -7337,7 +7337,7 @@ bluegl_glBlendFuncSeparateiARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFuncSeparateiARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFuncSeparateiARB, .-glBlendFuncSeparateiARB
+	.size	bluegl_glBlendFuncSeparateiARB, .-bluegl_glBlendFuncSeparateiARB
 
 	.align	2
 	.global	bluegl_glWindowPos2iARB
@@ -7347,7 +7347,7 @@ bluegl_glWindowPos2iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2iARB, .-glWindowPos2iARB
+	.size	bluegl_glWindowPos2iARB, .-bluegl_glWindowPos2iARB
 
 	.align	2
 	.global	bluegl_glFragmentLightModelivSGIX
@@ -7357,7 +7357,7 @@ bluegl_glFragmentLightModelivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightModelivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightModelivSGIX, .-glFragmentLightModelivSGIX
+	.size	bluegl_glFragmentLightModelivSGIX, .-bluegl_glFragmentLightModelivSGIX
 
 	.align	2
 	.global	bluegl_glVertexAttribP2ui
@@ -7367,7 +7367,7 @@ bluegl_glVertexAttribP2ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP2ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP2ui, .-glVertexAttribP2ui
+	.size	bluegl_glVertexAttribP2ui, .-bluegl_glVertexAttribP2ui
 
 	.align	2
 	.global	bluegl_glSecondaryColor3hNV
@@ -7377,7 +7377,7 @@ bluegl_glSecondaryColor3hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3hNV, .-glSecondaryColor3hNV
+	.size	bluegl_glSecondaryColor3hNV, .-bluegl_glSecondaryColor3hNV
 
 	.align	2
 	.global	bluegl_glProgramUniform3iEXT
@@ -7387,7 +7387,7 @@ bluegl_glProgramUniform3iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3iEXT, .-glProgramUniform3iEXT
+	.size	bluegl_glProgramUniform3iEXT, .-bluegl_glProgramUniform3iEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4Nub
@@ -7397,7 +7397,7 @@ bluegl_glVertexAttrib4Nub:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4Nub]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4Nub, .-glVertexAttrib4Nub
+	.size	bluegl_glVertexAttrib4Nub, .-bluegl_glVertexAttrib4Nub
 
 	.align	2
 	.global	bluegl_glBindBufferBase
@@ -7407,7 +7407,7 @@ bluegl_glBindBufferBase:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferBase]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferBase, .-glBindBufferBase
+	.size	bluegl_glBindBufferBase, .-bluegl_glBindBufferBase
 
 	.align	2
 	.global	bluegl_glTexCoord4hNV
@@ -7417,7 +7417,7 @@ bluegl_glTexCoord4hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4hNV, .-glTexCoord4hNV
+	.size	bluegl_glTexCoord4hNV, .-bluegl_glTexCoord4hNV
 
 	.align	2
 	.global	bluegl_glTexImage1D
@@ -7427,7 +7427,7 @@ bluegl_glTexImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage1D, .-glTexImage1D
+	.size	bluegl_glTexImage1D, .-bluegl_glTexImage1D
 
 	.align	2
 	.global	bluegl_glDeletePerfMonitorsAMD
@@ -7437,7 +7437,7 @@ bluegl_glDeletePerfMonitorsAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeletePerfMonitorsAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeletePerfMonitorsAMD, .-glDeletePerfMonitorsAMD
+	.size	bluegl_glDeletePerfMonitorsAMD, .-bluegl_glDeletePerfMonitorsAMD
 
 	.align	2
 	.global	bluegl_glIsRenderbufferEXT
@@ -7447,7 +7447,7 @@ bluegl_glIsRenderbufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsRenderbufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsRenderbufferEXT, .-glIsRenderbufferEXT
+	.size	bluegl_glIsRenderbufferEXT, .-bluegl_glIsRenderbufferEXT
 
 	.align	2
 	.global	bluegl_glDrawCommandsNV
@@ -7457,7 +7457,7 @@ bluegl_glDrawCommandsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawCommandsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawCommandsNV, .-glDrawCommandsNV
+	.size	bluegl_glDrawCommandsNV, .-bluegl_glDrawCommandsNV
 
 	.align	2
 	.global	bluegl_glUniform3ivARB
@@ -7467,7 +7467,7 @@ bluegl_glUniform3ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3ivARB, .-glUniform3ivARB
+	.size	bluegl_glUniform3ivARB, .-bluegl_glUniform3ivARB
 
 	.align	2
 	.global	bluegl_glBufferSubData
@@ -7477,7 +7477,7 @@ bluegl_glBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferSubData, .-glBufferSubData
+	.size	bluegl_glBufferSubData, .-bluegl_glBufferSubData
 
 	.align	2
 	.global	bluegl_glSecondaryColor3bv
@@ -7487,7 +7487,7 @@ bluegl_glSecondaryColor3bv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3bv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3bv, .-glSecondaryColor3bv
+	.size	bluegl_glSecondaryColor3bv, .-bluegl_glSecondaryColor3bv
 
 	.align	2
 	.global	bluegl_glVertexPointervINTEL
@@ -7497,7 +7497,7 @@ bluegl_glVertexPointervINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexPointervINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexPointervINTEL, .-glVertexPointervINTEL
+	.size	bluegl_glVertexPointervINTEL, .-bluegl_glVertexPointervINTEL
 
 	.align	2
 	.global	bluegl_glMatrixMultTransposedEXT
@@ -7507,7 +7507,7 @@ bluegl_glMatrixMultTransposedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixMultTransposedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixMultTransposedEXT, .-glMatrixMultTransposedEXT
+	.size	bluegl_glMatrixMultTransposedEXT, .-bluegl_glMatrixMultTransposedEXT
 
 	.align	2
 	.global	bluegl_glRequestResidentProgramsNV
@@ -7517,7 +7517,7 @@ bluegl_glRequestResidentProgramsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRequestResidentProgramsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRequestResidentProgramsNV, .-glRequestResidentProgramsNV
+	.size	bluegl_glRequestResidentProgramsNV, .-bluegl_glRequestResidentProgramsNV
 
 	.align	2
 	.global	bluegl_glGetQueryObjecti64v
@@ -7527,7 +7527,7 @@ bluegl_glGetQueryObjecti64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjecti64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjecti64v, .-glGetQueryObjecti64v
+	.size	bluegl_glGetQueryObjecti64v, .-bluegl_glGetQueryObjecti64v
 
 	.align	2
 	.global	bluegl_glMatrixMult3x3fNV
@@ -7537,7 +7537,7 @@ bluegl_glMatrixMult3x3fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixMult3x3fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixMult3x3fNV, .-glMatrixMult3x3fNV
+	.size	bluegl_glMatrixMult3x3fNV, .-bluegl_glMatrixMult3x3fNV
 
 	.align	2
 	.global	bluegl_glUniform4iARB
@@ -7547,7 +7547,7 @@ bluegl_glUniform4iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4iARB, .-glUniform4iARB
+	.size	bluegl_glUniform4iARB, .-bluegl_glUniform4iARB
 
 	.align	2
 	.global	bluegl_glPathSubCommandsNV
@@ -7557,7 +7557,7 @@ bluegl_glPathSubCommandsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathSubCommandsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathSubCommandsNV, .-glPathSubCommandsNV
+	.size	bluegl_glPathSubCommandsNV, .-bluegl_glPathSubCommandsNV
 
 	.align	2
 	.global	bluegl_glGetFinalCombinerInputParameterivNV
@@ -7567,7 +7567,7 @@ bluegl_glGetFinalCombinerInputParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFinalCombinerInputParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFinalCombinerInputParameterivNV, .-glGetFinalCombinerInputParameterivNV
+	.size	bluegl_glGetFinalCombinerInputParameterivNV, .-bluegl_glGetFinalCombinerInputParameterivNV
 
 	.align	2
 	.global	bluegl_glIsRenderbuffer
@@ -7577,7 +7577,7 @@ bluegl_glIsRenderbuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsRenderbuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsRenderbuffer, .-glIsRenderbuffer
+	.size	bluegl_glIsRenderbuffer, .-bluegl_glIsRenderbuffer
 
 	.align	2
 	.global	bluegl_glFrustumfOES
@@ -7587,7 +7587,7 @@ bluegl_glFrustumfOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFrustumfOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFrustumfOES, .-glFrustumfOES
+	.size	bluegl_glFrustumfOES, .-bluegl_glFrustumfOES
 
 	.align	2
 	.global	bluegl_glBindVertexBuffers
@@ -7597,7 +7597,7 @@ bluegl_glBindVertexBuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindVertexBuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindVertexBuffers, .-glBindVertexBuffers
+	.size	bluegl_glBindVertexBuffers, .-bluegl_glBindVertexBuffers
 
 	.align	2
 	.global	bluegl_glIsVertexArray
@@ -7607,7 +7607,7 @@ bluegl_glIsVertexArray:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsVertexArray]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsVertexArray, .-glIsVertexArray
+	.size	bluegl_glIsVertexArray, .-bluegl_glIsVertexArray
 
 	.align	2
 	.global	bluegl_glDisableVertexAttribArray
@@ -7617,7 +7617,7 @@ bluegl_glDisableVertexAttribArray:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableVertexAttribArray]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableVertexAttribArray, .-glDisableVertexAttribArray
+	.size	bluegl_glDisableVertexAttribArray, .-bluegl_glDisableVertexAttribArray
 
 	.align	2
 	.global	bluegl_glWindowPos3ivARB
@@ -7627,7 +7627,7 @@ bluegl_glWindowPos3ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3ivARB, .-glWindowPos3ivARB
+	.size	bluegl_glWindowPos3ivARB, .-bluegl_glWindowPos3ivARB
 
 	.align	2
 	.global	bluegl_glTexCoordFormatNV
@@ -7637,7 +7637,7 @@ bluegl_glTexCoordFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordFormatNV, .-glTexCoordFormatNV
+	.size	bluegl_glTexCoordFormatNV, .-bluegl_glTexCoordFormatNV
 
 	.align	2
 	.global	bluegl_glBlitNamedFramebuffer
@@ -7647,7 +7647,7 @@ bluegl_glBlitNamedFramebuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlitNamedFramebuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlitNamedFramebuffer, .-glBlitNamedFramebuffer
+	.size	bluegl_glBlitNamedFramebuffer, .-bluegl_glBlitNamedFramebuffer
 
 	.align	2
 	.global	bluegl_glMatrixLoadTransposefEXT
@@ -7657,7 +7657,7 @@ bluegl_glMatrixLoadTransposefEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoadTransposefEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoadTransposefEXT, .-glMatrixLoadTransposefEXT
+	.size	bluegl_glMatrixLoadTransposefEXT, .-bluegl_glMatrixLoadTransposefEXT
 
 	.align	2
 	.global	bluegl_glMultiTexGenfEXT
@@ -7667,7 +7667,7 @@ bluegl_glMultiTexGenfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexGenfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexGenfEXT, .-glMultiTexGenfEXT
+	.size	bluegl_glMultiTexGenfEXT, .-bluegl_glMultiTexGenfEXT
 
 	.align	2
 	.global	bluegl_glShaderStorageBlockBinding
@@ -7677,7 +7677,7 @@ bluegl_glShaderStorageBlockBinding:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glShaderStorageBlockBinding]
 	ldr	x16, [x16]
 	br	x16
-	.size	glShaderStorageBlockBinding, .-glShaderStorageBlockBinding
+	.size	bluegl_glShaderStorageBlockBinding, .-bluegl_glShaderStorageBlockBinding
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiColor4fNormal3fVertex3fSUN
@@ -7687,7 +7687,7 @@ bluegl_glReplacementCodeuiColor4fNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiColor4fNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiColor4fNormal3fVertex3fSUN, .-glReplacementCodeuiColor4fNormal3fVertex3fSUN
+	.size	bluegl_glReplacementCodeuiColor4fNormal3fVertex3fSUN, .-bluegl_glReplacementCodeuiColor4fNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glVertexAttribI4ubv
@@ -7697,7 +7697,7 @@ bluegl_glVertexAttribI4ubv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4ubv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4ubv, .-glVertexAttribI4ubv
+	.size	bluegl_glVertexAttribI4ubv, .-bluegl_glVertexAttribI4ubv
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribFormatEXT
@@ -7707,7 +7707,7 @@ bluegl_glVertexArrayVertexAttribFormatEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribFormatEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribFormatEXT, .-glVertexArrayVertexAttribFormatEXT
+	.size	bluegl_glVertexArrayVertexAttribFormatEXT, .-bluegl_glVertexArrayVertexAttribFormatEXT
 
 	.align	2
 	.global	bluegl_glVertex2hNV
@@ -7717,7 +7717,7 @@ bluegl_glVertex2hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex2hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex2hNV, .-glVertex2hNV
+	.size	bluegl_glVertex2hNV, .-bluegl_glVertex2hNV
 
 	.align	2
 	.global	bluegl_glDeleteVertexShaderEXT
@@ -7727,7 +7727,7 @@ bluegl_glDeleteVertexShaderEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteVertexShaderEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteVertexShaderEXT, .-glDeleteVertexShaderEXT
+	.size	bluegl_glDeleteVertexShaderEXT, .-bluegl_glDeleteVertexShaderEXT
 
 	.align	2
 	.global	bluegl_glTexImage3DEXT
@@ -7737,7 +7737,7 @@ bluegl_glTexImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage3DEXT, .-glTexImage3DEXT
+	.size	bluegl_glTexImage3DEXT, .-bluegl_glTexImage3DEXT
 
 	.align	2
 	.global	bluegl_glProgramLocalParameterI4ivNV
@@ -7747,7 +7747,7 @@ bluegl_glProgramLocalParameterI4ivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameterI4ivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameterI4ivNV, .-glProgramLocalParameterI4ivNV
+	.size	bluegl_glProgramLocalParameterI4ivNV, .-bluegl_glProgramLocalParameterI4ivNV
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactoriSUN
@@ -7757,7 +7757,7 @@ bluegl_glGlobalAlphaFactoriSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactoriSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactoriSUN, .-glGlobalAlphaFactoriSUN
+	.size	bluegl_glGlobalAlphaFactoriSUN, .-bluegl_glGlobalAlphaFactoriSUN
 
 	.align	2
 	.global	bluegl_glTextureStorage1D
@@ -7767,7 +7767,7 @@ bluegl_glTextureStorage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage1D, .-glTextureStorage1D
+	.size	bluegl_glTextureStorage1D, .-bluegl_glTextureStorage1D
 
 	.align	2
 	.global	bluegl_glPathCommandsNV
@@ -7777,7 +7777,7 @@ bluegl_glPathCommandsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathCommandsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathCommandsNV, .-glPathCommandsNV
+	.size	bluegl_glPathCommandsNV, .-bluegl_glPathCommandsNV
 
 	.align	2
 	.global	bluegl_glBinormal3sEXT
@@ -7787,7 +7787,7 @@ bluegl_glBinormal3sEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3sEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3sEXT, .-glBinormal3sEXT
+	.size	bluegl_glBinormal3sEXT, .-bluegl_glBinormal3sEXT
 
 	.align	2
 	.global	bluegl_glGetProgramInterfaceiv
@@ -7797,7 +7797,7 @@ bluegl_glGetProgramInterfaceiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramInterfaceiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramInterfaceiv, .-glGetProgramInterfaceiv
+	.size	bluegl_glGetProgramInterfaceiv, .-bluegl_glGetProgramInterfaceiv
 
 	.align	2
 	.global	bluegl_glMatrixIndexPointerARB
@@ -7807,7 +7807,7 @@ bluegl_glMatrixIndexPointerARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixIndexPointerARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixIndexPointerARB, .-glMatrixIndexPointerARB
+	.size	bluegl_glMatrixIndexPointerARB, .-bluegl_glMatrixIndexPointerARB
 
 	.align	2
 	.global	bluegl_glTexCoordPointerEXT
@@ -7817,7 +7817,7 @@ bluegl_glTexCoordPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordPointerEXT, .-glTexCoordPointerEXT
+	.size	bluegl_glTexCoordPointerEXT, .-bluegl_glTexCoordPointerEXT
 
 	.align	2
 	.global	bluegl_glMultiTexGeniEXT
@@ -7827,7 +7827,7 @@ bluegl_glMultiTexGeniEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexGeniEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexGeniEXT, .-glMultiTexGeniEXT
+	.size	bluegl_glMultiTexGeniEXT, .-bluegl_glMultiTexGeniEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib2fNV
@@ -7837,7 +7837,7 @@ bluegl_glVertexAttrib2fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2fNV, .-glVertexAttrib2fNV
+	.size	bluegl_glVertexAttrib2fNV, .-bluegl_glVertexAttrib2fNV
 
 	.align	2
 	.global	bluegl_glMultiDrawArrays
@@ -7847,7 +7847,7 @@ bluegl_glMultiDrawArrays:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawArrays]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawArrays, .-glMultiDrawArrays
+	.size	bluegl_glMultiDrawArrays, .-bluegl_glMultiDrawArrays
 
 	.align	2
 	.global	bluegl_glMapNamedBuffer
@@ -7857,7 +7857,7 @@ bluegl_glMapNamedBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapNamedBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapNamedBuffer, .-glMapNamedBuffer
+	.size	bluegl_glMapNamedBuffer, .-bluegl_glMapNamedBuffer
 
 	.align	2
 	.global	bluegl_glGetMinmaxParameteriv
@@ -7867,7 +7867,7 @@ bluegl_glGetMinmaxParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMinmaxParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMinmaxParameteriv, .-glGetMinmaxParameteriv
+	.size	bluegl_glGetMinmaxParameteriv, .-bluegl_glGetMinmaxParameteriv
 
 	.align	2
 	.global	bluegl_glGetnUniformdv
@@ -7877,7 +7877,7 @@ bluegl_glGetnUniformdv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformdv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformdv, .-glGetnUniformdv
+	.size	bluegl_glGetnUniformdv, .-bluegl_glGetnUniformdv
 
 	.align	2
 	.global	bluegl_glGetTextureSubImage
@@ -7887,7 +7887,7 @@ bluegl_glGetTextureSubImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureSubImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureSubImage, .-glGetTextureSubImage
+	.size	bluegl_glGetTextureSubImage, .-bluegl_glGetTextureSubImage
 
 	.align	2
 	.global	bluegl_glBinormal3fEXT
@@ -7897,7 +7897,7 @@ bluegl_glBinormal3fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3fEXT, .-glBinormal3fEXT
+	.size	bluegl_glBinormal3fEXT, .-bluegl_glBinormal3fEXT
 
 	.align	2
 	.global	bluegl_glNormalStream3iATI
@@ -7907,7 +7907,7 @@ bluegl_glNormalStream3iATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3iATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3iATI, .-glNormalStream3iATI
+	.size	bluegl_glNormalStream3iATI, .-bluegl_glNormalStream3iATI
 
 	.align	2
 	.global	bluegl_glProgramBufferParametersIivNV
@@ -7917,7 +7917,7 @@ bluegl_glProgramBufferParametersIivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramBufferParametersIivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramBufferParametersIivNV, .-glProgramBufferParametersIivNV
+	.size	bluegl_glProgramBufferParametersIivNV, .-bluegl_glProgramBufferParametersIivNV
 
 	.align	2
 	.global	bluegl_glPolygonOffset
@@ -7927,7 +7927,7 @@ bluegl_glPolygonOffset:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPolygonOffset]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPolygonOffset, .-glPolygonOffset
+	.size	bluegl_glPolygonOffset, .-bluegl_glPolygonOffset
 
 	.align	2
 	.global	bluegl_glBindBuffersBase
@@ -7937,7 +7937,7 @@ bluegl_glBindBuffersBase:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBuffersBase]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBuffersBase, .-glBindBuffersBase
+	.size	bluegl_glBindBuffersBase, .-bluegl_glBindBuffersBase
 
 	.align	2
 	.global	bluegl_glFlushMappedNamedBufferRangeEXT
@@ -7947,7 +7947,7 @@ bluegl_glFlushMappedNamedBufferRangeEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushMappedNamedBufferRangeEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushMappedNamedBufferRangeEXT, .-glFlushMappedNamedBufferRangeEXT
+	.size	bluegl_glFlushMappedNamedBufferRangeEXT, .-bluegl_glFlushMappedNamedBufferRangeEXT
 
 	.align	2
 	.global	bluegl_glGetVertexAttribIiv
@@ -7957,7 +7957,7 @@ bluegl_glGetVertexAttribIiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribIiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribIiv, .-glGetVertexAttribIiv
+	.size	bluegl_glGetVertexAttribIiv, .-bluegl_glGetVertexAttribIiv
 
 	.align	2
 	.global	bluegl_glGetProgramSubroutineParameteruivNV
@@ -7967,7 +7967,7 @@ bluegl_glGetProgramSubroutineParameteruivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramSubroutineParameteruivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramSubroutineParameteruivNV, .-glGetProgramSubroutineParameteruivNV
+	.size	bluegl_glGetProgramSubroutineParameteruivNV, .-bluegl_glGetProgramSubroutineParameteruivNV
 
 	.align	2
 	.global	bluegl_glUniformui64NV
@@ -7977,7 +7977,7 @@ bluegl_glUniformui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformui64NV, .-glUniformui64NV
+	.size	bluegl_glUniformui64NV, .-bluegl_glUniformui64NV
 
 	.align	2
 	.global	bluegl_glVertexAttrib2fvNV
@@ -7987,7 +7987,7 @@ bluegl_glVertexAttrib2fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2fvNV, .-glVertexAttrib2fvNV
+	.size	bluegl_glVertexAttrib2fvNV, .-bluegl_glVertexAttrib2fvNV
 
 	.align	2
 	.global	bluegl_glTexParameterxvOES
@@ -7997,7 +7997,7 @@ bluegl_glTexParameterxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterxvOES, .-glTexParameterxvOES
+	.size	bluegl_glTexParameterxvOES, .-bluegl_glTexParameterxvOES
 
 	.align	2
 	.global	bluegl_glPatchParameteri
@@ -8007,7 +8007,7 @@ bluegl_glPatchParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPatchParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPatchParameteri, .-glPatchParameteri
+	.size	bluegl_glPatchParameteri, .-bluegl_glPatchParameteri
 
 	.align	2
 	.global	bluegl_glGetTexFilterFuncSGIS
@@ -8017,7 +8017,7 @@ bluegl_glGetTexFilterFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexFilterFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexFilterFuncSGIS, .-glGetTexFilterFuncSGIS
+	.size	bluegl_glGetTexFilterFuncSGIS, .-bluegl_glGetTexFilterFuncSGIS
 
 	.align	2
 	.global	bluegl_glVertexStream3dATI
@@ -8027,7 +8027,7 @@ bluegl_glVertexStream3dATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3dATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3dATI, .-glVertexStream3dATI
+	.size	bluegl_glVertexStream3dATI, .-bluegl_glVertexStream3dATI
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexBindingDivisorEXT
@@ -8037,7 +8037,7 @@ bluegl_glVertexArrayVertexBindingDivisorEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexBindingDivisorEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexBindingDivisorEXT, .-glVertexArrayVertexBindingDivisorEXT
+	.size	bluegl_glVertexArrayVertexBindingDivisorEXT, .-bluegl_glVertexArrayVertexBindingDivisorEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3svARB
@@ -8047,7 +8047,7 @@ bluegl_glMultiTexCoord3svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3svARB, .-glMultiTexCoord3svARB
+	.size	bluegl_glMultiTexCoord3svARB, .-bluegl_glMultiTexCoord3svARB
 
 	.align	2
 	.global	bluegl_glBindProgramNV
@@ -8057,7 +8057,7 @@ bluegl_glBindProgramNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindProgramNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindProgramNV, .-glBindProgramNV
+	.size	bluegl_glBindProgramNV, .-bluegl_glBindProgramNV
 
 	.align	2
 	.global	bluegl_glGetConvolutionParameteriv
@@ -8067,7 +8067,7 @@ bluegl_glGetConvolutionParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetConvolutionParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetConvolutionParameteriv, .-glGetConvolutionParameteriv
+	.size	bluegl_glGetConvolutionParameteriv, .-bluegl_glGetConvolutionParameteriv
 
 	.align	2
 	.global	bluegl_glGetProgramLocalParameterfvARB
@@ -8077,7 +8077,7 @@ bluegl_glGetProgramLocalParameterfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramLocalParameterfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramLocalParameterfvARB, .-glGetProgramLocalParameterfvARB
+	.size	bluegl_glGetProgramLocalParameterfvARB, .-bluegl_glGetProgramLocalParameterfvARB
 
 	.align	2
 	.global	bluegl_glGenFragmentShadersATI
@@ -8087,7 +8087,7 @@ bluegl_glGenFragmentShadersATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenFragmentShadersATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenFragmentShadersATI, .-glGenFragmentShadersATI
+	.size	bluegl_glGenFragmentShadersATI, .-bluegl_glGenFragmentShadersATI
 
 	.align	2
 	.global	bluegl_glTexBumpParameterivATI
@@ -8097,7 +8097,7 @@ bluegl_glTexBumpParameterivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexBumpParameterivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexBumpParameterivATI, .-glTexBumpParameterivATI
+	.size	bluegl_glTexBumpParameterivATI, .-bluegl_glTexBumpParameterivATI
 
 	.align	2
 	.global	bluegl_glGetNamedFramebufferAttachmentParameteriv
@@ -8107,7 +8107,7 @@ bluegl_glGetNamedFramebufferAttachmentParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedFramebufferAttachmentParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedFramebufferAttachmentParameteriv, .-glGetNamedFramebufferAttachmentParameteriv
+	.size	bluegl_glGetNamedFramebufferAttachmentParameteriv, .-bluegl_glGetNamedFramebufferAttachmentParameteriv
 
 	.align	2
 	.global	bluegl_glGenVertexArraysAPPLE
@@ -8117,7 +8117,7 @@ bluegl_glGenVertexArraysAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenVertexArraysAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenVertexArraysAPPLE, .-glGenVertexArraysAPPLE
+	.size	bluegl_glGenVertexArraysAPPLE, .-bluegl_glGenVertexArraysAPPLE
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x3dvEXT
@@ -8127,7 +8127,7 @@ bluegl_glProgramUniformMatrix4x3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x3dvEXT, .-glProgramUniformMatrix4x3dvEXT
+	.size	bluegl_glProgramUniformMatrix4x3dvEXT, .-bluegl_glProgramUniformMatrix4x3dvEXT
 
 	.align	2
 	.global	bluegl_glPassTexCoordATI
@@ -8137,7 +8137,7 @@ bluegl_glPassTexCoordATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPassTexCoordATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPassTexCoordATI, .-glPassTexCoordATI
+	.size	bluegl_glPassTexCoordATI, .-bluegl_glPassTexCoordATI
 
 	.align	2
 	.global	bluegl_glFramebufferTextureFaceARB
@@ -8147,7 +8147,7 @@ bluegl_glFramebufferTextureFaceARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureFaceARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureFaceARB, .-glFramebufferTextureFaceARB
+	.size	bluegl_glFramebufferTextureFaceARB, .-bluegl_glFramebufferTextureFaceARB
 
 	.align	2
 	.global	bluegl_glTextureStorage2DEXT
@@ -8157,7 +8157,7 @@ bluegl_glTextureStorage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage2DEXT, .-glTextureStorage2DEXT
+	.size	bluegl_glTextureStorage2DEXT, .-bluegl_glTextureStorage2DEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayFogCoordOffsetEXT
@@ -8167,7 +8167,7 @@ bluegl_glVertexArrayFogCoordOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayFogCoordOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayFogCoordOffsetEXT, .-glVertexArrayFogCoordOffsetEXT
+	.size	bluegl_glVertexArrayFogCoordOffsetEXT, .-bluegl_glVertexArrayFogCoordOffsetEXT
 
 	.align	2
 	.global	bluegl_glDeleteNamedStringARB
@@ -8177,7 +8177,7 @@ bluegl_glDeleteNamedStringARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteNamedStringARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteNamedStringARB, .-glDeleteNamedStringARB
+	.size	bluegl_glDeleteNamedStringARB, .-bluegl_glDeleteNamedStringARB
 
 	.align	2
 	.global	bluegl_glGenOcclusionQueriesNV
@@ -8187,7 +8187,7 @@ bluegl_glGenOcclusionQueriesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenOcclusionQueriesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenOcclusionQueriesNV, .-glGenOcclusionQueriesNV
+	.size	bluegl_glGenOcclusionQueriesNV, .-bluegl_glGenOcclusionQueriesNV
 
 	.align	2
 	.global	bluegl_glClientAttribDefaultEXT
@@ -8197,7 +8197,7 @@ bluegl_glClientAttribDefaultEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClientAttribDefaultEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClientAttribDefaultEXT, .-glClientAttribDefaultEXT
+	.size	bluegl_glClientAttribDefaultEXT, .-bluegl_glClientAttribDefaultEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2i64ARB
@@ -8207,7 +8207,7 @@ bluegl_glProgramUniform2i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2i64ARB, .-glProgramUniform2i64ARB
+	.size	bluegl_glProgramUniform2i64ARB, .-bluegl_glProgramUniform2i64ARB
 
 	.align	2
 	.global	bluegl_glVertexAttribIFormatNV
@@ -8217,7 +8217,7 @@ bluegl_glVertexAttribIFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribIFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribIFormatNV, .-glVertexAttribIFormatNV
+	.size	bluegl_glVertexAttribIFormatNV, .-bluegl_glVertexAttribIFormatNV
 
 	.align	2
 	.global	bluegl_glStencilFuncSeparate
@@ -8227,7 +8227,7 @@ bluegl_glStencilFuncSeparate:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilFuncSeparate]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilFuncSeparate, .-glStencilFuncSeparate
+	.size	bluegl_glStencilFuncSeparate, .-bluegl_glStencilFuncSeparate
 
 	.align	2
 	.global	bluegl_glGetVertexAttribfvARB
@@ -8237,7 +8237,7 @@ bluegl_glGetVertexAttribfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribfvARB, .-glGetVertexAttribfvARB
+	.size	bluegl_glGetVertexAttribfvARB, .-bluegl_glGetVertexAttribfvARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib2dNV
@@ -8247,7 +8247,7 @@ bluegl_glVertexAttrib2dNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2dNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2dNV, .-glVertexAttrib2dNV
+	.size	bluegl_glVertexAttrib2dNV, .-bluegl_glVertexAttrib2dNV
 
 	.align	2
 	.global	bluegl_glProgramUniform2iEXT
@@ -8257,7 +8257,7 @@ bluegl_glProgramUniform2iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2iEXT, .-glProgramUniform2iEXT
+	.size	bluegl_glProgramUniform2iEXT, .-bluegl_glProgramUniform2iEXT
 
 	.align	2
 	.global	bluegl_glClientActiveVertexStreamATI
@@ -8267,7 +8267,7 @@ bluegl_glClientActiveVertexStreamATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClientActiveVertexStreamATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClientActiveVertexStreamATI, .-glClientActiveVertexStreamATI
+	.size	bluegl_glClientActiveVertexStreamATI, .-bluegl_glClientActiveVertexStreamATI
 
 	.align	2
 	.global	bluegl_glRasterPos3xOES
@@ -8277,7 +8277,7 @@ bluegl_glRasterPos3xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRasterPos3xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRasterPos3xOES, .-glRasterPos3xOES
+	.size	bluegl_glRasterPos3xOES, .-bluegl_glRasterPos3xOES
 
 	.align	2
 	.global	bluegl_glMapVertexAttrib2fAPPLE
@@ -8287,7 +8287,7 @@ bluegl_glMapVertexAttrib2fAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapVertexAttrib2fAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapVertexAttrib2fAPPLE, .-glMapVertexAttrib2fAPPLE
+	.size	bluegl_glMapVertexAttrib2fAPPLE, .-bluegl_glMapVertexAttrib2fAPPLE
 
 	.align	2
 	.global	bluegl_glClearDepthxOES
@@ -8297,7 +8297,7 @@ bluegl_glClearDepthxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearDepthxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearDepthxOES, .-glClearDepthxOES
+	.size	bluegl_glClearDepthxOES, .-bluegl_glClearDepthxOES
 
 	.align	2
 	.global	bluegl_glTexCoord2fNormal3fVertex3fvSUN
@@ -8307,7 +8307,7 @@ bluegl_glTexCoord2fNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fNormal3fVertex3fvSUN, .-glTexCoord2fNormal3fVertex3fvSUN
+	.size	bluegl_glTexCoord2fNormal3fVertex3fvSUN, .-bluegl_glTexCoord2fNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glGetFirstPerfQueryIdINTEL
@@ -8317,7 +8317,7 @@ bluegl_glGetFirstPerfQueryIdINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFirstPerfQueryIdINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFirstPerfQueryIdINTEL, .-glGetFirstPerfQueryIdINTEL
+	.size	bluegl_glGetFirstPerfQueryIdINTEL, .-bluegl_glGetFirstPerfQueryIdINTEL
 
 	.align	2
 	.global	bluegl_glUnmapNamedBufferEXT
@@ -8327,7 +8327,7 @@ bluegl_glUnmapNamedBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUnmapNamedBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUnmapNamedBufferEXT, .-glUnmapNamedBufferEXT
+	.size	bluegl_glUnmapNamedBufferEXT, .-bluegl_glUnmapNamedBufferEXT
 
 	.align	2
 	.global	bluegl_glGetTransformFeedbacki_v
@@ -8337,7 +8337,7 @@ bluegl_glGetTransformFeedbacki_v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTransformFeedbacki_v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTransformFeedbacki_v, .-glGetTransformFeedbacki_v
+	.size	bluegl_glGetTransformFeedbacki_v, .-bluegl_glGetTransformFeedbacki_v
 
 	.align	2
 	.global	bluegl_glUniform4fvARB
@@ -8347,7 +8347,7 @@ bluegl_glUniform4fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4fvARB, .-glUniform4fvARB
+	.size	bluegl_glUniform4fvARB, .-bluegl_glUniform4fvARB
 
 	.align	2
 	.global	bluegl_glRenderbufferStorageMultisampleCoverageNV
@@ -8357,7 +8357,7 @@ bluegl_glRenderbufferStorageMultisampleCoverageNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRenderbufferStorageMultisampleCoverageNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRenderbufferStorageMultisampleCoverageNV, .-glRenderbufferStorageMultisampleCoverageNV
+	.size	bluegl_glRenderbufferStorageMultisampleCoverageNV, .-bluegl_glRenderbufferStorageMultisampleCoverageNV
 
 	.align	2
 	.global	bluegl_glGetFloati_vEXT
@@ -8367,7 +8367,7 @@ bluegl_glGetFloati_vEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFloati_vEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFloati_vEXT, .-glGetFloati_vEXT
+	.size	bluegl_glGetFloati_vEXT, .-bluegl_glGetFloati_vEXT
 
 	.align	2
 	.global	bluegl_glBindAttribLocationARB
@@ -8377,7 +8377,7 @@ bluegl_glBindAttribLocationARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindAttribLocationARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindAttribLocationARB, .-glBindAttribLocationARB
+	.size	bluegl_glBindAttribLocationARB, .-bluegl_glBindAttribLocationARB
 
 	.align	2
 	.global	bluegl_glBufferAddressRangeNV
@@ -8387,7 +8387,7 @@ bluegl_glBufferAddressRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferAddressRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferAddressRangeNV, .-glBufferAddressRangeNV
+	.size	bluegl_glBufferAddressRangeNV, .-bluegl_glBufferAddressRangeNV
 
 	.align	2
 	.global	bluegl_glGenProgramsARB
@@ -8397,7 +8397,7 @@ bluegl_glGenProgramsARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenProgramsARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenProgramsARB, .-glGenProgramsARB
+	.size	bluegl_glGenProgramsARB, .-bluegl_glGenProgramsARB
 
 	.align	2
 	.global	bluegl_glMultiTexEnvivEXT
@@ -8407,7 +8407,7 @@ bluegl_glMultiTexEnvivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexEnvivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexEnvivEXT, .-glMultiTexEnvivEXT
+	.size	bluegl_glMultiTexEnvivEXT, .-bluegl_glMultiTexEnvivEXT
 
 	.align	2
 	.global	bluegl_glSecondaryColor3uiEXT
@@ -8417,7 +8417,7 @@ bluegl_glSecondaryColor3uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3uiEXT, .-glSecondaryColor3uiEXT
+	.size	bluegl_glSecondaryColor3uiEXT, .-bluegl_glSecondaryColor3uiEXT
 
 	.align	2
 	.global	bluegl_glCompressedTextureImage2DEXT
@@ -8427,7 +8427,7 @@ bluegl_glCompressedTextureImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureImage2DEXT, .-glCompressedTextureImage2DEXT
+	.size	bluegl_glCompressedTextureImage2DEXT, .-bluegl_glCompressedTextureImage2DEXT
 
 	.align	2
 	.global	bluegl_glUniform2i
@@ -8437,7 +8437,7 @@ bluegl_glUniform2i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2i, .-glUniform2i
+	.size	bluegl_glUniform2i, .-bluegl_glUniform2i
 
 	.align	2
 	.global	bluegl_glUniform2f
@@ -8447,7 +8447,7 @@ bluegl_glUniform2f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2f, .-glUniform2f
+	.size	bluegl_glUniform2f, .-bluegl_glUniform2f
 
 	.align	2
 	.global	bluegl_glUniform2d
@@ -8457,7 +8457,7 @@ bluegl_glUniform2d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2d, .-glUniform2d
+	.size	bluegl_glUniform2d, .-bluegl_glUniform2d
 
 	.align	2
 	.global	bluegl_glTexCoordP4ui
@@ -8467,7 +8467,7 @@ bluegl_glTexCoordP4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP4ui, .-glTexCoordP4ui
+	.size	bluegl_glTexCoordP4ui, .-bluegl_glTexCoordP4ui
 
 	.align	2
 	.global	bluegl_glFramebufferTextureFaceEXT
@@ -8477,7 +8477,7 @@ bluegl_glFramebufferTextureFaceEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureFaceEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureFaceEXT, .-glFramebufferTextureFaceEXT
+	.size	bluegl_glFramebufferTextureFaceEXT, .-bluegl_glFramebufferTextureFaceEXT
 
 	.align	2
 	.global	bluegl_glFramebufferTextureLayer
@@ -8487,7 +8487,7 @@ bluegl_glFramebufferTextureLayer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureLayer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureLayer, .-glFramebufferTextureLayer
+	.size	bluegl_glFramebufferTextureLayer, .-bluegl_glFramebufferTextureLayer
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4bvOES
@@ -8497,7 +8497,7 @@ bluegl_glMultiTexCoord4bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4bvOES, .-glMultiTexCoord4bvOES
+	.size	bluegl_glMultiTexCoord4bvOES, .-bluegl_glMultiTexCoord4bvOES
 
 	.align	2
 	.global	bluegl_glGetVertexArrayPointeri_vEXT
@@ -8507,7 +8507,7 @@ bluegl_glGetVertexArrayPointeri_vEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexArrayPointeri_vEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexArrayPointeri_vEXT, .-glGetVertexArrayPointeri_vEXT
+	.size	bluegl_glGetVertexArrayPointeri_vEXT, .-bluegl_glGetVertexArrayPointeri_vEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x3fvEXT
@@ -8517,7 +8517,7 @@ bluegl_glProgramUniformMatrix2x3fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x3fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x3fvEXT, .-glProgramUniformMatrix2x3fvEXT
+	.size	bluegl_glProgramUniformMatrix2x3fvEXT, .-bluegl_glProgramUniformMatrix2x3fvEXT
 
 	.align	2
 	.global	bluegl_glBinormal3bEXT
@@ -8527,7 +8527,7 @@ bluegl_glBinormal3bEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3bEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3bEXT, .-glBinormal3bEXT
+	.size	bluegl_glBinormal3bEXT, .-bluegl_glBinormal3bEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2fv
@@ -8537,7 +8537,7 @@ bluegl_glProgramUniform2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2fv, .-glProgramUniform2fv
+	.size	bluegl_glProgramUniform2fv, .-bluegl_glProgramUniform2fv
 
 	.align	2
 	.global	bluegl_glColor3fVertex3fSUN
@@ -8547,7 +8547,7 @@ bluegl_glColor3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor3fVertex3fSUN, .-glColor3fVertex3fSUN
+	.size	bluegl_glColor3fVertex3fSUN, .-bluegl_glColor3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glNormal3fVertex3fvSUN
@@ -8557,7 +8557,7 @@ bluegl_glNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormal3fVertex3fvSUN, .-glNormal3fVertex3fvSUN
+	.size	bluegl_glNormal3fVertex3fvSUN, .-bluegl_glNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glCopyMultiTexSubImage3DEXT
@@ -8567,7 +8567,7 @@ bluegl_glCopyMultiTexSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyMultiTexSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyMultiTexSubImage3DEXT, .-glCopyMultiTexSubImage3DEXT
+	.size	bluegl_glCopyMultiTexSubImage3DEXT, .-bluegl_glCopyMultiTexSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glProgramLocalParameterI4iNV
@@ -8577,7 +8577,7 @@ bluegl_glProgramLocalParameterI4iNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameterI4iNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameterI4iNV, .-glProgramLocalParameterI4iNV
+	.size	bluegl_glProgramLocalParameterI4iNV, .-bluegl_glProgramLocalParameterI4iNV
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x4dv
@@ -8587,7 +8587,7 @@ bluegl_glProgramUniformMatrix2x4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x4dv, .-glProgramUniformMatrix2x4dv
+	.size	bluegl_glProgramUniformMatrix2x4dv, .-bluegl_glProgramUniformMatrix2x4dv
 
 	.align	2
 	.global	bluegl_glPathMemoryGlyphIndexArrayNV
@@ -8597,7 +8597,7 @@ bluegl_glPathMemoryGlyphIndexArrayNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathMemoryGlyphIndexArrayNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathMemoryGlyphIndexArrayNV, .-glPathMemoryGlyphIndexArrayNV
+	.size	bluegl_glPathMemoryGlyphIndexArrayNV, .-bluegl_glPathMemoryGlyphIndexArrayNV
 
 	.align	2
 	.global	bluegl_glDrawArraysEXT
@@ -8607,7 +8607,7 @@ bluegl_glDrawArraysEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawArraysEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawArraysEXT, .-glDrawArraysEXT
+	.size	bluegl_glDrawArraysEXT, .-bluegl_glDrawArraysEXT
 
 	.align	2
 	.global	bluegl_glBlendEquationEXT
@@ -8617,7 +8617,7 @@ bluegl_glBlendEquationEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationEXT, .-glBlendEquationEXT
+	.size	bluegl_glBlendEquationEXT, .-bluegl_glBlendEquationEXT
 
 	.align	2
 	.global	bluegl_glCopyTextureSubImage2DEXT
@@ -8627,7 +8627,7 @@ bluegl_glCopyTextureSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureSubImage2DEXT, .-glCopyTextureSubImage2DEXT
+	.size	bluegl_glCopyTextureSubImage2DEXT, .-bluegl_glCopyTextureSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib2dvNV
@@ -8637,7 +8637,7 @@ bluegl_glVertexAttrib2dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2dvNV, .-glVertexAttrib2dvNV
+	.size	bluegl_glVertexAttrib2dvNV, .-bluegl_glVertexAttrib2dvNV
 
 	.align	2
 	.global	bluegl_glGenPerfMonitorsAMD
@@ -8647,7 +8647,7 @@ bluegl_glGenPerfMonitorsAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenPerfMonitorsAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenPerfMonitorsAMD, .-glGenPerfMonitorsAMD
+	.size	bluegl_glGenPerfMonitorsAMD, .-bluegl_glGenPerfMonitorsAMD
 
 	.align	2
 	.global	bluegl_glGetInteger64i_v
@@ -8657,7 +8657,7 @@ bluegl_glGetInteger64i_v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInteger64i_v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInteger64i_v, .-glGetInteger64i_v
+	.size	bluegl_glGetInteger64i_v, .-bluegl_glGetInteger64i_v
 
 	.align	2
 	.global	bluegl_glGetHistogramParameterfv
@@ -8667,7 +8667,7 @@ bluegl_glGetHistogramParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHistogramParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHistogramParameterfv, .-glGetHistogramParameterfv
+	.size	bluegl_glGetHistogramParameterfv, .-bluegl_glGetHistogramParameterfv
 
 	.align	2
 	.global	bluegl_glVertexFormatNV
@@ -8677,7 +8677,7 @@ bluegl_glVertexFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexFormatNV, .-glVertexFormatNV
+	.size	bluegl_glVertexFormatNV, .-bluegl_glVertexFormatNV
 
 	.align	2
 	.global	bluegl_glBlendFuncIndexedAMD
@@ -8687,7 +8687,7 @@ bluegl_glBlendFuncIndexedAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFuncIndexedAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFuncIndexedAMD, .-glBlendFuncIndexedAMD
+	.size	bluegl_glBlendFuncIndexedAMD, .-bluegl_glBlendFuncIndexedAMD
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1iv
@@ -8697,7 +8697,7 @@ bluegl_glMultiTexCoord1iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1iv, .-glMultiTexCoord1iv
+	.size	bluegl_glMultiTexCoord1iv, .-bluegl_glMultiTexCoord1iv
 
 	.align	2
 	.global	bluegl_glIsEnabledi
@@ -8707,7 +8707,7 @@ bluegl_glIsEnabledi:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsEnabledi]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsEnabledi, .-glIsEnabledi
+	.size	bluegl_glIsEnabledi, .-bluegl_glIsEnabledi
 
 	.align	2
 	.global	bluegl_glVertexAttribL2ui64vNV
@@ -8717,7 +8717,7 @@ bluegl_glVertexAttribL2ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2ui64vNV, .-glVertexAttribL2ui64vNV
+	.size	bluegl_glVertexAttribL2ui64vNV, .-bluegl_glVertexAttribL2ui64vNV
 
 	.align	2
 	.global	bluegl_glVertexAttribL4i64NV
@@ -8727,7 +8727,7 @@ bluegl_glVertexAttribL4i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4i64NV, .-glVertexAttribL4i64NV
+	.size	bluegl_glVertexAttribL4i64NV, .-bluegl_glVertexAttribL4i64NV
 
 	.align	2
 	.global	bluegl_glMatrixTranslatedEXT
@@ -8737,7 +8737,7 @@ bluegl_glMatrixTranslatedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixTranslatedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixTranslatedEXT, .-glMatrixTranslatedEXT
+	.size	bluegl_glMatrixTranslatedEXT, .-bluegl_glMatrixTranslatedEXT
 
 	.align	2
 	.global	bluegl_glUniform1ui64vARB
@@ -8747,7 +8747,7 @@ bluegl_glUniform1ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1ui64vARB, .-glUniform1ui64vARB
+	.size	bluegl_glUniform1ui64vARB, .-bluegl_glUniform1ui64vARB
 
 	.align	2
 	.global	bluegl_glMatrixMultdEXT
@@ -8757,7 +8757,7 @@ bluegl_glMatrixMultdEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixMultdEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixMultdEXT, .-glMatrixMultdEXT
+	.size	bluegl_glMatrixMultdEXT, .-bluegl_glMatrixMultdEXT
 
 	.align	2
 	.global	bluegl_glBinormal3dvEXT
@@ -8767,7 +8767,7 @@ bluegl_glBinormal3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3dvEXT, .-glBinormal3dvEXT
+	.size	bluegl_glBinormal3dvEXT, .-bluegl_glBinormal3dvEXT
 
 	.align	2
 	.global	bluegl_glImportSyncEXT
@@ -8777,7 +8777,7 @@ bluegl_glImportSyncEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glImportSyncEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glImportSyncEXT, .-glImportSyncEXT
+	.size	bluegl_glImportSyncEXT, .-bluegl_glImportSyncEXT
 
 	.align	2
 	.global	bluegl_glGetListParameterfvSGIX
@@ -8787,7 +8787,7 @@ bluegl_glGetListParameterfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetListParameterfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetListParameterfvSGIX, .-glGetListParameterfvSGIX
+	.size	bluegl_glGetListParameterfvSGIX, .-bluegl_glGetListParameterfvSGIX
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4sv
@@ -8797,7 +8797,7 @@ bluegl_glMultiTexCoord4sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4sv, .-glMultiTexCoord4sv
+	.size	bluegl_glMultiTexCoord4sv, .-bluegl_glMultiTexCoord4sv
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3fv
@@ -8807,7 +8807,7 @@ bluegl_glProgramUniformMatrix3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3fv, .-glProgramUniformMatrix3fv
+	.size	bluegl_glProgramUniformMatrix3fv, .-bluegl_glProgramUniformMatrix3fv
 
 	.align	2
 	.global	bluegl_glBindVertexArrayAPPLE
@@ -8817,7 +8817,7 @@ bluegl_glBindVertexArrayAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindVertexArrayAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindVertexArrayAPPLE, .-glBindVertexArrayAPPLE
+	.size	bluegl_glBindVertexArrayAPPLE, .-bluegl_glBindVertexArrayAPPLE
 
 	.align	2
 	.global	bluegl_glObjectPtrLabel
@@ -8827,7 +8827,7 @@ bluegl_glObjectPtrLabel:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glObjectPtrLabel]
 	ldr	x16, [x16]
 	br	x16
-	.size	glObjectPtrLabel, .-glObjectPtrLabel
+	.size	bluegl_glObjectPtrLabel, .-bluegl_glObjectPtrLabel
 
 	.align	2
 	.global	bluegl_glGetDebugMessageLog
@@ -8837,7 +8837,7 @@ bluegl_glGetDebugMessageLog:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDebugMessageLog]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDebugMessageLog, .-glGetDebugMessageLog
+	.size	bluegl_glGetDebugMessageLog, .-bluegl_glGetDebugMessageLog
 
 	.align	2
 	.global	bluegl_glTrackMatrixNV
@@ -8847,7 +8847,7 @@ bluegl_glTrackMatrixNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTrackMatrixNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTrackMatrixNV, .-glTrackMatrixNV
+	.size	bluegl_glTrackMatrixNV, .-bluegl_glTrackMatrixNV
 
 	.align	2
 	.global	bluegl_glBindFragDataLocation
@@ -8857,7 +8857,7 @@ bluegl_glBindFragDataLocation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindFragDataLocation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindFragDataLocation, .-glBindFragDataLocation
+	.size	bluegl_glBindFragDataLocation, .-bluegl_glBindFragDataLocation
 
 	.align	2
 	.global	bluegl_glTangent3ivEXT
@@ -8867,7 +8867,7 @@ bluegl_glTangent3ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3ivEXT, .-glTangent3ivEXT
+	.size	bluegl_glTangent3ivEXT, .-bluegl_glTangent3ivEXT
 
 	.align	2
 	.global	bluegl_glSecondaryColor3ubv
@@ -8877,7 +8877,7 @@ bluegl_glSecondaryColor3ubv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3ubv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3ubv, .-glSecondaryColor3ubv
+	.size	bluegl_glSecondaryColor3ubv, .-bluegl_glSecondaryColor3ubv
 
 	.align	2
 	.global	bluegl_glMakeTextureHandleNonResidentNV
@@ -8887,7 +8887,7 @@ bluegl_glMakeTextureHandleNonResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeTextureHandleNonResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeTextureHandleNonResidentNV, .-glMakeTextureHandleNonResidentNV
+	.size	bluegl_glMakeTextureHandleNonResidentNV, .-bluegl_glMakeTextureHandleNonResidentNV
 
 	.align	2
 	.global	bluegl_glVertexAttribs4ubvNV
@@ -8897,7 +8897,7 @@ bluegl_glVertexAttribs4ubvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs4ubvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs4ubvNV, .-glVertexAttribs4ubvNV
+	.size	bluegl_glVertexAttribs4ubvNV, .-bluegl_glVertexAttribs4ubvNV
 
 	.align	2
 	.global	bluegl_glClipPlanexOES
@@ -8907,7 +8907,7 @@ bluegl_glClipPlanexOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClipPlanexOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClipPlanexOES, .-glClipPlanexOES
+	.size	bluegl_glClipPlanexOES, .-bluegl_glClipPlanexOES
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3iv
@@ -8917,7 +8917,7 @@ bluegl_glMultiTexCoord3iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3iv, .-glMultiTexCoord3iv
+	.size	bluegl_glMultiTexCoord3iv, .-bluegl_glMultiTexCoord3iv
 
 	.align	2
 	.global	bluegl_glGetnPolygonStippleARB
@@ -8927,7 +8927,7 @@ bluegl_glGetnPolygonStippleARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPolygonStippleARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPolygonStippleARB, .-glGetnPolygonStippleARB
+	.size	bluegl_glGetnPolygonStippleARB, .-bluegl_glGetnPolygonStippleARB
 
 	.align	2
 	.global	bluegl_glUniform2i64vNV
@@ -8937,7 +8937,7 @@ bluegl_glUniform2i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2i64vNV, .-glUniform2i64vNV
+	.size	bluegl_glUniform2i64vNV, .-bluegl_glUniform2i64vNV
 
 	.align	2
 	.global	bluegl_glMultiTexSubImage2DEXT
@@ -8947,7 +8947,7 @@ bluegl_glMultiTexSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexSubImage2DEXT, .-glMultiTexSubImage2DEXT
+	.size	bluegl_glMultiTexSubImage2DEXT, .-bluegl_glMultiTexSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiColor3fVertex3fSUN
@@ -8957,7 +8957,7 @@ bluegl_glReplacementCodeuiColor3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiColor3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiColor3fVertex3fSUN, .-glReplacementCodeuiColor3fVertex3fSUN
+	.size	bluegl_glReplacementCodeuiColor3fVertex3fSUN, .-bluegl_glReplacementCodeuiColor3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glTangent3dvEXT
@@ -8967,7 +8967,7 @@ bluegl_glTangent3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3dvEXT, .-glTangent3dvEXT
+	.size	bluegl_glTangent3dvEXT, .-bluegl_glTangent3dvEXT
 
 	.align	2
 	.global	bluegl_glVertexWeighthvNV
@@ -8977,7 +8977,7 @@ bluegl_glVertexWeighthvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexWeighthvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexWeighthvNV, .-glVertexWeighthvNV
+	.size	bluegl_glVertexWeighthvNV, .-bluegl_glVertexWeighthvNV
 
 	.align	2
 	.global	bluegl_glWindowPos3iv
@@ -8987,7 +8987,7 @@ bluegl_glWindowPos3iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3iv, .-glWindowPos3iv
+	.size	bluegl_glWindowPos3iv, .-bluegl_glWindowPos3iv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1xvOES
@@ -8997,7 +8997,7 @@ bluegl_glMultiTexCoord1xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1xvOES, .-glMultiTexCoord1xvOES
+	.size	bluegl_glMultiTexCoord1xvOES, .-bluegl_glMultiTexCoord1xvOES
 
 	.align	2
 	.global	bluegl_glTransformPathNV
@@ -9007,7 +9007,7 @@ bluegl_glTransformPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformPathNV, .-glTransformPathNV
+	.size	bluegl_glTransformPathNV, .-bluegl_glTransformPathNV
 
 	.align	2
 	.global	bluegl_glProgramNamedParameter4dNV
@@ -9017,7 +9017,7 @@ bluegl_glProgramNamedParameter4dNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramNamedParameter4dNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramNamedParameter4dNV, .-glProgramNamedParameter4dNV
+	.size	bluegl_glProgramNamedParameter4dNV, .-bluegl_glProgramNamedParameter4dNV
 
 	.align	2
 	.global	bluegl_glBeginQuery
@@ -9027,7 +9027,7 @@ bluegl_glBeginQuery:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginQuery]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginQuery, .-glBeginQuery
+	.size	bluegl_glBeginQuery, .-bluegl_glBeginQuery
 
 	.align	2
 	.global	bluegl_glProgramUniform1dEXT
@@ -9037,7 +9037,7 @@ bluegl_glProgramUniform1dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1dEXT, .-glProgramUniform1dEXT
+	.size	bluegl_glProgramUniform1dEXT, .-bluegl_glProgramUniform1dEXT
 
 	.align	2
 	.global	bluegl_glNormal3hvNV
@@ -9047,7 +9047,7 @@ bluegl_glNormal3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormal3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormal3hvNV, .-glNormal3hvNV
+	.size	bluegl_glNormal3hvNV, .-bluegl_glNormal3hvNV
 
 	.align	2
 	.global	bluegl_glGetCombinerOutputParameterfvNV
@@ -9057,7 +9057,7 @@ bluegl_glGetCombinerOutputParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCombinerOutputParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCombinerOutputParameterfvNV, .-glGetCombinerOutputParameterfvNV
+	.size	bluegl_glGetCombinerOutputParameterfvNV, .-bluegl_glGetCombinerOutputParameterfvNV
 
 	.align	2
 	.global	bluegl_glPushDebugGroup
@@ -9067,7 +9067,7 @@ bluegl_glPushDebugGroup:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPushDebugGroup]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPushDebugGroup, .-glPushDebugGroup
+	.size	bluegl_glPushDebugGroup, .-bluegl_glPushDebugGroup
 
 	.align	2
 	.global	bluegl_glCopyTexSubImage3D
@@ -9077,7 +9077,7 @@ bluegl_glCopyTexSubImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexSubImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexSubImage3D, .-glCopyTexSubImage3D
+	.size	bluegl_glCopyTexSubImage3D, .-bluegl_glCopyTexSubImage3D
 
 	.align	2
 	.global	bluegl_glCreateShaderObjectARB
@@ -9087,7 +9087,7 @@ bluegl_glCreateShaderObjectARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateShaderObjectARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateShaderObjectARB, .-glCreateShaderObjectARB
+	.size	bluegl_glCreateShaderObjectARB, .-bluegl_glCreateShaderObjectARB
 
 	.align	2
 	.global	bluegl_glGetStageIndexNV
@@ -9097,7 +9097,7 @@ bluegl_glGetStageIndexNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetStageIndexNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetStageIndexNV, .-glGetStageIndexNV
+	.size	bluegl_glGetStageIndexNV, .-bluegl_glGetStageIndexNV
 
 	.align	2
 	.global	bluegl_glGetColorTableParameterfv
@@ -9107,7 +9107,7 @@ bluegl_glGetColorTableParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableParameterfv, .-glGetColorTableParameterfv
+	.size	bluegl_glGetColorTableParameterfv, .-bluegl_glGetColorTableParameterfv
 
 	.align	2
 	.global	bluegl_glGetNamedBufferPointervEXT
@@ -9117,7 +9117,7 @@ bluegl_glGetNamedBufferPointervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferPointervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferPointervEXT, .-glGetNamedBufferPointervEXT
+	.size	bluegl_glGetNamedBufferPointervEXT, .-bluegl_glGetNamedBufferPointervEXT
 
 	.align	2
 	.global	bluegl_glTextureBarrierNV
@@ -9127,7 +9127,7 @@ bluegl_glTextureBarrierNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureBarrierNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureBarrierNV, .-glTextureBarrierNV
+	.size	bluegl_glTextureBarrierNV, .-bluegl_glTextureBarrierNV
 
 	.align	2
 	.global	bluegl_glColor4ubVertex3fvSUN
@@ -9137,7 +9137,7 @@ bluegl_glColor4ubVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4ubVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4ubVertex3fvSUN, .-glColor4ubVertex3fvSUN
+	.size	bluegl_glColor4ubVertex3fvSUN, .-bluegl_glColor4ubVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glGetCommandHeaderNV
@@ -9147,7 +9147,7 @@ bluegl_glGetCommandHeaderNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCommandHeaderNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCommandHeaderNV, .-glGetCommandHeaderNV
+	.size	bluegl_glGetCommandHeaderNV, .-bluegl_glGetCommandHeaderNV
 
 	.align	2
 	.global	bluegl_glGetPerfMonitorCounterInfoAMD
@@ -9157,7 +9157,7 @@ bluegl_glGetPerfMonitorCounterInfoAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfMonitorCounterInfoAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfMonitorCounterInfoAMD, .-glGetPerfMonitorCounterInfoAMD
+	.size	bluegl_glGetPerfMonitorCounterInfoAMD, .-bluegl_glGetPerfMonitorCounterInfoAMD
 
 	.align	2
 	.global	bluegl_glVertexAttrib1svARB
@@ -9167,7 +9167,7 @@ bluegl_glVertexAttrib1svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1svARB, .-glVertexAttrib1svARB
+	.size	bluegl_glVertexAttrib1svARB, .-bluegl_glVertexAttrib1svARB
 
 	.align	2
 	.global	bluegl_glVertexArrayBindingDivisor
@@ -9177,7 +9177,7 @@ bluegl_glVertexArrayBindingDivisor:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayBindingDivisor]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayBindingDivisor, .-glVertexArrayBindingDivisor
+	.size	bluegl_glVertexArrayBindingDivisor, .-bluegl_glVertexArrayBindingDivisor
 
 	.align	2
 	.global	bluegl_glMatrixMultTransposefEXT
@@ -9187,7 +9187,7 @@ bluegl_glMatrixMultTransposefEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixMultTransposefEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixMultTransposefEXT, .-glMatrixMultTransposefEXT
+	.size	bluegl_glMatrixMultTransposefEXT, .-bluegl_glMatrixMultTransposefEXT
 
 	.align	2
 	.global	bluegl_glGetActiveUniformBlockiv
@@ -9197,7 +9197,7 @@ bluegl_glGetActiveUniformBlockiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveUniformBlockiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveUniformBlockiv, .-glGetActiveUniformBlockiv
+	.size	bluegl_glGetActiveUniformBlockiv, .-bluegl_glGetActiveUniformBlockiv
 
 	.align	2
 	.global	bluegl_glIndexPointerListIBM
@@ -9207,7 +9207,7 @@ bluegl_glIndexPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIndexPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIndexPointerListIBM, .-glIndexPointerListIBM
+	.size	bluegl_glIndexPointerListIBM, .-bluegl_glIndexPointerListIBM
 
 	.align	2
 	.global	bluegl_glVertexAttribI4iEXT
@@ -9217,7 +9217,7 @@ bluegl_glVertexAttribI4iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4iEXT, .-glVertexAttribI4iEXT
+	.size	bluegl_glVertexAttribI4iEXT, .-bluegl_glVertexAttribI4iEXT
 
 	.align	2
 	.global	bluegl_glBeginTransformFeedbackNV
@@ -9227,7 +9227,7 @@ bluegl_glBeginTransformFeedbackNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginTransformFeedbackNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginTransformFeedbackNV, .-glBeginTransformFeedbackNV
+	.size	bluegl_glBeginTransformFeedbackNV, .-bluegl_glBeginTransformFeedbackNV
 
 	.align	2
 	.global	bluegl_glColorFragmentOp3ATI
@@ -9237,7 +9237,7 @@ bluegl_glColorFragmentOp3ATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorFragmentOp3ATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorFragmentOp3ATI, .-glColorFragmentOp3ATI
+	.size	bluegl_glColorFragmentOp3ATI, .-bluegl_glColorFragmentOp3ATI
 
 	.align	2
 	.global	bluegl_glMapGrid1xOES
@@ -9247,7 +9247,7 @@ bluegl_glMapGrid1xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapGrid1xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapGrid1xOES, .-glMapGrid1xOES
+	.size	bluegl_glMapGrid1xOES, .-bluegl_glMapGrid1xOES
 
 	.align	2
 	.global	bluegl_glResizeBuffersMESA
@@ -9257,7 +9257,7 @@ bluegl_glResizeBuffersMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResizeBuffersMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResizeBuffersMESA, .-glResizeBuffersMESA
+	.size	bluegl_glResizeBuffersMESA, .-bluegl_glResizeBuffersMESA
 
 	.align	2
 	.global	bluegl_glGetMinmaxParameterfv
@@ -9267,7 +9267,7 @@ bluegl_glGetMinmaxParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMinmaxParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMinmaxParameterfv, .-glGetMinmaxParameterfv
+	.size	bluegl_glGetMinmaxParameterfv, .-bluegl_glGetMinmaxParameterfv
 
 	.align	2
 	.global	bluegl_glClientActiveTextureARB
@@ -9277,7 +9277,7 @@ bluegl_glClientActiveTextureARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClientActiveTextureARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClientActiveTextureARB, .-glClientActiveTextureARB
+	.size	bluegl_glClientActiveTextureARB, .-bluegl_glClientActiveTextureARB
 
 	.align	2
 	.global	bluegl_glBindVertexArray
@@ -9287,7 +9287,7 @@ bluegl_glBindVertexArray:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindVertexArray]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindVertexArray, .-glBindVertexArray
+	.size	bluegl_glBindVertexArray, .-bluegl_glBindVertexArray
 
 	.align	2
 	.global	bluegl_glProgramUniform1dvEXT
@@ -9297,7 +9297,7 @@ bluegl_glProgramUniform1dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1dvEXT, .-glProgramUniform1dvEXT
+	.size	bluegl_glProgramUniform1dvEXT, .-bluegl_glProgramUniform1dvEXT
 
 	.align	2
 	.global	bluegl_glNamedBufferSubData
@@ -9307,7 +9307,7 @@ bluegl_glNamedBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferSubData, .-glNamedBufferSubData
+	.size	bluegl_glNamedBufferSubData, .-bluegl_glNamedBufferSubData
 
 	.align	2
 	.global	bluegl_glGetMultiTexParameterIivEXT
@@ -9317,7 +9317,7 @@ bluegl_glGetMultiTexParameterIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexParameterIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexParameterIivEXT, .-glGetMultiTexParameterIivEXT
+	.size	bluegl_glGetMultiTexParameterIivEXT, .-bluegl_glGetMultiTexParameterIivEXT
 
 	.align	2
 	.global	bluegl_glDisableVertexArrayAttribEXT
@@ -9327,7 +9327,7 @@ bluegl_glDisableVertexArrayAttribEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableVertexArrayAttribEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableVertexArrayAttribEXT, .-glDisableVertexArrayAttribEXT
+	.size	bluegl_glDisableVertexArrayAttribEXT, .-bluegl_glDisableVertexArrayAttribEXT
 
 	.align	2
 	.global	bluegl_glObjectUnpurgeableAPPLE
@@ -9337,7 +9337,7 @@ bluegl_glObjectUnpurgeableAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glObjectUnpurgeableAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glObjectUnpurgeableAPPLE, .-glObjectUnpurgeableAPPLE
+	.size	bluegl_glObjectUnpurgeableAPPLE, .-bluegl_glObjectUnpurgeableAPPLE
 
 	.align	2
 	.global	bluegl_glVertexAttribs2dvNV
@@ -9347,7 +9347,7 @@ bluegl_glVertexAttribs2dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs2dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs2dvNV, .-glVertexAttribs2dvNV
+	.size	bluegl_glVertexAttribs2dvNV, .-bluegl_glVertexAttribs2dvNV
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiTexCoord2fVertex3fSUN
@@ -9357,7 +9357,7 @@ bluegl_glReplacementCodeuiTexCoord2fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiTexCoord2fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiTexCoord2fVertex3fSUN, .-glReplacementCodeuiTexCoord2fVertex3fSUN
+	.size	bluegl_glReplacementCodeuiTexCoord2fVertex3fSUN, .-bluegl_glReplacementCodeuiTexCoord2fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glGetMapParameterfvNV
@@ -9367,7 +9367,7 @@ bluegl_glGetMapParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMapParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMapParameterfvNV, .-glGetMapParameterfvNV
+	.size	bluegl_glGetMapParameterfvNV, .-bluegl_glGetMapParameterfvNV
 
 	.align	2
 	.global	bluegl_glProgramUniform4ivEXT
@@ -9377,7 +9377,7 @@ bluegl_glProgramUniform4ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4ivEXT, .-glProgramUniform4ivEXT
+	.size	bluegl_glProgramUniform4ivEXT, .-bluegl_glProgramUniform4ivEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3ui64vNV
@@ -9387,7 +9387,7 @@ bluegl_glProgramUniform3ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3ui64vNV, .-glProgramUniform3ui64vNV
+	.size	bluegl_glProgramUniform3ui64vNV, .-bluegl_glProgramUniform3ui64vNV
 
 	.align	2
 	.global	bluegl_glTexFilterFuncSGIS
@@ -9397,7 +9397,7 @@ bluegl_glTexFilterFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexFilterFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexFilterFuncSGIS, .-glTexFilterFuncSGIS
+	.size	bluegl_glTexFilterFuncSGIS, .-bluegl_glTexFilterFuncSGIS
 
 	.align	2
 	.global	bluegl_glSpriteParameterfvSGIX
@@ -9407,7 +9407,7 @@ bluegl_glSpriteParameterfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSpriteParameterfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSpriteParameterfvSGIX, .-glSpriteParameterfvSGIX
+	.size	bluegl_glSpriteParameterfvSGIX, .-bluegl_glSpriteParameterfvSGIX
 
 	.align	2
 	.global	bluegl_glCopyMultiTexImage1DEXT
@@ -9417,7 +9417,7 @@ bluegl_glCopyMultiTexImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyMultiTexImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyMultiTexImage1DEXT, .-glCopyMultiTexImage1DEXT
+	.size	bluegl_glCopyMultiTexImage1DEXT, .-bluegl_glCopyMultiTexImage1DEXT
 
 	.align	2
 	.global	bluegl_glColorMaskIndexedEXT
@@ -9427,7 +9427,7 @@ bluegl_glColorMaskIndexedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorMaskIndexedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorMaskIndexedEXT, .-glColorMaskIndexedEXT
+	.size	bluegl_glColorMaskIndexedEXT, .-bluegl_glColorMaskIndexedEXT
 
 	.align	2
 	.global	bluegl_glUniformMatrix2x4dv
@@ -9437,7 +9437,7 @@ bluegl_glUniformMatrix2x4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix2x4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix2x4dv, .-glUniformMatrix2x4dv
+	.size	bluegl_glUniformMatrix2x4dv, .-bluegl_glUniformMatrix2x4dv
 
 	.align	2
 	.global	bluegl_glGetProgramResourceLocationIndex
@@ -9447,7 +9447,7 @@ bluegl_glGetProgramResourceLocationIndex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramResourceLocationIndex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramResourceLocationIndex, .-glGetProgramResourceLocationIndex
+	.size	bluegl_glGetProgramResourceLocationIndex, .-bluegl_glGetProgramResourceLocationIndex
 
 	.align	2
 	.global	bluegl_glColor3hNV
@@ -9457,7 +9457,7 @@ bluegl_glColor3hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor3hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor3hNV, .-glColor3hNV
+	.size	bluegl_glColor3hNV, .-bluegl_glColor3hNV
 
 	.align	2
 	.global	bluegl_glViewport
@@ -9467,7 +9467,7 @@ bluegl_glViewport:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glViewport]
 	ldr	x16, [x16]
 	br	x16
-	.size	glViewport, .-glViewport
+	.size	bluegl_glViewport, .-bluegl_glViewport
 
 	.align	2
 	.global	bluegl_glProgramNamedParameter4fNV
@@ -9477,7 +9477,7 @@ bluegl_glProgramNamedParameter4fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramNamedParameter4fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramNamedParameter4fNV, .-glProgramNamedParameter4fNV
+	.size	bluegl_glProgramNamedParameter4fNV, .-bluegl_glProgramNamedParameter4fNV
 
 	.align	2
 	.global	bluegl_glGetInvariantBooleanvEXT
@@ -9487,7 +9487,7 @@ bluegl_glGetInvariantBooleanvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInvariantBooleanvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInvariantBooleanvEXT, .-glGetInvariantBooleanvEXT
+	.size	bluegl_glGetInvariantBooleanvEXT, .-bluegl_glGetInvariantBooleanvEXT
 
 	.align	2
 	.global	bluegl_glTexStorage2DMultisample
@@ -9497,7 +9497,7 @@ bluegl_glTexStorage2DMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexStorage2DMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexStorage2DMultisample, .-glTexStorage2DMultisample
+	.size	bluegl_glTexStorage2DMultisample, .-bluegl_glTexStorage2DMultisample
 
 	.align	2
 	.global	bluegl_glPixelStorex
@@ -9507,7 +9507,7 @@ bluegl_glPixelStorex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelStorex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelStorex, .-glPixelStorex
+	.size	bluegl_glPixelStorex, .-bluegl_glPixelStorex
 
 	.align	2
 	.global	bluegl_glVertexAttribL1dvEXT
@@ -9517,7 +9517,7 @@ bluegl_glVertexAttribL1dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1dvEXT, .-glVertexAttribL1dvEXT
+	.size	bluegl_glVertexAttribL1dvEXT, .-bluegl_glVertexAttribL1dvEXT
 
 	.align	2
 	.global	bluegl_glGetActiveSubroutineUniformiv
@@ -9527,7 +9527,7 @@ bluegl_glGetActiveSubroutineUniformiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveSubroutineUniformiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveSubroutineUniformiv, .-glGetActiveSubroutineUniformiv
+	.size	bluegl_glGetActiveSubroutineUniformiv, .-bluegl_glGetActiveSubroutineUniformiv
 
 	.align	2
 	.global	bluegl_glCompressedTexSubImage2DARB
@@ -9537,7 +9537,7 @@ bluegl_glCompressedTexSubImage2DARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexSubImage2DARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexSubImage2DARB, .-glCompressedTexSubImage2DARB
+	.size	bluegl_glCompressedTexSubImage2DARB, .-bluegl_glCompressedTexSubImage2DARB
 
 	.align	2
 	.global	bluegl_glVertex2hvNV
@@ -9547,7 +9547,7 @@ bluegl_glVertex2hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex2hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex2hvNV, .-glVertex2hvNV
+	.size	bluegl_glVertex2hvNV, .-bluegl_glVertex2hvNV
 
 	.align	2
 	.global	bluegl_glTexBuffer
@@ -9557,7 +9557,7 @@ bluegl_glTexBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexBuffer, .-glTexBuffer
+	.size	bluegl_glTexBuffer, .-bluegl_glTexBuffer
 
 	.align	2
 	.global	bluegl_glPixelStorei
@@ -9567,7 +9567,7 @@ bluegl_glPixelStorei:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelStorei]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelStorei, .-glPixelStorei
+	.size	bluegl_glPixelStorei, .-bluegl_glPixelStorei
 
 	.align	2
 	.global	bluegl_glValidateProgram
@@ -9577,7 +9577,7 @@ bluegl_glValidateProgram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glValidateProgram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glValidateProgram, .-glValidateProgram
+	.size	bluegl_glValidateProgram, .-bluegl_glValidateProgram
 
 	.align	2
 	.global	bluegl_glActiveShaderProgram
@@ -9587,7 +9587,7 @@ bluegl_glActiveShaderProgram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glActiveShaderProgram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glActiveShaderProgram, .-glActiveShaderProgram
+	.size	bluegl_glActiveShaderProgram, .-bluegl_glActiveShaderProgram
 
 	.align	2
 	.global	bluegl_glWindowPos3dARB
@@ -9597,7 +9597,7 @@ bluegl_glWindowPos3dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3dARB, .-glWindowPos3dARB
+	.size	bluegl_glWindowPos3dARB, .-bluegl_glWindowPos3dARB
 
 	.align	2
 	.global	bluegl_glClipControl
@@ -9607,7 +9607,7 @@ bluegl_glClipControl:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClipControl]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClipControl, .-glClipControl
+	.size	bluegl_glClipControl, .-bluegl_glClipControl
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP2uiv
@@ -9617,7 +9617,7 @@ bluegl_glMultiTexCoordP2uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP2uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP2uiv, .-glMultiTexCoordP2uiv
+	.size	bluegl_glMultiTexCoordP2uiv, .-bluegl_glMultiTexCoordP2uiv
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN
@@ -9627,7 +9627,7 @@ bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN, .-glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN, .-bluegl_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glTexCoord1bOES
@@ -9637,7 +9637,7 @@ bluegl_glTexCoord1bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord1bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord1bOES, .-glTexCoord1bOES
+	.size	bluegl_glTexCoord1bOES, .-bluegl_glTexCoord1bOES
 
 	.align	2
 	.global	bluegl_glProgramUniform2i64vARB
@@ -9647,7 +9647,7 @@ bluegl_glProgramUniform2i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2i64vARB, .-glProgramUniform2i64vARB
+	.size	bluegl_glProgramUniform2i64vARB, .-bluegl_glProgramUniform2i64vARB
 
 	.align	2
 	.global	bluegl_glWindowPos2dARB
@@ -9657,7 +9657,7 @@ bluegl_glWindowPos2dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2dARB, .-glWindowPos2dARB
+	.size	bluegl_glWindowPos2dARB, .-bluegl_glWindowPos2dARB
 
 	.align	2
 	.global	bluegl_glNormal3xOES
@@ -9667,7 +9667,7 @@ bluegl_glNormal3xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormal3xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormal3xOES, .-glNormal3xOES
+	.size	bluegl_glNormal3xOES, .-bluegl_glNormal3xOES
 
 	.align	2
 	.global	bluegl_glMap1xOES
@@ -9677,7 +9677,7 @@ bluegl_glMap1xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMap1xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMap1xOES, .-glMap1xOES
+	.size	bluegl_glMap1xOES, .-bluegl_glMap1xOES
 
 	.align	2
 	.global	bluegl_glTexCoord4fVertex4fvSUN
@@ -9687,7 +9687,7 @@ bluegl_glTexCoord4fVertex4fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4fVertex4fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4fVertex4fvSUN, .-glTexCoord4fVertex4fvSUN
+	.size	bluegl_glTexCoord4fVertex4fvSUN, .-bluegl_glTexCoord4fVertex4fvSUN
 
 	.align	2
 	.global	bluegl_glActiveVaryingNV
@@ -9697,7 +9697,7 @@ bluegl_glActiveVaryingNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glActiveVaryingNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glActiveVaryingNV, .-glActiveVaryingNV
+	.size	bluegl_glActiveVaryingNV, .-bluegl_glActiveVaryingNV
 
 	.align	2
 	.global	bluegl_glReferencePlaneSGIX
@@ -9707,7 +9707,7 @@ bluegl_glReferencePlaneSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReferencePlaneSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReferencePlaneSGIX, .-glReferencePlaneSGIX
+	.size	bluegl_glReferencePlaneSGIX, .-bluegl_glReferencePlaneSGIX
 
 	.align	2
 	.global	bluegl_glGetMultiTexGendvEXT
@@ -9717,7 +9717,7 @@ bluegl_glGetMultiTexGendvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexGendvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexGendvEXT, .-glGetMultiTexGendvEXT
+	.size	bluegl_glGetMultiTexGendvEXT, .-bluegl_glGetMultiTexGendvEXT
 
 	.align	2
 	.global	bluegl_glClearNamedBufferSubDataEXT
@@ -9727,7 +9727,7 @@ bluegl_glClearNamedBufferSubDataEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedBufferSubDataEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedBufferSubDataEXT, .-glClearNamedBufferSubDataEXT
+	.size	bluegl_glClearNamedBufferSubDataEXT, .-bluegl_glClearNamedBufferSubDataEXT
 
 	.align	2
 	.global	bluegl_glGetTextureSamplerHandleARB
@@ -9737,7 +9737,7 @@ bluegl_glGetTextureSamplerHandleARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureSamplerHandleARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureSamplerHandleARB, .-glGetTextureSamplerHandleARB
+	.size	bluegl_glGetTextureSamplerHandleARB, .-bluegl_glGetTextureSamplerHandleARB
 
 	.align	2
 	.global	bluegl_glBindTexture
@@ -9747,7 +9747,7 @@ bluegl_glBindTexture:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTexture]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTexture, .-glBindTexture
+	.size	bluegl_glBindTexture, .-bluegl_glBindTexture
 
 	.align	2
 	.global	bluegl_glGetActiveAttribARB
@@ -9757,7 +9757,7 @@ bluegl_glGetActiveAttribARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveAttribARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveAttribARB, .-glGetActiveAttribARB
+	.size	bluegl_glGetActiveAttribARB, .-bluegl_glGetActiveAttribARB
 
 	.align	2
 	.global	bluegl_glHistogramEXT
@@ -9767,7 +9767,7 @@ bluegl_glHistogramEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glHistogramEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glHistogramEXT, .-glHistogramEXT
+	.size	bluegl_glHistogramEXT, .-bluegl_glHistogramEXT
 
 	.align	2
 	.global	bluegl_glPixelTransformParameteriEXT
@@ -9777,7 +9777,7 @@ bluegl_glPixelTransformParameteriEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTransformParameteriEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTransformParameteriEXT, .-glPixelTransformParameteriEXT
+	.size	bluegl_glPixelTransformParameteriEXT, .-bluegl_glPixelTransformParameteriEXT
 
 	.align	2
 	.global	bluegl_glDetachShader
@@ -9787,7 +9787,7 @@ bluegl_glDetachShader:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDetachShader]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDetachShader, .-glDetachShader
+	.size	bluegl_glDetachShader, .-bluegl_glDetachShader
 
 	.align	2
 	.global	bluegl_glFinishTextureSUNX
@@ -9797,7 +9797,7 @@ bluegl_glFinishTextureSUNX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFinishTextureSUNX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFinishTextureSUNX, .-glFinishTextureSUNX
+	.size	bluegl_glFinishTextureSUNX, .-bluegl_glFinishTextureSUNX
 
 	.align	2
 	.global	bluegl_glUniformMatrix3x4dv
@@ -9807,7 +9807,7 @@ bluegl_glUniformMatrix3x4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix3x4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix3x4dv, .-glUniformMatrix3x4dv
+	.size	bluegl_glUniformMatrix3x4dv, .-bluegl_glUniformMatrix3x4dv
 
 	.align	2
 	.global	bluegl_glVertexAttrib4fARB
@@ -9817,7 +9817,7 @@ bluegl_glVertexAttrib4fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4fARB, .-glVertexAttrib4fARB
+	.size	bluegl_glVertexAttrib4fARB, .-bluegl_glVertexAttrib4fARB
 
 	.align	2
 	.global	bluegl_glGetPathColorGenivNV
@@ -9827,7 +9827,7 @@ bluegl_glGetPathColorGenivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathColorGenivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathColorGenivNV, .-glGetPathColorGenivNV
+	.size	bluegl_glGetPathColorGenivNV, .-bluegl_glGetPathColorGenivNV
 
 	.align	2
 	.global	bluegl_glGetProgramResourceLocation
@@ -9837,7 +9837,7 @@ bluegl_glGetProgramResourceLocation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramResourceLocation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramResourceLocation, .-glGetProgramResourceLocation
+	.size	bluegl_glGetProgramResourceLocation, .-bluegl_glGetProgramResourceLocation
 
 	.align	2
 	.global	bluegl_glVertexArrayAttribLFormat
@@ -9847,7 +9847,7 @@ bluegl_glVertexArrayAttribLFormat:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayAttribLFormat]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayAttribLFormat, .-glVertexArrayAttribLFormat
+	.size	bluegl_glVertexArrayAttribLFormat, .-bluegl_glVertexArrayAttribLFormat
 
 	.align	2
 	.global	bluegl_glNamedCopyBufferSubDataEXT
@@ -9857,7 +9857,7 @@ bluegl_glNamedCopyBufferSubDataEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedCopyBufferSubDataEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedCopyBufferSubDataEXT, .-glNamedCopyBufferSubDataEXT
+	.size	bluegl_glNamedCopyBufferSubDataEXT, .-bluegl_glNamedCopyBufferSubDataEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribOffsetEXT
@@ -9867,7 +9867,7 @@ bluegl_glVertexArrayVertexAttribOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribOffsetEXT, .-glVertexArrayVertexAttribOffsetEXT
+	.size	bluegl_glVertexArrayVertexAttribOffsetEXT, .-bluegl_glVertexArrayVertexAttribOffsetEXT
 
 	.align	2
 	.global	bluegl_glIndexFormatNV
@@ -9877,7 +9877,7 @@ bluegl_glIndexFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIndexFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIndexFormatNV, .-glIndexFormatNV
+	.size	bluegl_glIndexFormatNV, .-bluegl_glIndexFormatNV
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiVertex3fvSUN
@@ -9887,7 +9887,7 @@ bluegl_glReplacementCodeuiVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiVertex3fvSUN, .-glReplacementCodeuiVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiVertex3fvSUN, .-bluegl_glReplacementCodeuiVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glViewportIndexedfv
@@ -9897,7 +9897,7 @@ bluegl_glViewportIndexedfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glViewportIndexedfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glViewportIndexedfv, .-glViewportIndexedfv
+	.size	bluegl_glViewportIndexedfv, .-bluegl_glViewportIndexedfv
 
 	.align	2
 	.global	bluegl_glGetVertexAttribPointervARB
@@ -9907,7 +9907,7 @@ bluegl_glGetVertexAttribPointervARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribPointervARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribPointervARB, .-glGetVertexAttribPointervARB
+	.size	bluegl_glGetVertexAttribPointervARB, .-bluegl_glGetVertexAttribPointervARB
 
 	.align	2
 	.global	bluegl_glTexBumpParameterfvATI
@@ -9917,7 +9917,7 @@ bluegl_glTexBumpParameterfvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexBumpParameterfvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexBumpParameterfvATI, .-glTexBumpParameterfvATI
+	.size	bluegl_glTexBumpParameterfvATI, .-bluegl_glTexBumpParameterfvATI
 
 	.align	2
 	.global	bluegl_glMatrixIndexuivARB
@@ -9927,7 +9927,7 @@ bluegl_glMatrixIndexuivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixIndexuivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixIndexuivARB, .-glMatrixIndexuivARB
+	.size	bluegl_glMatrixIndexuivARB, .-bluegl_glMatrixIndexuivARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib1hNV
@@ -9937,7 +9937,7 @@ bluegl_glVertexAttrib1hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1hNV, .-glVertexAttrib1hNV
+	.size	bluegl_glVertexAttrib1hNV, .-bluegl_glVertexAttrib1hNV
 
 	.align	2
 	.global	bluegl_glWindowPos3svMESA
@@ -9947,7 +9947,7 @@ bluegl_glWindowPos3svMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3svMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3svMESA, .-glWindowPos3svMESA
+	.size	bluegl_glWindowPos3svMESA, .-bluegl_glWindowPos3svMESA
 
 	.align	2
 	.global	bluegl_glStencilOpSeparateATI
@@ -9957,7 +9957,7 @@ bluegl_glStencilOpSeparateATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilOpSeparateATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilOpSeparateATI, .-glStencilOpSeparateATI
+	.size	bluegl_glStencilOpSeparateATI, .-bluegl_glStencilOpSeparateATI
 
 	.align	2
 	.global	bluegl_glDrawElementsBaseVertex
@@ -9967,7 +9967,7 @@ bluegl_glDrawElementsBaseVertex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsBaseVertex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsBaseVertex, .-glDrawElementsBaseVertex
+	.size	bluegl_glDrawElementsBaseVertex, .-bluegl_glDrawElementsBaseVertex
 
 	.align	2
 	.global	bluegl_glBlendEquationSeparateiARB
@@ -9977,7 +9977,7 @@ bluegl_glBlendEquationSeparateiARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationSeparateiARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationSeparateiARB, .-glBlendEquationSeparateiARB
+	.size	bluegl_glBlendEquationSeparateiARB, .-bluegl_glBlendEquationSeparateiARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib1fNV
@@ -9987,7 +9987,7 @@ bluegl_glVertexAttrib1fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1fNV, .-glVertexAttrib1fNV
+	.size	bluegl_glVertexAttrib1fNV, .-bluegl_glVertexAttrib1fNV
 
 	.align	2
 	.global	bluegl_glSampleCoverage
@@ -9997,7 +9997,7 @@ bluegl_glSampleCoverage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSampleCoverage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSampleCoverage, .-glSampleCoverage
+	.size	bluegl_glSampleCoverage, .-bluegl_glSampleCoverage
 
 	.align	2
 	.global	bluegl_glClearBufferSubData
@@ -10007,7 +10007,7 @@ bluegl_glClearBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearBufferSubData, .-glClearBufferSubData
+	.size	bluegl_glClearBufferSubData, .-bluegl_glClearBufferSubData
 
 	.align	2
 	.global	bluegl_glTexStorage1D
@@ -10017,7 +10017,7 @@ bluegl_glTexStorage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexStorage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexStorage1D, .-glTexStorage1D
+	.size	bluegl_glTexStorage1D, .-bluegl_glTexStorage1D
 
 	.align	2
 	.global	bluegl_glVertexAttribI3iEXT
@@ -10027,7 +10027,7 @@ bluegl_glVertexAttribI3iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3iEXT, .-glVertexAttribI3iEXT
+	.size	bluegl_glVertexAttribI3iEXT, .-bluegl_glVertexAttribI3iEXT
 
 	.align	2
 	.global	bluegl_glMakeTextureHandleNonResidentARB
@@ -10037,7 +10037,7 @@ bluegl_glMakeTextureHandleNonResidentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeTextureHandleNonResidentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeTextureHandleNonResidentARB, .-glMakeTextureHandleNonResidentARB
+	.size	bluegl_glMakeTextureHandleNonResidentARB, .-bluegl_glMakeTextureHandleNonResidentARB
 
 	.align	2
 	.global	bluegl_glVertexStream4dATI
@@ -10047,7 +10047,7 @@ bluegl_glVertexStream4dATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4dATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4dATI, .-glVertexStream4dATI
+	.size	bluegl_glVertexStream4dATI, .-bluegl_glVertexStream4dATI
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2dvEXT
@@ -10057,7 +10057,7 @@ bluegl_glProgramUniformMatrix2dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2dvEXT, .-glProgramUniformMatrix2dvEXT
+	.size	bluegl_glProgramUniformMatrix2dvEXT, .-bluegl_glProgramUniformMatrix2dvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribs2hvNV
@@ -10067,7 +10067,7 @@ bluegl_glVertexAttribs2hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs2hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs2hvNV, .-glVertexAttribs2hvNV
+	.size	bluegl_glVertexAttribs2hvNV, .-bluegl_glVertexAttribs2hvNV
 
 	.align	2
 	.global	bluegl_glGetUniformiv
@@ -10077,7 +10077,7 @@ bluegl_glGetUniformiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformiv, .-glGetUniformiv
+	.size	bluegl_glGetUniformiv, .-bluegl_glGetUniformiv
 
 	.align	2
 	.global	bluegl_glWindowPos2fvMESA
@@ -10087,7 +10087,7 @@ bluegl_glWindowPos2fvMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2fvMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2fvMESA, .-glWindowPos2fvMESA
+	.size	bluegl_glWindowPos2fvMESA, .-bluegl_glWindowPos2fvMESA
 
 	.align	2
 	.global	bluegl_glUniform4ui
@@ -10097,7 +10097,7 @@ bluegl_glUniform4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4ui, .-glUniform4ui
+	.size	bluegl_glUniform4ui, .-bluegl_glUniform4ui
 
 	.align	2
 	.global	bluegl_glBindFramebuffer
@@ -10107,7 +10107,7 @@ bluegl_glBindFramebuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindFramebuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindFramebuffer, .-glBindFramebuffer
+	.size	bluegl_glBindFramebuffer, .-bluegl_glBindFramebuffer
 
 	.align	2
 	.global	bluegl_glValidateProgramARB
@@ -10117,7 +10117,7 @@ bluegl_glValidateProgramARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glValidateProgramARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glValidateProgramARB, .-glValidateProgramARB
+	.size	bluegl_glValidateProgramARB, .-bluegl_glValidateProgramARB
 
 	.align	2
 	.global	bluegl_glVertexAttribPointerARB
@@ -10127,7 +10127,7 @@ bluegl_glVertexAttribPointerARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribPointerARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribPointerARB, .-glVertexAttribPointerARB
+	.size	bluegl_glVertexAttribPointerARB, .-bluegl_glVertexAttribPointerARB
 
 	.align	2
 	.global	bluegl_glDeleteFramebuffersEXT
@@ -10137,7 +10137,7 @@ bluegl_glDeleteFramebuffersEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteFramebuffersEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteFramebuffersEXT, .-glDeleteFramebuffersEXT
+	.size	bluegl_glDeleteFramebuffersEXT, .-bluegl_glDeleteFramebuffersEXT
 
 	.align	2
 	.global	bluegl_glResetMinmaxEXT
@@ -10147,7 +10147,7 @@ bluegl_glResetMinmaxEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResetMinmaxEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResetMinmaxEXT, .-glResetMinmaxEXT
+	.size	bluegl_glResetMinmaxEXT, .-bluegl_glResetMinmaxEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib1fvNV
@@ -10157,7 +10157,7 @@ bluegl_glVertexAttrib1fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1fvNV, .-glVertexAttrib1fvNV
+	.size	bluegl_glVertexAttrib1fvNV, .-bluegl_glVertexAttrib1fvNV
 
 	.align	2
 	.global	bluegl_glIsQueryARB
@@ -10167,7 +10167,7 @@ bluegl_glIsQueryARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsQueryARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsQueryARB, .-glIsQueryARB
+	.size	bluegl_glIsQueryARB, .-bluegl_glIsQueryARB
 
 	.align	2
 	.global	bluegl_glEnableVariantClientStateEXT
@@ -10177,7 +10177,7 @@ bluegl_glEnableVariantClientStateEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableVariantClientStateEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableVariantClientStateEXT, .-glEnableVariantClientStateEXT
+	.size	bluegl_glEnableVariantClientStateEXT, .-bluegl_glEnableVariantClientStateEXT
 
 	.align	2
 	.global	bluegl_glScissorIndexed
@@ -10187,7 +10187,7 @@ bluegl_glScissorIndexed:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glScissorIndexed]
 	ldr	x16, [x16]
 	br	x16
-	.size	glScissorIndexed, .-glScissorIndexed
+	.size	bluegl_glScissorIndexed, .-bluegl_glScissorIndexed
 
 	.align	2
 	.global	bluegl_glGetInvariantIntegervEXT
@@ -10197,7 +10197,7 @@ bluegl_glGetInvariantIntegervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInvariantIntegervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInvariantIntegervEXT, .-glGetInvariantIntegervEXT
+	.size	bluegl_glGetInvariantIntegervEXT, .-bluegl_glGetInvariantIntegervEXT
 
 	.align	2
 	.global	bluegl_glConvolutionParameterxvOES
@@ -10207,7 +10207,7 @@ bluegl_glConvolutionParameterxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameterxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameterxvOES, .-glConvolutionParameterxvOES
+	.size	bluegl_glConvolutionParameterxvOES, .-bluegl_glConvolutionParameterxvOES
 
 	.align	2
 	.global	bluegl_glGenFramebuffersEXT
@@ -10217,7 +10217,7 @@ bluegl_glGenFramebuffersEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenFramebuffersEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenFramebuffersEXT, .-glGenFramebuffersEXT
+	.size	bluegl_glGenFramebuffersEXT, .-bluegl_glGenFramebuffersEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayColorOffsetEXT
@@ -10227,7 +10227,7 @@ bluegl_glVertexArrayColorOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayColorOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayColorOffsetEXT, .-glVertexArrayColorOffsetEXT
+	.size	bluegl_glVertexArrayColorOffsetEXT, .-bluegl_glVertexArrayColorOffsetEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3ivARB
@@ -10237,7 +10237,7 @@ bluegl_glMultiTexCoord3ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3ivARB, .-glMultiTexCoord3ivARB
+	.size	bluegl_glMultiTexCoord3ivARB, .-bluegl_glMultiTexCoord3ivARB
 
 	.align	2
 	.global	bluegl_glVertexWeightfEXT
@@ -10247,7 +10247,7 @@ bluegl_glVertexWeightfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexWeightfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexWeightfEXT, .-glVertexWeightfEXT
+	.size	bluegl_glVertexWeightfEXT, .-bluegl_glVertexWeightfEXT
 
 	.align	2
 	.global	bluegl_glIsTextureHandleResidentARB
@@ -10257,7 +10257,7 @@ bluegl_glIsTextureHandleResidentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsTextureHandleResidentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsTextureHandleResidentARB, .-glIsTextureHandleResidentARB
+	.size	bluegl_glIsTextureHandleResidentARB, .-bluegl_glIsTextureHandleResidentARB
 
 	.align	2
 	.global	bluegl_glWindowPos4ivMESA
@@ -10267,7 +10267,7 @@ bluegl_glWindowPos4ivMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4ivMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4ivMESA, .-glWindowPos4ivMESA
+	.size	bluegl_glWindowPos4ivMESA, .-bluegl_glWindowPos4ivMESA
 
 	.align	2
 	.global	bluegl_glGetVariantPointervEXT
@@ -10277,7 +10277,7 @@ bluegl_glGetVariantPointervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVariantPointervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVariantPointervEXT, .-glGetVariantPointervEXT
+	.size	bluegl_glGetVariantPointervEXT, .-bluegl_glGetVariantPointervEXT
 
 	.align	2
 	.global	bluegl_glMapNamedBufferRangeEXT
@@ -10287,7 +10287,7 @@ bluegl_glMapNamedBufferRangeEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapNamedBufferRangeEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapNamedBufferRangeEXT, .-glMapNamedBufferRangeEXT
+	.size	bluegl_glMapNamedBufferRangeEXT, .-bluegl_glMapNamedBufferRangeEXT
 
 	.align	2
 	.global	bluegl_glCreateShaderProgramv
@@ -10297,7 +10297,7 @@ bluegl_glCreateShaderProgramv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateShaderProgramv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateShaderProgramv, .-glCreateShaderProgramv
+	.size	bluegl_glCreateShaderProgramv, .-bluegl_glCreateShaderProgramv
 
 	.align	2
 	.global	bluegl_glGetQueryObjectiv
@@ -10307,7 +10307,7 @@ bluegl_glGetQueryObjectiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjectiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjectiv, .-glGetQueryObjectiv
+	.size	bluegl_glGetQueryObjectiv, .-bluegl_glGetQueryObjectiv
 
 	.align	2
 	.global	bluegl_glPNTrianglesfATI
@@ -10317,7 +10317,7 @@ bluegl_glPNTrianglesfATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPNTrianglesfATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPNTrianglesfATI, .-glPNTrianglesfATI
+	.size	bluegl_glPNTrianglesfATI, .-bluegl_glPNTrianglesfATI
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactorusSUN
@@ -10327,7 +10327,7 @@ bluegl_glGlobalAlphaFactorusSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactorusSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactorusSUN, .-glGlobalAlphaFactorusSUN
+	.size	bluegl_glGlobalAlphaFactorusSUN, .-bluegl_glGlobalAlphaFactorusSUN
 
 	.align	2
 	.global	bluegl_glVertexAttrib3dvNV
@@ -10337,7 +10337,7 @@ bluegl_glVertexAttrib3dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3dvNV, .-glVertexAttrib3dvNV
+	.size	bluegl_glVertexAttrib3dvNV, .-bluegl_glVertexAttrib3dvNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3sARB
@@ -10347,7 +10347,7 @@ bluegl_glMultiTexCoord3sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3sARB, .-glMultiTexCoord3sARB
+	.size	bluegl_glMultiTexCoord3sARB, .-bluegl_glMultiTexCoord3sARB
 
 	.align	2
 	.global	bluegl_glGenerateMipmap
@@ -10357,7 +10357,7 @@ bluegl_glGenerateMipmap:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenerateMipmap]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenerateMipmap, .-glGenerateMipmap
+	.size	bluegl_glGenerateMipmap, .-bluegl_glGenerateMipmap
 
 	.align	2
 	.global	bluegl_glCompressedTextureSubImage2D
@@ -10367,7 +10367,7 @@ bluegl_glCompressedTextureSubImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureSubImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureSubImage2D, .-glCompressedTextureSubImage2D
+	.size	bluegl_glCompressedTextureSubImage2D, .-bluegl_glCompressedTextureSubImage2D
 
 	.align	2
 	.global	bluegl_glNamedRenderbufferStorageMultisampleEXT
@@ -10377,7 +10377,7 @@ bluegl_glNamedRenderbufferStorageMultisampleEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedRenderbufferStorageMultisampleEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedRenderbufferStorageMultisampleEXT, .-glNamedRenderbufferStorageMultisampleEXT
+	.size	bluegl_glNamedRenderbufferStorageMultisampleEXT, .-bluegl_glNamedRenderbufferStorageMultisampleEXT
 
 	.align	2
 	.global	bluegl_glPolygonOffsetClampEXT
@@ -10387,7 +10387,7 @@ bluegl_glPolygonOffsetClampEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPolygonOffsetClampEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPolygonOffsetClampEXT, .-glPolygonOffsetClampEXT
+	.size	bluegl_glPolygonOffsetClampEXT, .-bluegl_glPolygonOffsetClampEXT
 
 	.align	2
 	.global	bluegl_glTextureRangeAPPLE
@@ -10397,7 +10397,7 @@ bluegl_glTextureRangeAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureRangeAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureRangeAPPLE, .-glTextureRangeAPPLE
+	.size	bluegl_glTextureRangeAPPLE, .-bluegl_glTextureRangeAPPLE
 
 	.align	2
 	.global	bluegl_glBlendEquationIndexedAMD
@@ -10407,7 +10407,7 @@ bluegl_glBlendEquationIndexedAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationIndexedAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationIndexedAMD, .-glBlendEquationIndexedAMD
+	.size	bluegl_glBlendEquationIndexedAMD, .-bluegl_glBlendEquationIndexedAMD
 
 	.align	2
 	.global	bluegl_glProgramUniform3i64vARB
@@ -10417,7 +10417,7 @@ bluegl_glProgramUniform3i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3i64vARB, .-glProgramUniform3i64vARB
+	.size	bluegl_glProgramUniform3i64vARB, .-bluegl_glProgramUniform3i64vARB
 
 	.align	2
 	.global	bluegl_glPointParameteri
@@ -10427,7 +10427,7 @@ bluegl_glPointParameteri:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameteri]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameteri, .-glPointParameteri
+	.size	bluegl_glPointParameteri, .-bluegl_glPointParameteri
 
 	.align	2
 	.global	bluegl_glUnmapBuffer
@@ -10437,7 +10437,7 @@ bluegl_glUnmapBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUnmapBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUnmapBuffer, .-glUnmapBuffer
+	.size	bluegl_glUnmapBuffer, .-bluegl_glUnmapBuffer
 
 	.align	2
 	.global	bluegl_glSampleMaskEXT
@@ -10447,7 +10447,7 @@ bluegl_glSampleMaskEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSampleMaskEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSampleMaskEXT, .-glSampleMaskEXT
+	.size	bluegl_glSampleMaskEXT, .-bluegl_glSampleMaskEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2fvEXT
@@ -10457,7 +10457,7 @@ bluegl_glProgramUniform2fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2fvEXT, .-glProgramUniform2fvEXT
+	.size	bluegl_glProgramUniform2fvEXT, .-bluegl_glProgramUniform2fvEXT
 
 	.align	2
 	.global	bluegl_glTexCoord1xvOES
@@ -10467,7 +10467,7 @@ bluegl_glTexCoord1xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord1xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord1xvOES, .-glTexCoord1xvOES
+	.size	bluegl_glTexCoord1xvOES, .-bluegl_glTexCoord1xvOES
 
 	.align	2
 	.global	bluegl_glVertexAttrib1sARB
@@ -10477,7 +10477,7 @@ bluegl_glVertexAttrib1sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1sARB, .-glVertexAttrib1sARB
+	.size	bluegl_glVertexAttrib1sARB, .-bluegl_glVertexAttrib1sARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4sv
@@ -10487,7 +10487,7 @@ bluegl_glVertexAttrib4sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4sv, .-glVertexAttrib4sv
+	.size	bluegl_glVertexAttrib4sv, .-bluegl_glVertexAttrib4sv
 
 	.align	2
 	.global	bluegl_glProgramParameter4dvNV
@@ -10497,7 +10497,7 @@ bluegl_glProgramParameter4dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameter4dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameter4dvNV, .-glProgramParameter4dvNV
+	.size	bluegl_glProgramParameter4dvNV, .-bluegl_glProgramParameter4dvNV
 
 	.align	2
 	.global	bluegl_glTextureParameterIuivEXT
@@ -10507,7 +10507,7 @@ bluegl_glTextureParameterIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterIuivEXT, .-glTextureParameterIuivEXT
+	.size	bluegl_glTextureParameterIuivEXT, .-bluegl_glTextureParameterIuivEXT
 
 	.align	2
 	.global	bluegl_glGetColorTableParameterfvSGI
@@ -10517,7 +10517,7 @@ bluegl_glGetColorTableParameterfvSGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableParameterfvSGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableParameterfvSGI, .-glGetColorTableParameterfvSGI
+	.size	bluegl_glGetColorTableParameterfvSGI, .-bluegl_glGetColorTableParameterfvSGI
 
 	.align	2
 	.global	bluegl_glDeleteRenderbuffersEXT
@@ -10527,7 +10527,7 @@ bluegl_glDeleteRenderbuffersEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteRenderbuffersEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteRenderbuffersEXT, .-glDeleteRenderbuffersEXT
+	.size	bluegl_glDeleteRenderbuffersEXT, .-bluegl_glDeleteRenderbuffersEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib1svNV
@@ -10537,7 +10537,7 @@ bluegl_glVertexAttrib1svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1svNV, .-glVertexAttrib1svNV
+	.size	bluegl_glVertexAttrib1svNV, .-bluegl_glVertexAttrib1svNV
 
 	.align	2
 	.global	bluegl_glVertexAttribP4uiv
@@ -10547,7 +10547,7 @@ bluegl_glVertexAttribP4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP4uiv, .-glVertexAttribP4uiv
+	.size	bluegl_glVertexAttribP4uiv, .-bluegl_glVertexAttribP4uiv
 
 	.align	2
 	.global	bluegl_glProgramUniform2ui64vNV
@@ -10557,7 +10557,7 @@ bluegl_glProgramUniform2ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2ui64vNV, .-glProgramUniform2ui64vNV
+	.size	bluegl_glProgramUniform2ui64vNV, .-bluegl_glProgramUniform2ui64vNV
 
 	.align	2
 	.global	bluegl_glReleaseShaderCompiler
@@ -10567,7 +10567,7 @@ bluegl_glReleaseShaderCompiler:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReleaseShaderCompiler]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReleaseShaderCompiler, .-glReleaseShaderCompiler
+	.size	bluegl_glReleaseShaderCompiler, .-bluegl_glReleaseShaderCompiler
 
 	.align	2
 	.global	bluegl_glTexCoord3bvOES
@@ -10577,7 +10577,7 @@ bluegl_glTexCoord3bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord3bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord3bvOES, .-glTexCoord3bvOES
+	.size	bluegl_glTexCoord3bvOES, .-bluegl_glTexCoord3bvOES
 
 	.align	2
 	.global	bluegl_glIsVertexAttribEnabledAPPLE
@@ -10587,7 +10587,7 @@ bluegl_glIsVertexAttribEnabledAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsVertexAttribEnabledAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsVertexAttribEnabledAPPLE, .-glIsVertexAttribEnabledAPPLE
+	.size	bluegl_glIsVertexAttribEnabledAPPLE, .-bluegl_glIsVertexAttribEnabledAPPLE
 
 	.align	2
 	.global	bluegl_glReadPixels
@@ -10597,7 +10597,7 @@ bluegl_glReadPixels:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReadPixels]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReadPixels, .-glReadPixels
+	.size	bluegl_glReadPixels, .-bluegl_glReadPixels
 
 	.align	2
 	.global	bluegl_glVertexAttribI3iv
@@ -10607,7 +10607,7 @@ bluegl_glVertexAttribI3iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3iv, .-glVertexAttribI3iv
+	.size	bluegl_glVertexAttribI3iv, .-bluegl_glVertexAttribI3iv
 
 	.align	2
 	.global	bluegl_glSetFenceAPPLE
@@ -10617,7 +10617,7 @@ bluegl_glSetFenceAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSetFenceAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSetFenceAPPLE, .-glSetFenceAPPLE
+	.size	bluegl_glSetFenceAPPLE, .-bluegl_glSetFenceAPPLE
 
 	.align	2
 	.global	bluegl_glStateCaptureNV
@@ -10627,7 +10627,7 @@ bluegl_glStateCaptureNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStateCaptureNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStateCaptureNV, .-glStateCaptureNV
+	.size	bluegl_glStateCaptureNV, .-bluegl_glStateCaptureNV
 
 	.align	2
 	.global	bluegl_glWeightsvARB
@@ -10637,7 +10637,7 @@ bluegl_glWeightsvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightsvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightsvARB, .-glWeightsvARB
+	.size	bluegl_glWeightsvARB, .-bluegl_glWeightsvARB
 
 	.align	2
 	.global	bluegl_glGetHistogramParameterivEXT
@@ -10647,7 +10647,7 @@ bluegl_glGetHistogramParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHistogramParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHistogramParameterivEXT, .-glGetHistogramParameterivEXT
+	.size	bluegl_glGetHistogramParameterivEXT, .-bluegl_glGetHistogramParameterivEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI1iEXT
@@ -10657,7 +10657,7 @@ bluegl_glVertexAttribI1iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1iEXT, .-glVertexAttribI1iEXT
+	.size	bluegl_glVertexAttribI1iEXT, .-bluegl_glVertexAttribI1iEXT
 
 	.align	2
 	.global	bluegl_glGetDoublei_vEXT
@@ -10667,7 +10667,7 @@ bluegl_glGetDoublei_vEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDoublei_vEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDoublei_vEXT, .-glGetDoublei_vEXT
+	.size	bluegl_glGetDoublei_vEXT, .-bluegl_glGetDoublei_vEXT
 
 	.align	2
 	.global	bluegl_glFogCoordfEXT
@@ -10677,7 +10677,7 @@ bluegl_glFogCoordfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordfEXT, .-glFogCoordfEXT
+	.size	bluegl_glFogCoordfEXT, .-bluegl_glFogCoordfEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib2dARB
@@ -10687,7 +10687,7 @@ bluegl_glVertexAttrib2dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2dARB, .-glVertexAttrib2dARB
+	.size	bluegl_glVertexAttrib2dARB, .-bluegl_glVertexAttrib2dARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4dARB
@@ -10697,7 +10697,7 @@ bluegl_glMultiTexCoord4dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4dARB, .-glMultiTexCoord4dARB
+	.size	bluegl_glMultiTexCoord4dARB, .-bluegl_glMultiTexCoord4dARB
 
 	.align	2
 	.global	bluegl_glReadnPixelsARB
@@ -10707,7 +10707,7 @@ bluegl_glReadnPixelsARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReadnPixelsARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReadnPixelsARB, .-glReadnPixelsARB
+	.size	bluegl_glReadnPixelsARB, .-bluegl_glReadnPixelsARB
 
 	.align	2
 	.global	bluegl_glMultiTexBufferEXT
@@ -10717,7 +10717,7 @@ bluegl_glMultiTexBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexBufferEXT, .-glMultiTexBufferEXT
+	.size	bluegl_glMultiTexBufferEXT, .-bluegl_glMultiTexBufferEXT
 
 	.align	2
 	.global	bluegl_glWindowPos4dvMESA
@@ -10727,7 +10727,7 @@ bluegl_glWindowPos4dvMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4dvMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4dvMESA, .-glWindowPos4dvMESA
+	.size	bluegl_glWindowPos4dvMESA, .-bluegl_glWindowPos4dvMESA
 
 	.align	2
 	.global	bluegl_glInvalidateNamedFramebufferData
@@ -10737,7 +10737,7 @@ bluegl_glInvalidateNamedFramebufferData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateNamedFramebufferData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateNamedFramebufferData, .-glInvalidateNamedFramebufferData
+	.size	bluegl_glInvalidateNamedFramebufferData, .-bluegl_glInvalidateNamedFramebufferData
 
 	.align	2
 	.global	bluegl_glColorP4ui
@@ -10747,7 +10747,7 @@ bluegl_glColorP4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorP4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorP4ui, .-glColorP4ui
+	.size	bluegl_glColorP4ui, .-bluegl_glColorP4ui
 
 	.align	2
 	.global	bluegl_glUseProgramStages
@@ -10757,7 +10757,7 @@ bluegl_glUseProgramStages:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUseProgramStages]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUseProgramStages, .-glUseProgramStages
+	.size	bluegl_glUseProgramStages, .-bluegl_glUseProgramStages
 
 	.align	2
 	.global	bluegl_glVertexBlendEnviATI
@@ -10767,7 +10767,7 @@ bluegl_glVertexBlendEnviATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexBlendEnviATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexBlendEnviATI, .-glVertexBlendEnviATI
+	.size	bluegl_glVertexBlendEnviATI, .-bluegl_glVertexBlendEnviATI
 
 	.align	2
 	.global	bluegl_glUniform3i64ARB
@@ -10777,7 +10777,7 @@ bluegl_glUniform3i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3i64ARB, .-glUniform3i64ARB
+	.size	bluegl_glUniform3i64ARB, .-bluegl_glUniform3i64ARB
 
 	.align	2
 	.global	bluegl_glProgramUniform2dEXT
@@ -10787,7 +10787,7 @@ bluegl_glProgramUniform2dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2dEXT, .-glProgramUniform2dEXT
+	.size	bluegl_glProgramUniform2dEXT, .-bluegl_glProgramUniform2dEXT
 
 	.align	2
 	.global	bluegl_glReadBuffer
@@ -10797,7 +10797,7 @@ bluegl_glReadBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReadBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReadBuffer, .-glReadBuffer
+	.size	bluegl_glReadBuffer, .-bluegl_glReadBuffer
 
 	.align	2
 	.global	bluegl_glBlendEquationiARB
@@ -10807,7 +10807,7 @@ bluegl_glBlendEquationiARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationiARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationiARB, .-glBlendEquationiARB
+	.size	bluegl_glBlendEquationiARB, .-bluegl_glBlendEquationiARB
 
 	.align	2
 	.global	bluegl_glColor3hvNV
@@ -10817,7 +10817,7 @@ bluegl_glColor3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor3hvNV, .-glColor3hvNV
+	.size	bluegl_glColor3hvNV, .-bluegl_glColor3hvNV
 
 	.align	2
 	.global	bluegl_glGetMapAttribParameterfvNV
@@ -10827,7 +10827,7 @@ bluegl_glGetMapAttribParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMapAttribParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMapAttribParameterfvNV, .-glGetMapAttribParameterfvNV
+	.size	bluegl_glGetMapAttribParameterfvNV, .-bluegl_glGetMapAttribParameterfvNV
 
 	.align	2
 	.global	bluegl_glGetBufferSubData
@@ -10837,7 +10837,7 @@ bluegl_glGetBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferSubData, .-glGetBufferSubData
+	.size	bluegl_glGetBufferSubData, .-bluegl_glGetBufferSubData
 
 	.align	2
 	.global	bluegl_glGetVertexAttribLdv
@@ -10847,7 +10847,7 @@ bluegl_glGetVertexAttribLdv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribLdv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribLdv, .-glGetVertexAttribLdv
+	.size	bluegl_glGetVertexAttribLdv, .-bluegl_glGetVertexAttribLdv
 
 	.align	2
 	.global	bluegl_glGetnUniformuiv
@@ -10857,7 +10857,7 @@ bluegl_glGetnUniformuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformuiv, .-glGetnUniformuiv
+	.size	bluegl_glGetnUniformuiv, .-bluegl_glGetnUniformuiv
 
 	.align	2
 	.global	bluegl_glGetUniformui64vNV
@@ -10867,7 +10867,7 @@ bluegl_glGetUniformui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformui64vNV, .-glGetUniformui64vNV
+	.size	bluegl_glGetUniformui64vNV, .-bluegl_glGetUniformui64vNV
 
 	.align	2
 	.global	bluegl_glNamedRenderbufferStorageEXT
@@ -10877,7 +10877,7 @@ bluegl_glNamedRenderbufferStorageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedRenderbufferStorageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedRenderbufferStorageEXT, .-glNamedRenderbufferStorageEXT
+	.size	bluegl_glNamedRenderbufferStorageEXT, .-bluegl_glNamedRenderbufferStorageEXT
 
 	.align	2
 	.global	bluegl_glGetArrayObjectfvATI
@@ -10887,7 +10887,7 @@ bluegl_glGetArrayObjectfvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetArrayObjectfvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetArrayObjectfvATI, .-glGetArrayObjectfvATI
+	.size	bluegl_glGetArrayObjectfvATI, .-bluegl_glGetArrayObjectfvATI
 
 	.align	2
 	.global	bluegl_glVertexAttrib3dNV
@@ -10897,7 +10897,7 @@ bluegl_glVertexAttrib3dNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3dNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3dNV, .-glVertexAttrib3dNV
+	.size	bluegl_glVertexAttrib3dNV, .-bluegl_glVertexAttrib3dNV
 
 	.align	2
 	.global	bluegl_glTextureStorage1DEXT
@@ -10907,7 +10907,7 @@ bluegl_glTextureStorage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage1DEXT, .-glTextureStorage1DEXT
+	.size	bluegl_glTextureStorage1DEXT, .-bluegl_glTextureStorage1DEXT
 
 	.align	2
 	.global	bluegl_glPixelTexGenParameteriSGIS
@@ -10917,7 +10917,7 @@ bluegl_glPixelTexGenParameteriSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTexGenParameteriSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTexGenParameteriSGIS, .-glPixelTexGenParameteriSGIS
+	.size	bluegl_glPixelTexGenParameteriSGIS, .-bluegl_glPixelTexGenParameteriSGIS
 
 	.align	2
 	.global	bluegl_glColorTableEXT
@@ -10927,7 +10927,7 @@ bluegl_glColorTableEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorTableEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorTableEXT, .-glColorTableEXT
+	.size	bluegl_glColorTableEXT, .-bluegl_glColorTableEXT
 
 	.align	2
 	.global	bluegl_glGenBuffers
@@ -10937,7 +10937,7 @@ bluegl_glGenBuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenBuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenBuffers, .-glGenBuffers
+	.size	bluegl_glGenBuffers, .-bluegl_glGenBuffers
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3xvOES
@@ -10947,7 +10947,7 @@ bluegl_glMultiTexCoord3xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3xvOES, .-glMultiTexCoord3xvOES
+	.size	bluegl_glMultiTexCoord3xvOES, .-bluegl_glMultiTexCoord3xvOES
 
 	.align	2
 	.global	bluegl_glExecuteProgramNV
@@ -10957,7 +10957,7 @@ bluegl_glExecuteProgramNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glExecuteProgramNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glExecuteProgramNV, .-glExecuteProgramNV
+	.size	bluegl_glExecuteProgramNV, .-bluegl_glExecuteProgramNV
 
 	.align	2
 	.global	bluegl_glVariantArrayObjectATI
@@ -10967,7 +10967,7 @@ bluegl_glVariantArrayObjectATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantArrayObjectATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantArrayObjectATI, .-glVariantArrayObjectATI
+	.size	bluegl_glVariantArrayObjectATI, .-bluegl_glVariantArrayObjectATI
 
 	.align	2
 	.global	bluegl_glColor3xvOES
@@ -10977,7 +10977,7 @@ bluegl_glColor3xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor3xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor3xvOES, .-glColor3xvOES
+	.size	bluegl_glColor3xvOES, .-bluegl_glColor3xvOES
 
 	.align	2
 	.global	bluegl_glTexCoordP1uiv
@@ -10987,7 +10987,7 @@ bluegl_glTexCoordP1uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP1uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP1uiv, .-glTexCoordP1uiv
+	.size	bluegl_glTexCoordP1uiv, .-bluegl_glTexCoordP1uiv
 
 	.align	2
 	.global	bluegl_glDeleteProgramsNV
@@ -10997,7 +10997,7 @@ bluegl_glDeleteProgramsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteProgramsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteProgramsNV, .-glDeleteProgramsNV
+	.size	bluegl_glDeleteProgramsNV, .-bluegl_glDeleteProgramsNV
 
 	.align	2
 	.global	bluegl_glNormalFormatNV
@@ -11007,7 +11007,7 @@ bluegl_glNormalFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalFormatNV, .-glNormalFormatNV
+	.size	bluegl_glNormalFormatNV, .-bluegl_glNormalFormatNV
 
 	.align	2
 	.global	bluegl_glGetInvariantFloatvEXT
@@ -11017,7 +11017,7 @@ bluegl_glGetInvariantFloatvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInvariantFloatvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInvariantFloatvEXT, .-glGetInvariantFloatvEXT
+	.size	bluegl_glGetInvariantFloatvEXT, .-bluegl_glGetInvariantFloatvEXT
 
 	.align	2
 	.global	bluegl_glClearNamedFramebufferiv
@@ -11027,7 +11027,7 @@ bluegl_glClearNamedFramebufferiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedFramebufferiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedFramebufferiv, .-glClearNamedFramebufferiv
+	.size	bluegl_glClearNamedFramebufferiv, .-bluegl_glClearNamedFramebufferiv
 
 	.align	2
 	.global	bluegl_glHistogram
@@ -11037,7 +11037,7 @@ bluegl_glHistogram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glHistogram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glHistogram, .-glHistogram
+	.size	bluegl_glHistogram, .-bluegl_glHistogram
 
 	.align	2
 	.global	bluegl_glVertexStream1ivATI
@@ -11047,7 +11047,7 @@ bluegl_glVertexStream1ivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1ivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1ivATI, .-glVertexStream1ivATI
+	.size	bluegl_glVertexStream1ivATI, .-bluegl_glVertexStream1ivATI
 
 	.align	2
 	.global	bluegl_glIsFramebuffer
@@ -11057,7 +11057,7 @@ bluegl_glIsFramebuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsFramebuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsFramebuffer, .-glIsFramebuffer
+	.size	bluegl_glIsFramebuffer, .-bluegl_glIsFramebuffer
 
 	.align	2
 	.global	bluegl_glProgramUniform3dvEXT
@@ -11067,7 +11067,7 @@ bluegl_glProgramUniform3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3dvEXT, .-glProgramUniform3dvEXT
+	.size	bluegl_glProgramUniform3dvEXT, .-bluegl_glProgramUniform3dvEXT
 
 	.align	2
 	.global	bluegl_glBindVideoCaptureStreamBufferNV
@@ -11077,7 +11077,7 @@ bluegl_glBindVideoCaptureStreamBufferNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindVideoCaptureStreamBufferNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindVideoCaptureStreamBufferNV, .-glBindVideoCaptureStreamBufferNV
+	.size	bluegl_glBindVideoCaptureStreamBufferNV, .-bluegl_glBindVideoCaptureStreamBufferNV
 
 	.align	2
 	.global	bluegl_glGetVertexAttribfvNV
@@ -11087,7 +11087,7 @@ bluegl_glGetVertexAttribfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribfvNV, .-glGetVertexAttribfvNV
+	.size	bluegl_glGetVertexAttribfvNV, .-bluegl_glGetVertexAttribfvNV
 
 	.align	2
 	.global	bluegl_glDrawRangeElementArrayAPPLE
@@ -11097,7 +11097,7 @@ bluegl_glDrawRangeElementArrayAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawRangeElementArrayAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawRangeElementArrayAPPLE, .-glDrawRangeElementArrayAPPLE
+	.size	bluegl_glDrawRangeElementArrayAPPLE, .-bluegl_glDrawRangeElementArrayAPPLE
 
 	.align	2
 	.global	bluegl_glGetTexParameterPointervAPPLE
@@ -11107,7 +11107,7 @@ bluegl_glGetTexParameterPointervAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameterPointervAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameterPointervAPPLE, .-glGetTexParameterPointervAPPLE
+	.size	bluegl_glGetTexParameterPointervAPPLE, .-bluegl_glGetTexParameterPointervAPPLE
 
 	.align	2
 	.global	bluegl_glMatrixPopEXT
@@ -11117,7 +11117,7 @@ bluegl_glMatrixPopEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixPopEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixPopEXT, .-glMatrixPopEXT
+	.size	bluegl_glMatrixPopEXT, .-bluegl_glMatrixPopEXT
 
 	.align	2
 	.global	bluegl_glVertexStream1sATI
@@ -11127,7 +11127,7 @@ bluegl_glVertexStream1sATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1sATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1sATI, .-glVertexStream1sATI
+	.size	bluegl_glVertexStream1sATI, .-bluegl_glVertexStream1sATI
 
 	.align	2
 	.global	bluegl_glGetnPixelMapuivARB
@@ -11137,7 +11137,7 @@ bluegl_glGetnPixelMapuivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPixelMapuivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPixelMapuivARB, .-glGetnPixelMapuivARB
+	.size	bluegl_glGetnPixelMapuivARB, .-bluegl_glGetnPixelMapuivARB
 
 	.align	2
 	.global	bluegl_glMultiTexEnviEXT
@@ -11147,7 +11147,7 @@ bluegl_glMultiTexEnviEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexEnviEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexEnviEXT, .-glMultiTexEnviEXT
+	.size	bluegl_glMultiTexEnviEXT, .-bluegl_glMultiTexEnviEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI2iEXT
@@ -11157,7 +11157,7 @@ bluegl_glVertexAttribI2iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2iEXT, .-glVertexAttribI2iEXT
+	.size	bluegl_glVertexAttribI2iEXT, .-bluegl_glVertexAttribI2iEXT
 
 	.align	2
 	.global	bluegl_glProgramParameter4fvNV
@@ -11167,7 +11167,7 @@ bluegl_glProgramParameter4fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameter4fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameter4fvNV, .-glProgramParameter4fvNV
+	.size	bluegl_glProgramParameter4fvNV, .-bluegl_glProgramParameter4fvNV
 
 	.align	2
 	.global	bluegl_glNamedFramebufferSampleLocationsfvNV
@@ -11177,7 +11177,7 @@ bluegl_glNamedFramebufferSampleLocationsfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferSampleLocationsfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferSampleLocationsfvNV, .-glNamedFramebufferSampleLocationsfvNV
+	.size	bluegl_glNamedFramebufferSampleLocationsfvNV, .-bluegl_glNamedFramebufferSampleLocationsfvNV
 
 	.align	2
 	.global	bluegl_glTexCoordP4uiv
@@ -11187,7 +11187,7 @@ bluegl_glTexCoordP4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP4uiv, .-glTexCoordP4uiv
+	.size	bluegl_glTexCoordP4uiv, .-bluegl_glTexCoordP4uiv
 
 	.align	2
 	.global	bluegl_glRectxvOES
@@ -11197,7 +11197,7 @@ bluegl_glRectxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRectxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRectxvOES, .-glRectxvOES
+	.size	bluegl_glRectxvOES, .-bluegl_glRectxvOES
 
 	.align	2
 	.global	bluegl_glGetVariantIntegervEXT
@@ -11207,7 +11207,7 @@ bluegl_glGetVariantIntegervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVariantIntegervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVariantIntegervEXT, .-glGetVariantIntegervEXT
+	.size	bluegl_glGetVariantIntegervEXT, .-bluegl_glGetVariantIntegervEXT
 
 	.align	2
 	.global	bluegl_glFragmentCoverageColorNV
@@ -11217,7 +11217,7 @@ bluegl_glFragmentCoverageColorNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentCoverageColorNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentCoverageColorNV, .-glFragmentCoverageColorNV
+	.size	bluegl_glFragmentCoverageColorNV, .-bluegl_glFragmentCoverageColorNV
 
 	.align	2
 	.global	bluegl_glVertexP2uiv
@@ -11227,7 +11227,7 @@ bluegl_glVertexP2uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexP2uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexP2uiv, .-glVertexP2uiv
+	.size	bluegl_glVertexP2uiv, .-bluegl_glVertexP2uiv
 
 	.align	2
 	.global	bluegl_glGetPerfMonitorGroupsAMD
@@ -11237,7 +11237,7 @@ bluegl_glGetPerfMonitorGroupsAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfMonitorGroupsAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfMonitorGroupsAMD, .-glGetPerfMonitorGroupsAMD
+	.size	bluegl_glGetPerfMonitorGroupsAMD, .-bluegl_glGetPerfMonitorGroupsAMD
 
 	.align	2
 	.global	bluegl_glMultTransposeMatrixfARB
@@ -11247,7 +11247,7 @@ bluegl_glMultTransposeMatrixfARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultTransposeMatrixfARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultTransposeMatrixfARB, .-glMultTransposeMatrixfARB
+	.size	bluegl_glMultTransposeMatrixfARB, .-bluegl_glMultTransposeMatrixfARB
 
 	.align	2
 	.global	bluegl_glVertexAttribI2ivEXT
@@ -11257,7 +11257,7 @@ bluegl_glVertexAttribI2ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2ivEXT, .-glVertexAttribI2ivEXT
+	.size	bluegl_glVertexAttribI2ivEXT, .-bluegl_glVertexAttribI2ivEXT
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiColor4fNormal3fVertex3fvSUN
@@ -11267,7 +11267,7 @@ bluegl_glReplacementCodeuiColor4fNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiColor4fNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiColor4fNormal3fVertex3fvSUN, .-glReplacementCodeuiColor4fNormal3fVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiColor4fNormal3fVertex3fvSUN, .-bluegl_glReplacementCodeuiColor4fNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glDeleteStatesNV
@@ -11277,7 +11277,7 @@ bluegl_glDeleteStatesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteStatesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteStatesNV, .-glDeleteStatesNV
+	.size	bluegl_glDeleteStatesNV, .-bluegl_glDeleteStatesNV
 
 	.align	2
 	.global	bluegl_glGetBufferParameteri64v
@@ -11287,7 +11287,7 @@ bluegl_glGetBufferParameteri64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferParameteri64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferParameteri64v, .-glGetBufferParameteri64v
+	.size	bluegl_glGetBufferParameteri64v, .-bluegl_glGetBufferParameteri64v
 
 	.align	2
 	.global	bluegl_glProgramUniform4dv
@@ -11297,7 +11297,7 @@ bluegl_glProgramUniform4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4dv, .-glProgramUniform4dv
+	.size	bluegl_glProgramUniform4dv, .-bluegl_glProgramUniform4dv
 
 	.align	2
 	.global	bluegl_glEdgeFlagPointerEXT
@@ -11307,7 +11307,7 @@ bluegl_glEdgeFlagPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEdgeFlagPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEdgeFlagPointerEXT, .-glEdgeFlagPointerEXT
+	.size	bluegl_glEdgeFlagPointerEXT, .-bluegl_glEdgeFlagPointerEXT
 
 	.align	2
 	.global	bluegl_glVideoCaptureStreamParameterivNV
@@ -11317,7 +11317,7 @@ bluegl_glVideoCaptureStreamParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVideoCaptureStreamParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVideoCaptureStreamParameterivNV, .-glVideoCaptureStreamParameterivNV
+	.size	bluegl_glVideoCaptureStreamParameterivNV, .-bluegl_glVideoCaptureStreamParameterivNV
 
 	.align	2
 	.global	bluegl_glVertexStream4iATI
@@ -11327,7 +11327,7 @@ bluegl_glVertexStream4iATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4iATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4iATI, .-glVertexStream4iATI
+	.size	bluegl_glVertexStream4iATI, .-bluegl_glVertexStream4iATI
 
 	.align	2
 	.global	bluegl_glVDPAUFiniNV
@@ -11337,7 +11337,7 @@ bluegl_glVDPAUFiniNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUFiniNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUFiniNV, .-glVDPAUFiniNV
+	.size	bluegl_glVDPAUFiniNV, .-bluegl_glVDPAUFiniNV
 
 	.align	2
 	.global	bluegl_glMakeBufferNonResidentNV
@@ -11347,7 +11347,7 @@ bluegl_glMakeBufferNonResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeBufferNonResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeBufferNonResidentNV, .-glMakeBufferNonResidentNV
+	.size	bluegl_glMakeBufferNonResidentNV, .-bluegl_glMakeBufferNonResidentNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2fvARB
@@ -11357,7 +11357,7 @@ bluegl_glMultiTexCoord2fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2fvARB, .-glMultiTexCoord2fvARB
+	.size	bluegl_glMultiTexCoord2fvARB, .-bluegl_glMultiTexCoord2fvARB
 
 	.align	2
 	.global	bluegl_glStencilStrokePathNV
@@ -11367,7 +11367,7 @@ bluegl_glStencilStrokePathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilStrokePathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilStrokePathNV, .-glStencilStrokePathNV
+	.size	bluegl_glStencilStrokePathNV, .-bluegl_glStencilStrokePathNV
 
 	.align	2
 	.global	bluegl_glVariantuivEXT
@@ -11377,7 +11377,7 @@ bluegl_glVariantuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantuivEXT, .-glVariantuivEXT
+	.size	bluegl_glVariantuivEXT, .-bluegl_glVariantuivEXT
 
 	.align	2
 	.global	bluegl_glCopyTexSubImage3DEXT
@@ -11387,7 +11387,7 @@ bluegl_glCopyTexSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexSubImage3DEXT, .-glCopyTexSubImage3DEXT
+	.size	bluegl_glCopyTexSubImage3DEXT, .-bluegl_glCopyTexSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glSecondaryColorPointerListIBM
@@ -11397,7 +11397,7 @@ bluegl_glSecondaryColorPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColorPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColorPointerListIBM, .-glSecondaryColorPointerListIBM
+	.size	bluegl_glSecondaryColorPointerListIBM, .-bluegl_glSecondaryColorPointerListIBM
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1sARB
@@ -11407,7 +11407,7 @@ bluegl_glMultiTexCoord1sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1sARB, .-glMultiTexCoord1sARB
+	.size	bluegl_glMultiTexCoord1sARB, .-bluegl_glMultiTexCoord1sARB
 
 	.align	2
 	.global	bluegl_glConvolutionParameterfv
@@ -11417,7 +11417,7 @@ bluegl_glConvolutionParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameterfv, .-glConvolutionParameterfv
+	.size	bluegl_glConvolutionParameterfv, .-bluegl_glConvolutionParameterfv
 
 	.align	2
 	.global	bluegl_glMakeTextureHandleResidentNV
@@ -11427,7 +11427,7 @@ bluegl_glMakeTextureHandleResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeTextureHandleResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeTextureHandleResidentNV, .-glMakeTextureHandleResidentNV
+	.size	bluegl_glMakeTextureHandleResidentNV, .-bluegl_glMakeTextureHandleResidentNV
 
 	.align	2
 	.global	bluegl_glMultMatrixxOES
@@ -11437,7 +11437,7 @@ bluegl_glMultMatrixxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultMatrixxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultMatrixxOES, .-glMultMatrixxOES
+	.size	bluegl_glMultMatrixxOES, .-bluegl_glMultMatrixxOES
 
 	.align	2
 	.global	bluegl_glTextureNormalEXT
@@ -11447,7 +11447,7 @@ bluegl_glTextureNormalEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureNormalEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureNormalEXT, .-glTextureNormalEXT
+	.size	bluegl_glTextureNormalEXT, .-bluegl_glTextureNormalEXT
 
 	.align	2
 	.global	bluegl_glGetQueryivARB
@@ -11457,7 +11457,7 @@ bluegl_glGetQueryivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryivARB, .-glGetQueryivARB
+	.size	bluegl_glGetQueryivARB, .-bluegl_glGetQueryivARB
 
 	.align	2
 	.global	bluegl_glCompressedMultiTexImage3DEXT
@@ -11467,7 +11467,7 @@ bluegl_glCompressedMultiTexImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedMultiTexImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedMultiTexImage3DEXT, .-glCompressedMultiTexImage3DEXT
+	.size	bluegl_glCompressedMultiTexImage3DEXT, .-bluegl_glCompressedMultiTexImage3DEXT
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameter4dEXT
@@ -11477,7 +11477,7 @@ bluegl_glNamedProgramLocalParameter4dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameter4dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameter4dEXT, .-glNamedProgramLocalParameter4dEXT
+	.size	bluegl_glNamedProgramLocalParameter4dEXT, .-bluegl_glNamedProgramLocalParameter4dEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x3fvEXT
@@ -11487,7 +11487,7 @@ bluegl_glProgramUniformMatrix4x3fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x3fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x3fvEXT, .-glProgramUniformMatrix4x3fvEXT
+	.size	bluegl_glProgramUniformMatrix4x3fvEXT, .-bluegl_glProgramUniformMatrix4x3fvEXT
 
 	.align	2
 	.global	bluegl_glPointParameterf
@@ -11497,7 +11497,7 @@ bluegl_glPointParameterf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterf, .-glPointParameterf
+	.size	bluegl_glPointParameterf, .-bluegl_glPointParameterf
 
 	.align	2
 	.global	bluegl_glProgramUniform3dEXT
@@ -11507,7 +11507,7 @@ bluegl_glProgramUniform3dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3dEXT, .-glProgramUniform3dEXT
+	.size	bluegl_glProgramUniform3dEXT, .-bluegl_glProgramUniform3dEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2hNV
@@ -11517,7 +11517,7 @@ bluegl_glMultiTexCoord2hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2hNV, .-glMultiTexCoord2hNV
+	.size	bluegl_glMultiTexCoord2hNV, .-bluegl_glMultiTexCoord2hNV
 
 	.align	2
 	.global	bluegl_glGetConvolutionFilterEXT
@@ -11527,7 +11527,7 @@ bluegl_glGetConvolutionFilterEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetConvolutionFilterEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetConvolutionFilterEXT, .-glGetConvolutionFilterEXT
+	.size	bluegl_glGetConvolutionFilterEXT, .-bluegl_glGetConvolutionFilterEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib2hNV
@@ -11537,7 +11537,7 @@ bluegl_glVertexAttrib2hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2hNV, .-glVertexAttrib2hNV
+	.size	bluegl_glVertexAttrib2hNV, .-bluegl_glVertexAttrib2hNV
 
 	.align	2
 	.global	bluegl_glCurrentPaletteMatrixARB
@@ -11547,7 +11547,7 @@ bluegl_glCurrentPaletteMatrixARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCurrentPaletteMatrixARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCurrentPaletteMatrixARB, .-glCurrentPaletteMatrixARB
+	.size	bluegl_glCurrentPaletteMatrixARB, .-bluegl_glCurrentPaletteMatrixARB
 
 	.align	2
 	.global	bluegl_glFogxvOES
@@ -11557,7 +11557,7 @@ bluegl_glFogxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogxvOES, .-glFogxvOES
+	.size	bluegl_glFogxvOES, .-bluegl_glFogxvOES
 
 	.align	2
 	.global	bluegl_glCreateRenderbuffers
@@ -11567,7 +11567,7 @@ bluegl_glCreateRenderbuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateRenderbuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateRenderbuffers, .-glCreateRenderbuffers
+	.size	bluegl_glCreateRenderbuffers, .-bluegl_glCreateRenderbuffers
 
 	.align	2
 	.global	bluegl_glVertexAttrib4Nusv
@@ -11577,7 +11577,7 @@ bluegl_glVertexAttrib4Nusv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4Nusv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4Nusv, .-glVertexAttrib4Nusv
+	.size	bluegl_glVertexAttrib4Nusv, .-bluegl_glVertexAttrib4Nusv
 
 	.align	2
 	.global	bluegl_glGetBufferParameterui64vNV
@@ -11587,7 +11587,7 @@ bluegl_glGetBufferParameterui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferParameterui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferParameterui64vNV, .-glGetBufferParameterui64vNV
+	.size	bluegl_glGetBufferParameterui64vNV, .-bluegl_glGetBufferParameterui64vNV
 
 	.align	2
 	.global	bluegl_glDepthFunc
@@ -11597,7 +11597,7 @@ bluegl_glDepthFunc:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthFunc]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthFunc, .-glDepthFunc
+	.size	bluegl_glDepthFunc, .-bluegl_glDepthFunc
 
 	.align	2
 	.global	bluegl_glVertexAttribI4bvEXT
@@ -11607,7 +11607,7 @@ bluegl_glVertexAttribI4bvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4bvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4bvEXT, .-glVertexAttribI4bvEXT
+	.size	bluegl_glVertexAttribI4bvEXT, .-bluegl_glVertexAttribI4bvEXT
 
 	.align	2
 	.global	bluegl_glEnableClientStateIndexedEXT
@@ -11617,7 +11617,7 @@ bluegl_glEnableClientStateIndexedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableClientStateIndexedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableClientStateIndexedEXT, .-glEnableClientStateIndexedEXT
+	.size	bluegl_glEnableClientStateIndexedEXT, .-bluegl_glEnableClientStateIndexedEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform4i64ARB
@@ -11627,7 +11627,7 @@ bluegl_glProgramUniform4i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4i64ARB, .-glProgramUniform4i64ARB
+	.size	bluegl_glProgramUniform4i64ARB, .-bluegl_glProgramUniform4i64ARB
 
 	.align	2
 	.global	bluegl_glBlendFunci
@@ -11637,7 +11637,7 @@ bluegl_glBlendFunci:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFunci]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFunci, .-glBlendFunci
+	.size	bluegl_glBlendFunci, .-bluegl_glBlendFunci
 
 	.align	2
 	.global	bluegl_glMatrixLoadIdentityEXT
@@ -11647,7 +11647,7 @@ bluegl_glMatrixLoadIdentityEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoadIdentityEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoadIdentityEXT, .-glMatrixLoadIdentityEXT
+	.size	bluegl_glMatrixLoadIdentityEXT, .-bluegl_glMatrixLoadIdentityEXT
 
 	.align	2
 	.global	bluegl_glTextureColorMaskSGIS
@@ -11657,7 +11657,7 @@ bluegl_glTextureColorMaskSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureColorMaskSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureColorMaskSGIS, .-glTextureColorMaskSGIS
+	.size	bluegl_glTextureColorMaskSGIS, .-bluegl_glTextureColorMaskSGIS
 
 	.align	2
 	.global	bluegl_glCreateShaderProgramEXT
@@ -11667,7 +11667,7 @@ bluegl_glCreateShaderProgramEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateShaderProgramEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateShaderProgramEXT, .-glCreateShaderProgramEXT
+	.size	bluegl_glCreateShaderProgramEXT, .-bluegl_glCreateShaderProgramEXT
 
 	.align	2
 	.global	bluegl_glBufferStorage
@@ -11677,7 +11677,7 @@ bluegl_glBufferStorage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferStorage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferStorage, .-glBufferStorage
+	.size	bluegl_glBufferStorage, .-bluegl_glBufferStorage
 
 	.align	2
 	.global	bluegl_glMakeNamedBufferNonResidentNV
@@ -11687,7 +11687,7 @@ bluegl_glMakeNamedBufferNonResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeNamedBufferNonResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeNamedBufferNonResidentNV, .-glMakeNamedBufferNonResidentNV
+	.size	bluegl_glMakeNamedBufferNonResidentNV, .-bluegl_glMakeNamedBufferNonResidentNV
 
 	.align	2
 	.global	bluegl_glRenderbufferStorageMultisampleEXT
@@ -11697,7 +11697,7 @@ bluegl_glRenderbufferStorageMultisampleEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRenderbufferStorageMultisampleEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRenderbufferStorageMultisampleEXT, .-glRenderbufferStorageMultisampleEXT
+	.size	bluegl_glRenderbufferStorageMultisampleEXT, .-bluegl_glRenderbufferStorageMultisampleEXT
 
 	.align	2
 	.global	bluegl_glGetFloati_v
@@ -11707,7 +11707,7 @@ bluegl_glGetFloati_v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFloati_v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFloati_v, .-glGetFloati_v
+	.size	bluegl_glGetFloati_v, .-bluegl_glGetFloati_v
 
 	.align	2
 	.global	bluegl_glUniform2ui64ARB
@@ -11717,7 +11717,7 @@ bluegl_glUniform2ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2ui64ARB, .-glUniform2ui64ARB
+	.size	bluegl_glUniform2ui64ARB, .-bluegl_glUniform2ui64ARB
 
 	.align	2
 	.global	bluegl_glBindVertexShaderEXT
@@ -11727,7 +11727,7 @@ bluegl_glBindVertexShaderEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindVertexShaderEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindVertexShaderEXT, .-glBindVertexShaderEXT
+	.size	bluegl_glBindVertexShaderEXT, .-bluegl_glBindVertexShaderEXT
 
 	.align	2
 	.global	bluegl_glGetUniformLocation
@@ -11737,7 +11737,7 @@ bluegl_glGetUniformLocation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformLocation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformLocation, .-glGetUniformLocation
+	.size	bluegl_glGetUniformLocation, .-bluegl_glGetUniformLocation
 
 	.align	2
 	.global	bluegl_glVertexStream1svATI
@@ -11747,7 +11747,7 @@ bluegl_glVertexStream1svATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1svATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1svATI, .-glVertexStream1svATI
+	.size	bluegl_glVertexStream1svATI, .-bluegl_glVertexStream1svATI
 
 	.align	2
 	.global	bluegl_glVertexStream3fATI
@@ -11757,7 +11757,7 @@ bluegl_glVertexStream3fATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3fATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3fATI, .-glVertexStream3fATI
+	.size	bluegl_glVertexStream3fATI, .-bluegl_glVertexStream3fATI
 
 	.align	2
 	.global	bluegl_glNamedFramebufferDrawBuffers
@@ -11767,7 +11767,7 @@ bluegl_glNamedFramebufferDrawBuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferDrawBuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferDrawBuffers, .-glNamedFramebufferDrawBuffers
+	.size	bluegl_glNamedFramebufferDrawBuffers, .-bluegl_glNamedFramebufferDrawBuffers
 
 	.align	2
 	.global	bluegl_glUniform2ui64vNV
@@ -11777,7 +11777,7 @@ bluegl_glUniform2ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2ui64vNV, .-glUniform2ui64vNV
+	.size	bluegl_glUniform2ui64vNV, .-bluegl_glUniform2ui64vNV
 
 	.align	2
 	.global	bluegl_glTexCoordPointervINTEL
@@ -11787,7 +11787,7 @@ bluegl_glTexCoordPointervINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordPointervINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordPointervINTEL, .-glTexCoordPointervINTEL
+	.size	bluegl_glTexCoordPointervINTEL, .-bluegl_glTexCoordPointervINTEL
 
 	.align	2
 	.global	bluegl_glUniform4fv
@@ -11797,7 +11797,7 @@ bluegl_glUniform4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4fv, .-glUniform4fv
+	.size	bluegl_glUniform4fv, .-bluegl_glUniform4fv
 
 	.align	2
 	.global	bluegl_glNormalPointerEXT
@@ -11807,7 +11807,7 @@ bluegl_glNormalPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalPointerEXT, .-glNormalPointerEXT
+	.size	bluegl_glNormalPointerEXT, .-bluegl_glNormalPointerEXT
 
 	.align	2
 	.global	bluegl_glGetTextureSamplerHandleNV
@@ -11817,7 +11817,7 @@ bluegl_glGetTextureSamplerHandleNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureSamplerHandleNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureSamplerHandleNV, .-glGetTextureSamplerHandleNV
+	.size	bluegl_glGetTextureSamplerHandleNV, .-bluegl_glGetTextureSamplerHandleNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib4hNV
@@ -11827,7 +11827,7 @@ bluegl_glVertexAttrib4hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4hNV, .-glVertexAttrib4hNV
+	.size	bluegl_glVertexAttrib4hNV, .-bluegl_glVertexAttrib4hNV
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTextureFaceEXT
@@ -11837,7 +11837,7 @@ bluegl_glNamedFramebufferTextureFaceEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTextureFaceEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTextureFaceEXT, .-glNamedFramebufferTextureFaceEXT
+	.size	bluegl_glNamedFramebufferTextureFaceEXT, .-bluegl_glNamedFramebufferTextureFaceEXT
 
 	.align	2
 	.global	bluegl_glCompressedTextureSubImage3D
@@ -11847,7 +11847,7 @@ bluegl_glCompressedTextureSubImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureSubImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureSubImage3D, .-glCompressedTextureSubImage3D
+	.size	bluegl_glCompressedTextureSubImage3D, .-bluegl_glCompressedTextureSubImage3D
 
 	.align	2
 	.global	bluegl_glBindSamplers
@@ -11857,7 +11857,7 @@ bluegl_glBindSamplers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindSamplers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindSamplers, .-glBindSamplers
+	.size	bluegl_glBindSamplers, .-bluegl_glBindSamplers
 
 	.align	2
 	.global	bluegl_glAsyncMarkerSGIX
@@ -11867,7 +11867,7 @@ bluegl_glAsyncMarkerSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAsyncMarkerSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAsyncMarkerSGIX, .-glAsyncMarkerSGIX
+	.size	bluegl_glAsyncMarkerSGIX, .-bluegl_glAsyncMarkerSGIX
 
 	.align	2
 	.global	bluegl_glTextureStorageSparseAMD
@@ -11877,7 +11877,7 @@ bluegl_glTextureStorageSparseAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorageSparseAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorageSparseAMD, .-glTextureStorageSparseAMD
+	.size	bluegl_glTextureStorageSparseAMD, .-bluegl_glTextureStorageSparseAMD
 
 	.align	2
 	.global	bluegl_glGetConvolutionParameterivEXT
@@ -11887,7 +11887,7 @@ bluegl_glGetConvolutionParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetConvolutionParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetConvolutionParameterivEXT, .-glGetConvolutionParameterivEXT
+	.size	bluegl_glGetConvolutionParameterivEXT, .-bluegl_glGetConvolutionParameterivEXT
 
 	.align	2
 	.global	bluegl_glEndPerfQueryINTEL
@@ -11897,7 +11897,7 @@ bluegl_glEndPerfQueryINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndPerfQueryINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndPerfQueryINTEL, .-glEndPerfQueryINTEL
+	.size	bluegl_glEndPerfQueryINTEL, .-bluegl_glEndPerfQueryINTEL
 
 	.align	2
 	.global	bluegl_glFragmentLightModeliSGIX
@@ -11907,7 +11907,7 @@ bluegl_glFragmentLightModeliSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightModeliSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightModeliSGIX, .-glFragmentLightModeliSGIX
+	.size	bluegl_glFragmentLightModeliSGIX, .-bluegl_glFragmentLightModeliSGIX
 
 	.align	2
 	.global	bluegl_glPrioritizeTexturesEXT
@@ -11917,7 +11917,7 @@ bluegl_glPrioritizeTexturesEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPrioritizeTexturesEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPrioritizeTexturesEXT, .-glPrioritizeTexturesEXT
+	.size	bluegl_glPrioritizeTexturesEXT, .-bluegl_glPrioritizeTexturesEXT
 
 	.align	2
 	.global	bluegl_glEndConditionalRender
@@ -11927,7 +11927,7 @@ bluegl_glEndConditionalRender:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndConditionalRender]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndConditionalRender, .-glEndConditionalRender
+	.size	bluegl_glEndConditionalRender, .-bluegl_glEndConditionalRender
 
 	.align	2
 	.global	bluegl_glResetHistogram
@@ -11937,7 +11937,7 @@ bluegl_glResetHistogram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResetHistogram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResetHistogram, .-glResetHistogram
+	.size	bluegl_glResetHistogram, .-bluegl_glResetHistogram
 
 	.align	2
 	.global	bluegl_glGetOcclusionQueryivNV
@@ -11947,7 +11947,7 @@ bluegl_glGetOcclusionQueryivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetOcclusionQueryivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetOcclusionQueryivNV, .-glGetOcclusionQueryivNV
+	.size	bluegl_glGetOcclusionQueryivNV, .-bluegl_glGetOcclusionQueryivNV
 
 	.align	2
 	.global	bluegl_glUniform1uiEXT
@@ -11957,7 +11957,7 @@ bluegl_glUniform1uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1uiEXT, .-glUniform1uiEXT
+	.size	bluegl_glUniform1uiEXT, .-bluegl_glUniform1uiEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2sv
@@ -11967,7 +11967,7 @@ bluegl_glMultiTexCoord2sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2sv, .-glMultiTexCoord2sv
+	.size	bluegl_glMultiTexCoord2sv, .-bluegl_glMultiTexCoord2sv
 
 	.align	2
 	.global	bluegl_glTexSubImage2DEXT
@@ -11977,7 +11977,7 @@ bluegl_glTexSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexSubImage2DEXT, .-glTexSubImage2DEXT
+	.size	bluegl_glTexSubImage2DEXT, .-bluegl_glTexSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2uiv
@@ -11987,7 +11987,7 @@ bluegl_glProgramUniform2uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2uiv, .-glProgramUniform2uiv
+	.size	bluegl_glProgramUniform2uiv, .-bluegl_glProgramUniform2uiv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2iARB
@@ -11997,7 +11997,7 @@ bluegl_glMultiTexCoord2iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2iARB, .-glMultiTexCoord2iARB
+	.size	bluegl_glMultiTexCoord2iARB, .-bluegl_glMultiTexCoord2iARB
 
 	.align	2
 	.global	bluegl_glGetQueryObjectuiv
@@ -12007,7 +12007,7 @@ bluegl_glGetQueryObjectuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjectuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjectuiv, .-glGetQueryObjectuiv
+	.size	bluegl_glGetQueryObjectuiv, .-bluegl_glGetQueryObjectuiv
 
 	.align	2
 	.global	bluegl_glGenerateMultiTexMipmapEXT
@@ -12017,7 +12017,7 @@ bluegl_glGenerateMultiTexMipmapEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenerateMultiTexMipmapEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenerateMultiTexMipmapEXT, .-glGenerateMultiTexMipmapEXT
+	.size	bluegl_glGenerateMultiTexMipmapEXT, .-bluegl_glGenerateMultiTexMipmapEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4iv
@@ -12027,7 +12027,7 @@ bluegl_glVertexAttrib4iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4iv, .-glVertexAttrib4iv
+	.size	bluegl_glVertexAttrib4iv, .-bluegl_glVertexAttrib4iv
 
 	.align	2
 	.global	bluegl_glWindowPos3dvMESA
@@ -12037,7 +12037,7 @@ bluegl_glWindowPos3dvMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3dvMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3dvMESA, .-glWindowPos3dvMESA
+	.size	bluegl_glWindowPos3dvMESA, .-bluegl_glWindowPos3dvMESA
 
 	.align	2
 	.global	bluegl_glLabelObjectEXT
@@ -12047,7 +12047,7 @@ bluegl_glLabelObjectEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLabelObjectEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLabelObjectEXT, .-glLabelObjectEXT
+	.size	bluegl_glLabelObjectEXT, .-bluegl_glLabelObjectEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform1uiv
@@ -12057,7 +12057,7 @@ bluegl_glProgramUniform1uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1uiv, .-glProgramUniform1uiv
+	.size	bluegl_glProgramUniform1uiv, .-bluegl_glProgramUniform1uiv
 
 	.align	2
 	.global	bluegl_glFramebufferTexture
@@ -12067,7 +12067,7 @@ bluegl_glFramebufferTexture:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTexture]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTexture, .-glFramebufferTexture
+	.size	bluegl_glFramebufferTexture, .-bluegl_glFramebufferTexture
 
 	.align	2
 	.global	bluegl_glMultiTexEnvfEXT
@@ -12077,7 +12077,7 @@ bluegl_glMultiTexEnvfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexEnvfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexEnvfEXT, .-glMultiTexEnvfEXT
+	.size	bluegl_glMultiTexEnvfEXT, .-bluegl_glMultiTexEnvfEXT
 
 	.align	2
 	.global	bluegl_glVertex4xOES
@@ -12087,7 +12087,7 @@ bluegl_glVertex4xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex4xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex4xOES, .-glVertex4xOES
+	.size	bluegl_glVertex4xOES, .-bluegl_glVertex4xOES
 
 	.align	2
 	.global	bluegl_glVertexAttribI2uivEXT
@@ -12097,7 +12097,7 @@ bluegl_glVertexAttribI2uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2uivEXT, .-glVertexAttribI2uivEXT
+	.size	bluegl_glVertexAttribI2uivEXT, .-bluegl_glVertexAttribI2uivEXT
 
 	.align	2
 	.global	bluegl_glGetnConvolutionFilterARB
@@ -12107,7 +12107,7 @@ bluegl_glGetnConvolutionFilterARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnConvolutionFilterARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnConvolutionFilterARB, .-glGetnConvolutionFilterARB
+	.size	bluegl_glGetnConvolutionFilterARB, .-bluegl_glGetnConvolutionFilterARB
 
 	.align	2
 	.global	bluegl_glPointParameterfvSGIS
@@ -12117,7 +12117,7 @@ bluegl_glPointParameterfvSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterfvSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterfvSGIS, .-glPointParameterfvSGIS
+	.size	bluegl_glPointParameterfvSGIS, .-bluegl_glPointParameterfvSGIS
 
 	.align	2
 	.global	bluegl_glGetPixelTransformParameterfvEXT
@@ -12127,7 +12127,7 @@ bluegl_glGetPixelTransformParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPixelTransformParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPixelTransformParameterfvEXT, .-glGetPixelTransformParameterfvEXT
+	.size	bluegl_glGetPixelTransformParameterfvEXT, .-bluegl_glGetPixelTransformParameterfvEXT
 
 	.align	2
 	.global	bluegl_glIndexxvOES
@@ -12137,7 +12137,7 @@ bluegl_glIndexxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIndexxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIndexxvOES, .-glIndexxvOES
+	.size	bluegl_glIndexxvOES, .-bluegl_glIndexxvOES
 
 	.align	2
 	.global	bluegl_glDepthMask
@@ -12147,7 +12147,7 @@ bluegl_glDepthMask:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthMask]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthMask, .-glDepthMask
+	.size	bluegl_glDepthMask, .-bluegl_glDepthMask
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x4fv
@@ -12157,7 +12157,7 @@ bluegl_glProgramUniformMatrix2x4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x4fv, .-glProgramUniformMatrix2x4fv
+	.size	bluegl_glProgramUniformMatrix2x4fv, .-bluegl_glProgramUniformMatrix2x4fv
 
 	.align	2
 	.global	bluegl_glAreProgramsResidentNV
@@ -12167,7 +12167,7 @@ bluegl_glAreProgramsResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAreProgramsResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAreProgramsResidentNV, .-glAreProgramsResidentNV
+	.size	bluegl_glAreProgramsResidentNV, .-bluegl_glAreProgramsResidentNV
 
 	.align	2
 	.global	bluegl_glColorTable
@@ -12177,7 +12177,7 @@ bluegl_glColorTable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorTable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorTable, .-glColorTable
+	.size	bluegl_glColorTable, .-bluegl_glColorTable
 
 	.align	2
 	.global	bluegl_glSecondaryColor3bvEXT
@@ -12187,7 +12187,7 @@ bluegl_glSecondaryColor3bvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3bvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3bvEXT, .-glSecondaryColor3bvEXT
+	.size	bluegl_glSecondaryColor3bvEXT, .-bluegl_glSecondaryColor3bvEXT
 
 	.align	2
 	.global	bluegl_glVertexStream1dvATI
@@ -12197,7 +12197,7 @@ bluegl_glVertexStream1dvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1dvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1dvATI, .-glVertexStream1dvATI
+	.size	bluegl_glVertexStream1dvATI, .-bluegl_glVertexStream1dvATI
 
 	.align	2
 	.global	bluegl_glGetMultiTexEnvfvEXT
@@ -12207,7 +12207,7 @@ bluegl_glGetMultiTexEnvfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexEnvfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexEnvfvEXT, .-glGetMultiTexEnvfvEXT
+	.size	bluegl_glGetMultiTexEnvfvEXT, .-bluegl_glGetMultiTexEnvfvEXT
 
 	.align	2
 	.global	bluegl_glFlushMappedBufferRangeAPPLE
@@ -12217,7 +12217,7 @@ bluegl_glFlushMappedBufferRangeAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushMappedBufferRangeAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushMappedBufferRangeAPPLE, .-glFlushMappedBufferRangeAPPLE
+	.size	bluegl_glFlushMappedBufferRangeAPPLE, .-bluegl_glFlushMappedBufferRangeAPPLE
 
 	.align	2
 	.global	bluegl_glVertexAttribs1dvNV
@@ -12227,7 +12227,7 @@ bluegl_glVertexAttribs1dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs1dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs1dvNV, .-glVertexAttribs1dvNV
+	.size	bluegl_glVertexAttribs1dvNV, .-bluegl_glVertexAttribs1dvNV
 
 	.align	2
 	.global	bluegl_glVertexStream2sATI
@@ -12237,7 +12237,7 @@ bluegl_glVertexStream2sATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2sATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2sATI, .-glVertexStream2sATI
+	.size	bluegl_glVertexStream2sATI, .-bluegl_glVertexStream2sATI
 
 	.align	2
 	.global	bluegl_glGetnSeparableFilterARB
@@ -12247,7 +12247,7 @@ bluegl_glGetnSeparableFilterARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnSeparableFilterARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnSeparableFilterARB, .-glGetnSeparableFilterARB
+	.size	bluegl_glGetnSeparableFilterARB, .-bluegl_glGetnSeparableFilterARB
 
 	.align	2
 	.global	bluegl_glProgramUniform2dv
@@ -12257,7 +12257,7 @@ bluegl_glProgramUniform2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2dv, .-glProgramUniform2dv
+	.size	bluegl_glProgramUniform2dv, .-bluegl_glProgramUniform2dv
 
 	.align	2
 	.global	bluegl_glActiveStencilFaceEXT
@@ -12267,7 +12267,7 @@ bluegl_glActiveStencilFaceEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glActiveStencilFaceEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glActiveStencilFaceEXT, .-glActiveStencilFaceEXT
+	.size	bluegl_glActiveStencilFaceEXT, .-bluegl_glActiveStencilFaceEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform4dEXT
@@ -12277,7 +12277,7 @@ bluegl_glProgramUniform4dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4dEXT, .-glProgramUniform4dEXT
+	.size	bluegl_glProgramUniform4dEXT, .-bluegl_glProgramUniform4dEXT
 
 	.align	2
 	.global	bluegl_glPointSizexOES
@@ -12287,7 +12287,7 @@ bluegl_glPointSizexOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointSizexOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointSizexOES, .-glPointSizexOES
+	.size	bluegl_glPointSizexOES, .-bluegl_glPointSizexOES
 
 	.align	2
 	.global	bluegl_glUniformMatrix2fv
@@ -12297,7 +12297,7 @@ bluegl_glUniformMatrix2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix2fv, .-glUniformMatrix2fv
+	.size	bluegl_glUniformMatrix2fv, .-bluegl_glUniformMatrix2fv
 
 	.align	2
 	.global	bluegl_glBlendParameteriNV
@@ -12307,7 +12307,7 @@ bluegl_glBlendParameteriNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendParameteriNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendParameteriNV, .-glBlendParameteriNV
+	.size	bluegl_glBlendParameteriNV, .-bluegl_glBlendParameteriNV
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameter4dvEXT
@@ -12317,7 +12317,7 @@ bluegl_glNamedProgramLocalParameter4dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameter4dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameter4dvEXT, .-glNamedProgramLocalParameter4dvEXT
+	.size	bluegl_glNamedProgramLocalParameter4dvEXT, .-bluegl_glNamedProgramLocalParameter4dvEXT
 
 	.align	2
 	.global	bluegl_glGetTextureParameterfvEXT
@@ -12327,7 +12327,7 @@ bluegl_glGetTextureParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameterfvEXT, .-glGetTextureParameterfvEXT
+	.size	bluegl_glGetTextureParameterfvEXT, .-bluegl_glGetTextureParameterfvEXT
 
 	.align	2
 	.global	bluegl_glGetPathMetricsNV
@@ -12337,7 +12337,7 @@ bluegl_glGetPathMetricsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathMetricsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathMetricsNV, .-glGetPathMetricsNV
+	.size	bluegl_glGetPathMetricsNV, .-bluegl_glGetPathMetricsNV
 
 	.align	2
 	.global	bluegl_glGetFloatv
@@ -12347,7 +12347,7 @@ bluegl_glGetFloatv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFloatv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFloatv, .-glGetFloatv
+	.size	bluegl_glGetFloatv, .-bluegl_glGetFloatv
 
 	.align	2
 	.global	bluegl_glMatrixLoad3x3fNV
@@ -12357,7 +12357,7 @@ bluegl_glMatrixLoad3x3fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoad3x3fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoad3x3fNV, .-glMatrixLoad3x3fNV
+	.size	bluegl_glMatrixLoad3x3fNV, .-bluegl_glMatrixLoad3x3fNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2fARB
@@ -12367,7 +12367,7 @@ bluegl_glMultiTexCoord2fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2fARB, .-glMultiTexCoord2fARB
+	.size	bluegl_glMultiTexCoord2fARB, .-bluegl_glMultiTexCoord2fARB
 
 	.align	2
 	.global	bluegl_glWeightdvARB
@@ -12377,7 +12377,7 @@ bluegl_glWeightdvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightdvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightdvARB, .-glWeightdvARB
+	.size	bluegl_glWeightdvARB, .-bluegl_glWeightdvARB
 
 	.align	2
 	.global	bluegl_glIsTransformFeedbackNV
@@ -12387,7 +12387,7 @@ bluegl_glIsTransformFeedbackNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsTransformFeedbackNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsTransformFeedbackNV, .-glIsTransformFeedbackNV
+	.size	bluegl_glIsTransformFeedbackNV, .-bluegl_glIsTransformFeedbackNV
 
 	.align	2
 	.global	bluegl_glVertexAttribDivisorARB
@@ -12397,7 +12397,7 @@ bluegl_glVertexAttribDivisorARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribDivisorARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribDivisorARB, .-glVertexAttribDivisorARB
+	.size	bluegl_glVertexAttribDivisorARB, .-bluegl_glVertexAttribDivisorARB
 
 	.align	2
 	.global	bluegl_glSecondaryColorP3uiv
@@ -12407,7 +12407,7 @@ bluegl_glSecondaryColorP3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColorP3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColorP3uiv, .-glSecondaryColorP3uiv
+	.size	bluegl_glSecondaryColorP3uiv, .-bluegl_glSecondaryColorP3uiv
 
 	.align	2
 	.global	bluegl_glGetnCompressedTexImageARB
@@ -12417,7 +12417,7 @@ bluegl_glGetnCompressedTexImageARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnCompressedTexImageARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnCompressedTexImageARB, .-glGetnCompressedTexImageARB
+	.size	bluegl_glGetnCompressedTexImageARB, .-bluegl_glGetnCompressedTexImageARB
 
 	.align	2
 	.global	bluegl_glGetIntegerv
@@ -12427,7 +12427,7 @@ bluegl_glGetIntegerv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetIntegerv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetIntegerv, .-glGetIntegerv
+	.size	bluegl_glGetIntegerv, .-bluegl_glGetIntegerv
 
 	.align	2
 	.global	bluegl_glMatrixLoaddEXT
@@ -12437,7 +12437,7 @@ bluegl_glMatrixLoaddEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoaddEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoaddEXT, .-glMatrixLoaddEXT
+	.size	bluegl_glMatrixLoaddEXT, .-bluegl_glMatrixLoaddEXT
 
 	.align	2
 	.global	bluegl_glGetPathLengthNV
@@ -12447,7 +12447,7 @@ bluegl_glGetPathLengthNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathLengthNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathLengthNV, .-glGetPathLengthNV
+	.size	bluegl_glGetPathLengthNV, .-bluegl_glGetPathLengthNV
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3dv
@@ -12457,7 +12457,7 @@ bluegl_glProgramUniformMatrix3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3dv, .-glProgramUniformMatrix3dv
+	.size	bluegl_glProgramUniformMatrix3dv, .-bluegl_glProgramUniformMatrix3dv
 
 	.align	2
 	.global	bluegl_glUniform4i64NV
@@ -12467,7 +12467,7 @@ bluegl_glUniform4i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4i64NV, .-glUniform4i64NV
+	.size	bluegl_glUniform4i64NV, .-bluegl_glUniform4i64NV
 
 	.align	2
 	.global	bluegl_glGetHistogramEXT
@@ -12477,7 +12477,7 @@ bluegl_glGetHistogramEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHistogramEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHistogramEXT, .-glGetHistogramEXT
+	.size	bluegl_glGetHistogramEXT, .-bluegl_glGetHistogramEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4NuivARB
@@ -12487,7 +12487,7 @@ bluegl_glVertexAttrib4NuivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4NuivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4NuivARB, .-glVertexAttrib4NuivARB
+	.size	bluegl_glVertexAttrib4NuivARB, .-bluegl_glVertexAttrib4NuivARB
 
 	.align	2
 	.global	bluegl_glMapGrid2xOES
@@ -12497,7 +12497,7 @@ bluegl_glMapGrid2xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapGrid2xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapGrid2xOES, .-glMapGrid2xOES
+	.size	bluegl_glMapGrid2xOES, .-bluegl_glMapGrid2xOES
 
 	.align	2
 	.global	bluegl_glTexImage2D
@@ -12507,7 +12507,7 @@ bluegl_glTexImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage2D, .-glTexImage2D
+	.size	bluegl_glTexImage2D, .-bluegl_glTexImage2D
 
 	.align	2
 	.global	bluegl_glWindowPos2fvARB
@@ -12517,7 +12517,7 @@ bluegl_glWindowPos2fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2fvARB, .-glWindowPos2fvARB
+	.size	bluegl_glWindowPos2fvARB, .-bluegl_glWindowPos2fvARB
 
 	.align	2
 	.global	bluegl_glEnableIndexedEXT
@@ -12527,7 +12527,7 @@ bluegl_glEnableIndexedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableIndexedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableIndexedEXT, .-glEnableIndexedEXT
+	.size	bluegl_glEnableIndexedEXT, .-bluegl_glEnableIndexedEXT
 
 	.align	2
 	.global	bluegl_glTexCoord1bvOES
@@ -12537,7 +12537,7 @@ bluegl_glTexCoord1bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord1bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord1bvOES, .-glTexCoord1bvOES
+	.size	bluegl_glTexCoord1bvOES, .-bluegl_glTexCoord1bvOES
 
 	.align	2
 	.global	bluegl_glUniform2uiEXT
@@ -12547,7 +12547,7 @@ bluegl_glUniform2uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2uiEXT, .-glUniform2uiEXT
+	.size	bluegl_glUniform2uiEXT, .-bluegl_glUniform2uiEXT
 
 	.align	2
 	.global	bluegl_glReplacementCodePointerSUN
@@ -12557,7 +12557,7 @@ bluegl_glReplacementCodePointerSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodePointerSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodePointerSUN, .-glReplacementCodePointerSUN
+	.size	bluegl_glReplacementCodePointerSUN, .-bluegl_glReplacementCodePointerSUN
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1fARB
@@ -12567,7 +12567,7 @@ bluegl_glMultiTexCoord1fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1fARB, .-glMultiTexCoord1fARB
+	.size	bluegl_glMultiTexCoord1fARB, .-bluegl_glMultiTexCoord1fARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4Nubv
@@ -12577,7 +12577,7 @@ bluegl_glVertexAttrib4Nubv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4Nubv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4Nubv, .-glVertexAttrib4Nubv
+	.size	bluegl_glVertexAttrib4Nubv, .-bluegl_glVertexAttrib4Nubv
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribIOffsetEXT
@@ -12587,7 +12587,7 @@ bluegl_glVertexArrayVertexAttribIOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribIOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribIOffsetEXT, .-glVertexArrayVertexAttribIOffsetEXT
+	.size	bluegl_glVertexArrayVertexAttribIOffsetEXT, .-bluegl_glVertexArrayVertexAttribIOffsetEXT
 
 	.align	2
 	.global	bluegl_glCompileShaderARB
@@ -12597,7 +12597,7 @@ bluegl_glCompileShaderARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompileShaderARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompileShaderARB, .-glCompileShaderARB
+	.size	bluegl_glCompileShaderARB, .-bluegl_glCompileShaderARB
 
 	.align	2
 	.global	bluegl_glWindowPos3dMESA
@@ -12607,7 +12607,7 @@ bluegl_glWindowPos3dMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3dMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3dMESA, .-glWindowPos3dMESA
+	.size	bluegl_glWindowPos3dMESA, .-bluegl_glWindowPos3dMESA
 
 	.align	2
 	.global	bluegl_glNormalStream3fvATI
@@ -12617,7 +12617,7 @@ bluegl_glNormalStream3fvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3fvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3fvATI, .-glNormalStream3fvATI
+	.size	bluegl_glNormalStream3fvATI, .-bluegl_glNormalStream3fvATI
 
 	.align	2
 	.global	bluegl_glUniform4ui64ARB
@@ -12627,7 +12627,7 @@ bluegl_glUniform4ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4ui64ARB, .-glUniform4ui64ARB
+	.size	bluegl_glUniform4ui64ARB, .-bluegl_glUniform4ui64ARB
 
 	.align	2
 	.global	bluegl_glTextureRenderbufferEXT
@@ -12637,7 +12637,7 @@ bluegl_glTextureRenderbufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureRenderbufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureRenderbufferEXT, .-glTextureRenderbufferEXT
+	.size	bluegl_glTextureRenderbufferEXT, .-bluegl_glTextureRenderbufferEXT
 
 	.align	2
 	.global	bluegl_glGetSubroutineUniformLocation
@@ -12647,7 +12647,7 @@ bluegl_glGetSubroutineUniformLocation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSubroutineUniformLocation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSubroutineUniformLocation, .-glGetSubroutineUniformLocation
+	.size	bluegl_glGetSubroutineUniformLocation, .-bluegl_glGetSubroutineUniformLocation
 
 	.align	2
 	.global	bluegl_glGetFramebufferParameteriv
@@ -12657,7 +12657,7 @@ bluegl_glGetFramebufferParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFramebufferParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFramebufferParameteriv, .-glGetFramebufferParameteriv
+	.size	bluegl_glGetFramebufferParameteriv, .-bluegl_glGetFramebufferParameteriv
 
 	.align	2
 	.global	bluegl_glGetSamplerParameteriv
@@ -12667,7 +12667,7 @@ bluegl_glGetSamplerParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSamplerParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSamplerParameteriv, .-glGetSamplerParameteriv
+	.size	bluegl_glGetSamplerParameteriv, .-bluegl_glGetSamplerParameteriv
 
 	.align	2
 	.global	bluegl_glVertexStream2fvATI
@@ -12677,7 +12677,7 @@ bluegl_glVertexStream2fvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2fvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2fvATI, .-glVertexStream2fvATI
+	.size	bluegl_glVertexStream2fvATI, .-bluegl_glVertexStream2fvATI
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3dvEXT
@@ -12687,7 +12687,7 @@ bluegl_glProgramUniformMatrix3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3dvEXT, .-glProgramUniformMatrix3dvEXT
+	.size	bluegl_glProgramUniformMatrix3dvEXT, .-bluegl_glProgramUniformMatrix3dvEXT
 
 	.align	2
 	.global	bluegl_glSeparableFilter2D
@@ -12697,7 +12697,7 @@ bluegl_glSeparableFilter2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSeparableFilter2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSeparableFilter2D, .-glSeparableFilter2D
+	.size	bluegl_glSeparableFilter2D, .-bluegl_glSeparableFilter2D
 
 	.align	2
 	.global	bluegl_glVertexAttribI1uiv
@@ -12707,7 +12707,7 @@ bluegl_glVertexAttribI1uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1uiv, .-glVertexAttribI1uiv
+	.size	bluegl_glVertexAttribI1uiv, .-bluegl_glVertexAttribI1uiv
 
 	.align	2
 	.global	bluegl_glReplacementCodeuivSUN
@@ -12717,7 +12717,7 @@ bluegl_glReplacementCodeuivSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuivSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuivSUN, .-glReplacementCodeuivSUN
+	.size	bluegl_glReplacementCodeuivSUN, .-bluegl_glReplacementCodeuivSUN
 
 	.align	2
 	.global	bluegl_glVertexAttribI3uiEXT
@@ -12727,7 +12727,7 @@ bluegl_glVertexAttribI3uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI3uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI3uiEXT, .-glVertexAttribI3uiEXT
+	.size	bluegl_glVertexAttribI3uiEXT, .-bluegl_glVertexAttribI3uiEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribL4dvEXT
@@ -12737,7 +12737,7 @@ bluegl_glVertexAttribL4dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4dvEXT, .-glVertexAttribL4dvEXT
+	.size	bluegl_glVertexAttribL4dvEXT, .-bluegl_glVertexAttribL4dvEXT
 
 	.align	2
 	.global	bluegl_glGetActiveUniform
@@ -12747,7 +12747,7 @@ bluegl_glGetActiveUniform:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveUniform]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveUniform, .-glGetActiveUniform
+	.size	bluegl_glGetActiveUniform, .-bluegl_glGetActiveUniform
 
 	.align	2
 	.global	bluegl_glUniform2ui64vARB
@@ -12757,7 +12757,7 @@ bluegl_glUniform2ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2ui64vARB, .-glUniform2ui64vARB
+	.size	bluegl_glUniform2ui64vARB, .-bluegl_glUniform2ui64vARB
 
 	.align	2
 	.global	bluegl_glMakeNamedBufferResidentNV
@@ -12767,7 +12767,7 @@ bluegl_glMakeNamedBufferResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeNamedBufferResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeNamedBufferResidentNV, .-glMakeNamedBufferResidentNV
+	.size	bluegl_glMakeNamedBufferResidentNV, .-bluegl_glMakeNamedBufferResidentNV
 
 	.align	2
 	.global	bluegl_glPathGlyphIndexRangeNV
@@ -12777,7 +12777,7 @@ bluegl_glPathGlyphIndexRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathGlyphIndexRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathGlyphIndexRangeNV, .-glPathGlyphIndexRangeNV
+	.size	bluegl_glPathGlyphIndexRangeNV, .-bluegl_glPathGlyphIndexRangeNV
 
 	.align	2
 	.global	bluegl_glEnableVertexAttribAPPLE
@@ -12787,7 +12787,7 @@ bluegl_glEnableVertexAttribAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableVertexAttribAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableVertexAttribAPPLE, .-glEnableVertexAttribAPPLE
+	.size	bluegl_glEnableVertexAttribAPPLE, .-bluegl_glEnableVertexAttribAPPLE
 
 	.align	2
 	.global	bluegl_glProgramEnvParameterI4ivNV
@@ -12797,7 +12797,7 @@ bluegl_glProgramEnvParameterI4ivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameterI4ivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameterI4ivNV, .-glProgramEnvParameterI4ivNV
+	.size	bluegl_glProgramEnvParameterI4ivNV, .-bluegl_glProgramEnvParameterI4ivNV
 
 	.align	2
 	.global	bluegl_glMultiTexParameterfEXT
@@ -12807,7 +12807,7 @@ bluegl_glMultiTexParameterfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexParameterfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexParameterfEXT, .-glMultiTexParameterfEXT
+	.size	bluegl_glMultiTexParameterfEXT, .-bluegl_glMultiTexParameterfEXT
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTextureLayer
@@ -12817,7 +12817,7 @@ bluegl_glNamedFramebufferTextureLayer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTextureLayer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTextureLayer, .-glNamedFramebufferTextureLayer
+	.size	bluegl_glNamedFramebufferTextureLayer, .-bluegl_glNamedFramebufferTextureLayer
 
 	.align	2
 	.global	bluegl_glGetVertexArrayIntegervEXT
@@ -12827,7 +12827,7 @@ bluegl_glGetVertexArrayIntegervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexArrayIntegervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexArrayIntegervEXT, .-glGetVertexArrayIntegervEXT
+	.size	bluegl_glGetVertexArrayIntegervEXT, .-bluegl_glGetVertexArrayIntegervEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib3dARB
@@ -12837,7 +12837,7 @@ bluegl_glVertexAttrib3dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3dARB, .-glVertexAttrib3dARB
+	.size	bluegl_glVertexAttrib3dARB, .-bluegl_glVertexAttrib3dARB
 
 	.align	2
 	.global	bluegl_glVDPAUIsSurfaceNV
@@ -12847,7 +12847,7 @@ bluegl_glVDPAUIsSurfaceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUIsSurfaceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUIsSurfaceNV, .-glVDPAUIsSurfaceNV
+	.size	bluegl_glVDPAUIsSurfaceNV, .-bluegl_glVDPAUIsSurfaceNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3sv
@@ -12857,7 +12857,7 @@ bluegl_glSecondaryColor3sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3sv, .-glSecondaryColor3sv
+	.size	bluegl_glSecondaryColor3sv, .-bluegl_glSecondaryColor3sv
 
 	.align	2
 	.global	bluegl_glIsAsyncMarkerSGIX
@@ -12867,7 +12867,7 @@ bluegl_glIsAsyncMarkerSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsAsyncMarkerSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsAsyncMarkerSGIX, .-glIsAsyncMarkerSGIX
+	.size	bluegl_glIsAsyncMarkerSGIX, .-bluegl_glIsAsyncMarkerSGIX
 
 	.align	2
 	.global	bluegl_glFragmentMaterialfvSGIX
@@ -12877,7 +12877,7 @@ bluegl_glFragmentMaterialfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentMaterialfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentMaterialfvSGIX, .-glFragmentMaterialfvSGIX
+	.size	bluegl_glFragmentMaterialfvSGIX, .-bluegl_glFragmentMaterialfvSGIX
 
 	.align	2
 	.global	bluegl_glCreatePerfQueryINTEL
@@ -12887,7 +12887,7 @@ bluegl_glCreatePerfQueryINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreatePerfQueryINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreatePerfQueryINTEL, .-glCreatePerfQueryINTEL
+	.size	bluegl_glCreatePerfQueryINTEL, .-bluegl_glCreatePerfQueryINTEL
 
 	.align	2
 	.global	bluegl_glIsCommandListNV
@@ -12897,7 +12897,7 @@ bluegl_glIsCommandListNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsCommandListNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsCommandListNV, .-glIsCommandListNV
+	.size	bluegl_glIsCommandListNV, .-bluegl_glIsCommandListNV
 
 	.align	2
 	.global	bluegl_glConvolutionParameteriEXT
@@ -12907,7 +12907,7 @@ bluegl_glConvolutionParameteriEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameteriEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameteriEXT, .-glConvolutionParameteriEXT
+	.size	bluegl_glConvolutionParameteriEXT, .-bluegl_glConvolutionParameteriEXT
 
 	.align	2
 	.global	bluegl_glTexParameterIuivEXT
@@ -12917,7 +12917,7 @@ bluegl_glTexParameterIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterIuivEXT, .-glTexParameterIuivEXT
+	.size	bluegl_glTexParameterIuivEXT, .-bluegl_glTexParameterIuivEXT
 
 	.align	2
 	.global	bluegl_glMinSampleShading
@@ -12927,7 +12927,7 @@ bluegl_glMinSampleShading:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMinSampleShading]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMinSampleShading, .-glMinSampleShading
+	.size	bluegl_glMinSampleShading, .-bluegl_glMinSampleShading
 
 	.align	2
 	.global	bluegl_glVertexAttribL3dEXT
@@ -12937,7 +12937,7 @@ bluegl_glVertexAttribL3dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3dEXT, .-glVertexAttribL3dEXT
+	.size	bluegl_glVertexAttribL3dEXT, .-bluegl_glVertexAttribL3dEXT
 
 	.align	2
 	.global	bluegl_glFramebufferRenderbuffer
@@ -12947,7 +12947,7 @@ bluegl_glFramebufferRenderbuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferRenderbuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferRenderbuffer, .-glFramebufferRenderbuffer
+	.size	bluegl_glFramebufferRenderbuffer, .-bluegl_glFramebufferRenderbuffer
 
 	.align	2
 	.global	bluegl_glGetUniformLocationARB
@@ -12957,7 +12957,7 @@ bluegl_glGetUniformLocationARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformLocationARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformLocationARB, .-glGetUniformLocationARB
+	.size	bluegl_glGetUniformLocationARB, .-bluegl_glGetUniformLocationARB
 
 	.align	2
 	.global	bluegl_glPathParameterfvNV
@@ -12967,7 +12967,7 @@ bluegl_glPathParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathParameterfvNV, .-glPathParameterfvNV
+	.size	bluegl_glPathParameterfvNV, .-bluegl_glPathParameterfvNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib3sNV
@@ -12977,7 +12977,7 @@ bluegl_glVertexAttrib3sNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3sNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3sNV, .-glVertexAttrib3sNV
+	.size	bluegl_glVertexAttrib3sNV, .-bluegl_glVertexAttrib3sNV
 
 	.align	2
 	.global	bluegl_glGetDoublei_v
@@ -12987,7 +12987,7 @@ bluegl_glGetDoublei_v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDoublei_v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDoublei_v, .-glGetDoublei_v
+	.size	bluegl_glGetDoublei_v, .-bluegl_glGetDoublei_v
 
 	.align	2
 	.global	bluegl_glVertexAttrib1sv
@@ -12997,7 +12997,7 @@ bluegl_glVertexAttrib1sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1sv, .-glVertexAttrib1sv
+	.size	bluegl_glVertexAttrib1sv, .-bluegl_glVertexAttrib1sv
 
 	.align	2
 	.global	bluegl_glBindSampler
@@ -13007,7 +13007,7 @@ bluegl_glBindSampler:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindSampler]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindSampler, .-glBindSampler
+	.size	bluegl_glBindSampler, .-bluegl_glBindSampler
 
 	.align	2
 	.global	bluegl_glLineWidth
@@ -13017,7 +13017,7 @@ bluegl_glLineWidth:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLineWidth]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLineWidth, .-glLineWidth
+	.size	bluegl_glLineWidth, .-bluegl_glLineWidth
 
 	.align	2
 	.global	bluegl_glVertexArrayRangeAPPLE
@@ -13027,7 +13027,7 @@ bluegl_glVertexArrayRangeAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayRangeAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayRangeAPPLE, .-glVertexArrayRangeAPPLE
+	.size	bluegl_glVertexArrayRangeAPPLE, .-bluegl_glVertexArrayRangeAPPLE
 
 	.align	2
 	.global	bluegl_glBindBufferOffsetEXT
@@ -13037,7 +13037,7 @@ bluegl_glBindBufferOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferOffsetEXT, .-glBindBufferOffsetEXT
+	.size	bluegl_glBindBufferOffsetEXT, .-bluegl_glBindBufferOffsetEXT
 
 	.align	2
 	.global	bluegl_glWeightfvARB
@@ -13047,7 +13047,7 @@ bluegl_glWeightfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightfvARB, .-glWeightfvARB
+	.size	bluegl_glWeightfvARB, .-bluegl_glWeightfvARB
 
 	.align	2
 	.global	bluegl_glGetIntegeri_v
@@ -13057,7 +13057,7 @@ bluegl_glGetIntegeri_v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetIntegeri_v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetIntegeri_v, .-glGetIntegeri_v
+	.size	bluegl_glGetIntegeri_v, .-bluegl_glGetIntegeri_v
 
 	.align	2
 	.global	bluegl_glGetTransformFeedbackVarying
@@ -13067,7 +13067,7 @@ bluegl_glGetTransformFeedbackVarying:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTransformFeedbackVarying]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTransformFeedbackVarying, .-glGetTransformFeedbackVarying
+	.size	bluegl_glGetTransformFeedbackVarying, .-bluegl_glGetTransformFeedbackVarying
 
 	.align	2
 	.global	bluegl_glVDPAUMapSurfacesNV
@@ -13077,7 +13077,7 @@ bluegl_glVDPAUMapSurfacesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUMapSurfacesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUMapSurfacesNV, .-glVDPAUMapSurfacesNV
+	.size	bluegl_glVDPAUMapSurfacesNV, .-bluegl_glVDPAUMapSurfacesNV
 
 	.align	2
 	.global	bluegl_glProgramLocalParameter4fvARB
@@ -13087,7 +13087,7 @@ bluegl_glProgramLocalParameter4fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameter4fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameter4fvARB, .-glProgramLocalParameter4fvARB
+	.size	bluegl_glProgramLocalParameter4fvARB, .-bluegl_glProgramLocalParameter4fvARB
 
 	.align	2
 	.global	bluegl_glGetTransformFeedbackVaryingNV
@@ -13097,7 +13097,7 @@ bluegl_glGetTransformFeedbackVaryingNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTransformFeedbackVaryingNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTransformFeedbackVaryingNV, .-glGetTransformFeedbackVaryingNV
+	.size	bluegl_glGetTransformFeedbackVaryingNV, .-bluegl_glGetTransformFeedbackVaryingNV
 
 	.align	2
 	.global	bluegl_glDeleteNamesAMD
@@ -13107,7 +13107,7 @@ bluegl_glDeleteNamesAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteNamesAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteNamesAMD, .-glDeleteNamesAMD
+	.size	bluegl_glDeleteNamesAMD, .-bluegl_glDeleteNamesAMD
 
 	.align	2
 	.global	bluegl_glColorFragmentOp2ATI
@@ -13117,7 +13117,7 @@ bluegl_glColorFragmentOp2ATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorFragmentOp2ATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorFragmentOp2ATI, .-glColorFragmentOp2ATI
+	.size	bluegl_glColorFragmentOp2ATI, .-bluegl_glColorFragmentOp2ATI
 
 	.align	2
 	.global	bluegl_glGetTextureHandleNV
@@ -13127,7 +13127,7 @@ bluegl_glGetTextureHandleNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureHandleNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureHandleNV, .-glGetTextureHandleNV
+	.size	bluegl_glGetTextureHandleNV, .-bluegl_glGetTextureHandleNV
 
 	.align	2
 	.global	bluegl_glDepthRangef
@@ -13137,7 +13137,7 @@ bluegl_glDepthRangef:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthRangef]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthRangef, .-glDepthRangef
+	.size	bluegl_glDepthRangef, .-bluegl_glDepthRangef
 
 	.align	2
 	.global	bluegl_glGetFragmentMaterialivSGIX
@@ -13147,7 +13147,7 @@ bluegl_glGetFragmentMaterialivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFragmentMaterialivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFragmentMaterialivSGIX, .-glGetFragmentMaterialivSGIX
+	.size	bluegl_glGetFragmentMaterialivSGIX, .-bluegl_glGetFragmentMaterialivSGIX
 
 	.align	2
 	.global	bluegl_glVideoCaptureStreamParameterfvNV
@@ -13157,7 +13157,7 @@ bluegl_glVideoCaptureStreamParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVideoCaptureStreamParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVideoCaptureStreamParameterfvNV, .-glVideoCaptureStreamParameterfvNV
+	.size	bluegl_glVideoCaptureStreamParameterfvNV, .-bluegl_glVideoCaptureStreamParameterfvNV
 
 	.align	2
 	.global	bluegl_glDeleteProgramsARB
@@ -13167,7 +13167,7 @@ bluegl_glDeleteProgramsARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteProgramsARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteProgramsARB, .-glDeleteProgramsARB
+	.size	bluegl_glDeleteProgramsARB, .-bluegl_glDeleteProgramsARB
 
 	.align	2
 	.global	bluegl_glWindowPos3fvARB
@@ -13177,7 +13177,7 @@ bluegl_glWindowPos3fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3fvARB, .-glWindowPos3fvARB
+	.size	bluegl_glWindowPos3fvARB, .-bluegl_glWindowPos3fvARB
 
 	.align	2
 	.global	bluegl_glFeedbackBufferxOES
@@ -13187,7 +13187,7 @@ bluegl_glFeedbackBufferxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFeedbackBufferxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFeedbackBufferxOES, .-glFeedbackBufferxOES
+	.size	bluegl_glFeedbackBufferxOES, .-bluegl_glFeedbackBufferxOES
 
 	.align	2
 	.global	bluegl_glGetTexBumpParameterfvATI
@@ -13197,7 +13197,7 @@ bluegl_glGetTexBumpParameterfvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexBumpParameterfvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexBumpParameterfvATI, .-glGetTexBumpParameterfvATI
+	.size	bluegl_glGetTexBumpParameterfvATI, .-bluegl_glGetTexBumpParameterfvATI
 
 	.align	2
 	.global	bluegl_glEnablei
@@ -13207,7 +13207,7 @@ bluegl_glEnablei:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnablei]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnablei, .-glEnablei
+	.size	bluegl_glEnablei, .-bluegl_glEnablei
 
 	.align	2
 	.global	bluegl_glBindProgramARB
@@ -13217,7 +13217,7 @@ bluegl_glBindProgramARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindProgramARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindProgramARB, .-glBindProgramARB
+	.size	bluegl_glBindProgramARB, .-bluegl_glBindProgramARB
 
 	.align	2
 	.global	bluegl_glProgramUniform3ui64vARB
@@ -13227,7 +13227,7 @@ bluegl_glProgramUniform3ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3ui64vARB, .-glProgramUniform3ui64vARB
+	.size	bluegl_glProgramUniform3ui64vARB, .-bluegl_glProgramUniform3ui64vARB
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2dv
@@ -13237,7 +13237,7 @@ bluegl_glProgramUniformMatrix2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2dv, .-glProgramUniformMatrix2dv
+	.size	bluegl_glProgramUniformMatrix2dv, .-bluegl_glProgramUniformMatrix2dv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2hvNV
@@ -13247,7 +13247,7 @@ bluegl_glMultiTexCoord2hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2hvNV, .-glMultiTexCoord2hvNV
+	.size	bluegl_glMultiTexCoord2hvNV, .-bluegl_glMultiTexCoord2hvNV
 
 	.align	2
 	.global	bluegl_glSampleCoverageARB
@@ -13257,7 +13257,7 @@ bluegl_glSampleCoverageARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSampleCoverageARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSampleCoverageARB, .-glSampleCoverageARB
+	.size	bluegl_glSampleCoverageARB, .-bluegl_glSampleCoverageARB
 
 	.align	2
 	.global	bluegl_glProgramUniform2ui64vARB
@@ -13267,7 +13267,7 @@ bluegl_glProgramUniform2ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2ui64vARB, .-glProgramUniform2ui64vARB
+	.size	bluegl_glProgramUniform2ui64vARB, .-bluegl_glProgramUniform2ui64vARB
 
 	.align	2
 	.global	bluegl_glPixelDataRangeNV
@@ -13277,7 +13277,7 @@ bluegl_glPixelDataRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelDataRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelDataRangeNV, .-glPixelDataRangeNV
+	.size	bluegl_glPixelDataRangeNV, .-bluegl_glPixelDataRangeNV
 
 	.align	2
 	.global	bluegl_glVertexStream3svATI
@@ -13287,7 +13287,7 @@ bluegl_glVertexStream3svATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3svATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3svATI, .-glVertexStream3svATI
+	.size	bluegl_glVertexStream3svATI, .-bluegl_glVertexStream3svATI
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN
@@ -13297,7 +13297,7 @@ bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN, .-glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN, .-bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glTexCoord3hvNV
@@ -13307,7 +13307,7 @@ bluegl_glTexCoord3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord3hvNV, .-glTexCoord3hvNV
+	.size	bluegl_glTexCoord3hvNV, .-bluegl_glTexCoord3hvNV
 
 	.align	2
 	.global	bluegl_glSampleMaski
@@ -13317,7 +13317,7 @@ bluegl_glSampleMaski:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSampleMaski]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSampleMaski, .-glSampleMaski
+	.size	bluegl_glSampleMaski, .-bluegl_glSampleMaski
 
 	.align	2
 	.global	bluegl_glIndexFuncEXT
@@ -13327,7 +13327,7 @@ bluegl_glIndexFuncEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIndexFuncEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIndexFuncEXT, .-glIndexFuncEXT
+	.size	bluegl_glIndexFuncEXT, .-bluegl_glIndexFuncEXT
 
 	.align	2
 	.global	bluegl_glPointParameteriNV
@@ -13337,7 +13337,7 @@ bluegl_glPointParameteriNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameteriNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameteriNV, .-glPointParameteriNV
+	.size	bluegl_glPointParameteriNV, .-bluegl_glPointParameteriNV
 
 	.align	2
 	.global	bluegl_glUniformMatrix3x2fv
@@ -13347,7 +13347,7 @@ bluegl_glUniformMatrix3x2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix3x2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix3x2fv, .-glUniformMatrix3x2fv
+	.size	bluegl_glUniformMatrix3x2fv, .-bluegl_glUniformMatrix3x2fv
 
 	.align	2
 	.global	bluegl_glGetFramebufferParameterivEXT
@@ -13357,7 +13357,7 @@ bluegl_glGetFramebufferParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFramebufferParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFramebufferParameterivEXT, .-glGetFramebufferParameterivEXT
+	.size	bluegl_glGetFramebufferParameterivEXT, .-bluegl_glGetFramebufferParameterivEXT
 
 	.align	2
 	.global	bluegl_glTexSubImage3D
@@ -13367,7 +13367,7 @@ bluegl_glTexSubImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexSubImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexSubImage3D, .-glTexSubImage3D
+	.size	bluegl_glTexSubImage3D, .-bluegl_glTexSubImage3D
 
 	.align	2
 	.global	bluegl_glGetInternalformativ
@@ -13377,7 +13377,7 @@ bluegl_glGetInternalformativ:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInternalformativ]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInternalformativ, .-glGetInternalformativ
+	.size	bluegl_glGetInternalformativ, .-bluegl_glGetInternalformativ
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTexture3DEXT
@@ -13387,7 +13387,7 @@ bluegl_glNamedFramebufferTexture3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTexture3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTexture3DEXT, .-glNamedFramebufferTexture3DEXT
+	.size	bluegl_glNamedFramebufferTexture3DEXT, .-bluegl_glNamedFramebufferTexture3DEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib2dv
@@ -13397,7 +13397,7 @@ bluegl_glVertexAttrib2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2dv, .-glVertexAttrib2dv
+	.size	bluegl_glVertexAttrib2dv, .-bluegl_glVertexAttrib2dv
 
 	.align	2
 	.global	bluegl_glVariantubvEXT
@@ -13407,7 +13407,7 @@ bluegl_glVariantubvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantubvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantubvEXT, .-glVariantubvEXT
+	.size	bluegl_glVariantubvEXT, .-bluegl_glVariantubvEXT
 
 	.align	2
 	.global	bluegl_glUniformMatrix3x4fv
@@ -13417,7 +13417,7 @@ bluegl_glUniformMatrix3x4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix3x4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix3x4fv, .-glUniformMatrix3x4fv
+	.size	bluegl_glUniformMatrix3x4fv, .-bluegl_glUniformMatrix3x4fv
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3fvEXT
@@ -13427,7 +13427,7 @@ bluegl_glProgramUniformMatrix3fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3fvEXT, .-glProgramUniformMatrix3fvEXT
+	.size	bluegl_glProgramUniformMatrix3fvEXT, .-bluegl_glProgramUniformMatrix3fvEXT
 
 	.align	2
 	.global	bluegl_glEnableVertexArrayEXT
@@ -13437,7 +13437,7 @@ bluegl_glEnableVertexArrayEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableVertexArrayEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableVertexArrayEXT, .-glEnableVertexArrayEXT
+	.size	bluegl_glEnableVertexArrayEXT, .-bluegl_glEnableVertexArrayEXT
 
 	.align	2
 	.global	bluegl_glColorTableParameterfvSGI
@@ -13447,7 +13447,7 @@ bluegl_glColorTableParameterfvSGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorTableParameterfvSGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorTableParameterfvSGI, .-glColorTableParameterfvSGI
+	.size	bluegl_glColorTableParameterfvSGI, .-bluegl_glColorTableParameterfvSGI
 
 	.align	2
 	.global	bluegl_glFogCoordf
@@ -13457,7 +13457,7 @@ bluegl_glFogCoordf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordf, .-glFogCoordf
+	.size	bluegl_glFogCoordf, .-bluegl_glFogCoordf
 
 	.align	2
 	.global	bluegl_glSpriteParameterivSGIX
@@ -13467,7 +13467,7 @@ bluegl_glSpriteParameterivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSpriteParameterivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSpriteParameterivSGIX, .-glSpriteParameterivSGIX
+	.size	bluegl_glSpriteParameterivSGIX, .-bluegl_glSpriteParameterivSGIX
 
 	.align	2
 	.global	bluegl_glGetColorTable
@@ -13477,7 +13477,7 @@ bluegl_glGetColorTable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTable, .-glGetColorTable
+	.size	bluegl_glGetColorTable, .-bluegl_glGetColorTable
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4ivARB
@@ -13487,7 +13487,7 @@ bluegl_glMultiTexCoord4ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4ivARB, .-glMultiTexCoord4ivARB
+	.size	bluegl_glMultiTexCoord4ivARB, .-bluegl_glMultiTexCoord4ivARB
 
 	.align	2
 	.global	bluegl_glTexCoordP2ui
@@ -13497,7 +13497,7 @@ bluegl_glTexCoordP2ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP2ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP2ui, .-glTexCoordP2ui
+	.size	bluegl_glTexCoordP2ui, .-bluegl_glTexCoordP2ui
 
 	.align	2
 	.global	bluegl_glColorMaski
@@ -13507,7 +13507,7 @@ bluegl_glColorMaski:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorMaski]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorMaski, .-glColorMaski
+	.size	bluegl_glColorMaski, .-bluegl_glColorMaski
 
 	.align	2
 	.global	bluegl_glPrimitiveRestartIndexNV
@@ -13517,7 +13517,7 @@ bluegl_glPrimitiveRestartIndexNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPrimitiveRestartIndexNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPrimitiveRestartIndexNV, .-glPrimitiveRestartIndexNV
+	.size	bluegl_glPrimitiveRestartIndexNV, .-bluegl_glPrimitiveRestartIndexNV
 
 	.align	2
 	.global	bluegl_glFragmentLightfvSGIX
@@ -13527,7 +13527,7 @@ bluegl_glFragmentLightfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightfvSGIX, .-glFragmentLightfvSGIX
+	.size	bluegl_glFragmentLightfvSGIX, .-bluegl_glFragmentLightfvSGIX
 
 	.align	2
 	.global	bluegl_glTexCoordPointerListIBM
@@ -13537,7 +13537,7 @@ bluegl_glTexCoordPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordPointerListIBM, .-glTexCoordPointerListIBM
+	.size	bluegl_glTexCoordPointerListIBM, .-bluegl_glTexCoordPointerListIBM
 
 	.align	2
 	.global	bluegl_glRectxOES
@@ -13547,7 +13547,7 @@ bluegl_glRectxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRectxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRectxOES, .-glRectxOES
+	.size	bluegl_glRectxOES, .-bluegl_glRectxOES
 
 	.align	2
 	.global	bluegl_glCopyNamedBufferSubData
@@ -13557,7 +13557,7 @@ bluegl_glCopyNamedBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyNamedBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyNamedBufferSubData, .-glCopyNamedBufferSubData
+	.size	bluegl_glCopyNamedBufferSubData, .-bluegl_glCopyNamedBufferSubData
 
 	.align	2
 	.global	bluegl_glGenProgramsNV
@@ -13567,7 +13567,7 @@ bluegl_glGenProgramsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenProgramsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenProgramsNV, .-glGenProgramsNV
+	.size	bluegl_glGenProgramsNV, .-bluegl_glGenProgramsNV
 
 	.align	2
 	.global	bluegl_glFragmentLightfSGIX
@@ -13577,7 +13577,7 @@ bluegl_glFragmentLightfSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightfSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightfSGIX, .-glFragmentLightfSGIX
+	.size	bluegl_glFragmentLightfSGIX, .-bluegl_glFragmentLightfSGIX
 
 	.align	2
 	.global	bluegl_glTexStorage3D
@@ -13587,7 +13587,7 @@ bluegl_glTexStorage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexStorage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexStorage3D, .-glTexStorage3D
+	.size	bluegl_glTexStorage3D, .-bluegl_glTexStorage3D
 
 	.align	2
 	.global	bluegl_glTextureParameteriv
@@ -13597,7 +13597,7 @@ bluegl_glTextureParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameteriv, .-glTextureParameteriv
+	.size	bluegl_glTextureParameteriv, .-bluegl_glTextureParameteriv
 
 	.align	2
 	.global	bluegl_glNamedBufferDataEXT
@@ -13607,7 +13607,7 @@ bluegl_glNamedBufferDataEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferDataEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferDataEXT, .-glNamedBufferDataEXT
+	.size	bluegl_glNamedBufferDataEXT, .-bluegl_glNamedBufferDataEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3fvARB
@@ -13617,7 +13617,7 @@ bluegl_glMultiTexCoord3fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3fvARB, .-glMultiTexCoord3fvARB
+	.size	bluegl_glMultiTexCoord3fvARB, .-bluegl_glMultiTexCoord3fvARB
 
 	.align	2
 	.global	bluegl_glImageTransformParameterivHP
@@ -13627,7 +13627,7 @@ bluegl_glImageTransformParameterivHP:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glImageTransformParameterivHP]
 	ldr	x16, [x16]
 	br	x16
-	.size	glImageTransformParameterivHP, .-glImageTransformParameterivHP
+	.size	bluegl_glImageTransformParameterivHP, .-bluegl_glImageTransformParameterivHP
 
 	.align	2
 	.global	bluegl_glSubpixelPrecisionBiasNV
@@ -13637,7 +13637,7 @@ bluegl_glSubpixelPrecisionBiasNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSubpixelPrecisionBiasNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSubpixelPrecisionBiasNV, .-glSubpixelPrecisionBiasNV
+	.size	bluegl_glSubpixelPrecisionBiasNV, .-bluegl_glSubpixelPrecisionBiasNV
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTexture
@@ -13647,7 +13647,7 @@ bluegl_glNamedFramebufferTexture:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTexture]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTexture, .-glNamedFramebufferTexture
+	.size	bluegl_glNamedFramebufferTexture, .-bluegl_glNamedFramebufferTexture
 
 	.align	2
 	.global	bluegl_glVertexAttrib4NsvARB
@@ -13657,7 +13657,7 @@ bluegl_glVertexAttrib4NsvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4NsvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4NsvARB, .-glVertexAttrib4NsvARB
+	.size	bluegl_glVertexAttrib4NsvARB, .-bluegl_glVertexAttrib4NsvARB
 
 	.align	2
 	.global	bluegl_glDrawMeshArraysSUN
@@ -13667,7 +13667,7 @@ bluegl_glDrawMeshArraysSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawMeshArraysSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawMeshArraysSUN, .-glDrawMeshArraysSUN
+	.size	bluegl_glDrawMeshArraysSUN, .-bluegl_glDrawMeshArraysSUN
 
 	.align	2
 	.global	bluegl_glIsImageHandleResidentARB
@@ -13677,7 +13677,7 @@ bluegl_glIsImageHandleResidentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsImageHandleResidentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsImageHandleResidentARB, .-glIsImageHandleResidentARB
+	.size	bluegl_glIsImageHandleResidentARB, .-bluegl_glIsImageHandleResidentARB
 
 	.align	2
 	.global	bluegl_glConvolutionParameterfEXT
@@ -13687,7 +13687,7 @@ bluegl_glConvolutionParameterfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameterfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameterfEXT, .-glConvolutionParameterfEXT
+	.size	bluegl_glConvolutionParameterfEXT, .-bluegl_glConvolutionParameterfEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x3fv
@@ -13697,7 +13697,7 @@ bluegl_glProgramUniformMatrix4x3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x3fv, .-glProgramUniformMatrix4x3fv
+	.size	bluegl_glProgramUniformMatrix4x3fv, .-bluegl_glProgramUniformMatrix4x3fv
 
 	.align	2
 	.global	bluegl_glVertexAttribI4iv
@@ -13707,7 +13707,7 @@ bluegl_glVertexAttribI4iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4iv, .-glVertexAttribI4iv
+	.size	bluegl_glVertexAttribI4iv, .-bluegl_glVertexAttribI4iv
 
 	.align	2
 	.global	bluegl_glFogCoordfvEXT
@@ -13717,7 +13717,7 @@ bluegl_glFogCoordfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordfvEXT, .-glFogCoordfvEXT
+	.size	bluegl_glFogCoordfvEXT, .-bluegl_glFogCoordfvEXT
 
 	.align	2
 	.global	bluegl_glVertexP3ui
@@ -13727,7 +13727,7 @@ bluegl_glVertexP3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexP3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexP3ui, .-glVertexP3ui
+	.size	bluegl_glVertexP3ui, .-bluegl_glVertexP3ui
 
 	.align	2
 	.global	bluegl_glVertexAttribL3i64NV
@@ -13737,7 +13737,7 @@ bluegl_glVertexAttribL3i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3i64NV, .-glVertexAttribL3i64NV
+	.size	bluegl_glVertexAttribL3i64NV, .-bluegl_glVertexAttribL3i64NV
 
 	.align	2
 	.global	bluegl_glStencilClearTagEXT
@@ -13747,7 +13747,7 @@ bluegl_glStencilClearTagEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilClearTagEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilClearTagEXT, .-glStencilClearTagEXT
+	.size	bluegl_glStencilClearTagEXT, .-bluegl_glStencilClearTagEXT
 
 	.align	2
 	.global	bluegl_glGetActiveUniformName
@@ -13757,7 +13757,7 @@ bluegl_glGetActiveUniformName:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveUniformName]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveUniformName, .-glGetActiveUniformName
+	.size	bluegl_glGetActiveUniformName, .-bluegl_glGetActiveUniformName
 
 	.align	2
 	.global	bluegl_glMultiTexGendEXT
@@ -13767,7 +13767,7 @@ bluegl_glMultiTexGendEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexGendEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexGendEXT, .-glMultiTexGendEXT
+	.size	bluegl_glMultiTexGendEXT, .-bluegl_glMultiTexGendEXT
 
 	.align	2
 	.global	bluegl_glUniform4ui64vNV
@@ -13777,7 +13777,7 @@ bluegl_glUniform4ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4ui64vNV, .-glUniform4ui64vNV
+	.size	bluegl_glUniform4ui64vNV, .-bluegl_glUniform4ui64vNV
 
 	.align	2
 	.global	bluegl_glDebugMessageEnableAMD
@@ -13787,7 +13787,7 @@ bluegl_glDebugMessageEnableAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageEnableAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageEnableAMD, .-glDebugMessageEnableAMD
+	.size	bluegl_glDebugMessageEnableAMD, .-bluegl_glDebugMessageEnableAMD
 
 	.align	2
 	.global	bluegl_glGetFramebufferAttachmentParameteriv
@@ -13797,7 +13797,7 @@ bluegl_glGetFramebufferAttachmentParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFramebufferAttachmentParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFramebufferAttachmentParameteriv, .-glGetFramebufferAttachmentParameteriv
+	.size	bluegl_glGetFramebufferAttachmentParameteriv, .-bluegl_glGetFramebufferAttachmentParameteriv
 
 	.align	2
 	.global	bluegl_glCopyTexSubImage2DEXT
@@ -13807,7 +13807,7 @@ bluegl_glCopyTexSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexSubImage2DEXT, .-glCopyTexSubImage2DEXT
+	.size	bluegl_glCopyTexSubImage2DEXT, .-bluegl_glCopyTexSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glGenRenderbuffersEXT
@@ -13817,7 +13817,7 @@ bluegl_glGenRenderbuffersEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenRenderbuffersEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenRenderbuffersEXT, .-glGenRenderbuffersEXT
+	.size	bluegl_glGenRenderbuffersEXT, .-bluegl_glGenRenderbuffersEXT
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameterI4ivEXT
@@ -13827,7 +13827,7 @@ bluegl_glNamedProgramLocalParameterI4ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameterI4ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameterI4ivEXT, .-glNamedProgramLocalParameterI4ivEXT
+	.size	bluegl_glNamedProgramLocalParameterI4ivEXT, .-bluegl_glNamedProgramLocalParameterI4ivEXT
 
 	.align	2
 	.global	bluegl_glGetMultiTexParameterIuivEXT
@@ -13837,7 +13837,7 @@ bluegl_glGetMultiTexParameterIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexParameterIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexParameterIuivEXT, .-glGetMultiTexParameterIuivEXT
+	.size	bluegl_glGetMultiTexParameterIuivEXT, .-bluegl_glGetMultiTexParameterIuivEXT
 
 	.align	2
 	.global	bluegl_glNamedFramebufferDrawBuffer
@@ -13847,7 +13847,7 @@ bluegl_glNamedFramebufferDrawBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferDrawBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferDrawBuffer, .-glNamedFramebufferDrawBuffer
+	.size	bluegl_glNamedFramebufferDrawBuffer, .-bluegl_glNamedFramebufferDrawBuffer
 
 	.align	2
 	.global	bluegl_glTexParameteriv
@@ -13857,7 +13857,7 @@ bluegl_glTexParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameteriv, .-glTexParameteriv
+	.size	bluegl_glTexParameteriv, .-bluegl_glTexParameteriv
 
 	.align	2
 	.global	bluegl_glUniform4ivARB
@@ -13867,7 +13867,7 @@ bluegl_glUniform4ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4ivARB, .-glUniform4ivARB
+	.size	bluegl_glUniform4ivARB, .-bluegl_glUniform4ivARB
 
 	.align	2
 	.global	bluegl_glMatrixOrthoEXT
@@ -13877,7 +13877,7 @@ bluegl_glMatrixOrthoEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixOrthoEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixOrthoEXT, .-glMatrixOrthoEXT
+	.size	bluegl_glMatrixOrthoEXT, .-bluegl_glMatrixOrthoEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexBuffer
@@ -13887,7 +13887,7 @@ bluegl_glVertexArrayVertexBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexBuffer, .-glVertexArrayVertexBuffer
+	.size	bluegl_glVertexArrayVertexBuffer, .-bluegl_glVertexArrayVertexBuffer
 
 	.align	2
 	.global	bluegl_glGetTexImage
@@ -13897,7 +13897,7 @@ bluegl_glGetTexImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexImage, .-glGetTexImage
+	.size	bluegl_glGetTexImage, .-bluegl_glGetTexImage
 
 	.align	2
 	.global	bluegl_glProgramUniform4ui64vNV
@@ -13907,7 +13907,7 @@ bluegl_glProgramUniform4ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4ui64vNV, .-glProgramUniform4ui64vNV
+	.size	bluegl_glProgramUniform4ui64vNV, .-bluegl_glProgramUniform4ui64vNV
 
 	.align	2
 	.global	bluegl_glGetNamedStringivARB
@@ -13917,7 +13917,7 @@ bluegl_glGetNamedStringivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedStringivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedStringivARB, .-glGetNamedStringivARB
+	.size	bluegl_glGetNamedStringivARB, .-bluegl_glGetNamedStringivARB
 
 	.align	2
 	.global	bluegl_glVertexAttribL1i64vNV
@@ -13927,7 +13927,7 @@ bluegl_glVertexAttribL1i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1i64vNV, .-glVertexAttribL1i64vNV
+	.size	bluegl_glVertexAttribL1i64vNV, .-bluegl_glVertexAttribL1i64vNV
 
 	.align	2
 	.global	bluegl_glTransformFeedbackBufferBase
@@ -13937,7 +13937,7 @@ bluegl_glTransformFeedbackBufferBase:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformFeedbackBufferBase]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformFeedbackBufferBase, .-glTransformFeedbackBufferBase
+	.size	bluegl_glTransformFeedbackBufferBase, .-bluegl_glTransformFeedbackBufferBase
 
 	.align	2
 	.global	bluegl_glPointParameterivNV
@@ -13947,7 +13947,7 @@ bluegl_glPointParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterivNV, .-glPointParameterivNV
+	.size	bluegl_glPointParameterivNV, .-bluegl_glPointParameterivNV
 
 	.align	2
 	.global	bluegl_glGetDetailTexFuncSGIS
@@ -13957,7 +13957,7 @@ bluegl_glGetDetailTexFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDetailTexFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDetailTexFuncSGIS, .-glGetDetailTexFuncSGIS
+	.size	bluegl_glGetDetailTexFuncSGIS, .-bluegl_glGetDetailTexFuncSGIS
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiColor3fVertex3fvSUN
@@ -13967,7 +13967,7 @@ bluegl_glReplacementCodeuiColor3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiColor3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiColor3fVertex3fvSUN, .-glReplacementCodeuiColor3fVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiColor3fVertex3fvSUN, .-bluegl_glReplacementCodeuiColor3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glProgramLocalParameter4fARB
@@ -13977,7 +13977,7 @@ bluegl_glProgramLocalParameter4fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameter4fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameter4fARB, .-glProgramLocalParameter4fARB
+	.size	bluegl_glProgramLocalParameter4fARB, .-bluegl_glProgramLocalParameter4fARB
 
 	.align	2
 	.global	bluegl_glColorSubTable
@@ -13987,7 +13987,7 @@ bluegl_glColorSubTable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorSubTable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorSubTable, .-glColorSubTable
+	.size	bluegl_glColorSubTable, .-bluegl_glColorSubTable
 
 	.align	2
 	.global	bluegl_glMultiTexGenfvEXT
@@ -13997,7 +13997,7 @@ bluegl_glMultiTexGenfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexGenfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexGenfvEXT, .-glMultiTexGenfvEXT
+	.size	bluegl_glMultiTexGenfvEXT, .-bluegl_glMultiTexGenfvEXT
 
 	.align	2
 	.global	bluegl_glGetNamedBufferSubData
@@ -14007,7 +14007,7 @@ bluegl_glGetNamedBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferSubData, .-glGetNamedBufferSubData
+	.size	bluegl_glGetNamedBufferSubData, .-bluegl_glGetNamedBufferSubData
 
 	.align	2
 	.global	bluegl_glStencilFuncSeparateATI
@@ -14017,7 +14017,7 @@ bluegl_glStencilFuncSeparateATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilFuncSeparateATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilFuncSeparateATI, .-glStencilFuncSeparateATI
+	.size	bluegl_glStencilFuncSeparateATI, .-bluegl_glStencilFuncSeparateATI
 
 	.align	2
 	.global	bluegl_glProgramUniform2iv
@@ -14027,7 +14027,7 @@ bluegl_glProgramUniform2iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2iv, .-glProgramUniform2iv
+	.size	bluegl_glProgramUniform2iv, .-bluegl_glProgramUniform2iv
 
 	.align	2
 	.global	bluegl_glGetQueryiv
@@ -14037,7 +14037,7 @@ bluegl_glGetQueryiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryiv, .-glGetQueryiv
+	.size	bluegl_glGetQueryiv, .-bluegl_glGetQueryiv
 
 	.align	2
 	.global	bluegl_glGetTransformFeedbackiv
@@ -14047,7 +14047,7 @@ bluegl_glGetTransformFeedbackiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTransformFeedbackiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTransformFeedbackiv, .-glGetTransformFeedbackiv
+	.size	bluegl_glGetTransformFeedbackiv, .-bluegl_glGetTransformFeedbackiv
 
 	.align	2
 	.global	bluegl_glListParameterivSGIX
@@ -14057,7 +14057,7 @@ bluegl_glListParameterivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glListParameterivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glListParameterivSGIX, .-glListParameterivSGIX
+	.size	bluegl_glListParameterivSGIX, .-bluegl_glListParameterivSGIX
 
 	.align	2
 	.global	bluegl_glCreateQueries
@@ -14067,7 +14067,7 @@ bluegl_glCreateQueries:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateQueries]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateQueries, .-glCreateQueries
+	.size	bluegl_glCreateQueries, .-bluegl_glCreateQueries
 
 	.align	2
 	.global	bluegl_glGetSamplerParameterfv
@@ -14077,7 +14077,7 @@ bluegl_glGetSamplerParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSamplerParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSamplerParameterfv, .-glGetSamplerParameterfv
+	.size	bluegl_glGetSamplerParameterfv, .-bluegl_glGetSamplerParameterfv
 
 	.align	2
 	.global	bluegl_glObjectLabel
@@ -14087,7 +14087,7 @@ bluegl_glObjectLabel:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glObjectLabel]
 	ldr	x16, [x16]
 	br	x16
-	.size	glObjectLabel, .-glObjectLabel
+	.size	bluegl_glObjectLabel, .-bluegl_glObjectLabel
 
 	.align	2
 	.global	bluegl_glProgramUniform3i64NV
@@ -14097,7 +14097,7 @@ bluegl_glProgramUniform3i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3i64NV, .-glProgramUniform3i64NV
+	.size	bluegl_glProgramUniform3i64NV, .-bluegl_glProgramUniform3i64NV
 
 	.align	2
 	.global	bluegl_glGetTextureHandleARB
@@ -14107,7 +14107,7 @@ bluegl_glGetTextureHandleARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureHandleARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureHandleARB, .-glGetTextureHandleARB
+	.size	bluegl_glGetTextureHandleARB, .-bluegl_glGetTextureHandleARB
 
 	.align	2
 	.global	bluegl_glAlphaFragmentOp1ATI
@@ -14117,7 +14117,7 @@ bluegl_glAlphaFragmentOp1ATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAlphaFragmentOp1ATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAlphaFragmentOp1ATI, .-glAlphaFragmentOp1ATI
+	.size	bluegl_glAlphaFragmentOp1ATI, .-bluegl_glAlphaFragmentOp1ATI
 
 	.align	2
 	.global	bluegl_glColorTableParameteriv
@@ -14127,7 +14127,7 @@ bluegl_glColorTableParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorTableParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorTableParameteriv, .-glColorTableParameteriv
+	.size	bluegl_glColorTableParameteriv, .-bluegl_glColorTableParameteriv
 
 	.align	2
 	.global	bluegl_glGetUniformIndices
@@ -14137,7 +14137,7 @@ bluegl_glGetUniformIndices:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformIndices]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformIndices, .-glGetUniformIndices
+	.size	bluegl_glGetUniformIndices, .-bluegl_glGetUniformIndices
 
 	.align	2
 	.global	bluegl_glMultiTexImage3DEXT
@@ -14147,7 +14147,7 @@ bluegl_glMultiTexImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexImage3DEXT, .-glMultiTexImage3DEXT
+	.size	bluegl_glMultiTexImage3DEXT, .-bluegl_glMultiTexImage3DEXT
 
 	.align	2
 	.global	bluegl_glCoverageModulationTableNV
@@ -14157,7 +14157,7 @@ bluegl_glCoverageModulationTableNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCoverageModulationTableNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCoverageModulationTableNV, .-glCoverageModulationTableNV
+	.size	bluegl_glCoverageModulationTableNV, .-bluegl_glCoverageModulationTableNV
 
 	.align	2
 	.global	bluegl_glPointParameteriv
@@ -14167,7 +14167,7 @@ bluegl_glPointParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameteriv, .-glPointParameteriv
+	.size	bluegl_glPointParameteriv, .-bluegl_glPointParameteriv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4svARB
@@ -14177,7 +14177,7 @@ bluegl_glMultiTexCoord4svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4svARB, .-glMultiTexCoord4svARB
+	.size	bluegl_glMultiTexCoord4svARB, .-bluegl_glMultiTexCoord4svARB
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x4dvEXT
@@ -14187,7 +14187,7 @@ bluegl_glProgramUniformMatrix3x4dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x4dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x4dvEXT, .-glProgramUniformMatrix3x4dvEXT
+	.size	bluegl_glProgramUniformMatrix3x4dvEXT, .-bluegl_glProgramUniformMatrix3x4dvEXT
 
 	.align	2
 	.global	bluegl_glNormal3xvOES
@@ -14197,7 +14197,7 @@ bluegl_glNormal3xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormal3xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormal3xvOES, .-glNormal3xvOES
+	.size	bluegl_glNormal3xvOES, .-bluegl_glNormal3xvOES
 
 	.align	2
 	.global	bluegl_glGetActiveVaryingNV
@@ -14207,7 +14207,7 @@ bluegl_glGetActiveVaryingNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveVaryingNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveVaryingNV, .-glGetActiveVaryingNV
+	.size	bluegl_glGetActiveVaryingNV, .-bluegl_glGetActiveVaryingNV
 
 	.align	2
 	.global	bluegl_glUniform1i64vARB
@@ -14217,7 +14217,7 @@ bluegl_glUniform1i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1i64vARB, .-glUniform1i64vARB
+	.size	bluegl_glUniform1i64vARB, .-bluegl_glUniform1i64vARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1dv
@@ -14227,7 +14227,7 @@ bluegl_glMultiTexCoord1dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1dv, .-glMultiTexCoord1dv
+	.size	bluegl_glMultiTexCoord1dv, .-bluegl_glMultiTexCoord1dv
 
 	.align	2
 	.global	bluegl_glSecondaryColor3usv
@@ -14237,7 +14237,7 @@ bluegl_glSecondaryColor3usv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3usv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3usv, .-glSecondaryColor3usv
+	.size	bluegl_glSecondaryColor3usv, .-bluegl_glSecondaryColor3usv
 
 	.align	2
 	.global	bluegl_glProgramUniform1ui64vNV
@@ -14247,7 +14247,7 @@ bluegl_glProgramUniform1ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1ui64vNV, .-glProgramUniform1ui64vNV
+	.size	bluegl_glProgramUniform1ui64vNV, .-bluegl_glProgramUniform1ui64vNV
 
 	.align	2
 	.global	bluegl_glTextureMaterialEXT
@@ -14257,7 +14257,7 @@ bluegl_glTextureMaterialEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureMaterialEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureMaterialEXT, .-glTextureMaterialEXT
+	.size	bluegl_glTextureMaterialEXT, .-bluegl_glTextureMaterialEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP3uiv
@@ -14267,7 +14267,7 @@ bluegl_glMultiTexCoordP3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP3uiv, .-glMultiTexCoordP3uiv
+	.size	bluegl_glMultiTexCoordP3uiv, .-bluegl_glMultiTexCoordP3uiv
 
 	.align	2
 	.global	bluegl_glVertexAttribP3ui
@@ -14277,7 +14277,7 @@ bluegl_glVertexAttribP3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP3ui, .-glVertexAttribP3ui
+	.size	bluegl_glVertexAttribP3ui, .-bluegl_glVertexAttribP3ui
 
 	.align	2
 	.global	bluegl_glInterpolatePathsNV
@@ -14287,7 +14287,7 @@ bluegl_glInterpolatePathsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInterpolatePathsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInterpolatePathsNV, .-glInterpolatePathsNV
+	.size	bluegl_glInterpolatePathsNV, .-bluegl_glInterpolatePathsNV
 
 	.align	2
 	.global	bluegl_glTextureBufferRange
@@ -14297,7 +14297,7 @@ bluegl_glTextureBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureBufferRange, .-glTextureBufferRange
+	.size	bluegl_glTextureBufferRange, .-bluegl_glTextureBufferRange
 
 	.align	2
 	.global	bluegl_glGetIntegerui64vNV
@@ -14307,7 +14307,7 @@ bluegl_glGetIntegerui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetIntegerui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetIntegerui64vNV, .-glGetIntegerui64vNV
+	.size	bluegl_glGetIntegerui64vNV, .-bluegl_glGetIntegerui64vNV
 
 	.align	2
 	.global	bluegl_glGetPixelTransformParameterivEXT
@@ -14317,7 +14317,7 @@ bluegl_glGetPixelTransformParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPixelTransformParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPixelTransformParameterivEXT, .-glGetPixelTransformParameterivEXT
+	.size	bluegl_glGetPixelTransformParameterivEXT, .-bluegl_glGetPixelTransformParameterivEXT
 
 	.align	2
 	.global	bluegl_glTexCoord4xvOES
@@ -14327,7 +14327,7 @@ bluegl_glTexCoord4xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4xvOES, .-glTexCoord4xvOES
+	.size	bluegl_glTexCoord4xvOES, .-bluegl_glTexCoord4xvOES
 
 	.align	2
 	.global	bluegl_glGetVariantBooleanvEXT
@@ -14337,7 +14337,7 @@ bluegl_glGetVariantBooleanvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVariantBooleanvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVariantBooleanvEXT, .-glGetVariantBooleanvEXT
+	.size	bluegl_glGetVariantBooleanvEXT, .-bluegl_glGetVariantBooleanvEXT
 
 	.align	2
 	.global	bluegl_glDepthRange
@@ -14347,7 +14347,7 @@ bluegl_glDepthRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthRange, .-glDepthRange
+	.size	bluegl_glDepthRange, .-bluegl_glDepthRange
 
 	.align	2
 	.global	bluegl_glGetVertexAttribdvARB
@@ -14357,7 +14357,7 @@ bluegl_glGetVertexAttribdvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribdvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribdvARB, .-glGetVertexAttribdvARB
+	.size	bluegl_glGetVertexAttribdvARB, .-bluegl_glGetVertexAttribdvARB
 
 	.align	2
 	.global	bluegl_glProgramUniform4i64vNV
@@ -14367,7 +14367,7 @@ bluegl_glProgramUniform4i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4i64vNV, .-glProgramUniform4i64vNV
+	.size	bluegl_glProgramUniform4i64vNV, .-bluegl_glProgramUniform4i64vNV
 
 	.align	2
 	.global	bluegl_glDrawArraysInstancedEXT
@@ -14377,7 +14377,7 @@ bluegl_glDrawArraysInstancedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawArraysInstancedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawArraysInstancedEXT, .-glDrawArraysInstancedEXT
+	.size	bluegl_glDrawArraysInstancedEXT, .-bluegl_glDrawArraysInstancedEXT
 
 	.align	2
 	.global	bluegl_glDisableClientStateIndexedEXT
@@ -14387,7 +14387,7 @@ bluegl_glDisableClientStateIndexedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableClientStateIndexedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableClientStateIndexedEXT, .-glDisableClientStateIndexedEXT
+	.size	bluegl_glDisableClientStateIndexedEXT, .-bluegl_glDisableClientStateIndexedEXT
 
 	.align	2
 	.global	bluegl_glDrawBuffer
@@ -14397,7 +14397,7 @@ bluegl_glDrawBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawBuffer, .-glDrawBuffer
+	.size	bluegl_glDrawBuffer, .-bluegl_glDrawBuffer
 
 	.align	2
 	.global	bluegl_glMultiDrawArraysIndirectBindlessNV
@@ -14407,7 +14407,7 @@ bluegl_glMultiDrawArraysIndirectBindlessNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawArraysIndirectBindlessNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawArraysIndirectBindlessNV, .-glMultiDrawArraysIndirectBindlessNV
+	.size	bluegl_glMultiDrawArraysIndirectBindlessNV, .-bluegl_glMultiDrawArraysIndirectBindlessNV
 
 	.align	2
 	.global	bluegl_glGetnPixelMapusv
@@ -14417,7 +14417,7 @@ bluegl_glGetnPixelMapusv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPixelMapusv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPixelMapusv, .-glGetnPixelMapusv
+	.size	bluegl_glGetnPixelMapusv, .-bluegl_glGetnPixelMapusv
 
 	.align	2
 	.global	bluegl_glClearBufferuiv
@@ -14427,7 +14427,7 @@ bluegl_glClearBufferuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearBufferuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearBufferuiv, .-glClearBufferuiv
+	.size	bluegl_glClearBufferuiv, .-bluegl_glClearBufferuiv
 
 	.align	2
 	.global	bluegl_glGetInternalformati64v
@@ -14437,7 +14437,7 @@ bluegl_glGetInternalformati64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInternalformati64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInternalformati64v, .-glGetInternalformati64v
+	.size	bluegl_glGetInternalformati64v, .-bluegl_glGetInternalformati64v
 
 	.align	2
 	.global	bluegl_glShaderSourceARB
@@ -14447,7 +14447,7 @@ bluegl_glShaderSourceARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glShaderSourceARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glShaderSourceARB, .-glShaderSourceARB
+	.size	bluegl_glShaderSourceARB, .-bluegl_glShaderSourceARB
 
 	.align	2
 	.global	bluegl_glShaderOp3EXT
@@ -14457,7 +14457,7 @@ bluegl_glShaderOp3EXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glShaderOp3EXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glShaderOp3EXT, .-glShaderOp3EXT
+	.size	bluegl_glShaderOp3EXT, .-bluegl_glShaderOp3EXT
 
 	.align	2
 	.global	bluegl_glWindowPos2dvMESA
@@ -14467,7 +14467,7 @@ bluegl_glWindowPos2dvMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2dvMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2dvMESA, .-glWindowPos2dvMESA
+	.size	bluegl_glWindowPos2dvMESA, .-bluegl_glWindowPos2dvMESA
 
 	.align	2
 	.global	bluegl_glProvokingVertexEXT
@@ -14477,7 +14477,7 @@ bluegl_glProvokingVertexEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProvokingVertexEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProvokingVertexEXT, .-glProvokingVertexEXT
+	.size	bluegl_glProvokingVertexEXT, .-bluegl_glProvokingVertexEXT
 
 	.align	2
 	.global	bluegl_glNormalStream3bvATI
@@ -14487,7 +14487,7 @@ bluegl_glNormalStream3bvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3bvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3bvATI, .-glNormalStream3bvATI
+	.size	bluegl_glNormalStream3bvATI, .-bluegl_glNormalStream3bvATI
 
 	.align	2
 	.global	bluegl_glFlush
@@ -14497,7 +14497,7 @@ bluegl_glFlush:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlush]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlush, .-glFlush
+	.size	bluegl_glFlush, .-bluegl_glFlush
 
 	.align	2
 	.global	bluegl_glGetColorTableParameterivEXT
@@ -14507,7 +14507,7 @@ bluegl_glGetColorTableParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableParameterivEXT, .-glGetColorTableParameterivEXT
+	.size	bluegl_glGetColorTableParameterivEXT, .-bluegl_glGetColorTableParameterivEXT
 
 	.align	2
 	.global	bluegl_glGetVertexAttribIuivEXT
@@ -14517,7 +14517,7 @@ bluegl_glGetVertexAttribIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribIuivEXT, .-glGetVertexAttribIuivEXT
+	.size	bluegl_glGetVertexAttribIuivEXT, .-bluegl_glGetVertexAttribIuivEXT
 
 	.align	2
 	.global	bluegl_glPresentFrameDualFillNV
@@ -14527,7 +14527,7 @@ bluegl_glPresentFrameDualFillNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPresentFrameDualFillNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPresentFrameDualFillNV, .-glPresentFrameDualFillNV
+	.size	bluegl_glPresentFrameDualFillNV, .-bluegl_glPresentFrameDualFillNV
 
 	.align	2
 	.global	bluegl_glGenVertexShadersEXT
@@ -14537,7 +14537,7 @@ bluegl_glGenVertexShadersEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenVertexShadersEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenVertexShadersEXT, .-glGenVertexShadersEXT
+	.size	bluegl_glGenVertexShadersEXT, .-bluegl_glGenVertexShadersEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformHandleui64vARB
@@ -14547,7 +14547,7 @@ bluegl_glProgramUniformHandleui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformHandleui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformHandleui64vARB, .-glProgramUniformHandleui64vARB
+	.size	bluegl_glProgramUniformHandleui64vARB, .-bluegl_glProgramUniformHandleui64vARB
 
 	.align	2
 	.global	bluegl_glDepthRangefOES
@@ -14557,7 +14557,7 @@ bluegl_glDepthRangefOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthRangefOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthRangefOES, .-glDepthRangefOES
+	.size	bluegl_glDepthRangefOES, .-bluegl_glDepthRangefOES
 
 	.align	2
 	.global	bluegl_glDrawElementsInstancedBaseVertexBaseInstance
@@ -14567,7 +14567,7 @@ bluegl_glDrawElementsInstancedBaseVertexBaseInstance:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsInstancedBaseVertexBaseInstance]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsInstancedBaseVertexBaseInstance, .-glDrawElementsInstancedBaseVertexBaseInstance
+	.size	bluegl_glDrawElementsInstancedBaseVertexBaseInstance, .-bluegl_glDrawElementsInstancedBaseVertexBaseInstance
 
 	.align	2
 	.global	bluegl_glGetTexLevelParameteriv
@@ -14577,7 +14577,7 @@ bluegl_glGetTexLevelParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexLevelParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexLevelParameteriv, .-glGetTexLevelParameteriv
+	.size	bluegl_glGetTexLevelParameteriv, .-bluegl_glGetTexLevelParameteriv
 
 	.align	2
 	.global	bluegl_glStencilFillPathNV
@@ -14587,7 +14587,7 @@ bluegl_glStencilFillPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilFillPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilFillPathNV, .-glStencilFillPathNV
+	.size	bluegl_glStencilFillPathNV, .-bluegl_glStencilFillPathNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3usvEXT
@@ -14597,7 +14597,7 @@ bluegl_glSecondaryColor3usvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3usvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3usvEXT, .-glSecondaryColor3usvEXT
+	.size	bluegl_glSecondaryColor3usvEXT, .-bluegl_glSecondaryColor3usvEXT
 
 	.align	2
 	.global	bluegl_glWindowPos3iARB
@@ -14607,7 +14607,7 @@ bluegl_glWindowPos3iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3iARB, .-glWindowPos3iARB
+	.size	bluegl_glWindowPos3iARB, .-bluegl_glWindowPos3iARB
 
 	.align	2
 	.global	bluegl_glGetFloatIndexedvEXT
@@ -14617,7 +14617,7 @@ bluegl_glGetFloatIndexedvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFloatIndexedvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFloatIndexedvEXT, .-glGetFloatIndexedvEXT
+	.size	bluegl_glGetFloatIndexedvEXT, .-bluegl_glGetFloatIndexedvEXT
 
 	.align	2
 	.global	bluegl_glWindowPos3fvMESA
@@ -14627,7 +14627,7 @@ bluegl_glWindowPos3fvMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3fvMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3fvMESA, .-glWindowPos3fvMESA
+	.size	bluegl_glWindowPos3fvMESA, .-bluegl_glWindowPos3fvMESA
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x2dvEXT
@@ -14637,7 +14637,7 @@ bluegl_glProgramUniformMatrix3x2dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x2dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x2dvEXT, .-glProgramUniformMatrix3x2dvEXT
+	.size	bluegl_glProgramUniformMatrix3x2dvEXT, .-bluegl_glProgramUniformMatrix3x2dvEXT
 
 	.align	2
 	.global	bluegl_glVertex4xvOES
@@ -14647,7 +14647,7 @@ bluegl_glVertex4xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex4xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex4xvOES, .-glVertex4xvOES
+	.size	bluegl_glVertex4xvOES, .-bluegl_glVertex4xvOES
 
 	.align	2
 	.global	bluegl_glTexStorage3DMultisample
@@ -14657,7 +14657,7 @@ bluegl_glTexStorage3DMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexStorage3DMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexStorage3DMultisample, .-glTexStorage3DMultisample
+	.size	bluegl_glTexStorage3DMultisample, .-bluegl_glTexStorage3DMultisample
 
 	.align	2
 	.global	bluegl_glGetNamedProgramLocalParameterfvEXT
@@ -14667,7 +14667,7 @@ bluegl_glGetNamedProgramLocalParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedProgramLocalParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedProgramLocalParameterfvEXT, .-glGetNamedProgramLocalParameterfvEXT
+	.size	bluegl_glGetNamedProgramLocalParameterfvEXT, .-bluegl_glGetNamedProgramLocalParameterfvEXT
 
 	.align	2
 	.global	bluegl_glStencilOpValueAMD
@@ -14677,7 +14677,7 @@ bluegl_glStencilOpValueAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilOpValueAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilOpValueAMD, .-glStencilOpValueAMD
+	.size	bluegl_glStencilOpValueAMD, .-bluegl_glStencilOpValueAMD
 
 	.align	2
 	.global	bluegl_glProgramVertexLimitNV
@@ -14687,7 +14687,7 @@ bluegl_glProgramVertexLimitNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramVertexLimitNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramVertexLimitNV, .-glProgramVertexLimitNV
+	.size	bluegl_glProgramVertexLimitNV, .-bluegl_glProgramVertexLimitNV
 
 	.align	2
 	.global	bluegl_glUniform3i64NV
@@ -14697,7 +14697,7 @@ bluegl_glUniform3i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3i64NV, .-glUniform3i64NV
+	.size	bluegl_glUniform3i64NV, .-bluegl_glUniform3i64NV
 
 	.align	2
 	.global	bluegl_glProgramUniform3uivEXT
@@ -14707,7 +14707,7 @@ bluegl_glProgramUniform3uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3uivEXT, .-glProgramUniform3uivEXT
+	.size	bluegl_glProgramUniform3uivEXT, .-bluegl_glProgramUniform3uivEXT
 
 	.align	2
 	.global	bluegl_glClampColor
@@ -14717,7 +14717,7 @@ bluegl_glClampColor:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClampColor]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClampColor, .-glClampColor
+	.size	bluegl_glClampColor, .-bluegl_glClampColor
 
 	.align	2
 	.global	bluegl_glClearStencil
@@ -14727,7 +14727,7 @@ bluegl_glClearStencil:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearStencil]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearStencil, .-glClearStencil
+	.size	bluegl_glClearStencil, .-bluegl_glClearStencil
 
 	.align	2
 	.global	bluegl_glVertexAttribs3svNV
@@ -14737,7 +14737,7 @@ bluegl_glVertexAttribs3svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs3svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs3svNV, .-glVertexAttribs3svNV
+	.size	bluegl_glVertexAttribs3svNV, .-bluegl_glVertexAttribs3svNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3fv
@@ -14747,7 +14747,7 @@ bluegl_glMultiTexCoord3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3fv, .-glMultiTexCoord3fv
+	.size	bluegl_glMultiTexCoord3fv, .-bluegl_glMultiTexCoord3fv
 
 	.align	2
 	.global	bluegl_glVertexBlendEnvfATI
@@ -14757,7 +14757,7 @@ bluegl_glVertexBlendEnvfATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexBlendEnvfATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexBlendEnvfATI, .-glVertexBlendEnvfATI
+	.size	bluegl_glVertexBlendEnvfATI, .-bluegl_glVertexBlendEnvfATI
 
 	.align	2
 	.global	bluegl_glIsFenceAPPLE
@@ -14767,7 +14767,7 @@ bluegl_glIsFenceAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsFenceAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsFenceAPPLE, .-glIsFenceAPPLE
+	.size	bluegl_glIsFenceAPPLE, .-bluegl_glIsFenceAPPLE
 
 	.align	2
 	.global	bluegl_glCombinerInputNV
@@ -14777,7 +14777,7 @@ bluegl_glCombinerInputNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCombinerInputNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCombinerInputNV, .-glCombinerInputNV
+	.size	bluegl_glCombinerInputNV, .-bluegl_glCombinerInputNV
 
 	.align	2
 	.global	bluegl_glWindowPos4fMESA
@@ -14787,7 +14787,7 @@ bluegl_glWindowPos4fMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4fMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4fMESA, .-glWindowPos4fMESA
+	.size	bluegl_glWindowPos4fMESA, .-bluegl_glWindowPos4fMESA
 
 	.align	2
 	.global	bluegl_glUniform2fARB
@@ -14797,7 +14797,7 @@ bluegl_glUniform2fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2fARB, .-glUniform2fARB
+	.size	bluegl_glUniform2fARB, .-bluegl_glUniform2fARB
 
 	.align	2
 	.global	bluegl_glReplacementCodeusvSUN
@@ -14807,7 +14807,7 @@ bluegl_glReplacementCodeusvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeusvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeusvSUN, .-glReplacementCodeusvSUN
+	.size	bluegl_glReplacementCodeusvSUN, .-bluegl_glReplacementCodeusvSUN
 
 	.align	2
 	.global	bluegl_glStopInstrumentsSGIX
@@ -14817,7 +14817,7 @@ bluegl_glStopInstrumentsSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStopInstrumentsSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStopInstrumentsSGIX, .-glStopInstrumentsSGIX
+	.size	bluegl_glStopInstrumentsSGIX, .-bluegl_glStopInstrumentsSGIX
 
 	.align	2
 	.global	bluegl_glVertexAttrib3fNV
@@ -14827,7 +14827,7 @@ bluegl_glVertexAttrib3fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3fNV, .-glVertexAttrib3fNV
+	.size	bluegl_glVertexAttrib3fNV, .-bluegl_glVertexAttrib3fNV
 
 	.align	2
 	.global	bluegl_glMapVertexAttrib2dAPPLE
@@ -14837,7 +14837,7 @@ bluegl_glMapVertexAttrib2dAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapVertexAttrib2dAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapVertexAttrib2dAPPLE, .-glMapVertexAttrib2dAPPLE
+	.size	bluegl_glMapVertexAttrib2dAPPLE, .-bluegl_glMapVertexAttrib2dAPPLE
 
 	.align	2
 	.global	bluegl_glIsTexture
@@ -14847,7 +14847,7 @@ bluegl_glIsTexture:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsTexture]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsTexture, .-glIsTexture
+	.size	bluegl_glIsTexture, .-bluegl_glIsTexture
 
 	.align	2
 	.global	bluegl_glCopyTextureImage2DEXT
@@ -14857,7 +14857,7 @@ bluegl_glCopyTextureImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureImage2DEXT, .-glCopyTextureImage2DEXT
+	.size	bluegl_glCopyTextureImage2DEXT, .-bluegl_glCopyTextureImage2DEXT
 
 	.align	2
 	.global	bluegl_glBeginQueryIndexed
@@ -14867,7 +14867,7 @@ bluegl_glBeginQueryIndexed:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginQueryIndexed]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginQueryIndexed, .-glBeginQueryIndexed
+	.size	bluegl_glBeginQueryIndexed, .-bluegl_glBeginQueryIndexed
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4fARB
@@ -14877,7 +14877,7 @@ bluegl_glMultiTexCoord4fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4fARB, .-glMultiTexCoord4fARB
+	.size	bluegl_glMultiTexCoord4fARB, .-bluegl_glMultiTexCoord4fARB
 
 	.align	2
 	.global	bluegl_glTangent3bvEXT
@@ -14887,7 +14887,7 @@ bluegl_glTangent3bvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3bvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3bvEXT, .-glTangent3bvEXT
+	.size	bluegl_glTangent3bvEXT, .-bluegl_glTangent3bvEXT
 
 	.align	2
 	.global	bluegl_glTexImage3D
@@ -14897,7 +14897,7 @@ bluegl_glTexImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage3D, .-glTexImage3D
+	.size	bluegl_glTexImage3D, .-bluegl_glTexImage3D
 
 	.align	2
 	.global	bluegl_glGetProgramiv
@@ -14907,7 +14907,7 @@ bluegl_glGetProgramiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramiv, .-glGetProgramiv
+	.size	bluegl_glGetProgramiv, .-bluegl_glGetProgramiv
 
 	.align	2
 	.global	bluegl_glMatrixIndexubvARB
@@ -14917,7 +14917,7 @@ bluegl_glMatrixIndexubvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixIndexubvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixIndexubvARB, .-glMatrixIndexubvARB
+	.size	bluegl_glMatrixIndexubvARB, .-bluegl_glMatrixIndexubvARB
 
 	.align	2
 	.global	bluegl_glProgramUniform4fv
@@ -14927,7 +14927,7 @@ bluegl_glProgramUniform4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4fv, .-glProgramUniform4fv
+	.size	bluegl_glProgramUniform4fv, .-bluegl_glProgramUniform4fv
 
 	.align	2
 	.global	bluegl_glGetVertexAttribLui64vNV
@@ -14937,7 +14937,7 @@ bluegl_glGetVertexAttribLui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribLui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribLui64vNV, .-glGetVertexAttribLui64vNV
+	.size	bluegl_glGetVertexAttribLui64vNV, .-bluegl_glGetVertexAttribLui64vNV
 
 	.align	2
 	.global	bluegl_glMapBufferARB
@@ -14947,7 +14947,7 @@ bluegl_glMapBufferARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapBufferARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapBufferARB, .-glMapBufferARB
+	.size	bluegl_glMapBufferARB, .-bluegl_glMapBufferARB
 
 	.align	2
 	.global	bluegl_glFlushMappedBufferRange
@@ -14957,7 +14957,7 @@ bluegl_glFlushMappedBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushMappedBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushMappedBufferRange, .-glFlushMappedBufferRange
+	.size	bluegl_glFlushMappedBufferRange, .-bluegl_glFlushMappedBufferRange
 
 	.align	2
 	.global	bluegl_glTexStorage2D
@@ -14967,7 +14967,7 @@ bluegl_glTexStorage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexStorage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexStorage2D, .-glTexStorage2D
+	.size	bluegl_glTexStorage2D, .-bluegl_glTexStorage2D
 
 	.align	2
 	.global	bluegl_glLineWidthxOES
@@ -14977,7 +14977,7 @@ bluegl_glLineWidthxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLineWidthxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLineWidthxOES, .-glLineWidthxOES
+	.size	bluegl_glLineWidthxOES, .-bluegl_glLineWidthxOES
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2fvEXT
@@ -14987,7 +14987,7 @@ bluegl_glProgramUniformMatrix2fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2fvEXT, .-glProgramUniformMatrix2fvEXT
+	.size	bluegl_glProgramUniformMatrix2fvEXT, .-bluegl_glProgramUniformMatrix2fvEXT
 
 	.align	2
 	.global	bluegl_glGetTextureParameterIuivEXT
@@ -14997,7 +14997,7 @@ bluegl_glGetTextureParameterIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameterIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameterIuivEXT, .-glGetTextureParameterIuivEXT
+	.size	bluegl_glGetTextureParameterIuivEXT, .-bluegl_glGetTextureParameterIuivEXT
 
 	.align	2
 	.global	bluegl_glGetMultiTexEnvivEXT
@@ -15007,7 +15007,7 @@ bluegl_glGetMultiTexEnvivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexEnvivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexEnvivEXT, .-glGetMultiTexEnvivEXT
+	.size	bluegl_glGetMultiTexEnvivEXT, .-bluegl_glGetMultiTexEnvivEXT
 
 	.align	2
 	.global	bluegl_glPixelTexGenParameterivSGIS
@@ -15017,7 +15017,7 @@ bluegl_glPixelTexGenParameterivSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTexGenParameterivSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTexGenParameterivSGIS, .-glPixelTexGenParameterivSGIS
+	.size	bluegl_glPixelTexGenParameterivSGIS, .-bluegl_glPixelTexGenParameterivSGIS
 
 	.align	2
 	.global	bluegl_glGenQueries
@@ -15027,7 +15027,7 @@ bluegl_glGenQueries:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenQueries]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenQueries, .-glGenQueries
+	.size	bluegl_glGenQueries, .-bluegl_glGenQueries
 
 	.align	2
 	.global	bluegl_glCompressedTextureSubImage1DEXT
@@ -15037,7 +15037,7 @@ bluegl_glCompressedTextureSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureSubImage1DEXT, .-glCompressedTextureSubImage1DEXT
+	.size	bluegl_glCompressedTextureSubImage1DEXT, .-bluegl_glCompressedTextureSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glBlendColorEXT
@@ -15047,7 +15047,7 @@ bluegl_glBlendColorEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendColorEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendColorEXT, .-glBlendColorEXT
+	.size	bluegl_glBlendColorEXT, .-bluegl_glBlendColorEXT
 
 	.align	2
 	.global	bluegl_glResetMinmax
@@ -15057,7 +15057,7 @@ bluegl_glResetMinmax:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResetMinmax]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResetMinmax, .-glResetMinmax
+	.size	bluegl_glResetMinmax, .-bluegl_glResetMinmax
 
 	.align	2
 	.global	bluegl_glGetnUniformivARB
@@ -15067,7 +15067,7 @@ bluegl_glGetnUniformivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformivARB, .-glGetnUniformivARB
+	.size	bluegl_glGetnUniformivARB, .-bluegl_glGetnUniformivARB
 
 	.align	2
 	.global	bluegl_glVertexBlendARB
@@ -15077,7 +15077,7 @@ bluegl_glVertexBlendARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexBlendARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexBlendARB, .-glVertexBlendARB
+	.size	bluegl_glVertexBlendARB, .-bluegl_glVertexBlendARB
 
 	.align	2
 	.global	bluegl_glGetVaryingLocationNV
@@ -15087,7 +15087,7 @@ bluegl_glGetVaryingLocationNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVaryingLocationNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVaryingLocationNV, .-glGetVaryingLocationNV
+	.size	bluegl_glGetVaryingLocationNV, .-bluegl_glGetVaryingLocationNV
 
 	.align	2
 	.global	bluegl_glGetMapAttribParameterivNV
@@ -15097,7 +15097,7 @@ bluegl_glGetMapAttribParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMapAttribParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMapAttribParameterivNV, .-glGetMapAttribParameterivNV
+	.size	bluegl_glGetMapAttribParameterivNV, .-bluegl_glGetMapAttribParameterivNV
 
 	.align	2
 	.global	bluegl_glUniform2i64ARB
@@ -15107,7 +15107,7 @@ bluegl_glUniform2i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2i64ARB, .-glUniform2i64ARB
+	.size	bluegl_glUniform2i64ARB, .-bluegl_glUniform2i64ARB
 
 	.align	2
 	.global	bluegl_glDeleteSamplers
@@ -15117,7 +15117,7 @@ bluegl_glDeleteSamplers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteSamplers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteSamplers, .-glDeleteSamplers
+	.size	bluegl_glDeleteSamplers, .-bluegl_glDeleteSamplers
 
 	.align	2
 	.global	bluegl_glGetLightxOES
@@ -15127,7 +15127,7 @@ bluegl_glGetLightxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetLightxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetLightxOES, .-glGetLightxOES
+	.size	bluegl_glGetLightxOES, .-bluegl_glGetLightxOES
 
 	.align	2
 	.global	bluegl_glPrimitiveBoundingBoxARB
@@ -15137,7 +15137,7 @@ bluegl_glPrimitiveBoundingBoxARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPrimitiveBoundingBoxARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPrimitiveBoundingBoxARB, .-glPrimitiveBoundingBoxARB
+	.size	bluegl_glPrimitiveBoundingBoxARB, .-bluegl_glPrimitiveBoundingBoxARB
 
 	.align	2
 	.global	bluegl_glVertexArrayNormalOffsetEXT
@@ -15147,7 +15147,7 @@ bluegl_glVertexArrayNormalOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayNormalOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayNormalOffsetEXT, .-glVertexArrayNormalOffsetEXT
+	.size	bluegl_glVertexArrayNormalOffsetEXT, .-bluegl_glVertexArrayNormalOffsetEXT
 
 	.align	2
 	.global	bluegl_glGetBufferParameterivARB
@@ -15157,7 +15157,7 @@ bluegl_glGetBufferParameterivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferParameterivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferParameterivARB, .-glGetBufferParameterivARB
+	.size	bluegl_glGetBufferParameterivARB, .-bluegl_glGetBufferParameterivARB
 
 	.align	2
 	.global	bluegl_glGetTextureParameterfv
@@ -15167,7 +15167,7 @@ bluegl_glGetTextureParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameterfv, .-glGetTextureParameterfv
+	.size	bluegl_glGetTextureParameterfv, .-bluegl_glGetTextureParameterfv
 
 	.align	2
 	.global	bluegl_glSecondaryColorP3ui
@@ -15177,7 +15177,7 @@ bluegl_glSecondaryColorP3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColorP3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColorP3ui, .-glSecondaryColorP3ui
+	.size	bluegl_glSecondaryColorP3ui, .-bluegl_glSecondaryColorP3ui
 
 	.align	2
 	.global	bluegl_glVertexAttrib4dNV
@@ -15187,7 +15187,7 @@ bluegl_glVertexAttrib4dNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4dNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4dNV, .-glVertexAttrib4dNV
+	.size	bluegl_glVertexAttrib4dNV, .-bluegl_glVertexAttrib4dNV
 
 	.align	2
 	.global	bluegl_glGetMultisamplefvNV
@@ -15197,7 +15197,7 @@ bluegl_glGetMultisamplefvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultisamplefvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultisamplefvNV, .-glGetMultisamplefvNV
+	.size	bluegl_glGetMultisamplefvNV, .-bluegl_glGetMultisamplefvNV
 
 	.align	2
 	.global	bluegl_glMapObjectBufferATI
@@ -15207,7 +15207,7 @@ bluegl_glMapObjectBufferATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapObjectBufferATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapObjectBufferATI, .-glMapObjectBufferATI
+	.size	bluegl_glMapObjectBufferATI, .-bluegl_glMapObjectBufferATI
 
 	.align	2
 	.global	bluegl_glGetPathCommandsNV
@@ -15217,7 +15217,7 @@ bluegl_glGetPathCommandsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathCommandsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathCommandsNV, .-glGetPathCommandsNV
+	.size	bluegl_glGetPathCommandsNV, .-bluegl_glGetPathCommandsNV
 
 	.align	2
 	.global	bluegl_glVertexArrayTexCoordOffsetEXT
@@ -15227,7 +15227,7 @@ bluegl_glVertexArrayTexCoordOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayTexCoordOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayTexCoordOffsetEXT, .-glVertexArrayTexCoordOffsetEXT
+	.size	bluegl_glVertexArrayTexCoordOffsetEXT, .-bluegl_glVertexArrayTexCoordOffsetEXT
 
 	.align	2
 	.global	bluegl_glGetHistogram
@@ -15237,7 +15237,7 @@ bluegl_glGetHistogram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHistogram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHistogram, .-glGetHistogram
+	.size	bluegl_glGetHistogram, .-bluegl_glGetHistogram
 
 	.align	2
 	.global	bluegl_glColorFormatNV
@@ -15247,7 +15247,7 @@ bluegl_glColorFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorFormatNV, .-glColorFormatNV
+	.size	bluegl_glColorFormatNV, .-bluegl_glColorFormatNV
 
 	.align	2
 	.global	bluegl_glProgramUniformui64NV
@@ -15257,7 +15257,7 @@ bluegl_glProgramUniformui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformui64NV, .-glProgramUniformui64NV
+	.size	bluegl_glProgramUniformui64NV, .-bluegl_glProgramUniformui64NV
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x2fvEXT
@@ -15267,7 +15267,7 @@ bluegl_glProgramUniformMatrix4x2fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x2fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x2fvEXT, .-glProgramUniformMatrix4x2fvEXT
+	.size	bluegl_glProgramUniformMatrix4x2fvEXT, .-bluegl_glProgramUniformMatrix4x2fvEXT
 
 	.align	2
 	.global	bluegl_glLoadMatrixxOES
@@ -15277,7 +15277,7 @@ bluegl_glLoadMatrixxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadMatrixxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadMatrixxOES, .-glLoadMatrixxOES
+	.size	bluegl_glLoadMatrixxOES, .-bluegl_glLoadMatrixxOES
 
 	.align	2
 	.global	bluegl_glVariantbvEXT
@@ -15287,7 +15287,7 @@ bluegl_glVariantbvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantbvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantbvEXT, .-glVariantbvEXT
+	.size	bluegl_glVariantbvEXT, .-bluegl_glVariantbvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribL2i64NV
@@ -15297,7 +15297,7 @@ bluegl_glVertexAttribL2i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2i64NV, .-glVertexAttribL2i64NV
+	.size	bluegl_glVertexAttribL2i64NV, .-bluegl_glVertexAttribL2i64NV
 
 	.align	2
 	.global	bluegl_glBindTextures
@@ -15307,7 +15307,7 @@ bluegl_glBindTextures:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTextures]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTextures, .-glBindTextures
+	.size	bluegl_glBindTextures, .-bluegl_glBindTextures
 
 	.align	2
 	.global	bluegl_glCombinerParameteriNV
@@ -15317,7 +15317,7 @@ bluegl_glCombinerParameteriNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCombinerParameteriNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCombinerParameteriNV, .-glCombinerParameteriNV
+	.size	bluegl_glCombinerParameteriNV, .-bluegl_glCombinerParameteriNV
 
 	.align	2
 	.global	bluegl_glMatrixRotatefEXT
@@ -15327,7 +15327,7 @@ bluegl_glMatrixRotatefEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixRotatefEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixRotatefEXT, .-glMatrixRotatefEXT
+	.size	bluegl_glMatrixRotatefEXT, .-bluegl_glMatrixRotatefEXT
 
 	.align	2
 	.global	bluegl_glGetClipPlanexOES
@@ -15337,7 +15337,7 @@ bluegl_glGetClipPlanexOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetClipPlanexOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetClipPlanexOES, .-glGetClipPlanexOES
+	.size	bluegl_glGetClipPlanexOES, .-bluegl_glGetClipPlanexOES
 
 	.align	2
 	.global	bluegl_glSecondaryColor3uivEXT
@@ -15347,7 +15347,7 @@ bluegl_glSecondaryColor3uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3uivEXT, .-glSecondaryColor3uivEXT
+	.size	bluegl_glSecondaryColor3uivEXT, .-bluegl_glSecondaryColor3uivEXT
 
 	.align	2
 	.global	bluegl_glGetPerfQueryInfoINTEL
@@ -15357,7 +15357,7 @@ bluegl_glGetPerfQueryInfoINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfQueryInfoINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfQueryInfoINTEL, .-glGetPerfQueryInfoINTEL
+	.size	bluegl_glGetPerfQueryInfoINTEL, .-bluegl_glGetPerfQueryInfoINTEL
 
 	.align	2
 	.global	bluegl_glGetDoublev
@@ -15367,7 +15367,7 @@ bluegl_glGetDoublev:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDoublev]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDoublev, .-glGetDoublev
+	.size	bluegl_glGetDoublev, .-bluegl_glGetDoublev
 
 	.align	2
 	.global	bluegl_glBindBufferRangeEXT
@@ -15377,7 +15377,7 @@ bluegl_glBindBufferRangeEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferRangeEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferRangeEXT, .-glBindBufferRangeEXT
+	.size	bluegl_glBindBufferRangeEXT, .-bluegl_glBindBufferRangeEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib1d
@@ -15387,7 +15387,7 @@ bluegl_glVertexAttrib1d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1d, .-glVertexAttrib1d
+	.size	bluegl_glVertexAttrib1d, .-bluegl_glVertexAttrib1d
 
 	.align	2
 	.global	bluegl_glGetProgramStringARB
@@ -15397,7 +15397,7 @@ bluegl_glGetProgramStringARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramStringARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramStringARB, .-glGetProgramStringARB
+	.size	bluegl_glGetProgramStringARB, .-bluegl_glGetProgramStringARB
 
 	.align	2
 	.global	bluegl_glGetPathSpacingNV
@@ -15407,7 +15407,7 @@ bluegl_glGetPathSpacingNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathSpacingNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathSpacingNV, .-glGetPathSpacingNV
+	.size	bluegl_glGetPathSpacingNV, .-bluegl_glGetPathSpacingNV
 
 	.align	2
 	.global	bluegl_glUniform4dv
@@ -15417,7 +15417,7 @@ bluegl_glUniform4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4dv, .-glUniform4dv
+	.size	bluegl_glUniform4dv, .-bluegl_glUniform4dv
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactordSUN
@@ -15427,7 +15427,7 @@ bluegl_glGlobalAlphaFactordSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactordSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactordSUN, .-glGlobalAlphaFactordSUN
+	.size	bluegl_glGlobalAlphaFactordSUN, .-bluegl_glGlobalAlphaFactordSUN
 
 	.align	2
 	.global	bluegl_glProgramUniform3dv
@@ -15437,7 +15437,7 @@ bluegl_glProgramUniform3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3dv, .-glProgramUniform3dv
+	.size	bluegl_glProgramUniform3dv, .-bluegl_glProgramUniform3dv
 
 	.align	2
 	.global	bluegl_glGetShaderSourceARB
@@ -15447,7 +15447,7 @@ bluegl_glGetShaderSourceARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetShaderSourceARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetShaderSourceARB, .-glGetShaderSourceARB
+	.size	bluegl_glGetShaderSourceARB, .-bluegl_glGetShaderSourceARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib3dvARB
@@ -15457,7 +15457,7 @@ bluegl_glVertexAttrib3dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3dvARB, .-glVertexAttrib3dvARB
+	.size	bluegl_glVertexAttrib3dvARB, .-bluegl_glVertexAttrib3dvARB
 
 	.align	2
 	.global	bluegl_glInvalidateBufferData
@@ -15467,7 +15467,7 @@ bluegl_glInvalidateBufferData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateBufferData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateBufferData, .-glInvalidateBufferData
+	.size	bluegl_glInvalidateBufferData, .-bluegl_glInvalidateBufferData
 
 	.align	2
 	.global	bluegl_glMatrixLoad3x2fNV
@@ -15477,7 +15477,7 @@ bluegl_glMatrixLoad3x2fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoad3x2fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoad3x2fNV, .-glMatrixLoad3x2fNV
+	.size	bluegl_glMatrixLoad3x2fNV, .-bluegl_glMatrixLoad3x2fNV
 
 	.align	2
 	.global	bluegl_glCompressedTextureSubImage1D
@@ -15487,7 +15487,7 @@ bluegl_glCompressedTextureSubImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureSubImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureSubImage1D, .-glCompressedTextureSubImage1D
+	.size	bluegl_glCompressedTextureSubImage1D, .-bluegl_glCompressedTextureSubImage1D
 
 	.align	2
 	.global	bluegl_glTexCoord3xvOES
@@ -15497,7 +15497,7 @@ bluegl_glTexCoord3xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord3xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord3xvOES, .-glTexCoord3xvOES
+	.size	bluegl_glTexCoord3xvOES, .-bluegl_glTexCoord3xvOES
 
 	.align	2
 	.global	bluegl_glUniform3fv
@@ -15507,7 +15507,7 @@ bluegl_glUniform3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3fv, .-glUniform3fv
+	.size	bluegl_glUniform3fv, .-bluegl_glUniform3fv
 
 	.align	2
 	.global	bluegl_glTangent3iEXT
@@ -15517,7 +15517,7 @@ bluegl_glTangent3iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3iEXT, .-glTangent3iEXT
+	.size	bluegl_glTangent3iEXT, .-bluegl_glTangent3iEXT
 
 	.align	2
 	.global	bluegl_glClearTexImage
@@ -15527,7 +15527,7 @@ bluegl_glClearTexImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearTexImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearTexImage, .-glClearTexImage
+	.size	bluegl_glClearTexImage, .-bluegl_glClearTexImage
 
 	.align	2
 	.global	bluegl_glBinormal3bvEXT
@@ -15537,7 +15537,7 @@ bluegl_glBinormal3bvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3bvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3bvEXT, .-glBinormal3bvEXT
+	.size	bluegl_glBinormal3bvEXT, .-bluegl_glBinormal3bvEXT
 
 	.align	2
 	.global	bluegl_glGenTexturesEXT
@@ -15547,7 +15547,7 @@ bluegl_glGenTexturesEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenTexturesEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenTexturesEXT, .-glGenTexturesEXT
+	.size	bluegl_glGenTexturesEXT, .-bluegl_glGenTexturesEXT
 
 	.align	2
 	.global	bluegl_glGetnPixelMapusvARB
@@ -15557,7 +15557,7 @@ bluegl_glGetnPixelMapusvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPixelMapusvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPixelMapusvARB, .-glGetnPixelMapusvARB
+	.size	bluegl_glGetnPixelMapusvARB, .-bluegl_glGetnPixelMapusvARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP1ui
@@ -15567,7 +15567,7 @@ bluegl_glMultiTexCoordP1ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP1ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP1ui, .-glMultiTexCoordP1ui
+	.size	bluegl_glMultiTexCoordP1ui, .-bluegl_glMultiTexCoordP1ui
 
 	.align	2
 	.global	bluegl_glGetTransformFeedbacki64_v
@@ -15577,7 +15577,7 @@ bluegl_glGetTransformFeedbacki64_v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTransformFeedbacki64_v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTransformFeedbacki64_v, .-glGetTransformFeedbacki64_v
+	.size	bluegl_glGetTransformFeedbacki64_v, .-bluegl_glGetTransformFeedbacki64_v
 
 	.align	2
 	.global	bluegl_glUniformMatrix4dv
@@ -15587,7 +15587,7 @@ bluegl_glUniformMatrix4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix4dv, .-glUniformMatrix4dv
+	.size	bluegl_glUniformMatrix4dv, .-bluegl_glUniformMatrix4dv
 
 	.align	2
 	.global	bluegl_glWindowPos3fMESA
@@ -15597,7 +15597,7 @@ bluegl_glWindowPos3fMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3fMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3fMESA, .-glWindowPos3fMESA
+	.size	bluegl_glWindowPos3fMESA, .-bluegl_glWindowPos3fMESA
 
 	.align	2
 	.global	bluegl_glDeleteRenderbuffers
@@ -15607,7 +15607,7 @@ bluegl_glDeleteRenderbuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteRenderbuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteRenderbuffers, .-glDeleteRenderbuffers
+	.size	bluegl_glDeleteRenderbuffers, .-bluegl_glDeleteRenderbuffers
 
 	.align	2
 	.global	bluegl_glConvolutionParameterxOES
@@ -15617,7 +15617,7 @@ bluegl_glConvolutionParameterxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameterxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameterxOES, .-glConvolutionParameterxOES
+	.size	bluegl_glConvolutionParameterxOES, .-bluegl_glConvolutionParameterxOES
 
 	.align	2
 	.global	bluegl_glGetHistogramParameterxvOES
@@ -15627,7 +15627,7 @@ bluegl_glGetHistogramParameterxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHistogramParameterxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHistogramParameterxvOES, .-glGetHistogramParameterxvOES
+	.size	bluegl_glGetHistogramParameterxvOES, .-bluegl_glGetHistogramParameterxvOES
 
 	.align	2
 	.global	bluegl_glMultiDrawElements
@@ -15637,7 +15637,7 @@ bluegl_glMultiDrawElements:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElements]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElements, .-glMultiDrawElements
+	.size	bluegl_glMultiDrawElements, .-bluegl_glMultiDrawElements
 
 	.align	2
 	.global	bluegl_glMakeImageHandleNonResidentNV
@@ -15647,7 +15647,7 @@ bluegl_glMakeImageHandleNonResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeImageHandleNonResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeImageHandleNonResidentNV, .-glMakeImageHandleNonResidentNV
+	.size	bluegl_glMakeImageHandleNonResidentNV, .-bluegl_glMakeImageHandleNonResidentNV
 
 	.align	2
 	.global	bluegl_glTexSubImage1DEXT
@@ -15657,7 +15657,7 @@ bluegl_glTexSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexSubImage1DEXT, .-glTexSubImage1DEXT
+	.size	bluegl_glTexSubImage1DEXT, .-bluegl_glTexSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glNormalStream3dATI
@@ -15667,7 +15667,7 @@ bluegl_glNormalStream3dATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3dATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3dATI, .-glNormalStream3dATI
+	.size	bluegl_glNormalStream3dATI, .-bluegl_glNormalStream3dATI
 
 	.align	2
 	.global	bluegl_glVertexAttribL4i64vNV
@@ -15677,7 +15677,7 @@ bluegl_glVertexAttribL4i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4i64vNV, .-glVertexAttribL4i64vNV
+	.size	bluegl_glVertexAttribL4i64vNV, .-bluegl_glVertexAttribL4i64vNV
 
 	.align	2
 	.global	bluegl_glClearNamedFramebufferfv
@@ -15687,7 +15687,7 @@ bluegl_glClearNamedFramebufferfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedFramebufferfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedFramebufferfv, .-glClearNamedFramebufferfv
+	.size	bluegl_glClearNamedFramebufferfv, .-bluegl_glClearNamedFramebufferfv
 
 	.align	2
 	.global	bluegl_glCopyTextureSubImage1DEXT
@@ -15697,7 +15697,7 @@ bluegl_glCopyTextureSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureSubImage1DEXT, .-glCopyTextureSubImage1DEXT
+	.size	bluegl_glCopyTextureSubImage1DEXT, .-bluegl_glCopyTextureSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glNamedFramebufferReadBuffer
@@ -15707,7 +15707,7 @@ bluegl_glNamedFramebufferReadBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferReadBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferReadBuffer, .-glNamedFramebufferReadBuffer
+	.size	bluegl_glNamedFramebufferReadBuffer, .-bluegl_glNamedFramebufferReadBuffer
 
 	.align	2
 	.global	bluegl_glUniform2i64vARB
@@ -15717,7 +15717,7 @@ bluegl_glUniform2i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2i64vARB, .-glUniform2i64vARB
+	.size	bluegl_glUniform2i64vARB, .-bluegl_glUniform2i64vARB
 
 	.align	2
 	.global	bluegl_glVertexAttribI1uivEXT
@@ -15727,7 +15727,7 @@ bluegl_glVertexAttribI1uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1uivEXT, .-glVertexAttribI1uivEXT
+	.size	bluegl_glVertexAttribI1uivEXT, .-bluegl_glVertexAttribI1uivEXT
 
 	.align	2
 	.global	bluegl_glBeginQueryARB
@@ -15737,7 +15737,7 @@ bluegl_glBeginQueryARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginQueryARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginQueryARB, .-glBeginQueryARB
+	.size	bluegl_glBeginQueryARB, .-bluegl_glBeginQueryARB
 
 	.align	2
 	.global	bluegl_glUniform1iARB
@@ -15747,7 +15747,7 @@ bluegl_glUniform1iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1iARB, .-glUniform1iARB
+	.size	bluegl_glUniform1iARB, .-bluegl_glUniform1iARB
 
 	.align	2
 	.global	bluegl_glVertex4bvOES
@@ -15757,7 +15757,7 @@ bluegl_glVertex4bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex4bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex4bvOES, .-glVertex4bvOES
+	.size	bluegl_glVertex4bvOES, .-bluegl_glVertex4bvOES
 
 	.align	2
 	.global	bluegl_glInvalidateSubFramebuffer
@@ -15767,7 +15767,7 @@ bluegl_glInvalidateSubFramebuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateSubFramebuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateSubFramebuffer, .-glInvalidateSubFramebuffer
+	.size	bluegl_glInvalidateSubFramebuffer, .-bluegl_glInvalidateSubFramebuffer
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4xOES
@@ -15777,7 +15777,7 @@ bluegl_glMultiTexCoord4xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4xOES, .-glMultiTexCoord4xOES
+	.size	bluegl_glMultiTexCoord4xOES, .-bluegl_glMultiTexCoord4xOES
 
 	.align	2
 	.global	bluegl_glBindTransformFeedback
@@ -15787,7 +15787,7 @@ bluegl_glBindTransformFeedback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTransformFeedback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTransformFeedback, .-glBindTransformFeedback
+	.size	bluegl_glBindTransformFeedback, .-bluegl_glBindTransformFeedback
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2iv
@@ -15797,7 +15797,7 @@ bluegl_glMultiTexCoord2iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2iv, .-glMultiTexCoord2iv
+	.size	bluegl_glMultiTexCoord2iv, .-bluegl_glMultiTexCoord2iv
 
 	.align	2
 	.global	bluegl_glCopyMultiTexSubImage1DEXT
@@ -15807,7 +15807,7 @@ bluegl_glCopyMultiTexSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyMultiTexSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyMultiTexSubImage1DEXT, .-glCopyMultiTexSubImage1DEXT
+	.size	bluegl_glCopyMultiTexSubImage1DEXT, .-bluegl_glCopyMultiTexSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glTexCoord1hNV
@@ -15817,7 +15817,7 @@ bluegl_glTexCoord1hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord1hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord1hNV, .-glTexCoord1hNV
+	.size	bluegl_glTexCoord1hNV, .-bluegl_glTexCoord1hNV
 
 	.align	2
 	.global	bluegl_glGenFencesNV
@@ -15827,7 +15827,7 @@ bluegl_glGenFencesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenFencesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenFencesNV, .-glGenFencesNV
+	.size	bluegl_glGenFencesNV, .-bluegl_glGenFencesNV
 
 	.align	2
 	.global	bluegl_glVertexAttribL2ui64NV
@@ -15837,7 +15837,7 @@ bluegl_glVertexAttribL2ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL2ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL2ui64NV, .-glVertexAttribL2ui64NV
+	.size	bluegl_glVertexAttribL2ui64NV, .-bluegl_glVertexAttribL2ui64NV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1hvNV
@@ -15847,7 +15847,7 @@ bluegl_glMultiTexCoord1hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1hvNV, .-glMultiTexCoord1hvNV
+	.size	bluegl_glMultiTexCoord1hvNV, .-bluegl_glMultiTexCoord1hvNV
 
 	.align	2
 	.global	bluegl_glGetnConvolutionFilter
@@ -15857,7 +15857,7 @@ bluegl_glGetnConvolutionFilter:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnConvolutionFilter]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnConvolutionFilter, .-glGetnConvolutionFilter
+	.size	bluegl_glGetnConvolutionFilter, .-bluegl_glGetnConvolutionFilter
 
 	.align	2
 	.global	bluegl_glWeightbvARB
@@ -15867,7 +15867,7 @@ bluegl_glWeightbvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightbvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightbvARB, .-glWeightbvARB
+	.size	bluegl_glWeightbvARB, .-bluegl_glWeightbvARB
 
 	.align	2
 	.global	bluegl_glUniform2uiv
@@ -15877,7 +15877,7 @@ bluegl_glUniform2uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2uiv, .-glUniform2uiv
+	.size	bluegl_glUniform2uiv, .-bluegl_glUniform2uiv
 
 	.align	2
 	.global	bluegl_glBeginConditionalRenderNVX
@@ -15887,7 +15887,7 @@ bluegl_glBeginConditionalRenderNVX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginConditionalRenderNVX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginConditionalRenderNVX, .-glBeginConditionalRenderNVX
+	.size	bluegl_glBeginConditionalRenderNVX, .-bluegl_glBeginConditionalRenderNVX
 
 	.align	2
 	.global	bluegl_glFinish
@@ -15897,7 +15897,7 @@ bluegl_glFinish:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFinish]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFinish, .-glFinish
+	.size	bluegl_glFinish, .-bluegl_glFinish
 
 	.align	2
 	.global	bluegl_glColorTableParameterfv
@@ -15907,7 +15907,7 @@ bluegl_glColorTableParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorTableParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorTableParameterfv, .-glColorTableParameterfv
+	.size	bluegl_glColorTableParameterfv, .-bluegl_glColorTableParameterfv
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexOffsetEXT
@@ -15917,7 +15917,7 @@ bluegl_glVertexArrayVertexOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexOffsetEXT, .-glVertexArrayVertexOffsetEXT
+	.size	bluegl_glVertexArrayVertexOffsetEXT, .-bluegl_glVertexArrayVertexOffsetEXT
 
 	.align	2
 	.global	bluegl_glFinishObjectAPPLE
@@ -15927,7 +15927,7 @@ bluegl_glFinishObjectAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFinishObjectAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFinishObjectAPPLE, .-glFinishObjectAPPLE
+	.size	bluegl_glFinishObjectAPPLE, .-bluegl_glFinishObjectAPPLE
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiTexCoord2fVertex3fvSUN
@@ -15937,7 +15937,7 @@ bluegl_glReplacementCodeuiTexCoord2fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiTexCoord2fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiTexCoord2fVertex3fvSUN, .-glReplacementCodeuiTexCoord2fVertex3fvSUN
+	.size	bluegl_glReplacementCodeuiTexCoord2fVertex3fvSUN, .-bluegl_glReplacementCodeuiTexCoord2fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glUniform1uiv
@@ -15947,7 +15947,7 @@ bluegl_glUniform1uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1uiv, .-glUniform1uiv
+	.size	bluegl_glUniform1uiv, .-bluegl_glUniform1uiv
 
 	.align	2
 	.global	bluegl_glUniformMatrix2dv
@@ -15957,7 +15957,7 @@ bluegl_glUniformMatrix2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix2dv, .-glUniformMatrix2dv
+	.size	bluegl_glUniformMatrix2dv, .-bluegl_glUniformMatrix2dv
 
 	.align	2
 	.global	bluegl_glSecondaryColor3ivEXT
@@ -15967,7 +15967,7 @@ bluegl_glSecondaryColor3ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3ivEXT, .-glSecondaryColor3ivEXT
+	.size	bluegl_glSecondaryColor3ivEXT, .-bluegl_glSecondaryColor3ivEXT
 
 	.align	2
 	.global	bluegl_glVertexStream1dATI
@@ -15977,7 +15977,7 @@ bluegl_glVertexStream1dATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream1dATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream1dATI, .-glVertexStream1dATI
+	.size	bluegl_glVertexStream1dATI, .-bluegl_glVertexStream1dATI
 
 	.align	2
 	.global	bluegl_glDeformationMap3fSGIX
@@ -15987,7 +15987,7 @@ bluegl_glDeformationMap3fSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeformationMap3fSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeformationMap3fSGIX, .-glDeformationMap3fSGIX
+	.size	bluegl_glDeformationMap3fSGIX, .-bluegl_glDeformationMap3fSGIX
 
 	.align	2
 	.global	bluegl_glClearDepth
@@ -15997,7 +15997,7 @@ bluegl_glClearDepth:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearDepth]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearDepth, .-glClearDepth
+	.size	bluegl_glClearDepth, .-bluegl_glClearDepth
 
 	.align	2
 	.global	bluegl_glGenAsyncMarkersSGIX
@@ -16007,7 +16007,7 @@ bluegl_glGenAsyncMarkersSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenAsyncMarkersSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenAsyncMarkersSGIX, .-glGenAsyncMarkersSGIX
+	.size	bluegl_glGenAsyncMarkersSGIX, .-bluegl_glGenAsyncMarkersSGIX
 
 	.align	2
 	.global	bluegl_glDisableIndexedEXT
@@ -16017,7 +16017,7 @@ bluegl_glDisableIndexedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableIndexedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableIndexedEXT, .-glDisableIndexedEXT
+	.size	bluegl_glDisableIndexedEXT, .-bluegl_glDisableIndexedEXT
 
 	.align	2
 	.global	bluegl_glNormal3fVertex3fSUN
@@ -16027,7 +16027,7 @@ bluegl_glNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormal3fVertex3fSUN, .-glNormal3fVertex3fSUN
+	.size	bluegl_glNormal3fVertex3fSUN, .-bluegl_glNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glVertexWeightfvEXT
@@ -16037,7 +16037,7 @@ bluegl_glVertexWeightfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexWeightfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexWeightfvEXT, .-glVertexWeightfvEXT
+	.size	bluegl_glVertexWeightfvEXT, .-bluegl_glVertexWeightfvEXT
 
 	.align	2
 	.global	bluegl_glGetProgramLocalParameterIivNV
@@ -16047,7 +16047,7 @@ bluegl_glGetProgramLocalParameterIivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramLocalParameterIivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramLocalParameterIivNV, .-glGetProgramLocalParameterIivNV
+	.size	bluegl_glGetProgramLocalParameterIivNV, .-bluegl_glGetProgramLocalParameterIivNV
 
 	.align	2
 	.global	bluegl_glTexCoord4fColor4fNormal3fVertex4fSUN
@@ -16057,7 +16057,7 @@ bluegl_glTexCoord4fColor4fNormal3fVertex4fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4fColor4fNormal3fVertex4fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4fColor4fNormal3fVertex4fSUN, .-glTexCoord4fColor4fNormal3fVertex4fSUN
+	.size	bluegl_glTexCoord4fColor4fNormal3fVertex4fSUN, .-bluegl_glTexCoord4fColor4fNormal3fVertex4fSUN
 
 	.align	2
 	.global	bluegl_glCompressedTexImage3DARB
@@ -16067,7 +16067,7 @@ bluegl_glCompressedTexImage3DARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexImage3DARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexImage3DARB, .-glCompressedTexImage3DARB
+	.size	bluegl_glCompressedTexImage3DARB, .-bluegl_glCompressedTexImage3DARB
 
 	.align	2
 	.global	bluegl_glProgramParameter4fNV
@@ -16077,7 +16077,7 @@ bluegl_glProgramParameter4fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameter4fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameter4fNV, .-glProgramParameter4fNV
+	.size	bluegl_glProgramParameter4fNV, .-bluegl_glProgramParameter4fNV
 
 	.align	2
 	.global	bluegl_glGetTextureLevelParameterfvEXT
@@ -16087,7 +16087,7 @@ bluegl_glGetTextureLevelParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureLevelParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureLevelParameterfvEXT, .-glGetTextureLevelParameterfvEXT
+	.size	bluegl_glGetTextureLevelParameterfvEXT, .-bluegl_glGetTextureLevelParameterfvEXT
 
 	.align	2
 	.global	bluegl_glInsertComponentEXT
@@ -16097,7 +16097,7 @@ bluegl_glInsertComponentEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInsertComponentEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInsertComponentEXT, .-glInsertComponentEXT
+	.size	bluegl_glInsertComponentEXT, .-bluegl_glInsertComponentEXT
 
 	.align	2
 	.global	bluegl_glCreateTextures
@@ -16107,7 +16107,7 @@ bluegl_glCreateTextures:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateTextures]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateTextures, .-glCreateTextures
+	.size	bluegl_glCreateTextures, .-bluegl_glCreateTextures
 
 	.align	2
 	.global	bluegl_glUniform3uiv
@@ -16117,7 +16117,7 @@ bluegl_glUniform3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3uiv, .-glUniform3uiv
+	.size	bluegl_glUniform3uiv, .-bluegl_glUniform3uiv
 
 	.align	2
 	.global	bluegl_glCreateBuffers
@@ -16127,7 +16127,7 @@ bluegl_glCreateBuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateBuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateBuffers, .-glCreateBuffers
+	.size	bluegl_glCreateBuffers, .-bluegl_glCreateBuffers
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2xvOES
@@ -16137,7 +16137,7 @@ bluegl_glMultiTexCoord2xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2xvOES, .-glMultiTexCoord2xvOES
+	.size	bluegl_glMultiTexCoord2xvOES, .-bluegl_glMultiTexCoord2xvOES
 
 	.align	2
 	.global	bluegl_glTexGenxvOES
@@ -16147,7 +16147,7 @@ bluegl_glTexGenxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexGenxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexGenxvOES, .-glTexGenxvOES
+	.size	bluegl_glTexGenxvOES, .-bluegl_glTexGenxvOES
 
 	.align	2
 	.global	bluegl_glColor3fVertex3fvSUN
@@ -16157,7 +16157,7 @@ bluegl_glColor3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor3fVertex3fvSUN, .-glColor3fVertex3fvSUN
+	.size	bluegl_glColor3fVertex3fvSUN, .-bluegl_glColor3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glGetnPixelMapfvARB
@@ -16167,7 +16167,7 @@ bluegl_glGetnPixelMapfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPixelMapfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPixelMapfvARB, .-glGetnPixelMapfvARB
+	.size	bluegl_glGetnPixelMapfvARB, .-bluegl_glGetnPixelMapfvARB
 
 	.align	2
 	.global	bluegl_glMultiTexParameteriEXT
@@ -16177,7 +16177,7 @@ bluegl_glMultiTexParameteriEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexParameteriEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexParameteriEXT, .-glMultiTexParameteriEXT
+	.size	bluegl_glMultiTexParameteriEXT, .-bluegl_glMultiTexParameteriEXT
 
 	.align	2
 	.global	bluegl_glFreeObjectBufferATI
@@ -16187,7 +16187,7 @@ bluegl_glFreeObjectBufferATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFreeObjectBufferATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFreeObjectBufferATI, .-glFreeObjectBufferATI
+	.size	bluegl_glFreeObjectBufferATI, .-bluegl_glFreeObjectBufferATI
 
 	.align	2
 	.global	bluegl_glBlendBarrierNV
@@ -16197,7 +16197,7 @@ bluegl_glBlendBarrierNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendBarrierNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendBarrierNV, .-glBlendBarrierNV
+	.size	bluegl_glBlendBarrierNV, .-bluegl_glBlendBarrierNV
 
 	.align	2
 	.global	bluegl_glUniform4i64vNV
@@ -16207,7 +16207,7 @@ bluegl_glUniform4i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4i64vNV, .-glUniform4i64vNV
+	.size	bluegl_glUniform4i64vNV, .-bluegl_glUniform4i64vNV
 
 	.align	2
 	.global	bluegl_glGetnUniformuivARB
@@ -16217,7 +16217,7 @@ bluegl_glGetnUniformuivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformuivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformuivARB, .-glGetnUniformuivARB
+	.size	bluegl_glGetnUniformuivARB, .-bluegl_glGetnUniformuivARB
 
 	.align	2
 	.global	bluegl_glProgramEnvParameters4fvEXT
@@ -16227,7 +16227,7 @@ bluegl_glProgramEnvParameters4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameters4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameters4fvEXT, .-glProgramEnvParameters4fvEXT
+	.size	bluegl_glProgramEnvParameters4fvEXT, .-bluegl_glProgramEnvParameters4fvEXT
 
 	.align	2
 	.global	bluegl_glBlendFuncSeparateEXT
@@ -16237,7 +16237,7 @@ bluegl_glBlendFuncSeparateEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFuncSeparateEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFuncSeparateEXT, .-glBlendFuncSeparateEXT
+	.size	bluegl_glBlendFuncSeparateEXT, .-bluegl_glBlendFuncSeparateEXT
 
 	.align	2
 	.global	bluegl_glConvolutionParameterivEXT
@@ -16247,7 +16247,7 @@ bluegl_glConvolutionParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameterivEXT, .-glConvolutionParameterivEXT
+	.size	bluegl_glConvolutionParameterivEXT, .-bluegl_glConvolutionParameterivEXT
 
 	.align	2
 	.global	bluegl_glPixelTexGenSGIX
@@ -16257,7 +16257,7 @@ bluegl_glPixelTexGenSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTexGenSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTexGenSGIX, .-glPixelTexGenSGIX
+	.size	bluegl_glPixelTexGenSGIX, .-bluegl_glPixelTexGenSGIX
 
 	.align	2
 	.global	bluegl_glGetPathTexGenivNV
@@ -16267,7 +16267,7 @@ bluegl_glGetPathTexGenivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathTexGenivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathTexGenivNV, .-glGetPathTexGenivNV
+	.size	bluegl_glGetPathTexGenivNV, .-bluegl_glGetPathTexGenivNV
 
 	.align	2
 	.global	bluegl_glUniformMatrix4x3dv
@@ -16277,7 +16277,7 @@ bluegl_glUniformMatrix4x3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix4x3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix4x3dv, .-glUniformMatrix4x3dv
+	.size	bluegl_glUniformMatrix4x3dv, .-bluegl_glUniformMatrix4x3dv
 
 	.align	2
 	.global	bluegl_glGetVideoCaptureStreamivNV
@@ -16287,7 +16287,7 @@ bluegl_glGetVideoCaptureStreamivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideoCaptureStreamivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideoCaptureStreamivNV, .-glGetVideoCaptureStreamivNV
+	.size	bluegl_glGetVideoCaptureStreamivNV, .-bluegl_glGetVideoCaptureStreamivNV
 
 	.align	2
 	.global	bluegl_glMakeImageHandleNonResidentARB
@@ -16297,7 +16297,7 @@ bluegl_glMakeImageHandleNonResidentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeImageHandleNonResidentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeImageHandleNonResidentARB, .-glMakeImageHandleNonResidentARB
+	.size	bluegl_glMakeImageHandleNonResidentARB, .-bluegl_glMakeImageHandleNonResidentARB
 
 	.align	2
 	.global	bluegl_glSecondaryColor3dEXT
@@ -16307,7 +16307,7 @@ bluegl_glSecondaryColor3dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3dEXT, .-glSecondaryColor3dEXT
+	.size	bluegl_glSecondaryColor3dEXT, .-bluegl_glSecondaryColor3dEXT
 
 	.align	2
 	.global	bluegl_glDeleteQueries
@@ -16317,7 +16317,7 @@ bluegl_glDeleteQueries:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteQueries]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteQueries, .-glDeleteQueries
+	.size	bluegl_glDeleteQueries, .-bluegl_glDeleteQueries
 
 	.align	2
 	.global	bluegl_glNormalP3uiv
@@ -16327,7 +16327,7 @@ bluegl_glNormalP3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalP3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalP3uiv, .-glNormalP3uiv
+	.size	bluegl_glNormalP3uiv, .-bluegl_glNormalP3uiv
 
 	.align	2
 	.global	bluegl_glGetUniformfvARB
@@ -16337,7 +16337,7 @@ bluegl_glGetUniformfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformfvARB, .-glGetUniformfvARB
+	.size	bluegl_glGetUniformfvARB, .-bluegl_glGetUniformfvARB
 
 	.align	2
 	.global	bluegl_glBinormal3fvEXT
@@ -16347,7 +16347,7 @@ bluegl_glBinormal3fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3fvEXT, .-glBinormal3fvEXT
+	.size	bluegl_glBinormal3fvEXT, .-bluegl_glBinormal3fvEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribDivisorEXT
@@ -16357,7 +16357,7 @@ bluegl_glVertexArrayVertexAttribDivisorEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribDivisorEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribDivisorEXT, .-glVertexArrayVertexAttribDivisorEXT
+	.size	bluegl_glVertexArrayVertexAttribDivisorEXT, .-bluegl_glVertexArrayVertexAttribDivisorEXT
 
 	.align	2
 	.global	bluegl_glArrayElementEXT
@@ -16367,7 +16367,7 @@ bluegl_glArrayElementEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glArrayElementEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glArrayElementEXT, .-glArrayElementEXT
+	.size	bluegl_glArrayElementEXT, .-bluegl_glArrayElementEXT
 
 	.align	2
 	.global	bluegl_glGetnMinmax
@@ -16377,7 +16377,7 @@ bluegl_glGetnMinmax:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMinmax]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMinmax, .-glGetnMinmax
+	.size	bluegl_glGetnMinmax, .-bluegl_glGetnMinmax
 
 	.align	2
 	.global	bluegl_glIndexxOES
@@ -16387,7 +16387,7 @@ bluegl_glIndexxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIndexxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIndexxOES, .-glIndexxOES
+	.size	bluegl_glIndexxOES, .-bluegl_glIndexxOES
 
 	.align	2
 	.global	bluegl_glUniform3uivEXT
@@ -16397,7 +16397,7 @@ bluegl_glUniform3uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3uivEXT, .-glUniform3uivEXT
+	.size	bluegl_glUniform3uivEXT, .-bluegl_glUniform3uivEXT
 
 	.align	2
 	.global	bluegl_glPopGroupMarkerEXT
@@ -16407,7 +16407,7 @@ bluegl_glPopGroupMarkerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPopGroupMarkerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPopGroupMarkerEXT, .-glPopGroupMarkerEXT
+	.size	bluegl_glPopGroupMarkerEXT, .-bluegl_glPopGroupMarkerEXT
 
 	.align	2
 	.global	bluegl_glClearNamedFramebufferuiv
@@ -16417,7 +16417,7 @@ bluegl_glClearNamedFramebufferuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedFramebufferuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedFramebufferuiv, .-glClearNamedFramebufferuiv
+	.size	bluegl_glClearNamedFramebufferuiv, .-bluegl_glClearNamedFramebufferuiv
 
 	.align	2
 	.global	bluegl_glSetLocalConstantEXT
@@ -16427,7 +16427,7 @@ bluegl_glSetLocalConstantEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSetLocalConstantEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSetLocalConstantEXT, .-glSetLocalConstantEXT
+	.size	bluegl_glSetLocalConstantEXT, .-bluegl_glSetLocalConstantEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform1ui64NV
@@ -16437,7 +16437,7 @@ bluegl_glProgramUniform1ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1ui64NV, .-glProgramUniform1ui64NV
+	.size	bluegl_glProgramUniform1ui64NV, .-bluegl_glProgramUniform1ui64NV
 
 	.align	2
 	.global	bluegl_glColor4hvNV
@@ -16447,7 +16447,7 @@ bluegl_glColor4hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4hvNV, .-glColor4hvNV
+	.size	bluegl_glColor4hvNV, .-bluegl_glColor4hvNV
 
 	.align	2
 	.global	bluegl_glGetVertexAttribfv
@@ -16457,7 +16457,7 @@ bluegl_glGetVertexAttribfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribfv, .-glGetVertexAttribfv
+	.size	bluegl_glGetVertexAttribfv, .-bluegl_glGetVertexAttribfv
 
 	.align	2
 	.global	bluegl_glDispatchCompute
@@ -16467,7 +16467,7 @@ bluegl_glDispatchCompute:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDispatchCompute]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDispatchCompute, .-glDispatchCompute
+	.size	bluegl_glDispatchCompute, .-bluegl_glDispatchCompute
 
 	.align	2
 	.global	bluegl_glGetActiveAttrib
@@ -16477,7 +16477,7 @@ bluegl_glGetActiveAttrib:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveAttrib]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveAttrib, .-glGetActiveAttrib
+	.size	bluegl_glGetActiveAttrib, .-bluegl_glGetActiveAttrib
 
 	.align	2
 	.global	bluegl_glFragmentColorMaterialSGIX
@@ -16487,7 +16487,7 @@ bluegl_glFragmentColorMaterialSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentColorMaterialSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentColorMaterialSGIX, .-glFragmentColorMaterialSGIX
+	.size	bluegl_glFragmentColorMaterialSGIX, .-bluegl_glFragmentColorMaterialSGIX
 
 	.align	2
 	.global	bluegl_glTexSubImage2D
@@ -16497,7 +16497,7 @@ bluegl_glTexSubImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexSubImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexSubImage2D, .-glTexSubImage2D
+	.size	bluegl_glTexSubImage2D, .-bluegl_glTexSubImage2D
 
 	.align	2
 	.global	bluegl_glGetnMinmaxARB
@@ -16507,7 +16507,7 @@ bluegl_glGetnMinmaxARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMinmaxARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMinmaxARB, .-glGetnMinmaxARB
+	.size	bluegl_glGetnMinmaxARB, .-bluegl_glGetnMinmaxARB
 
 	.align	2
 	.global	bluegl_glLogicOp
@@ -16517,7 +16517,7 @@ bluegl_glLogicOp:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLogicOp]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLogicOp, .-glLogicOp
+	.size	bluegl_glLogicOp, .-bluegl_glLogicOp
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x4fv
@@ -16527,7 +16527,7 @@ bluegl_glProgramUniformMatrix3x4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x4fv, .-glProgramUniformMatrix3x4fv
+	.size	bluegl_glProgramUniformMatrix3x4fv, .-bluegl_glProgramUniformMatrix3x4fv
 
 	.align	2
 	.global	bluegl_glWindowPos4iMESA
@@ -16537,7 +16537,7 @@ bluegl_glWindowPos4iMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4iMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4iMESA, .-glWindowPos4iMESA
+	.size	bluegl_glWindowPos4iMESA, .-bluegl_glWindowPos4iMESA
 
 	.align	2
 	.global	bluegl_glPollAsyncSGIX
@@ -16547,7 +16547,7 @@ bluegl_glPollAsyncSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPollAsyncSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPollAsyncSGIX, .-glPollAsyncSGIX
+	.size	bluegl_glPollAsyncSGIX, .-bluegl_glPollAsyncSGIX
 
 	.align	2
 	.global	bluegl_glGetTextureParameterIuiv
@@ -16557,7 +16557,7 @@ bluegl_glGetTextureParameterIuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameterIuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameterIuiv, .-glGetTextureParameterIuiv
+	.size	bluegl_glGetTextureParameterIuiv, .-bluegl_glGetTextureParameterIuiv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1xOES
@@ -16567,7 +16567,7 @@ bluegl_glMultiTexCoord1xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1xOES, .-glMultiTexCoord1xOES
+	.size	bluegl_glMultiTexCoord1xOES, .-bluegl_glMultiTexCoord1xOES
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4dv
@@ -16577,7 +16577,7 @@ bluegl_glProgramUniformMatrix4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4dv, .-glProgramUniformMatrix4dv
+	.size	bluegl_glProgramUniformMatrix4dv, .-bluegl_glProgramUniformMatrix4dv
 
 	.align	2
 	.global	bluegl_glFramebufferTexture1DEXT
@@ -16587,7 +16587,7 @@ bluegl_glFramebufferTexture1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTexture1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTexture1DEXT, .-glFramebufferTexture1DEXT
+	.size	bluegl_glFramebufferTexture1DEXT, .-bluegl_glFramebufferTexture1DEXT
 
 	.align	2
 	.global	bluegl_glUniform1ui64ARB
@@ -16597,7 +16597,7 @@ bluegl_glUniform1ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1ui64ARB, .-glUniform1ui64ARB
+	.size	bluegl_glUniform1ui64ARB, .-bluegl_glUniform1ui64ARB
 
 	.align	2
 	.global	bluegl_glTextureParameterIiv
@@ -16607,7 +16607,7 @@ bluegl_glTextureParameterIiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterIiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterIiv, .-glTextureParameterIiv
+	.size	bluegl_glTextureParameterIiv, .-bluegl_glTextureParameterIiv
 
 	.align	2
 	.global	bluegl_glGetSeparableFilterEXT
@@ -16617,7 +16617,7 @@ bluegl_glGetSeparableFilterEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSeparableFilterEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSeparableFilterEXT, .-glGetSeparableFilterEXT
+	.size	bluegl_glGetSeparableFilterEXT, .-bluegl_glGetSeparableFilterEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3iARB
@@ -16627,7 +16627,7 @@ bluegl_glMultiTexCoord3iARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3iARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3iARB, .-glMultiTexCoord3iARB
+	.size	bluegl_glMultiTexCoord3iARB, .-bluegl_glMultiTexCoord3iARB
 
 	.align	2
 	.global	bluegl_glRasterPos4xvOES
@@ -16637,7 +16637,7 @@ bluegl_glRasterPos4xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRasterPos4xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRasterPos4xvOES, .-glRasterPos4xvOES
+	.size	bluegl_glRasterPos4xvOES, .-bluegl_glRasterPos4xvOES
 
 	.align	2
 	.global	bluegl_glDrawTransformFeedbackStream
@@ -16647,7 +16647,7 @@ bluegl_glDrawTransformFeedbackStream:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawTransformFeedbackStream]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawTransformFeedbackStream, .-glDrawTransformFeedbackStream
+	.size	bluegl_glDrawTransformFeedbackStream, .-bluegl_glDrawTransformFeedbackStream
 
 	.align	2
 	.global	bluegl_glVertex3hvNV
@@ -16657,7 +16657,7 @@ bluegl_glVertex3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex3hvNV, .-glVertex3hvNV
+	.size	bluegl_glVertex3hvNV, .-bluegl_glVertex3hvNV
 
 	.align	2
 	.global	bluegl_glVertexArrayMultiTexCoordOffsetEXT
@@ -16667,7 +16667,7 @@ bluegl_glVertexArrayMultiTexCoordOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayMultiTexCoordOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayMultiTexCoordOffsetEXT, .-glVertexArrayMultiTexCoordOffsetEXT
+	.size	bluegl_glVertexArrayMultiTexCoordOffsetEXT, .-bluegl_glVertexArrayMultiTexCoordOffsetEXT
 
 	.align	2
 	.global	bluegl_glProvokingVertex
@@ -16677,7 +16677,7 @@ bluegl_glProvokingVertex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProvokingVertex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProvokingVertex, .-glProvokingVertex
+	.size	bluegl_glProvokingVertex, .-bluegl_glProvokingVertex
 
 	.align	2
 	.global	bluegl_glAccumxOES
@@ -16687,7 +16687,7 @@ bluegl_glAccumxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAccumxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAccumxOES, .-glAccumxOES
+	.size	bluegl_glAccumxOES, .-bluegl_glAccumxOES
 
 	.align	2
 	.global	bluegl_glShaderBinary
@@ -16697,7 +16697,7 @@ bluegl_glShaderBinary:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glShaderBinary]
 	ldr	x16, [x16]
 	br	x16
-	.size	glShaderBinary, .-glShaderBinary
+	.size	bluegl_glShaderBinary, .-bluegl_glShaderBinary
 
 	.align	2
 	.global	bluegl_glGetMultiTexGenivEXT
@@ -16707,7 +16707,7 @@ bluegl_glGetMultiTexGenivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexGenivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexGenivEXT, .-glGetMultiTexGenivEXT
+	.size	bluegl_glGetMultiTexGenivEXT, .-bluegl_glGetMultiTexGenivEXT
 
 	.align	2
 	.global	bluegl_glPointParameterxvOES
@@ -16717,7 +16717,7 @@ bluegl_glPointParameterxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterxvOES, .-glPointParameterxvOES
+	.size	bluegl_glPointParameterxvOES, .-bluegl_glPointParameterxvOES
 
 	.align	2
 	.global	bluegl_glCreateStatesNV
@@ -16727,7 +16727,7 @@ bluegl_glCreateStatesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateStatesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateStatesNV, .-glCreateStatesNV
+	.size	bluegl_glCreateStatesNV, .-bluegl_glCreateStatesNV
 
 	.align	2
 	.global	bluegl_glClearDepthdNV
@@ -16737,7 +16737,7 @@ bluegl_glClearDepthdNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearDepthdNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearDepthdNV, .-glClearDepthdNV
+	.size	bluegl_glClearDepthdNV, .-bluegl_glClearDepthdNV
 
 	.align	2
 	.global	bluegl_glClearColorIuiEXT
@@ -16747,7 +16747,7 @@ bluegl_glClearColorIuiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearColorIuiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearColorIuiEXT, .-glClearColorIuiEXT
+	.size	bluegl_glClearColorIuiEXT, .-bluegl_glClearColorIuiEXT
 
 	.align	2
 	.global	bluegl_glBindMultiTextureEXT
@@ -16757,7 +16757,7 @@ bluegl_glBindMultiTextureEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindMultiTextureEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindMultiTextureEXT, .-glBindMultiTextureEXT
+	.size	bluegl_glBindMultiTextureEXT, .-bluegl_glBindMultiTextureEXT
 
 	.align	2
 	.global	bluegl_glDrawElements
@@ -16767,7 +16767,7 @@ bluegl_glDrawElements:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElements]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElements, .-glDrawElements
+	.size	bluegl_glDrawElements, .-bluegl_glDrawElements
 
 	.align	2
 	.global	bluegl_glConvolutionFilter1DEXT
@@ -16777,7 +16777,7 @@ bluegl_glConvolutionFilter1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionFilter1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionFilter1DEXT, .-glConvolutionFilter1DEXT
+	.size	bluegl_glConvolutionFilter1DEXT, .-bluegl_glConvolutionFilter1DEXT
 
 	.align	2
 	.global	bluegl_glDisableVertexArrayEXT
@@ -16787,7 +16787,7 @@ bluegl_glDisableVertexArrayEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableVertexArrayEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableVertexArrayEXT, .-glDisableVertexArrayEXT
+	.size	bluegl_glDisableVertexArrayEXT, .-bluegl_glDisableVertexArrayEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3ui64NV
@@ -16797,7 +16797,7 @@ bluegl_glProgramUniform3ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3ui64NV, .-glProgramUniform3ui64NV
+	.size	bluegl_glProgramUniform3ui64NV, .-bluegl_glProgramUniform3ui64NV
 
 	.align	2
 	.global	bluegl_glClientActiveTexture
@@ -16807,7 +16807,7 @@ bluegl_glClientActiveTexture:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClientActiveTexture]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClientActiveTexture, .-glClientActiveTexture
+	.size	bluegl_glClientActiveTexture, .-bluegl_glClientActiveTexture
 
 	.align	2
 	.global	bluegl_glMultiTexParameterIivEXT
@@ -16817,7 +16817,7 @@ bluegl_glMultiTexParameterIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexParameterIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexParameterIivEXT, .-glMultiTexParameterIivEXT
+	.size	bluegl_glMultiTexParameterIivEXT, .-bluegl_glMultiTexParameterIivEXT
 
 	.align	2
 	.global	bluegl_glUniform1iv
@@ -16827,7 +16827,7 @@ bluegl_glUniform1iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1iv, .-glUniform1iv
+	.size	bluegl_glUniform1iv, .-bluegl_glUniform1iv
 
 	.align	2
 	.global	bluegl_glVertexAttribArrayObjectATI
@@ -16837,7 +16837,7 @@ bluegl_glVertexAttribArrayObjectATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribArrayObjectATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribArrayObjectATI, .-glVertexAttribArrayObjectATI
+	.size	bluegl_glVertexAttribArrayObjectATI, .-bluegl_glVertexAttribArrayObjectATI
 
 	.align	2
 	.global	bluegl_glDrawArraysInstanced
@@ -16847,7 +16847,7 @@ bluegl_glDrawArraysInstanced:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawArraysInstanced]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawArraysInstanced, .-glDrawArraysInstanced
+	.size	bluegl_glDrawArraysInstanced, .-bluegl_glDrawArraysInstanced
 
 	.align	2
 	.global	bluegl_glVertexAttrib2sNV
@@ -16857,7 +16857,7 @@ bluegl_glVertexAttrib2sNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2sNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2sNV, .-glVertexAttrib2sNV
+	.size	bluegl_glVertexAttrib2sNV, .-bluegl_glVertexAttrib2sNV
 
 	.align	2
 	.global	bluegl_glTexBufferEXT
@@ -16867,7 +16867,7 @@ bluegl_glTexBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexBufferEXT, .-glTexBufferEXT
+	.size	bluegl_glTexBufferEXT, .-bluegl_glTexBufferEXT
 
 	.align	2
 	.global	bluegl_glVertexStream2fATI
@@ -16877,7 +16877,7 @@ bluegl_glVertexStream2fATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2fATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2fATI, .-glVertexStream2fATI
+	.size	bluegl_glVertexStream2fATI, .-bluegl_glVertexStream2fATI
 
 	.align	2
 	.global	bluegl_glDebugMessageCallbackAMD
@@ -16887,7 +16887,7 @@ bluegl_glDebugMessageCallbackAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageCallbackAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageCallbackAMD, .-glDebugMessageCallbackAMD
+	.size	bluegl_glDebugMessageCallbackAMD, .-bluegl_glDebugMessageCallbackAMD
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2dARB
@@ -16897,7 +16897,7 @@ bluegl_glMultiTexCoord2dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2dARB, .-glMultiTexCoord2dARB
+	.size	bluegl_glMultiTexCoord2dARB, .-bluegl_glMultiTexCoord2dARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4uiv
@@ -16907,7 +16907,7 @@ bluegl_glVertexAttrib4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4uiv, .-glVertexAttrib4uiv
+	.size	bluegl_glVertexAttrib4uiv, .-bluegl_glVertexAttrib4uiv
 
 	.align	2
 	.global	bluegl_glEndQueryIndexed
@@ -16917,7 +16917,7 @@ bluegl_glEndQueryIndexed:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndQueryIndexed]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndQueryIndexed, .-glEndQueryIndexed
+	.size	bluegl_glEndQueryIndexed, .-bluegl_glEndQueryIndexed
 
 	.align	2
 	.global	bluegl_glNormalStream3sATI
@@ -16927,7 +16927,7 @@ bluegl_glNormalStream3sATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3sATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3sATI, .-glNormalStream3sATI
+	.size	bluegl_glNormalStream3sATI, .-bluegl_glNormalStream3sATI
 
 	.align	2
 	.global	bluegl_glProgramParameteriARB
@@ -16937,7 +16937,7 @@ bluegl_glProgramParameteriARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameteriARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameteriARB, .-glProgramParameteriARB
+	.size	bluegl_glProgramParameteriARB, .-bluegl_glProgramParameteriARB
 
 	.align	2
 	.global	bluegl_glTexEnvxOES
@@ -16947,7 +16947,7 @@ bluegl_glTexEnvxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexEnvxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexEnvxOES, .-glTexEnvxOES
+	.size	bluegl_glTexEnvxOES, .-bluegl_glTexEnvxOES
 
 	.align	2
 	.global	bluegl_glProgramUniform1iv
@@ -16957,7 +16957,7 @@ bluegl_glProgramUniform1iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1iv, .-glProgramUniform1iv
+	.size	bluegl_glProgramUniform1iv, .-bluegl_glProgramUniform1iv
 
 	.align	2
 	.global	bluegl_glDisableVertexAttribAPPLE
@@ -16967,7 +16967,7 @@ bluegl_glDisableVertexAttribAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableVertexAttribAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableVertexAttribAPPLE, .-glDisableVertexAttribAPPLE
+	.size	bluegl_glDisableVertexAttribAPPLE, .-bluegl_glDisableVertexAttribAPPLE
 
 	.align	2
 	.global	bluegl_glBindRenderbuffer
@@ -16977,7 +16977,7 @@ bluegl_glBindRenderbuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindRenderbuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindRenderbuffer, .-glBindRenderbuffer
+	.size	bluegl_glBindRenderbuffer, .-bluegl_glBindRenderbuffer
 
 	.align	2
 	.global	bluegl_glMultiTexSubImage3DEXT
@@ -16987,7 +16987,7 @@ bluegl_glMultiTexSubImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexSubImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexSubImage3DEXT, .-glMultiTexSubImage3DEXT
+	.size	bluegl_glMultiTexSubImage3DEXT, .-bluegl_glMultiTexSubImage3DEXT
 
 	.align	2
 	.global	bluegl_glIsProgram
@@ -16997,7 +16997,7 @@ bluegl_glIsProgram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsProgram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsProgram, .-glIsProgram
+	.size	bluegl_glIsProgram, .-bluegl_glIsProgram
 
 	.align	2
 	.global	bluegl_glMultiDrawElementsIndirectAMD
@@ -17007,7 +17007,7 @@ bluegl_glMultiDrawElementsIndirectAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementsIndirectAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementsIndirectAMD, .-glMultiDrawElementsIndirectAMD
+	.size	bluegl_glMultiDrawElementsIndirectAMD, .-bluegl_glMultiDrawElementsIndirectAMD
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4fvARB
@@ -17017,7 +17017,7 @@ bluegl_glMultiTexCoord4fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4fvARB, .-glMultiTexCoord4fvARB
+	.size	bluegl_glMultiTexCoord4fvARB, .-bluegl_glMultiTexCoord4fvARB
 
 	.align	2
 	.global	bluegl_glGetLocalConstantBooleanvEXT
@@ -17027,7 +17027,7 @@ bluegl_glGetLocalConstantBooleanvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetLocalConstantBooleanvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetLocalConstantBooleanvEXT, .-glGetLocalConstantBooleanvEXT
+	.size	bluegl_glGetLocalConstantBooleanvEXT, .-bluegl_glGetLocalConstantBooleanvEXT
 
 	.align	2
 	.global	bluegl_glUniformMatrix3x2dv
@@ -17037,7 +17037,7 @@ bluegl_glUniformMatrix3x2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix3x2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix3x2dv, .-glUniformMatrix3x2dv
+	.size	bluegl_glUniformMatrix3x2dv, .-bluegl_glUniformMatrix3x2dv
 
 	.align	2
 	.global	bluegl_glVertexAttrib4fv
@@ -17047,7 +17047,7 @@ bluegl_glVertexAttrib4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4fv, .-glVertexAttrib4fv
+	.size	bluegl_glVertexAttrib4fv, .-bluegl_glVertexAttrib4fv
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x3dv
@@ -17057,7 +17057,7 @@ bluegl_glProgramUniformMatrix2x3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x3dv, .-glProgramUniformMatrix2x3dv
+	.size	bluegl_glProgramUniformMatrix2x3dv, .-bluegl_glProgramUniformMatrix2x3dv
 
 	.align	2
 	.global	bluegl_glGetnPixelMapfv
@@ -17067,7 +17067,7 @@ bluegl_glGetnPixelMapfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPixelMapfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPixelMapfv, .-glGetnPixelMapfv
+	.size	bluegl_glGetnPixelMapfv, .-bluegl_glGetnPixelMapfv
 
 	.align	2
 	.global	bluegl_glTexCoord3xOES
@@ -17077,7 +17077,7 @@ bluegl_glTexCoord3xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord3xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord3xOES, .-glTexCoord3xOES
+	.size	bluegl_glTexCoord3xOES, .-bluegl_glTexCoord3xOES
 
 	.align	2
 	.global	bluegl_glLoadTransposeMatrixfARB
@@ -17087,7 +17087,7 @@ bluegl_glLoadTransposeMatrixfARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadTransposeMatrixfARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadTransposeMatrixfARB, .-glLoadTransposeMatrixfARB
+	.size	bluegl_glLoadTransposeMatrixfARB, .-bluegl_glLoadTransposeMatrixfARB
 
 	.align	2
 	.global	bluegl_glImageTransformParameteriHP
@@ -17097,7 +17097,7 @@ bluegl_glImageTransformParameteriHP:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glImageTransformParameteriHP]
 	ldr	x16, [x16]
 	br	x16
-	.size	glImageTransformParameteriHP, .-glImageTransformParameteriHP
+	.size	bluegl_glImageTransformParameteriHP, .-bluegl_glImageTransformParameteriHP
 
 	.align	2
 	.global	bluegl_glTestFenceNV
@@ -17107,7 +17107,7 @@ bluegl_glTestFenceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTestFenceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTestFenceNV, .-glTestFenceNV
+	.size	bluegl_glTestFenceNV, .-bluegl_glTestFenceNV
 
 	.align	2
 	.global	bluegl_glGetMapParameterivNV
@@ -17117,7 +17117,7 @@ bluegl_glGetMapParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMapParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMapParameterivNV, .-glGetMapParameterivNV
+	.size	bluegl_glGetMapParameterivNV, .-bluegl_glGetMapParameterivNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib2fv
@@ -17127,7 +17127,7 @@ bluegl_glVertexAttrib2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2fv, .-glVertexAttrib2fv
+	.size	bluegl_glVertexAttrib2fv, .-bluegl_glVertexAttrib2fv
 
 	.align	2
 	.global	bluegl_glUniform3ui64NV
@@ -17137,7 +17137,7 @@ bluegl_glUniform3ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3ui64NV, .-glUniform3ui64NV
+	.size	bluegl_glUniform3ui64NV, .-bluegl_glUniform3ui64NV
 
 	.align	2
 	.global	bluegl_glCombinerParameterfvNV
@@ -17147,7 +17147,7 @@ bluegl_glCombinerParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCombinerParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCombinerParameterfvNV, .-glCombinerParameterfvNV
+	.size	bluegl_glCombinerParameterfvNV, .-bluegl_glCombinerParameterfvNV
 
 	.align	2
 	.global	bluegl_glCopyConvolutionFilter2D
@@ -17157,7 +17157,7 @@ bluegl_glCopyConvolutionFilter2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyConvolutionFilter2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyConvolutionFilter2D, .-glCopyConvolutionFilter2D
+	.size	bluegl_glCopyConvolutionFilter2D, .-bluegl_glCopyConvolutionFilter2D
 
 	.align	2
 	.global	bluegl_glGetProgramResourceIndex
@@ -17167,7 +17167,7 @@ bluegl_glGetProgramResourceIndex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramResourceIndex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramResourceIndex, .-glGetProgramResourceIndex
+	.size	bluegl_glGetProgramResourceIndex, .-bluegl_glGetProgramResourceIndex
 
 	.align	2
 	.global	bluegl_glBeginConditionalRenderNV
@@ -17177,7 +17177,7 @@ bluegl_glBeginConditionalRenderNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginConditionalRenderNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginConditionalRenderNV, .-glBeginConditionalRenderNV
+	.size	bluegl_glBeginConditionalRenderNV, .-bluegl_glBeginConditionalRenderNV
 
 	.align	2
 	.global	bluegl_glPathFogGenNV
@@ -17187,7 +17187,7 @@ bluegl_glPathFogGenNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathFogGenNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathFogGenNV, .-glPathFogGenNV
+	.size	bluegl_glPathFogGenNV, .-bluegl_glPathFogGenNV
 
 	.align	2
 	.global	bluegl_glStencilThenCoverFillPathNV
@@ -17197,7 +17197,7 @@ bluegl_glStencilThenCoverFillPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilThenCoverFillPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilThenCoverFillPathNV, .-glStencilThenCoverFillPathNV
+	.size	bluegl_glStencilThenCoverFillPathNV, .-bluegl_glStencilThenCoverFillPathNV
 
 	.align	2
 	.global	bluegl_glVertexArrayIndexOffsetEXT
@@ -17207,7 +17207,7 @@ bluegl_glVertexArrayIndexOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayIndexOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayIndexOffsetEXT, .-glVertexArrayIndexOffsetEXT
+	.size	bluegl_glVertexArrayIndexOffsetEXT, .-bluegl_glVertexArrayIndexOffsetEXT
 
 	.align	2
 	.global	bluegl_glProgramBufferParametersIuivNV
@@ -17217,7 +17217,7 @@ bluegl_glProgramBufferParametersIuivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramBufferParametersIuivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramBufferParametersIuivNV, .-glProgramBufferParametersIuivNV
+	.size	bluegl_glProgramBufferParametersIuivNV, .-bluegl_glProgramBufferParametersIuivNV
 
 	.align	2
 	.global	bluegl_glPixelTransformParameterivEXT
@@ -17227,7 +17227,7 @@ bluegl_glPixelTransformParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTransformParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTransformParameterivEXT, .-glPixelTransformParameterivEXT
+	.size	bluegl_glPixelTransformParameterivEXT, .-bluegl_glPixelTransformParameterivEXT
 
 	.align	2
 	.global	bluegl_glDisableClientStateiEXT
@@ -17237,7 +17237,7 @@ bluegl_glDisableClientStateiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableClientStateiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableClientStateiEXT, .-glDisableClientStateiEXT
+	.size	bluegl_glDisableClientStateiEXT, .-bluegl_glDisableClientStateiEXT
 
 	.align	2
 	.global	bluegl_glTexBufferARB
@@ -17247,7 +17247,7 @@ bluegl_glTexBufferARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexBufferARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexBufferARB, .-glTexBufferARB
+	.size	bluegl_glTexBufferARB, .-bluegl_glTexBufferARB
 
 	.align	2
 	.global	bluegl_glGetLocalConstantIntegervEXT
@@ -17257,7 +17257,7 @@ bluegl_glGetLocalConstantIntegervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetLocalConstantIntegervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetLocalConstantIntegervEXT, .-glGetLocalConstantIntegervEXT
+	.size	bluegl_glGetLocalConstantIntegervEXT, .-bluegl_glGetLocalConstantIntegervEXT
 
 	.align	2
 	.global	bluegl_glPathCoverDepthFuncNV
@@ -17267,7 +17267,7 @@ bluegl_glPathCoverDepthFuncNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathCoverDepthFuncNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathCoverDepthFuncNV, .-glPathCoverDepthFuncNV
+	.size	bluegl_glPathCoverDepthFuncNV, .-bluegl_glPathCoverDepthFuncNV
 
 	.align	2
 	.global	bluegl_glProgramUniform3i
@@ -17277,7 +17277,7 @@ bluegl_glProgramUniform3i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3i, .-glProgramUniform3i
+	.size	bluegl_glProgramUniform3i, .-bluegl_glProgramUniform3i
 
 	.align	2
 	.global	bluegl_glMultiDrawElementsIndirectBindlessCountNV
@@ -17287,7 +17287,7 @@ bluegl_glMultiDrawElementsIndirectBindlessCountNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementsIndirectBindlessCountNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementsIndirectBindlessCountNV, .-glMultiDrawElementsIndirectBindlessCountNV
+	.size	bluegl_glMultiDrawElementsIndirectBindlessCountNV, .-bluegl_glMultiDrawElementsIndirectBindlessCountNV
 
 	.align	2
 	.global	bluegl_glGetBufferPointervARB
@@ -17297,7 +17297,7 @@ bluegl_glGetBufferPointervARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferPointervARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferPointervARB, .-glGetBufferPointervARB
+	.size	bluegl_glGetBufferPointervARB, .-bluegl_glGetBufferPointervARB
 
 	.align	2
 	.global	bluegl_glMultiTexParameterIuivEXT
@@ -17307,7 +17307,7 @@ bluegl_glMultiTexParameterIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexParameterIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexParameterIuivEXT, .-glMultiTexParameterIuivEXT
+	.size	bluegl_glMultiTexParameterIuivEXT, .-bluegl_glMultiTexParameterIuivEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3f
@@ -17317,7 +17317,7 @@ bluegl_glProgramUniform3f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3f, .-glProgramUniform3f
+	.size	bluegl_glProgramUniform3f, .-bluegl_glProgramUniform3f
 
 	.align	2
 	.global	bluegl_glStencilThenCoverFillPathInstancedNV
@@ -17327,7 +17327,7 @@ bluegl_glStencilThenCoverFillPathInstancedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilThenCoverFillPathInstancedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilThenCoverFillPathInstancedNV, .-glStencilThenCoverFillPathInstancedNV
+	.size	bluegl_glStencilThenCoverFillPathInstancedNV, .-bluegl_glStencilThenCoverFillPathInstancedNV
 
 	.align	2
 	.global	bluegl_glProgramUniform3d
@@ -17337,7 +17337,7 @@ bluegl_glProgramUniform3d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3d, .-glProgramUniform3d
+	.size	bluegl_glProgramUniform3d, .-bluegl_glProgramUniform3d
 
 	.align	2
 	.global	bluegl_glMapVertexAttrib1dAPPLE
@@ -17347,7 +17347,7 @@ bluegl_glMapVertexAttrib1dAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapVertexAttrib1dAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapVertexAttrib1dAPPLE, .-glMapVertexAttrib1dAPPLE
+	.size	bluegl_glMapVertexAttrib1dAPPLE, .-bluegl_glMapVertexAttrib1dAPPLE
 
 	.align	2
 	.global	bluegl_glLoadTransposeMatrixd
@@ -17357,7 +17357,7 @@ bluegl_glLoadTransposeMatrixd:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadTransposeMatrixd]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadTransposeMatrixd, .-glLoadTransposeMatrixd
+	.size	bluegl_glLoadTransposeMatrixd, .-bluegl_glLoadTransposeMatrixd
 
 	.align	2
 	.global	bluegl_glLoadTransposeMatrixf
@@ -17367,7 +17367,7 @@ bluegl_glLoadTransposeMatrixf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadTransposeMatrixf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadTransposeMatrixf, .-glLoadTransposeMatrixf
+	.size	bluegl_glLoadTransposeMatrixf, .-bluegl_glLoadTransposeMatrixf
 
 	.align	2
 	.global	bluegl_glGetPointervEXT
@@ -17377,7 +17377,7 @@ bluegl_glGetPointervEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPointervEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPointervEXT, .-glGetPointervEXT
+	.size	bluegl_glGetPointervEXT, .-bluegl_glGetPointervEXT
 
 	.align	2
 	.global	bluegl_glEndConditionalRenderNV
@@ -17387,7 +17387,7 @@ bluegl_glEndConditionalRenderNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndConditionalRenderNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndConditionalRenderNV, .-glEndConditionalRenderNV
+	.size	bluegl_glEndConditionalRenderNV, .-bluegl_glEndConditionalRenderNV
 
 	.align	2
 	.global	bluegl_glMultiTexImage1DEXT
@@ -17397,7 +17397,7 @@ bluegl_glMultiTexImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexImage1DEXT, .-glMultiTexImage1DEXT
+	.size	bluegl_glMultiTexImage1DEXT, .-bluegl_glMultiTexImage1DEXT
 
 	.align	2
 	.global	bluegl_glDeleteObjectARB
@@ -17407,7 +17407,7 @@ bluegl_glDeleteObjectARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteObjectARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteObjectARB, .-glDeleteObjectARB
+	.size	bluegl_glDeleteObjectARB, .-bluegl_glDeleteObjectARB
 
 	.align	2
 	.global	bluegl_glProgramUniform2uiEXT
@@ -17417,7 +17417,7 @@ bluegl_glProgramUniform2uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2uiEXT, .-glProgramUniform2uiEXT
+	.size	bluegl_glProgramUniform2uiEXT, .-bluegl_glProgramUniform2uiEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI1ui
@@ -17427,7 +17427,7 @@ bluegl_glVertexAttribI1ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1ui, .-glVertexAttribI1ui
+	.size	bluegl_glVertexAttribI1ui, .-bluegl_glVertexAttribI1ui
 
 	.align	2
 	.global	bluegl_glProgramNamedParameter4dvNV
@@ -17437,7 +17437,7 @@ bluegl_glProgramNamedParameter4dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramNamedParameter4dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramNamedParameter4dvNV, .-glProgramNamedParameter4dvNV
+	.size	bluegl_glProgramNamedParameter4dvNV, .-bluegl_glProgramNamedParameter4dvNV
 
 	.align	2
 	.global	bluegl_glCompileCommandListNV
@@ -17447,7 +17447,7 @@ bluegl_glCompileCommandListNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompileCommandListNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompileCommandListNV, .-glCompileCommandListNV
+	.size	bluegl_glCompileCommandListNV, .-bluegl_glCompileCommandListNV
 
 	.align	2
 	.global	bluegl_glGetRenderbufferParameterivEXT
@@ -17457,7 +17457,7 @@ bluegl_glGetRenderbufferParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetRenderbufferParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetRenderbufferParameterivEXT, .-glGetRenderbufferParameterivEXT
+	.size	bluegl_glGetRenderbufferParameterivEXT, .-bluegl_glGetRenderbufferParameterivEXT
 
 	.align	2
 	.global	bluegl_glGetnPolygonStipple
@@ -17467,7 +17467,7 @@ bluegl_glGetnPolygonStipple:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPolygonStipple]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPolygonStipple, .-glGetnPolygonStipple
+	.size	bluegl_glGetnPolygonStipple, .-bluegl_glGetnPolygonStipple
 
 	.align	2
 	.global	bluegl_glIsBufferResidentNV
@@ -17477,7 +17477,7 @@ bluegl_glIsBufferResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsBufferResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsBufferResidentNV, .-glIsBufferResidentNV
+	.size	bluegl_glIsBufferResidentNV, .-bluegl_glIsBufferResidentNV
 
 	.align	2
 	.global	bluegl_glGetNamedRenderbufferParameterivEXT
@@ -17487,7 +17487,7 @@ bluegl_glGetNamedRenderbufferParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedRenderbufferParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedRenderbufferParameterivEXT, .-glGetNamedRenderbufferParameterivEXT
+	.size	bluegl_glGetNamedRenderbufferParameterivEXT, .-bluegl_glGetNamedRenderbufferParameterivEXT
 
 	.align	2
 	.global	bluegl_glNamedFramebufferSampleLocationsfvARB
@@ -17497,7 +17497,7 @@ bluegl_glNamedFramebufferSampleLocationsfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferSampleLocationsfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferSampleLocationsfvARB, .-glNamedFramebufferSampleLocationsfvARB
+	.size	bluegl_glNamedFramebufferSampleLocationsfvARB, .-bluegl_glNamedFramebufferSampleLocationsfvARB
 
 	.align	2
 	.global	bluegl_glMultiTexGendvEXT
@@ -17507,7 +17507,7 @@ bluegl_glMultiTexGendvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexGendvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexGendvEXT, .-glMultiTexGendvEXT
+	.size	bluegl_glMultiTexGendvEXT, .-bluegl_glMultiTexGendvEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayRangeNV
@@ -17517,7 +17517,7 @@ bluegl_glVertexArrayRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayRangeNV, .-glVertexArrayRangeNV
+	.size	bluegl_glVertexArrayRangeNV, .-bluegl_glVertexArrayRangeNV
 
 	.align	2
 	.global	bluegl_glIsTextureHandleResidentNV
@@ -17527,7 +17527,7 @@ bluegl_glIsTextureHandleResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsTextureHandleResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsTextureHandleResidentNV, .-glIsTextureHandleResidentNV
+	.size	bluegl_glIsTextureHandleResidentNV, .-bluegl_glIsTextureHandleResidentNV
 
 	.align	2
 	.global	bluegl_glGetProgramEnvParameterdvARB
@@ -17537,7 +17537,7 @@ bluegl_glGetProgramEnvParameterdvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramEnvParameterdvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramEnvParameterdvARB, .-glGetProgramEnvParameterdvARB
+	.size	bluegl_glGetProgramEnvParameterdvARB, .-bluegl_glGetProgramEnvParameterdvARB
 
 	.align	2
 	.global	bluegl_glIsNamedStringARB
@@ -17547,7 +17547,7 @@ bluegl_glIsNamedStringARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsNamedStringARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsNamedStringARB, .-glIsNamedStringARB
+	.size	bluegl_glIsNamedStringARB, .-bluegl_glIsNamedStringARB
 
 	.align	2
 	.global	bluegl_glSecondaryColorFormatNV
@@ -17557,7 +17557,7 @@ bluegl_glSecondaryColorFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColorFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColorFormatNV, .-glSecondaryColorFormatNV
+	.size	bluegl_glSecondaryColorFormatNV, .-bluegl_glSecondaryColorFormatNV
 
 	.align	2
 	.global	bluegl_glPixelTransferxOES
@@ -17567,7 +17567,7 @@ bluegl_glPixelTransferxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTransferxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTransferxOES, .-glPixelTransferxOES
+	.size	bluegl_glPixelTransferxOES, .-bluegl_glPixelTransferxOES
 
 	.align	2
 	.global	bluegl_glInvalidateTexSubImage
@@ -17577,7 +17577,7 @@ bluegl_glInvalidateTexSubImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateTexSubImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateTexSubImage, .-glInvalidateTexSubImage
+	.size	bluegl_glInvalidateTexSubImage, .-bluegl_glInvalidateTexSubImage
 
 	.align	2
 	.global	bluegl_glVDPAUUnregisterSurfaceNV
@@ -17587,7 +17587,7 @@ bluegl_glVDPAUUnregisterSurfaceNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUUnregisterSurfaceNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUUnregisterSurfaceNV, .-glVDPAUUnregisterSurfaceNV
+	.size	bluegl_glVDPAUUnregisterSurfaceNV, .-bluegl_glVDPAUUnregisterSurfaceNV
 
 	.align	2
 	.global	bluegl_glGetPerfQueryIdByNameINTEL
@@ -17597,7 +17597,7 @@ bluegl_glGetPerfQueryIdByNameINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfQueryIdByNameINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfQueryIdByNameINTEL, .-glGetPerfQueryIdByNameINTEL
+	.size	bluegl_glGetPerfQueryIdByNameINTEL, .-bluegl_glGetPerfQueryIdByNameINTEL
 
 	.align	2
 	.global	bluegl_glGetInteger64v
@@ -17607,7 +17607,7 @@ bluegl_glGetInteger64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInteger64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInteger64v, .-glGetInteger64v
+	.size	bluegl_glGetInteger64v, .-bluegl_glGetInteger64v
 
 	.align	2
 	.global	bluegl_glColor4ubVertex3fSUN
@@ -17617,7 +17617,7 @@ bluegl_glColor4ubVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4ubVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4ubVertex3fSUN, .-glColor4ubVertex3fSUN
+	.size	bluegl_glColor4ubVertex3fSUN, .-bluegl_glColor4ubVertex3fSUN
 
 	.align	2
 	.global	bluegl_glVertex2bOES
@@ -17627,7 +17627,7 @@ bluegl_glVertex2bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex2bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex2bOES, .-glVertex2bOES
+	.size	bluegl_glVertex2bOES, .-bluegl_glVertex2bOES
 
 	.align	2
 	.global	bluegl_glGetProgramEnvParameterfvARB
@@ -17637,7 +17637,7 @@ bluegl_glGetProgramEnvParameterfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramEnvParameterfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramEnvParameterfvARB, .-glGetProgramEnvParameterfvARB
+	.size	bluegl_glGetProgramEnvParameterfvARB, .-bluegl_glGetProgramEnvParameterfvARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4usvARB
@@ -17647,7 +17647,7 @@ bluegl_glVertexAttrib4usvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4usvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4usvARB, .-glVertexAttrib4usvARB
+	.size	bluegl_glVertexAttrib4usvARB, .-bluegl_glVertexAttrib4usvARB
 
 	.align	2
 	.global	bluegl_glNamedFramebufferRenderbuffer
@@ -17657,7 +17657,7 @@ bluegl_glNamedFramebufferRenderbuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferRenderbuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferRenderbuffer, .-glNamedFramebufferRenderbuffer
+	.size	bluegl_glNamedFramebufferRenderbuffer, .-bluegl_glNamedFramebufferRenderbuffer
 
 	.align	2
 	.global	bluegl_glGetHandleARB
@@ -17667,7 +17667,7 @@ bluegl_glGetHandleARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHandleARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHandleARB, .-glGetHandleARB
+	.size	bluegl_glGetHandleARB, .-bluegl_glGetHandleARB
 
 	.align	2
 	.global	bluegl_glTestFenceAPPLE
@@ -17677,7 +17677,7 @@ bluegl_glTestFenceAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTestFenceAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTestFenceAPPLE, .-glTestFenceAPPLE
+	.size	bluegl_glTestFenceAPPLE, .-bluegl_glTestFenceAPPLE
 
 	.align	2
 	.global	bluegl_glVertexAttrib4Niv
@@ -17687,7 +17687,7 @@ bluegl_glVertexAttrib4Niv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4Niv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4Niv, .-glVertexAttrib4Niv
+	.size	bluegl_glVertexAttrib4Niv, .-bluegl_glVertexAttrib4Niv
 
 	.align	2
 	.global	bluegl_glClearBufferiv
@@ -17697,7 +17697,7 @@ bluegl_glClearBufferiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearBufferiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearBufferiv, .-glClearBufferiv
+	.size	bluegl_glClearBufferiv, .-bluegl_glClearBufferiv
 
 	.align	2
 	.global	bluegl_glColorP4uiv
@@ -17707,7 +17707,7 @@ bluegl_glColorP4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorP4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorP4uiv, .-glColorP4uiv
+	.size	bluegl_glColorP4uiv, .-bluegl_glColorP4uiv
 
 	.align	2
 	.global	bluegl_glUniformMatrix2x3fv
@@ -17717,7 +17717,7 @@ bluegl_glUniformMatrix2x3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix2x3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix2x3fv, .-glUniformMatrix2x3fv
+	.size	bluegl_glUniformMatrix2x3fv, .-bluegl_glUniformMatrix2x3fv
 
 	.align	2
 	.global	bluegl_glCallCommandListNV
@@ -17727,7 +17727,7 @@ bluegl_glCallCommandListNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCallCommandListNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCallCommandListNV, .-glCallCommandListNV
+	.size	bluegl_glCallCommandListNV, .-bluegl_glCallCommandListNV
 
 	.align	2
 	.global	bluegl_glMakeBufferResidentNV
@@ -17737,7 +17737,7 @@ bluegl_glMakeBufferResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeBufferResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeBufferResidentNV, .-glMakeBufferResidentNV
+	.size	bluegl_glMakeBufferResidentNV, .-bluegl_glMakeBufferResidentNV
 
 	.align	2
 	.global	bluegl_glNamedStringARB
@@ -17747,7 +17747,7 @@ bluegl_glNamedStringARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedStringARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedStringARB, .-glNamedStringARB
+	.size	bluegl_glNamedStringARB, .-bluegl_glNamedStringARB
 
 	.align	2
 	.global	bluegl_glVDPAUSurfaceAccessNV
@@ -17757,7 +17757,7 @@ bluegl_glVDPAUSurfaceAccessNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUSurfaceAccessNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUSurfaceAccessNV, .-glVDPAUSurfaceAccessNV
+	.size	bluegl_glVDPAUSurfaceAccessNV, .-bluegl_glVDPAUSurfaceAccessNV
 
 	.align	2
 	.global	bluegl_glMatrixMult3x2fNV
@@ -17767,7 +17767,7 @@ bluegl_glMatrixMult3x2fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixMult3x2fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixMult3x2fNV, .-glMatrixMult3x2fNV
+	.size	bluegl_glMatrixMult3x2fNV, .-bluegl_glMatrixMult3x2fNV
 
 	.align	2
 	.global	bluegl_glGetActiveSubroutineUniformName
@@ -17777,7 +17777,7 @@ bluegl_glGetActiveSubroutineUniformName:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveSubroutineUniformName]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveSubroutineUniformName, .-glGetActiveSubroutineUniformName
+	.size	bluegl_glGetActiveSubroutineUniformName, .-bluegl_glGetActiveSubroutineUniformName
 
 	.align	2
 	.global	bluegl_glGetnHistogramARB
@@ -17787,7 +17787,7 @@ bluegl_glGetnHistogramARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnHistogramARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnHistogramARB, .-glGetnHistogramARB
+	.size	bluegl_glGetnHistogramARB, .-bluegl_glGetnHistogramARB
 
 	.align	2
 	.global	bluegl_glGetTextureLevelParameterfv
@@ -17797,7 +17797,7 @@ bluegl_glGetTextureLevelParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureLevelParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureLevelParameterfv, .-glGetTextureLevelParameterfv
+	.size	bluegl_glGetTextureLevelParameterfv, .-bluegl_glGetTextureLevelParameterfv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1fv
@@ -17807,7 +17807,7 @@ bluegl_glMultiTexCoord1fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1fv, .-glMultiTexCoord1fv
+	.size	bluegl_glMultiTexCoord1fv, .-bluegl_glMultiTexCoord1fv
 
 	.align	2
 	.global	bluegl_glBitmapxOES
@@ -17817,7 +17817,7 @@ bluegl_glBitmapxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBitmapxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBitmapxOES, .-glBitmapxOES
+	.size	bluegl_glBitmapxOES, .-bluegl_glBitmapxOES
 
 	.align	2
 	.global	bluegl_glGetSamplerParameterIuiv
@@ -17827,7 +17827,7 @@ bluegl_glGetSamplerParameterIuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSamplerParameterIuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSamplerParameterIuiv, .-glGetSamplerParameterIuiv
+	.size	bluegl_glGetSamplerParameterIuiv, .-bluegl_glGetSamplerParameterIuiv
 
 	.align	2
 	.global	bluegl_glTexCoordP3ui
@@ -17837,7 +17837,7 @@ bluegl_glTexCoordP3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP3ui, .-glTexCoordP3ui
+	.size	bluegl_glTexCoordP3ui, .-bluegl_glTexCoordP3ui
 
 	.align	2
 	.global	bluegl_glTextureSubImage1D
@@ -17847,7 +17847,7 @@ bluegl_glTextureSubImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureSubImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureSubImage1D, .-glTextureSubImage1D
+	.size	bluegl_glTextureSubImage1D, .-bluegl_glTextureSubImage1D
 
 	.align	2
 	.global	bluegl_glVertexAttribLPointerEXT
@@ -17857,7 +17857,7 @@ bluegl_glVertexAttribLPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribLPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribLPointerEXT, .-glVertexAttribLPointerEXT
+	.size	bluegl_glVertexAttribLPointerEXT, .-bluegl_glVertexAttribLPointerEXT
 
 	.align	2
 	.global	bluegl_glFogCoordPointerEXT
@@ -17867,7 +17867,7 @@ bluegl_glFogCoordPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordPointerEXT, .-glFogCoordPointerEXT
+	.size	bluegl_glFogCoordPointerEXT, .-bluegl_glFogCoordPointerEXT
 
 	.align	2
 	.global	bluegl_glWindowPos3s
@@ -17877,7 +17877,7 @@ bluegl_glWindowPos3s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3s, .-glWindowPos3s
+	.size	bluegl_glWindowPos3s, .-bluegl_glWindowPos3s
 
 	.align	2
 	.global	bluegl_glVertexAttribs2svNV
@@ -17887,7 +17887,7 @@ bluegl_glVertexAttribs2svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs2svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs2svNV, .-glVertexAttribs2svNV
+	.size	bluegl_glVertexAttribs2svNV, .-bluegl_glVertexAttribs2svNV
 
 	.align	2
 	.global	bluegl_glClearDepthf
@@ -17897,7 +17897,7 @@ bluegl_glClearDepthf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearDepthf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearDepthf, .-glClearDepthf
+	.size	bluegl_glClearDepthf, .-bluegl_glClearDepthf
 
 	.align	2
 	.global	bluegl_glWindowPos3i
@@ -17907,7 +17907,7 @@ bluegl_glWindowPos3i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3i, .-glWindowPos3i
+	.size	bluegl_glWindowPos3i, .-bluegl_glWindowPos3i
 
 	.align	2
 	.global	bluegl_glWindowPos3d
@@ -17917,7 +17917,7 @@ bluegl_glWindowPos3d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3d, .-glWindowPos3d
+	.size	bluegl_glWindowPos3d, .-bluegl_glWindowPos3d
 
 	.align	2
 	.global	bluegl_glGetPerfMonitorCounterStringAMD
@@ -17927,7 +17927,7 @@ bluegl_glGetPerfMonitorCounterStringAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfMonitorCounterStringAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfMonitorCounterStringAMD, .-glGetPerfMonitorCounterStringAMD
+	.size	bluegl_glGetPerfMonitorCounterStringAMD, .-bluegl_glGetPerfMonitorCounterStringAMD
 
 	.align	2
 	.global	bluegl_glIsEnabledIndexedEXT
@@ -17937,7 +17937,7 @@ bluegl_glIsEnabledIndexedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsEnabledIndexedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsEnabledIndexedEXT, .-glIsEnabledIndexedEXT
+	.size	bluegl_glIsEnabledIndexedEXT, .-bluegl_glIsEnabledIndexedEXT
 
 	.align	2
 	.global	bluegl_glGetNamedProgramivEXT
@@ -17947,7 +17947,7 @@ bluegl_glGetNamedProgramivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedProgramivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedProgramivEXT, .-glGetNamedProgramivEXT
+	.size	bluegl_glGetNamedProgramivEXT, .-bluegl_glGetNamedProgramivEXT
 
 	.align	2
 	.global	bluegl_glGetTexParameterIuivEXT
@@ -17957,7 +17957,7 @@ bluegl_glGetTexParameterIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameterIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameterIuivEXT, .-glGetTexParameterIuivEXT
+	.size	bluegl_glGetTexParameterIuivEXT, .-bluegl_glGetTexParameterIuivEXT
 
 	.align	2
 	.global	bluegl_glBeginPerfMonitorAMD
@@ -17967,7 +17967,7 @@ bluegl_glBeginPerfMonitorAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginPerfMonitorAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginPerfMonitorAMD, .-glBeginPerfMonitorAMD
+	.size	bluegl_glBeginPerfMonitorAMD, .-bluegl_glBeginPerfMonitorAMD
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x3dv
@@ -17977,7 +17977,7 @@ bluegl_glProgramUniformMatrix4x3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x3dv, .-glProgramUniformMatrix4x3dv
+	.size	bluegl_glProgramUniformMatrix4x3dv, .-bluegl_glProgramUniformMatrix4x3dv
 
 	.align	2
 	.global	bluegl_glGetNamedProgramLocalParameterIuivEXT
@@ -17987,7 +17987,7 @@ bluegl_glGetNamedProgramLocalParameterIuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedProgramLocalParameterIuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedProgramLocalParameterIuivEXT, .-glGetNamedProgramLocalParameterIuivEXT
+	.size	bluegl_glGetNamedProgramLocalParameterIuivEXT, .-bluegl_glGetNamedProgramLocalParameterIuivEXT
 
 	.align	2
 	.global	bluegl_glReadnPixels
@@ -17997,7 +17997,7 @@ bluegl_glReadnPixels:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReadnPixels]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReadnPixels, .-glReadnPixels
+	.size	bluegl_glReadnPixels, .-bluegl_glReadnPixels
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4f
@@ -18007,7 +18007,7 @@ bluegl_glMultiTexCoord4f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4f, .-glMultiTexCoord4f
+	.size	bluegl_glMultiTexCoord4f, .-bluegl_glMultiTexCoord4f
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4d
@@ -18017,7 +18017,7 @@ bluegl_glMultiTexCoord4d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4d, .-glMultiTexCoord4d
+	.size	bluegl_glMultiTexCoord4d, .-bluegl_glMultiTexCoord4d
 
 	.align	2
 	.global	bluegl_glVertexAttribL3ui64NV
@@ -18027,7 +18027,7 @@ bluegl_glVertexAttribL3ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL3ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL3ui64NV, .-glVertexAttribL3ui64NV
+	.size	bluegl_glVertexAttribL3ui64NV, .-bluegl_glVertexAttribL3ui64NV
 
 	.align	2
 	.global	bluegl_glProgramUniform4fvEXT
@@ -18037,7 +18037,7 @@ bluegl_glProgramUniform4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4fvEXT, .-glProgramUniform4fvEXT
+	.size	bluegl_glProgramUniform4fvEXT, .-bluegl_glProgramUniform4fvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib2sARB
@@ -18047,7 +18047,7 @@ bluegl_glVertexAttrib2sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2sARB, .-glVertexAttrib2sARB
+	.size	bluegl_glVertexAttrib2sARB, .-bluegl_glVertexAttrib2sARB
 
 	.align	2
 	.global	bluegl_glCompressedTexImage2DARB
@@ -18057,7 +18057,7 @@ bluegl_glCompressedTexImage2DARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexImage2DARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexImage2DARB, .-glCompressedTexImage2DARB
+	.size	bluegl_glCompressedTexImage2DARB, .-bluegl_glCompressedTexImage2DARB
 
 	.align	2
 	.global	bluegl_glCheckFramebufferStatusEXT
@@ -18067,7 +18067,7 @@ bluegl_glCheckFramebufferStatusEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCheckFramebufferStatusEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCheckFramebufferStatusEXT, .-glCheckFramebufferStatusEXT
+	.size	bluegl_glCheckFramebufferStatusEXT, .-bluegl_glCheckFramebufferStatusEXT
 
 	.align	2
 	.global	bluegl_glGetnMapivARB
@@ -18077,7 +18077,7 @@ bluegl_glGetnMapivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMapivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMapivARB, .-glGetnMapivARB
+	.size	bluegl_glGetnMapivARB, .-bluegl_glGetnMapivARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1ivARB
@@ -18087,7 +18087,7 @@ bluegl_glMultiTexCoord1ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1ivARB, .-glMultiTexCoord1ivARB
+	.size	bluegl_glMultiTexCoord1ivARB, .-bluegl_glMultiTexCoord1ivARB
 
 	.align	2
 	.global	bluegl_glDisableVertexAttribArrayARB
@@ -18097,7 +18097,7 @@ bluegl_glDisableVertexAttribArrayARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableVertexAttribArrayARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableVertexAttribArrayARB, .-glDisableVertexAttribArrayARB
+	.size	bluegl_glDisableVertexAttribArrayARB, .-bluegl_glDisableVertexAttribArrayARB
 
 	.align	2
 	.global	bluegl_glVertexAttribI4ui
@@ -18107,7 +18107,7 @@ bluegl_glVertexAttribI4ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4ui, .-glVertexAttribI4ui
+	.size	bluegl_glVertexAttribI4ui, .-bluegl_glVertexAttribI4ui
 
 	.align	2
 	.global	bluegl_glGetPathDashArrayNV
@@ -18117,7 +18117,7 @@ bluegl_glGetPathDashArrayNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathDashArrayNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathDashArrayNV, .-glGetPathDashArrayNV
+	.size	bluegl_glGetPathDashArrayNV, .-bluegl_glGetPathDashArrayNV
 
 	.align	2
 	.global	bluegl_glMultiTexRenderbufferEXT
@@ -18127,7 +18127,7 @@ bluegl_glMultiTexRenderbufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexRenderbufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexRenderbufferEXT, .-glMultiTexRenderbufferEXT
+	.size	bluegl_glMultiTexRenderbufferEXT, .-bluegl_glMultiTexRenderbufferEXT
 
 	.align	2
 	.global	bluegl_glTexCoord4fVertex4fSUN
@@ -18137,7 +18137,7 @@ bluegl_glTexCoord4fVertex4fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4fVertex4fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4fVertex4fSUN, .-glTexCoord4fVertex4fSUN
+	.size	bluegl_glTexCoord4fVertex4fSUN, .-bluegl_glTexCoord4fVertex4fSUN
 
 	.align	2
 	.global	bluegl_glColorMask
@@ -18147,7 +18147,7 @@ bluegl_glColorMask:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorMask]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorMask, .-glColorMask
+	.size	bluegl_glColorMask, .-bluegl_glColorMask
 
 	.align	2
 	.global	bluegl_glVertex4hvNV
@@ -18157,7 +18157,7 @@ bluegl_glVertex4hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex4hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex4hvNV, .-glVertex4hvNV
+	.size	bluegl_glVertex4hvNV, .-bluegl_glVertex4hvNV
 
 	.align	2
 	.global	bluegl_glGetnTexImage
@@ -18167,7 +18167,7 @@ bluegl_glGetnTexImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnTexImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnTexImage, .-glGetnTexImage
+	.size	bluegl_glGetnTexImage, .-bluegl_glGetnTexImage
 
 	.align	2
 	.global	bluegl_glProgramLocalParameter4dARB
@@ -18177,7 +18177,7 @@ bluegl_glProgramLocalParameter4dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameter4dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameter4dARB, .-glProgramLocalParameter4dARB
+	.size	bluegl_glProgramLocalParameter4dARB, .-bluegl_glProgramLocalParameter4dARB
 
 	.align	2
 	.global	bluegl_glBlendEquation
@@ -18187,7 +18187,7 @@ bluegl_glBlendEquation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquation, .-glBlendEquation
+	.size	bluegl_glBlendEquation, .-bluegl_glBlendEquation
 
 	.align	2
 	.global	bluegl_glUnlockArraysEXT
@@ -18197,7 +18197,7 @@ bluegl_glUnlockArraysEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUnlockArraysEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUnlockArraysEXT, .-glUnlockArraysEXT
+	.size	bluegl_glUnlockArraysEXT, .-bluegl_glUnlockArraysEXT
 
 	.align	2
 	.global	bluegl_glGetQueryObjectui64vEXT
@@ -18207,7 +18207,7 @@ bluegl_glGetQueryObjectui64vEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjectui64vEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjectui64vEXT, .-glGetQueryObjectui64vEXT
+	.size	bluegl_glGetQueryObjectui64vEXT, .-bluegl_glGetQueryObjectui64vEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI4uivEXT
@@ -18217,7 +18217,7 @@ bluegl_glVertexAttribI4uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4uivEXT, .-glVertexAttribI4uivEXT
+	.size	bluegl_glVertexAttribI4uivEXT, .-bluegl_glVertexAttribI4uivEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3dv
@@ -18227,7 +18227,7 @@ bluegl_glMultiTexCoord3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3dv, .-glMultiTexCoord3dv
+	.size	bluegl_glMultiTexCoord3dv, .-bluegl_glMultiTexCoord3dv
 
 	.align	2
 	.global	bluegl_glVertexStream4ivATI
@@ -18237,7 +18237,7 @@ bluegl_glVertexStream4ivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4ivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4ivATI, .-glVertexStream4ivATI
+	.size	bluegl_glVertexStream4ivATI, .-bluegl_glVertexStream4ivATI
 
 	.align	2
 	.global	bluegl_glGetProgramResourceiv
@@ -18247,7 +18247,7 @@ bluegl_glGetProgramResourceiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramResourceiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramResourceiv, .-glGetProgramResourceiv
+	.size	bluegl_glGetProgramResourceiv, .-bluegl_glGetProgramResourceiv
 
 	.align	2
 	.global	bluegl_glClearBufferData
@@ -18257,7 +18257,7 @@ bluegl_glClearBufferData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearBufferData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearBufferData, .-glClearBufferData
+	.size	bluegl_glClearBufferData, .-bluegl_glClearBufferData
 
 	.align	2
 	.global	bluegl_glGetProgramivNV
@@ -18267,7 +18267,7 @@ bluegl_glGetProgramivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramivNV, .-glGetProgramivNV
+	.size	bluegl_glGetProgramivNV, .-bluegl_glGetProgramivNV
 
 	.align	2
 	.global	bluegl_glBeginTransformFeedback
@@ -18277,7 +18277,7 @@ bluegl_glBeginTransformFeedback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginTransformFeedback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginTransformFeedback, .-glBeginTransformFeedback
+	.size	bluegl_glBeginTransformFeedback, .-bluegl_glBeginTransformFeedback
 
 	.align	2
 	.global	bluegl_glTransformFeedbackAttribsNV
@@ -18287,7 +18287,7 @@ bluegl_glTransformFeedbackAttribsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformFeedbackAttribsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformFeedbackAttribsNV, .-glTransformFeedbackAttribsNV
+	.size	bluegl_glTransformFeedbackAttribsNV, .-bluegl_glTransformFeedbackAttribsNV
 
 	.align	2
 	.global	bluegl_glCompressedTexImage1D
@@ -18297,7 +18297,7 @@ bluegl_glCompressedTexImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexImage1D, .-glCompressedTexImage1D
+	.size	bluegl_glCompressedTexImage1D, .-bluegl_glCompressedTexImage1D
 
 	.align	2
 	.global	bluegl_glDeleteTransformFeedbacks
@@ -18307,7 +18307,7 @@ bluegl_glDeleteTransformFeedbacks:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteTransformFeedbacks]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteTransformFeedbacks, .-glDeleteTransformFeedbacks
+	.size	bluegl_glDeleteTransformFeedbacks, .-bluegl_glDeleteTransformFeedbacks
 
 	.align	2
 	.global	bluegl_glDrawRangeElementsBaseVertex
@@ -18317,7 +18317,7 @@ bluegl_glDrawRangeElementsBaseVertex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawRangeElementsBaseVertex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawRangeElementsBaseVertex, .-glDrawRangeElementsBaseVertex
+	.size	bluegl_glDrawRangeElementsBaseVertex, .-bluegl_glDrawRangeElementsBaseVertex
 
 	.align	2
 	.global	bluegl_glUniform4i64vARB
@@ -18327,7 +18327,7 @@ bluegl_glUniform4i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4i64vARB, .-glUniform4i64vARB
+	.size	bluegl_glUniform4i64vARB, .-bluegl_glUniform4i64vARB
 
 	.align	2
 	.global	bluegl_glTextureStorage3DMultisampleEXT
@@ -18337,7 +18337,7 @@ bluegl_glTextureStorage3DMultisampleEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage3DMultisampleEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage3DMultisampleEXT, .-glTextureStorage3DMultisampleEXT
+	.size	bluegl_glTextureStorage3DMultisampleEXT, .-bluegl_glTextureStorage3DMultisampleEXT
 
 	.align	2
 	.global	bluegl_glBindAttribLocation
@@ -18347,7 +18347,7 @@ bluegl_glBindAttribLocation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindAttribLocation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindAttribLocation, .-glBindAttribLocation
+	.size	bluegl_glBindAttribLocation, .-bluegl_glBindAttribLocation
 
 	.align	2
 	.global	bluegl_glProgramUniformui64vNV
@@ -18357,7 +18357,7 @@ bluegl_glProgramUniformui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformui64vNV, .-glProgramUniformui64vNV
+	.size	bluegl_glProgramUniformui64vNV, .-bluegl_glProgramUniformui64vNV
 
 	.align	2
 	.global	bluegl_glCompressedMultiTexImage1DEXT
@@ -18367,7 +18367,7 @@ bluegl_glCompressedMultiTexImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedMultiTexImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedMultiTexImage1DEXT, .-glCompressedMultiTexImage1DEXT
+	.size	bluegl_glCompressedMultiTexImage1DEXT, .-bluegl_glCompressedMultiTexImage1DEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2ivEXT
@@ -18377,7 +18377,7 @@ bluegl_glProgramUniform2ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2ivEXT, .-glProgramUniform2ivEXT
+	.size	bluegl_glProgramUniform2ivEXT, .-bluegl_glProgramUniform2ivEXT
 
 	.align	2
 	.global	bluegl_glPushGroupMarkerEXT
@@ -18387,7 +18387,7 @@ bluegl_glPushGroupMarkerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPushGroupMarkerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPushGroupMarkerEXT, .-glPushGroupMarkerEXT
+	.size	bluegl_glPushGroupMarkerEXT, .-bluegl_glPushGroupMarkerEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib1dv
@@ -18397,7 +18397,7 @@ bluegl_glVertexAttrib1dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1dv, .-glVertexAttrib1dv
+	.size	bluegl_glVertexAttrib1dv, .-bluegl_glVertexAttrib1dv
 
 	.align	2
 	.global	bluegl_glResolveDepthValuesNV
@@ -18407,7 +18407,7 @@ bluegl_glResolveDepthValuesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glResolveDepthValuesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glResolveDepthValuesNV, .-glResolveDepthValuesNV
+	.size	bluegl_glResolveDepthValuesNV, .-bluegl_glResolveDepthValuesNV
 
 	.align	2
 	.global	bluegl_glMultTransposeMatrixxOES
@@ -18417,7 +18417,7 @@ bluegl_glMultTransposeMatrixxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultTransposeMatrixxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultTransposeMatrixxOES, .-glMultTransposeMatrixxOES
+	.size	bluegl_glMultTransposeMatrixxOES, .-bluegl_glMultTransposeMatrixxOES
 
 	.align	2
 	.global	bluegl_glGetPixelMapxv
@@ -18427,7 +18427,7 @@ bluegl_glGetPixelMapxv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPixelMapxv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPixelMapxv, .-glGetPixelMapxv
+	.size	bluegl_glGetPixelMapxv, .-bluegl_glGetPixelMapxv
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN
@@ -18437,7 +18437,7 @@ bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN, .-glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN
+	.size	bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN, .-bluegl_glReplacementCodeuiTexCoord2fNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glFramebufferSampleLocationsfvARB
@@ -18447,7 +18447,7 @@ bluegl_glFramebufferSampleLocationsfvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferSampleLocationsfvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferSampleLocationsfvARB, .-glFramebufferSampleLocationsfvARB
+	.size	bluegl_glFramebufferSampleLocationsfvARB, .-bluegl_glFramebufferSampleLocationsfvARB
 
 	.align	2
 	.global	bluegl_glBlendFuncSeparatei
@@ -18457,7 +18457,7 @@ bluegl_glBlendFuncSeparatei:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFuncSeparatei]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFuncSeparatei, .-glBlendFuncSeparatei
+	.size	bluegl_glBlendFuncSeparatei, .-bluegl_glBlendFuncSeparatei
 
 	.align	2
 	.global	bluegl_glGetBooleanIndexedvEXT
@@ -18467,7 +18467,7 @@ bluegl_glGetBooleanIndexedvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBooleanIndexedvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBooleanIndexedvEXT, .-glGetBooleanIndexedvEXT
+	.size	bluegl_glGetBooleanIndexedvEXT, .-bluegl_glGetBooleanIndexedvEXT
 
 	.align	2
 	.global	bluegl_glVertexP4uiv
@@ -18477,7 +18477,7 @@ bluegl_glVertexP4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexP4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexP4uiv, .-glVertexP4uiv
+	.size	bluegl_glVertexP4uiv, .-bluegl_glVertexP4uiv
 
 	.align	2
 	.global	bluegl_glApplyFramebufferAttachmentCMAAINTEL
@@ -18487,7 +18487,7 @@ bluegl_glApplyFramebufferAttachmentCMAAINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glApplyFramebufferAttachmentCMAAINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glApplyFramebufferAttachmentCMAAINTEL, .-glApplyFramebufferAttachmentCMAAINTEL
+	.size	bluegl_glApplyFramebufferAttachmentCMAAINTEL, .-bluegl_glApplyFramebufferAttachmentCMAAINTEL
 
 	.align	2
 	.global	bluegl_glWindowPos2fv
@@ -18497,7 +18497,7 @@ bluegl_glWindowPos2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2fv, .-glWindowPos2fv
+	.size	bluegl_glWindowPos2fv, .-bluegl_glWindowPos2fv
 
 	.align	2
 	.global	bluegl_glDisablei
@@ -18507,7 +18507,7 @@ bluegl_glDisablei:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisablei]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisablei, .-glDisablei
+	.size	bluegl_glDisablei, .-bluegl_glDisablei
 
 	.align	2
 	.global	bluegl_glCopyBufferSubData
@@ -18517,7 +18517,7 @@ bluegl_glCopyBufferSubData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyBufferSubData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyBufferSubData, .-glCopyBufferSubData
+	.size	bluegl_glCopyBufferSubData, .-bluegl_glCopyBufferSubData
 
 	.align	2
 	.global	bluegl_glSelectPerfMonitorCountersAMD
@@ -18527,7 +18527,7 @@ bluegl_glSelectPerfMonitorCountersAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSelectPerfMonitorCountersAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSelectPerfMonitorCountersAMD, .-glSelectPerfMonitorCountersAMD
+	.size	bluegl_glSelectPerfMonitorCountersAMD, .-bluegl_glSelectPerfMonitorCountersAMD
 
 	.align	2
 	.global	bluegl_glGetVertexAttribLi64vNV
@@ -18537,7 +18537,7 @@ bluegl_glGetVertexAttribLi64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribLi64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribLi64vNV, .-glGetVertexAttribLi64vNV
+	.size	bluegl_glGetVertexAttribLi64vNV, .-bluegl_glGetVertexAttribLi64vNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2dvARB
@@ -18547,7 +18547,7 @@ bluegl_glMultiTexCoord2dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2dvARB, .-glMultiTexCoord2dvARB
+	.size	bluegl_glMultiTexCoord2dvARB, .-bluegl_glMultiTexCoord2dvARB
 
 	.align	2
 	.global	bluegl_glWeightuivARB
@@ -18557,7 +18557,7 @@ bluegl_glWeightuivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightuivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightuivARB, .-glWeightuivARB
+	.size	bluegl_glWeightuivARB, .-bluegl_glWeightuivARB
 
 	.align	2
 	.global	bluegl_glGetVideoCaptureStreamdvNV
@@ -18567,7 +18567,7 @@ bluegl_glGetVideoCaptureStreamdvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideoCaptureStreamdvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideoCaptureStreamdvNV, .-glGetVideoCaptureStreamdvNV
+	.size	bluegl_glGetVideoCaptureStreamdvNV, .-bluegl_glGetVideoCaptureStreamdvNV
 
 	.align	2
 	.global	bluegl_glGetProgramLocalParameterdvARB
@@ -18577,7 +18577,7 @@ bluegl_glGetProgramLocalParameterdvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramLocalParameterdvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramLocalParameterdvARB, .-glGetProgramLocalParameterdvARB
+	.size	bluegl_glGetProgramLocalParameterdvARB, .-bluegl_glGetProgramLocalParameterdvARB
 
 	.align	2
 	.global	bluegl_glGetUniformui64vARB
@@ -18587,7 +18587,7 @@ bluegl_glGetUniformui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformui64vARB, .-glGetUniformui64vARB
+	.size	bluegl_glGetUniformui64vARB, .-bluegl_glGetUniformui64vARB
 
 	.align	2
 	.global	bluegl_glVertexStream4fvATI
@@ -18597,7 +18597,7 @@ bluegl_glVertexStream4fvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4fvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4fvATI, .-glVertexStream4fvATI
+	.size	bluegl_glVertexStream4fvATI, .-bluegl_glVertexStream4fvATI
 
 	.align	2
 	.global	bluegl_glGetSynciv
@@ -18607,7 +18607,7 @@ bluegl_glGetSynciv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSynciv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSynciv, .-glGetSynciv
+	.size	bluegl_glGetSynciv, .-bluegl_glGetSynciv
 
 	.align	2
 	.global	bluegl_glMakeImageHandleResidentARB
@@ -18617,7 +18617,7 @@ bluegl_glMakeImageHandleResidentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMakeImageHandleResidentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMakeImageHandleResidentARB, .-glMakeImageHandleResidentARB
+	.size	bluegl_glMakeImageHandleResidentARB, .-bluegl_glMakeImageHandleResidentARB
 
 	.align	2
 	.global	bluegl_glGetProgramNamedParameterfvNV
@@ -18627,7 +18627,7 @@ bluegl_glGetProgramNamedParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramNamedParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramNamedParameterfvNV, .-glGetProgramNamedParameterfvNV
+	.size	bluegl_glGetProgramNamedParameterfvNV, .-bluegl_glGetProgramNamedParameterfvNV
 
 	.align	2
 	.global	bluegl_glProgramUniform2i
@@ -18637,7 +18637,7 @@ bluegl_glProgramUniform2i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2i, .-glProgramUniform2i
+	.size	bluegl_glProgramUniform2i, .-bluegl_glProgramUniform2i
 
 	.align	2
 	.global	bluegl_glProgramUniform2d
@@ -18647,7 +18647,7 @@ bluegl_glProgramUniform2d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2d, .-glProgramUniform2d
+	.size	bluegl_glProgramUniform2d, .-bluegl_glProgramUniform2d
 
 	.align	2
 	.global	bluegl_glProgramLocalParametersI4uivNV
@@ -18657,7 +18657,7 @@ bluegl_glProgramLocalParametersI4uivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParametersI4uivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParametersI4uivNV, .-glProgramLocalParametersI4uivNV
+	.size	bluegl_glProgramLocalParametersI4uivNV, .-bluegl_glProgramLocalParametersI4uivNV
 
 	.align	2
 	.global	bluegl_glProgramUniform2f
@@ -18667,7 +18667,7 @@ bluegl_glProgramUniform2f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2f, .-glProgramUniform2f
+	.size	bluegl_glProgramUniform2f, .-bluegl_glProgramUniform2f
 
 	.align	2
 	.global	bluegl_glGetProgramBinary
@@ -18677,7 +18677,7 @@ bluegl_glGetProgramBinary:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramBinary]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramBinary, .-glGetProgramBinary
+	.size	bluegl_glGetProgramBinary, .-bluegl_glGetProgramBinary
 
 	.align	2
 	.global	bluegl_glBinormal3iEXT
@@ -18687,7 +18687,7 @@ bluegl_glBinormal3iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3iEXT, .-glBinormal3iEXT
+	.size	bluegl_glBinormal3iEXT, .-bluegl_glBinormal3iEXT
 
 	.align	2
 	.global	bluegl_glPauseTransformFeedback
@@ -18697,7 +18697,7 @@ bluegl_glPauseTransformFeedback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPauseTransformFeedback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPauseTransformFeedback, .-glPauseTransformFeedback
+	.size	bluegl_glPauseTransformFeedback, .-bluegl_glPauseTransformFeedback
 
 	.align	2
 	.global	bluegl_glWindowPos2sMESA
@@ -18707,7 +18707,7 @@ bluegl_glWindowPos2sMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2sMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2sMESA, .-glWindowPos2sMESA
+	.size	bluegl_glWindowPos2sMESA, .-bluegl_glWindowPos2sMESA
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactorbSUN
@@ -18717,7 +18717,7 @@ bluegl_glGlobalAlphaFactorbSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactorbSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactorbSUN, .-glGlobalAlphaFactorbSUN
+	.size	bluegl_glGlobalAlphaFactorbSUN, .-bluegl_glGlobalAlphaFactorbSUN
 
 	.align	2
 	.global	bluegl_glCreateTransformFeedbacks
@@ -18727,7 +18727,7 @@ bluegl_glCreateTransformFeedbacks:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateTransformFeedbacks]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateTransformFeedbacks, .-glCreateTransformFeedbacks
+	.size	bluegl_glCreateTransformFeedbacks, .-bluegl_glCreateTransformFeedbacks
 
 	.align	2
 	.global	bluegl_glTexturePageCommitmentEXT
@@ -18737,7 +18737,7 @@ bluegl_glTexturePageCommitmentEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexturePageCommitmentEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexturePageCommitmentEXT, .-glTexturePageCommitmentEXT
+	.size	bluegl_glTexturePageCommitmentEXT, .-bluegl_glTexturePageCommitmentEXT
 
 	.align	2
 	.global	bluegl_glTransformFeedbackVaryingsNV
@@ -18747,7 +18747,7 @@ bluegl_glTransformFeedbackVaryingsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformFeedbackVaryingsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformFeedbackVaryingsNV, .-glTransformFeedbackVaryingsNV
+	.size	bluegl_glTransformFeedbackVaryingsNV, .-bluegl_glTransformFeedbackVaryingsNV
 
 	.align	2
 	.global	bluegl_glTexSubImage1D
@@ -18757,7 +18757,7 @@ bluegl_glTexSubImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexSubImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexSubImage1D, .-glTexSubImage1D
+	.size	bluegl_glTexSubImage1D, .-bluegl_glTexSubImage1D
 
 	.align	2
 	.global	bluegl_glConvolutionParameterfvEXT
@@ -18767,7 +18767,7 @@ bluegl_glConvolutionParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameterfvEXT, .-glConvolutionParameterfvEXT
+	.size	bluegl_glConvolutionParameterfvEXT, .-bluegl_glConvolutionParameterfvEXT
 
 	.align	2
 	.global	bluegl_glBlitFramebufferEXT
@@ -18777,7 +18777,7 @@ bluegl_glBlitFramebufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlitFramebufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlitFramebufferEXT, .-glBlitFramebufferEXT
+	.size	bluegl_glBlitFramebufferEXT, .-bluegl_glBlitFramebufferEXT
 
 	.align	2
 	.global	bluegl_glUniformMatrix4fvARB
@@ -18787,7 +18787,7 @@ bluegl_glUniformMatrix4fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix4fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix4fvARB, .-glUniformMatrix4fvARB
+	.size	bluegl_glUniformMatrix4fvARB, .-bluegl_glUniformMatrix4fvARB
 
 	.align	2
 	.global	bluegl_glProgramEnvParameter4dvARB
@@ -18797,7 +18797,7 @@ bluegl_glProgramEnvParameter4dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameter4dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameter4dvARB, .-glProgramEnvParameter4dvARB
+	.size	bluegl_glProgramEnvParameter4dvARB, .-bluegl_glProgramEnvParameter4dvARB
 
 	.align	2
 	.global	bluegl_glVertexAttribP3uiv
@@ -18807,7 +18807,7 @@ bluegl_glVertexAttribP3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP3uiv, .-glVertexAttribP3uiv
+	.size	bluegl_glVertexAttribP3uiv, .-bluegl_glVertexAttribP3uiv
 
 	.align	2
 	.global	bluegl_glElementPointerAPPLE
@@ -18817,7 +18817,7 @@ bluegl_glElementPointerAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glElementPointerAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glElementPointerAPPLE, .-glElementPointerAPPLE
+	.size	bluegl_glElementPointerAPPLE, .-bluegl_glElementPointerAPPLE
 
 	.align	2
 	.global	bluegl_glGetMultiTexLevelParameterivEXT
@@ -18827,7 +18827,7 @@ bluegl_glGetMultiTexLevelParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMultiTexLevelParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMultiTexLevelParameterivEXT, .-glGetMultiTexLevelParameterivEXT
+	.size	bluegl_glGetMultiTexLevelParameterivEXT, .-bluegl_glGetMultiTexLevelParameterivEXT
 
 	.align	2
 	.global	bluegl_glIsOcclusionQueryNV
@@ -18837,7 +18837,7 @@ bluegl_glIsOcclusionQueryNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsOcclusionQueryNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsOcclusionQueryNV, .-glIsOcclusionQueryNV
+	.size	bluegl_glIsOcclusionQueryNV, .-bluegl_glIsOcclusionQueryNV
 
 	.align	2
 	.global	bluegl_glGetProgramEnvParameterIuivNV
@@ -18847,7 +18847,7 @@ bluegl_glGetProgramEnvParameterIuivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramEnvParameterIuivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramEnvParameterIuivNV, .-glGetProgramEnvParameterIuivNV
+	.size	bluegl_glGetProgramEnvParameterIuivNV, .-bluegl_glGetProgramEnvParameterIuivNV
 
 	.align	2
 	.global	bluegl_glGetVertexArrayiv
@@ -18857,7 +18857,7 @@ bluegl_glGetVertexArrayiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexArrayiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexArrayiv, .-glGetVertexArrayiv
+	.size	bluegl_glGetVertexArrayiv, .-bluegl_glGetVertexArrayiv
 
 	.align	2
 	.global	bluegl_glVertexAttrib4fvARB
@@ -18867,7 +18867,7 @@ bluegl_glVertexAttrib4fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4fvARB, .-glVertexAttrib4fvARB
+	.size	bluegl_glVertexAttrib4fvARB, .-bluegl_glVertexAttrib4fvARB
 
 	.align	2
 	.global	bluegl_glGetNamedProgramLocalParameterIivEXT
@@ -18877,7 +18877,7 @@ bluegl_glGetNamedProgramLocalParameterIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedProgramLocalParameterIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedProgramLocalParameterIivEXT, .-glGetNamedProgramLocalParameterIivEXT
+	.size	bluegl_glGetNamedProgramLocalParameterIivEXT, .-bluegl_glGetNamedProgramLocalParameterIivEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3uiEXT
@@ -18887,7 +18887,7 @@ bluegl_glProgramUniform3uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3uiEXT, .-glProgramUniform3uiEXT
+	.size	bluegl_glProgramUniform3uiEXT, .-bluegl_glProgramUniform3uiEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x2dvEXT
@@ -18897,7 +18897,7 @@ bluegl_glProgramUniformMatrix4x2dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x2dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x2dvEXT, .-glProgramUniformMatrix4x2dvEXT
+	.size	bluegl_glProgramUniformMatrix4x2dvEXT, .-bluegl_glProgramUniformMatrix4x2dvEXT
 
 	.align	2
 	.global	bluegl_glTexCoord1hvNV
@@ -18907,7 +18907,7 @@ bluegl_glTexCoord1hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord1hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord1hvNV, .-glTexCoord1hvNV
+	.size	bluegl_glTexCoord1hvNV, .-bluegl_glTexCoord1hvNV
 
 	.align	2
 	.global	bluegl_glTexParameterfv
@@ -18917,7 +18917,7 @@ bluegl_glTexParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterfv, .-glTexParameterfv
+	.size	bluegl_glTexParameterfv, .-bluegl_glTexParameterfv
 
 	.align	2
 	.global	bluegl_glVariantdvEXT
@@ -18927,7 +18927,7 @@ bluegl_glVariantdvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantdvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantdvEXT, .-glVariantdvEXT
+	.size	bluegl_glVariantdvEXT, .-bluegl_glVariantdvEXT
 
 	.align	2
 	.global	bluegl_glCullParameterfvEXT
@@ -18937,7 +18937,7 @@ bluegl_glCullParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCullParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCullParameterfvEXT, .-glCullParameterfvEXT
+	.size	bluegl_glCullParameterfvEXT, .-bluegl_glCullParameterfvEXT
 
 	.align	2
 	.global	bluegl_glUniform3dv
@@ -18947,7 +18947,7 @@ bluegl_glUniform3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3dv, .-glUniform3dv
+	.size	bluegl_glUniform3dv, .-bluegl_glUniform3dv
 
 	.align	2
 	.global	bluegl_glProgramUniform3fv
@@ -18957,7 +18957,7 @@ bluegl_glProgramUniform3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3fv, .-glProgramUniform3fv
+	.size	bluegl_glProgramUniform3fv, .-bluegl_glProgramUniform3fv
 
 	.align	2
 	.global	bluegl_glIsBufferARB
@@ -18967,7 +18967,7 @@ bluegl_glIsBufferARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsBufferARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsBufferARB, .-glIsBufferARB
+	.size	bluegl_glIsBufferARB, .-bluegl_glIsBufferARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1bOES
@@ -18977,7 +18977,7 @@ bluegl_glMultiTexCoord1bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1bOES, .-glMultiTexCoord1bOES
+	.size	bluegl_glMultiTexCoord1bOES, .-bluegl_glMultiTexCoord1bOES
 
 	.align	2
 	.global	bluegl_glFogCoordhNV
@@ -18987,7 +18987,7 @@ bluegl_glFogCoordhNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordhNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordhNV, .-glFogCoordhNV
+	.size	bluegl_glFogCoordhNV, .-bluegl_glFogCoordhNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib4dvNV
@@ -18997,7 +18997,7 @@ bluegl_glVertexAttrib4dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4dvNV, .-glVertexAttrib4dvNV
+	.size	bluegl_glVertexAttrib4dvNV, .-bluegl_glVertexAttrib4dvNV
 
 	.align	2
 	.global	bluegl_glGenSymbolsEXT
@@ -19007,7 +19007,7 @@ bluegl_glGenSymbolsEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenSymbolsEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenSymbolsEXT, .-glGenSymbolsEXT
+	.size	bluegl_glGenSymbolsEXT, .-bluegl_glGenSymbolsEXT
 
 	.align	2
 	.global	bluegl_glGetConvolutionFilter
@@ -19017,7 +19017,7 @@ bluegl_glGetConvolutionFilter:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetConvolutionFilter]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetConvolutionFilter, .-glGetConvolutionFilter
+	.size	bluegl_glGetConvolutionFilter, .-bluegl_glGetConvolutionFilter
 
 	.align	2
 	.global	bluegl_glProgramUniform1fvEXT
@@ -19027,7 +19027,7 @@ bluegl_glProgramUniform1fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1fvEXT, .-glProgramUniform1fvEXT
+	.size	bluegl_glProgramUniform1fvEXT, .-bluegl_glProgramUniform1fvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib1dvNV
@@ -19037,7 +19037,7 @@ bluegl_glVertexAttrib1dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1dvNV, .-glVertexAttrib1dvNV
+	.size	bluegl_glVertexAttrib1dvNV, .-bluegl_glVertexAttrib1dvNV
 
 	.align	2
 	.global	bluegl_glCompressedTexImage1DARB
@@ -19047,7 +19047,7 @@ bluegl_glCompressedTexImage1DARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexImage1DARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexImage1DARB, .-glCompressedTexImage1DARB
+	.size	bluegl_glCompressedTexImage1DARB, .-bluegl_glCompressedTexImage1DARB
 
 	.align	2
 	.global	bluegl_glDrawElementsIndirect
@@ -19057,7 +19057,7 @@ bluegl_glDrawElementsIndirect:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsIndirect]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsIndirect, .-glDrawElementsIndirect
+	.size	bluegl_glDrawElementsIndirect, .-bluegl_glDrawElementsIndirect
 
 	.align	2
 	.global	bluegl_glGetProgramEnvParameterIivNV
@@ -19067,7 +19067,7 @@ bluegl_glGetProgramEnvParameterIivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramEnvParameterIivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramEnvParameterIivNV, .-glGetProgramEnvParameterIivNV
+	.size	bluegl_glGetProgramEnvParameterIivNV, .-bluegl_glGetProgramEnvParameterIivNV
 
 	.align	2
 	.global	bluegl_glGetQueryObjectui64v
@@ -19077,7 +19077,7 @@ bluegl_glGetQueryObjectui64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjectui64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjectui64v, .-glGetQueryObjectui64v
+	.size	bluegl_glGetQueryObjectui64v, .-bluegl_glGetQueryObjectui64v
 
 	.align	2
 	.global	bluegl_glVertexAttribL4ui64vNV
@@ -19087,7 +19087,7 @@ bluegl_glVertexAttribL4ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4ui64vNV, .-glVertexAttribL4ui64vNV
+	.size	bluegl_glVertexAttribL4ui64vNV, .-bluegl_glVertexAttribL4ui64vNV
 
 	.align	2
 	.global	bluegl_glGetVideoivNV
@@ -19097,7 +19097,7 @@ bluegl_glGetVideoivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideoivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideoivNV, .-glGetVideoivNV
+	.size	bluegl_glGetVideoivNV, .-bluegl_glGetVideoivNV
 
 	.align	2
 	.global	bluegl_glGetTextureImage
@@ -19107,7 +19107,7 @@ bluegl_glGetTextureImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureImage, .-glGetTextureImage
+	.size	bluegl_glGetTextureImage, .-bluegl_glGetTextureImage
 
 	.align	2
 	.global	bluegl_glProgramUniform1fv
@@ -19117,7 +19117,7 @@ bluegl_glProgramUniform1fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1fv, .-glProgramUniform1fv
+	.size	bluegl_glProgramUniform1fv, .-bluegl_glProgramUniform1fv
 
 	.align	2
 	.global	bluegl_glUniformMatrix4fv
@@ -19127,7 +19127,7 @@ bluegl_glUniformMatrix4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix4fv, .-glUniformMatrix4fv
+	.size	bluegl_glUniformMatrix4fv, .-bluegl_glUniformMatrix4fv
 
 	.align	2
 	.global	bluegl_glBeginFragmentShaderATI
@@ -19137,7 +19137,7 @@ bluegl_glBeginFragmentShaderATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginFragmentShaderATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginFragmentShaderATI, .-glBeginFragmentShaderATI
+	.size	bluegl_glBeginFragmentShaderATI, .-bluegl_glBeginFragmentShaderATI
 
 	.align	2
 	.global	bluegl_glMultiDrawArraysEXT
@@ -19147,7 +19147,7 @@ bluegl_glMultiDrawArraysEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawArraysEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawArraysEXT, .-glMultiDrawArraysEXT
+	.size	bluegl_glMultiDrawArraysEXT, .-bluegl_glMultiDrawArraysEXT
 
 	.align	2
 	.global	bluegl_glGenNamesAMD
@@ -19157,7 +19157,7 @@ bluegl_glGenNamesAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenNamesAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenNamesAMD, .-glGenNamesAMD
+	.size	bluegl_glGenNamesAMD, .-bluegl_glGenNamesAMD
 
 	.align	2
 	.global	bluegl_glPathParameteriNV
@@ -19167,7 +19167,7 @@ bluegl_glPathParameteriNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathParameteriNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathParameteriNV, .-glPathParameteriNV
+	.size	bluegl_glPathParameteriNV, .-bluegl_glPathParameteriNV
 
 	.align	2
 	.global	bluegl_glCreateCommandListsNV
@@ -19177,7 +19177,7 @@ bluegl_glCreateCommandListsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateCommandListsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateCommandListsNV, .-glCreateCommandListsNV
+	.size	bluegl_glCreateCommandListsNV, .-bluegl_glCreateCommandListsNV
 
 	.align	2
 	.global	bluegl_glDeleteProgramPipelines
@@ -19187,7 +19187,7 @@ bluegl_glDeleteProgramPipelines:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteProgramPipelines]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteProgramPipelines, .-glDeleteProgramPipelines
+	.size	bluegl_glDeleteProgramPipelines, .-bluegl_glDeleteProgramPipelines
 
 	.align	2
 	.global	bluegl_glCopyColorSubTableEXT
@@ -19197,7 +19197,7 @@ bluegl_glCopyColorSubTableEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyColorSubTableEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyColorSubTableEXT, .-glCopyColorSubTableEXT
+	.size	bluegl_glCopyColorSubTableEXT, .-bluegl_glCopyColorSubTableEXT
 
 	.align	2
 	.global	bluegl_glVariantsvEXT
@@ -19207,7 +19207,7 @@ bluegl_glVariantsvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantsvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantsvEXT, .-glVariantsvEXT
+	.size	bluegl_glVariantsvEXT, .-bluegl_glVariantsvEXT
 
 	.align	2
 	.global	bluegl_glIsNameAMD
@@ -19217,7 +19217,7 @@ bluegl_glIsNameAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsNameAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsNameAMD, .-glIsNameAMD
+	.size	bluegl_glIsNameAMD, .-bluegl_glIsNameAMD
 
 	.align	2
 	.global	bluegl_glVertexArrayEdgeFlagOffsetEXT
@@ -19227,7 +19227,7 @@ bluegl_glVertexArrayEdgeFlagOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayEdgeFlagOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayEdgeFlagOffsetEXT, .-glVertexArrayEdgeFlagOffsetEXT
+	.size	bluegl_glVertexArrayEdgeFlagOffsetEXT, .-bluegl_glVertexArrayEdgeFlagOffsetEXT
 
 	.align	2
 	.global	bluegl_glWindowPos2s
@@ -19237,7 +19237,7 @@ bluegl_glWindowPos2s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2s, .-glWindowPos2s
+	.size	bluegl_glWindowPos2s, .-bluegl_glWindowPos2s
 
 	.align	2
 	.global	bluegl_glSecondaryColor3iEXT
@@ -19247,7 +19247,7 @@ bluegl_glSecondaryColor3iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3iEXT, .-glSecondaryColor3iEXT
+	.size	bluegl_glSecondaryColor3iEXT, .-bluegl_glSecondaryColor3iEXT
 
 	.align	2
 	.global	bluegl_glWindowPos2i
@@ -19257,7 +19257,7 @@ bluegl_glWindowPos2i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2i, .-glWindowPos2i
+	.size	bluegl_glWindowPos2i, .-bluegl_glWindowPos2i
 
 	.align	2
 	.global	bluegl_glWindowPos2f
@@ -19267,7 +19267,7 @@ bluegl_glWindowPos2f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2f, .-glWindowPos2f
+	.size	bluegl_glWindowPos2f, .-bluegl_glWindowPos2f
 
 	.align	2
 	.global	bluegl_glWindowPos2d
@@ -19277,7 +19277,7 @@ bluegl_glWindowPos2d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2d, .-glWindowPos2d
+	.size	bluegl_glWindowPos2d, .-bluegl_glWindowPos2d
 
 	.align	2
 	.global	bluegl_glUniform4uivEXT
@@ -19287,7 +19287,7 @@ bluegl_glUniform4uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4uivEXT, .-glUniform4uivEXT
+	.size	bluegl_glUniform4uivEXT, .-bluegl_glUniform4uivEXT
 
 	.align	2
 	.global	bluegl_glOrthoxOES
@@ -19297,7 +19297,7 @@ bluegl_glOrthoxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glOrthoxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glOrthoxOES, .-glOrthoxOES
+	.size	bluegl_glOrthoxOES, .-bluegl_glOrthoxOES
 
 	.align	2
 	.global	bluegl_glUniformSubroutinesuiv
@@ -19307,7 +19307,7 @@ bluegl_glUniformSubroutinesuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformSubroutinesuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformSubroutinesuiv, .-glUniformSubroutinesuiv
+	.size	bluegl_glUniformSubroutinesuiv, .-bluegl_glUniformSubroutinesuiv
 
 	.align	2
 	.global	bluegl_glTexCoord2fColor3fVertex3fvSUN
@@ -19317,7 +19317,7 @@ bluegl_glTexCoord2fColor3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fColor3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fColor3fVertex3fvSUN, .-glTexCoord2fColor3fVertex3fvSUN
+	.size	bluegl_glTexCoord2fColor3fVertex3fvSUN, .-bluegl_glTexCoord2fColor3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glProgramUniform1i64vNV
@@ -19327,7 +19327,7 @@ bluegl_glProgramUniform1i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1i64vNV, .-glProgramUniform1i64vNV
+	.size	bluegl_glProgramUniform1i64vNV, .-bluegl_glProgramUniform1i64vNV
 
 	.align	2
 	.global	bluegl_glVertexAttribI4uiEXT
@@ -19337,7 +19337,7 @@ bluegl_glVertexAttribI4uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4uiEXT, .-glVertexAttribI4uiEXT
+	.size	bluegl_glVertexAttribI4uiEXT, .-bluegl_glVertexAttribI4uiEXT
 
 	.align	2
 	.global	bluegl_glSecondaryColor3ubEXT
@@ -19347,7 +19347,7 @@ bluegl_glSecondaryColor3ubEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3ubEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3ubEXT, .-glSecondaryColor3ubEXT
+	.size	bluegl_glSecondaryColor3ubEXT, .-bluegl_glSecondaryColor3ubEXT
 
 	.align	2
 	.global	bluegl_glCompressedMultiTexSubImage1DEXT
@@ -19357,7 +19357,7 @@ bluegl_glCompressedMultiTexSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedMultiTexSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedMultiTexSubImage1DEXT, .-glCompressedMultiTexSubImage1DEXT
+	.size	bluegl_glCompressedMultiTexSubImage1DEXT, .-bluegl_glCompressedMultiTexSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glTangentPointerEXT
@@ -19367,7 +19367,7 @@ bluegl_glTangentPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangentPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangentPointerEXT, .-glTangentPointerEXT
+	.size	bluegl_glTangentPointerEXT, .-bluegl_glTangentPointerEXT
 
 	.align	2
 	.global	bluegl_glColorP3uiv
@@ -19377,7 +19377,7 @@ bluegl_glColorP3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorP3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorP3uiv, .-glColorP3uiv
+	.size	bluegl_glColorP3uiv, .-bluegl_glColorP3uiv
 
 	.align	2
 	.global	bluegl_glFogCoordfv
@@ -19387,7 +19387,7 @@ bluegl_glFogCoordfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoordfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoordfv, .-glFogCoordfv
+	.size	bluegl_glFogCoordfv, .-bluegl_glFogCoordfv
 
 	.align	2
 	.global	bluegl_glCompileShader
@@ -19397,7 +19397,7 @@ bluegl_glCompileShader:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompileShader]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompileShader, .-glCompileShader
+	.size	bluegl_glCompileShader, .-bluegl_glCompileShader
 
 	.align	2
 	.global	bluegl_glTexCoord2hNV
@@ -19407,7 +19407,7 @@ bluegl_glTexCoord2hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2hNV, .-glTexCoord2hNV
+	.size	bluegl_glTexCoord2hNV, .-bluegl_glTexCoord2hNV
 
 	.align	2
 	.global	bluegl_glUniform1uivEXT
@@ -19417,7 +19417,7 @@ bluegl_glUniform1uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1uivEXT, .-glUniform1uivEXT
+	.size	bluegl_glUniform1uivEXT, .-bluegl_glUniform1uivEXT
 
 	.align	2
 	.global	bluegl_glMatrixLoadTransposedEXT
@@ -19427,7 +19427,7 @@ bluegl_glMatrixLoadTransposedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixLoadTransposedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixLoadTransposedEXT, .-glMatrixLoadTransposedEXT
+	.size	bluegl_glMatrixLoadTransposedEXT, .-bluegl_glMatrixLoadTransposedEXT
 
 	.align	2
 	.global	bluegl_glMatrixTranslatefEXT
@@ -19437,7 +19437,7 @@ bluegl_glMatrixTranslatefEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixTranslatefEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixTranslatefEXT, .-glMatrixTranslatefEXT
+	.size	bluegl_glMatrixTranslatefEXT, .-bluegl_glMatrixTranslatefEXT
 
 	.align	2
 	.global	bluegl_glGetUniformuivEXT
@@ -19447,7 +19447,7 @@ bluegl_glGetUniformuivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformuivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformuivEXT, .-glGetUniformuivEXT
+	.size	bluegl_glGetUniformuivEXT, .-bluegl_glGetUniformuivEXT
 
 	.align	2
 	.global	bluegl_glBeginTransformFeedbackEXT
@@ -19457,7 +19457,7 @@ bluegl_glBeginTransformFeedbackEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginTransformFeedbackEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginTransformFeedbackEXT, .-glBeginTransformFeedbackEXT
+	.size	bluegl_glBeginTransformFeedbackEXT, .-bluegl_glBeginTransformFeedbackEXT
 
 	.align	2
 	.global	bluegl_glFramebufferTextureEXT
@@ -19467,7 +19467,7 @@ bluegl_glFramebufferTextureEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureEXT, .-glFramebufferTextureEXT
+	.size	bluegl_glFramebufferTextureEXT, .-bluegl_glFramebufferTextureEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribIPointer
@@ -19477,7 +19477,7 @@ bluegl_glVertexAttribIPointer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribIPointer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribIPointer, .-glVertexAttribIPointer
+	.size	bluegl_glVertexAttribIPointer, .-bluegl_glVertexAttribIPointer
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP3ui
@@ -19487,7 +19487,7 @@ bluegl_glMultiTexCoordP3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP3ui, .-glMultiTexCoordP3ui
+	.size	bluegl_glMultiTexCoordP3ui, .-bluegl_glMultiTexCoordP3ui
 
 	.align	2
 	.global	bluegl_glEvaluateDepthValuesARB
@@ -19497,7 +19497,7 @@ bluegl_glEvaluateDepthValuesARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEvaluateDepthValuesARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEvaluateDepthValuesARB, .-glEvaluateDepthValuesARB
+	.size	bluegl_glEvaluateDepthValuesARB, .-bluegl_glEvaluateDepthValuesARB
 
 	.align	2
 	.global	bluegl_glWindowPos2sARB
@@ -19507,7 +19507,7 @@ bluegl_glWindowPos2sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2sARB, .-glWindowPos2sARB
+	.size	bluegl_glWindowPos2sARB, .-bluegl_glWindowPos2sARB
 
 	.align	2
 	.global	bluegl_glColor4fNormal3fVertex3fvSUN
@@ -19517,7 +19517,7 @@ bluegl_glColor4fNormal3fVertex3fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4fNormal3fVertex3fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4fNormal3fVertex3fvSUN, .-glColor4fNormal3fVertex3fvSUN
+	.size	bluegl_glColor4fNormal3fVertex3fvSUN, .-bluegl_glColor4fNormal3fVertex3fvSUN
 
 	.align	2
 	.global	bluegl_glSeparableFilter2DEXT
@@ -19527,7 +19527,7 @@ bluegl_glSeparableFilter2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSeparableFilter2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSeparableFilter2DEXT, .-glSeparableFilter2DEXT
+	.size	bluegl_glSeparableFilter2DEXT, .-bluegl_glSeparableFilter2DEXT
 
 	.align	2
 	.global	bluegl_glTexParameterxOES
@@ -19537,7 +19537,7 @@ bluegl_glTexParameterxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterxOES, .-glTexParameterxOES
+	.size	bluegl_glTexParameterxOES, .-bluegl_glTexParameterxOES
 
 	.align	2
 	.global	bluegl_glClearAccumxOES
@@ -19547,7 +19547,7 @@ bluegl_glClearAccumxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearAccumxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearAccumxOES, .-glClearAccumxOES
+	.size	bluegl_glClearAccumxOES, .-bluegl_glClearAccumxOES
 
 	.align	2
 	.global	bluegl_glInvalidateFramebuffer
@@ -19557,7 +19557,7 @@ bluegl_glInvalidateFramebuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glInvalidateFramebuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glInvalidateFramebuffer, .-glInvalidateFramebuffer
+	.size	bluegl_glInvalidateFramebuffer, .-bluegl_glInvalidateFramebuffer
 
 	.align	2
 	.global	bluegl_glWeightubvARB
@@ -19567,7 +19567,7 @@ bluegl_glWeightubvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightubvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightubvARB, .-glWeightubvARB
+	.size	bluegl_glWeightubvARB, .-bluegl_glWeightubvARB
 
 	.align	2
 	.global	bluegl_glCompressedTexImage2D
@@ -19577,7 +19577,7 @@ bluegl_glCompressedTexImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexImage2D, .-glCompressedTexImage2D
+	.size	bluegl_glCompressedTexImage2D, .-bluegl_glCompressedTexImage2D
 
 	.align	2
 	.global	bluegl_glVertexAttrib1f
@@ -19587,7 +19587,7 @@ bluegl_glVertexAttrib1f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1f, .-glVertexAttrib1f
+	.size	bluegl_glVertexAttrib1f, .-bluegl_glVertexAttrib1f
 
 	.align	2
 	.global	bluegl_glClearNamedFramebufferfi
@@ -19597,7 +19597,7 @@ bluegl_glClearNamedFramebufferfi:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedFramebufferfi]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedFramebufferfi, .-glClearNamedFramebufferfi
+	.size	bluegl_glClearNamedFramebufferfi, .-bluegl_glClearNamedFramebufferfi
 
 	.align	2
 	.global	bluegl_glGetQueryBufferObjectuiv
@@ -19607,7 +19607,7 @@ bluegl_glGetQueryBufferObjectuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryBufferObjectuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryBufferObjectuiv, .-glGetQueryBufferObjectuiv
+	.size	bluegl_glGetQueryBufferObjectuiv, .-bluegl_glGetQueryBufferObjectuiv
 
 	.align	2
 	.global	bluegl_glDrawBuffers
@@ -19617,7 +19617,7 @@ bluegl_glDrawBuffers:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawBuffers]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawBuffers, .-glDrawBuffers
+	.size	bluegl_glDrawBuffers, .-bluegl_glDrawBuffers
 
 	.align	2
 	.global	bluegl_glEndVertexShaderEXT
@@ -19627,7 +19627,7 @@ bluegl_glEndVertexShaderEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndVertexShaderEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndVertexShaderEXT, .-glEndVertexShaderEXT
+	.size	bluegl_glEndVertexShaderEXT, .-bluegl_glEndVertexShaderEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib1s
@@ -19637,7 +19637,7 @@ bluegl_glVertexAttrib1s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1s, .-glVertexAttrib1s
+	.size	bluegl_glVertexAttrib1s, .-bluegl_glVertexAttrib1s
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4dvARB
@@ -19647,7 +19647,7 @@ bluegl_glMultiTexCoord4dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4dvARB, .-glMultiTexCoord4dvARB
+	.size	bluegl_glMultiTexCoord4dvARB, .-bluegl_glMultiTexCoord4dvARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1sv
@@ -19657,7 +19657,7 @@ bluegl_glMultiTexCoord1sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1sv, .-glMultiTexCoord1sv
+	.size	bluegl_glMultiTexCoord1sv, .-bluegl_glMultiTexCoord1sv
 
 	.align	2
 	.global	bluegl_glUniform1ui64vNV
@@ -19667,7 +19667,7 @@ bluegl_glUniform1ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1ui64vNV, .-glUniform1ui64vNV
+	.size	bluegl_glUniform1ui64vNV, .-bluegl_glUniform1ui64vNV
 
 	.align	2
 	.global	bluegl_glGetClipPlanefOES
@@ -19677,7 +19677,7 @@ bluegl_glGetClipPlanefOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetClipPlanefOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetClipPlanefOES, .-glGetClipPlanefOES
+	.size	bluegl_glGetClipPlanefOES, .-bluegl_glGetClipPlanefOES
 
 	.align	2
 	.global	bluegl_glProgramUniform3ivEXT
@@ -19687,7 +19687,7 @@ bluegl_glProgramUniform3ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3ivEXT, .-glProgramUniform3ivEXT
+	.size	bluegl_glProgramUniform3ivEXT, .-bluegl_glProgramUniform3ivEXT
 
 	.align	2
 	.global	bluegl_glWeightivARB
@@ -19697,7 +19697,7 @@ bluegl_glWeightivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWeightivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWeightivARB, .-glWeightivARB
+	.size	bluegl_glWeightivARB, .-bluegl_glWeightivARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4hvNV
@@ -19707,7 +19707,7 @@ bluegl_glMultiTexCoord4hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4hvNV, .-glMultiTexCoord4hvNV
+	.size	bluegl_glMultiTexCoord4hvNV, .-bluegl_glMultiTexCoord4hvNV
 
 	.align	2
 	.global	bluegl_glNormal3hNV
@@ -19717,7 +19717,7 @@ bluegl_glNormal3hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormal3hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormal3hNV, .-glNormal3hNV
+	.size	bluegl_glNormal3hNV, .-bluegl_glNormal3hNV
 
 	.align	2
 	.global	bluegl_glGetSeparableFilter
@@ -19727,7 +19727,7 @@ bluegl_glGetSeparableFilter:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSeparableFilter]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSeparableFilter, .-glGetSeparableFilter
+	.size	bluegl_glGetSeparableFilter, .-bluegl_glGetSeparableFilter
 
 	.align	2
 	.global	bluegl_glDeleteProgram
@@ -19737,7 +19737,7 @@ bluegl_glDeleteProgram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteProgram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteProgram, .-glDeleteProgram
+	.size	bluegl_glDeleteProgram, .-bluegl_glDeleteProgram
 
 	.align	2
 	.global	bluegl_glNamedBufferPageCommitmentARB
@@ -19747,7 +19747,7 @@ bluegl_glNamedBufferPageCommitmentARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferPageCommitmentARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferPageCommitmentARB, .-glNamedBufferPageCommitmentARB
+	.size	bluegl_glNamedBufferPageCommitmentARB, .-bluegl_glNamedBufferPageCommitmentARB
 
 	.align	2
 	.global	bluegl_glTexCoord4bOES
@@ -19757,7 +19757,7 @@ bluegl_glTexCoord4bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4bOES, .-glTexCoord4bOES
+	.size	bluegl_glTexCoord4bOES, .-bluegl_glTexCoord4bOES
 
 	.align	2
 	.global	bluegl_glProgramParameter4dNV
@@ -19767,7 +19767,7 @@ bluegl_glProgramParameter4dNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameter4dNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameter4dNV, .-glProgramParameter4dNV
+	.size	bluegl_glProgramParameter4dNV, .-bluegl_glProgramParameter4dNV
 
 	.align	2
 	.global	bluegl_glUniformMatrix4x3fv
@@ -19777,7 +19777,7 @@ bluegl_glUniformMatrix4x3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix4x3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix4x3fv, .-glUniformMatrix4x3fv
+	.size	bluegl_glUniformMatrix4x3fv, .-bluegl_glUniformMatrix4x3fv
 
 	.align	2
 	.global	bluegl_glClearBufferfv
@@ -19787,7 +19787,7 @@ bluegl_glClearBufferfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearBufferfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearBufferfv, .-glClearBufferfv
+	.size	bluegl_glClearBufferfv, .-bluegl_glClearBufferfv
 
 	.align	2
 	.global	bluegl_glPauseTransformFeedbackNV
@@ -19797,7 +19797,7 @@ bluegl_glPauseTransformFeedbackNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPauseTransformFeedbackNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPauseTransformFeedbackNV, .-glPauseTransformFeedbackNV
+	.size	bluegl_glPauseTransformFeedbackNV, .-bluegl_glPauseTransformFeedbackNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4hNV
@@ -19807,7 +19807,7 @@ bluegl_glMultiTexCoord4hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4hNV, .-glMultiTexCoord4hNV
+	.size	bluegl_glMultiTexCoord4hNV, .-bluegl_glMultiTexCoord4hNV
 
 	.align	2
 	.global	bluegl_glTextureBarrier
@@ -19817,7 +19817,7 @@ bluegl_glTextureBarrier:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureBarrier]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureBarrier, .-glTextureBarrier
+	.size	bluegl_glTextureBarrier, .-bluegl_glTextureBarrier
 
 	.align	2
 	.global	bluegl_glAlphaFragmentOp3ATI
@@ -19827,7 +19827,7 @@ bluegl_glAlphaFragmentOp3ATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAlphaFragmentOp3ATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAlphaFragmentOp3ATI, .-glAlphaFragmentOp3ATI
+	.size	bluegl_glAlphaFragmentOp3ATI, .-bluegl_glAlphaFragmentOp3ATI
 
 	.align	2
 	.global	bluegl_glUniform1i64ARB
@@ -19837,7 +19837,7 @@ bluegl_glUniform1i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1i64ARB, .-glUniform1i64ARB
+	.size	bluegl_glUniform1i64ARB, .-bluegl_glUniform1i64ARB
 
 	.align	2
 	.global	bluegl_glTexCoord2bvOES
@@ -19847,7 +19847,7 @@ bluegl_glTexCoord2bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2bvOES, .-glTexCoord2bvOES
+	.size	bluegl_glTexCoord2bvOES, .-bluegl_glTexCoord2bvOES
 
 	.align	2
 	.global	bluegl_glEvalCoord2xOES
@@ -19857,7 +19857,7 @@ bluegl_glEvalCoord2xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEvalCoord2xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEvalCoord2xOES, .-glEvalCoord2xOES
+	.size	bluegl_glEvalCoord2xOES, .-bluegl_glEvalCoord2xOES
 
 	.align	2
 	.global	bluegl_glGetSharpenTexFuncSGIS
@@ -19867,7 +19867,7 @@ bluegl_glGetSharpenTexFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSharpenTexFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSharpenTexFuncSGIS, .-glGetSharpenTexFuncSGIS
+	.size	bluegl_glGetSharpenTexFuncSGIS, .-bluegl_glGetSharpenTexFuncSGIS
 
 	.align	2
 	.global	bluegl_glProgramUniformHandleui64vNV
@@ -19877,7 +19877,7 @@ bluegl_glProgramUniformHandleui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformHandleui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformHandleui64vNV, .-glProgramUniformHandleui64vNV
+	.size	bluegl_glProgramUniformHandleui64vNV, .-bluegl_glProgramUniformHandleui64vNV
 
 	.align	2
 	.global	bluegl_glIglooInterfaceSGIX
@@ -19887,7 +19887,7 @@ bluegl_glIglooInterfaceSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIglooInterfaceSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIglooInterfaceSGIX, .-glIglooInterfaceSGIX
+	.size	bluegl_glIglooInterfaceSGIX, .-bluegl_glIglooInterfaceSGIX
 
 	.align	2
 	.global	bluegl_glWindowPos2dvARB
@@ -19897,7 +19897,7 @@ bluegl_glWindowPos2dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2dvARB, .-glWindowPos2dvARB
+	.size	bluegl_glWindowPos2dvARB, .-bluegl_glWindowPos2dvARB
 
 	.align	2
 	.global	bluegl_glClearBufferfi
@@ -19907,7 +19907,7 @@ bluegl_glClearBufferfi:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearBufferfi]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearBufferfi, .-glClearBufferfi
+	.size	bluegl_glClearBufferfi, .-bluegl_glClearBufferfi
 
 	.align	2
 	.global	bluegl_glDrawArraysIndirect
@@ -19917,7 +19917,7 @@ bluegl_glDrawArraysIndirect:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawArraysIndirect]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawArraysIndirect, .-glDrawArraysIndirect
+	.size	bluegl_glDrawArraysIndirect, .-bluegl_glDrawArraysIndirect
 
 	.align	2
 	.global	bluegl_glGenVertexArrays
@@ -19927,7 +19927,7 @@ bluegl_glGenVertexArrays:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenVertexArrays]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenVertexArrays, .-glGenVertexArrays
+	.size	bluegl_glGenVertexArrays, .-bluegl_glGenVertexArrays
 
 	.align	2
 	.global	bluegl_glEnableVertexArrayAttrib
@@ -19937,7 +19937,7 @@ bluegl_glEnableVertexArrayAttrib:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableVertexArrayAttrib]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableVertexArrayAttrib, .-glEnableVertexArrayAttrib
+	.size	bluegl_glEnableVertexArrayAttrib, .-bluegl_glEnableVertexArrayAttrib
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x2dv
@@ -19947,7 +19947,7 @@ bluegl_glProgramUniformMatrix3x2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x2dv, .-glProgramUniformMatrix3x2dv
+	.size	bluegl_glProgramUniformMatrix3x2dv, .-bluegl_glProgramUniformMatrix3x2dv
 
 	.align	2
 	.global	bluegl_glVertexStream4fATI
@@ -19957,7 +19957,7 @@ bluegl_glVertexStream4fATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4fATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4fATI, .-glVertexStream4fATI
+	.size	bluegl_glVertexStream4fATI, .-bluegl_glVertexStream4fATI
 
 	.align	2
 	.global	bluegl_glGetSamplerParameterIiv
@@ -19967,7 +19967,7 @@ bluegl_glGetSamplerParameterIiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetSamplerParameterIiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetSamplerParameterIiv, .-glGetSamplerParameterIiv
+	.size	bluegl_glGetSamplerParameterIiv, .-bluegl_glGetSamplerParameterIiv
 
 	.align	2
 	.global	bluegl_glGetCoverageModulationTableNV
@@ -19977,7 +19977,7 @@ bluegl_glGetCoverageModulationTableNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCoverageModulationTableNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCoverageModulationTableNV, .-glGetCoverageModulationTableNV
+	.size	bluegl_glGetCoverageModulationTableNV, .-bluegl_glGetCoverageModulationTableNV
 
 	.align	2
 	.global	bluegl_glDepthRangedNV
@@ -19987,7 +19987,7 @@ bluegl_glDepthRangedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthRangedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthRangedNV, .-glDepthRangedNV
+	.size	bluegl_glDepthRangedNV, .-bluegl_glDepthRangedNV
 
 	.align	2
 	.global	bluegl_glMultiDrawRangeElementArrayAPPLE
@@ -19997,7 +19997,7 @@ bluegl_glMultiDrawRangeElementArrayAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawRangeElementArrayAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawRangeElementArrayAPPLE, .-glMultiDrawRangeElementArrayAPPLE
+	.size	bluegl_glMultiDrawRangeElementArrayAPPLE, .-bluegl_glMultiDrawRangeElementArrayAPPLE
 
 	.align	2
 	.global	bluegl_glVertexAttribFormatNV
@@ -20007,7 +20007,7 @@ bluegl_glVertexAttribFormatNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribFormatNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribFormatNV, .-glVertexAttribFormatNV
+	.size	bluegl_glVertexAttribFormatNV, .-bluegl_glVertexAttribFormatNV
 
 	.align	2
 	.global	bluegl_glGetQueryBufferObjecti64v
@@ -20017,7 +20017,7 @@ bluegl_glGetQueryBufferObjecti64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryBufferObjecti64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryBufferObjecti64v, .-glGetQueryBufferObjecti64v
+	.size	bluegl_glGetQueryBufferObjecti64v, .-bluegl_glGetQueryBufferObjecti64v
 
 	.align	2
 	.global	bluegl_glGetVertexAttribdv
@@ -20027,7 +20027,7 @@ bluegl_glGetVertexAttribdv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribdv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribdv, .-glGetVertexAttribdv
+	.size	bluegl_glGetVertexAttribdv, .-bluegl_glGetVertexAttribdv
 
 	.align	2
 	.global	bluegl_glStartInstrumentsSGIX
@@ -20037,7 +20037,7 @@ bluegl_glStartInstrumentsSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStartInstrumentsSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStartInstrumentsSGIX, .-glStartInstrumentsSGIX
+	.size	bluegl_glStartInstrumentsSGIX, .-bluegl_glStartInstrumentsSGIX
 
 	.align	2
 	.global	bluegl_glAreTexturesResidentEXT
@@ -20047,7 +20047,7 @@ bluegl_glAreTexturesResidentEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAreTexturesResidentEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAreTexturesResidentEXT, .-glAreTexturesResidentEXT
+	.size	bluegl_glAreTexturesResidentEXT, .-bluegl_glAreTexturesResidentEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x4dv
@@ -20057,7 +20057,7 @@ bluegl_glProgramUniformMatrix3x4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x4dv, .-glProgramUniformMatrix3x4dv
+	.size	bluegl_glProgramUniformMatrix3x4dv, .-bluegl_glProgramUniformMatrix3x4dv
 
 	.align	2
 	.global	bluegl_glVideoCaptureStreamParameterdvNV
@@ -20067,7 +20067,7 @@ bluegl_glVideoCaptureStreamParameterdvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVideoCaptureStreamParameterdvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVideoCaptureStreamParameterdvNV, .-glVideoCaptureStreamParameterdvNV
+	.size	bluegl_glVideoCaptureStreamParameterdvNV, .-bluegl_glVideoCaptureStreamParameterdvNV
 
 	.align	2
 	.global	bluegl_glMapParameterivNV
@@ -20077,7 +20077,7 @@ bluegl_glMapParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapParameterivNV, .-glMapParameterivNV
+	.size	bluegl_glMapParameterivNV, .-bluegl_glMapParameterivNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2svARB
@@ -20087,7 +20087,7 @@ bluegl_glMultiTexCoord2svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2svARB, .-glMultiTexCoord2svARB
+	.size	bluegl_glMultiTexCoord2svARB, .-bluegl_glMultiTexCoord2svARB
 
 	.align	2
 	.global	bluegl_glSecondaryColor3sEXT
@@ -20097,7 +20097,7 @@ bluegl_glSecondaryColor3sEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3sEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3sEXT, .-glSecondaryColor3sEXT
+	.size	bluegl_glSecondaryColor3sEXT, .-bluegl_glSecondaryColor3sEXT
 
 	.align	2
 	.global	bluegl_glGetTexParameterIivEXT
@@ -20107,7 +20107,7 @@ bluegl_glGetTexParameterIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameterIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameterIivEXT, .-glGetTexParameterIivEXT
+	.size	bluegl_glGetTexParameterIivEXT, .-bluegl_glGetTexParameterIivEXT
 
 	.align	2
 	.global	bluegl_glFrameTerminatorGREMEDY
@@ -20117,7 +20117,7 @@ bluegl_glFrameTerminatorGREMEDY:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFrameTerminatorGREMEDY]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFrameTerminatorGREMEDY, .-glFrameTerminatorGREMEDY
+	.size	bluegl_glFrameTerminatorGREMEDY, .-bluegl_glFrameTerminatorGREMEDY
 
 	.align	2
 	.global	bluegl_glBlendBarrierKHR
@@ -20127,7 +20127,7 @@ bluegl_glBlendBarrierKHR:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendBarrierKHR]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendBarrierKHR, .-glBlendBarrierKHR
+	.size	bluegl_glBlendBarrierKHR, .-bluegl_glBlendBarrierKHR
 
 	.align	2
 	.global	bluegl_glVertexAttrib4NubARB
@@ -20137,7 +20137,7 @@ bluegl_glVertexAttrib4NubARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4NubARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4NubARB, .-glVertexAttrib4NubARB
+	.size	bluegl_glVertexAttrib4NubARB, .-bluegl_glVertexAttrib4NubARB
 
 	.align	2
 	.global	bluegl_glPrimitiveRestartNV
@@ -20147,7 +20147,7 @@ bluegl_glPrimitiveRestartNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPrimitiveRestartNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPrimitiveRestartNV, .-glPrimitiveRestartNV
+	.size	bluegl_glPrimitiveRestartNV, .-bluegl_glPrimitiveRestartNV
 
 	.align	2
 	.global	bluegl_glVertexAttribL1ui64vARB
@@ -20157,7 +20157,7 @@ bluegl_glVertexAttribL1ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL1ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL1ui64vARB, .-glVertexAttribL1ui64vARB
+	.size	bluegl_glVertexAttribL1ui64vARB, .-bluegl_glVertexAttribL1ui64vARB
 
 	.align	2
 	.global	bluegl_glUniform1i64vNV
@@ -20167,7 +20167,7 @@ bluegl_glUniform1i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1i64vNV, .-glUniform1i64vNV
+	.size	bluegl_glUniform1i64vNV, .-bluegl_glUniform1i64vNV
 
 	.align	2
 	.global	bluegl_glVertexAttribs4svNV
@@ -20177,7 +20177,7 @@ bluegl_glVertexAttribs4svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs4svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs4svNV, .-glVertexAttribs4svNV
+	.size	bluegl_glVertexAttribs4svNV, .-bluegl_glVertexAttribs4svNV
 
 	.align	2
 	.global	bluegl_glUniform1ui
@@ -20187,7 +20187,7 @@ bluegl_glUniform1ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1ui, .-glUniform1ui
+	.size	bluegl_glUniform1ui, .-bluegl_glUniform1ui
 
 	.align	2
 	.global	bluegl_glVertexAttrib2fvARB
@@ -20197,7 +20197,7 @@ bluegl_glVertexAttrib2fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2fvARB, .-glVertexAttrib2fvARB
+	.size	bluegl_glVertexAttrib2fvARB, .-bluegl_glVertexAttrib2fvARB
 
 	.align	2
 	.global	bluegl_glVertexAttribI4svEXT
@@ -20207,7 +20207,7 @@ bluegl_glVertexAttribI4svEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4svEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4svEXT, .-glVertexAttribI4svEXT
+	.size	bluegl_glVertexAttribI4svEXT, .-bluegl_glVertexAttribI4svEXT
 
 	.align	2
 	.global	bluegl_glTextureImage3DMultisampleCoverageNV
@@ -20217,7 +20217,7 @@ bluegl_glTextureImage3DMultisampleCoverageNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureImage3DMultisampleCoverageNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureImage3DMultisampleCoverageNV, .-glTextureImage3DMultisampleCoverageNV
+	.size	bluegl_glTextureImage3DMultisampleCoverageNV, .-bluegl_glTextureImage3DMultisampleCoverageNV
 
 	.align	2
 	.global	bluegl_glMemoryBarrier
@@ -20227,7 +20227,7 @@ bluegl_glMemoryBarrier:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMemoryBarrier]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMemoryBarrier, .-glMemoryBarrier
+	.size	bluegl_glMemoryBarrier, .-bluegl_glMemoryBarrier
 
 	.align	2
 	.global	bluegl_glGetVariantArrayObjectfvATI
@@ -20237,7 +20237,7 @@ bluegl_glGetVariantArrayObjectfvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVariantArrayObjectfvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVariantArrayObjectfvATI, .-glGetVariantArrayObjectfvATI
+	.size	bluegl_glGetVariantArrayObjectfvATI, .-bluegl_glGetVariantArrayObjectfvATI
 
 	.align	2
 	.global	bluegl_glTexCoord4fColor4fNormal3fVertex4fvSUN
@@ -20247,7 +20247,7 @@ bluegl_glTexCoord4fColor4fNormal3fVertex4fvSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4fColor4fNormal3fVertex4fvSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4fColor4fNormal3fVertex4fvSUN, .-glTexCoord4fColor4fNormal3fVertex4fvSUN
+	.size	bluegl_glTexCoord4fColor4fNormal3fVertex4fvSUN, .-bluegl_glTexCoord4fColor4fNormal3fVertex4fvSUN
 
 	.align	2
 	.global	bluegl_glIsProgramARB
@@ -20257,7 +20257,7 @@ bluegl_glIsProgramARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsProgramARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsProgramARB, .-glIsProgramARB
+	.size	bluegl_glIsProgramARB, .-bluegl_glIsProgramARB
 
 	.align	2
 	.global	bluegl_glBindImageTextureEXT
@@ -20267,7 +20267,7 @@ bluegl_glBindImageTextureEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindImageTextureEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindImageTextureEXT, .-glBindImageTextureEXT
+	.size	bluegl_glBindImageTextureEXT, .-bluegl_glBindImageTextureEXT
 
 	.align	2
 	.global	bluegl_glGetFragDataLocation
@@ -20277,7 +20277,7 @@ bluegl_glGetFragDataLocation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFragDataLocation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFragDataLocation, .-glGetFragDataLocation
+	.size	bluegl_glGetFragDataLocation, .-bluegl_glGetFragDataLocation
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1svARB
@@ -20287,7 +20287,7 @@ bluegl_glMultiTexCoord1svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1svARB, .-glMultiTexCoord1svARB
+	.size	bluegl_glMultiTexCoord1svARB, .-bluegl_glMultiTexCoord1svARB
 
 	.align	2
 	.global	bluegl_glGetMapxvOES
@@ -20297,7 +20297,7 @@ bluegl_glGetMapxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMapxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMapxvOES, .-glGetMapxvOES
+	.size	bluegl_glGetMapxvOES, .-bluegl_glGetMapxvOES
 
 	.align	2
 	.global	bluegl_glTextureStorage2DMultisampleEXT
@@ -20307,7 +20307,7 @@ bluegl_glTextureStorage2DMultisampleEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage2DMultisampleEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage2DMultisampleEXT, .-glTextureStorage2DMultisampleEXT
+	.size	bluegl_glTextureStorage2DMultisampleEXT, .-bluegl_glTextureStorage2DMultisampleEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4svARB
@@ -20317,7 +20317,7 @@ bluegl_glVertexAttrib4svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4svARB, .-glVertexAttrib4svARB
+	.size	bluegl_glVertexAttrib4svARB, .-bluegl_glVertexAttrib4svARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4NbvARB
@@ -20327,7 +20327,7 @@ bluegl_glVertexAttrib4NbvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4NbvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4NbvARB, .-glVertexAttrib4NbvARB
+	.size	bluegl_glVertexAttrib4NbvARB, .-bluegl_glVertexAttrib4NbvARB
 
 	.align	2
 	.global	bluegl_glColorPointerEXT
@@ -20337,7 +20337,7 @@ bluegl_glColorPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorPointerEXT, .-glColorPointerEXT
+	.size	bluegl_glColorPointerEXT, .-bluegl_glColorPointerEXT
 
 	.align	2
 	.global	bluegl_glEnableClientStateiEXT
@@ -20347,7 +20347,7 @@ bluegl_glEnableClientStateiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableClientStateiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableClientStateiEXT, .-glEnableClientStateiEXT
+	.size	bluegl_glEnableClientStateiEXT, .-bluegl_glEnableClientStateiEXT
 
 	.align	2
 	.global	bluegl_glClearTexSubImage
@@ -20357,7 +20357,7 @@ bluegl_glClearTexSubImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearTexSubImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearTexSubImage, .-glClearTexSubImage
+	.size	bluegl_glClearTexSubImage, .-bluegl_glClearTexSubImage
 
 	.align	2
 	.global	bluegl_glEvalCoord1xvOES
@@ -20367,7 +20367,7 @@ bluegl_glEvalCoord1xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEvalCoord1xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEvalCoord1xvOES, .-glEvalCoord1xvOES
+	.size	bluegl_glEvalCoord1xvOES, .-bluegl_glEvalCoord1xvOES
 
 	.align	2
 	.global	bluegl_glDetachObjectARB
@@ -20377,7 +20377,7 @@ bluegl_glDetachObjectARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDetachObjectARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDetachObjectARB, .-glDetachObjectARB
+	.size	bluegl_glDetachObjectARB, .-bluegl_glDetachObjectARB
 
 	.align	2
 	.global	bluegl_glGetTextureParameterIiv
@@ -20387,7 +20387,7 @@ bluegl_glGetTextureParameterIiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameterIiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameterIiv, .-glGetTextureParameterIiv
+	.size	bluegl_glGetTextureParameterIiv, .-bluegl_glGetTextureParameterIiv
 
 	.align	2
 	.global	bluegl_glVariantusvEXT
@@ -20397,7 +20397,7 @@ bluegl_glVariantusvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantusvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantusvEXT, .-glVariantusvEXT
+	.size	bluegl_glVariantusvEXT, .-bluegl_glVariantusvEXT
 
 	.align	2
 	.global	bluegl_glCompressedTextureImage3DEXT
@@ -20407,7 +20407,7 @@ bluegl_glCompressedTextureImage3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureImage3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureImage3DEXT, .-glCompressedTextureImage3DEXT
+	.size	bluegl_glCompressedTextureImage3DEXT, .-bluegl_glCompressedTextureImage3DEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1dARB
@@ -20417,7 +20417,7 @@ bluegl_glMultiTexCoord1dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1dARB, .-glMultiTexCoord1dARB
+	.size	bluegl_glMultiTexCoord1dARB, .-bluegl_glMultiTexCoord1dARB
 
 	.align	2
 	.global	bluegl_glGetVertexArrayIntegeri_vEXT
@@ -20427,7 +20427,7 @@ bluegl_glGetVertexArrayIntegeri_vEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexArrayIntegeri_vEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexArrayIntegeri_vEXT, .-glGetVertexArrayIntegeri_vEXT
+	.size	bluegl_glGetVertexArrayIntegeri_vEXT, .-bluegl_glGetVertexArrayIntegeri_vEXT
 
 	.align	2
 	.global	bluegl_glCheckNamedFramebufferStatusEXT
@@ -20437,7 +20437,7 @@ bluegl_glCheckNamedFramebufferStatusEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCheckNamedFramebufferStatusEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCheckNamedFramebufferStatusEXT, .-glCheckNamedFramebufferStatusEXT
+	.size	bluegl_glCheckNamedFramebufferStatusEXT, .-bluegl_glCheckNamedFramebufferStatusEXT
 
 	.align	2
 	.global	bluegl_glPixelTexGenParameterfSGIS
@@ -20447,7 +20447,7 @@ bluegl_glPixelTexGenParameterfSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTexGenParameterfSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTexGenParameterfSGIS, .-glPixelTexGenParameterfSGIS
+	.size	bluegl_glPixelTexGenParameterfSGIS, .-bluegl_glPixelTexGenParameterfSGIS
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x2dv
@@ -20457,7 +20457,7 @@ bluegl_glProgramUniformMatrix4x2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x2dv, .-glProgramUniformMatrix4x2dv
+	.size	bluegl_glProgramUniformMatrix4x2dv, .-bluegl_glProgramUniformMatrix4x2dv
 
 	.align	2
 	.global	bluegl_glUniform3fARB
@@ -20467,7 +20467,7 @@ bluegl_glUniform3fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3fARB, .-glUniform3fARB
+	.size	bluegl_glUniform3fARB, .-bluegl_glUniform3fARB
 
 	.align	2
 	.global	bluegl_glIsShader
@@ -20477,7 +20477,7 @@ bluegl_glIsShader:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsShader]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsShader, .-glIsShader
+	.size	bluegl_glIsShader, .-bluegl_glIsShader
 
 	.align	2
 	.global	bluegl_glConvolutionParameteriv
@@ -20487,7 +20487,7 @@ bluegl_glConvolutionParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionParameteriv, .-glConvolutionParameteriv
+	.size	bluegl_glConvolutionParameteriv, .-bluegl_glConvolutionParameteriv
 
 	.align	2
 	.global	bluegl_glCopyMultiTexSubImage2DEXT
@@ -20497,7 +20497,7 @@ bluegl_glCopyMultiTexSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyMultiTexSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyMultiTexSubImage2DEXT, .-glCopyMultiTexSubImage2DEXT
+	.size	bluegl_glCopyMultiTexSubImage2DEXT, .-bluegl_glCopyMultiTexSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glEnableVertexAttribArrayARB
@@ -20507,7 +20507,7 @@ bluegl_glEnableVertexAttribArrayARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableVertexAttribArrayARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableVertexAttribArrayARB, .-glEnableVertexAttribArrayARB
+	.size	bluegl_glEnableVertexAttribArrayARB, .-bluegl_glEnableVertexAttribArrayARB
 
 	.align	2
 	.global	bluegl_glEnable
@@ -20517,7 +20517,7 @@ bluegl_glEnable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnable, .-glEnable
+	.size	bluegl_glEnable, .-bluegl_glEnable
 
 	.align	2
 	.global	bluegl_glGetActiveUniformsiv
@@ -20527,7 +20527,7 @@ bluegl_glGetActiveUniformsiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveUniformsiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveUniformsiv, .-glGetActiveUniformsiv
+	.size	bluegl_glGetActiveUniformsiv, .-bluegl_glGetActiveUniformsiv
 
 	.align	2
 	.global	bluegl_glGetVertexAttribivARB
@@ -20537,7 +20537,7 @@ bluegl_glGetVertexAttribivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribivARB, .-glGetVertexAttribivARB
+	.size	bluegl_glGetVertexAttribivARB, .-bluegl_glGetVertexAttribivARB
 
 	.align	2
 	.global	bluegl_glTexCoord4hvNV
@@ -20547,7 +20547,7 @@ bluegl_glTexCoord4hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4hvNV, .-glTexCoord4hvNV
+	.size	bluegl_glTexCoord4hvNV, .-bluegl_glTexCoord4hvNV
 
 	.align	2
 	.global	bluegl_glUseProgramObjectARB
@@ -20557,7 +20557,7 @@ bluegl_glUseProgramObjectARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUseProgramObjectARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUseProgramObjectARB, .-glUseProgramObjectARB
+	.size	bluegl_glUseProgramObjectARB, .-bluegl_glUseProgramObjectARB
 
 	.align	2
 	.global	bluegl_glGetAttribLocation
@@ -20567,7 +20567,7 @@ bluegl_glGetAttribLocation:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetAttribLocation]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetAttribLocation, .-glGetAttribLocation
+	.size	bluegl_glGetAttribLocation, .-bluegl_glGetAttribLocation
 
 	.align	2
 	.global	bluegl_glVertexAttrib4dv
@@ -20577,7 +20577,7 @@ bluegl_glVertexAttrib4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4dv, .-glVertexAttrib4dv
+	.size	bluegl_glVertexAttrib4dv, .-bluegl_glVertexAttrib4dv
 
 	.align	2
 	.global	bluegl_glGetTextureParameteriv
@@ -20587,7 +20587,7 @@ bluegl_glGetTextureParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameteriv, .-glGetTextureParameteriv
+	.size	bluegl_glGetTextureParameteriv, .-bluegl_glGetTextureParameteriv
 
 	.align	2
 	.global	bluegl_glUniform3ui64vNV
@@ -20597,7 +20597,7 @@ bluegl_glUniform3ui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3ui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3ui64vNV, .-glUniform3ui64vNV
+	.size	bluegl_glUniform3ui64vNV, .-bluegl_glUniform3ui64vNV
 
 	.align	2
 	.global	bluegl_glMatrixIndexusvARB
@@ -20607,7 +20607,7 @@ bluegl_glMatrixIndexusvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixIndexusvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixIndexusvARB, .-glMatrixIndexusvARB
+	.size	bluegl_glMatrixIndexusvARB, .-bluegl_glMatrixIndexusvARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4d
@@ -20617,7 +20617,7 @@ bluegl_glVertexAttrib4d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4d, .-glVertexAttrib4d
+	.size	bluegl_glVertexAttrib4d, .-bluegl_glVertexAttrib4d
 
 	.align	2
 	.global	bluegl_glGetVideoCaptureivNV
@@ -20627,7 +20627,7 @@ bluegl_glGetVideoCaptureivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideoCaptureivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideoCaptureivNV, .-glGetVideoCaptureivNV
+	.size	bluegl_glGetVideoCaptureivNV, .-bluegl_glGetVideoCaptureivNV
 
 	.align	2
 	.global	bluegl_glProgramUniform3ui
@@ -20637,7 +20637,7 @@ bluegl_glProgramUniform3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3ui, .-glProgramUniform3ui
+	.size	bluegl_glProgramUniform3ui, .-bluegl_glProgramUniform3ui
 
 	.align	2
 	.global	bluegl_glVertexAttrib3svARB
@@ -20647,7 +20647,7 @@ bluegl_glVertexAttrib3svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3svARB, .-glVertexAttrib3svARB
+	.size	bluegl_glVertexAttrib3svARB, .-bluegl_glVertexAttrib3svARB
 
 	.align	2
 	.global	bluegl_glGetNamedBufferParameterivEXT
@@ -20657,7 +20657,7 @@ bluegl_glGetNamedBufferParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferParameterivEXT, .-glGetNamedBufferParameterivEXT
+	.size	bluegl_glGetNamedBufferParameterivEXT, .-bluegl_glGetNamedBufferParameterivEXT
 
 	.align	2
 	.global	bluegl_glMatrixScaledEXT
@@ -20667,7 +20667,7 @@ bluegl_glMatrixScaledEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixScaledEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixScaledEXT, .-glMatrixScaledEXT
+	.size	bluegl_glMatrixScaledEXT, .-bluegl_glMatrixScaledEXT
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x3fv
@@ -20677,7 +20677,7 @@ bluegl_glProgramUniformMatrix2x3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x3fv, .-glProgramUniformMatrix2x3fv
+	.size	bluegl_glProgramUniformMatrix2x3fv, .-bluegl_glProgramUniformMatrix2x3fv
 
 	.align	2
 	.global	bluegl_glGetFragmentLightivSGIX
@@ -20687,7 +20687,7 @@ bluegl_glGetFragmentLightivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFragmentLightivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFragmentLightivSGIX, .-glGetFragmentLightivSGIX
+	.size	bluegl_glGetFragmentLightivSGIX, .-bluegl_glGetFragmentLightivSGIX
 
 	.align	2
 	.global	bluegl_glWindowPos2svARB
@@ -20697,7 +20697,7 @@ bluegl_glWindowPos2svARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2svARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2svARB, .-glWindowPos2svARB
+	.size	bluegl_glWindowPos2svARB, .-bluegl_glWindowPos2svARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib2svNV
@@ -20707,7 +20707,7 @@ bluegl_glVertexAttrib2svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2svNV, .-glVertexAttrib2svNV
+	.size	bluegl_glVertexAttrib2svNV, .-bluegl_glVertexAttrib2svNV
 
 	.align	2
 	.global	bluegl_glWindowPos2ivARB
@@ -20717,7 +20717,7 @@ bluegl_glWindowPos2ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2ivARB, .-glWindowPos2ivARB
+	.size	bluegl_glWindowPos2ivARB, .-bluegl_glWindowPos2ivARB
 
 	.align	2
 	.global	bluegl_glGetVertexAttribPointervNV
@@ -20727,7 +20727,7 @@ bluegl_glGetVertexAttribPointervNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribPointervNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribPointervNV, .-glGetVertexAttribPointervNV
+	.size	bluegl_glGetVertexAttribPointervNV, .-bluegl_glGetVertexAttribPointervNV
 
 	.align	2
 	.global	bluegl_glEdgeFlagPointerListIBM
@@ -20737,7 +20737,7 @@ bluegl_glEdgeFlagPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEdgeFlagPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEdgeFlagPointerListIBM, .-glEdgeFlagPointerListIBM
+	.size	bluegl_glEdgeFlagPointerListIBM, .-bluegl_glEdgeFlagPointerListIBM
 
 	.align	2
 	.global	bluegl_glGenerateMipmapEXT
@@ -20747,7 +20747,7 @@ bluegl_glGenerateMipmapEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenerateMipmapEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenerateMipmapEXT, .-glGenerateMipmapEXT
+	.size	bluegl_glGenerateMipmapEXT, .-bluegl_glGenerateMipmapEXT
 
 	.align	2
 	.global	bluegl_glWindowPos3sv
@@ -20757,7 +20757,7 @@ bluegl_glWindowPos3sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3sv, .-glWindowPos3sv
+	.size	bluegl_glWindowPos3sv, .-bluegl_glWindowPos3sv
 
 	.align	2
 	.global	bluegl_glPathCoordsNV
@@ -20767,7 +20767,7 @@ bluegl_glPathCoordsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathCoordsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathCoordsNV, .-glPathCoordsNV
+	.size	bluegl_glPathCoordsNV, .-bluegl_glPathCoordsNV
 
 	.align	2
 	.global	bluegl_glProgramUniform1i
@@ -20777,7 +20777,7 @@ bluegl_glProgramUniform1i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1i, .-glProgramUniform1i
+	.size	bluegl_glProgramUniform1i, .-bluegl_glProgramUniform1i
 
 	.align	2
 	.global	bluegl_glProgramUniform1d
@@ -20787,7 +20787,7 @@ bluegl_glProgramUniform1d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1d, .-glProgramUniform1d
+	.size	bluegl_glProgramUniform1d, .-bluegl_glProgramUniform1d
 
 	.align	2
 	.global	bluegl_glProgramUniform1f
@@ -20797,7 +20797,7 @@ bluegl_glProgramUniform1f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1f, .-glProgramUniform1f
+	.size	bluegl_glProgramUniform1f, .-bluegl_glProgramUniform1f
 
 	.align	2
 	.global	bluegl_glProgramParameteriEXT
@@ -20807,7 +20807,7 @@ bluegl_glProgramParameteriEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameteriEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameteriEXT, .-glProgramParameteriEXT
+	.size	bluegl_glProgramParameteriEXT, .-bluegl_glProgramParameteriEXT
 
 	.align	2
 	.global	bluegl_glCompressedMultiTexImage2DEXT
@@ -20817,7 +20817,7 @@ bluegl_glCompressedMultiTexImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedMultiTexImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedMultiTexImage2DEXT, .-glCompressedMultiTexImage2DEXT
+	.size	bluegl_glCompressedMultiTexImage2DEXT, .-bluegl_glCompressedMultiTexImage2DEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform3iv
@@ -20827,7 +20827,7 @@ bluegl_glProgramUniform3iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3iv, .-glProgramUniform3iv
+	.size	bluegl_glProgramUniform3iv, .-bluegl_glProgramUniform3iv
 
 	.align	2
 	.global	bluegl_glCombinerParameterivNV
@@ -20837,7 +20837,7 @@ bluegl_glCombinerParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCombinerParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCombinerParameterivNV, .-glCombinerParameterivNV
+	.size	bluegl_glCombinerParameterivNV, .-bluegl_glCombinerParameterivNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4xvOES
@@ -20847,7 +20847,7 @@ bluegl_glMultiTexCoord4xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4xvOES, .-glMultiTexCoord4xvOES
+	.size	bluegl_glMultiTexCoord4xvOES, .-bluegl_glMultiTexCoord4xvOES
 
 	.align	2
 	.global	bluegl_glGetVertexAttribPointerv
@@ -20857,7 +20857,7 @@ bluegl_glGetVertexAttribPointerv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribPointerv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribPointerv, .-glGetVertexAttribPointerv
+	.size	bluegl_glGetVertexAttribPointerv, .-bluegl_glGetVertexAttribPointerv
 
 	.align	2
 	.global	bluegl_glVideoCaptureNV
@@ -20867,7 +20867,7 @@ bluegl_glVideoCaptureNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVideoCaptureNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVideoCaptureNV, .-glVideoCaptureNV
+	.size	bluegl_glVideoCaptureNV, .-bluegl_glVideoCaptureNV
 
 	.align	2
 	.global	bluegl_glFramebufferReadBufferEXT
@@ -20877,7 +20877,7 @@ bluegl_glFramebufferReadBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferReadBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferReadBufferEXT, .-glFramebufferReadBufferEXT
+	.size	bluegl_glFramebufferReadBufferEXT, .-bluegl_glFramebufferReadBufferEXT
 
 	.align	2
 	.global	bluegl_glExtractComponentEXT
@@ -20887,7 +20887,7 @@ bluegl_glExtractComponentEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glExtractComponentEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glExtractComponentEXT, .-glExtractComponentEXT
+	.size	bluegl_glExtractComponentEXT, .-bluegl_glExtractComponentEXT
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameter4fvEXT
@@ -20897,7 +20897,7 @@ bluegl_glNamedProgramLocalParameter4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameter4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameter4fvEXT, .-glNamedProgramLocalParameter4fvEXT
+	.size	bluegl_glNamedProgramLocalParameter4fvEXT, .-bluegl_glNamedProgramLocalParameter4fvEXT
 
 	.align	2
 	.global	bluegl_glMinmax
@@ -20907,7 +20907,7 @@ bluegl_glMinmax:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMinmax]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMinmax, .-glMinmax
+	.size	bluegl_glMinmax, .-bluegl_glMinmax
 
 	.align	2
 	.global	bluegl_glColorP3ui
@@ -20917,7 +20917,7 @@ bluegl_glColorP3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorP3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorP3ui, .-glColorP3ui
+	.size	bluegl_glColorP3ui, .-bluegl_glColorP3ui
 
 	.align	2
 	.global	bluegl_glBlendEquationi
@@ -20927,7 +20927,7 @@ bluegl_glBlendEquationi:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendEquationi]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendEquationi, .-glBlendEquationi
+	.size	bluegl_glBlendEquationi, .-bluegl_glBlendEquationi
 
 	.align	2
 	.global	bluegl_glVertexAttrib4s
@@ -20937,7 +20937,7 @@ bluegl_glVertexAttrib4s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4s, .-glVertexAttrib4s
+	.size	bluegl_glVertexAttrib4s, .-bluegl_glVertexAttrib4s
 
 	.align	2
 	.global	bluegl_glVertexAttrib4fvNV
@@ -20947,7 +20947,7 @@ bluegl_glVertexAttrib4fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4fvNV, .-glVertexAttrib4fvNV
+	.size	bluegl_glVertexAttrib4fvNV, .-bluegl_glVertexAttrib4fvNV
 
 	.align	2
 	.global	bluegl_glFragmentLightiSGIX
@@ -20957,7 +20957,7 @@ bluegl_glFragmentLightiSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightiSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightiSGIX, .-glFragmentLightiSGIX
+	.size	bluegl_glFragmentLightiSGIX, .-bluegl_glFragmentLightiSGIX
 
 	.align	2
 	.global	bluegl_glMultiTexCoord1bvOES
@@ -20967,7 +20967,7 @@ bluegl_glMultiTexCoord1bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord1bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord1bvOES, .-glMultiTexCoord1bvOES
+	.size	bluegl_glMultiTexCoord1bvOES, .-bluegl_glMultiTexCoord1bvOES
 
 	.align	2
 	.global	bluegl_glSecondaryColorPointerEXT
@@ -20977,7 +20977,7 @@ bluegl_glSecondaryColorPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColorPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColorPointerEXT, .-glSecondaryColorPointerEXT
+	.size	bluegl_glSecondaryColorPointerEXT, .-bluegl_glSecondaryColorPointerEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoordP4uiv
@@ -20987,7 +20987,7 @@ bluegl_glMultiTexCoordP4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoordP4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoordP4uiv, .-glMultiTexCoordP4uiv
+	.size	bluegl_glMultiTexCoordP4uiv, .-bluegl_glMultiTexCoordP4uiv
 
 	.align	2
 	.global	bluegl_glGetBufferSubDataARB
@@ -20997,7 +20997,7 @@ bluegl_glGetBufferSubDataARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferSubDataARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferSubDataARB, .-glGetBufferSubDataARB
+	.size	bluegl_glGetBufferSubDataARB, .-bluegl_glGetBufferSubDataARB
 
 	.align	2
 	.global	bluegl_glGetPathParameterivNV
@@ -21007,7 +21007,7 @@ bluegl_glGetPathParameterivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathParameterivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathParameterivNV, .-glGetPathParameterivNV
+	.size	bluegl_glGetPathParameterivNV, .-bluegl_glGetPathParameterivNV
 
 	.align	2
 	.global	bluegl_glDisableVertexArrayAttrib
@@ -21017,7 +21017,7 @@ bluegl_glDisableVertexArrayAttrib:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableVertexArrayAttrib]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableVertexArrayAttrib, .-glDisableVertexArrayAttrib
+	.size	bluegl_glDisableVertexArrayAttrib, .-bluegl_glDisableVertexArrayAttrib
 
 	.align	2
 	.global	bluegl_glElementPointerATI
@@ -21027,7 +21027,7 @@ bluegl_glElementPointerATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glElementPointerATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glElementPointerATI, .-glElementPointerATI
+	.size	bluegl_glElementPointerATI, .-bluegl_glElementPointerATI
 
 	.align	2
 	.global	bluegl_glGetAttachedObjectsARB
@@ -21037,7 +21037,7 @@ bluegl_glGetAttachedObjectsARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetAttachedObjectsARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetAttachedObjectsARB, .-glGetAttachedObjectsARB
+	.size	bluegl_glGetAttachedObjectsARB, .-bluegl_glGetAttachedObjectsARB
 
 	.align	2
 	.global	bluegl_glUniform4iv
@@ -21047,7 +21047,7 @@ bluegl_glUniform4iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4iv, .-glUniform4iv
+	.size	bluegl_glUniform4iv, .-bluegl_glUniform4iv
 
 	.align	2
 	.global	bluegl_glFogxOES
@@ -21057,7 +21057,7 @@ bluegl_glFogxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogxOES, .-glFogxOES
+	.size	bluegl_glFogxOES, .-bluegl_glFogxOES
 
 	.align	2
 	.global	bluegl_glSharpenTexFuncSGIS
@@ -21067,7 +21067,7 @@ bluegl_glSharpenTexFuncSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSharpenTexFuncSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSharpenTexFuncSGIS, .-glSharpenTexFuncSGIS
+	.size	bluegl_glSharpenTexFuncSGIS, .-bluegl_glSharpenTexFuncSGIS
 
 	.align	2
 	.global	bluegl_glClearDepthfOES
@@ -21077,7 +21077,7 @@ bluegl_glClearDepthfOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearDepthfOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearDepthfOES, .-glClearDepthfOES
+	.size	bluegl_glClearDepthfOES, .-bluegl_glClearDepthfOES
 
 	.align	2
 	.global	bluegl_glDeleteCommandListsNV
@@ -21087,7 +21087,7 @@ bluegl_glDeleteCommandListsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteCommandListsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteCommandListsNV, .-glDeleteCommandListsNV
+	.size	bluegl_glDeleteCommandListsNV, .-bluegl_glDeleteCommandListsNV
 
 	.align	2
 	.global	bluegl_glVertex4hNV
@@ -21097,7 +21097,7 @@ bluegl_glVertex4hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex4hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex4hNV, .-glVertex4hNV
+	.size	bluegl_glVertex4hNV, .-bluegl_glVertex4hNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3dvEXT
@@ -21107,7 +21107,7 @@ bluegl_glSecondaryColor3dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3dvEXT, .-glSecondaryColor3dvEXT
+	.size	bluegl_glSecondaryColor3dvEXT, .-bluegl_glSecondaryColor3dvEXT
 
 	.align	2
 	.global	bluegl_glGenTextures
@@ -21117,7 +21117,7 @@ bluegl_glGenTextures:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenTextures]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenTextures, .-glGenTextures
+	.size	bluegl_glGenTextures, .-bluegl_glGenTextures
 
 	.align	2
 	.global	bluegl_glTextureStorage2DMultisample
@@ -21127,7 +21127,7 @@ bluegl_glTextureStorage2DMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureStorage2DMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureStorage2DMultisample, .-glTextureStorage2DMultisample
+	.size	bluegl_glTextureStorage2DMultisample, .-bluegl_glTextureStorage2DMultisample
 
 	.align	2
 	.global	bluegl_glPathSubCoordsNV
@@ -21137,7 +21137,7 @@ bluegl_glPathSubCoordsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathSubCoordsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathSubCoordsNV, .-glPathSubCoordsNV
+	.size	bluegl_glPathSubCoordsNV, .-bluegl_glPathSubCoordsNV
 
 	.align	2
 	.global	bluegl_glBlendFuncSeparateIndexedAMD
@@ -21147,7 +21147,7 @@ bluegl_glBlendFuncSeparateIndexedAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFuncSeparateIndexedAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFuncSeparateIndexedAMD, .-glBlendFuncSeparateIndexedAMD
+	.size	bluegl_glBlendFuncSeparateIndexedAMD, .-bluegl_glBlendFuncSeparateIndexedAMD
 
 	.align	2
 	.global	bluegl_glProgramStringARB
@@ -21157,7 +21157,7 @@ bluegl_glProgramStringARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramStringARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramStringARB, .-glProgramStringARB
+	.size	bluegl_glProgramStringARB, .-bluegl_glProgramStringARB
 
 	.align	2
 	.global	bluegl_glShaderOp2EXT
@@ -21167,7 +21167,7 @@ bluegl_glShaderOp2EXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glShaderOp2EXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glShaderOp2EXT, .-glShaderOp2EXT
+	.size	bluegl_glShaderOp2EXT, .-bluegl_glShaderOp2EXT
 
 	.align	2
 	.global	bluegl_glActiveTextureARB
@@ -21177,7 +21177,7 @@ bluegl_glActiveTextureARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glActiveTextureARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glActiveTextureARB, .-glActiveTextureARB
+	.size	bluegl_glActiveTextureARB, .-bluegl_glActiveTextureARB
 
 	.align	2
 	.global	bluegl_glTexParameterIivEXT
@@ -21187,7 +21187,7 @@ bluegl_glTexParameterIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterIivEXT, .-glTexParameterIivEXT
+	.size	bluegl_glTexParameterIivEXT, .-bluegl_glTexParameterIivEXT
 
 	.align	2
 	.global	bluegl_glGetPerfQueryDataINTEL
@@ -21197,7 +21197,7 @@ bluegl_glGetPerfQueryDataINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfQueryDataINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfQueryDataINTEL, .-glGetPerfQueryDataINTEL
+	.size	bluegl_glGetPerfQueryDataINTEL, .-bluegl_glGetPerfQueryDataINTEL
 
 	.align	2
 	.global	bluegl_glNamedProgramStringEXT
@@ -21207,7 +21207,7 @@ bluegl_glNamedProgramStringEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramStringEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramStringEXT, .-glNamedProgramStringEXT
+	.size	bluegl_glNamedProgramStringEXT, .-bluegl_glNamedProgramStringEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4dvARB
@@ -21217,7 +21217,7 @@ bluegl_glVertexAttrib4dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4dvARB, .-glVertexAttrib4dvARB
+	.size	bluegl_glVertexAttrib4dvARB, .-bluegl_glVertexAttrib4dvARB
 
 	.align	2
 	.global	bluegl_glTextureSubImage1DEXT
@@ -21227,7 +21227,7 @@ bluegl_glTextureSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureSubImage1DEXT, .-glTextureSubImage1DEXT
+	.size	bluegl_glTextureSubImage1DEXT, .-bluegl_glTextureSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glDispatchComputeGroupSizeARB
@@ -21237,7 +21237,7 @@ bluegl_glDispatchComputeGroupSizeARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDispatchComputeGroupSizeARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDispatchComputeGroupSizeARB, .-glDispatchComputeGroupSizeARB
+	.size	bluegl_glDispatchComputeGroupSizeARB, .-bluegl_glDispatchComputeGroupSizeARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib2dvARB
@@ -21247,7 +21247,7 @@ bluegl_glVertexAttrib2dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2dvARB, .-glVertexAttrib2dvARB
+	.size	bluegl_glVertexAttrib2dvARB, .-bluegl_glVertexAttrib2dvARB
 
 	.align	2
 	.global	bluegl_glVertexAttribPointer
@@ -21257,7 +21257,7 @@ bluegl_glVertexAttribPointer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribPointer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribPointer, .-glVertexAttribPointer
+	.size	bluegl_glVertexAttribPointer, .-bluegl_glVertexAttribPointer
 
 	.align	2
 	.global	bluegl_glDepthBoundsdNV
@@ -21267,7 +21267,7 @@ bluegl_glDepthBoundsdNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthBoundsdNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthBoundsdNV, .-glDepthBoundsdNV
+	.size	bluegl_glDepthBoundsdNV, .-bluegl_glDepthBoundsdNV
 
 	.align	2
 	.global	bluegl_glDeleteTexturesEXT
@@ -21277,7 +21277,7 @@ bluegl_glDeleteTexturesEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteTexturesEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteTexturesEXT, .-glDeleteTexturesEXT
+	.size	bluegl_glDeleteTexturesEXT, .-bluegl_glDeleteTexturesEXT
 
 	.align	2
 	.global	bluegl_glGetVideouivNV
@@ -21287,7 +21287,7 @@ bluegl_glGetVideouivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideouivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideouivNV, .-glGetVideouivNV
+	.size	bluegl_glGetVideouivNV, .-bluegl_glGetVideouivNV
 
 	.align	2
 	.global	bluegl_glDrawBuffersATI
@@ -21297,7 +21297,7 @@ bluegl_glDrawBuffersATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawBuffersATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawBuffersATI, .-glDrawBuffersATI
+	.size	bluegl_glDrawBuffersATI, .-bluegl_glDrawBuffersATI
 
 	.align	2
 	.global	bluegl_glLightModelxvOES
@@ -21307,7 +21307,7 @@ bluegl_glLightModelxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLightModelxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLightModelxvOES, .-glLightModelxvOES
+	.size	bluegl_glLightModelxvOES, .-bluegl_glLightModelxvOES
 
 	.align	2
 	.global	bluegl_glApplyTextureEXT
@@ -21317,7 +21317,7 @@ bluegl_glApplyTextureEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glApplyTextureEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glApplyTextureEXT, .-glApplyTextureEXT
+	.size	bluegl_glApplyTextureEXT, .-bluegl_glApplyTextureEXT
 
 	.align	2
 	.global	bluegl_glGetImageHandleNV
@@ -21327,7 +21327,7 @@ bluegl_glGetImageHandleNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetImageHandleNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetImageHandleNV, .-glGetImageHandleNV
+	.size	bluegl_glGetImageHandleNV, .-bluegl_glGetImageHandleNV
 
 	.align	2
 	.global	bluegl_glGetMinmax
@@ -21337,7 +21337,7 @@ bluegl_glGetMinmax:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMinmax]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMinmax, .-glGetMinmax
+	.size	bluegl_glGetMinmax, .-bluegl_glGetMinmax
 
 	.align	2
 	.global	bluegl_glGetFixedvOES
@@ -21347,7 +21347,7 @@ bluegl_glGetFixedvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFixedvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFixedvOES, .-glGetFixedvOES
+	.size	bluegl_glGetFixedvOES, .-bluegl_glGetFixedvOES
 
 	.align	2
 	.global	bluegl_glSamplePatternEXT
@@ -21357,7 +21357,7 @@ bluegl_glSamplePatternEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplePatternEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplePatternEXT, .-glSamplePatternEXT
+	.size	bluegl_glSamplePatternEXT, .-bluegl_glSamplePatternEXT
 
 	.align	2
 	.global	bluegl_glColor4fNormal3fVertex3fSUN
@@ -21367,7 +21367,7 @@ bluegl_glColor4fNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4fNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4fNormal3fVertex3fSUN, .-glColor4fNormal3fVertex3fSUN
+	.size	bluegl_glColor4fNormal3fVertex3fSUN, .-bluegl_glColor4fNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glFogCoorddvEXT
@@ -21377,7 +21377,7 @@ bluegl_glFogCoorddvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoorddvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoorddvEXT, .-glFogCoorddvEXT
+	.size	bluegl_glFogCoorddvEXT, .-bluegl_glFogCoorddvEXT
 
 	.align	2
 	.global	bluegl_glCopyTextureImage1DEXT
@@ -21387,7 +21387,7 @@ bluegl_glCopyTextureImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureImage1DEXT, .-glCopyTextureImage1DEXT
+	.size	bluegl_glCopyTextureImage1DEXT, .-bluegl_glCopyTextureImage1DEXT
 
 	.align	2
 	.global	bluegl_glDeleteFencesNV
@@ -21397,7 +21397,7 @@ bluegl_glDeleteFencesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteFencesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteFencesNV, .-glDeleteFencesNV
+	.size	bluegl_glDeleteFencesNV, .-bluegl_glDeleteFencesNV
 
 	.align	2
 	.global	bluegl_glProgramUniform1ivEXT
@@ -21407,7 +21407,7 @@ bluegl_glProgramUniform1ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1ivEXT, .-glProgramUniform1ivEXT
+	.size	bluegl_glProgramUniform1ivEXT, .-bluegl_glProgramUniform1ivEXT
 
 	.align	2
 	.global	bluegl_glFlushStaticDataIBM
@@ -21417,7 +21417,7 @@ bluegl_glFlushStaticDataIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushStaticDataIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushStaticDataIBM, .-glFlushStaticDataIBM
+	.size	bluegl_glFlushStaticDataIBM, .-bluegl_glFlushStaticDataIBM
 
 	.align	2
 	.global	bluegl_glProgramUniform4ui64NV
@@ -21427,7 +21427,7 @@ bluegl_glProgramUniform4ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4ui64NV, .-glProgramUniform4ui64NV
+	.size	bluegl_glProgramUniform4ui64NV, .-bluegl_glProgramUniform4ui64NV
 
 	.align	2
 	.global	bluegl_glRasterPos4xOES
@@ -21437,7 +21437,7 @@ bluegl_glRasterPos4xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRasterPos4xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRasterPos4xOES, .-glRasterPos4xOES
+	.size	bluegl_glRasterPos4xOES, .-bluegl_glRasterPos4xOES
 
 	.align	2
 	.global	bluegl_glVertexAttribP1ui
@@ -21447,7 +21447,7 @@ bluegl_glVertexAttribP1ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP1ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP1ui, .-glVertexAttribP1ui
+	.size	bluegl_glVertexAttribP1ui, .-bluegl_glVertexAttribP1ui
 
 	.align	2
 	.global	bluegl_glProgramUniform4dvEXT
@@ -21457,7 +21457,7 @@ bluegl_glProgramUniform4dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4dvEXT, .-glProgramUniform4dvEXT
+	.size	bluegl_glProgramUniform4dvEXT, .-bluegl_glProgramUniform4dvEXT
 
 	.align	2
 	.global	bluegl_glEndTransformFeedbackEXT
@@ -21467,7 +21467,7 @@ bluegl_glEndTransformFeedbackEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndTransformFeedbackEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndTransformFeedbackEXT, .-glEndTransformFeedbackEXT
+	.size	bluegl_glEndTransformFeedbackEXT, .-bluegl_glEndTransformFeedbackEXT
 
 	.align	2
 	.global	bluegl_glBinormal3dEXT
@@ -21477,7 +21477,7 @@ bluegl_glBinormal3dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3dEXT, .-glBinormal3dEXT
+	.size	bluegl_glBinormal3dEXT, .-bluegl_glBinormal3dEXT
 
 	.align	2
 	.global	bluegl_glEndConditionalRenderNVX
@@ -21487,7 +21487,7 @@ bluegl_glEndConditionalRenderNVX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndConditionalRenderNVX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndConditionalRenderNVX, .-glEndConditionalRenderNVX
+	.size	bluegl_glEndConditionalRenderNVX, .-bluegl_glEndConditionalRenderNVX
 
 	.align	2
 	.global	bluegl_glGetNamedRenderbufferParameteriv
@@ -21497,7 +21497,7 @@ bluegl_glGetNamedRenderbufferParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedRenderbufferParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedRenderbufferParameteriv, .-glGetNamedRenderbufferParameteriv
+	.size	bluegl_glGetNamedRenderbufferParameteriv, .-bluegl_glGetNamedRenderbufferParameteriv
 
 	.align	2
 	.global	bluegl_glBindBuffersRange
@@ -21507,7 +21507,7 @@ bluegl_glBindBuffersRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBuffersRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBuffersRange, .-glBindBuffersRange
+	.size	bluegl_glBindBuffersRange, .-bluegl_glBindBuffersRange
 
 	.align	2
 	.global	bluegl_glDrawCommandsAddressNV
@@ -21517,7 +21517,7 @@ bluegl_glDrawCommandsAddressNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawCommandsAddressNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawCommandsAddressNV, .-glDrawCommandsAddressNV
+	.size	bluegl_glDrawCommandsAddressNV, .-bluegl_glDrawCommandsAddressNV
 
 	.align	2
 	.global	bluegl_glBindFragDataLocationIndexed
@@ -21527,7 +21527,7 @@ bluegl_glBindFragDataLocationIndexed:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindFragDataLocationIndexed]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindFragDataLocationIndexed, .-glBindFragDataLocationIndexed
+	.size	bluegl_glBindFragDataLocationIndexed, .-bluegl_glBindFragDataLocationIndexed
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2dv
@@ -21537,7 +21537,7 @@ bluegl_glMultiTexCoord2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2dv, .-glMultiTexCoord2dv
+	.size	bluegl_glMultiTexCoord2dv, .-bluegl_glMultiTexCoord2dv
 
 	.align	2
 	.global	bluegl_glUniform2iv
@@ -21547,7 +21547,7 @@ bluegl_glUniform2iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2iv, .-glUniform2iv
+	.size	bluegl_glUniform2iv, .-bluegl_glUniform2iv
 
 	.align	2
 	.global	bluegl_glProgramUniform2i64vNV
@@ -21557,7 +21557,7 @@ bluegl_glProgramUniform2i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2i64vNV, .-glProgramUniform2i64vNV
+	.size	bluegl_glProgramUniform2i64vNV, .-bluegl_glProgramUniform2i64vNV
 
 	.align	2
 	.global	bluegl_glFlushVertexArrayRangeAPPLE
@@ -21567,7 +21567,7 @@ bluegl_glFlushVertexArrayRangeAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushVertexArrayRangeAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushVertexArrayRangeAPPLE, .-glFlushVertexArrayRangeAPPLE
+	.size	bluegl_glFlushVertexArrayRangeAPPLE, .-bluegl_glFlushVertexArrayRangeAPPLE
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3dvARB
@@ -21577,7 +21577,7 @@ bluegl_glMultiTexCoord3dvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3dvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3dvARB, .-glMultiTexCoord3dvARB
+	.size	bluegl_glMultiTexCoord3dvARB, .-bluegl_glMultiTexCoord3dvARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2s
@@ -21587,7 +21587,7 @@ bluegl_glMultiTexCoord2s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2s, .-glMultiTexCoord2s
+	.size	bluegl_glMultiTexCoord2s, .-bluegl_glMultiTexCoord2s
 
 	.align	2
 	.global	bluegl_glDebugMessageInsertARB
@@ -21597,7 +21597,7 @@ bluegl_glDebugMessageInsertARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageInsertARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageInsertARB, .-glDebugMessageInsertARB
+	.size	bluegl_glDebugMessageInsertARB, .-bluegl_glDebugMessageInsertARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2i
@@ -21607,7 +21607,7 @@ bluegl_glMultiTexCoord2i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2i, .-glMultiTexCoord2i
+	.size	bluegl_glMultiTexCoord2i, .-bluegl_glMultiTexCoord2i
 
 	.align	2
 	.global	bluegl_glTextureSubImage3D
@@ -21617,7 +21617,7 @@ bluegl_glTextureSubImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureSubImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureSubImage3D, .-glTextureSubImage3D
+	.size	bluegl_glTextureSubImage3D, .-bluegl_glTextureSubImage3D
 
 	.align	2
 	.global	bluegl_glFramebufferTexture1D
@@ -21627,7 +21627,7 @@ bluegl_glFramebufferTexture1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTexture1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTexture1D, .-glFramebufferTexture1D
+	.size	bluegl_glFramebufferTexture1D, .-bluegl_glFramebufferTexture1D
 
 	.align	2
 	.global	bluegl_glGetShaderiv
@@ -21637,7 +21637,7 @@ bluegl_glGetShaderiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetShaderiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetShaderiv, .-glGetShaderiv
+	.size	bluegl_glGetShaderiv, .-bluegl_glGetShaderiv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2d
@@ -21647,7 +21647,7 @@ bluegl_glMultiTexCoord2d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2d, .-glMultiTexCoord2d
+	.size	bluegl_glMultiTexCoord2d, .-bluegl_glMultiTexCoord2d
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2f
@@ -21657,7 +21657,7 @@ bluegl_glMultiTexCoord2f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2f, .-glMultiTexCoord2f
+	.size	bluegl_glMultiTexCoord2f, .-bluegl_glMultiTexCoord2f
 
 	.align	2
 	.global	bluegl_glGetPointeri_vEXT
@@ -21667,7 +21667,7 @@ bluegl_glGetPointeri_vEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPointeri_vEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPointeri_vEXT, .-glGetPointeri_vEXT
+	.size	bluegl_glGetPointeri_vEXT, .-bluegl_glGetPointeri_vEXT
 
 	.align	2
 	.global	bluegl_glGetPerfMonitorCountersAMD
@@ -21677,7 +21677,7 @@ bluegl_glGetPerfMonitorCountersAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfMonitorCountersAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfMonitorCountersAMD, .-glGetPerfMonitorCountersAMD
+	.size	bluegl_glGetPerfMonitorCountersAMD, .-bluegl_glGetPerfMonitorCountersAMD
 
 	.align	2
 	.global	bluegl_glNamedBufferStorage
@@ -21687,7 +21687,7 @@ bluegl_glNamedBufferStorage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferStorage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferStorage, .-glNamedBufferStorage
+	.size	bluegl_glNamedBufferStorage, .-bluegl_glNamedBufferStorage
 
 	.align	2
 	.global	bluegl_glGenQueriesARB
@@ -21697,7 +21697,7 @@ bluegl_glGenQueriesARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenQueriesARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenQueriesARB, .-glGenQueriesARB
+	.size	bluegl_glGenQueriesARB, .-bluegl_glGenQueriesARB
 
 	.align	2
 	.global	bluegl_glProgramUniform2ui64NV
@@ -21707,7 +21707,7 @@ bluegl_glProgramUniform2ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2ui64NV, .-glProgramUniform2ui64NV
+	.size	bluegl_glProgramUniform2ui64NV, .-bluegl_glProgramUniform2ui64NV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3bOES
@@ -21717,7 +21717,7 @@ bluegl_glMultiTexCoord3bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3bOES, .-glMultiTexCoord3bOES
+	.size	bluegl_glMultiTexCoord3bOES, .-bluegl_glMultiTexCoord3bOES
 
 	.align	2
 	.global	bluegl_glUniform1dv
@@ -21727,7 +21727,7 @@ bluegl_glUniform1dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1dv, .-glUniform1dv
+	.size	bluegl_glUniform1dv, .-bluegl_glUniform1dv
 
 	.align	2
 	.global	bluegl_glVertexAttrib1fv
@@ -21737,7 +21737,7 @@ bluegl_glVertexAttrib1fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1fv, .-glVertexAttrib1fv
+	.size	bluegl_glVertexAttrib1fv, .-bluegl_glVertexAttrib1fv
 
 	.align	2
 	.global	bluegl_glProgramEnvParameterI4uivNV
@@ -21747,7 +21747,7 @@ bluegl_glProgramEnvParameterI4uivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameterI4uivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameterI4uivNV, .-glProgramEnvParameterI4uivNV
+	.size	bluegl_glProgramEnvParameterI4uivNV, .-bluegl_glProgramEnvParameterI4uivNV
 
 	.align	2
 	.global	bluegl_glWindowPos4dMESA
@@ -21757,7 +21757,7 @@ bluegl_glWindowPos4dMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4dMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4dMESA, .-glWindowPos4dMESA
+	.size	bluegl_glWindowPos4dMESA, .-bluegl_glWindowPos4dMESA
 
 	.align	2
 	.global	bluegl_glDebugMessageControlARB
@@ -21767,7 +21767,7 @@ bluegl_glDebugMessageControlARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageControlARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageControlARB, .-glDebugMessageControlARB
+	.size	bluegl_glDebugMessageControlARB, .-bluegl_glDebugMessageControlARB
 
 	.align	2
 	.global	bluegl_glIsTextureEXT
@@ -21777,7 +21777,7 @@ bluegl_glIsTextureEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsTextureEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsTextureEXT, .-glIsTextureEXT
+	.size	bluegl_glIsTextureEXT, .-bluegl_glIsTextureEXT
 
 	.align	2
 	.global	bluegl_glFragmentMaterialivSGIX
@@ -21787,7 +21787,7 @@ bluegl_glFragmentMaterialivSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentMaterialivSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentMaterialivSGIX, .-glFragmentMaterialivSGIX
+	.size	bluegl_glFragmentMaterialivSGIX, .-bluegl_glFragmentMaterialivSGIX
 
 	.align	2
 	.global	bluegl_glLinkProgramARB
@@ -21797,7 +21797,7 @@ bluegl_glLinkProgramARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLinkProgramARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLinkProgramARB, .-glLinkProgramARB
+	.size	bluegl_glLinkProgramARB, .-bluegl_glLinkProgramARB
 
 	.align	2
 	.global	bluegl_glFinishFenceAPPLE
@@ -21807,7 +21807,7 @@ bluegl_glFinishFenceAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFinishFenceAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFinishFenceAPPLE, .-glFinishFenceAPPLE
+	.size	bluegl_glFinishFenceAPPLE, .-bluegl_glFinishFenceAPPLE
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribBindingEXT
@@ -21817,7 +21817,7 @@ bluegl_glVertexArrayVertexAttribBindingEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribBindingEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribBindingEXT, .-glVertexArrayVertexAttribBindingEXT
+	.size	bluegl_glVertexArrayVertexAttribBindingEXT, .-bluegl_glVertexArrayVertexAttribBindingEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4fv
@@ -21827,7 +21827,7 @@ bluegl_glMultiTexCoord4fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4fv, .-glMultiTexCoord4fv
+	.size	bluegl_glMultiTexCoord4fv, .-bluegl_glMultiTexCoord4fv
 
 	.align	2
 	.global	bluegl_glCompressedTexImage3D
@@ -21837,7 +21837,7 @@ bluegl_glCompressedTexImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexImage3D, .-glCompressedTexImage3D
+	.size	bluegl_glCompressedTexImage3D, .-bluegl_glCompressedTexImage3D
 
 	.align	2
 	.global	bluegl_glVariantivEXT
@@ -21847,7 +21847,7 @@ bluegl_glVariantivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVariantivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVariantivEXT, .-glVariantivEXT
+	.size	bluegl_glVariantivEXT, .-bluegl_glVariantivEXT
 
 	.align	2
 	.global	bluegl_glUnmapTexture2DINTEL
@@ -21857,7 +21857,7 @@ bluegl_glUnmapTexture2DINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUnmapTexture2DINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUnmapTexture2DINTEL, .-glUnmapTexture2DINTEL
+	.size	bluegl_glUnmapTexture2DINTEL, .-bluegl_glUnmapTexture2DINTEL
 
 	.align	2
 	.global	bluegl_glGetVertexAttribiv
@@ -21867,7 +21867,7 @@ bluegl_glGetVertexAttribiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribiv, .-glGetVertexAttribiv
+	.size	bluegl_glGetVertexAttribiv, .-bluegl_glGetVertexAttribiv
 
 	.align	2
 	.global	bluegl_glGetPointerIndexedvEXT
@@ -21877,7 +21877,7 @@ bluegl_glGetPointerIndexedvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPointerIndexedvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPointerIndexedvEXT, .-glGetPointerIndexedvEXT
+	.size	bluegl_glGetPointerIndexedvEXT, .-bluegl_glGetPointerIndexedvEXT
 
 	.align	2
 	.global	bluegl_glColor4xvOES
@@ -21887,7 +21887,7 @@ bluegl_glColor4xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor4xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor4xvOES, .-glColor4xvOES
+	.size	bluegl_glColor4xvOES, .-bluegl_glColor4xvOES
 
 	.align	2
 	.global	bluegl_glVertexAttrib3fv
@@ -21897,7 +21897,7 @@ bluegl_glVertexAttrib3fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3fv, .-glVertexAttrib3fv
+	.size	bluegl_glVertexAttrib3fv, .-bluegl_glVertexAttrib3fv
 
 	.align	2
 	.global	bluegl_glClampColorARB
@@ -21907,7 +21907,7 @@ bluegl_glClampColorARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClampColorARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClampColorARB, .-glClampColorARB
+	.size	bluegl_glClampColorARB, .-bluegl_glClampColorARB
 
 	.align	2
 	.global	bluegl_glVertex4bOES
@@ -21917,7 +21917,7 @@ bluegl_glVertex4bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex4bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex4bOES, .-glVertex4bOES
+	.size	bluegl_glVertex4bOES, .-bluegl_glVertex4bOES
 
 	.align	2
 	.global	bluegl_glGetnHistogram
@@ -21927,7 +21927,7 @@ bluegl_glGetnHistogram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnHistogram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnHistogram, .-glGetnHistogram
+	.size	bluegl_glGetnHistogram, .-bluegl_glGetnHistogram
 
 	.align	2
 	.global	bluegl_glCombinerOutputNV
@@ -21937,7 +21937,7 @@ bluegl_glCombinerOutputNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCombinerOutputNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCombinerOutputNV, .-glCombinerOutputNV
+	.size	bluegl_glCombinerOutputNV, .-bluegl_glCombinerOutputNV
 
 	.align	2
 	.global	bluegl_glWindowPos4sMESA
@@ -21947,7 +21947,7 @@ bluegl_glWindowPos4sMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4sMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4sMESA, .-glWindowPos4sMESA
+	.size	bluegl_glWindowPos4sMESA, .-bluegl_glWindowPos4sMESA
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2ivARB
@@ -21957,7 +21957,7 @@ bluegl_glMultiTexCoord2ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2ivARB, .-glMultiTexCoord2ivARB
+	.size	bluegl_glMultiTexCoord2ivARB, .-bluegl_glMultiTexCoord2ivARB
 
 	.align	2
 	.global	bluegl_glGetFenceivNV
@@ -21967,7 +21967,7 @@ bluegl_glGetFenceivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFenceivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFenceivNV, .-glGetFenceivNV
+	.size	bluegl_glGetFenceivNV, .-bluegl_glGetFenceivNV
 
 	.align	2
 	.global	bluegl_glGetVertexAttribivNV
@@ -21977,7 +21977,7 @@ bluegl_glGetVertexAttribivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribivNV, .-glGetVertexAttribivNV
+	.size	bluegl_glGetVertexAttribivNV, .-bluegl_glGetVertexAttribivNV
 
 	.align	2
 	.global	bluegl_glGetInfoLogARB
@@ -21987,7 +21987,7 @@ bluegl_glGetInfoLogARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetInfoLogARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetInfoLogARB, .-glGetInfoLogARB
+	.size	bluegl_glGetInfoLogARB, .-bluegl_glGetInfoLogARB
 
 	.align	2
 	.global	bluegl_glBindParameterEXT
@@ -21997,7 +21997,7 @@ bluegl_glBindParameterEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindParameterEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindParameterEXT, .-glBindParameterEXT
+	.size	bluegl_glBindParameterEXT, .-bluegl_glBindParameterEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribs3dvNV
@@ -22007,7 +22007,7 @@ bluegl_glVertexAttribs3dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs3dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs3dvNV, .-glVertexAttribs3dvNV
+	.size	bluegl_glVertexAttribs3dvNV, .-bluegl_glVertexAttribs3dvNV
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactorsSUN
@@ -22017,7 +22017,7 @@ bluegl_glGlobalAlphaFactorsSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactorsSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactorsSUN, .-glGlobalAlphaFactorsSUN
+	.size	bluegl_glGlobalAlphaFactorsSUN, .-bluegl_glGlobalAlphaFactorsSUN
 
 	.align	2
 	.global	bluegl_glGetTrackMatrixivNV
@@ -22027,7 +22027,7 @@ bluegl_glGetTrackMatrixivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTrackMatrixivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTrackMatrixivNV, .-glGetTrackMatrixivNV
+	.size	bluegl_glGetTrackMatrixivNV, .-bluegl_glGetTrackMatrixivNV
 
 	.align	2
 	.global	bluegl_glTextureParameterfvEXT
@@ -22037,7 +22037,7 @@ bluegl_glTextureParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterfvEXT, .-glTextureParameterfvEXT
+	.size	bluegl_glTextureParameterfvEXT, .-bluegl_glTextureParameterfvEXT
 
 	.align	2
 	.global	bluegl_glIsNamedBufferResidentNV
@@ -22047,7 +22047,7 @@ bluegl_glIsNamedBufferResidentNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsNamedBufferResidentNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsNamedBufferResidentNV, .-glIsNamedBufferResidentNV
+	.size	bluegl_glIsNamedBufferResidentNV, .-bluegl_glIsNamedBufferResidentNV
 
 	.align	2
 	.global	bluegl_glProgramUniform4ui64vARB
@@ -22057,7 +22057,7 @@ bluegl_glProgramUniform4ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4ui64vARB, .-glProgramUniform4ui64vARB
+	.size	bluegl_glProgramUniform4ui64vARB, .-bluegl_glProgramUniform4ui64vARB
 
 	.align	2
 	.global	bluegl_glTbufferMask3DFX
@@ -22067,7 +22067,7 @@ bluegl_glTbufferMask3DFX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTbufferMask3DFX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTbufferMask3DFX, .-glTbufferMask3DFX
+	.size	bluegl_glTbufferMask3DFX, .-bluegl_glTbufferMask3DFX
 
 	.align	2
 	.global	bluegl_glCoverFillPathNV
@@ -22077,7 +22077,7 @@ bluegl_glCoverFillPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCoverFillPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCoverFillPathNV, .-glCoverFillPathNV
+	.size	bluegl_glCoverFillPathNV, .-bluegl_glCoverFillPathNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib1fvARB
@@ -22087,7 +22087,7 @@ bluegl_glVertexAttrib1fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1fvARB, .-glVertexAttrib1fvARB
+	.size	bluegl_glVertexAttrib1fvARB, .-bluegl_glVertexAttrib1fvARB
 
 	.align	2
 	.global	bluegl_glGenerateTextureMipmap
@@ -22097,7 +22097,7 @@ bluegl_glGenerateTextureMipmap:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenerateTextureMipmap]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenerateTextureMipmap, .-glGenerateTextureMipmap
+	.size	bluegl_glGenerateTextureMipmap, .-bluegl_glGenerateTextureMipmap
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameterI4uivEXT
@@ -22107,7 +22107,7 @@ bluegl_glNamedProgramLocalParameterI4uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameterI4uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameterI4uivEXT, .-glNamedProgramLocalParameterI4uivEXT
+	.size	bluegl_glNamedProgramLocalParameterI4uivEXT, .-bluegl_glNamedProgramLocalParameterI4uivEXT
 
 	.align	2
 	.global	bluegl_glMultiDrawElementsBaseVertex
@@ -22117,7 +22117,7 @@ bluegl_glMultiDrawElementsBaseVertex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementsBaseVertex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementsBaseVertex, .-glMultiDrawElementsBaseVertex
+	.size	bluegl_glMultiDrawElementsBaseVertex, .-bluegl_glMultiDrawElementsBaseVertex
 
 	.align	2
 	.global	bluegl_glProgramSubroutineParametersuivNV
@@ -22127,7 +22127,7 @@ bluegl_glProgramSubroutineParametersuivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramSubroutineParametersuivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramSubroutineParametersuivNV, .-glProgramSubroutineParametersuivNV
+	.size	bluegl_glProgramSubroutineParametersuivNV, .-bluegl_glProgramSubroutineParametersuivNV
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2x4dvEXT
@@ -22137,7 +22137,7 @@ bluegl_glProgramUniformMatrix2x4dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2x4dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2x4dvEXT, .-glProgramUniformMatrix2x4dvEXT
+	.size	bluegl_glProgramUniformMatrix2x4dvEXT, .-bluegl_glProgramUniformMatrix2x4dvEXT
 
 	.align	2
 	.global	bluegl_glBufferData
@@ -22147,7 +22147,7 @@ bluegl_glBufferData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferData, .-glBufferData
+	.size	bluegl_glBufferData, .-bluegl_glBufferData
 
 	.align	2
 	.global	bluegl_glMemoryBarrierEXT
@@ -22157,7 +22157,7 @@ bluegl_glMemoryBarrierEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMemoryBarrierEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMemoryBarrierEXT, .-glMemoryBarrierEXT
+	.size	bluegl_glMemoryBarrierEXT, .-bluegl_glMemoryBarrierEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib3svNV
@@ -22167,7 +22167,7 @@ bluegl_glVertexAttrib3svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3svNV, .-glVertexAttrib3svNV
+	.size	bluegl_glVertexAttrib3svNV, .-bluegl_glVertexAttrib3svNV
 
 	.align	2
 	.global	bluegl_glVertexStream3iATI
@@ -22177,7 +22177,7 @@ bluegl_glVertexStream3iATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3iATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3iATI, .-glVertexStream3iATI
+	.size	bluegl_glVertexStream3iATI, .-bluegl_glVertexStream3iATI
 
 	.align	2
 	.global	bluegl_glCompressedTexSubImage1D
@@ -22187,7 +22187,7 @@ bluegl_glCompressedTexSubImage1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexSubImage1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexSubImage1D, .-glCompressedTexSubImage1D
+	.size	bluegl_glCompressedTexSubImage1D, .-bluegl_glCompressedTexSubImage1D
 
 	.align	2
 	.global	bluegl_glGetTexParameterIiv
@@ -22197,7 +22197,7 @@ bluegl_glGetTexParameterIiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameterIiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameterIiv, .-glGetTexParameterIiv
+	.size	bluegl_glGetTexParameterIiv, .-bluegl_glGetTexParameterIiv
 
 	.align	2
 	.global	bluegl_glCopyConvolutionFilter1D
@@ -22207,7 +22207,7 @@ bluegl_glCopyConvolutionFilter1D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyConvolutionFilter1D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyConvolutionFilter1D, .-glCopyConvolutionFilter1D
+	.size	bluegl_glCopyConvolutionFilter1D, .-bluegl_glCopyConvolutionFilter1D
 
 	.align	2
 	.global	bluegl_glDeletePathsNV
@@ -22217,7 +22217,7 @@ bluegl_glDeletePathsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeletePathsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeletePathsNV, .-glDeletePathsNV
+	.size	bluegl_glDeletePathsNV, .-bluegl_glDeletePathsNV
 
 	.align	2
 	.global	bluegl_glProgramParameters4fvNV
@@ -22227,7 +22227,7 @@ bluegl_glProgramParameters4fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameters4fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameters4fvNV, .-glProgramParameters4fvNV
+	.size	bluegl_glProgramParameters4fvNV, .-bluegl_glProgramParameters4fvNV
 
 	.align	2
 	.global	bluegl_glTextureBuffer
@@ -22237,7 +22237,7 @@ bluegl_glTextureBuffer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureBuffer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureBuffer, .-glTextureBuffer
+	.size	bluegl_glTextureBuffer, .-bluegl_glTextureBuffer
 
 	.align	2
 	.global	bluegl_glVertexAttrib4Nsv
@@ -22247,7 +22247,7 @@ bluegl_glVertexAttrib4Nsv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4Nsv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4Nsv, .-glVertexAttrib4Nsv
+	.size	bluegl_glVertexAttrib4Nsv, .-bluegl_glVertexAttrib4Nsv
 
 	.align	2
 	.global	bluegl_glVertexAttribI4usvEXT
@@ -22257,7 +22257,7 @@ bluegl_glVertexAttribI4usvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4usvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4usvEXT, .-glVertexAttribI4usvEXT
+	.size	bluegl_glVertexAttribI4usvEXT, .-bluegl_glVertexAttribI4usvEXT
 
 	.align	2
 	.global	bluegl_glTextureBufferRangeEXT
@@ -22267,7 +22267,7 @@ bluegl_glTextureBufferRangeEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureBufferRangeEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureBufferRangeEXT, .-glTextureBufferRangeEXT
+	.size	bluegl_glTextureBufferRangeEXT, .-bluegl_glTextureBufferRangeEXT
 
 	.align	2
 	.global	bluegl_glVertexP3uiv
@@ -22277,7 +22277,7 @@ bluegl_glVertexP3uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexP3uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexP3uiv, .-glVertexP3uiv
+	.size	bluegl_glVertexP3uiv, .-bluegl_glVertexP3uiv
 
 	.align	2
 	.global	bluegl_glTransformFeedbackVaryings
@@ -22287,7 +22287,7 @@ bluegl_glTransformFeedbackVaryings:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformFeedbackVaryings]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformFeedbackVaryings, .-glTransformFeedbackVaryings
+	.size	bluegl_glTransformFeedbackVaryings, .-bluegl_glTransformFeedbackVaryings
 
 	.align	2
 	.global	bluegl_glGetnUniformi64vARB
@@ -22297,7 +22297,7 @@ bluegl_glGetnUniformi64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformi64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformi64vARB, .-glGetnUniformi64vARB
+	.size	bluegl_glGetnUniformi64vARB, .-bluegl_glGetnUniformi64vARB
 
 	.align	2
 	.global	bluegl_glFramebufferTextureMultiviewOVR
@@ -22307,7 +22307,7 @@ bluegl_glFramebufferTextureMultiviewOVR:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureMultiviewOVR]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureMultiviewOVR, .-glFramebufferTextureMultiviewOVR
+	.size	bluegl_glFramebufferTextureMultiviewOVR, .-bluegl_glFramebufferTextureMultiviewOVR
 
 	.align	2
 	.global	bluegl_glCompressedMultiTexSubImage2DEXT
@@ -22317,7 +22317,7 @@ bluegl_glCompressedMultiTexSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedMultiTexSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedMultiTexSubImage2DEXT, .-glCompressedMultiTexSubImage2DEXT
+	.size	bluegl_glCompressedMultiTexSubImage2DEXT, .-bluegl_glCompressedMultiTexSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glGetnMapdv
@@ -22327,7 +22327,7 @@ bluegl_glGetnMapdv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnMapdv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnMapdv, .-glGetnMapdv
+	.size	bluegl_glGetnMapdv, .-bluegl_glGetnMapdv
 
 	.align	2
 	.global	bluegl_glDebugMessageCallback
@@ -22337,7 +22337,7 @@ bluegl_glDebugMessageCallback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDebugMessageCallback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDebugMessageCallback, .-glDebugMessageCallback
+	.size	bluegl_glDebugMessageCallback, .-bluegl_glDebugMessageCallback
 
 	.align	2
 	.global	bluegl_glTangent3svEXT
@@ -22347,7 +22347,7 @@ bluegl_glTangent3svEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3svEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3svEXT, .-glTangent3svEXT
+	.size	bluegl_glTangent3svEXT, .-bluegl_glTangent3svEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribParameteriAMD
@@ -22357,7 +22357,7 @@ bluegl_glVertexAttribParameteriAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribParameteriAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribParameteriAMD, .-glVertexAttribParameteriAMD
+	.size	bluegl_glVertexAttribParameteriAMD, .-bluegl_glVertexAttribParameteriAMD
 
 	.align	2
 	.global	bluegl_glBufferSubDataARB
@@ -22367,7 +22367,7 @@ bluegl_glBufferSubDataARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBufferSubDataARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBufferSubDataARB, .-glBufferSubDataARB
+	.size	bluegl_glBufferSubDataARB, .-bluegl_glBufferSubDataARB
 
 	.align	2
 	.global	bluegl_glGetVertexAttribLui64vARB
@@ -22377,7 +22377,7 @@ bluegl_glGetVertexAttribLui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribLui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribLui64vARB, .-glGetVertexAttribLui64vARB
+	.size	bluegl_glGetVertexAttribLui64vARB, .-bluegl_glGetVertexAttribLui64vARB
 
 	.align	2
 	.global	bluegl_glVertexAttribL4ui64NV
@@ -22387,7 +22387,7 @@ bluegl_glVertexAttribL4ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4ui64NV, .-glVertexAttribL4ui64NV
+	.size	bluegl_glVertexAttribL4ui64NV, .-bluegl_glVertexAttribL4ui64NV
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiColor4ubVertex3fSUN
@@ -22397,7 +22397,7 @@ bluegl_glReplacementCodeuiColor4ubVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiColor4ubVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiColor4ubVertex3fSUN, .-glReplacementCodeuiColor4ubVertex3fSUN
+	.size	bluegl_glReplacementCodeuiColor4ubVertex3fSUN, .-bluegl_glReplacementCodeuiColor4ubVertex3fSUN
 
 	.align	2
 	.global	bluegl_glImageTransformParameterfHP
@@ -22407,7 +22407,7 @@ bluegl_glImageTransformParameterfHP:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glImageTransformParameterfHP]
 	ldr	x16, [x16]
 	br	x16
-	.size	glImageTransformParameterfHP, .-glImageTransformParameterfHP
+	.size	bluegl_glImageTransformParameterfHP, .-bluegl_glImageTransformParameterfHP
 
 	.align	2
 	.global	bluegl_glGetBooleani_v
@@ -22417,7 +22417,7 @@ bluegl_glGetBooleani_v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBooleani_v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBooleani_v, .-glGetBooleani_v
+	.size	bluegl_glGetBooleani_v, .-bluegl_glGetBooleani_v
 
 	.align	2
 	.global	bluegl_glVertex2bvOES
@@ -22427,7 +22427,7 @@ bluegl_glVertex2bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex2bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex2bvOES, .-glVertex2bvOES
+	.size	bluegl_glVertex2bvOES, .-bluegl_glVertex2bvOES
 
 	.align	2
 	.global	bluegl_glGetMapControlPointsNV
@@ -22437,7 +22437,7 @@ bluegl_glGetMapControlPointsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMapControlPointsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMapControlPointsNV, .-glGetMapControlPointsNV
+	.size	bluegl_glGetMapControlPointsNV, .-bluegl_glGetMapControlPointsNV
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParametersI4ivEXT
@@ -22447,7 +22447,7 @@ bluegl_glNamedProgramLocalParametersI4ivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParametersI4ivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParametersI4ivEXT, .-glNamedProgramLocalParametersI4ivEXT
+	.size	bluegl_glNamedProgramLocalParametersI4ivEXT, .-bluegl_glNamedProgramLocalParametersI4ivEXT
 
 	.align	2
 	.global	bluegl_glBindBufferRangeNV
@@ -22457,7 +22457,7 @@ bluegl_glBindBufferRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferRangeNV, .-glBindBufferRangeNV
+	.size	bluegl_glBindBufferRangeNV, .-bluegl_glBindBufferRangeNV
 
 	.align	2
 	.global	bluegl_glVertexStream3dvATI
@@ -22467,7 +22467,7 @@ bluegl_glVertexStream3dvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream3dvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream3dvATI, .-glVertexStream3dvATI
+	.size	bluegl_glVertexStream3dvATI, .-bluegl_glVertexStream3dvATI
 
 	.align	2
 	.global	bluegl_glNormalPointerListIBM
@@ -22477,7 +22477,7 @@ bluegl_glNormalPointerListIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalPointerListIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalPointerListIBM, .-glNormalPointerListIBM
+	.size	bluegl_glNormalPointerListIBM, .-bluegl_glNormalPointerListIBM
 
 	.align	2
 	.global	bluegl_glProgramUniform2dvEXT
@@ -22487,7 +22487,7 @@ bluegl_glProgramUniform2dvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2dvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2dvEXT, .-glProgramUniform2dvEXT
+	.size	bluegl_glProgramUniform2dvEXT, .-bluegl_glProgramUniform2dvEXT
 
 	.align	2
 	.global	bluegl_glMultiModeDrawArraysIBM
@@ -22497,7 +22497,7 @@ bluegl_glMultiModeDrawArraysIBM:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiModeDrawArraysIBM]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiModeDrawArraysIBM, .-glMultiModeDrawArraysIBM
+	.size	bluegl_glMultiModeDrawArraysIBM, .-bluegl_glMultiModeDrawArraysIBM
 
 	.align	2
 	.global	bluegl_glGetNamedFramebufferAttachmentParameterivEXT
@@ -22507,7 +22507,7 @@ bluegl_glGetNamedFramebufferAttachmentParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedFramebufferAttachmentParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedFramebufferAttachmentParameterivEXT, .-glGetNamedFramebufferAttachmentParameterivEXT
+	.size	bluegl_glGetNamedFramebufferAttachmentParameterivEXT, .-bluegl_glGetNamedFramebufferAttachmentParameterivEXT
 
 	.align	2
 	.global	bluegl_glVertexArrayVertexAttribIFormatEXT
@@ -22517,7 +22517,7 @@ bluegl_glVertexArrayVertexAttribIFormatEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayVertexAttribIFormatEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayVertexAttribIFormatEXT, .-glVertexArrayVertexAttribIFormatEXT
+	.size	bluegl_glVertexArrayVertexAttribIFormatEXT, .-bluegl_glVertexArrayVertexAttribIFormatEXT
 
 	.align	2
 	.global	bluegl_glHint
@@ -22527,7 +22527,7 @@ bluegl_glHint:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glHint]
 	ldr	x16, [x16]
 	br	x16
-	.size	glHint, .-glHint
+	.size	bluegl_glHint, .-bluegl_glHint
 
 	.align	2
 	.global	bluegl_glPointAlongPathNV
@@ -22537,7 +22537,7 @@ bluegl_glPointAlongPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointAlongPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointAlongPathNV, .-glPointAlongPathNV
+	.size	bluegl_glPointAlongPathNV, .-bluegl_glPointAlongPathNV
 
 	.align	2
 	.global	bluegl_glVertexStream2svATI
@@ -22547,7 +22547,7 @@ bluegl_glVertexStream2svATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream2svATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream2svATI, .-glVertexStream2svATI
+	.size	bluegl_glVertexStream2svATI, .-bluegl_glVertexStream2svATI
 
 	.align	2
 	.global	bluegl_glMultiDrawArraysIndirect
@@ -22557,7 +22557,7 @@ bluegl_glMultiDrawArraysIndirect:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawArraysIndirect]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawArraysIndirect, .-glMultiDrawArraysIndirect
+	.size	bluegl_glMultiDrawArraysIndirect, .-bluegl_glMultiDrawArraysIndirect
 
 	.align	2
 	.global	bluegl_glVertexAttribP2uiv
@@ -22567,7 +22567,7 @@ bluegl_glVertexAttribP2uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribP2uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribP2uiv, .-glVertexAttribP2uiv
+	.size	bluegl_glVertexAttribP2uiv, .-bluegl_glVertexAttribP2uiv
 
 	.align	2
 	.global	bluegl_glProgramUniform1i64vARB
@@ -22577,7 +22577,7 @@ bluegl_glProgramUniform1i64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1i64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1i64vARB, .-glProgramUniform1i64vARB
+	.size	bluegl_glProgramUniform1i64vARB, .-bluegl_glProgramUniform1i64vARB
 
 	.align	2
 	.global	bluegl_glFramebufferTextureARB
@@ -22587,7 +22587,7 @@ bluegl_glFramebufferTextureARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTextureARB, .-glFramebufferTextureARB
+	.size	bluegl_glFramebufferTextureARB, .-bluegl_glFramebufferTextureARB
 
 	.align	2
 	.global	bluegl_glPushClientAttribDefaultEXT
@@ -22597,7 +22597,7 @@ bluegl_glPushClientAttribDefaultEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPushClientAttribDefaultEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPushClientAttribDefaultEXT, .-glPushClientAttribDefaultEXT
+	.size	bluegl_glPushClientAttribDefaultEXT, .-bluegl_glPushClientAttribDefaultEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib4svNV
@@ -22607,7 +22607,7 @@ bluegl_glVertexAttrib4svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4svNV, .-glVertexAttrib4svNV
+	.size	bluegl_glVertexAttrib4svNV, .-bluegl_glVertexAttrib4svNV
 
 	.align	2
 	.global	bluegl_glGetProgramResourceName
@@ -22617,7 +22617,7 @@ bluegl_glGetProgramResourceName:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramResourceName]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramResourceName, .-glGetProgramResourceName
+	.size	bluegl_glGetProgramResourceName, .-bluegl_glGetProgramResourceName
 
 	.align	2
 	.global	bluegl_glCopyColorTable
@@ -22627,7 +22627,7 @@ bluegl_glCopyColorTable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyColorTable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyColorTable, .-glCopyColorTable
+	.size	bluegl_glCopyColorTable, .-bluegl_glCopyColorTable
 
 	.align	2
 	.global	bluegl_glDepthRangeArrayv
@@ -22637,7 +22637,7 @@ bluegl_glDepthRangeArrayv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDepthRangeArrayv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDepthRangeArrayv, .-glDepthRangeArrayv
+	.size	bluegl_glDepthRangeArrayv, .-bluegl_glDepthRangeArrayv
 
 	.align	2
 	.global	bluegl_glCoverFillPathInstancedNV
@@ -22647,7 +22647,7 @@ bluegl_glCoverFillPathInstancedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCoverFillPathInstancedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCoverFillPathInstancedNV, .-glCoverFillPathInstancedNV
+	.size	bluegl_glCoverFillPathInstancedNV, .-bluegl_glCoverFillPathInstancedNV
 
 	.align	2
 	.global	bluegl_glMultiTexParameterivEXT
@@ -22657,7 +22657,7 @@ bluegl_glMultiTexParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexParameterivEXT, .-glMultiTexParameterivEXT
+	.size	bluegl_glMultiTexParameterivEXT, .-bluegl_glMultiTexParameterivEXT
 
 	.align	2
 	.global	bluegl_glGetActiveAtomicCounterBufferiv
@@ -22667,7 +22667,7 @@ bluegl_glGetActiveAtomicCounterBufferiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveAtomicCounterBufferiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveAtomicCounterBufferiv, .-glGetActiveAtomicCounterBufferiv
+	.size	bluegl_glGetActiveAtomicCounterBufferiv, .-bluegl_glGetActiveAtomicCounterBufferiv
 
 	.align	2
 	.global	bluegl_glStencilOpSeparate
@@ -22677,7 +22677,7 @@ bluegl_glStencilOpSeparate:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilOpSeparate]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilOpSeparate, .-glStencilOpSeparate
+	.size	bluegl_glStencilOpSeparate, .-bluegl_glStencilOpSeparate
 
 	.align	2
 	.global	bluegl_glVertexAttrib4fNV
@@ -22687,7 +22687,7 @@ bluegl_glVertexAttrib4fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4fNV, .-glVertexAttrib4fNV
+	.size	bluegl_glVertexAttrib4fNV, .-bluegl_glVertexAttrib4fNV
 
 	.align	2
 	.global	bluegl_glGetColorTableParameterivSGI
@@ -22697,7 +22697,7 @@ bluegl_glGetColorTableParameterivSGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableParameterivSGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableParameterivSGI, .-glGetColorTableParameterivSGI
+	.size	bluegl_glGetColorTableParameterivSGI, .-bluegl_glGetColorTableParameterivSGI
 
 	.align	2
 	.global	bluegl_glVertexArrayAttribBinding
@@ -22707,7 +22707,7 @@ bluegl_glVertexArrayAttribBinding:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayAttribBinding]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayAttribBinding, .-glVertexArrayAttribBinding
+	.size	bluegl_glVertexArrayAttribBinding, .-bluegl_glVertexArrayAttribBinding
 
 	.align	2
 	.global	bluegl_glProgramParameters4dvNV
@@ -22717,7 +22717,7 @@ bluegl_glProgramParameters4dvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramParameters4dvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramParameters4dvNV, .-glProgramParameters4dvNV
+	.size	bluegl_glProgramParameters4dvNV, .-bluegl_glProgramParameters4dvNV
 
 	.align	2
 	.global	bluegl_glVertexAttribL4dv
@@ -22727,7 +22727,7 @@ bluegl_glVertexAttribL4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribL4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribL4dv, .-glVertexAttribL4dv
+	.size	bluegl_glVertexAttribL4dv, .-bluegl_glVertexAttribL4dv
 
 	.align	2
 	.global	bluegl_glGetTexParameteriv
@@ -22737,7 +22737,7 @@ bluegl_glGetTexParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameteriv, .-glGetTexParameteriv
+	.size	bluegl_glGetTexParameteriv, .-bluegl_glGetTexParameteriv
 
 	.align	2
 	.global	bluegl_glGetUniformOffsetEXT
@@ -22747,7 +22747,7 @@ bluegl_glGetUniformOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformOffsetEXT, .-glGetUniformOffsetEXT
+	.size	bluegl_glGetUniformOffsetEXT, .-bluegl_glGetUniformOffsetEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform1dv
@@ -22757,7 +22757,7 @@ bluegl_glProgramUniform1dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1dv, .-glProgramUniform1dv
+	.size	bluegl_glProgramUniform1dv, .-bluegl_glProgramUniform1dv
 
 	.align	2
 	.global	bluegl_glProgramUniform3i64vNV
@@ -22767,7 +22767,7 @@ bluegl_glProgramUniform3i64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3i64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3i64vNV, .-glProgramUniform3i64vNV
+	.size	bluegl_glProgramUniform3i64vNV, .-bluegl_glProgramUniform3i64vNV
 
 	.align	2
 	.global	bluegl_glTangent3fEXT
@@ -22777,7 +22777,7 @@ bluegl_glTangent3fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3fEXT, .-glTangent3fEXT
+	.size	bluegl_glTangent3fEXT, .-bluegl_glTangent3fEXT
 
 	.align	2
 	.global	bluegl_glGetPathMetricRangeNV
@@ -22787,7 +22787,7 @@ bluegl_glGetPathMetricRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathMetricRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathMetricRangeNV, .-glGetPathMetricRangeNV
+	.size	bluegl_glGetPathMetricRangeNV, .-bluegl_glGetPathMetricRangeNV
 
 	.align	2
 	.global	bluegl_glWindowPos2iMESA
@@ -22797,7 +22797,7 @@ bluegl_glWindowPos2iMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2iMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2iMESA, .-glWindowPos2iMESA
+	.size	bluegl_glWindowPos2iMESA, .-bluegl_glWindowPos2iMESA
 
 	.align	2
 	.global	bluegl_glVertex2xvOES
@@ -22807,7 +22807,7 @@ bluegl_glVertex2xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex2xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex2xvOES, .-glVertex2xvOES
+	.size	bluegl_glVertex2xvOES, .-bluegl_glVertex2xvOES
 
 	.align	2
 	.global	bluegl_glGetnCompressedTexImage
@@ -22817,7 +22817,7 @@ bluegl_glGetnCompressedTexImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnCompressedTexImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnCompressedTexImage, .-glGetnCompressedTexImage
+	.size	bluegl_glGetnCompressedTexImage, .-bluegl_glGetnCompressedTexImage
 
 	.align	2
 	.global	bluegl_glWindowPos2dv
@@ -22827,7 +22827,7 @@ bluegl_glWindowPos2dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2dv, .-glWindowPos2dv
+	.size	bluegl_glWindowPos2dv, .-bluegl_glWindowPos2dv
 
 	.align	2
 	.global	bluegl_glReplacementCodeuiVertex3fSUN
@@ -22837,7 +22837,7 @@ bluegl_glReplacementCodeuiVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeuiVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeuiVertex3fSUN, .-glReplacementCodeuiVertex3fSUN
+	.size	bluegl_glReplacementCodeuiVertex3fSUN, .-bluegl_glReplacementCodeuiVertex3fSUN
 
 	.align	2
 	.global	bluegl_glGetTransformFeedbackVaryingEXT
@@ -22847,7 +22847,7 @@ bluegl_glGetTransformFeedbackVaryingEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTransformFeedbackVaryingEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTransformFeedbackVaryingEXT, .-glGetTransformFeedbackVaryingEXT
+	.size	bluegl_glGetTransformFeedbackVaryingEXT, .-bluegl_glGetTransformFeedbackVaryingEXT
 
 	.align	2
 	.global	bluegl_glWindowPos3fARB
@@ -22857,7 +22857,7 @@ bluegl_glWindowPos3fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3fARB, .-glWindowPos3fARB
+	.size	bluegl_glWindowPos3fARB, .-bluegl_glWindowPos3fARB
 
 	.align	2
 	.global	bluegl_glMapNamedBufferEXT
@@ -22867,7 +22867,7 @@ bluegl_glMapNamedBufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapNamedBufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapNamedBufferEXT, .-glMapNamedBufferEXT
+	.size	bluegl_glMapNamedBufferEXT, .-bluegl_glMapNamedBufferEXT
 
 	.align	2
 	.global	bluegl_glDisable
@@ -22877,7 +22877,7 @@ bluegl_glDisable:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisable]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisable, .-glDisable
+	.size	bluegl_glDisable, .-bluegl_glDisable
 
 	.align	2
 	.global	bluegl_glIsPointInFillPathNV
@@ -22887,7 +22887,7 @@ bluegl_glIsPointInFillPathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsPointInFillPathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsPointInFillPathNV, .-glIsPointInFillPathNV
+	.size	bluegl_glIsPointInFillPathNV, .-bluegl_glIsPointInFillPathNV
 
 	.align	2
 	.global	bluegl_glVertexAttribI2uiEXT
@@ -22897,7 +22897,7 @@ bluegl_glVertexAttribI2uiEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2uiEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2uiEXT, .-glVertexAttribI2uiEXT
+	.size	bluegl_glVertexAttribI2uiEXT, .-bluegl_glVertexAttribI2uiEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform4uiv
@@ -22907,7 +22907,7 @@ bluegl_glProgramUniform4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4uiv, .-glProgramUniform4uiv
+	.size	bluegl_glProgramUniform4uiv, .-bluegl_glProgramUniform4uiv
 
 	.align	2
 	.global	bluegl_glGetConvolutionParameterfvEXT
@@ -22917,7 +22917,7 @@ bluegl_glGetConvolutionParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetConvolutionParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetConvolutionParameterfvEXT, .-glGetConvolutionParameterfvEXT
+	.size	bluegl_glGetConvolutionParameterfvEXT, .-bluegl_glGetConvolutionParameterfvEXT
 
 	.align	2
 	.global	bluegl_glFramebufferRenderbufferEXT
@@ -22927,7 +22927,7 @@ bluegl_glFramebufferRenderbufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferRenderbufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferRenderbufferEXT, .-glFramebufferRenderbufferEXT
+	.size	bluegl_glFramebufferRenderbufferEXT, .-bluegl_glFramebufferRenderbufferEXT
 
 	.align	2
 	.global	bluegl_glBinormal3svEXT
@@ -22937,7 +22937,7 @@ bluegl_glBinormal3svEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormal3svEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormal3svEXT, .-glBinormal3svEXT
+	.size	bluegl_glBinormal3svEXT, .-bluegl_glBinormal3svEXT
 
 	.align	2
 	.global	bluegl_glBindBufferOffsetNV
@@ -22947,7 +22947,7 @@ bluegl_glBindBufferOffsetNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferOffsetNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferOffsetNV, .-glBindBufferOffsetNV
+	.size	bluegl_glBindBufferOffsetNV, .-bluegl_glBindBufferOffsetNV
 
 	.align	2
 	.global	bluegl_glCopyTextureSubImage2D
@@ -22957,7 +22957,7 @@ bluegl_glCopyTextureSubImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureSubImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureSubImage2D, .-glCopyTextureSubImage2D
+	.size	bluegl_glCopyTextureSubImage2D, .-bluegl_glCopyTextureSubImage2D
 
 	.align	2
 	.global	bluegl_glGetProgramResourcefvNV
@@ -22967,7 +22967,7 @@ bluegl_glGetProgramResourcefvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramResourcefvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramResourcefvNV, .-glGetProgramResourcefvNV
+	.size	bluegl_glGetProgramResourcefvNV, .-bluegl_glGetProgramResourcefvNV
 
 	.align	2
 	.global	bluegl_glBinormalPointerEXT
@@ -22977,7 +22977,7 @@ bluegl_glBinormalPointerEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBinormalPointerEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBinormalPointerEXT, .-glBinormalPointerEXT
+	.size	bluegl_glBinormalPointerEXT, .-bluegl_glBinormalPointerEXT
 
 	.align	2
 	.global	bluegl_glUniform2ivARB
@@ -22987,7 +22987,7 @@ bluegl_glUniform2ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2ivARB, .-glUniform2ivARB
+	.size	bluegl_glUniform2ivARB, .-bluegl_glUniform2ivARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3s
@@ -22997,7 +22997,7 @@ bluegl_glMultiTexCoord3s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3s, .-glMultiTexCoord3s
+	.size	bluegl_glMultiTexCoord3s, .-bluegl_glMultiTexCoord3s
 
 	.align	2
 	.global	bluegl_glGetHistogramParameterfvEXT
@@ -23007,7 +23007,7 @@ bluegl_glGetHistogramParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetHistogramParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetHistogramParameterfvEXT, .-glGetHistogramParameterfvEXT
+	.size	bluegl_glGetHistogramParameterfvEXT, .-bluegl_glGetHistogramParameterfvEXT
 
 	.align	2
 	.global	bluegl_glGetProgramStringNV
@@ -23017,7 +23017,7 @@ bluegl_glGetProgramStringNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramStringNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramStringNV, .-glGetProgramStringNV
+	.size	bluegl_glGetProgramStringNV, .-bluegl_glGetProgramStringNV
 
 	.align	2
 	.global	bluegl_glGetTexGenxvOES
@@ -23027,7 +23027,7 @@ bluegl_glGetTexGenxvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexGenxvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexGenxvOES, .-glGetTexGenxvOES
+	.size	bluegl_glGetTexGenxvOES, .-bluegl_glGetTexGenxvOES
 
 	.align	2
 	.global	bluegl_glTextureSubImage2D
@@ -23037,7 +23037,7 @@ bluegl_glTextureSubImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureSubImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureSubImage2D, .-glTextureSubImage2D
+	.size	bluegl_glTextureSubImage2D, .-bluegl_glTextureSubImage2D
 
 	.align	2
 	.global	bluegl_glObjectPurgeableAPPLE
@@ -23047,7 +23047,7 @@ bluegl_glObjectPurgeableAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glObjectPurgeableAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glObjectPurgeableAPPLE, .-glObjectPurgeableAPPLE
+	.size	bluegl_glObjectPurgeableAPPLE, .-bluegl_glObjectPurgeableAPPLE
 
 	.align	2
 	.global	bluegl_glColorTableSGI
@@ -23057,7 +23057,7 @@ bluegl_glColorTableSGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColorTableSGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColorTableSGI, .-glColorTableSGI
+	.size	bluegl_glColorTableSGI, .-bluegl_glColorTableSGI
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3i
@@ -23067,7 +23067,7 @@ bluegl_glMultiTexCoord3i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3i, .-glMultiTexCoord3i
+	.size	bluegl_glMultiTexCoord3i, .-bluegl_glMultiTexCoord3i
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3f
@@ -23077,7 +23077,7 @@ bluegl_glMultiTexCoord3f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3f, .-glMultiTexCoord3f
+	.size	bluegl_glMultiTexCoord3f, .-bluegl_glMultiTexCoord3f
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3d
@@ -23087,7 +23087,7 @@ bluegl_glMultiTexCoord3d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3d, .-glMultiTexCoord3d
+	.size	bluegl_glMultiTexCoord3d, .-bluegl_glMultiTexCoord3d
 
 	.align	2
 	.global	bluegl_glFogCoorddv
@@ -23097,7 +23097,7 @@ bluegl_glFogCoorddv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoorddv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoorddv, .-glFogCoorddv
+	.size	bluegl_glFogCoorddv, .-bluegl_glFogCoorddv
 
 	.align	2
 	.global	bluegl_glCopyConvolutionFilter2DEXT
@@ -23107,7 +23107,7 @@ bluegl_glCopyConvolutionFilter2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyConvolutionFilter2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyConvolutionFilter2DEXT, .-glCopyConvolutionFilter2DEXT
+	.size	bluegl_glCopyConvolutionFilter2DEXT, .-bluegl_glCopyConvolutionFilter2DEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform1fEXT
@@ -23117,7 +23117,7 @@ bluegl_glProgramUniform1fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform1fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform1fEXT, .-glProgramUniform1fEXT
+	.size	bluegl_glProgramUniform1fEXT, .-bluegl_glProgramUniform1fEXT
 
 	.align	2
 	.global	bluegl_glClipPlanefOES
@@ -23127,7 +23127,7 @@ bluegl_glClipPlanefOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClipPlanefOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClipPlanefOES, .-glClipPlanefOES
+	.size	bluegl_glClipPlanefOES, .-bluegl_glClipPlanefOES
 
 	.align	2
 	.global	bluegl_glPolygonOffsetxOES
@@ -23137,7 +23137,7 @@ bluegl_glPolygonOffsetxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPolygonOffsetxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPolygonOffsetxOES, .-glPolygonOffsetxOES
+	.size	bluegl_glPolygonOffsetxOES, .-bluegl_glPolygonOffsetxOES
 
 	.align	2
 	.global	bluegl_glVertexAttrib4dARB
@@ -23147,7 +23147,7 @@ bluegl_glVertexAttrib4dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4dARB, .-glVertexAttrib4dARB
+	.size	bluegl_glVertexAttrib4dARB, .-bluegl_glVertexAttrib4dARB
 
 	.align	2
 	.global	bluegl_glUniformHandleui64vARB
@@ -23157,7 +23157,7 @@ bluegl_glUniformHandleui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformHandleui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformHandleui64vARB, .-glUniformHandleui64vARB
+	.size	bluegl_glUniformHandleui64vARB, .-bluegl_glUniformHandleui64vARB
 
 	.align	2
 	.global	bluegl_glFragmentLightModelfvSGIX
@@ -23167,7 +23167,7 @@ bluegl_glFragmentLightModelfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentLightModelfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentLightModelfvSGIX, .-glFragmentLightModelfvSGIX
+	.size	bluegl_glFragmentLightModelfvSGIX, .-bluegl_glFragmentLightModelfvSGIX
 
 	.align	2
 	.global	bluegl_glSwizzleEXT
@@ -23177,7 +23177,7 @@ bluegl_glSwizzleEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSwizzleEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSwizzleEXT, .-glSwizzleEXT
+	.size	bluegl_glSwizzleEXT, .-bluegl_glSwizzleEXT
 
 	.align	2
 	.global	bluegl_glBindFragmentShaderATI
@@ -23187,7 +23187,7 @@ bluegl_glBindFragmentShaderATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindFragmentShaderATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindFragmentShaderATI, .-glBindFragmentShaderATI
+	.size	bluegl_glBindFragmentShaderATI, .-bluegl_glBindFragmentShaderATI
 
 	.align	2
 	.global	bluegl_glVertexAttribs3hvNV
@@ -23197,7 +23197,7 @@ bluegl_glVertexAttribs3hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs3hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs3hvNV, .-glVertexAttribs3hvNV
+	.size	bluegl_glVertexAttribs3hvNV, .-bluegl_glVertexAttribs3hvNV
 
 	.align	2
 	.global	bluegl_glGenBuffersARB
@@ -23207,7 +23207,7 @@ bluegl_glGenBuffersARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenBuffersARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenBuffersARB, .-glGenBuffersARB
+	.size	bluegl_glGenBuffersARB, .-bluegl_glGenBuffersARB
 
 	.align	2
 	.global	bluegl_glListParameterfvSGIX
@@ -23217,7 +23217,7 @@ bluegl_glListParameterfvSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glListParameterfvSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glListParameterfvSGIX, .-glListParameterfvSGIX
+	.size	bluegl_glListParameterfvSGIX, .-bluegl_glListParameterfvSGIX
 
 	.align	2
 	.global	bluegl_glNamedRenderbufferStorageMultisample
@@ -23227,7 +23227,7 @@ bluegl_glNamedRenderbufferStorageMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedRenderbufferStorageMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedRenderbufferStorageMultisample, .-glNamedRenderbufferStorageMultisample
+	.size	bluegl_glNamedRenderbufferStorageMultisample, .-bluegl_glNamedRenderbufferStorageMultisample
 
 	.align	2
 	.global	bluegl_glClearNamedBufferData
@@ -23237,7 +23237,7 @@ bluegl_glClearNamedBufferData:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearNamedBufferData]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearNamedBufferData, .-glClearNamedBufferData
+	.size	bluegl_glClearNamedBufferData, .-bluegl_glClearNamedBufferData
 
 	.align	2
 	.global	bluegl_glLightModelxOES
@@ -23247,7 +23247,7 @@ bluegl_glLightModelxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLightModelxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLightModelxOES, .-glLightModelxOES
+	.size	bluegl_glLightModelxOES, .-bluegl_glLightModelxOES
 
 	.align	2
 	.global	bluegl_glColor3xOES
@@ -23257,7 +23257,7 @@ bluegl_glColor3xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glColor3xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glColor3xOES, .-glColor3xOES
+	.size	bluegl_glColor3xOES, .-bluegl_glColor3xOES
 
 	.align	2
 	.global	bluegl_glMultiDrawElementArrayAPPLE
@@ -23267,7 +23267,7 @@ bluegl_glMultiDrawElementArrayAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementArrayAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementArrayAPPLE, .-glMultiDrawElementArrayAPPLE
+	.size	bluegl_glMultiDrawElementArrayAPPLE, .-bluegl_glMultiDrawElementArrayAPPLE
 
 	.align	2
 	.global	bluegl_glStencilFillPathInstancedNV
@@ -23277,7 +23277,7 @@ bluegl_glStencilFillPathInstancedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glStencilFillPathInstancedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glStencilFillPathInstancedNV, .-glStencilFillPathInstancedNV
+	.size	bluegl_glStencilFillPathInstancedNV, .-bluegl_glStencilFillPathInstancedNV
 
 	.align	2
 	.global	bluegl_glVDPAUUnmapSurfacesNV
@@ -23287,7 +23287,7 @@ bluegl_glVDPAUUnmapSurfacesNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVDPAUUnmapSurfacesNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVDPAUUnmapSurfacesNV, .-glVDPAUUnmapSurfacesNV
+	.size	bluegl_glVDPAUUnmapSurfacesNV, .-bluegl_glVDPAUUnmapSurfacesNV
 
 	.align	2
 	.global	bluegl_glProgramUniform4i64NV
@@ -23297,7 +23297,7 @@ bluegl_glProgramUniform4i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform4i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform4i64NV, .-glProgramUniform4i64NV
+	.size	bluegl_glProgramUniform4i64NV, .-bluegl_glProgramUniform4i64NV
 
 	.align	2
 	.global	bluegl_glVertexStream4dvATI
@@ -23307,7 +23307,7 @@ bluegl_glVertexStream4dvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexStream4dvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexStream4dvATI, .-glVertexStream4dvATI
+	.size	bluegl_glVertexStream4dvATI, .-bluegl_glVertexStream4dvATI
 
 	.align	2
 	.global	bluegl_glIsQuery
@@ -23317,7 +23317,7 @@ bluegl_glIsQuery:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsQuery]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsQuery, .-glIsQuery
+	.size	bluegl_glIsQuery, .-bluegl_glIsQuery
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4fvEXT
@@ -23327,7 +23327,7 @@ bluegl_glProgramUniformMatrix4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4fvEXT, .-glProgramUniformMatrix4fvEXT
+	.size	bluegl_glProgramUniformMatrix4fvEXT, .-bluegl_glProgramUniformMatrix4fvEXT
 
 	.align	2
 	.global	bluegl_glVertexAttrib3hNV
@@ -23337,7 +23337,7 @@ bluegl_glVertexAttrib3hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3hNV, .-glVertexAttrib3hNV
+	.size	bluegl_glVertexAttrib3hNV, .-bluegl_glVertexAttrib3hNV
 
 	.align	2
 	.global	bluegl_glFlushMappedNamedBufferRange
@@ -23347,7 +23347,7 @@ bluegl_glFlushMappedNamedBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushMappedNamedBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushMappedNamedBufferRange, .-glFlushMappedNamedBufferRange
+	.size	bluegl_glFlushMappedNamedBufferRange, .-bluegl_glFlushMappedNamedBufferRange
 
 	.align	2
 	.global	bluegl_glVertexAttrib3f
@@ -23357,7 +23357,7 @@ bluegl_glVertexAttrib3f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3f, .-glVertexAttrib3f
+	.size	bluegl_glVertexAttrib3f, .-bluegl_glVertexAttrib3f
 
 	.align	2
 	.global	bluegl_glVertexAttrib3d
@@ -23367,7 +23367,7 @@ bluegl_glVertexAttrib3d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3d, .-glVertexAttrib3d
+	.size	bluegl_glVertexAttrib3d, .-bluegl_glVertexAttrib3d
 
 	.align	2
 	.global	bluegl_glBlendColor
@@ -23377,7 +23377,7 @@ bluegl_glBlendColor:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendColor]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendColor, .-glBlendColor
+	.size	bluegl_glBlendColor, .-bluegl_glBlendColor
 
 	.align	2
 	.global	bluegl_glBindTransformFeedbackNV
@@ -23387,7 +23387,7 @@ bluegl_glBindTransformFeedbackNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTransformFeedbackNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTransformFeedbackNV, .-glBindTransformFeedbackNV
+	.size	bluegl_glBindTransformFeedbackNV, .-bluegl_glBindTransformFeedbackNV
 
 	.align	2
 	.global	bluegl_glSamplerParameterIuiv
@@ -23397,7 +23397,7 @@ bluegl_glSamplerParameterIuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplerParameterIuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplerParameterIuiv, .-glSamplerParameterIuiv
+	.size	bluegl_glSamplerParameterIuiv, .-bluegl_glSamplerParameterIuiv
 
 	.align	2
 	.global	bluegl_glNamedBufferPageCommitmentEXT
@@ -23407,7 +23407,7 @@ bluegl_glNamedBufferPageCommitmentEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferPageCommitmentEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferPageCommitmentEXT, .-glNamedBufferPageCommitmentEXT
+	.size	bluegl_glNamedBufferPageCommitmentEXT, .-bluegl_glNamedBufferPageCommitmentEXT
 
 	.align	2
 	.global	bluegl_glCheckNamedFramebufferStatus
@@ -23417,7 +23417,7 @@ bluegl_glCheckNamedFramebufferStatus:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCheckNamedFramebufferStatus]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCheckNamedFramebufferStatus, .-glCheckNamedFramebufferStatus
+	.size	bluegl_glCheckNamedFramebufferStatus, .-bluegl_glCheckNamedFramebufferStatus
 
 	.align	2
 	.global	bluegl_glGetObjectBufferfvATI
@@ -23427,7 +23427,7 @@ bluegl_glGetObjectBufferfvATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectBufferfvATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectBufferfvATI, .-glGetObjectBufferfvATI
+	.size	bluegl_glGetObjectBufferfvATI, .-bluegl_glGetObjectBufferfvATI
 
 	.align	2
 	.global	bluegl_glVertexAttrib3s
@@ -23437,7 +23437,7 @@ bluegl_glVertexAttrib3s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3s, .-glVertexAttrib3s
+	.size	bluegl_glVertexAttrib3s, .-bluegl_glVertexAttrib3s
 
 	.align	2
 	.global	bluegl_glDrawElementsInstancedEXT
@@ -23447,7 +23447,7 @@ bluegl_glDrawElementsInstancedEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsInstancedEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsInstancedEXT, .-glDrawElementsInstancedEXT
+	.size	bluegl_glDrawElementsInstancedEXT, .-bluegl_glDrawElementsInstancedEXT
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameterI4iEXT
@@ -23457,7 +23457,7 @@ bluegl_glNamedProgramLocalParameterI4iEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameterI4iEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameterI4iEXT, .-glNamedProgramLocalParameterI4iEXT
+	.size	bluegl_glNamedProgramLocalParameterI4iEXT, .-bluegl_glNamedProgramLocalParameterI4iEXT
 
 	.align	2
 	.global	bluegl_glGetProgramStageiv
@@ -23467,7 +23467,7 @@ bluegl_glGetProgramStageiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramStageiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramStageiv, .-glGetProgramStageiv
+	.size	bluegl_glGetProgramStageiv, .-bluegl_glGetProgramStageiv
 
 	.align	2
 	.global	bluegl_glGetMaterialxOES
@@ -23477,7 +23477,7 @@ bluegl_glGetMaterialxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetMaterialxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetMaterialxOES, .-glGetMaterialxOES
+	.size	bluegl_glGetMaterialxOES, .-bluegl_glGetMaterialxOES
 
 	.align	2
 	.global	bluegl_glGetVideoui64vNV
@@ -23487,7 +23487,7 @@ bluegl_glGetVideoui64vNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVideoui64vNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVideoui64vNV, .-glGetVideoui64vNV
+	.size	bluegl_glGetVideoui64vNV, .-bluegl_glGetVideoui64vNV
 
 	.align	2
 	.global	bluegl_glTangent3bEXT
@@ -23497,7 +23497,7 @@ bluegl_glTangent3bEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3bEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3bEXT, .-glTangent3bEXT
+	.size	bluegl_glTangent3bEXT, .-bluegl_glTangent3bEXT
 
 	.align	2
 	.global	bluegl_glGetGraphicsResetStatusARB
@@ -23507,7 +23507,7 @@ bluegl_glGetGraphicsResetStatusARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetGraphicsResetStatusARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetGraphicsResetStatusARB, .-glGetGraphicsResetStatusARB
+	.size	bluegl_glGetGraphicsResetStatusARB, .-bluegl_glGetGraphicsResetStatusARB
 
 	.align	2
 	.global	bluegl_glUniform4i
@@ -23517,7 +23517,7 @@ bluegl_glUniform4i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4i, .-glUniform4i
+	.size	bluegl_glUniform4i, .-bluegl_glUniform4i
 
 	.align	2
 	.global	bluegl_glActiveTexture
@@ -23527,7 +23527,7 @@ bluegl_glActiveTexture:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glActiveTexture]
 	ldr	x16, [x16]
 	br	x16
-	.size	glActiveTexture, .-glActiveTexture
+	.size	bluegl_glActiveTexture, .-bluegl_glActiveTexture
 
 	.align	2
 	.global	bluegl_glEnableVertexAttribArray
@@ -23537,7 +23537,7 @@ bluegl_glEnableVertexAttribArray:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEnableVertexAttribArray]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEnableVertexAttribArray, .-glEnableVertexAttribArray
+	.size	bluegl_glEnableVertexAttribArray, .-bluegl_glEnableVertexAttribArray
 
 	.align	2
 	.global	bluegl_glProgramUniformHandleui64NV
@@ -23547,7 +23547,7 @@ bluegl_glProgramUniformHandleui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformHandleui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformHandleui64NV, .-glProgramUniformHandleui64NV
+	.size	bluegl_glProgramUniformHandleui64NV, .-bluegl_glProgramUniformHandleui64NV
 
 	.align	2
 	.global	bluegl_glUniform4d
@@ -23557,7 +23557,7 @@ bluegl_glUniform4d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4d, .-glUniform4d
+	.size	bluegl_glUniform4d, .-bluegl_glUniform4d
 
 	.align	2
 	.global	bluegl_glUniform4f
@@ -23567,7 +23567,7 @@ bluegl_glUniform4f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4f, .-glUniform4f
+	.size	bluegl_glUniform4f, .-bluegl_glUniform4f
 
 	.align	2
 	.global	bluegl_glRenderbufferStorageMultisample
@@ -23577,7 +23577,7 @@ bluegl_glRenderbufferStorageMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRenderbufferStorageMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRenderbufferStorageMultisample, .-glRenderbufferStorageMultisample
+	.size	bluegl_glRenderbufferStorageMultisample, .-bluegl_glRenderbufferStorageMultisample
 
 	.align	2
 	.global	bluegl_glCreateProgramPipelines
@@ -23587,7 +23587,7 @@ bluegl_glCreateProgramPipelines:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateProgramPipelines]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateProgramPipelines, .-glCreateProgramPipelines
+	.size	bluegl_glCreateProgramPipelines, .-bluegl_glCreateProgramPipelines
 
 	.align	2
 	.global	bluegl_glVertexAttribLPointer
@@ -23597,7 +23597,7 @@ bluegl_glVertexAttribLPointer:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribLPointer]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribLPointer, .-glVertexAttribLPointer
+	.size	bluegl_glVertexAttribLPointer, .-bluegl_glVertexAttribLPointer
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3sv
@@ -23607,7 +23607,7 @@ bluegl_glMultiTexCoord3sv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3sv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3sv, .-glMultiTexCoord3sv
+	.size	bluegl_glMultiTexCoord3sv, .-bluegl_glMultiTexCoord3sv
 
 	.align	2
 	.global	bluegl_glDrawElementsInstancedBaseVertex
@@ -23617,7 +23617,7 @@ bluegl_glDrawElementsInstancedBaseVertex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawElementsInstancedBaseVertex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawElementsInstancedBaseVertex, .-glDrawElementsInstancedBaseVertex
+	.size	bluegl_glDrawElementsInstancedBaseVertex, .-bluegl_glDrawElementsInstancedBaseVertex
 
 	.align	2
 	.global	bluegl_glPixelTransformParameterfvEXT
@@ -23627,7 +23627,7 @@ bluegl_glPixelTransformParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTransformParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTransformParameterfvEXT, .-glPixelTransformParameterfvEXT
+	.size	bluegl_glPixelTransformParameterfvEXT, .-bluegl_glPixelTransformParameterfvEXT
 
 	.align	2
 	.global	bluegl_glDrawTransformFeedbackNV
@@ -23637,7 +23637,7 @@ bluegl_glDrawTransformFeedbackNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawTransformFeedbackNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawTransformFeedbackNV, .-glDrawTransformFeedbackNV
+	.size	bluegl_glDrawTransformFeedbackNV, .-bluegl_glDrawTransformFeedbackNV
 
 	.align	2
 	.global	bluegl_glTextureImage2DMultisampleCoverageNV
@@ -23647,7 +23647,7 @@ bluegl_glTextureImage2DMultisampleCoverageNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureImage2DMultisampleCoverageNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureImage2DMultisampleCoverageNV, .-glTextureImage2DMultisampleCoverageNV
+	.size	bluegl_glTextureImage2DMultisampleCoverageNV, .-bluegl_glTextureImage2DMultisampleCoverageNV
 
 	.align	2
 	.global	bluegl_glNamedRenderbufferStorageMultisampleCoverageEXT
@@ -23657,7 +23657,7 @@ bluegl_glNamedRenderbufferStorageMultisampleCoverageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedRenderbufferStorageMultisampleCoverageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedRenderbufferStorageMultisampleCoverageEXT, .-glNamedRenderbufferStorageMultisampleCoverageEXT
+	.size	bluegl_glNamedRenderbufferStorageMultisampleCoverageEXT, .-bluegl_glNamedRenderbufferStorageMultisampleCoverageEXT
 
 	.align	2
 	.global	bluegl_glGetActiveSubroutineName
@@ -23667,7 +23667,7 @@ bluegl_glGetActiveSubroutineName:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveSubroutineName]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveSubroutineName, .-glGetActiveSubroutineName
+	.size	bluegl_glGetActiveSubroutineName, .-bluegl_glGetActiveSubroutineName
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4iv
@@ -23677,7 +23677,7 @@ bluegl_glMultiTexCoord4iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4iv, .-glMultiTexCoord4iv
+	.size	bluegl_glMultiTexCoord4iv, .-bluegl_glMultiTexCoord4iv
 
 	.align	2
 	.global	bluegl_glPopDebugGroup
@@ -23687,7 +23687,7 @@ bluegl_glPopDebugGroup:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPopDebugGroup]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPopDebugGroup, .-glPopDebugGroup
+	.size	bluegl_glPopDebugGroup, .-bluegl_glPopDebugGroup
 
 	.align	2
 	.global	bluegl_glUniformBlockBinding
@@ -23697,7 +23697,7 @@ bluegl_glUniformBlockBinding:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformBlockBinding]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformBlockBinding, .-glUniformBlockBinding
+	.size	bluegl_glUniformBlockBinding, .-bluegl_glUniformBlockBinding
 
 	.align	2
 	.global	bluegl_glWindowPos2svMESA
@@ -23707,7 +23707,7 @@ bluegl_glWindowPos2svMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2svMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2svMESA, .-glWindowPos2svMESA
+	.size	bluegl_glWindowPos2svMESA, .-bluegl_glWindowPos2svMESA
 
 	.align	2
 	.global	bluegl_glGenerateTextureMipmapEXT
@@ -23717,7 +23717,7 @@ bluegl_glGenerateTextureMipmapEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenerateTextureMipmapEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenerateTextureMipmapEXT, .-glGenerateTextureMipmapEXT
+	.size	bluegl_glGenerateTextureMipmapEXT, .-bluegl_glGenerateTextureMipmapEXT
 
 	.align	2
 	.global	bluegl_glBindLightParameterEXT
@@ -23727,7 +23727,7 @@ bluegl_glBindLightParameterEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindLightParameterEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindLightParameterEXT, .-glBindLightParameterEXT
+	.size	bluegl_glBindLightParameterEXT, .-bluegl_glBindLightParameterEXT
 
 	.align	2
 	.global	bluegl_glTexCoord3bOES
@@ -23737,7 +23737,7 @@ bluegl_glTexCoord3bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord3bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord3bOES, .-glTexCoord3bOES
+	.size	bluegl_glTexCoord3bOES, .-bluegl_glTexCoord3bOES
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix3x2fv
@@ -23747,7 +23747,7 @@ bluegl_glProgramUniformMatrix3x2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix3x2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix3x2fv, .-glProgramUniformMatrix3x2fv
+	.size	bluegl_glProgramUniformMatrix3x2fv, .-bluegl_glProgramUniformMatrix3x2fv
 
 	.align	2
 	.global	bluegl_glUniform2fvARB
@@ -23757,7 +23757,7 @@ bluegl_glUniform2fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform2fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform2fvARB, .-glUniform2fvARB
+	.size	bluegl_glUniform2fvARB, .-bluegl_glUniform2fvARB
 
 	.align	2
 	.global	bluegl_glProgramLocalParameterI4uivNV
@@ -23767,7 +23767,7 @@ bluegl_glProgramLocalParameterI4uivNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramLocalParameterI4uivNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramLocalParameterI4uivNV, .-glProgramLocalParameterI4uivNV
+	.size	bluegl_glProgramLocalParameterI4uivNV, .-bluegl_glProgramLocalParameterI4uivNV
 
 	.align	2
 	.global	bluegl_glFlushVertexArrayRangeNV
@@ -23777,7 +23777,7 @@ bluegl_glFlushVertexArrayRangeNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushVertexArrayRangeNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushVertexArrayRangeNV, .-glFlushVertexArrayRangeNV
+	.size	bluegl_glFlushVertexArrayRangeNV, .-bluegl_glFlushVertexArrayRangeNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3svEXT
@@ -23787,7 +23787,7 @@ bluegl_glSecondaryColor3svEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3svEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3svEXT, .-glSecondaryColor3svEXT
+	.size	bluegl_glSecondaryColor3svEXT, .-bluegl_glSecondaryColor3svEXT
 
 	.align	2
 	.global	bluegl_glGetQueryIndexediv
@@ -23797,7 +23797,7 @@ bluegl_glGetQueryIndexediv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryIndexediv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryIndexediv, .-glGetQueryIndexediv
+	.size	bluegl_glGetQueryIndexediv, .-bluegl_glGetQueryIndexediv
 
 	.align	2
 	.global	bluegl_glFramebufferTexture3DEXT
@@ -23807,7 +23807,7 @@ bluegl_glFramebufferTexture3DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTexture3DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTexture3DEXT, .-glFramebufferTexture3DEXT
+	.size	bluegl_glFramebufferTexture3DEXT, .-bluegl_glFramebufferTexture3DEXT
 
 	.align	2
 	.global	bluegl_glLoadTransposeMatrixxOES
@@ -23817,7 +23817,7 @@ bluegl_glLoadTransposeMatrixxOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLoadTransposeMatrixxOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLoadTransposeMatrixxOES, .-glLoadTransposeMatrixxOES
+	.size	bluegl_glLoadTransposeMatrixxOES, .-bluegl_glLoadTransposeMatrixxOES
 
 	.align	2
 	.global	bluegl_glDeleteTransformFeedbacksNV
@@ -23827,7 +23827,7 @@ bluegl_glDeleteTransformFeedbacksNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteTransformFeedbacksNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteTransformFeedbacksNV, .-glDeleteTransformFeedbacksNV
+	.size	bluegl_glDeleteTransformFeedbacksNV, .-bluegl_glDeleteTransformFeedbacksNV
 
 	.align	2
 	.global	bluegl_glGetCompressedTextureImageEXT
@@ -23837,7 +23837,7 @@ bluegl_glGetCompressedTextureImageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCompressedTextureImageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCompressedTextureImageEXT, .-glGetCompressedTextureImageEXT
+	.size	bluegl_glGetCompressedTextureImageEXT, .-bluegl_glGetCompressedTextureImageEXT
 
 	.align	2
 	.global	bluegl_glIndexMaterialEXT
@@ -23847,7 +23847,7 @@ bluegl_glIndexMaterialEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIndexMaterialEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIndexMaterialEXT, .-glIndexMaterialEXT
+	.size	bluegl_glIndexMaterialEXT, .-bluegl_glIndexMaterialEXT
 
 	.align	2
 	.global	bluegl_glFogCoorddEXT
@@ -23857,7 +23857,7 @@ bluegl_glFogCoorddEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFogCoorddEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFogCoorddEXT, .-glFogCoorddEXT
+	.size	bluegl_glFogCoorddEXT, .-bluegl_glFogCoorddEXT
 
 	.align	2
 	.global	bluegl_glTexCoord2hvNV
@@ -23867,7 +23867,7 @@ bluegl_glTexCoord2hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2hvNV, .-glTexCoord2hvNV
+	.size	bluegl_glTexCoord2hvNV, .-bluegl_glTexCoord2hvNV
 
 	.align	2
 	.global	bluegl_glFramebufferTexture2DEXT
@@ -23877,7 +23877,7 @@ bluegl_glFramebufferTexture2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTexture2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTexture2DEXT, .-glFramebufferTexture2DEXT
+	.size	bluegl_glFramebufferTexture2DEXT, .-bluegl_glFramebufferTexture2DEXT
 
 	.align	2
 	.global	bluegl_glEndTransformFeedbackNV
@@ -23887,7 +23887,7 @@ bluegl_glEndTransformFeedbackNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndTransformFeedbackNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndTransformFeedbackNV, .-glEndTransformFeedbackNV
+	.size	bluegl_glEndTransformFeedbackNV, .-bluegl_glEndTransformFeedbackNV
 
 	.align	2
 	.global	bluegl_glGlobalAlphaFactoruiSUN
@@ -23897,7 +23897,7 @@ bluegl_glGlobalAlphaFactoruiSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGlobalAlphaFactoruiSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGlobalAlphaFactoruiSUN, .-glGlobalAlphaFactoruiSUN
+	.size	bluegl_glGlobalAlphaFactoruiSUN, .-bluegl_glGlobalAlphaFactoruiSUN
 
 	.align	2
 	.global	bluegl_glProgramUniform3fEXT
@@ -23907,7 +23907,7 @@ bluegl_glProgramUniform3fEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3fEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3fEXT, .-glProgramUniform3fEXT
+	.size	bluegl_glProgramUniform3fEXT, .-bluegl_glProgramUniform3fEXT
 
 	.align	2
 	.global	bluegl_glNamedBufferSubDataEXT
@@ -23917,7 +23917,7 @@ bluegl_glNamedBufferSubDataEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedBufferSubDataEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedBufferSubDataEXT, .-glNamedBufferSubDataEXT
+	.size	bluegl_glNamedBufferSubDataEXT, .-bluegl_glNamedBufferSubDataEXT
 
 	.align	2
 	.global	bluegl_glFlushRasterSGIX
@@ -23927,7 +23927,7 @@ bluegl_glFlushRasterSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFlushRasterSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFlushRasterSGIX, .-glFlushRasterSGIX
+	.size	bluegl_glFlushRasterSGIX, .-bluegl_glFlushRasterSGIX
 
 	.align	2
 	.global	bluegl_glBlendFunc
@@ -23937,7 +23937,7 @@ bluegl_glBlendFunc:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBlendFunc]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBlendFunc, .-glBlendFunc
+	.size	bluegl_glBlendFunc, .-bluegl_glBlendFunc
 
 	.align	2
 	.global	bluegl_glCreateProgram
@@ -23947,7 +23947,7 @@ bluegl_glCreateProgram:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCreateProgram]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCreateProgram, .-glCreateProgram
+	.size	bluegl_glCreateProgram, .-bluegl_glCreateProgram
 
 	.align	2
 	.global	bluegl_glUniform4ui64vARB
@@ -23957,7 +23957,7 @@ bluegl_glUniform4ui64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4ui64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4ui64vARB, .-glUniform4ui64vARB
+	.size	bluegl_glUniform4ui64vARB, .-bluegl_glUniform4ui64vARB
 
 	.align	2
 	.global	bluegl_glPrimitiveRestartIndex
@@ -23967,7 +23967,7 @@ bluegl_glPrimitiveRestartIndex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPrimitiveRestartIndex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPrimitiveRestartIndex, .-glPrimitiveRestartIndex
+	.size	bluegl_glPrimitiveRestartIndex, .-bluegl_glPrimitiveRestartIndex
 
 	.align	2
 	.global	bluegl_glNormalStream3fATI
@@ -23977,7 +23977,7 @@ bluegl_glNormalStream3fATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3fATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3fATI, .-glNormalStream3fATI
+	.size	bluegl_glNormalStream3fATI, .-bluegl_glNormalStream3fATI
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix2fv
@@ -23987,7 +23987,7 @@ bluegl_glProgramUniformMatrix2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix2fv, .-glProgramUniformMatrix2fv
+	.size	bluegl_glProgramUniformMatrix2fv, .-bluegl_glProgramUniformMatrix2fv
 
 	.align	2
 	.global	bluegl_glVertexAttribs1hvNV
@@ -23997,7 +23997,7 @@ bluegl_glVertexAttribs1hvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs1hvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs1hvNV, .-glVertexAttribs1hvNV
+	.size	bluegl_glVertexAttribs1hvNV, .-bluegl_glVertexAttribs1hvNV
 
 	.align	2
 	.global	bluegl_glWindowPos4svMESA
@@ -24007,7 +24007,7 @@ bluegl_glWindowPos4svMESA:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos4svMESA]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos4svMESA, .-glWindowPos4svMESA
+	.size	bluegl_glWindowPos4svMESA, .-bluegl_glWindowPos4svMESA
 
 	.align	2
 	.global	bluegl_glDeleteFragmentShaderATI
@@ -24017,7 +24017,7 @@ bluegl_glDeleteFragmentShaderATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteFragmentShaderATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteFragmentShaderATI, .-glDeleteFragmentShaderATI
+	.size	bluegl_glDeleteFragmentShaderATI, .-bluegl_glDeleteFragmentShaderATI
 
 	.align	2
 	.global	bluegl_glBindImageTextures
@@ -24027,7 +24027,7 @@ bluegl_glBindImageTextures:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindImageTextures]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindImageTextures, .-glBindImageTextures
+	.size	bluegl_glBindImageTextures, .-bluegl_glBindImageTextures
 
 	.align	2
 	.global	bluegl_glSamplerParameteriv
@@ -24037,7 +24037,7 @@ bluegl_glSamplerParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplerParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplerParameteriv, .-glSamplerParameteriv
+	.size	bluegl_glSamplerParameteriv, .-bluegl_glSamplerParameteriv
 
 	.align	2
 	.global	bluegl_glUniform1i64NV
@@ -24047,7 +24047,7 @@ bluegl_glUniform1i64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1i64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1i64NV, .-glUniform1i64NV
+	.size	bluegl_glUniform1i64NV, .-bluegl_glUniform1i64NV
 
 	.align	2
 	.global	bluegl_glPathStringNV
@@ -24057,7 +24057,7 @@ bluegl_glPathStringNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathStringNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathStringNV, .-glPathStringNV
+	.size	bluegl_glPathStringNV, .-bluegl_glPathStringNV
 
 	.align	2
 	.global	bluegl_glGetNamedFramebufferParameterivEXT
@@ -24067,7 +24067,7 @@ bluegl_glGetNamedFramebufferParameterivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedFramebufferParameterivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedFramebufferParameterivEXT, .-glGetNamedFramebufferParameterivEXT
+	.size	bluegl_glGetNamedFramebufferParameterivEXT, .-bluegl_glGetNamedFramebufferParameterivEXT
 
 	.align	2
 	.global	bluegl_glGetProgramNamedParameterdvNV
@@ -24077,7 +24077,7 @@ bluegl_glGetProgramNamedParameterdvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetProgramNamedParameterdvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetProgramNamedParameterdvNV, .-glGetProgramNamedParameterdvNV
+	.size	bluegl_glGetProgramNamedParameterdvNV, .-bluegl_glGetProgramNamedParameterdvNV
 
 	.align	2
 	.global	bluegl_glPathDashArrayNV
@@ -24087,7 +24087,7 @@ bluegl_glPathDashArrayNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathDashArrayNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathDashArrayNV, .-glPathDashArrayNV
+	.size	bluegl_glPathDashArrayNV, .-bluegl_glPathDashArrayNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3iv
@@ -24097,7 +24097,7 @@ bluegl_glSecondaryColor3iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3iv, .-glSecondaryColor3iv
+	.size	bluegl_glSecondaryColor3iv, .-bluegl_glSecondaryColor3iv
 
 	.align	2
 	.global	bluegl_glMultTransposeMatrixf
@@ -24107,7 +24107,7 @@ bluegl_glMultTransposeMatrixf:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultTransposeMatrixf]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultTransposeMatrixf, .-glMultTransposeMatrixf
+	.size	bluegl_glMultTransposeMatrixf, .-bluegl_glMultTransposeMatrixf
 
 	.align	2
 	.global	bluegl_glMultTransposeMatrixd
@@ -24117,7 +24117,7 @@ bluegl_glMultTransposeMatrixd:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultTransposeMatrixd]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultTransposeMatrixd, .-glMultTransposeMatrixd
+	.size	bluegl_glMultTransposeMatrixd, .-bluegl_glMultTransposeMatrixd
 
 	.align	2
 	.global	bluegl_glClearColor
@@ -24127,7 +24127,7 @@ bluegl_glClearColor:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glClearColor]
 	ldr	x16, [x16]
 	br	x16
-	.size	glClearColor, .-glClearColor
+	.size	bluegl_glClearColor, .-bluegl_glClearColor
 
 	.align	2
 	.global	bluegl_glGetImageHandleARB
@@ -24137,7 +24137,7 @@ bluegl_glGetImageHandleARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetImageHandleARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetImageHandleARB, .-glGetImageHandleARB
+	.size	bluegl_glGetImageHandleARB, .-bluegl_glGetImageHandleARB
 
 	.align	2
 	.global	bluegl_glTangent3dEXT
@@ -24147,7 +24147,7 @@ bluegl_glTangent3dEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTangent3dEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTangent3dEXT, .-glTangent3dEXT
+	.size	bluegl_glTangent3dEXT, .-bluegl_glTangent3dEXT
 
 	.align	2
 	.global	bluegl_glGetQueryObjectivARB
@@ -24157,7 +24157,7 @@ bluegl_glGetQueryObjectivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryObjectivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryObjectivARB, .-glGetQueryObjectivARB
+	.size	bluegl_glGetQueryObjectivARB, .-bluegl_glGetQueryObjectivARB
 
 	.align	2
 	.global	bluegl_glGetLocalConstantFloatvEXT
@@ -24167,7 +24167,7 @@ bluegl_glGetLocalConstantFloatvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetLocalConstantFloatvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetLocalConstantFloatvEXT, .-glGetLocalConstantFloatvEXT
+	.size	bluegl_glGetLocalConstantFloatvEXT, .-bluegl_glGetLocalConstantFloatvEXT
 
 	.align	2
 	.global	bluegl_glUseShaderProgramEXT
@@ -24177,7 +24177,7 @@ bluegl_glUseShaderProgramEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUseShaderProgramEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUseShaderProgramEXT, .-glUseShaderProgramEXT
+	.size	bluegl_glUseShaderProgramEXT, .-bluegl_glUseShaderProgramEXT
 
 	.align	2
 	.global	bluegl_glBindRenderbufferEXT
@@ -24187,7 +24187,7 @@ bluegl_glBindRenderbufferEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindRenderbufferEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindRenderbufferEXT, .-glBindRenderbufferEXT
+	.size	bluegl_glBindRenderbufferEXT, .-bluegl_glBindRenderbufferEXT
 
 	.align	2
 	.global	bluegl_glGetnUniformiv
@@ -24197,7 +24197,7 @@ bluegl_glGetnUniformiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnUniformiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnUniformiv, .-glGetnUniformiv
+	.size	bluegl_glGetnUniformiv, .-bluegl_glGetnUniformiv
 
 	.align	2
 	.global	bluegl_glGetPerfMonitorGroupStringAMD
@@ -24207,7 +24207,7 @@ bluegl_glGetPerfMonitorGroupStringAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPerfMonitorGroupStringAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPerfMonitorGroupStringAMD, .-glGetPerfMonitorGroupStringAMD
+	.size	bluegl_glGetPerfMonitorGroupStringAMD, .-bluegl_glGetPerfMonitorGroupStringAMD
 
 	.align	2
 	.global	bluegl_glUniform3ui
@@ -24217,7 +24217,7 @@ bluegl_glUniform3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform3ui, .-glUniform3ui
+	.size	bluegl_glUniform3ui, .-bluegl_glUniform3ui
 
 	.align	2
 	.global	bluegl_glGetNamedProgramLocalParameterdvEXT
@@ -24227,7 +24227,7 @@ bluegl_glGetNamedProgramLocalParameterdvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedProgramLocalParameterdvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedProgramLocalParameterdvEXT, .-glGetNamedProgramLocalParameterdvEXT
+	.size	bluegl_glGetNamedProgramLocalParameterdvEXT, .-bluegl_glGetNamedProgramLocalParameterdvEXT
 
 	.align	2
 	.global	bluegl_glSecondaryColor3us
@@ -24237,7 +24237,7 @@ bluegl_glSecondaryColor3us:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3us]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3us, .-glSecondaryColor3us
+	.size	bluegl_glSecondaryColor3us, .-bluegl_glSecondaryColor3us
 
 	.align	2
 	.global	bluegl_glVertexAttribI4uiv
@@ -24247,7 +24247,7 @@ bluegl_glVertexAttribI4uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4uiv, .-glVertexAttribI4uiv
+	.size	bluegl_glVertexAttribI4uiv, .-bluegl_glVertexAttribI4uiv
 
 	.align	2
 	.global	bluegl_glVertexAttrib4bv
@@ -24257,7 +24257,7 @@ bluegl_glVertexAttrib4bv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4bv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4bv, .-glVertexAttrib4bv
+	.size	bluegl_glVertexAttrib4bv, .-bluegl_glVertexAttrib4bv
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3xOES
@@ -24267,7 +24267,7 @@ bluegl_glMultiTexCoord3xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3xOES, .-glMultiTexCoord3xOES
+	.size	bluegl_glMultiTexCoord3xOES, .-bluegl_glMultiTexCoord3xOES
 
 	.align	2
 	.global	bluegl_glSecondaryColor3ub
@@ -24277,7 +24277,7 @@ bluegl_glSecondaryColor3ub:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3ub]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3ub, .-glSecondaryColor3ub
+	.size	bluegl_glSecondaryColor3ub, .-bluegl_glSecondaryColor3ub
 
 	.align	2
 	.global	bluegl_glConvolutionFilter2DEXT
@@ -24287,7 +24287,7 @@ bluegl_glConvolutionFilter2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glConvolutionFilter2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glConvolutionFilter2DEXT, .-glConvolutionFilter2DEXT
+	.size	bluegl_glConvolutionFilter2DEXT, .-bluegl_glConvolutionFilter2DEXT
 
 	.align	2
 	.global	bluegl_glGetVariantArrayObjectivATI
@@ -24297,7 +24297,7 @@ bluegl_glGetVariantArrayObjectivATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVariantArrayObjectivATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVariantArrayObjectivATI, .-glGetVariantArrayObjectivATI
+	.size	bluegl_glGetVariantArrayObjectivATI, .-bluegl_glGetVariantArrayObjectivATI
 
 	.align	2
 	.global	bluegl_glSecondaryColor3ui
@@ -24307,7 +24307,7 @@ bluegl_glSecondaryColor3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3ui, .-glSecondaryColor3ui
+	.size	bluegl_glSecondaryColor3ui, .-bluegl_glSecondaryColor3ui
 
 	.align	2
 	.global	bluegl_glVertexAttrib1dARB
@@ -24317,7 +24317,7 @@ bluegl_glVertexAttrib1dARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1dARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1dARB, .-glVertexAttrib1dARB
+	.size	bluegl_glVertexAttrib1dARB, .-bluegl_glVertexAttrib1dARB
 
 	.align	2
 	.global	bluegl_glGetNamedBufferPointerv
@@ -24327,7 +24327,7 @@ bluegl_glGetNamedBufferPointerv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferPointerv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferPointerv, .-glGetNamedBufferPointerv
+	.size	bluegl_glGetNamedBufferPointerv, .-bluegl_glGetNamedBufferPointerv
 
 	.align	2
 	.global	bluegl_glLockArraysEXT
@@ -24337,7 +24337,7 @@ bluegl_glLockArraysEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glLockArraysEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glLockArraysEXT, .-glLockArraysEXT
+	.size	bluegl_glLockArraysEXT, .-bluegl_glLockArraysEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribPointerNV
@@ -24347,7 +24347,7 @@ bluegl_glVertexAttribPointerNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribPointerNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribPointerNV, .-glVertexAttribPointerNV
+	.size	bluegl_glVertexAttribPointerNV, .-bluegl_glVertexAttribPointerNV
 
 	.align	2
 	.global	bluegl_glBindBufferBaseEXT
@@ -24357,7 +24357,7 @@ bluegl_glBindBufferBaseEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferBaseEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferBaseEXT, .-glBindBufferBaseEXT
+	.size	bluegl_glBindBufferBaseEXT, .-bluegl_glBindBufferBaseEXT
 
 	.align	2
 	.global	bluegl_glTexCoord2xvOES
@@ -24367,7 +24367,7 @@ bluegl_glTexCoord2xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2xvOES, .-glTexCoord2xvOES
+	.size	bluegl_glTexCoord2xvOES, .-bluegl_glTexCoord2xvOES
 
 	.align	2
 	.global	bluegl_glGetQueryBufferObjectui64v
@@ -24377,7 +24377,7 @@ bluegl_glGetQueryBufferObjectui64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetQueryBufferObjectui64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetQueryBufferObjectui64v, .-glGetQueryBufferObjectui64v
+	.size	bluegl_glGetQueryBufferObjectui64v, .-bluegl_glGetQueryBufferObjectui64v
 
 	.align	2
 	.global	bluegl_glSetMultisamplefvAMD
@@ -24387,7 +24387,7 @@ bluegl_glSetMultisamplefvAMD:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSetMultisamplefvAMD]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSetMultisamplefvAMD, .-glSetMultisamplefvAMD
+	.size	bluegl_glSetMultisamplefvAMD, .-bluegl_glSetMultisamplefvAMD
 
 	.align	2
 	.global	bluegl_glPathColorGenNV
@@ -24397,7 +24397,7 @@ bluegl_glPathColorGenNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPathColorGenNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPathColorGenNV, .-glPathColorGenNV
+	.size	bluegl_glPathColorGenNV, .-bluegl_glPathColorGenNV
 
 	.align	2
 	.global	bluegl_glUniform1ivARB
@@ -24407,7 +24407,7 @@ bluegl_glUniform1ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1ivARB, .-glUniform1ivARB
+	.size	bluegl_glUniform1ivARB, .-bluegl_glUniform1ivARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib4ivARB
@@ -24417,7 +24417,7 @@ bluegl_glVertexAttrib4ivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4ivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4ivARB, .-glVertexAttrib4ivARB
+	.size	bluegl_glVertexAttrib4ivARB, .-bluegl_glVertexAttrib4ivARB
 
 	.align	2
 	.global	bluegl_glGenTransformFeedbacks
@@ -24427,7 +24427,7 @@ bluegl_glGenTransformFeedbacks:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenTransformFeedbacks]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenTransformFeedbacks, .-glGenTransformFeedbacks
+	.size	bluegl_glGenTransformFeedbacks, .-bluegl_glGenTransformFeedbacks
 
 	.align	2
 	.global	bluegl_glGetVertexAttribIuiv
@@ -24437,7 +24437,7 @@ bluegl_glGetVertexAttribIuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexAttribIuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexAttribIuiv, .-glGetVertexAttribIuiv
+	.size	bluegl_glGetVertexAttribIuiv, .-bluegl_glGetVertexAttribIuiv
 
 	.align	2
 	.global	bluegl_glPixelTransformParameterfEXT
@@ -24447,7 +24447,7 @@ bluegl_glPixelTransformParameterfEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPixelTransformParameterfEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPixelTransformParameterfEXT, .-glPixelTransformParameterfEXT
+	.size	bluegl_glPixelTransformParameterfEXT, .-bluegl_glPixelTransformParameterfEXT
 
 	.align	2
 	.global	bluegl_glVertex3xvOES
@@ -24457,7 +24457,7 @@ bluegl_glVertex3xvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex3xvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex3xvOES, .-glVertex3xvOES
+	.size	bluegl_glVertex3xvOES, .-bluegl_glVertex3xvOES
 
 	.align	2
 	.global	bluegl_glGetObjectParameterivARB
@@ -24467,7 +24467,7 @@ bluegl_glGetObjectParameterivARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectParameterivARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectParameterivARB, .-glGetObjectParameterivARB
+	.size	bluegl_glGetObjectParameterivARB, .-bluegl_glGetObjectParameterivARB
 
 	.align	2
 	.global	bluegl_glVertexArraySecondaryColorOffsetEXT
@@ -24477,7 +24477,7 @@ bluegl_glVertexArraySecondaryColorOffsetEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArraySecondaryColorOffsetEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArraySecondaryColorOffsetEXT, .-glVertexArraySecondaryColorOffsetEXT
+	.size	bluegl_glVertexArraySecondaryColorOffsetEXT, .-bluegl_glVertexArraySecondaryColorOffsetEXT
 
 	.align	2
 	.global	bluegl_glWindowPos2fARB
@@ -24487,7 +24487,7 @@ bluegl_glWindowPos2fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos2fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos2fARB, .-glWindowPos2fARB
+	.size	bluegl_glWindowPos2fARB, .-bluegl_glWindowPos2fARB
 
 	.align	2
 	.global	bluegl_glCompressedTexSubImage2D
@@ -24497,7 +24497,7 @@ bluegl_glCompressedTexSubImage2D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexSubImage2D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexSubImage2D, .-glCompressedTexSubImage2D
+	.size	bluegl_glCompressedTexSubImage2D, .-bluegl_glCompressedTexSubImage2D
 
 	.align	2
 	.global	bluegl_glCompressedTexSubImage3DARB
@@ -24507,7 +24507,7 @@ bluegl_glCompressedTexSubImage3DARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTexSubImage3DARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTexSubImage3DARB, .-glCompressedTexSubImage3DARB
+	.size	bluegl_glCompressedTexSubImage3DARB, .-bluegl_glCompressedTexSubImage3DARB
 
 	.align	2
 	.global	bluegl_glProgramBinary
@@ -24517,7 +24517,7 @@ bluegl_glProgramBinary:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramBinary]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramBinary, .-glProgramBinary
+	.size	bluegl_glProgramBinary, .-bluegl_glProgramBinary
 
 	.align	2
 	.global	bluegl_glPresentFrameKeyedNV
@@ -24527,7 +24527,7 @@ bluegl_glPresentFrameKeyedNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPresentFrameKeyedNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPresentFrameKeyedNV, .-glPresentFrameKeyedNV
+	.size	bluegl_glPresentFrameKeyedNV, .-bluegl_glPresentFrameKeyedNV
 
 	.align	2
 	.global	bluegl_glVertexAttribI4bv
@@ -24537,7 +24537,7 @@ bluegl_glVertexAttribI4bv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI4bv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI4bv, .-glVertexAttribI4bv
+	.size	bluegl_glVertexAttribI4bv, .-bluegl_glVertexAttribI4bv
 
 	.align	2
 	.global	bluegl_glGetTexParameterfv
@@ -24547,7 +24547,7 @@ bluegl_glGetTexParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTexParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTexParameterfv, .-glGetTexParameterfv
+	.size	bluegl_glGetTexParameterfv, .-bluegl_glGetTexParameterfv
 
 	.align	2
 	.global	bluegl_glTransformFeedbackStreamAttribsNV
@@ -24557,7 +24557,7 @@ bluegl_glTransformFeedbackStreamAttribsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTransformFeedbackStreamAttribsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTransformFeedbackStreamAttribsNV, .-glTransformFeedbackStreamAttribsNV
+	.size	bluegl_glTransformFeedbackStreamAttribsNV, .-bluegl_glTransformFeedbackStreamAttribsNV
 
 	.align	2
 	.global	bluegl_glSecondaryColor3usEXT
@@ -24567,7 +24567,7 @@ bluegl_glSecondaryColor3usEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3usEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3usEXT, .-glSecondaryColor3usEXT
+	.size	bluegl_glSecondaryColor3usEXT, .-bluegl_glSecondaryColor3usEXT
 
 	.align	2
 	.global	bluegl_glCopyColorTableSGI
@@ -24577,7 +24577,7 @@ bluegl_glCopyColorTableSGI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyColorTableSGI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyColorTableSGI, .-glCopyColorTableSGI
+	.size	bluegl_glCopyColorTableSGI, .-bluegl_glCopyColorTableSGI
 
 	.align	2
 	.global	bluegl_glProgramEnvParameter4fvARB
@@ -24587,7 +24587,7 @@ bluegl_glProgramEnvParameter4fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramEnvParameter4fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramEnvParameter4fvARB, .-glProgramEnvParameter4fvARB
+	.size	bluegl_glProgramEnvParameter4fvARB, .-bluegl_glProgramEnvParameter4fvARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4sARB
@@ -24597,7 +24597,7 @@ bluegl_glMultiTexCoord4sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4sARB, .-glMultiTexCoord4sARB
+	.size	bluegl_glMultiTexCoord4sARB, .-bluegl_glMultiTexCoord4sARB
 
 	.align	2
 	.global	bluegl_glGetVertexArrayIndexed64iv
@@ -24607,7 +24607,7 @@ bluegl_glGetVertexArrayIndexed64iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetVertexArrayIndexed64iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetVertexArrayIndexed64iv, .-glGetVertexArrayIndexed64iv
+	.size	bluegl_glGetVertexArrayIndexed64iv, .-bluegl_glGetVertexArrayIndexed64iv
 
 	.align	2
 	.global	bluegl_glMatrixMultTranspose3x3fNV
@@ -24617,7 +24617,7 @@ bluegl_glMatrixMultTranspose3x3fNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMatrixMultTranspose3x3fNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMatrixMultTranspose3x3fNV, .-glMatrixMultTranspose3x3fNV
+	.size	bluegl_glMatrixMultTranspose3x3fNV, .-bluegl_glMatrixMultTranspose3x3fNV
 
 	.align	2
 	.global	bluegl_glTexParameterIiv
@@ -24627,7 +24627,7 @@ bluegl_glTexParameterIiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexParameterIiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexParameterIiv, .-glTexParameterIiv
+	.size	bluegl_glTexParameterIiv, .-bluegl_glTexParameterIiv
 
 	.align	2
 	.global	bluegl_glVertexArrayAttribFormat
@@ -24637,7 +24637,7 @@ bluegl_glVertexArrayAttribFormat:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexArrayAttribFormat]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexArrayAttribFormat, .-glVertexArrayAttribFormat
+	.size	bluegl_glVertexArrayAttribFormat, .-bluegl_glVertexArrayAttribFormat
 
 	.align	2
 	.global	bluegl_glEndTransformFeedback
@@ -24647,7 +24647,7 @@ bluegl_glEndTransformFeedback:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndTransformFeedback]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndTransformFeedback, .-glEndTransformFeedback
+	.size	bluegl_glEndTransformFeedback, .-bluegl_glEndTransformFeedback
 
 	.align	2
 	.global	bluegl_glDrawCommandsStatesAddressNV
@@ -24657,7 +24657,7 @@ bluegl_glDrawCommandsStatesAddressNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawCommandsStatesAddressNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawCommandsStatesAddressNV, .-glDrawCommandsStatesAddressNV
+	.size	bluegl_glDrawCommandsStatesAddressNV, .-bluegl_glDrawCommandsStatesAddressNV
 
 	.align	2
 	.global	bluegl_glUniform4ui64NV
@@ -24667,7 +24667,7 @@ bluegl_glUniform4ui64NV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4ui64NV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4ui64NV, .-glUniform4ui64NV
+	.size	bluegl_glUniform4ui64NV, .-bluegl_glUniform4ui64NV
 
 	.align	2
 	.global	bluegl_glVertexAttrib4usv
@@ -24677,7 +24677,7 @@ bluegl_glVertexAttrib4usv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib4usv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib4usv, .-glVertexAttrib4usv
+	.size	bluegl_glVertexAttrib4usv, .-bluegl_glVertexAttrib4usv
 
 	.align	2
 	.global	bluegl_glTexImage2DMultisample
@@ -24687,7 +24687,7 @@ bluegl_glTexImage2DMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage2DMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage2DMultisample, .-glTexImage2DMultisample
+	.size	bluegl_glTexImage2DMultisample, .-bluegl_glTexImage2DMultisample
 
 	.align	2
 	.global	bluegl_glBindTextureEXT
@@ -24697,7 +24697,7 @@ bluegl_glBindTextureEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTextureEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTextureEXT, .-glBindTextureEXT
+	.size	bluegl_glBindTextureEXT, .-bluegl_glBindTextureEXT
 
 	.align	2
 	.global	bluegl_glVertexAttribI1iv
@@ -24707,7 +24707,7 @@ bluegl_glVertexAttribI1iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1iv, .-glVertexAttribI1iv
+	.size	bluegl_glVertexAttribI1iv, .-bluegl_glVertexAttribI1iv
 
 	.align	2
 	.global	bluegl_glGetFinalCombinerInputParameterfvNV
@@ -24717,7 +24717,7 @@ bluegl_glGetFinalCombinerInputParameterfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFinalCombinerInputParameterfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFinalCombinerInputParameterfvNV, .-glGetFinalCombinerInputParameterfvNV
+	.size	bluegl_glGetFinalCombinerInputParameterfvNV, .-bluegl_glGetFinalCombinerInputParameterfvNV
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3bvOES
@@ -24727,7 +24727,7 @@ bluegl_glMultiTexCoord3bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3bvOES, .-glMultiTexCoord3bvOES
+	.size	bluegl_glMultiTexCoord3bvOES, .-bluegl_glMultiTexCoord3bvOES
 
 	.align	2
 	.global	bluegl_glVertexAttribDivisor
@@ -24737,7 +24737,7 @@ bluegl_glVertexAttribDivisor:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribDivisor]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribDivisor, .-glVertexAttribDivisor
+	.size	bluegl_glVertexAttribDivisor, .-bluegl_glVertexAttribDivisor
 
 	.align	2
 	.global	bluegl_glGetCompressedTextureImage
@@ -24747,7 +24747,7 @@ bluegl_glGetCompressedTextureImage:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCompressedTextureImage]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCompressedTextureImage, .-glGetCompressedTextureImage
+	.size	bluegl_glGetCompressedTextureImage, .-bluegl_glGetCompressedTextureImage
 
 	.align	2
 	.global	bluegl_glBindTexGenParameterEXT
@@ -24757,7 +24757,7 @@ bluegl_glBindTexGenParameterEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindTexGenParameterEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindTexGenParameterEXT, .-glBindTexGenParameterEXT
+	.size	bluegl_glBindTexGenParameterEXT, .-bluegl_glBindTexGenParameterEXT
 
 	.align	2
 	.global	bluegl_glNormalStream3bATI
@@ -24767,7 +24767,7 @@ bluegl_glNormalStream3bATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalStream3bATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalStream3bATI, .-glNormalStream3bATI
+	.size	bluegl_glNormalStream3bATI, .-bluegl_glNormalStream3bATI
 
 	.align	2
 	.global	bluegl_glVertexAttribs1svNV
@@ -24777,7 +24777,7 @@ bluegl_glVertexAttribs1svNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs1svNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs1svNV, .-glVertexAttribs1svNV
+	.size	bluegl_glVertexAttribs1svNV, .-bluegl_glVertexAttribs1svNV
 
 	.align	2
 	.global	bluegl_glTextureImage2DEXT
@@ -24787,7 +24787,7 @@ bluegl_glTextureImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureImage2DEXT, .-glTextureImage2DEXT
+	.size	bluegl_glTextureImage2DEXT, .-bluegl_glTextureImage2DEXT
 
 	.align	2
 	.global	bluegl_glGetColorTableParameteriv
@@ -24797,7 +24797,7 @@ bluegl_glGetColorTableParameteriv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetColorTableParameteriv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetColorTableParameteriv, .-glGetColorTableParameteriv
+	.size	bluegl_glGetColorTableParameteriv, .-bluegl_glGetColorTableParameteriv
 
 	.align	2
 	.global	bluegl_glTexCoord4xOES
@@ -24807,7 +24807,7 @@ bluegl_glTexCoord4xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord4xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord4xOES, .-glTexCoord4xOES
+	.size	bluegl_glTexCoord4xOES, .-bluegl_glTexCoord4xOES
 
 	.align	2
 	.global	bluegl_glSecondaryColor3fvEXT
@@ -24817,7 +24817,7 @@ bluegl_glSecondaryColor3fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSecondaryColor3fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSecondaryColor3fvEXT, .-glSecondaryColor3fvEXT
+	.size	bluegl_glSecondaryColor3fvEXT, .-bluegl_glSecondaryColor3fvEXT
 
 	.align	2
 	.global	bluegl_glUniformMatrix4x2fv
@@ -24827,7 +24827,7 @@ bluegl_glUniformMatrix4x2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix4x2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix4x2fv, .-glUniformMatrix4x2fv
+	.size	bluegl_glUniformMatrix4x2fv, .-bluegl_glUniformMatrix4x2fv
 
 	.align	2
 	.global	bluegl_glGetUniformi64vARB
@@ -24837,7 +24837,7 @@ bluegl_glGetUniformi64vARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformi64vARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformi64vARB, .-glGetUniformi64vARB
+	.size	bluegl_glGetUniformi64vARB, .-bluegl_glGetUniformi64vARB
 
 	.align	2
 	.global	bluegl_glProgramNamedParameter4fvNV
@@ -24847,7 +24847,7 @@ bluegl_glProgramNamedParameter4fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramNamedParameter4fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramNamedParameter4fvNV, .-glProgramNamedParameter4fvNV
+	.size	bluegl_glProgramNamedParameter4fvNV, .-bluegl_glProgramNamedParameter4fvNV
 
 	.align	2
 	.global	bluegl_glEndVideoCaptureNV
@@ -24857,7 +24857,7 @@ bluegl_glEndVideoCaptureNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEndVideoCaptureNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEndVideoCaptureNV, .-glEndVideoCaptureNV
+	.size	bluegl_glEndVideoCaptureNV, .-bluegl_glEndVideoCaptureNV
 
 	.align	2
 	.global	bluegl_glVertexAttrib3dv
@@ -24867,7 +24867,7 @@ bluegl_glVertexAttrib3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3dv, .-glVertexAttrib3dv
+	.size	bluegl_glVertexAttrib3dv, .-bluegl_glVertexAttrib3dv
 
 	.align	2
 	.global	bluegl_glNamedFramebufferTexture1DEXT
@@ -24877,7 +24877,7 @@ bluegl_glNamedFramebufferTexture1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedFramebufferTexture1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedFramebufferTexture1DEXT, .-glNamedFramebufferTexture1DEXT
+	.size	bluegl_glNamedFramebufferTexture1DEXT, .-bluegl_glNamedFramebufferTexture1DEXT
 
 	.align	2
 	.global	bluegl_glMapBufferRange
@@ -24887,7 +24887,7 @@ bluegl_glMapBufferRange:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMapBufferRange]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMapBufferRange, .-glMapBufferRange
+	.size	bluegl_glMapBufferRange, .-bluegl_glMapBufferRange
 
 	.align	2
 	.global	bluegl_glMultiDrawElementsIndirectCountARB
@@ -24897,7 +24897,7 @@ bluegl_glMultiDrawElementsIndirectCountARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementsIndirectCountARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementsIndirectCountARB, .-glMultiDrawElementsIndirectCountARB
+	.size	bluegl_glMultiDrawElementsIndirectCountARB, .-bluegl_glMultiDrawElementsIndirectCountARB
 
 	.align	2
 	.global	bluegl_glProgramUniformMatrix4x2fv
@@ -24907,7 +24907,7 @@ bluegl_glProgramUniformMatrix4x2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniformMatrix4x2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniformMatrix4x2fv, .-glProgramUniformMatrix4x2fv
+	.size	bluegl_glProgramUniformMatrix4x2fv, .-bluegl_glProgramUniformMatrix4x2fv
 
 	.align	2
 	.global	bluegl_glGetTextureParameterIivEXT
@@ -24917,7 +24917,7 @@ bluegl_glGetTextureParameterIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetTextureParameterIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetTextureParameterIivEXT, .-glGetTextureParameterIivEXT
+	.size	bluegl_glGetTextureParameterIivEXT, .-bluegl_glGetTextureParameterIivEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord3hNV
@@ -24927,7 +24927,7 @@ bluegl_glMultiTexCoord3hNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord3hNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord3hNV, .-glMultiTexCoord3hNV
+	.size	bluegl_glMultiTexCoord3hNV, .-bluegl_glMultiTexCoord3hNV
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParametersI4uivEXT
@@ -24937,7 +24937,7 @@ bluegl_glNamedProgramLocalParametersI4uivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParametersI4uivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParametersI4uivEXT, .-glNamedProgramLocalParametersI4uivEXT
+	.size	bluegl_glNamedProgramLocalParametersI4uivEXT, .-bluegl_glNamedProgramLocalParametersI4uivEXT
 
 	.align	2
 	.global	bluegl_glTexCoord2fColor4fNormal3fVertex3fSUN
@@ -24947,7 +24947,7 @@ bluegl_glTexCoord2fColor4fNormal3fVertex3fSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoord2fColor4fNormal3fVertex3fSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoord2fColor4fNormal3fVertex3fSUN, .-glTexCoord2fColor4fNormal3fVertex3fSUN
+	.size	bluegl_glTexCoord2fColor4fNormal3fVertex3fSUN, .-bluegl_glTexCoord2fColor4fNormal3fVertex3fSUN
 
 	.align	2
 	.global	bluegl_glGenTransformFeedbacksNV
@@ -24957,7 +24957,7 @@ bluegl_glGenTransformFeedbacksNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenTransformFeedbacksNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenTransformFeedbacksNV, .-glGenTransformFeedbacksNV
+	.size	bluegl_glGenTransformFeedbacksNV, .-bluegl_glGenTransformFeedbacksNV
 
 	.align	2
 	.global	bluegl_glVertexAttribI2iv
@@ -24967,7 +24967,7 @@ bluegl_glVertexAttribI2iv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI2iv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI2iv, .-glVertexAttribI2iv
+	.size	bluegl_glVertexAttribI2iv, .-bluegl_glVertexAttribI2iv
 
 	.align	2
 	.global	bluegl_glCopyMultiTexImage2DEXT
@@ -24977,7 +24977,7 @@ bluegl_glCopyMultiTexImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyMultiTexImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyMultiTexImage2DEXT, .-glCopyMultiTexImage2DEXT
+	.size	bluegl_glCopyMultiTexImage2DEXT, .-bluegl_glCopyMultiTexImage2DEXT
 
 	.align	2
 	.global	bluegl_glVertex3bvOES
@@ -24987,7 +24987,7 @@ bluegl_glVertex3bvOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertex3bvOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertex3bvOES, .-glVertex3bvOES
+	.size	bluegl_glVertex3bvOES, .-bluegl_glVertex3bvOES
 
 	.align	2
 	.global	bluegl_glTexImage3DMultisampleCoverageNV
@@ -24997,7 +24997,7 @@ bluegl_glTexImage3DMultisampleCoverageNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage3DMultisampleCoverageNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage3DMultisampleCoverageNV, .-glTexImage3DMultisampleCoverageNV
+	.size	bluegl_glTexImage3DMultisampleCoverageNV, .-bluegl_glTexImage3DMultisampleCoverageNV
 
 	.align	2
 	.global	bluegl_glGetShaderPrecisionFormat
@@ -25007,7 +25007,7 @@ bluegl_glGetShaderPrecisionFormat:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetShaderPrecisionFormat]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetShaderPrecisionFormat, .-glGetShaderPrecisionFormat
+	.size	bluegl_glGetShaderPrecisionFormat, .-bluegl_glGetShaderPrecisionFormat
 
 	.align	2
 	.global	bluegl_glTexSubImage4DSGIS
@@ -25017,7 +25017,7 @@ bluegl_glTexSubImage4DSGIS:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexSubImage4DSGIS]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexSubImage4DSGIS, .-glTexSubImage4DSGIS
+	.size	bluegl_glTexSubImage4DSGIS, .-bluegl_glTexSubImage4DSGIS
 
 	.align	2
 	.global	bluegl_glRasterSamplesEXT
@@ -25027,7 +25027,7 @@ bluegl_glRasterSamplesEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRasterSamplesEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRasterSamplesEXT, .-glRasterSamplesEXT
+	.size	bluegl_glRasterSamplesEXT, .-bluegl_glRasterSamplesEXT
 
 	.align	2
 	.global	bluegl_glTextureView
@@ -25037,7 +25037,7 @@ bluegl_glTextureView:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureView]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureView, .-glTextureView
+	.size	bluegl_glTextureView, .-bluegl_glTextureView
 
 	.align	2
 	.global	bluegl_glEvalMapsNV
@@ -25047,7 +25047,7 @@ bluegl_glEvalMapsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEvalMapsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEvalMapsNV, .-glEvalMapsNV
+	.size	bluegl_glEvalMapsNV, .-bluegl_glEvalMapsNV
 
 	.align	2
 	.global	bluegl_glGetFragDataLocationEXT
@@ -25057,7 +25057,7 @@ bluegl_glGetFragDataLocationEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetFragDataLocationEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetFragDataLocationEXT, .-glGetFragDataLocationEXT
+	.size	bluegl_glGetFragDataLocationEXT, .-bluegl_glGetFragDataLocationEXT
 
 	.align	2
 	.global	bluegl_glGetCompressedMultiTexImageEXT
@@ -25067,7 +25067,7 @@ bluegl_glGetCompressedMultiTexImageEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetCompressedMultiTexImageEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetCompressedMultiTexImageEXT, .-glGetCompressedMultiTexImageEXT
+	.size	bluegl_glGetCompressedMultiTexImageEXT, .-bluegl_glGetCompressedMultiTexImageEXT
 
 	.align	2
 	.global	bluegl_glDrawBuffersARB
@@ -25077,7 +25077,7 @@ bluegl_glDrawBuffersARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawBuffersARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawBuffersARB, .-glDrawBuffersARB
+	.size	bluegl_glDrawBuffersARB, .-bluegl_glDrawBuffersARB
 
 	.align	2
 	.global	bluegl_glShaderSource
@@ -25087,7 +25087,7 @@ bluegl_glShaderSource:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glShaderSource]
 	ldr	x16, [x16]
 	br	x16
-	.size	glShaderSource, .-glShaderSource
+	.size	bluegl_glShaderSource, .-bluegl_glShaderSource
 
 	.align	2
 	.global	bluegl_glGetnSeparableFilter
@@ -25097,7 +25097,7 @@ bluegl_glGetnSeparableFilter:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnSeparableFilter]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnSeparableFilter, .-glGetnSeparableFilter
+	.size	bluegl_glGetnSeparableFilter, .-bluegl_glGetnSeparableFilter
 
 	.align	2
 	.global	bluegl_glGetActiveUniformBlockName
@@ -25107,7 +25107,7 @@ bluegl_glGetActiveUniformBlockName:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetActiveUniformBlockName]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetActiveUniformBlockName, .-glGetActiveUniformBlockName
+	.size	bluegl_glGetActiveUniformBlockName, .-bluegl_glGetActiveUniformBlockName
 
 	.align	2
 	.global	bluegl_glTexCoordP2uiv
@@ -25117,7 +25117,7 @@ bluegl_glTexCoordP2uiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP2uiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP2uiv, .-glTexCoordP2uiv
+	.size	bluegl_glTexCoordP2uiv, .-bluegl_glTexCoordP2uiv
 
 	.align	2
 	.global	bluegl_glCopyTexImage2DEXT
@@ -25127,7 +25127,7 @@ bluegl_glCopyTexImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexImage2DEXT, .-glCopyTexImage2DEXT
+	.size	bluegl_glCopyTexImage2DEXT, .-bluegl_glCopyTexImage2DEXT
 
 	.align	2
 	.global	bluegl_glGetNamedBufferParameteri64v
@@ -25137,7 +25137,7 @@ bluegl_glGetNamedBufferParameteri64v:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetNamedBufferParameteri64v]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetNamedBufferParameteri64v, .-glGetNamedBufferParameteri64v
+	.size	bluegl_glGetNamedBufferParameteri64v, .-bluegl_glGetNamedBufferParameteri64v
 
 	.align	2
 	.global	bluegl_glCommandListSegmentsNV
@@ -25147,7 +25147,7 @@ bluegl_glCommandListSegmentsNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCommandListSegmentsNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCommandListSegmentsNV, .-glCommandListSegmentsNV
+	.size	bluegl_glCommandListSegmentsNV, .-bluegl_glCommandListSegmentsNV
 
 	.align	2
 	.global	bluegl_glTextureParameterIivEXT
@@ -25157,7 +25157,7 @@ bluegl_glTextureParameterIivEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureParameterIivEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureParameterIivEXT, .-glTextureParameterIivEXT
+	.size	bluegl_glTextureParameterIivEXT, .-bluegl_glTextureParameterIivEXT
 
 	.align	2
 	.global	bluegl_glMultiTexParameterfvEXT
@@ -25167,7 +25167,7 @@ bluegl_glMultiTexParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexParameterfvEXT, .-glMultiTexParameterfvEXT
+	.size	bluegl_glMultiTexParameterfvEXT, .-bluegl_glMultiTexParameterfvEXT
 
 	.align	2
 	.global	bluegl_glProgramUniform2ui64ARB
@@ -25177,7 +25177,7 @@ bluegl_glProgramUniform2ui64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform2ui64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform2ui64ARB, .-glProgramUniform2ui64ARB
+	.size	bluegl_glProgramUniform2ui64ARB, .-bluegl_glProgramUniform2ui64ARB
 
 	.align	2
 	.global	bluegl_glNewObjectBufferATI
@@ -25187,7 +25187,7 @@ bluegl_glNewObjectBufferATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNewObjectBufferATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNewObjectBufferATI, .-glNewObjectBufferATI
+	.size	bluegl_glNewObjectBufferATI, .-bluegl_glNewObjectBufferATI
 
 	.align	2
 	.global	bluegl_glDeleteAsyncMarkersSGIX
@@ -25197,7 +25197,7 @@ bluegl_glDeleteAsyncMarkersSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDeleteAsyncMarkersSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDeleteAsyncMarkersSGIX, .-glDeleteAsyncMarkersSGIX
+	.size	bluegl_glDeleteAsyncMarkersSGIX, .-bluegl_glDeleteAsyncMarkersSGIX
 
 	.align	2
 	.global	bluegl_glRotatexOES
@@ -25207,7 +25207,7 @@ bluegl_glRotatexOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glRotatexOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glRotatexOES, .-glRotatexOES
+	.size	bluegl_glRotatexOES, .-bluegl_glRotatexOES
 
 	.align	2
 	.global	bluegl_glTextureImage1DEXT
@@ -25217,7 +25217,7 @@ bluegl_glTextureImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTextureImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTextureImage1DEXT, .-glTextureImage1DEXT
+	.size	bluegl_glTextureImage1DEXT, .-bluegl_glTextureImage1DEXT
 
 	.align	2
 	.global	bluegl_glAttachObjectARB
@@ -25227,7 +25227,7 @@ bluegl_glAttachObjectARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glAttachObjectARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glAttachObjectARB, .-glAttachObjectARB
+	.size	bluegl_glAttachObjectARB, .-bluegl_glAttachObjectARB
 
 	.align	2
 	.global	bluegl_glCopyTexSubImage1DEXT
@@ -25237,7 +25237,7 @@ bluegl_glCopyTexSubImage1DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTexSubImage1DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTexSubImage1DEXT, .-glCopyTexSubImage1DEXT
+	.size	bluegl_glCopyTexSubImage1DEXT, .-bluegl_glCopyTexSubImage1DEXT
 
 	.align	2
 	.global	bluegl_glUniformMatrix3fvARB
@@ -25247,7 +25247,7 @@ bluegl_glUniformMatrix3fvARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniformMatrix3fvARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniformMatrix3fvARB, .-glUniformMatrix3fvARB
+	.size	bluegl_glUniformMatrix3fvARB, .-bluegl_glUniformMatrix3fvARB
 
 	.align	2
 	.global	bluegl_glTexCoordP1ui
@@ -25257,7 +25257,7 @@ bluegl_glTexCoordP1ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexCoordP1ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexCoordP1ui, .-glTexCoordP1ui
+	.size	bluegl_glTexCoordP1ui, .-bluegl_glTexCoordP1ui
 
 	.align	2
 	.global	bluegl_glPointParameterfvEXT
@@ -25267,7 +25267,7 @@ bluegl_glPointParameterfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glPointParameterfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glPointParameterfvEXT, .-glPointParameterfvEXT
+	.size	bluegl_glPointParameterfvEXT, .-bluegl_glPointParameterfvEXT
 
 	.align	2
 	.global	bluegl_glUniform4fARB
@@ -25277,7 +25277,7 @@ bluegl_glUniform4fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform4fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform4fARB, .-glUniform4fARB
+	.size	bluegl_glUniform4fARB, .-bluegl_glUniform4fARB
 
 	.align	2
 	.global	bluegl_glVertexAttribs3fvNV
@@ -25287,7 +25287,7 @@ bluegl_glVertexAttribs3fvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribs3fvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribs3fvNV, .-glVertexAttribs3fvNV
+	.size	bluegl_glVertexAttribs3fvNV, .-bluegl_glVertexAttribs3fvNV
 
 	.align	2
 	.global	bluegl_glCopyTextureSubImage3D
@@ -25297,7 +25297,7 @@ bluegl_glCopyTextureSubImage3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCopyTextureSubImage3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCopyTextureSubImage3D, .-glCopyTextureSubImage3D
+	.size	bluegl_glCopyTextureSubImage3D, .-bluegl_glCopyTextureSubImage3D
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2fv
@@ -25307,7 +25307,7 @@ bluegl_glMultiTexCoord2fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2fv, .-glMultiTexCoord2fv
+	.size	bluegl_glMultiTexCoord2fv, .-bluegl_glMultiTexCoord2fv
 
 	.align	2
 	.global	bluegl_glMultiTexEnvfvEXT
@@ -25317,7 +25317,7 @@ bluegl_glMultiTexEnvfvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexEnvfvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexEnvfvEXT, .-glMultiTexEnvfvEXT
+	.size	bluegl_glMultiTexEnvfvEXT, .-bluegl_glMultiTexEnvfvEXT
 
 	.align	2
 	.global	bluegl_glNormalP3ui
@@ -25327,7 +25327,7 @@ bluegl_glNormalP3ui:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalP3ui]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalP3ui, .-glNormalP3ui
+	.size	bluegl_glNormalP3ui, .-bluegl_glNormalP3ui
 
 	.align	2
 	.global	bluegl_glDrawRangeElementArrayATI
@@ -25337,7 +25337,7 @@ bluegl_glDrawRangeElementArrayATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawRangeElementArrayATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawRangeElementArrayATI, .-glDrawRangeElementArrayATI
+	.size	bluegl_glDrawRangeElementArrayATI, .-bluegl_glDrawRangeElementArrayATI
 
 	.align	2
 	.global	bluegl_glVertexAttribI1i
@@ -25347,7 +25347,7 @@ bluegl_glVertexAttribI1i:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttribI1i]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttribI1i, .-glVertexAttribI1i
+	.size	bluegl_glVertexAttribI1i, .-bluegl_glVertexAttribI1i
 
 	.align	2
 	.global	bluegl_glDrawArraysInstancedARB
@@ -25357,7 +25357,7 @@ bluegl_glDrawArraysInstancedARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawArraysInstancedARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawArraysInstancedARB, .-glDrawArraysInstancedARB
+	.size	bluegl_glDrawArraysInstancedARB, .-bluegl_glDrawArraysInstancedARB
 
 	.align	2
 	.global	bluegl_glGetDebugMessageLogARB
@@ -25367,7 +25367,7 @@ bluegl_glGetDebugMessageLogARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetDebugMessageLogARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetDebugMessageLogARB, .-glGetDebugMessageLogARB
+	.size	bluegl_glGetDebugMessageLogARB, .-bluegl_glGetDebugMessageLogARB
 
 	.align	2
 	.global	bluegl_glGetPathTexGenfvNV
@@ -25377,7 +25377,7 @@ bluegl_glGetPathTexGenfvNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetPathTexGenfvNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetPathTexGenfvNV, .-glGetPathTexGenfvNV
+	.size	bluegl_glGetPathTexGenfvNV, .-bluegl_glGetPathTexGenfvNV
 
 	.align	2
 	.global	bluegl_glNamedProgramLocalParameters4fvEXT
@@ -25387,7 +25387,7 @@ bluegl_glNamedProgramLocalParameters4fvEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNamedProgramLocalParameters4fvEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNamedProgramLocalParameters4fvEXT, .-glNamedProgramLocalParameters4fvEXT
+	.size	bluegl_glNamedProgramLocalParameters4fvEXT, .-bluegl_glNamedProgramLocalParameters4fvEXT
 
 	.align	2
 	.global	bluegl_glGetBufferPointerv
@@ -25397,7 +25397,7 @@ bluegl_glGetBufferPointerv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetBufferPointerv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetBufferPointerv, .-glGetBufferPointerv
+	.size	bluegl_glGetBufferPointerv, .-bluegl_glGetBufferPointerv
 
 	.align	2
 	.global	bluegl_glFramebufferTexture3D
@@ -25407,7 +25407,7 @@ bluegl_glFramebufferTexture3D:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTexture3D]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFramebufferTexture3D, .-glFramebufferTexture3D
+	.size	bluegl_glFramebufferTexture3D, .-bluegl_glFramebufferTexture3D
 
 	.align	2
 	.global	bluegl_glCompressedTextureSubImage2DEXT
@@ -25417,7 +25417,7 @@ bluegl_glCompressedTextureSubImage2DEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glCompressedTextureSubImage2DEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glCompressedTextureSubImage2DEXT, .-glCompressedTextureSubImage2DEXT
+	.size	bluegl_glCompressedTextureSubImage2DEXT, .-bluegl_glCompressedTextureSubImage2DEXT
 
 	.align	2
 	.global	bluegl_glReplacementCodeubSUN
@@ -25427,7 +25427,7 @@ bluegl_glReplacementCodeubSUN:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReplacementCodeubSUN]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReplacementCodeubSUN, .-glReplacementCodeubSUN
+	.size	bluegl_glReplacementCodeubSUN, .-bluegl_glReplacementCodeubSUN
 
 	.align	2
 	.global	bluegl_glWindowPos3dv
@@ -25437,7 +25437,7 @@ bluegl_glWindowPos3dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glWindowPos3dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glWindowPos3dv, .-glWindowPos3dv
+	.size	bluegl_glWindowPos3dv, .-bluegl_glWindowPos3dv
 
 	.align	2
 	.global	bluegl_glFragmentMaterialiSGIX
@@ -25447,7 +25447,7 @@ bluegl_glFragmentMaterialiSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFragmentMaterialiSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFragmentMaterialiSGIX, .-glFragmentMaterialiSGIX
+	.size	bluegl_glFragmentMaterialiSGIX, .-bluegl_glFragmentMaterialiSGIX
 
 	.align	2
 	.global	bluegl_glReadInstrumentsSGIX
@@ -25457,7 +25457,7 @@ bluegl_glReadInstrumentsSGIX:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glReadInstrumentsSGIX]
 	ldr	x16, [x16]
 	br	x16
-	.size	glReadInstrumentsSGIX, .-glReadInstrumentsSGIX
+	.size	bluegl_glReadInstrumentsSGIX, .-bluegl_glReadInstrumentsSGIX
 
 	.align	2
 	.global	bluegl_glSamplerParameterfv
@@ -25467,7 +25467,7 @@ bluegl_glSamplerParameterfv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glSamplerParameterfv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glSamplerParameterfv, .-glSamplerParameterfv
+	.size	bluegl_glSamplerParameterfv, .-bluegl_glSamplerParameterfv
 
 	.align	2
 	.global	bluegl_glBindBufferARB
@@ -25477,7 +25477,7 @@ bluegl_glBindBufferARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindBufferARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindBufferARB, .-glBindBufferARB
+	.size	bluegl_glBindBufferARB, .-bluegl_glBindBufferARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib1sNV
@@ -25487,7 +25487,7 @@ bluegl_glVertexAttrib1sNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib1sNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib1sNV, .-glVertexAttrib1sNV
+	.size	bluegl_glVertexAttrib1sNV, .-bluegl_glVertexAttrib1sNV
 
 	.align	2
 	.global	bluegl_glUniform1fv
@@ -25497,7 +25497,7 @@ bluegl_glUniform1fv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1fv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1fv, .-glUniform1fv
+	.size	bluegl_glUniform1fv, .-bluegl_glUniform1fv
 
 	.align	2
 	.global	bluegl_glBeginOcclusionQueryNV
@@ -25507,7 +25507,7 @@ bluegl_glBeginOcclusionQueryNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBeginOcclusionQueryNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBeginOcclusionQueryNV, .-glBeginOcclusionQueryNV
+	.size	bluegl_glBeginOcclusionQueryNV, .-bluegl_glBeginOcclusionQueryNV
 
 	.align	2
 	.global	bluegl_glGenFencesAPPLE
@@ -25517,7 +25517,7 @@ bluegl_glGenFencesAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGenFencesAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGenFencesAPPLE, .-glGenFencesAPPLE
+	.size	bluegl_glGenFencesAPPLE, .-bluegl_glGenFencesAPPLE
 
 	.align	2
 	.global	bluegl_glScissorIndexedv
@@ -25527,7 +25527,7 @@ bluegl_glScissorIndexedv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glScissorIndexedv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glScissorIndexedv, .-glScissorIndexedv
+	.size	bluegl_glScissorIndexedv, .-bluegl_glScissorIndexedv
 
 	.align	2
 	.global	bluegl_glDisableVariantClientStateEXT
@@ -25537,7 +25537,7 @@ bluegl_glDisableVariantClientStateEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDisableVariantClientStateEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDisableVariantClientStateEXT, .-glDisableVariantClientStateEXT
+	.size	bluegl_glDisableVariantClientStateEXT, .-bluegl_glDisableVariantClientStateEXT
 
 	.align	2
 	.global	bluegl_glMinmaxEXT
@@ -25547,7 +25547,7 @@ bluegl_glMinmaxEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMinmaxEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMinmaxEXT, .-glMinmaxEXT
+	.size	bluegl_glMinmaxEXT, .-bluegl_glMinmaxEXT
 
 	.align	2
 	.global	bluegl_glNormalPointervINTEL
@@ -25557,7 +25557,7 @@ bluegl_glNormalPointervINTEL:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glNormalPointervINTEL]
 	ldr	x16, [x16]
 	br	x16
-	.size	glNormalPointervINTEL, .-glNormalPointervINTEL
+	.size	bluegl_glNormalPointervINTEL, .-bluegl_glNormalPointervINTEL
 
 	.align	2
 	.global	bluegl_glGetnPixelMapuiv
@@ -25567,7 +25567,7 @@ bluegl_glGetnPixelMapuiv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetnPixelMapuiv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetnPixelMapuiv, .-glGetnPixelMapuiv
+	.size	bluegl_glGetnPixelMapuiv, .-bluegl_glGetnPixelMapuiv
 
 	.align	2
 	.global	bluegl_glBindMaterialParameterEXT
@@ -25577,7 +25577,7 @@ bluegl_glBindMaterialParameterEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glBindMaterialParameterEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glBindMaterialParameterEXT, .-glBindMaterialParameterEXT
+	.size	bluegl_glBindMaterialParameterEXT, .-bluegl_glBindMaterialParameterEXT
 
 	.align	2
 	.global	bluegl_glGetObjectParameterivAPPLE
@@ -25587,7 +25587,7 @@ bluegl_glGetObjectParameterivAPPLE:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetObjectParameterivAPPLE]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetObjectParameterivAPPLE, .-glGetObjectParameterivAPPLE
+	.size	bluegl_glGetObjectParameterivAPPLE, .-bluegl_glGetObjectParameterivAPPLE
 
 	.align	2
 	.global	bluegl_glVertexAttrib3sARB
@@ -25597,7 +25597,7 @@ bluegl_glVertexAttrib3sARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib3sARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib3sARB, .-glVertexAttrib3sARB
+	.size	bluegl_glVertexAttrib3sARB, .-bluegl_glVertexAttrib3sARB
 
 	.align	2
 	.global	bluegl_glUpdateObjectBufferATI
@@ -25607,7 +25607,7 @@ bluegl_glUpdateObjectBufferATI:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUpdateObjectBufferATI]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUpdateObjectBufferATI, .-glUpdateObjectBufferATI
+	.size	bluegl_glUpdateObjectBufferATI, .-bluegl_glUpdateObjectBufferATI
 
 	.align	2
 	.global	bluegl_glGetUniformBufferSizeEXT
@@ -25617,7 +25617,7 @@ bluegl_glGetUniformBufferSizeEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformBufferSizeEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformBufferSizeEXT, .-glGetUniformBufferSizeEXT
+	.size	bluegl_glGetUniformBufferSizeEXT, .-bluegl_glGetUniformBufferSizeEXT
 
 	.align	2
 	.global	bluegl_glMultiTexCoord4dv
@@ -25627,7 +25627,7 @@ bluegl_glMultiTexCoord4dv:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord4dv]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord4dv, .-glMultiTexCoord4dv
+	.size	bluegl_glMultiTexCoord4dv, .-bluegl_glMultiTexCoord4dv
 
 	.align	2
 	.global	bluegl_glProgramUniform3i64ARB
@@ -25637,7 +25637,7 @@ bluegl_glProgramUniform3i64ARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glProgramUniform3i64ARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glProgramUniform3i64ARB, .-glProgramUniform3i64ARB
+	.size	bluegl_glProgramUniform3i64ARB, .-bluegl_glProgramUniform3i64ARB
 
 	.align	2
 	.global	bluegl_glVertexAttrib2d
@@ -25647,7 +25647,7 @@ bluegl_glVertexAttrib2d:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2d]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2d, .-glVertexAttrib2d
+	.size	bluegl_glVertexAttrib2d, .-bluegl_glVertexAttrib2d
 
 	.align	2
 	.global	bluegl_glVertexAttrib2f
@@ -25657,7 +25657,7 @@ bluegl_glVertexAttrib2f:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2f]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2f, .-glVertexAttrib2f
+	.size	bluegl_glVertexAttrib2f, .-bluegl_glVertexAttrib2f
 
 	.align	2
 	.global	bluegl_glMultiDrawElementsEXT
@@ -25667,7 +25667,7 @@ bluegl_glMultiDrawElementsEXT:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiDrawElementsEXT]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiDrawElementsEXT, .-glMultiDrawElementsEXT
+	.size	bluegl_glMultiDrawElementsEXT, .-bluegl_glMultiDrawElementsEXT
 
 	.align	2
 	.global	bluegl_glUniform1fARB
@@ -25677,7 +25677,7 @@ bluegl_glUniform1fARB:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glUniform1fARB]
 	ldr	x16, [x16]
 	br	x16
-	.size	glUniform1fARB, .-glUniform1fARB
+	.size	bluegl_glUniform1fARB, .-bluegl_glUniform1fARB
 
 	.align	2
 	.global	bluegl_glMultiTexCoord2bOES
@@ -25687,7 +25687,7 @@ bluegl_glMultiTexCoord2bOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glMultiTexCoord2bOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glMultiTexCoord2bOES, .-glMultiTexCoord2bOES
+	.size	bluegl_glMultiTexCoord2bOES, .-bluegl_glMultiTexCoord2bOES
 
 	.align	2
 	.global	bluegl_glVertexAttrib2s
@@ -25697,7 +25697,7 @@ bluegl_glVertexAttrib2s:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glVertexAttrib2s]
 	ldr	x16, [x16]
 	br	x16
-	.size	glVertexAttrib2s, .-glVertexAttrib2s
+	.size	bluegl_glVertexAttrib2s, .-bluegl_glVertexAttrib2s
 
 	.align	2
 	.global	bluegl_glTexImage3DMultisample
@@ -25707,7 +25707,7 @@ bluegl_glTexImage3DMultisample:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glTexImage3DMultisample]
 	ldr	x16, [x16]
 	br	x16
-	.size	glTexImage3DMultisample, .-glTexImage3DMultisample
+	.size	bluegl_glTexImage3DMultisample, .-bluegl_glTexImage3DMultisample
 
 	.align	2
 	.global	bluegl_glGetUniformBlockIndex
@@ -25717,7 +25717,7 @@ bluegl_glGetUniformBlockIndex:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glGetUniformBlockIndex]
 	ldr	x16, [x16]
 	br	x16
-	.size	glGetUniformBlockIndex, .-glGetUniformBlockIndex
+	.size	bluegl_glGetUniformBlockIndex, .-bluegl_glGetUniformBlockIndex
 
 	.align	2
 	.global	bluegl_glFrontFace
@@ -25727,7 +25727,7 @@ bluegl_glFrontFace:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFrontFace]
 	ldr	x16, [x16]
 	br	x16
-	.size	glFrontFace, .-glFrontFace
+	.size	bluegl_glFrontFace, .-bluegl_glFrontFace
 
 	.align	2
 	.global	bluegl_glEvalCoord1xOES
@@ -25737,7 +25737,7 @@ bluegl_glEvalCoord1xOES:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glEvalCoord1xOES]
 	ldr	x16, [x16]
 	br	x16
-	.size	glEvalCoord1xOES, .-glEvalCoord1xOES
+	.size	bluegl_glEvalCoord1xOES, .-bluegl_glEvalCoord1xOES
 
 	.align	2
 	.global	bluegl_glDrawArraysInstancedBaseInstance
@@ -25747,7 +25747,7 @@ bluegl_glDrawArraysInstancedBaseInstance:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glDrawArraysInstancedBaseInstance]
 	ldr	x16, [x16]
 	br	x16
-	.size	glDrawArraysInstancedBaseInstance, .-glDrawArraysInstancedBaseInstance
+	.size	bluegl_glDrawArraysInstancedBaseInstance, .-bluegl_glDrawArraysInstancedBaseInstance
 
 	.align	2
 	.global	bluegl_glIsPointInStrokePathNV
@@ -25757,4 +25757,4 @@ bluegl_glIsPointInStrokePathNV:
 	ldr	x16, [x16, #:got_lo12:__blue_glCore_glIsPointInStrokePathNV]
 	ldr	x16, [x16]
 	br	x16
-	.size	glIsPointInStrokePathNV, .-glIsPointInStrokePathNV
+	.size	bluegl_glIsPointInStrokePathNV, .-bluegl_glIsPointInStrokePathNV
