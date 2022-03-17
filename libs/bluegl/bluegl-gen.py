@@ -52,8 +52,20 @@ def generateHeader(api, functions, include_dir, output_dir):
     print('Generating public header %s...' % src_file)
 
     headers = ''
-    if len(api['defines']) > 0:
-        headers += '\n'.join('#define %s 1' % d for d in api['defines'])
+    defines = api['defines']
+    if len(defines) > 0:
+        # special case for GL_GLEXT_PROTOTYPES
+        if 'GL_GLEXT_PROTOTYPES' in defines:
+            headers += '''
+// MSVC includes .../Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h, with gl APIs conflicting with
+// bluegl\include\GL/glcorearb.h, causing errors for OpenGL APIs such as:
+// error C2375:  'glBindTexture': redefinition; different linkage
+#ifndef FILAMENT_PLATFORM_WGL
+    #define GL_GLEXT_PROTOTYPES 1
+#endif
+'''
+            defines.remove('GL_GLEXT_PROTOTYPES')
+        headers += '\n'.join('#define %s 1' % d for d in defines)
         headers += '\n\n'
     headers += '\n'.join('#include <%s/%s>' % (api['directory'], r) for r in api['headers'])
 

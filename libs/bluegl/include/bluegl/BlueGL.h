@@ -22,7 +22,14 @@
 #ifndef TNT_FILAMENT_BLUEGL__H
 #define TNT_FILAMENT_BLUEGL__H
 
-#define GL_GLEXT_PROTOTYPES 1
+
+// MSVC includes .../Windows Kits\Include.0.17763.0\um\GL/gl.h, with gl APIs conflicting with
+// bluegl\include\GL/glcorearb.h, causing errors for OpenGL APIs such as:
+// error C2375:  'glBindTexture': redefinition; different linkage
+#ifndef FILAMENT_PLATFORM_WGL
+    #define GL_GLEXT_PROTOTYPES 1
+#endif
+
 
 #include <GL/glcorearb.h>
 #include <GL/glext.h>
