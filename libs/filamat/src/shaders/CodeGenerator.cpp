@@ -621,7 +621,6 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
         }
 
         out << SHADERS_AMBIENT_OCCLUSION_FS_DATA;
-        out << SHADERS_LIGHT_REFLECTIONS_FS_DATA;   // TODO: keep this because it'll be nedeed for translucents reflections
         out << SHADERS_LIGHT_INDIRECT_FS_DATA;
 
         if (variant.hasDirectionalLighting()) {
