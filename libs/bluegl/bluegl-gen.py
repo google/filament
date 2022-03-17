@@ -52,8 +52,20 @@ def generateHeader(api, functions, include_dir, output_dir):
     print('Generating public header %s...' % src_file)
 
     headers = ''
-    if len(api['defines']) > 0:
-        headers += '\n'.join('#define %s 1' % d for d in api['defines'])
+    defines = api['defines']
+    if len(defines) > 0:
+        # special case for GL_GLEXT_PROTOTYPES
+        if 'GL_GLEXT_PROTOTYPES' in defines:
+            headers += '''
+// MSVC includes .../Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h, with gl APIs conflicting with
+// bluegl\include\GL/glcorearb.h, causing errors for OpenGL APIs such as:
+// error C2375:  'glBindTexture': redefinition; different linkage
+#ifndef FILAMENT_PLATFORM_WGL
+    #define GL_GLEXT_PROTOTYPES 1
+#endif
+'''
+            defines.remove('GL_GLEXT_PROTOTYPES')
+        headers += '\n'.join('#define %s 1' % d for d in defines)
         headers += '\n\n'
     headers += '\n'.join('#include <%s/%s>' % (api['directory'], r) for r in api['headers'])
 
@@ -167,9 +179,9 @@ void unbind%(gl_suffix)s();
 
 def generateDefineHeader(api, functions, include_dir):
     suffix = api['suffix'] if api['suffix'] != 'Core' else ''
-    src_file = os.path.join(include_dir, 'bluegl', 'BlueGLWindowsDefines%s.h' % suffix)
+    src_file = os.path.join(include_dir, 'bluegl', 'BlueGLDefines%s.h' % suffix)
 
-    print('Generating Windows define header %s...' % src_file)
+    print('Generating define header %s...' % src_file)
 
     header = '''/*
  * Copyright (C) %(year)d The Android Open Source Project
@@ -283,33 +295,33 @@ def generateProxies(api, functions, output_dir, platforms):
 
     code = {
         'Linux': '''
-.global %(function)s
-.type %(function)s, %%function
-%(function)s:
+.global bluegl_%(function)s
+.type bluegl_%(function)s, %%function
+bluegl_%(function)s:
     mov __blue_gl%(suffix)s_%(function)s@GOTPCREL(%%rip), %%r11
     jmp *(%%r11)
 ''',
         'LinuxAArch64': '''
 	.align	2
-	.global	%(function)s
-	.type	%(function)s, %%function
-%(function)s:
+	.global	bluegl_%(function)s
+	.type	bluegl_%(function)s, %%function
+bluegl_%(function)s:
 	adrp	x16, :got:__blue_gl%(suffix)s_%(function)s
 	ldr	x16, [x16, #:got_lo12:__blue_gl%(suffix)s_%(function)s]
 	ldr	x16, [x16]
 	br	x16
-	.size	%(function)s, .-%(function)s
+	.size	bluegl_%(function)s, .-bluegl_%(function)s
 ''',
         'Darwin': '''
-.private_extern _%(function)s
-_%(function)s:
+.private_extern _bluegl_%(function)s
+_bluegl_%(function)s:
     mov ___blue_gl%(suffix)s_%(function)s@GOTPCREL(%%rip), %%r11
     jmp *(%%r11)
 ''',
         'DarwinAArch64': '''
-.private_extern _%(function)s
+.private_extern _bluegl_%(function)s
 	.align	2
-_%(function)s:
+_bluegl_%(function)s:
 	adrp	x16, ___blue_gl%(suffix)s_%(function)s@GOTPAGE
 	ldr	x16, [x16, ___blue_gl%(suffix)s_%(function)s@GOTPAGEOFF]
 	ldr	x16, [x16]
