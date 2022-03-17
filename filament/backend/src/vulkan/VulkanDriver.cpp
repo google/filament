@@ -1029,7 +1029,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     VulkanAttachment depth = rt->getSamples() == 1 ? rt->getDepth() : rt->getMsaaDepth();
-    VulkanTexture* depthFeedback = nullptr;
 
     VulkanDepthLayout initialDepthLayout = fromVkImageLayout(depth.getLayout());
     VulkanDepthLayout renderPassDepthLayout =
@@ -1052,7 +1051,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-None-04584)
     //
     if (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
-        depthFeedback = depth.texture;
         VkImageSubresourceRange range = {
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .baseMipLevel = 0,

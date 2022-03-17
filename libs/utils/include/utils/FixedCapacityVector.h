@@ -396,7 +396,8 @@ private:
         SizeTypeWrapper() noexcept = default;
         SizeTypeWrapper(SizeTypeWrapper const& rhs) noexcept = default;
         explicit  SizeTypeWrapper(TYPE value) noexcept : value(value) { }
-        SizeTypeWrapper operator=(TYPE rhs) noexcept { value = rhs; return *this; }
+        SizeTypeWrapper& operator=(TYPE rhs) noexcept { value = rhs; return *this; }
+        SizeTypeWrapper& operator=(SizeTypeWrapper& rhs) noexcept = delete;
         operator TYPE() const noexcept { return value; }
     };
 
