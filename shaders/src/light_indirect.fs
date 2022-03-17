@@ -523,7 +523,7 @@ vec3 evaluateRefraction(
     // distance to camera plane
     const float invLog2sqrt5 = 0.8614;
     float lod = max(0.0, (2.0f * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
-    Ft = textureLod(light_ssr, p.xy, lod).rgb;
+    Ft = textureLod(light_ssr, vec3(p.xy, 0.0), lod).rgb;
 #endif
 
     // base color changes the amount of light passing through the boundary
@@ -567,7 +567,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
             float lod = max(0.0, (log2(pixel.roughness / d) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
 #if !defined(MATERIAL_HAS_REFRACTION)
             // this is temporary, until we can access the SSR buffer when we have refraction
-            ssrFr = textureLod(light_ssr, interpolationCache.uv, lod);
+            ssrFr = textureLod(light_ssr, vec3(interpolationCache.uv, 0.0), lod);
 #endif
         }
     }

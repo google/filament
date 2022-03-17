@@ -1281,7 +1281,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
         input = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, {
                 .width = w,
                 .height = h,
+                .depth = 1,
                 .levels = roughnessLodCount,
+                .type = SamplerType::SAMPLER_2D_ARRAY,
                 .format = format,
         });
     } else {
@@ -1292,7 +1294,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
         input = ppm.opaqueBlit(fg, input, {
                 .width = w,
                 .height = h,
+                .depth = 1,
                 .levels = roughnessLodCount,
+                .type = SamplerType::SAMPLER_2D_ARRAY,
                 .format = format,
         });
         // Note: it's not possible to use the FrameGraph's forwardResource(), as an optimization
@@ -1305,7 +1309,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
      */
 
     *pLodOffset = refractionLodOffset;
-    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize, sigma0);
+    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount,
+            true, kernelSize, sigma0);
     return input;
 }
 
