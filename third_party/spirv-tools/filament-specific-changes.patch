@@ -68,6 +68,7 @@ index 70caf857a..3991bf660 100755
 +  find_host_package(PythonInterp 3 REQUIRED)
 +else()
 +  find_package(Python3 COMPONENTS Interpreter)
++  set(PYTHON_EXECUTABLE "${Python3_EXECUTABLE}")
 +endif()
 +# End Filament specific changes
  
