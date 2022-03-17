@@ -82,6 +82,7 @@ public:
 
 protected:
     HandleBase(HandleBase const& rhs) noexcept = default;
+    HandleBase& operator=(HandleBase const& rhs) noexcept = default;
 
 private:
     HandleId object;
@@ -97,6 +98,8 @@ struct Handle : public HandleBase {
     Handle() noexcept = default;
 
     Handle(Handle const& rhs) noexcept = default;
+
+    Handle& operator=(Handle const& rhs) noexcept = default;
 
     explicit Handle(HandleId id) noexcept : HandleBase(id) { }
 
