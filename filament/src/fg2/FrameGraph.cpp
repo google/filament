@@ -245,17 +245,17 @@ FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle, FrameGrap
     return handle;
 }
 
-FrameGraphHandle FrameGraph::createNewVersionForSubresourceIfNeeded(FrameGraphHandle handle) noexcept {
-    ResourceSlot& slot = getResourceSlot(handle);
+ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* node) noexcept {
+    ResourceSlot& slot = getResourceSlot(node->resourceHandle);
     if (slot.sid < 0) {
         // if we don't already have a new ResourceNode for this resource, create one.
         // we keep the old ResourceNode index so we can direct all the reads to it.
         slot.sid = slot.nid; // record the current ResourceNode of the parent
         slot.nid = mResourceNodes.size();   // create the new parent node
-        ResourceNode* newNode = mArena.make<ResourceNode>(*this, handle, FrameGraphHandle{});
-        mResourceNodes.push_back(newNode);
+        node = mArena.make<ResourceNode>(*this, node->resourceHandle, FrameGraphHandle{});
+        mResourceNodes.push_back(node);
     }
-    return handle;
+    return node;
 }
 
 FrameGraphHandle FrameGraph::addResourceInternal(VirtualResource* resource) noexcept {
@@ -351,8 +351,7 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
     if (resource->isSubResource()) {
         assert_invariant(parentNode);
         // FIXME: do we need the equivalent of hasWriterPass() test below
-        createNewVersionForSubresourceIfNeeded(parentNode->resourceHandle);
-        parentNode = node->getParentNode();
+        parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
     }
 
     // if this node already writes to this resource, just update the used bits
@@ -396,11 +395,27 @@ FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle resourceHa
         return {};
     }
 
-    getActiveResourceNode(replaceResourceHandle)->setForwardResourceDependency(
-            getActiveResourceNode(resourceHandle));
+    ResourceSlot& replacedResourceSlot = getResourceSlot(replaceResourceHandle);
+    ResourceNode* const replacedResourceNode = getActiveResourceNode(replaceResourceHandle);
 
     ResourceSlot const& resourceSlot = getResourceSlot(resourceHandle);
-    ResourceSlot& replacedResourceSlot = getResourceSlot(replaceResourceHandle);
+    ResourceNode* const resourceNode = getActiveResourceNode(resourceHandle);
+    VirtualResource* const resource = getResource(resourceHandle);
+
+    replacedResourceNode->setForwardResourceDependency(resourceNode);
+
+    if (resource->isSubResource() && replacedResourceNode->hasWriterPass()) {
+        // if the replaced resource is written to and replaced by a subresource -- meaning
+        // that now it's that subresource that is being written to, we need to add a
+        // write-dependency from this subresource to its parent node (which effectively is
+        // being written as well). This would normally happen during write(), but here
+        // the write has already happened.
+        // We create a new version of the parent node to ensure nobody writes into it beyond
+        // this point (note: it's not completely clear to me if this is needed/correct).
+        ResourceNode* parentNode = resourceNode->getParentNode();
+        parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
+        resourceNode->setParentWriteDependency(parentNode);
+    }
 
     replacedResourceSlot.rid = resourceSlot.rid;
     // nid is unchanged, because we keep our node which has the graph information
