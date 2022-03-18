@@ -275,7 +275,7 @@ FrameGraphHandle FrameGraph::addSubResourceInternal(FrameGraphHandle parent,
 }
 
 FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* passNode,
-        std::function<bool(ResourceNode*, VirtualResource*)> connect) {
+        const std::function<bool(ResourceNode*, VirtualResource*)>& connect) {
 
     if (!assertValid(handle)) {
         return {};
@@ -301,16 +301,25 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
     // Connect can fail if usage flags are incorrectly used
     if (connect(node, resource)) {
         if (resource->isSubResource()) {
-            // this is read() to a subresource, so we need to add a "read" from the the parent's
+            // this is a read() from a subresource, so we need to add a "read" from the parent's
             // node to the subresource -- but we may have two parent nodes, one for reads and
             // one for writes, so we need to use the one for reads.
             auto* parentNode = node->getParentNode();
             ResourceSlot& slot = getResourceSlot(parentNode->resourceHandle);
             if (slot.sid >= 0) {
-                // we have a parent's node for reads, use the one
+                // we have a parent's node for reads, use that one
                 parentNode = mResourceNodes[slot.sid];
             }
             node->setParentReadDependency(parentNode);
+        } else {
+            // we're reading from a top-level resource (i.e. not a subresource), but this
+            // resource is a parent of some subresource and it might exist as a version for
+            // writing, in this case we need to add a dependency from its "read" version to
+            // itself.
+            ResourceSlot& slot = getResourceSlot(handle);
+            if (slot.sid >= 0) {
+                node->setParentReadDependency(mResourceNodes[slot.sid]);
+            }
         }
 
         // if a resource has a subresource, then its handle becomes valid again as soon as it's used.
@@ -328,7 +337,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
 }
 
 FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* passNode,
-        std::function<bool(ResourceNode*, VirtualResource*)> connect) {
+        const std::function<bool(ResourceNode*, VirtualResource*)>& connect) {
     if (!assertValid(handle)) {
         return {};
     }
@@ -394,7 +403,8 @@ FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle resourceHa
     ResourceSlot& replacedResourceSlot = getResourceSlot(replaceResourceHandle);
 
     replacedResourceSlot.rid = resourceSlot.rid;
-    // FIXME: what should happen with .sid and .nid?
+    // nid is unchanged, because we keep our node which has the graph information
+    // FIXME: what should happen with .sid?
 
     // makes the replaceResourceHandle forever invalid
     replacedResourceSlot.version = -1;

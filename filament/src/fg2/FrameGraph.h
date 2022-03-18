@@ -393,9 +393,9 @@ private:
     FrameGraphHandle addResourceInternal(VirtualResource* resource) noexcept;
     FrameGraphHandle addSubResourceInternal(FrameGraphHandle parent, VirtualResource* resource) noexcept;
     FrameGraphHandle readInternal(FrameGraphHandle handle, PassNode* passNode,
-            std::function<bool(ResourceNode*, VirtualResource*)> connect);
+            const std::function<bool(ResourceNode*, VirtualResource*)>& connect);
     FrameGraphHandle writeInternal(FrameGraphHandle handle, PassNode* passNode,
-            std::function<bool(ResourceNode*, VirtualResource*)> connect);
+            const std::function<bool(ResourceNode*, VirtualResource*)>& connect);
     FrameGraphHandle forwardResourceInternal(FrameGraphHandle resourceHandle,
             FrameGraphHandle replaceResourceHandle);
 
