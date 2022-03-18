@@ -2975,10 +2975,14 @@ void OpenGLDriver::endFrame(uint32_t frameId) {
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
     // done with the frame. We do NOT officially support using Filament in this way, but we can
     // at least do some minimal safety things here, such as resetting the VAO to 0.
-    mContext.bindVertexArray(nullptr);
+    auto& gl = mContext;
+    gl.bindVertexArray(nullptr);
     for (int unit = OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1; unit >= 0; unit--) {
-        mContext.bindTexture(unit, GL_TEXTURE_2D, 0);
+        gl.bindTexture(unit, GL_TEXTURE_2D, 0);
     }
+    gl.disable(GL_CULL_FACE);
+    gl.depthFunc(GL_LESS);
+    gl.disable(GL_SCISSOR_TEST);
 #endif
     //glFinish();
     insertEventMarker("endFrame");
