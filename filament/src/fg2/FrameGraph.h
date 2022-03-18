@@ -389,7 +389,7 @@ private:
     void addPresentPass(std::function<void(Builder&)> setup) noexcept;
     Builder addPassInternal(const char* name, FrameGraphPassBase* base) noexcept;
     FrameGraphHandle createNewVersion(FrameGraphHandle handle, FrameGraphHandle parent = {}) noexcept;
-    FrameGraphHandle createNewVersionForSubresourceIfNeeded(FrameGraphHandle handle) noexcept;
+    ResourceNode* createNewVersionForSubresourceIfNeeded(ResourceNode* node) noexcept;
     FrameGraphHandle addResourceInternal(VirtualResource* resource) noexcept;
     FrameGraphHandle addSubResourceInternal(FrameGraphHandle parent, VirtualResource* resource) noexcept;
     FrameGraphHandle readInternal(FrameGraphHandle handle, PassNode* passNode,
