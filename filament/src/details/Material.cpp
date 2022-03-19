@@ -137,9 +137,7 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
             CString uniformName(
                     SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
                             list[i].name.c_str()));
-            uint8_t binding = 0;
-            UTILS_UNUSED bool ok = map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
-            assert_invariant(ok);
+            uint8_t binding = map.getSamplerBinding(bindingPoint, (uint8_t)i);
             const bool strict = (bindingPoint == filament::BindingPoints::PER_MATERIAL_INSTANCE);
             samplers[i] = { std::move(uniformName), binding, strict };
         }
