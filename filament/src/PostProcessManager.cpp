@@ -1136,12 +1136,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        const float verticalFieldOfView,
-        filament::Viewport const& svp, float2 scale,
-        TextureFormat format,
-        float* pLodOffset) const noexcept {
+FrameGraphId <FrameGraphTexture> PostProcessManager::generateMipmapSSR(
+        PostProcessManager& ppm, FrameGraph& fg, FrameGraphId <FrameGraphTexture> input,
+        const float verticalFieldOfView, float2 scale, TextureFormat format,
+        float* pLodOffset) noexcept {
 
     // TODO: add an option to generate a 1/4 res texture (for performance)
 
@@ -1257,48 +1255,40 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
 
     // Then copy the color buffer into a texture, making sure that we keep the original
     // buffer aspect-ratio (this is because dynamic-resolution is not necessarily homogenous).
-    uint32_t w = svp.width;
-    uint32_t h = svp.height;
+    uint32_t w = desc.width;
+    uint32_t h = desc.height;
     if (scale.x != scale.y) {
         // dynamic resolution wasn't homogenous, which would affect the blur, so make sure to
         // keep an intermediary buffer that has the same aspect-ratio as the original.
         const float homogenousScale = std::sqrt(scale.x * scale.y);
-        w = uint32_t((homogenousScale / scale.x) * float(svp.width));
-        h = uint32_t((homogenousScale / scale.y) * float(svp.height));
+        w = uint32_t((homogenousScale / scale.x) * float(desc.width));
+        h = uint32_t((homogenousScale / scale.y) * float(desc.height));
     }
-
-    PostProcessManager& ppm = mEngine.getPostProcessManager();
 
     /*
      * Resolve if needed + copy the image into first LOD
      */
 
+    FrameGraphId<FrameGraphTexture> output;
+    const FrameGraphTexture::Descriptor outDesc{
+            .width = w, .height = h, .depth = 1,
+            .levels = roughnessLodCount,
+            .type = SamplerType::SAMPLER_2D_ARRAY,
+            .format = format,
+    };
+
     if (desc.samples > 1 &&
-        (w == svp.width && h == svp.height) &&
+        (w == desc.width && h == desc.height) &&
         desc.format == format) {
         // Here we can resolve directly into a texture with the right dimensions, level count and format
         // (resolve CANNOT scale or convert formats)
-        input = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, {
-                .width = w,
-                .height = h,
-                .depth = 1,
-                .levels = roughnessLodCount,
-                .type = SamplerType::SAMPLER_2D_ARRAY,
-                .format = format,
-        });
+        output = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, outDesc);
     } else {
         // first resolve (if needed)
-        input = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
+        output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
         // then blit into an appropriate texture
         // this handles scaling, format conversion and mipmaping
-        input = ppm.opaqueBlit(fg, input, {
-                .width = w,
-                .height = h,
-                .depth = 1,
-                .levels = roughnessLodCount,
-                .type = SamplerType::SAMPLER_2D_ARRAY,
-                .format = format,
-        });
+        output = ppm.opaqueBlit(fg, output, outDesc);
         // Note: it's not possible to use the FrameGraph's forwardResource(), as an optimization
         // because the SSR buffer must be distinct from the color buffer (input here), because
         // we can't read and write into the same buffer, later in the refraction pass.
@@ -1309,9 +1299,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
      */
 
     *pLodOffset = refractionLodOffset;
-    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount,
+    output = ppm.generateGaussianMipmap(fg, output, roughnessLodCount,
             true, kernelSize, sigma0);
-    return input;
+    return output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
