@@ -485,9 +485,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         // generate the mipchain
-        reflections = ppm.generateMipmapSSR(fg, reflections,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL),
-                config.svp, config.scale,
+        reflections = PostProcessManager::generateMipmapSSR(ppm, fg, reflections,
+                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
                 TextureFormat::RGBA16F,
                 &config.ssrLodOffset);
 
@@ -754,9 +753,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 view);
 
         // generate the mipmap chain
-        input = ppm.generateMipmapSSR(fg, input,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL),
-                config.svp, config.scale,
+        input = PostProcessManager::generateMipmapSSR(ppm, fg, input,
+                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
                 TextureFormat::R11F_G11F_B10F,
                 &refractionLodOffset);
 
