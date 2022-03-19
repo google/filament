@@ -670,23 +670,28 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //   is translucent AND we've not already done it as part of upscaling.
     // * And we can't use the default rendertarget if MRT is required (e.g. with color grading
     //   as a subpass)
+    // * And we also can't use the default rendertarget if frame history is needed (e.g. with
+    //   screen-space reflections)
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
 
     const bool outputIsSwapChain = (input == colorPassOutput) && (viewRenderTarget == mRenderTarget);
-    if (mightNeedFinalBlit &&
-            ((outputIsSwapChain && (msaaSampleCount > 1 || colorGradingConfig.asSubpass)) ||
-             blending)) {
-        assert_invariant(!scaled);
-        if (UTILS_LIKELY(!blending)) {
-            input = ppm.opaqueBlit(fg, input, {
-                    .width = vp.width, .height = vp.height,
-                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
-        } else {
-            input = ppm.blendBlit(fg, blending, {
-                    .quality = QualityLevel::LOW
-            }, input, {
-                    .width = vp.width, .height = vp.height,
-                    .format = colorGradingConfig.ldrFormat });
+    if (mightNeedFinalBlit) {
+        if (blending ||
+            (outputIsSwapChain &&
+                    (msaaSampleCount > 1 ||
+                    colorGradingConfig.asSubpass ||
+                    ssReflectionsOptions.enabled)))
+        {
+            assert_invariant(!scaled);
+            if (UTILS_LIKELY(!blending)) {
+                input = ppm.opaqueBlit(fg, input, {
+                        .width = vp.width, .height = vp.height,
+                        .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
+            } else {
+                input = ppm.blendBlit(fg, blending, { .quality = QualityLevel::LOW }, input, {
+                        .width = vp.width, .height = vp.height,
+                        .format = colorGradingConfig.ldrFormat});
+            }
         }
     }
 
