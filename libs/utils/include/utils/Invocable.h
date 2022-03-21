@@ -94,7 +94,7 @@ Invocable<R(Args...)>::Invocable(Fn&& fn) noexcept
               auto typed_invocable = static_cast<Fn*>(erased_invocable);
               delete typed_invocable;
           }),
-          mInvoker(+[](void* erased_invocable, Args... args) {
+          mInvoker(+[](void* erased_invocable, Args... args) -> R {
               auto typed_invocable = static_cast<Fn*>(erased_invocable);
               return (*typed_invocable)(std::forward<Args>(args)...);
           })
