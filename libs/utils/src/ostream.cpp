@@ -20,8 +20,11 @@
 #include <algorithm>
 #include <stdarg.h>
 #include <string>
+#include <mutex>
 
 namespace utils::io {
+
+std::mutex mLock;
 
 ostream::~ostream() = default;
 

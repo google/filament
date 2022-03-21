@@ -17,7 +17,6 @@
 #ifndef TNT_UTILS_OSTREAM_H
 #define TNT_UTILS_OSTREAM_H
 
-#include <mutex>
 #include <string>
 #include <utility>
 
@@ -86,7 +85,6 @@ protected:
         size_t capacity = 0;        // total capacity of the buffer
     };
 
-    std::mutex mLock;
     Buffer mData;
     Buffer& getBuffer() noexcept { return mData; }
 

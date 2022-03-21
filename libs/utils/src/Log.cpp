@@ -18,6 +18,7 @@
 
 #include <string>
 #include <utils/compiler.h>
+#include <mutex>
 
 #ifdef __ANDROID__
 #   include <android/log.h>
@@ -29,6 +30,8 @@
 namespace utils {
 
 namespace io {
+
+extern std::mutex mLock;        // defined in ostream.cpp
 
 class LogStream : public ostream {
 public:
