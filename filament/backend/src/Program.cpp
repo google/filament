@@ -18,8 +18,7 @@
 
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // We want these in the .cpp file so they're not inlined (not worth it)
 Program::Program() noexcept {}  // = default; does not work with msvc because of noexcept
@@ -27,9 +26,10 @@ Program::Program(Program&& rhs) noexcept = default;
 Program& Program::operator=(Program&& rhs) noexcept = default;
 Program::~Program() noexcept = default;
 
-Program& Program::diagnostics(utils::CString const& name, Variant variant) {
+Program& Program::diagnostics(utils::CString const& name,
+        utils::Invocable<io::ostream&(utils::io::ostream&)>&& logger) {
     mName = name;
-    mVariant = variant;
+    mLogger = std::move(logger);
     return *this;
 }
 
@@ -57,13 +57,11 @@ Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFla
     return *this;
 }
 
-
-#if !defined(NDEBUG)
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
-    return out << "Program(" << builder.mName.c_str_safe() << ")";
+    out << "Program{";
+    builder.mLogger(out);
+    out << "}";
+    return out;
 }
 
-#endif
-
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

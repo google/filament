@@ -26,8 +26,6 @@
 
 #include "PlatformRunner.h"
 
-#include <filament/MaterialEnums.h>
-
 namespace test {
 
 class BackendTest : public ::testing::Test {
