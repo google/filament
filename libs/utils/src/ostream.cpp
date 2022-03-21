@@ -23,6 +23,8 @@
 
 namespace utils::io {
 
+std::mutex mLock;
+
 ostream::~ostream() = default;
 
 // don't allocate any memory before we actually use the log because one of these is created

@@ -86,7 +86,6 @@ protected:
         size_t capacity = 0;        // total capacity of the buffer
     };
 
-    std::mutex mLock;
     Buffer mData;
     Buffer& getBuffer() noexcept { return mData; }
 

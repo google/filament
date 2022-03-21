@@ -30,6 +30,8 @@ namespace utils {
 
 namespace io {
 
+extern std::mutex mLock;        // defined in ostream.cpp
+
 class LogStream : public ostream {
 public:
 
