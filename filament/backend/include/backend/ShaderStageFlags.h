@@ -24,8 +24,7 @@ namespace filament::backend {
 struct ShaderStageFlags {
     bool vertex : 1;
     bool fragment : 1;
-
-    inline bool hasShaderType(ShaderType type) const {
+    bool hasShaderType(ShaderType type) const {
         return (vertex && type == ShaderType::VERTEX) ||
                (fragment && type == ShaderType::FRAGMENT);
     }
@@ -46,7 +45,7 @@ inline utils::io::ostream& operator<<(utils::io::ostream& stream, ShaderStageFla
     stream << " }";
     return stream;
 }
+} // namespace filament::backend
 
-} // namespace filament
 
 #endif // TNT_FILAMENT_BACKEND_SHADERSTAGEFLAGS_H

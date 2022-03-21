@@ -211,7 +211,7 @@ public:
     explicit CString(const char* cstr);
 
     template<size_t N>
-    explicit CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
+    CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
             : CString(other, N - 1) {
     }
 

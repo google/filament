@@ -66,6 +66,8 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
         }
         utils::slog.e << utils::io::endl;
         offset = 0;
+
+        UTILS_NOUNROLL
         for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
             SamplerInterfaceBlock const* const sib =
                     (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
@@ -73,10 +75,11 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             if (sib) {
                 auto const& sibFields = sib->getSamplerInfoList();
                 for (auto const& sInfo : sibFields) {
-                    utils::slog.e << "  " << (int) offset << " " << sInfo.name.c_str()
-                        << " " << sib->getStageFlags() << utils::io::endl;
+                    utils::slog.e << "  " << +offset << " " << sInfo.name.c_str()
+                        << " " << sib->getStageFlags() << '\n';
                     offset++;
                 }
+                flush(utils::slog.e);
             }
         }
     }
