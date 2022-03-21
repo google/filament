@@ -256,7 +256,7 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
 }
 
 void FVertexBuffer::setExternalBufferAt(FEngine& engine, uint8_t bufferIndex,
-         void* externalBuffer) {
+         intptr_t externalBuffer) {
     ASSERT_PRECONDITION(!mBufferObjectsEnabled, "Please use setBufferObjectAt()");
     ASSERT_PRECONDITION(mExternalBuffersEnabled, "Please use setBufferAt()");
     if (bufferIndex < mBufferCount) {
@@ -285,7 +285,7 @@ void VertexBuffer::setBufferObjectAt(Engine& engine, uint8_t bufferIndex,
     upcast(this)->setBufferObjectAt(upcast(engine), bufferIndex, upcast(bufferObject));
 }
 
-void VertexBuffer::setExternalBufferAt(Engine& engine, uint8_t bufferIndex, void* externalBuffer) {
+void VertexBuffer::setExternalBufferAt(Engine& engine, uint8_t bufferIndex, intptr_t externalBuffer) {
     upcast(this)->setExternalBufferAt(upcast(engine), bufferIndex, externalBuffer);
 }
 

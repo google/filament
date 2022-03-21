@@ -64,7 +64,7 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const IndexBuffer::Builder& builder)
     mHandle = driver.createIndexBuffer(
             (backend::ElementType)builder->mIndexType,
             uint32_t(builder->mIndexCount),
-            backend::BufferUsage::STATIC, 
+            backend::BufferUsage::STATIC,
             mExternalBuffersEnabled);
 }
 
@@ -78,7 +78,7 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
     engine.getDriverApi().updateIndexBuffer(mHandle, std::move(buffer), byteOffset);
 }
 
-void FIndexBuffer::setExternalBuffer(FEngine& engine, void* externalBuffer) {
+void FIndexBuffer::setExternalBuffer(FEngine& engine, intptr_t externalBuffer) {
     ASSERT_PRECONDITION(mExternalBuffersEnabled, "Please use setBuffer()");
     engine.getDriverApi().setExternalIndexBuffer(mHandle, externalBuffer);
 }
@@ -96,7 +96,7 @@ size_t IndexBuffer::getIndexCount() const noexcept {
     return upcast(this)->getIndexCount();
 }
 
-void IndexBuffer::setExternalBuffer(Engine& engine, void* externalBuffer) {
+void IndexBuffer::setExternalBuffer(Engine& engine, intptr_t externalBuffer) {
     upcast(this)->setExternalBuffer(upcast(engine), externalBuffer);
 }
 

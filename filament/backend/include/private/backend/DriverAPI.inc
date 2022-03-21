@@ -314,11 +314,11 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, wor
 
 DECL_DRIVER_API_N(setExternalIndexBuffer,
         backend::IndexBufferHandle, ibh,
-        void*, externalBuffer)
+        intptr_t, externalBuffer)
 
 DECL_DRIVER_API_N(setExternalBuffer,
         backend::BufferObjectHandle, boh,
-        void*, externalBuffer)
+        intptr_t, externalBuffer)
 
 DECL_DRIVER_API_N(setVertexBufferObject,
         backend::VertexBufferHandle, vbh,

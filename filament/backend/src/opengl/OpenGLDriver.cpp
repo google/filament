@@ -167,7 +167,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
           mHandleAllocator("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
           mSamplerMap(32),
           mPlatform(*platform) {
-  
+
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
     // set a reasonable default value for our stream array
@@ -408,7 +408,7 @@ void OpenGLDriver::createIndexBufferR(
         Handle<HwIndexBuffer> ibh,
         ElementType elementType,
         uint32_t indexCount,
-        BufferUsage usage, 
+        BufferUsage usage,
         bool wrapsExternalBuffer) {
     DEBUG_MARKER()
 
@@ -1612,7 +1612,7 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* externalBuffer) {
+void OpenGLDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
 #ifdef GL_EXT_external_buffer
     DEBUG_MARKER()
 
@@ -1631,7 +1631,7 @@ void OpenGLDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* exter
 #endif
 }
 
-void OpenGLDriver::setExternalBuffer(Handle<HwBufferObject> boh, void* externalBuffer) {
+void OpenGLDriver::setExternalBuffer(Handle<HwBufferObject> boh, intptr_t externalBuffer) {
 #ifdef GL_EXT_external_buffer
     DEBUG_MARKER()
 

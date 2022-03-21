@@ -139,7 +139,7 @@ public:
      * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
      * @param externalBuffer Pointer to the external buffer that will be used in this buffer slot.
      */
-    void setExternalBuffer(Engine& engine, void* externalBuffer);
+    void setExternalBuffer(Engine& engine, intptr_t externalBuffer);
 
     /**
      * Returns the size of this IndexBuffer in elements.

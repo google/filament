@@ -844,11 +844,11 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
     return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
-void VulkanDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* externalBuffer) {
+void VulkanDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
     ASSERT_PRECONDITION(false, "setExternalIndexBuffer() is not implemented for backend!");
 }
 
-void VulkanDriver::setExternalBuffer(Handle<HwBufferObject> boh, void* externalBuffer) {
+void VulkanDriver::setExternalBuffer(Handle<HwBufferObject> boh, intptr_t externalBuffer) {
     ASSERT_PRECONDITION(false, "setExternalBuffer() is not implemented for backend!");
 }
 

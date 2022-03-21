@@ -222,7 +222,7 @@ public:
      *                    and Builder::bufferCount() - 1.
      * @param externalBuffer Pointer to the external buffer that will be used in this buffer slot.
      */
-    void setExternalBufferAt(Engine& engine, uint8_t bufferIndex, void* externalBuffer);
+    void setExternalBufferAt(Engine& engine, uint8_t bufferIndex, intptr_t externalBuffer);
 };
 
 } // namespace filament
