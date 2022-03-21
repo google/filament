@@ -38,52 +38,50 @@
 using namespace glslang;
 using namespace spirv_cross;
 using namespace spvtools;
+using namespace filament;
+using namespace filament::backend;
 
 namespace filamat {
 
+namespace msl {  // this is only used for MSL
+
 using BindingIndexMap = tsl::robin_map<std::string, uint16_t>;
 
+UTILS_NOINLINE
 static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
-        filament::SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
+        SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
     const auto stageFlags = sib.getStageFlags();
-    if (!stageFlags.hasShaderType(config.shaderType)) {
-        return;
+    if (stageFlags.hasShaderType(config.shaderType)) {
+        const auto& infoList = sib.getSamplerInfoList();
+        for (const auto& info: infoList) {
+            auto uniformName = SamplerInterfaceBlock::getUniformName(
+                    sib.getName().c_str(), info.name.c_str());
+            map[uniformName.c_str()] = map.size();
+        }
     }
-    const auto& infoList = sib.getSamplerInfoList();
-    for (const auto& info : infoList) {
-        auto uniformName = filament::SamplerInterfaceBlock::getUniformName(
-                sib.getName().c_str(), info.name.c_str());
-        map[uniformName.c_str()] = map.size();
-    }
-}
-
-static BindingIndexMap getSurfaceBindingIndexMap(const GLSLPostProcessor::Config& config) {
-    const filament::Variant& variant = config.variant;
-    BindingIndexMap map;
-    // Always add the morphing sampler group because there is no way
-    // that SamplerBindingMap knows the current variant.
-    generateBindingIndexMap(config,
-            filament::SibGenerator::getPerRenderPrimitiveMorphingSib(variant), map);
-    generateBindingIndexMap(config, filament::SibGenerator::getPerViewSib(variant), map);
-    generateBindingIndexMap(config, config.materialInfo->sib, map);
-    return map;
-}
-
-
-static BindingIndexMap getPostProcessBindingIndexMap(const GLSLPostProcessor::Config& config) {
-    BindingIndexMap map;
-    generateBindingIndexMap(config, config.materialInfo->sib, map);
-    return map;
 }
 
 static BindingIndexMap getBindingIndexMap(const GLSLPostProcessor::Config& config) {
+    BindingIndexMap map;
     switch (config.domain) {
-    case filament::MaterialDomain::SURFACE:
-        return getSurfaceBindingIndexMap(config);
-    case filament::MaterialDomain::POST_PROCESS:
-        return getPostProcessBindingIndexMap(config);
+        case MaterialDomain::SURFACE:
+            UTILS_NOUNROLL
+            for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
+                if (blockIndex != BindingPoints::PER_MATERIAL_INSTANCE) {
+                    auto const* sib = SibGenerator::getSib(blockIndex, config.variant);
+                    if (sib) {
+                        generateBindingIndexMap(config, *sib, map);
+                    }
+                }
+            }
+        case MaterialDomain::POST_PROCESS:
+            break;
     }
+    generateBindingIndexMap(config, config.materialInfo->sib, map);
+    return map;
 }
+
+}; // namespace msl
 
 GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags)
         : mOptimization(optimization),
@@ -96,15 +94,14 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
     });
 }
 
-GLSLPostProcessor::~GLSLPostProcessor() {
-}
+GLSLPostProcessor::~GLSLPostProcessor() = default;
 
-static uint32_t shaderVersionFromModel(filament::backend::ShaderModel model) {
+static uint32_t shaderVersionFromModel(ShaderModel model) {
     switch (model) {
-        case filament::backend::ShaderModel::UNKNOWN:
-        case filament::backend::ShaderModel::GL_ES_30:
+        case ShaderModel::UNKNOWN:
+        case ShaderModel::GL_ES_30:
             return 300;
-        case filament::backend::ShaderModel::GL_CORE_41:
+        case ShaderModel::GL_CORE_41:
             return 410;
     }
 }
@@ -156,26 +153,28 @@ static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const
 }
 
 void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl,
-        const Config &config, ShaderMinifier& minifier) const {
+        const Config &config, ShaderMinifier& minifier) {
+
+    using namespace msl;
 
     CompilerMSL mslCompiler(*spirv);
     CompilerGLSL::Options options;
     mslCompiler.set_common_options(options);
 
     const CompilerMSL::Options::Platform platform =
-        config.shaderModel == filament::backend::ShaderModel::GL_ES_30 ?
+        config.shaderModel == ShaderModel::GL_ES_30 ?
             CompilerMSL::Options::Platform::iOS : CompilerMSL::Options::Platform::macOS;
 
     CompilerMSL::Options mslOptions = {};
     mslOptions.platform = platform,
-    mslOptions.msl_version = config.shaderModel == filament::backend::ShaderModel::GL_ES_30 ?
+    mslOptions.msl_version = config.shaderModel == ShaderModel::GL_ES_30 ?
         CompilerMSL::Options::make_msl_version(2, 0) : CompilerMSL::Options::make_msl_version(2, 2);
 
     if (config.hasFramebufferFetch) {
         mslOptions.use_framebuffer_fetch_subpasses = true;
         // On macOS, framebuffer fetch is only available starting with MSL 2.3. Filament will only
         // use framebuffer fetch materials on devices that support it.
-        if (config.shaderModel == filament::backend::ShaderModel::GL_CORE_41) {
+        if (config.shaderModel == ShaderModel::GL_CORE_41) {
             mslOptions.msl_version = CompilerMSL::Options::make_msl_version(2, 3);
         }
     }
@@ -236,7 +235,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     internalConfig.spirvOutput = outputSpirv;
     internalConfig.mslOutput = outputMsl;
 
-    if (config.shaderType == filament::backend::VERTEX) {
+    if (config.shaderType == backend::VERTEX) {
         internalConfig.shLang = EShLangVertex;
     } else {
         internalConfig.shLang = EShLangFragment;
@@ -262,8 +261,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     }
 
     // add texture lod bias
-    if (config.shaderType == filament::backend::FRAGMENT &&
-        config.domain == filament::MaterialDomain::SURFACE) {
+    if (config.shaderType == backend::FRAGMENT &&
+        config.domain == MaterialDomain::SURFACE) {
         GLSLTools::textureLodBias(tShader);
     }
 
@@ -397,7 +396,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     // Transpile back to GLSL
     if (internalConfig.glslOutput) {
         CompilerGLSL::Options glslOptions;
-        glslOptions.es = config.shaderModel == filament::backend::ShaderModel::GL_ES_30;
+        glslOptions.es = config.shaderModel == ShaderModel::GL_ES_30;
         glslOptions.version = shaderVersionFromModel(config.shaderModel);
         glslOptions.enable_420pack_extension = glslOptions.version >= 420;
         glslOptions.fragment.default_float_precision = glslOptions.es ?
@@ -461,7 +460,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass());
 
-    if (config.shaderModel != filament::backend::ShaderModel::GL_CORE_41) {
+    if (config.shaderModel != ShaderModel::GL_CORE_41) {
         // this triggers a segfault with AMD drivers on MacOS
         optimizer.RegisterPass(CreateMergeReturnPass());
     }
@@ -505,7 +504,7 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass());
 
-    if (config.shaderModel != filament::backend::ShaderModel::GL_CORE_41) {
+    if (config.shaderModel != ShaderModel::GL_CORE_41) {
         // this triggers a segfault with AMD drivers on MacOS
         optimizer.RegisterPass(CreateMergeReturnPass());
     }

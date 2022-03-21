@@ -34,6 +34,7 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
     size_t vertexSamplerCount = 0;
     size_t fragmentSamplerCount = 0;
 
+    UTILS_NOUNROLL
     for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
         SamplerInterfaceBlock const* const sib =
