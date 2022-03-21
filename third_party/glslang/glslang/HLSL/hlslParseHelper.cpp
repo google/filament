@@ -4017,11 +4017,11 @@ void HlslParseContext::decomposeSampleMethods(const TSourceLoc& loc, TIntermType
             txsample->getSequence().push_back(txcombine);
             txsample->getSequence().push_back(argCoord);
 
-            if (argBias != nullptr)
-                txsample->getSequence().push_back(argBias);
-
             if (argOffset != nullptr)
                 txsample->getSequence().push_back(argOffset);
+
+            if (argBias != nullptr)
+              txsample->getSequence().push_back(argBias);
 
             node = convertReturn(txsample, sampler);
 
@@ -6689,12 +6689,6 @@ void HlslParseContext::globalQualifierFix(const TSourceLoc&, TQualifier& qualifi
 
 //
 // Merge characteristics of the 'src' qualifier into the 'dst'.
-// If there is duplication, issue error messages, unless 'force'
-// is specified, which means to just override default settings.
-//
-// Also, when force is false, it will be assumed that 'src' follows
-// 'dst', for the purpose of error checking order for versions
-// that require specific orderings of qualifiers.
 //
 void HlslParseContext::mergeQualifiers(TQualifier& dst, const TQualifier& src)
 {
@@ -6712,8 +6706,7 @@ void HlslParseContext::mergeQualifiers(TQualifier& dst, const TQualifier& src)
     mergeObjectLayoutQualifiers(dst, src, false);
 
     // individual qualifiers
-    bool repeated = false;
-#define MERGE_SINGLETON(field) repeated |= dst.field && src.field; dst.field |= src.field;
+#define MERGE_SINGLETON(field) dst.field |= src.field;
     MERGE_SINGLETON(invariant);
     MERGE_SINGLETON(noContraction);
     MERGE_SINGLETON(centroid);

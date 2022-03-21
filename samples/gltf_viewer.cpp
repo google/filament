@@ -85,6 +85,7 @@ struct App {
 
     gltfio::ResourceLoader* resourceLoader = nullptr;
     bool recomputeAabb = false;
+    bool ignoreBindTransform = false;
 
     bool actualSize = false;
 
@@ -108,7 +109,7 @@ struct App {
     AutomationEngine* automationEngine = nullptr;
 };
 
-static const char* DEFAULT_IBL = "default_env";
+static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -133,6 +134,8 @@ static void printUsage(char* name) {
         "       Do not scale the model to fit into a unit cube\n\n"
         "   --recompute-aabb, -r\n"
         "       Ignore the min/max attributes in the glTF file\n\n"
+        "   --ignore-bind-transform, -g\n"
+        "       Ignore bind transform when recomputing aabb\n\n"
         "   --settings=<path to JSON file>, -t\n"
         "       Apply the settings in the given JSON file\n\n"
         "   --ubershader, -u\n"
@@ -161,19 +164,20 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:ev";
+    static constexpr const char* OPTSTR = "ha:i:usc:rgt:b:ev";
     static const struct option OPTIONS[] = {
-        { "help",         no_argument,       nullptr, 'h' },
-        { "api",          required_argument, nullptr, 'a' },
-        { "batch",        required_argument, nullptr, 'b' },
-        { "headless",     no_argument,       nullptr, 'e' },
-        { "ibl",          required_argument, nullptr, 'i' },
-        { "ubershader",   no_argument,       nullptr, 'u' },
-        { "actual-size",  no_argument,       nullptr, 's' },
-        { "camera",       required_argument, nullptr, 'c' },
-        { "recompute-aabb", no_argument,     nullptr, 'r' },
-        { "settings",     required_argument, nullptr, 't' },
-        { "split-view",   no_argument,       nullptr, 'v' },
+        { "help",         no_argument,          nullptr, 'h' },
+        { "api",          required_argument,    nullptr, 'a' },
+        { "batch",        required_argument,    nullptr, 'b' },
+        { "headless",     no_argument,          nullptr, 'e' },
+        { "ibl",          required_argument,    nullptr, 'i' },
+        { "ubershader",   no_argument,          nullptr, 'u' },
+        { "actual-size",  no_argument,          nullptr, 's' },
+        { "camera",       required_argument,    nullptr, 'c' },
+        { "recompute-aabb", no_argument,        nullptr, 'r' },
+        { "ignore-bind-transform", no_argument, nullptr, 'g' },
+        { "settings",     required_argument,    nullptr, 't' },
+        { "split-view",   no_argument,          nullptr, 'v' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -219,6 +223,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             case 'r':
                 app->recomputeAabb = true;
+                break;
+            case 'g':
+                app->ignoreBindTransform = true;
                 break;
             case 't':
                 app->settingsFile = arg;
@@ -343,11 +350,6 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
-static float sGlobalScale = 1.0f;
-static float sGlobalScaleAnamorphism = 0.0f;
-static int sGlobalScaleQuality = 0;
-static float sGlobalScaleSharpness = 0.9f;
-
 int main(int argc, char** argv) {
     App app;
 
@@ -417,14 +419,12 @@ int main(int argc, char** argv) {
         configuration.engine = app.engine;
         configuration.gltfPath = gltfPath.c_str();
         configuration.recomputeBoundingBoxes = app.recomputeAabb;
+        configuration.ignoreBindTransform = app.ignoreBindTransform;
         configuration.normalizeSkinningWeights = true;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
-
-        // Load animation data then free the source hierarchy.
-        app.asset->getAnimator();
         app.asset->releaseSourceData();
 
         auto ibl = FilamentApp::get().getIBL();
@@ -569,17 +569,54 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::CollapsingHeader("Debug")) {
+                auto& debug = engine->getDebugRegistry();
                 if (ImGui::Button("Capture frame")) {
-                    auto& debug = engine->getDebugRegistry();
                     bool* captureFrame =
                         debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                     *captureFrame = true;
                 }
-                ImGui::SliderFloat("scale", &sGlobalScale, 0.25f, 1.0f);
-                ImGui::SliderFloat("anamorphism", &sGlobalScaleAnamorphism, -1.0f, 1.0f);
-                ImGui::SliderInt("quality", &sGlobalScaleQuality, 0, 3);
-                ImGui::SliderFloat("sharpness", &sGlobalScaleSharpness, 0.0f, 1.0f);
+                auto dataSource = debug.getDataSource("d.view.frame_info");
+                if (dataSource.data) {
+                    ImGuiExt::PlotLinesSeries("FrameInfo", 6,
+                            [](int series) {
+                                const ImVec4 colors[] = {
+                                        { 1,    0, 0, 1 }, // target
+                                        { 0, 0.5f, 0, 1 }, // frame-time
+                                        { 0,    1, 0, 1 }, // frame-time denoised
+                                        { 1,    1, 0, 1 }, // i
+                                        { 1,    0, 1, 1 }, // d
+                                        { 0,    1, 1, 1 }, // e
 
+                                };
+                                ImGui::PushStyleColor(ImGuiCol_PlotLines, colors[series]);
+                            },
+                            [](int series, void* buffer, int i) -> float {
+                                auto const* p = (DebugRegistry::FrameHistory const*)buffer + i;
+                                switch (series) {
+                                    case 0:     return 0.03f * p->target;
+                                    case 1:     return 0.03f * p->frameTime;
+                                    case 2:     return 0.03f * p->frameTimeDenoised;
+                                    case 3:     return p->pid_i * 0.5f / 100.0f + 0.5f;
+                                    case 4:     return p->pid_d * 0.5f / 0.100f + 0.5f;
+                                    case 5:     return p->pid_e * 0.5f / 1.000f + 0.5f;
+                                    default:    return 0.0f;
+                                }
+                            },
+                            [](int series) {
+                                if (series < 6) ImGui::PopStyleColor();
+                            },
+                            const_cast<void*>(dataSource.data), int(dataSource.count), 0,
+                            nullptr, 0.0f, 1.0f, { 0, 100 });
+                }
+#ifndef NDEBUG
+                ImGui::SliderFloat("Kp", debug.getPropertyAddress<float>("d.view.pid.kp"), 0, 2);
+                ImGui::SliderFloat("Ki", debug.getPropertyAddress<float>("d.view.pid.ki"), 0, 10);
+                ImGui::SliderFloat("Kd", debug.getPropertyAddress<float>("d.view.pid.kd"), 0, 10);
+#endif
+                bool* lispsm;
+                if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
+                    ImGui::Checkbox("Enable LiSPSM", lispsm);
+                }
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -626,7 +663,7 @@ int main(int argc, char** argv) {
     auto resize = [&app](Engine* engine, View* view) {
         Camera& camera = view->getCamera();
         if (&camera == app.mainCamera) {
-            // Don't adjut the aspect ratio of the main camera, this is done inside of
+            // Don't adjust the aspect ratio of the main camera, this is done inside of
             // FilamentApp.cpp
             return;
         }
@@ -691,24 +728,6 @@ int main(int argc, char** argv) {
         } else {
             view->setColorGrading(nullptr);
         }
-
-        view->setDynamicResolutionOptions({
-                .minScale = {
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
-                },
-                .maxScale = {
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
-                },
-                .sharpness = sGlobalScaleSharpness,
-                .enabled = sGlobalScale != 1.0f,
-                .quality = (QualityLevel)sGlobalScaleQuality
-        });
     };
 
     auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {

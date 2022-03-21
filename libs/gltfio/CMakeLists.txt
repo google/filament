@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
         include/gltfio/ResourceLoader.h
         include/gltfio/FilamentAsset.h
         include/gltfio/FilamentInstance.h
+        include/gltfio/math.h
 )
 
 set(SRCS
@@ -29,15 +30,12 @@ set(SRCS
         src/FilamentInstance.cpp
         src/GltfEnums.h
         src/MaterialProvider.cpp
-        src/MorphHelper.h
-        src/MorphHelper.cpp
         src/ResourceLoader.cpp
         src/TangentsJob.h
         src/TangentsJob.cpp
         src/UbershaderLoader.cpp
         src/Wireframe.cpp
         src/Wireframe.h
-        src/math.h
         src/upcast.h
         src/Image.cpp
 )

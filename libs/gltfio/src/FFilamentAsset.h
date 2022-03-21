@@ -70,10 +70,10 @@ class Wireframe;
 struct BufferSlot {
     const cgltf_accessor* accessor;
     cgltf_attribute_type attribute;
-    int bufferIndex; // for vertex buffers only
-    int morphTarget; // 0 if no morphing, otherwise 1-based index
+    int bufferIndex; // for vertex buffer and morph target buffer only
     filament::VertexBuffer* vertexBuffer;
     filament::IndexBuffer* indexBuffer;
+    filament::MorphTargetBuffer* morphTargetBuffer;
 };
 
 // Encapsulates a connection between Texture and MaterialInstance.
@@ -97,8 +97,7 @@ struct Primitive {
     filament::IndexBuffer* indices = nullptr;
     filament::Aabb aabb; // object-space bounding box
     UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
-    uint8_t morphPositions[4] = {};  // Buffer indices for MORPH_POSITION_0, MORPH_POSITION_1 etc.
-    uint8_t morphTangents[4] = {};   // Buffer indices for MORPH_TANGENTS_0, MORPH_TANGENTS_1, etc.
+    filament::MorphTargetBuffer* targets = nullptr;
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
@@ -192,7 +191,17 @@ struct FFilamentAsset : public FilamentAsset {
     size_t getEntitiesByPrefix(const char* prefix, utils::Entity* entities,
             size_t maxCount) const noexcept;
 
-    Animator* getAnimator() noexcept;
+    Animator* getAnimator() const noexcept { return mAnimator; }
+
+    size_t getSkinCount() const noexcept;
+
+    const char* getSkinNameAt(size_t skinIndex) const noexcept;
+
+    size_t getJointCountAt(size_t skinIndex) const noexcept;
+
+    const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
+
+    const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
     utils::Entity getWireframe() noexcept;
 
@@ -227,6 +236,8 @@ struct FFilamentAsset : public FilamentAsset {
         return mInstances.size() > 0;
     }
 
+    void createAnimators();
+
     filament::Engine* mEngine;
     utils::NameComponentManager* mNameManager;
     utils::EntityManager* mEntityManager;
@@ -237,6 +248,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<filament::VertexBuffer*> mVertexBuffers;
     std::vector<filament::BufferObject*> mBufferObjects;
     std::vector<filament::IndexBuffer*> mIndexBuffers;
+    std::vector<filament::MorphTargetBuffer*> mMorphTargetBuffers;
     std::vector<filament::Texture*> mTextures;
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
@@ -248,6 +260,7 @@ struct FFilamentAsset : public FilamentAsset {
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
     tsl::robin_map<utils::Entity, utils::CString> mNodeExtras;
+    tsl::robin_map<utils::Entity, std::vector<utils::CString>> mMorphTargetNames;
     utils::CString mAssetExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.

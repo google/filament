@@ -26,67 +26,59 @@ namespace filament {
 
 void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             const char* materialName) {
-    // We assume material variant 0 here, which is sufficient for calculating the binding map.
-    // The material variant currently only affects sampler formats (for VSM), not offsets.
-    const uint8_t variantKey = 0;
+    // TODO: Calculate SamplerBindingMap with a material variant.
+    // The dummy variant isn't enough for calculating the binding map.
+    // The material variant affects sampler bindings.
+    const Variant dummyVariant{};
     uint8_t offset = 0;
-    size_t maxSamplerIndex = backend::MAX_SAMPLER_COUNT - 1;
-    bool overflow = false;
-    for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
+    size_t vertexSamplerCount = 0;
+    size_t fragmentSamplerCount = 0;
+
+    for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
-        filament::SamplerInterfaceBlock const* sib;
-        if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
-            sib = perMaterialSib;
-        } else {
-            sib = filament::SibGenerator::getSib(blockIndex, variantKey);
-        }
+        SamplerInterfaceBlock const* const sib =
+                (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
+                perMaterialSib : SibGenerator::getSib(blockIndex, dummyVariant);
         if (sib) {
-            auto sibFields = sib->getSamplerInfoList();
-            for (const auto& sInfo : sibFields) {
-                if (offset > maxSamplerIndex) {
-                    overflow = true;
-                }
-                addSampler({
-                    .blockIndex = blockIndex,
-                    .localOffset = sInfo.offset,
-                    .globalOffset = offset++,
-                });
+            const auto& sibFields = sib->getSamplerInfoList();
+            const auto stageFlags = sib->getStageFlags();
+            const size_t samplerCount = sibFields.size();
+            offset += samplerCount;
+            if (stageFlags.vertex) {
+                vertexSamplerCount += samplerCount;
+            }
+            if (stageFlags.fragment) {
+                fragmentSamplerCount += samplerCount;
             }
         }
     }
 
+    const bool isOverflow = vertexSamplerCount > backend::MAX_VERTEX_SAMPLER_COUNT ||
+                            fragmentSamplerCount > backend::MAX_FRAGMENT_SAMPLER_COUNT;
+
     // If an overflow occurred, go back through and list all sampler names. This is helpful to
     // material authors who need to understand where the samplers are coming from.
-    if (overflow) {
+    if (UTILS_UNLIKELY(isOverflow)) {
         utils::slog.e << "WARNING: Exceeded max sampler count of " << backend::MAX_SAMPLER_COUNT;
         if (materialName) {
             utils::slog.e << " (" << materialName << ")";
         }
         utils::slog.e << utils::io::endl;
         offset = 0;
-        for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
-            filament::SamplerInterfaceBlock const* sib;
-            if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
-                sib = perMaterialSib;
-            } else {
-                sib = filament::SibGenerator::getSib(blockIndex, variantKey);
-            }
+        for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
+            SamplerInterfaceBlock const* const sib =
+                    (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
+                    perMaterialSib : SibGenerator::getSib(blockIndex, dummyVariant);
             if (sib) {
-                auto sibFields = sib->getSamplerInfoList();
-                for (auto sInfo : sibFields) {
-                    utils::slog.e << "  " << (int) offset << " " << sInfo.name.c_str() << utils::io::endl;
+                auto const& sibFields = sib->getSamplerInfoList();
+                for (auto const& sInfo : sibFields) {
+                    utils::slog.e << "  " << (int) offset << " " << sInfo.name.c_str()
+                        << " " << sib->getStageFlags() << utils::io::endl;
                     offset++;
                 }
             }
         }
     }
-}
-
-void SamplerBindingMap::addSampler(SamplerBindingInfo info) {
-    if (info.globalOffset < mSamplerBlockOffsets[info.blockIndex]) {
-        mSamplerBlockOffsets[info.blockIndex] = info.globalOffset;
-    }
-    mBindingMap[getBindingKey(info.blockIndex, info.localOffset)] = info;
 }
 
 } // namespace filament

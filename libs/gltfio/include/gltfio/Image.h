@@ -25,7 +25,7 @@
 
 // For emscripten and Android builds, we never load from the file
 // system, so we-opt out of the stdio functionality in stb.
-#if defined(__EMSCRIPTEN__) || defined(ANDROID)
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__)
 #define STBI_NO_STDIO
 #endif
 

@@ -762,7 +762,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     // depth/stencil attachment must match the rendertarget sample count
     // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
     // is resolved.
-    bool attachmentTypeNotSupportedByMSRTT = false;
+    UTILS_UNUSED bool attachmentTypeNotSupportedByMSRTT = false;
     switch (attachment) {
         case GL_DEPTH_ATTACHMENT:
         case GL_STENCIL_ATTACHMENT:
@@ -785,7 +785,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                 // note: multi-sampled textures can't have mipmaps
                 break;
             case SamplerType::SAMPLER_CUBEMAP:
-                target = getCubemapTarget(binfo.face);
+                target = getCubemapTarget(binfo.layer);
                 // note: cubemaps can't be multi-sampled
                 break;
             default:
@@ -1553,14 +1553,25 @@ bool OpenGLDriver::isFrameBufferFetchSupported() {
     return gl.ext.EXT_shader_framebuffer_fetch;
 }
 
+bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
+    return isFrameBufferFetchSupported();
+}
+
 bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
+}
+
+bool OpenGLDriver::isAutoDepthResolveSupported() {
+    // TODO: this should return true only for GLES3.1+ and EXT_multisampled_render_to_texture2
+    return true;
 }
 
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
             return mContext.bugs.split_easu;
+        case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
+            return mContext.bugs.allow_read_only_ancillary_feedback_loop;
     }
     return false;
 }
@@ -1803,10 +1814,12 @@ void OpenGLDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     DEBUG_MARKER()
 
     GLTexture* t = handle_cast<GLTexture *>(th);
+    auto width = std::max(1u, t->width >> level);
+    auto height = std::max(1u, t->height >> level);
     if (data.type == PixelDataType::COMPRESSED) {
-        setCompressedTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
+        setCompressedTextureData(t, level, 0, 0, 0, width, height, 0, std::move(data), &faceOffsets);
     } else {
-        setTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
+        setTextureData(t, level, 0, 0, 0, width, height, 0, std::move(data), &faceOffsets);
     }
 }
 
@@ -1899,11 +1912,11 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
-#pragma nounroll
+            UTILS_NOUNROLL
             for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                GLenum target = getCubemapTarget(face);
                 glTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, glFormat, glType,
+                        width, height, glFormat, glType,
                         static_cast<uint8_t const*>(p.buffer) + offsets[face]);
             }
             break;
@@ -1934,8 +1947,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert_invariant(xoffset + width <= t->width >> level);
-    assert_invariant(yoffset + height <= t->height >> level);
+    assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
+    assert_invariant(yoffset + height <= std::max(1u, t->height >> level));
     assert_invariant(zoffset + depth <= t->depth);
     assert_invariant(t->samples <= 1);
 
@@ -1984,11 +1997,11 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
-#pragma nounroll
+            UTILS_NOUNROLL
             for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                GLenum target = getCubemapTarget(face);
                 glCompressedTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, t->gl.internalFormat,
+                        width, height, t->gl.internalFormat,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
             }
             break;
@@ -2300,11 +2313,15 @@ void OpenGLDriver::endRenderPass(int) {
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES30_HEADERS) {
+        auto effectiveDiscardFlags = discardFlags;
+        if (gl.bugs.invalidate_end_only_if_invalidate_start) {
+            effectiveDiscardFlags &= mRenderPassParams.flags.discardStart;
+        }
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            GLsizei attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
@@ -2954,6 +2971,19 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 
 void OpenGLDriver::endFrame(uint32_t frameId) {
     //SYSTRACE_NAME("glFinish");
+#if defined(__EMSCRIPTEN__)
+    // WebGL builds are single-threaded so users might manipulate various GL state after we're
+    // done with the frame. We do NOT officially support using Filament in this way, but we can
+    // at least do some minimal safety things here, such as resetting the VAO to 0.
+    auto& gl = mContext;
+    gl.bindVertexArray(nullptr);
+    for (int unit = OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1; unit >= 0; unit--) {
+        gl.bindTexture(unit, GL_TEXTURE_2D, 0);
+    }
+    gl.disable(GL_CULL_FACE);
+    gl.depthFunc(GL_LESS);
+    gl.disable(GL_SCISSOR_TEST);
+#endif
     //glFinish();
     insertEventMarker("endFrame");
 }
@@ -3077,14 +3107,14 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
 
         // GL_INVALID_OPERATION is generated if GL_SAMPLE_BUFFERS for the read buffer is greater
         // than zero and the formats of draw and read buffers are not identical.
-        // However, it's not well defined in the spec what "format" means. So it's difficult
+        // However, it's not well-defined in the spec what "format" means. So it's difficult
         // to have an assert here -- especially when dealing with the default framebuffer
 
         // GL_INVALID_OPERATION is generated if GL_SAMPLE_BUFFERS for the read buffer is greater
         // than zero and (...) the source and destination rectangles are not defined with the
         // same (X0, Y0) and (X1, Y1) bounds.
 
-        // Additionally the EXT_multisampled_render_to_texture extension doesn't specify what
+        // Additionally, the EXT_multisampled_render_to_texture extension doesn't specify what
         // happens when blitting from an "implicit" resolve render target (does it work?), so
         // to ere on the safe side, we don't allow it.
         if (s->gl.samples > 1) {
@@ -3125,7 +3155,7 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
     }
 }
 
-void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
+void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -3162,8 +3192,14 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 
     setViewportScissor(state.scissor);
 
-    glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
-            rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+    if (UTILS_LIKELY(instanceCount <= 1)) {
+        glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
+                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+    } else {
+        glDrawElementsInstanced(GLenum(rp->type), rp->count,
+                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset),
+                instanceCount);
+    }
 
     CHECK_GL_ERROR(utils::slog.e)
 }

@@ -45,9 +45,11 @@ struct UTILS_PUBLIC MaterialInfo {
     bool multiBounceAOSet;
     bool specularAOSet;
     bool hasCustomSurfaceShading;
+    bool useLegacyMorphing;
     filament::SpecularAmbientOcclusion specularAO;
     filament::RefractionMode refractionMode;
     filament::RefractionType refractionType;
+    filament::ReflectionMode reflectionMode;
     filament::AttributeBitset requiredAttributes;
     filament::BlendingMode blendingMode;
     filament::BlendingMode postLightingBlendingMode;

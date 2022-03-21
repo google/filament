@@ -2,29 +2,40 @@
 // Lighting
 //------------------------------------------------------------------------------
 
+#if defined(BLEND_MODE_MASKED)
+float computeMaskedAlpha(float a) {
+    // Use derivatives to smooth alpha tested edges
+    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
+}
+
 float computeDiffuseAlpha(float a) {
-#if defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE) || defined(BLEND_MODE_MASKED)
+    // If we reach this point in the code, we already know that the fragment is not discarded due
+    // to the threshold factor. Therefore we can just output 1.0, which prevents a "punch through"
+    // effect from occuring. We do this only for TRANSLUCENT views in order to prevent breakage
+    // of ALPHA_TO_COVERAGE.
+    return (frameUniforms.needsAlphaChannel == 1.0) ? 1.0 : a;
+}
+
+void applyAlphaMask(inout vec4 baseColor) {
+    baseColor.a = computeMaskedAlpha(baseColor.a);
+    if (baseColor.a <= 0.0) {
+        discard;
+    }
+}
+
+#else // not masked
+
+float computeDiffuseAlpha(float a) {
+#if defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)
     return a;
 #else
     return 1.0;
 #endif
 }
 
-#if defined(BLEND_MODE_MASKED)
-float computeMaskedAlpha(float a) {
-    // Use derivatives to smooth alpha tested edges
-    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
-}
-#endif
+void applyAlphaMask(inout vec4 baseColor) {}
 
-void applyAlphaMask(inout vec4 baseColor) {
-#if defined(BLEND_MODE_MASKED)
-    baseColor.a = computeMaskedAlpha(baseColor.a);
-    if (baseColor.a <= 0.0) {
-        discard;
-    }
 #endif
-}
 
 #if defined(GEOMETRIC_SPECULAR_AA)
 float normalFiltering(float perceptualRoughness, const vec3 worldNormal) {
@@ -88,7 +99,7 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #endif
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
-#if defined(HAS_REFRACTION)
+#if defined(MATERIAL_HAS_REFRACTION)
     // Air's Index of refraction is 1.000277 at STP but everybody uses 1.0
     const float airIor = 1.0;
 #if !defined(MATERIAL_HAS_IOR)
@@ -206,15 +217,6 @@ void getSubsurfacePixelParams(const MaterialInputs material, inout PixelParams p
 #endif
 }
 
-void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams pixel) {
-#if defined(MATERIAL_HAS_ANISOTROPY)
-    vec3 direction = material.anisotropyDirection;
-    pixel.anisotropy = material.anisotropy;
-    pixel.anisotropicT = normalize(shading_tangentToWorld * direction);
-    pixel.anisotropicB = normalize(cross(getWorldGeometricNormalVector(), pixel.anisotropicT));
-#endif
-}
-
 void getEnergyCompensationPixelParams(inout PixelParams pixel) {
     // Pre-filtered DFG term used for image-based lighting
     pixel.dfg = prefilteredDFG(pixel.perceptualRoughness, shading_NoV);
@@ -276,11 +278,11 @@ vec4 evaluateLights(const MaterialInputs material) {
     // it also saves 1 shader variant
     evaluateIBL(material, pixel, color);
 
-#if defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
     evaluateDirectionalLight(material, pixel, color);
 #endif
 
-#if defined(HAS_DYNAMIC_LIGHTING)
+#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
     evaluatePunctualLights(material, pixel, color);
 #endif
 

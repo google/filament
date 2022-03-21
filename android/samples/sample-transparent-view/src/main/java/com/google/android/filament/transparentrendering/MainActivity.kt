@@ -281,7 +281,7 @@ class MainActivity : Activity() {
 
         // Stop the animation and any pending frame
         choreographer.removeFrameCallback(frameScheduler)
-        animator.cancel();
+        animator.cancel()
 
         // Always detach the surface before destroying the engine
         uiHelper.detach()
@@ -328,11 +328,11 @@ class MainActivity : Activity() {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
             swapChain = engine.createSwapChain(surface, uiHelper.swapChainFlags)
-            displayHelper.attach(renderer, surfaceView.display);
+            displayHelper.attach(renderer, surfaceView.display)
         }
 
         override fun onDetachedFromSurface() {
-            displayHelper.detach();
+            displayHelper.detach()
             swapChain?.let {
                 engine.destroySwapChain(it)
                 // Required to ensure we don't return before Filament is done executing the
@@ -353,6 +353,7 @@ class MainActivity : Activity() {
         }
     }
 
+    @Suppress("SameParameterValue")
     private fun readUncompressedAsset(assetName: String): ByteBuffer {
         assets.openFd(assetName).use { fd ->
             val input = fd.createInputStream()

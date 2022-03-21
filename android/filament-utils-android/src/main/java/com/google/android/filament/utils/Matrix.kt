@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
+@file:Suppress("unused")
+
 package com.google.android.filament.utils
 
 import kotlin.math.*
 
 enum class MatrixColumn {
     X, Y, Z, W
+}
+
+enum class RotationsOrder {
+    XYZ, XZY, YXZ, YZX, ZXY, ZYX
 }
 
 data class Mat2(
@@ -39,14 +45,14 @@ data class Mat2(
         fun identity() = Mat2()
     }
 
-    operator fun get(column: Int) = when(column) {
+    operator fun get(column: Int) = when (column) {
         0 -> x
         1 -> y
         else -> throw IllegalArgumentException("column must be in 0..1")
     }
     operator fun get(column: Int, row: Int) = get(column)[row]
 
-    operator fun get(column: MatrixColumn) = when(column) {
+    operator fun get(column: MatrixColumn) = when (column) {
         MatrixColumn.X -> x
         MatrixColumn.Y -> y
         else -> throw IllegalArgumentException("column must be X or Y")
@@ -64,16 +70,8 @@ data class Mat2(
     }
 
     operator fun unaryMinus() = Mat2(-x, -y)
-    operator fun inc(): Mat2 {
-        x++
-        y++
-        return this
-    }
-    operator fun dec(): Mat2 {
-        x--
-        y--
-        return this
-    }
+    operator fun inc() = Mat2(x++, y++)
+    operator fun dec() = Mat2(x--, y--)
 
     operator fun plus(v: Float) = Mat2(x + v, y + v)
     operator fun minus(v: Float) = Mat2(x - v, y - v)
@@ -130,7 +128,7 @@ data class Mat3(
         fun identity() = Mat3()
     }
 
-    operator fun get(column: Int) = when(column) {
+    operator fun get(column: Int) = when (column) {
         0 -> x
         1 -> y
         2 -> z
@@ -138,7 +136,7 @@ data class Mat3(
     }
     operator fun get(column: Int, row: Int) = get(column)[row]
 
-    operator fun get(column: MatrixColumn) = when(column) {
+    operator fun get(column: MatrixColumn) = when (column) {
         MatrixColumn.X -> x
         MatrixColumn.Y -> y
         MatrixColumn.Z -> z
@@ -157,18 +155,8 @@ data class Mat3(
     }
 
     operator fun unaryMinus() = Mat3(-x, -y, -z)
-    operator fun inc(): Mat3 {
-        x++
-        y++
-        z++
-        return this
-    }
-    operator fun dec(): Mat3 {
-        x--
-        y--
-        z--
-        return this
-    }
+    operator fun inc() = Mat3(x++, y++, z++)
+    operator fun dec() = Mat3(x--, y--, z--)
 
     operator fun plus(v: Float) = Mat3(x + v, y + v, z + v)
     operator fun minus(v: Float) = Mat3(x - v, y - v, z - v)
@@ -279,7 +267,7 @@ data class Mat4(
     inline val upperLeft: Mat3
         get() = Mat3(x.xyz, y.xyz, z.xyz)
 
-    operator fun get(column: Int) = when(column) {
+    operator fun get(column: Int) = when (column) {
         0 -> x
         1 -> y
         2 -> z
@@ -288,7 +276,7 @@ data class Mat4(
     }
     operator fun get(column: Int, row: Int) = get(column)[row]
 
-    operator fun get(column: MatrixColumn) = when(column) {
+    operator fun get(column: MatrixColumn) = when (column) {
         MatrixColumn.X -> x
         MatrixColumn.Y -> y
         MatrixColumn.Z -> z
@@ -307,20 +295,8 @@ data class Mat4(
     }
 
     operator fun unaryMinus() = Mat4(-x, -y, -z, -w)
-    operator fun inc(): Mat4 {
-        x++
-        y++
-        z++
-        w++
-        return this
-    }
-    operator fun dec(): Mat4 {
-        x--
-        y--
-        z--
-        w--
-        return this
-    }
+    operator fun inc() = Mat4(x++, y++, z++, w++)
+    operator fun dec() = Mat4(x--, y--, z--, w--)
 
     operator fun plus(v: Float) = Mat4(x + v, y + v, z + v, w + v)
     operator fun minus(v: Float) = Mat4(x - v, y - v, z - v, w - v)
@@ -360,6 +336,8 @@ data class Mat4(
             x.z * v.x + y.z * v.y + z.z * v.z+ w.z * v.w,
             x.w * v.x + y.w * v.y + z.w * v.z+ w.w * v.w
     )
+
+    fun toQuaternion() = quaternion(this)
 
     fun toFloatArray() = floatArrayOf(
             x.x, y.x, z.x, w.x,
@@ -408,7 +386,7 @@ fun inverse(m: Mat3): Mat3 {
     val det = a * A + b * B + c * C
 
     return Mat3.of(
-            A / det,               B / det,               C / det,
+            A / det, B / det, C / det,
             (c * h - b * i) / det, (a * i - c * g) / det, (b * g - a * h) / det,
             (b * f - c * e) / det, (c * d - a * f) / det, (a * e - b * d) / det
     )
@@ -496,18 +474,90 @@ fun translation(t: Float3) = Mat4(w = Float4(t, 1.0f))
 fun translation(m: Mat4) = translation(m.translation)
 
 fun rotation(m: Mat4) = Mat4(normalize(m.right), normalize(m.up), normalize(m.forward))
-fun rotation(d: Float3): Mat4 {
-    val r = transform(d, ::radians)
-    val c = transform(r) { x -> cos(x) }
-    val s = transform(r) { x -> sin(x) }
 
-    return Mat4.of(
-             c.y * c.z, -c.x * s.z + s.x * s.y * c.z,  s.x * s.z + c.x * s.y * c.z, 0.0f,
-             c.y * s.z,  c.x * c.z + s.x * s.y * s.z, -s.x * c.z + c.x * s.y * s.z, 0.0f,
-            -s.y      ,  s.x * c.y                  ,  c.x * c.y                  , 0.0f,
-             0.0f     ,  0.0f                       ,  0.0f                       , 1.0f
-    )
+/**
+ * Construct a rotation matrix from Euler angles using YPR around a specified order
+ *
+ * Uses intrinsic Tait-Bryan angles. This means that rotations are performed with respect to the
+ * local coordinate system.
+ * That is, for order 'XYZ', the rotation is first around the X axis (which is the same as the
+ * world-X axis), then around local-Y (which may now be different from the world Y-axis),
+ * then local-Z (which may be different from the world Z-axis)
+ *
+ * @param d Per axis Euler angles in degrees
+ * Yaw, pitch, roll (YPR) are taken accordingly to the rotations order input.
+ * @param order The order in which to apply rotations.
+ * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around its Z
+ * axis, then its Y axis and finally its X axis.
+ *
+ * @return The rotation matrix
+ */
+fun rotation(d: Float3, order: RotationsOrder = RotationsOrder.ZYX): Mat4 {
+    val r = transform(d, ::radians)
+    return when(order) {
+        RotationsOrder.XZY -> rotation(r.x, r.z, r.y)
+        RotationsOrder.XYZ -> rotation(r.x, r.y, r.z)
+        RotationsOrder.YXZ -> rotation(r.y, r.x, r.z)
+        RotationsOrder.YZX -> rotation(r.y, r.z, r.x)
+        RotationsOrder.ZYX -> rotation(r.z, r.y, r.x)
+        RotationsOrder.ZXY -> rotation(r.z, r.x, r.y)
+    }
 }
+
+/**
+ * Construct a rotation matrix from Euler yaw, pitch, roll around a specified order.
+ *
+ * @param roll about 1st rotation axis in radians. Z in case of ZYX order
+ * @param pitch about 2nd rotation axis in radians. Y in case of ZYX order
+ * @param yaw about 3rd rotation axis in radians. X in case of ZYX order
+ * @param order The order in which to apply rotations.
+ * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around its Z
+ * axis, then its Y axis and finally its X axis.
+ *
+ * @return The rotation matrix
+ */
+fun rotation(yaw: Float = 0.0f, pitch: Float = 0.0f, roll: Float = 0.0f, order: RotationsOrder = RotationsOrder.ZYX): Mat4 {
+    val c1 = cos(yaw)
+    val s1 = sin(yaw)
+    val c2 = cos(pitch)
+    val s2 = sin(pitch)
+    val c3 = cos(roll)
+    val s3 = sin(roll)
+
+    return when (order) {
+        RotationsOrder.XZY -> Mat4.of(
+                c2 * c3, -s2, c2 * s3, 0.0f,
+                s1 * s3 + c1 * c3 * s2, c1 * c2, c1 * s2 * s3 - c3 * s1, 0.0f,
+                c3 * s1 * s2 - c1 * s3, c2 * s1, c1 * c3 + s1 * s2 * s3, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f)
+        RotationsOrder.XYZ -> Mat4.of(
+                c2 * c3, -c2 * s3, s2, 0.0f,
+                c1 * s3 + c3 * s1 * s2, c1 * c3 - s1 * s2 * s3, -c2 * s1, 0.0f,
+                s1 * s3 - c1 * c3 * s2, c3 * s1 + c1 * s2 * s3, c1 * c2, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f)
+        RotationsOrder.YXZ -> Mat4.of(
+                c1 * c3 + s1 * s2 * s3, c3 * s1 * s2 - c1 * s3, c2 * s1, 0.0f,
+                c2 * s3, c2 * c3, -s2, 0.0f,
+                c1 * s2 * s3 - c3 * s1, c1 * c3 * s2 + s1 * s3, c1 * c2, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f)
+        RotationsOrder.YZX -> Mat4.of(
+                c1 * c2, s1 * s3 - c1 * c3 * s2, c3 * s1 + c1 * s2 * s3, 0.0f,
+                s2, c2 * c3, -c2 * s3, 0.0f,
+                -c2 * s1, c1 * s3 + c3 * s1 * s2, c1 * c3 - s1 * s2 * s3, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f)
+        RotationsOrder.ZYX -> Mat4.of(
+                c1 * c2, c1 * s2 * s3 - c3 * s1, s1 * s3 + c1 * c3 * s2, 0.0f,
+                c2 * s1, c1 * c3 + s1 * s2 * s3, c3 * s1 * s2 - c1 * s3, 0.0f,
+                -s2, c2 * s3, c2 * c3, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f)
+        RotationsOrder.ZXY -> Mat4.of(
+                c1 * c3 - s1 * s2 * s3, -c2 * s1, c1 * s3 + c3 * s1 * s2, 0.0f,
+                c3 * s1 + c1 * s2 * s3, c1 * c2, s1 * s3 - c1 * c3 * s2, 0.0f,
+                -c2 * s3, s2, c2 * c3, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f)
+    }
+}
+
 fun rotation(axis: Float3, angle: Float): Mat4 {
     val x = axis.x
     val y = axis.y
@@ -519,10 +569,85 @@ fun rotation(axis: Float3, angle: Float): Mat4 {
     val d = 1.0f - c
 
     return Mat4.of(
-            x * x * d + c    , x * y * d - z * s, x * z * d + y * s, 0.0f,
-            y * x * d + z * s, y * y * d + c    , y * z * d - x * s, 0.0f,
-            z * x * d - y * s, z * y * d + x * s, z * z * d + c    , 0.0f,
-            0.0f             , 0.0f             , 0.0f             , 1.0f
+            x * x * d + c, x * y * d - z * s, x * z * d + y * s, 0.0f,
+            y * x * d + z * s, y * y * d + c, y * z * d - x * s, 0.0f,
+            z * x * d - y * s, z * y * d + x * s, z * z * d + c, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+    )
+}
+
+/**
+ * Construct a Quaternion Rotation Matrix following the Hamilton convention
+ *
+ * Assume the destination and local coordinate spaces are initially aligned, and the local
+ * coordinate space is then rotated counter-clockwise about a unit-length axis, k, by an angle,
+ * theta.
+ */
+fun rotation(quaternion: Quaternion): Mat4 {
+    val n = normalize(quaternion)
+    return Mat4(
+            Float4(
+                1.0f - 2.0f * (n.y * n.y + n.z * n.z),
+                2.0f * (n.x * n.y + n.z * n.w),
+                2.0f * (n.x * n.z - n.y * n.w),
+            ),
+            Float4(
+                2.0f * (n.x * n.y - n.z * n.w),
+                1.0f - 2.0f * (n.x * n.x + n.z * n.z),
+                2.0f * (n.y * n.z + n.x * n.w),
+            ),
+            Float4(
+                2.0f * (n.x * n.z + n.y * n.w),
+                2.0f * (n.y * n.z - n.x * n.w),
+                1.0f - 2.0f * (n.x * n.x + n.y * n.y),
+            )
+    )
+}
+
+/**
+ * Extract Quaternion rotation from a Matrix
+ */
+fun quaternion(m: Mat4): Quaternion {
+    val trace = m.x.x + m.y.y + m.z.z
+    return normalize(
+        when {
+            trace > 0.0f -> {
+                val s = 2.0f * sqrt(trace + 1.0f)
+                Quaternion(
+                    (m.y.z - m.z.y) / s,
+                    (m.z.x - m.x.z) / s,
+                    (m.x.y - m.y.x) / s,
+                    0.25f * s
+                )
+            }
+            m.x.x > m.y.y && m.x.x > m.z.z -> {
+                val s = 2.0f * sqrt(1.0f + m.x.x - m.y.y - m.z.z)
+                Quaternion(
+                    0.25f * s,
+                    (m.y.x + m.x.y) / s,
+                    (m.z.x + m.x.z) / s,
+                    (m.y.z - m.z.y) / s
+                )
+            }
+            m.y.y > m.z.z -> {
+                val s = 2.0f * sqrt(1.0f + m.y.y - m.x.x - m.z.z)
+                Quaternion(
+                    (m.y.x + m.x.y) / s,
+                    0.25f * s,
+                    (m.z.y + m.y.z) / s,
+                    (m.z.x - m.x.z) / s
+                )
+            }
+            else -> {
+                val s = 2.0f * sqrt(1.0f + m.z.z - m.x.x - m.y.y)
+                Quaternion(
+                    (m.z.x + m.x.z) / s,
+                    (m.z.y + m.y.z) / s,
+                    0.25f * s,
+                    (m.x.y - m.y.x) / s
+                )
+            }
+        }
     )
 }
 
@@ -536,7 +661,7 @@ fun lookTowards(eye: Float3, forward: Float3, up: Float3 = Float3(z = 1.0f)): Ma
     val f = normalize(forward)
     val r = normalize(f x up)
     val u = normalize(r x f)
-    return Mat4(Float4(r), Float4(u), Float4(f), Float4(eye, 1.0f))
+    return Mat4(Float4(r), Float4(u), Float4(-f), Float4(eye, 1.0f))
 }
 
 fun perspective(fov: Float, ratio: Float, near: Float, far: Float): Mat4 {

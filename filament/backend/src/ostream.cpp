@@ -51,7 +51,9 @@ io::ostream& operator<<(io::ostream& out, ShaderModel model) {
 io::ostream& operator<<(io::ostream& out, PrimitiveType type) {
     switch (type) {
         CASE(PrimitiveType, TRIANGLES)
+        CASE(PrimitiveType, TRIANGLE_STRIP)
         CASE(PrimitiveType, LINES)
+        CASE(PrimitiveType, LINE_STRIP)
         CASE(PrimitiveType, POINTS)
         CASE(PrimitiveType, NONE)
     }
@@ -424,9 +426,9 @@ io::ostream& operator<<(io::ostream& out, const RasterState& rs) {
 
 io::ostream& operator<<(io::ostream& out, const TargetBufferInfo& tbi) {
     return out << "TargetBufferInfo{"
-    << "h=" << tbi.handle
+    << "handle=" << tbi.handle
     << ", level=" << tbi.level
-    << ", face=" << tbi.face << "}";
+    << ", layer=" << tbi.layer << "}";
 }
 
 io::ostream& operator<<(io::ostream& out, const PolygonOffset& po) {

@@ -22,38 +22,19 @@
 
 #include <stdint.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 //! \privatesection
 
-class TargetBufferInfo {
-public:
-    // ctor for 2D textures
-    TargetBufferInfo(Handle<HwTexture> h, uint8_t level = 0) noexcept // NOLINT(google-explicit-constructor)
-            : handle(h), level(level) { }
-    // ctor for cubemaps
-    TargetBufferInfo(Handle<HwTexture> h, uint8_t level, TextureCubemapFace face) noexcept
-            : handle(h), level(level), face(face) { }
-    // ctor for 3D textures
-    TargetBufferInfo(Handle<HwTexture> h, uint8_t level, uint16_t layer) noexcept
-            : handle(h), level(level), layer(layer) { }
-
-    explicit TargetBufferInfo(TextureCubemapFace face) noexcept : face(face) {}
-
-    explicit TargetBufferInfo(uint16_t layer) noexcept : layer(layer) {}
-
+struct TargetBufferInfo {
     // texture to be used as render target
     Handle<HwTexture> handle;
+
     // level to be used
     uint8_t level = 0;
-    union {
-        // face if texture is a cubemap
-        TextureCubemapFace face;
-        // for 3D textures
-        uint16_t layer = 0;
-    };
-    TargetBufferInfo() noexcept { }
+
+    // for cubemaps and 3D textures. See TextureCubemapFace for the face->layer mapping
+    uint16_t layer = 0;
 };
 
 class MRT {
@@ -96,13 +77,12 @@ public:
     }
 
     // this is here for backward compatibility
-    MRT(Handle<HwTexture> h, uint8_t level, uint16_t layer) noexcept
-            : mInfos{{ h, level, layer }} {
+    MRT(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
+            : mInfos{{ handle, level, layer }} {
     }
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #if !defined(NDEBUG)
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);

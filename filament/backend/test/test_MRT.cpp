@@ -101,7 +101,7 @@ TEST_F(BackendTest, MRT) {
                 512,                                       // width
                 512,                                       // height
                 1,                                         // samples
-                { textureA, textureB }, // color
+                {{textureA },{textureB }}, // color
                 {},                                        // depth
                 {});                                       // stencil
 
@@ -126,7 +126,7 @@ TEST_F(BackendTest, MRT) {
 
         // Draw a triangle.
         getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive());
+        getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
         getDriverApi().endRenderPass();
 
         getDriverApi().flush();

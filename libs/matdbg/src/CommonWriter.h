@@ -182,6 +182,7 @@ const char* toString(backend::UniformType type) noexcept {
         case backend::UniformType::UINT4:  return "uint4";
         case backend::UniformType::MAT3:   return "float3x3";
         case backend::UniformType::MAT4:   return "float4x4";
+        case backend::UniformType::STRUCT: return "struct";
     }
 }
 
@@ -225,7 +226,7 @@ const char* toString(backend::SamplerFormat format) noexcept {
 
 // Returns a human-readable variant description.
 // For example: DYN|DIR
-std::string formatVariantString(uint8_t variant, MaterialDomain domain) noexcept;
+std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept;
 
 } // namespace matdbg
 } // namespace filament

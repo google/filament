@@ -54,7 +54,12 @@ struct FFilamentInstance : public FilamentInstance {
     FFilamentAsset* owner;
     SkinVector skins;
     NodeMap nodeMap;
-    Animator* getAnimator() noexcept;
+    void createAnimator();
+    Animator* getAnimator() const noexcept;
+    size_t getSkinCount() const noexcept;
+    const char* getSkinNameAt(size_t skinIndex) const noexcept;
+    size_t getJointCountAt(size_t skinIndex) const noexcept;
+    const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
 };
 
 FILAMENT_UPCAST(FilamentInstance)

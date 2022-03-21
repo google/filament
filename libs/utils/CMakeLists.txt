@@ -25,6 +25,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
@@ -66,11 +67,16 @@ set(SRCS
         src/Path.cpp
         src/Profiler.cpp
         src/sstream.cpp
+        src/string.cpp
         src/Systrace.cpp
+        src/ThreadUtils.cpp
 )
 
 if (WIN32)
     list(APPEND SRCS src/win32/Path.cpp)
+endif()
+if (ANDROID)
+    list(APPEND SRCS src/android/ThermalManager.cpp)
 endif()
 if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Condition.cpp)
@@ -134,8 +140,10 @@ set(TEST_SRCS
         test/test_Entity.cpp
         test/test_FixedCapacityVector.cpp
         test/test_JobSystem.cpp
+        test/test_RangeMap.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
+        test/test_string.cpp
         test/test_utils_main.cpp
         test/test_Zip2Iterator.cpp
         test/test_BinaryTreeArray.cpp

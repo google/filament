@@ -25,7 +25,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <algorithm>
+#include <algorithm> // for std::fill
 #include <type_traits>
 
 #if defined(__ARM_NEON)
@@ -314,10 +314,12 @@ private:
 
 using bitset8 = bitset<uint8_t>;
 using bitset32 = bitset<uint32_t>;
+using bitset64 = bitset<uint64_t>;
 using bitset256 = bitset<uint64_t, 4>;
 
 static_assert(sizeof(bitset8) == sizeof(uint8_t), "bitset8 isn't 8 bits!");
 static_assert(sizeof(bitset32) == sizeof(uint32_t), "bitset32 isn't 32 bits!");
+static_assert(sizeof(bitset64) == sizeof(uint64_t), "bitset64 isn't 64 bits!");
 
 } // namespace utils
 

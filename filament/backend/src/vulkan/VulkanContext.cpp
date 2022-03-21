@@ -17,7 +17,10 @@
 #include "VulkanContext.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
+#include "VulkanTexture.h"
 #include "VulkanUtility.h"
+
+#include <algorithm> // for std::max
 
 #include <utils/Panic.h>
 #include <utils/FixedCapacityVector.h>
@@ -28,6 +31,28 @@ using utils::FixedCapacityVector;
 
 namespace filament {
 namespace backend {
+
+VkImage VulkanAttachment::getImage() const {
+    return texture ? texture->getVkImage() : VK_NULL_HANDLE;
+}
+
+VkFormat VulkanAttachment::getFormat() const {
+    return texture ? texture->getVkFormat() : VK_FORMAT_UNDEFINED;
+}
+
+VkImageLayout VulkanAttachment::getLayout() const {
+    return texture ? texture->getVkLayout(layer, level) : VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
+VkExtent2D VulkanAttachment::getExtent2D() const {
+    assert_invariant(texture);
+    return { std::max(1u, texture->width >> level), std::max(1u, texture->height >> level) };
+}
+
+VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) const {
+    assert_invariant(texture);
+    return texture->getAttachmentView(level, layer, aspect);
+}
 
 void VulkanContext::selectPhysicalDevice() {
     uint32_t physicalDeviceCount = 0;
@@ -265,7 +290,6 @@ void VulkanContext::createLogicalDevice() {
         .physicalDevice = physicalDevice,
         .device = device,
         .pVulkanFunctions = &funcs,
-        .pRecordSettings = nullptr,
         .instance = instance
     };
     vmaCreateAllocator(&allocatorInfo, &allocator);
@@ -333,25 +357,6 @@ VkFormat VulkanContext::findSupportedFormat(utils::Slice<VkFormat> candidates,
     return VK_FORMAT_UNDEFINED;
 }
 
-VkImageLayout VulkanContext::getTextureLayout(TextureUsage usage) const {
-    // Filament sometimes samples from depth while it is bound to the current render target, (e.g.
-    // SSAO does this while depth writes are disabled) so let's keep it simple and use GENERAL for
-    // all depth textures.
-    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_GENERAL;
-    }
-
-    // Filament sometimes samples from one miplevel while writing to another level in the same
-    // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
-    // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_GENERAL;
-    }
-
-    // Finally, the layout for an immutable texture is optimal read-only.
-    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-}
-
 void VulkanContext::createEmptyTexture(VulkanStagePool& stagePool) {
     emptyTexture = new VulkanTexture(*this, SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1,
@@ -359,7 +364,7 @@ void VulkanContext::createEmptyTexture(VulkanStagePool& stagePool) {
             TextureUsage::SUBPASS_INPUT, stagePool);
     uint32_t black = 0;
     PixelBufferDescriptor pbd(&black, 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
-    emptyTexture->update2DImage(pbd, 1, 1, 0);
+    emptyTexture->updateImage(pbd, 1, 1, 1, 0, 0, 0, 0);
 }
 
 } // namespace filament

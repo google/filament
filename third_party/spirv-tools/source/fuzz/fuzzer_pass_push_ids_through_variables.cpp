@@ -24,9 +24,10 @@ namespace fuzz {
 FuzzerPassPushIdsThroughVariables::FuzzerPassPushIdsThroughVariables(
     opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
-    protobufs::TransformationSequence* transformations)
+    protobufs::TransformationSequence* transformations,
+    bool ignore_inapplicable_transformations)
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
-                 transformations) {}
+                 transformations, ignore_inapplicable_transformations) {}
 
 void FuzzerPassPushIdsThroughVariables::Apply() {
   ForEachInstructionWithInstructionDescriptor(
@@ -102,7 +103,7 @@ void FuzzerPassPushIdsThroughVariables::Apply() {
                            ->IdIsIrrelevant(instruction->result_id()) &&
                       !fuzzerutil::CanMakeSynonymOf(ir_context,
                                                     *GetTransformationContext(),
-                                                    instruction)) {
+                                                    *instruction)) {
                     return false;
                   }
 

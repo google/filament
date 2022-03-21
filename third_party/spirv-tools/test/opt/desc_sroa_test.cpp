@@ -770,6 +770,69 @@ TEST_F(DescriptorScalarReplacementTest, BindingForResourceArrayOfStructs) {
   SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
 }
 
+TEST_F(DescriptorScalarReplacementTest, MemberDecorationForResourceStruct) {
+  // Check that an OpMemberDecorate instruction is correctly converted to a
+  // OpDecorate instruction.
+
+  const std::string shader = R"(
+; CHECK: OpDecorate [[t:%\w+]] DescriptorSet 0
+; CHECK: OpDecorate [[t]] Binding 0
+; CHECK: OpDecorate [[t]] RelaxedPrecision
+; CHECK: OpDecorate [[s:%\w+]] DescriptorSet 0
+; CHECK: OpDecorate [[s]] Binding 1
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %PSMain "PSMain" %in_var_TEXCOORD %out_var_SV_Target
+               OpExecutionMode %PSMain OriginUpperLeft
+               OpSource HLSL 600
+               OpName %sampler2D_h "sampler2D_h"
+               OpMemberName %sampler2D_h 0 "t"
+               OpMemberName %sampler2D_h 1 "s"
+               OpName %type_2d_image "type.2d.image"
+               OpName %type_sampler "type.sampler"
+               OpName %_MainTex "_MainTex"
+               OpName %in_var_TEXCOORD "in.var.TEXCOORD"
+               OpName %out_var_SV_Target "out.var.SV_Target"
+               OpName %PSMain "PSMain"
+               OpName %type_sampled_image "type.sampled.image"
+               OpDecorate %in_var_TEXCOORD Location 0
+               OpDecorate %out_var_SV_Target Location 0
+               OpDecorate %_MainTex DescriptorSet 0
+               OpDecorate %_MainTex Binding 0
+               OpMemberDecorate %sampler2D_h 0 RelaxedPrecision
+               OpDecorate %out_var_SV_Target RelaxedPrecision
+               OpDecorate %69 RelaxedPrecision
+      %float = OpTypeFloat 32
+%type_2d_image = OpTypeImage %float 2D 2 0 0 1 Unknown
+%type_sampler = OpTypeSampler
+%sampler2D_h = OpTypeStruct %type_2d_image %type_sampler
+%_ptr_UniformConstant_sampler2D_h = OpTypePointer UniformConstant %sampler2D_h
+    %v2float = OpTypeVector %float 2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+         %35 = OpTypeFunction %void
+%type_sampled_image = OpTypeSampledImage %type_2d_image
+   %_MainTex = OpVariable %_ptr_UniformConstant_sampler2D_h UniformConstant
+%in_var_TEXCOORD = OpVariable %_ptr_Input_v2float Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+     %PSMain = OpFunction %void None %35
+         %43 = OpLabel
+         %44 = OpLoad %v2float %in_var_TEXCOORD
+         %57 = OpLoad %sampler2D_h %_MainTex
+         %72 = OpCompositeExtract %type_2d_image %57 0
+         %73 = OpCompositeExtract %type_sampler %57 1
+         %68 = OpSampledImage %type_sampled_image %72 %73
+         %69 = OpImageSampleImplicitLod %v4float %68 %44 None
+               OpStore %out_var_SV_Target %69
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

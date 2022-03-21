@@ -926,6 +926,7 @@ enum TOperator {
     EOpMul32x16,
 
     EOpTraceNV,
+    EOpTraceRayMotionNV,
     EOpTraceKHR,
     EOpReportIntersection,
     EOpIgnoreIntersectionNV,
@@ -1642,6 +1643,7 @@ public:
     ~TIntermAggregate() { delete pragmaTable; }
     virtual       TIntermAggregate* getAsAggregate()       { return this; }
     virtual const TIntermAggregate* getAsAggregate() const { return this; }
+    virtual void updatePrecision();
     virtual void setOperator(TOperator o) { op = o; }
     virtual       TIntermSequence& getSequence()       { return sequence; }
     virtual const TIntermSequence& getSequence() const { return sequence; }

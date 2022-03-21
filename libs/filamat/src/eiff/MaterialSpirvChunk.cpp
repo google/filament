@@ -25,7 +25,7 @@ void MaterialSpirvChunk::flatten(Flattener &f) {
     f.writeUint64(mEntries.size());
     for (const SpirvEntry& entry : mEntries) {
         f.writeUint8(entry.shaderModel);
-        f.writeUint8(entry.variant);
+        f.writeUint8(entry.variantKey);
         f.writeUint8(entry.stage);
         f.writeUint32(entry.dictionaryIndex);
     }

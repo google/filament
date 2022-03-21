@@ -94,7 +94,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         setupView()
         setupScene()
 
-        cameraHelper = CameraHelper(this, engine, materialInstance, windowManager.defaultDisplay)
+        cameraHelper = CameraHelper(this, engine, materialInstance)
         cameraHelper.openCamera()
     }
 

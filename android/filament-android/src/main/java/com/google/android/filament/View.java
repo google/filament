@@ -59,6 +59,10 @@ import static com.google.android.filament.Colors.LinearColor;
  * @see RenderTarget
  */
 public class View {
+    private static final AntiAliasing[] sAntiAliasingValues = AntiAliasing.values();
+    private static final Dithering[] sDitheringValues = Dithering.values();
+    private static final AmbientOcclusion[] sAmbientOcclusionValues = AmbientOcclusion.values();
+
     private long mNativeObject;
     private String mName;
     private Scene mScene;
@@ -75,8 +79,10 @@ public class View {
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+    private ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
+    private SoftShadowOptions mSoftShadowOptions;
 
     /**
      * Generic quality level.
@@ -329,6 +335,28 @@ public class View {
         /** enables or disables temporal anti-aliasing */
         public boolean enabled = false;
     };
+
+    /**
+     * Options for Screen-space Reflections.
+     * @see View#setScreenSpaceReflectionOptions
+     */
+    public static class ScreenSpaceReflectionsOptions {
+        /** ray thickness, in world units */
+        public float thickness = 0.1f;
+
+        /** bias, in world units, to prevent self-intersections */
+        public float bias = 0.01f;
+
+        /** maximum distance, in world units, to raycast */
+        public float maxDistance = 3.0f;
+
+        /** stride, in texels, for samples along the ray. */
+        public float stride = 2.0f;
+
+        /** enables or disables screen-space reflections */
+        public boolean enabled = false;
+    };
+
 
     /**
      * Options for controlling the Bloom effect
@@ -732,7 +760,17 @@ public class View {
         /**
          * Variance shadows.
          */
-        VSM
+        VSM,
+
+        /**
+         * Percentage-closer filtered shadows, with contact hardening simulation.
+         */
+        DPCF,
+
+        /**
+         * Percentage-closer soft shadows
+         */
+        PCSS
     }
 
     /**
@@ -761,13 +799,6 @@ public class View {
         public boolean mipmapping = false;
 
         /**
-         * EVSM exponent
-         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
-         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
-         */
-        public float exponent = 5.54f;
-
-        /**
          * VSM minimum variance scale, must be positive.
          */
         public float minVarianceScale = 1.0f;
@@ -776,6 +807,29 @@ public class View {
          * VSM light bleeding reduction amount, between 0 and 1.
          */
         public float lightBleedReduction = 0.2f;
+    }
+
+    /**
+     * View-level options for DPCF and PCSS Shadowing.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @see View#setSoftShadowOptions
+     */
+    public static class SoftShadowOptions {
+        /**
+         * Globally scales the penumbra of all DPCF and PCSS shadows
+         * Acceptable values are greater than 0
+         */
+        public float penumbraScale = 1.0f;
+
+        /**
+         * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+         * This effectively controls the strength of contact hardening effect and is useful for
+         * artistic purposes. Higher values make the shadows become softer faster.
+         * Acceptable values are equal to or greater than 1.
+         */
+        public float penumbraRatioScale = 1.0f;
     }
 
     /**
@@ -1116,7 +1170,7 @@ public class View {
      */
     @NonNull
     public AntiAliasing getAntiAliasing() {
-        return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
+        return sAntiAliasingValues[nGetAntiAliasing(getNativeObject())];
     }
 
     /**
@@ -1155,6 +1209,17 @@ public class View {
     }
 
     /**
+     * Enables or disable screen-space reflections. Disabled by default.
+     *
+     * @param options screen-space reflections options
+     */
+    public void setScreenSpaceReflectionsOptions(@NonNull ScreenSpaceReflectionsOptions options) {
+        mScreenSpaceReflectionsOptions = options;
+        nSetScreenSpaceReflectionsOptions(getNativeObject(), options.thickness, options.bias,
+                options.maxDistance, options.stride, options.enabled);
+    }
+
+    /**
      * Returns temporal anti-aliasing options.
      *
      * @return temporal anti-aliasing options
@@ -1165,6 +1230,19 @@ public class View {
             mTemporalAntiAliasingOptions = new TemporalAntiAliasingOptions();
         }
         return mTemporalAntiAliasingOptions;
+    }
+
+    /**
+     * Returns screen-space reflections options.
+     *
+     * @return screen-space reflections options
+     */
+    @NonNull
+    public ScreenSpaceReflectionsOptions getScreenSpaceReflectionsOptions() {
+        if (mScreenSpaceReflectionsOptions == null) {
+            mScreenSpaceReflectionsOptions = new ScreenSpaceReflectionsOptions();
+        }
+        return mScreenSpaceReflectionsOptions;
     }
 
     /**
@@ -1229,7 +1307,7 @@ public class View {
      */
     @NonNull
     public Dithering getDithering() {
-        return Dithering.values()[nGetDithering(getNativeObject())];
+        return sDitheringValues[nGetDithering(getNativeObject())];
     }
 
     /**
@@ -1306,21 +1384,26 @@ public class View {
      *
      * <p>Post-processing includes:</p>
      * <ul>
-     * <li>Tone-mapping & gamma encoding</li>
+     * <li>Depth-of-field</li>
+     * <li>Bloom</li>
+     * <li>Vignetting</li>
+     * <li>Temporal Anti-aliasing (TAA)</li>
+     * <li>Color grading & gamma encoding</li>
      * <li>Dithering</li>
-     * <li>MSAA</li>
      * <li>FXAA</li>
      * <li>Dynamic scaling</li>
      * </ul>
      *
      * <p>
-     * Disabling post-processing forgoes color correctness as well as anti-aliasing and
-     * should only be used experimentally (e.g., for UI overlays).
+     * Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques
+     * and should only be used for debugging, UI overlays or when using custom render targets
+     * (see RenderTarget).
      * </p>
      *
      * @param enabled true enables post processing, false disables it
      *
-     * @see #setToneMapping
+     * @see #setBloomOptions
+     * @see #setColorGrading
      * @see #setAntiAliasing
      * @see #setDithering
      * @see #setSampleCount
@@ -1415,7 +1498,7 @@ public class View {
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
         nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
-                options.exponent, options.minVarianceScale, options.lightBleedReduction);
+                options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1429,6 +1512,37 @@ public class View {
             mVsmShadowOptions = new VsmShadowOptions();
         }
         return mVsmShadowOptions;
+    }
+
+    /**
+     * Sets soft shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with
+     * {@link LightManager.Builder#shadowOptions}.
+     *
+     * Only applicable when shadow type is set to ShadowType.DPCF.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @param options Options for shadowing.
+     * @see #setShadowType
+     */
+    public void setSoftShadowOptions(@NonNull SoftShadowOptions options) {
+        mSoftShadowOptions = options;
+        nSetSoftShadowOptions(getNativeObject(), options.penumbraScale, options.penumbraRatioScale);
+    }
+
+    /**
+     * Gets soft shadowing options associated with this View.
+     * @see #setSoftShadowOptions
+     * @return soft shadow options currently set.
+     */
+    @NonNull
+    public SoftShadowOptions getSoftShadowOptions() {
+        if (mSoftShadowOptions == null) {
+            mSoftShadowOptions = new SoftShadowOptions();
+        }
+        return mSoftShadowOptions;
     }
 
     /**
@@ -1449,7 +1563,7 @@ public class View {
     @Deprecated
     @NonNull
     public AmbientOcclusion getAmbientOcclusion() {
-        return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
+        return sAmbientOcclusionValues[nGetAmbientOcclusion(getNativeObject())];
     }
 
     /**
@@ -1610,7 +1724,7 @@ public class View {
         @Entity public int renderable;
         /** The value of the depth buffer at the picking query location */
         public float depth;
-        /** The fragment coordinate in GL convention at the the picking query location */
+        /** The fragment coordinate in GL convention at the picking query location */
         @NonNull public float[] fragCoords = new float[3];
     };
 
@@ -1696,7 +1810,8 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float exponent, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
@@ -1714,6 +1829,7 @@ public class View {
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
+    private static native void nSetScreenSpaceReflectionsOptions(long nativeView, float thickness, float bias, float maxDistance, float stride, boolean enabled);
     private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);

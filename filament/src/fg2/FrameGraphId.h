@@ -59,17 +59,8 @@ private:
 
 public:
     FrameGraphHandle(FrameGraphHandle const& rhs) noexcept = default;
-    FrameGraphHandle(FrameGraphHandle&& rhs) noexcept
-            : index(rhs.index), version(rhs.version) {
-        rhs.clear();
-    }
+
     FrameGraphHandle& operator=(FrameGraphHandle const& rhs) noexcept = default;
-    FrameGraphHandle& operator=(FrameGraphHandle&& rhs) noexcept  {
-        using namespace std;
-        swap(rhs.index, index);
-        swap(rhs.version, version);
-        return *this;
-    }
 
     bool isInitialized() const noexcept { return index != UNINITIALIZED; }
 

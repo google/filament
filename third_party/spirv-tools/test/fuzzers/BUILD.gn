@@ -48,6 +48,7 @@ template("spvtools_fuzzer") {
   source_set(target_name) {
     testonly = true
     sources = invoker.sources
+    sources += [ "random_generator.cpp" ]
     deps = [
       "../..:spvtools",
       "../..:spvtools_opt",

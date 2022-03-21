@@ -22,6 +22,7 @@
 #include "Allocators.h"
 #include "FrameInfo.h"
 #include "FrameSkipper.h"
+#include "PostProcessManager.h"
 #include "RenderPass.h"
 
 #include "details/SwapChain.h"
@@ -29,9 +30,11 @@
 #include "private/backend/DriverApiForward.h"
 
 #include <fg2/FrameGraphId.h>
+#include <fg2/FrameGraphTexture.h>
 
 #include <filament/Renderer.h>
 #include <filament/View.h>
+#include <filament/Viewport.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -61,7 +64,7 @@ class ShadowMap;
  * A concrete implementation of the Renderer Interface.
  */
 class FRenderer : public Renderer {
-    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
+    static constexpr unsigned MAX_FRAMETIME_HISTORY = 32u;
 
 public:
     explicit FRenderer(FEngine& engine);
@@ -107,9 +110,9 @@ public:
         FrameRateOptions& frameRateOptions = mFrameRateOptions;
         frameRateOptions = options;
 
-        // History can't be more than 32 frames (~0.5s)
-        frameRateOptions.history = std::min(frameRateOptions.history,
-                uint8_t(MAX_FRAMETIME_HISTORY));
+        // History can't be more than 31 frames (~0.5s), make it odd.
+        frameRateOptions.history = std::min(frameRateOptions.history / 2u * 2u + 1u,
+                MAX_FRAMETIME_HISTORY);
 
         // History must at least be 3 frames
         frameRateOptions.history = std::max(frameRateOptions.history, uint8_t(3));
@@ -140,15 +143,26 @@ private:
     void renderInternal(FView const* view);
 
     struct ColorPassConfig {
+        // User Viewport
         Viewport vp;
+        // Scaled (down) viewport from dynamic resolution
         Viewport svp;
+        // dynamic resolution scale
         math::float2 scale;
+        // HDR format
         backend::TextureFormat hdrFormat;
+        // MSAA sample count
         uint8_t msaa;
+        // Clear flags
         backend::TargetBufferFlags clearFlags;
+        // Clear color
         math::float4 clearColor = {};
-        float refractionLodOffset;
+        // Lod offset for the SSR passes
+        float ssrLodOffset;
+        // Contact shadow enabled?
         bool hasContactShadows;
+        // Screen-space reflections enabled?
+        bool hasScreenSpaceReflections;
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
@@ -183,6 +197,8 @@ private:
     duration getUserTime() const noexcept {
         return clock::now() - getUserEpoch();
     }
+
+    math::mat4f getClipSpaceToTextureSpaceMatrix() const noexcept;
 
     // keep a reference to our engine
     FEngine& mEngine;

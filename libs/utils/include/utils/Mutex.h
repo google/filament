@@ -17,7 +17,7 @@
 #ifndef TNT_UTILS_MUTEX_H
 #define TNT_UTILS_MUTEX_H
 
-#if defined(__linux__) && !defined(__SANITIZE_THREAD__)
+#if defined(__linux__)
 #include <utils/linux/Mutex.h>
 #else
 #include <utils/generic/Mutex.h>

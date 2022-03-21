@@ -59,8 +59,7 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
     }
 }
 
-void PerViewUniforms::terminate(FEngine& engine) {
-    DriverApi& driver = engine.getDriverApi();
+void PerViewUniforms::terminate(DriverApi& driver) {
     driver.destroyBufferObject(mPerViewUbh);
     driver.destroySamplerGroup(mPerViewSbh);
 }
@@ -84,6 +83,8 @@ void PerViewUniforms::prepareCamera(const CameraInfo& camera) noexcept {
     s.cameraPosition = float3{ camera.getPosition() };
     s.worldOffset = camera.worldOffset;
     s.cameraFar = camera.zf;
+    s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
+    s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
     s.clipControl = mClipControl;
 }
 
@@ -105,19 +106,25 @@ void PerViewUniforms::prepareExposure(float ev100) noexcept {
 }
 
 void PerViewUniforms::prepareViewport(const filament::Viewport &viewport) noexcept {
-    const float w = viewport.width;
-    const float h = viewport.height;
+    const float w = float(viewport.width);
+    const float h = float(viewport.height);
     auto& s = mPerViewUb.edit();
     s.resolution = float4{ w, h, 1.0f / w, 1.0f / h };
     s.origin = float2{ viewport.left, viewport.bottom };
 }
 
-void PerViewUniforms::prepareTime(FEngine& engine, float4 const& userTime) noexcept {
+void PerViewUniforms::prepareTime(math::float4 const& userTime) noexcept {
     auto& s = mPerViewUb.edit();
-    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
+    const uint64_t oneSecondRemainder = mEngine.getEngineTime().count() % 1000000000;
     const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
     s.time = fraction;
     s.userTime = userTime;
+}
+
+void PerViewUniforms::prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept {
+    auto& s = mPerViewUb.edit();
+    const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
+    s.temporalNoise = options.enabled ? temporalNoise : 0.0f;
 }
 
 void PerViewUniforms::prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept {
@@ -161,13 +168,41 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao, AmbientOcclusionOption
     s.aoBentNormals = options.enabled && options.bentNormals ? 1.0f : 0.0f;
 }
 
-void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) noexcept {
+void PerViewUniforms::prepareBlending(bool needsAlphaChannel) noexcept {
+    mPerViewUb.edit().needsAlphaChannel = needsAlphaChannel ? 1.0f : 0.0f;
+}
+
+void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
+        float refractionLodOffset,
+        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
+
     mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
         .filterMag = SamplerMagFilter::LINEAR,
         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
     });
+
     auto& s = mPerViewUb.edit();
     s.refractionLodOffset = refractionLodOffset;
+    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
+}
+
+void PerViewUniforms::prepareHistorySSR(Handle<HwTexture> ssr,
+        math::mat4f const& historyProjection,
+        math::mat4f const& uvFromViewMatrix,
+        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
+
+    mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
+        .filterMag = SamplerMagFilter::LINEAR,
+        .filterMin = SamplerMinFilter::LINEAR
+    });
+
+    auto& s = mPerViewUb.edit();
+    s.ssrReprojection = historyProjection;
+    s.ssrUvFromViewMatrix = uvFromViewMatrix;
+    s.ssrThickness = ssrOptions.thickness;
+    s.ssrBias = ssrOptions.bias;
+    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
+    s.ssrStride = ssrOptions.stride;
 }
 
 void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {
@@ -241,18 +276,21 @@ void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
 void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     auto& s = mPerViewUb.edit();
     froxelizer.updateUniforms(s);
+    float f = froxelizer.getLightFar();
     mPerViewSb.setSampler(PerViewSib::FROXELS, { froxelizer.getFroxelTexture() });
+    s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
 void PerViewUniforms::prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
         VsmShadowOptions const& options) noexcept {
     auto& s = mPerViewUb.edit();
-    s.vsmExponent = options.exponent;  // fp16: max 5.54f, fp32: max 42.0
-    s.vsmDepthScale = options.minVarianceScale * 0.01f * options.exponent;
+    s.vsmExponent = 5.54f;  // fp16: max 5.54f, fp32: max 42.0
+    s.vsmDepthScale = options.minVarianceScale * 0.01f * s.vsmExponent;
     s.vsmLightBleedReduction = options.lightBleedReduction;
 
     s.lightFromWorldMatrix = shadowMappingUniforms.lightFromWorldMatrix;
     s.cascadeSplits = shadowMappingUniforms.cascadeSplits;
+    s.shadowBulbRadiusLs = shadowMappingUniforms.shadowBulbRadiusLs;
     s.shadowBias = shadowMappingUniforms.shadowBias;
     s.ssContactShadowDistance = shadowMappingUniforms.ssContactShadowDistance;
     s.directionalShadows = shadowMappingUniforms.directionalShadows;
@@ -270,6 +308,8 @@ void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture, VsmShadowOptio
                     .filterMin = filterMin,
                     .anisotropyLog2 = options.anisotropy,
             }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_VSM;
 }
 
 void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
@@ -277,9 +317,27 @@ void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
             texture, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE, // ignored for VSM
-                    .compareFunc = SamplerCompareFunc::GE                  // ignored for VSM
+                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
+                    .compareFunc = SamplerCompareFunc::GE
             }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
+}
+
+void PerViewUniforms::prepareShadowDPCF(Handle <HwTexture> texture,
+        SoftShadowOptions const& options) noexcept {
+    mPerViewSb.setSampler(PerViewSib::SHADOW_MAP, { texture, { }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
+    s.shadowPenumbraRatioScale = options.penumbraRatioScale;
+}
+
+void PerViewUniforms::prepareShadowPCSS(Handle <HwTexture> texture,
+        SoftShadowOptions const& options) noexcept {
+    mPerViewSb.setSampler(PerViewSib::SHADOW_MAP, { texture, { }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
+    s.shadowPenumbraRatioScale = options.penumbraRatioScale;
 }
 
 void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {

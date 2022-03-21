@@ -19,6 +19,8 @@
 
 #include <filament/View.h>
 
+#include <filament/Renderer.h>
+
 #include "upcast.h"
 
 #include "Allocators.h"
@@ -26,6 +28,7 @@
 #include "FrameInfo.h"
 #include "Froxelizer.h"
 #include "PerViewUniforms.h"
+#include "PIDController.h"
 #include "ShadowMap.h"
 #include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
@@ -116,7 +119,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
-            Viewport const& viewport, math::float4 const& userTime) noexcept;
+            Viewport const& viewport, math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }
@@ -168,7 +171,11 @@ public:
             ArenaScope& arena, Viewport const& viewport) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
-    void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
+            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
+    void prepareHistorySSR(backend::Handle<backend::HwTexture> ssr,
+            math::mat4f const& historyProjection, math::mat4f const& uvFromViewMatrix,
+            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadowMap() const noexcept;
@@ -183,7 +190,9 @@ public:
     bool hasShadowing() const noexcept { return mHasShadowing; }
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
-    bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasVSM() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
+    bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
 
     void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
@@ -201,11 +210,15 @@ public:
 
     bool isScreenSpaceRefractionEnabled() const noexcept { return mScreenSpaceRefractionEnabled; }
 
+    bool isScreenSpaceReflectionEnabled() const noexcept { return mScreenSpaceReflectionsOptions.enabled; }
+
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
+        assert_invariant(!renderTarget || !mMultiSampleAntiAliasingOptions.enabled ||
+                !renderTarget->hasSampleableDepth());
         mRenderTarget = renderTarget;
     }
 
@@ -231,23 +244,22 @@ public:
         return mAntiAliasing;
     }
 
-    void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
-        options.feedback = math::clamp(options.feedback, 0.0f, 1.0f);
-        options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
-        mTemporalAntiAliasingOptions = options;
-    }
+    void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept ;
 
     const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
         return mTemporalAntiAliasingOptions;
     }
 
-    void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
-        options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
-        mMultiSampleAntiAliasingOptions = options;
-    }
+    void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
 
     const MultiSampleAntiAliasingOptions& getMultiSampleAntiAliasingOptions() const noexcept {
         return mMultiSampleAntiAliasingOptions;
+    }
+
+    void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept;
+
+    const ScreenSpaceReflectionsOptions& getScreenSpaceReflectionsOptions() const noexcept {
+        return mScreenSpaceReflectionsOptions;
     }
 
     void setColorGrading(FColorGrading* colorGrading) noexcept {
@@ -270,7 +282,10 @@ public:
         return mHasPostProcessPass;
     }
 
-    math::float2 updateScale(FrameInfo const& info) noexcept;
+    math::float2 updateScale(FEngine& engine,
+            FrameInfo const& info,
+            Renderer::FrameRateOptions const& frameRateOptions,
+            Renderer::DisplayInfo const& displayInfo) noexcept;
 
     void setDynamicResolutionOptions(View::DynamicResolutionOptions const& options) noexcept;
 
@@ -300,27 +315,7 @@ public:
         return mAmbientOcclusionOptions.enabled ? AmbientOcclusion::SSAO : AmbientOcclusion::NONE;
     }
 
-    void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
-        options.radius = math::max(0.0f, options.radius);
-        options.power = std::max(0.0f, options.power);
-        options.bias = math::clamp(options.bias, 0.0f, 0.1f);
-        // snap to the closer of 0.5 or 1.0
-        options.resolution = std::floor(
-                math::clamp(options.resolution * 2.0f, 1.0f, 2.0f) + 0.5f) * 0.5f;
-        options.intensity = std::max(0.0f, options.intensity);
-        options.bilateralThreshold = std::max(0.0f, options.bilateralThreshold);
-        options.minHorizonAngleRad = math::clamp(options.minHorizonAngleRad, 0.0f, math::f::PI_2);
-        options.ssct.lightConeRad = math::clamp(options.ssct.lightConeRad, 0.0f, math::f::PI_2);
-        options.ssct.shadowDistance = std::max(0.0f, options.ssct.shadowDistance);
-        options.ssct.contactDistanceMax = std::max(0.0f, options.ssct.contactDistanceMax);
-        options.ssct.intensity = std::max(0.0f, options.ssct.intensity);
-        options.ssct.lightDirection = normalize(options.ssct.lightDirection);
-        options.ssct.depthBias = std::max(0.0f, options.ssct.depthBias);
-        options.ssct.depthSlopeBias = std::max(0.0f, options.ssct.depthSlopeBias);
-        options.ssct.sampleCount = math::clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
-        options.ssct.rayCount = math::clamp((unsigned)options.ssct.rayCount, 1u, 255u);
-        mAmbientOcclusionOptions = options;
-    }
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept;
 
     ShadowType getShadowType() const noexcept {
         return mShadowType;
@@ -338,53 +333,35 @@ public:
         return mVsmShadowOptions;
     }
 
+    void setSoftShadowOptions(SoftShadowOptions options) noexcept;
+
+    SoftShadowOptions getSoftShadowOptions() const noexcept {
+        return mSoftShadowOptions;
+    }
+
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
         return mAmbientOcclusionOptions;
     }
 
-    void setBloomOptions(BloomOptions options) noexcept {
-        options.dirtStrength = math::saturate(options.dirtStrength);
-        options.levels = math::clamp(options.levels, uint8_t(3), uint8_t(11));
-        options.resolution = math::clamp(options.resolution, 1u << options.levels, 2048u);
-        options.anamorphism = math::clamp(options.anamorphism, 1.0f/32.0f, 32.0f);
-        options.highlight = std::max(10.0f, options.highlight);
-        mBloomOptions = options;
-    }
+    void setBloomOptions(BloomOptions options) noexcept;
 
     BloomOptions getBloomOptions() const noexcept {
         return mBloomOptions;
     }
 
-    void setFogOptions(FogOptions options) noexcept {
-        options.distance = std::max(0.0f, options.distance);
-        options.maximumOpacity = math::clamp(options.maximumOpacity, 0.0f, 1.0f);
-        options.density = std::max(0.0f, options.density);
-        options.heightFalloff = std::max(0.0f, options.heightFalloff);
-        options.inScatteringSize = options.inScatteringSize;
-        options.inScatteringStart = std::max(0.0f, options.inScatteringStart);
-        mFogOptions = options;
-    }
+    void setFogOptions(FogOptions options) noexcept;
 
     FogOptions getFogOptions() const noexcept {
         return mFogOptions;
     }
 
-    void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
-        options.cocScale = std::max(0.0f, options.cocScale);
-        options.maxApertureDiameter = std::max(0.0f, options.maxApertureDiameter);
-        mDepthOfFieldOptions = options;
-    }
+    void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept;
 
     DepthOfFieldOptions getDepthOfFieldOptions() const noexcept {
         return mDepthOfFieldOptions;
     }
 
-    void setVignetteOptions(VignetteOptions options) noexcept {
-        options.roundness = math::saturate(options.roundness);
-        options.midPoint = math::saturate(options.midPoint);
-        options.feather = math::clamp(options.feather, 0.05f, 1.0f);
-        mVignetteOptions = options;
-    }
+    void setVignetteOptions(VignetteOptions options) noexcept;
 
     VignetteOptions getVignetteOptions() const noexcept {
         return mVignetteOptions;
@@ -432,6 +409,9 @@ public:
 
     auto& getShadowUniforms() const { return mShadowUb; }
 
+    PerViewUniforms const& getPerViewUniforms() const noexcept { return mPerViewUniforms; }
+    PerViewUniforms& getPerViewUniforms() noexcept { return mPerViewUniforms; }
+
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
     FrameHistory& getFrameHistory() noexcept { return mFrameHistory; }
@@ -444,12 +424,7 @@ public:
 
     // create the picking query
     View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-            View::PickingQueryResultCallback callback) noexcept {
-        FPickingQuery* pQuery = FPickingQuery::get(x, y, handler, callback);
-        pQuery->next = mActivePickingQueriesList;
-        mActivePickingQueriesList = pQuery;
-        return *pQuery;
-    }
+            View::PickingQueryResultCallback callback) noexcept;
 
     void executePickingQueries(backend::DriverApi& driver,
             backend::RenderTargetHandle handle, float scale) noexcept;
@@ -544,17 +519,20 @@ private:
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     ShadowType mShadowType = ShadowType::PCF;
-    VsmShadowOptions mVsmShadowOptions = {}; // FIXME: this should probably be per-light
+    VsmShadowOptions mVsmShadowOptions; // FIXME: this should probably be per-light
+    SoftShadowOptions mSoftShadowOptions;
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;
     VignetteOptions mVignetteOptions;
     TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
+    ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
 
+    PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;
     math::float2 mScale = 1.0f;
     bool mIsDynamicResolutionSupported = false;
@@ -581,6 +559,10 @@ private:
     mutable bool mNeedsShadowMap = false;
 
     ShadowMapManager mShadowMapManager;
+
+#ifndef NDEBUG
+    std::array<DebugRegistry::FrameHistory, 5*60> mDebugFrameHistory;
+#endif
 };
 
 FILAMENT_UPCAST(View)

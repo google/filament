@@ -93,7 +93,7 @@ class ConvertToHalfPass : public Pass {
   bool GenHalfArith(Instruction* inst);
 
   // Gen code for relaxed phi |inst|
-  bool ProcessPhi(Instruction* inst);
+  bool ProcessPhi(Instruction* inst, uint32_t from_width, uint32_t to_width);
 
   // Gen code for relaxed convert |inst|
   bool ProcessConvert(Instruction* inst);

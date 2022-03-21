@@ -20,11 +20,11 @@
 #include <utils/compressed_pair.h>
 #include <utils/Panic.h>
 
-#include <algorithm>
+#include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include <vector>
+#include <vector> // TODO: is this necessary?
 
 #include <stddef.h>
 #include <stdint.h>
@@ -396,7 +396,8 @@ private:
         SizeTypeWrapper() noexcept = default;
         SizeTypeWrapper(SizeTypeWrapper const& rhs) noexcept = default;
         explicit  SizeTypeWrapper(TYPE value) noexcept : value(value) { }
-        SizeTypeWrapper operator=(TYPE rhs) noexcept { value = rhs; return *this; }
+        SizeTypeWrapper& operator=(TYPE rhs) noexcept { value = rhs; return *this; }
+        SizeTypeWrapper& operator=(SizeTypeWrapper& rhs) noexcept = delete;
         operator TYPE() const noexcept { return value; }
     };
 

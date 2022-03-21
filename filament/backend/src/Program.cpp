@@ -18,8 +18,7 @@
 
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // We want these in the .cpp file so they're not inlined (not worth it)
 Program::Program() noexcept {}  // = default; does not work with msvc because of noexcept
@@ -27,9 +26,10 @@ Program::Program(Program&& rhs) noexcept = default;
 Program& Program::operator=(Program&& rhs) noexcept = default;
 Program::~Program() noexcept = default;
 
-Program& Program::diagnostics(utils::CString const& name, uint8_t variant) {
+Program& Program::diagnostics(utils::CString const& name,
+        utils::Invocable<io::ostream&(utils::io::ostream&)>&& logger) {
     mName = name;
-    mVariant = variant;
+    mLogger = std::move(logger);
     return *this;
 }
 
@@ -45,9 +45,11 @@ Program& Program::setUniformBlock(size_t bindingPoint, utils::CString uniformBlo
     return *this;
 }
 
-Program& Program::setSamplerGroup(size_t bindingPoint,
+Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
         const Program::Sampler* samplers, size_t count) noexcept {
-    auto& samplerList = mSamplerGroups[bindingPoint];
+    auto& groupData = mSamplerGroups[bindingPoint];
+    groupData.stageFlags = stageFlags;
+    auto& samplerList = groupData.samplers;
     samplerList.reserve(count);
     samplerList.resize(count);
     std::copy_n(samplers, count, samplerList.data());
@@ -55,13 +57,11 @@ Program& Program::setSamplerGroup(size_t bindingPoint,
     return *this;
 }
 
-
-#if !defined(NDEBUG)
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
-    return out << "Program(" << builder.mName.c_str_safe() << ")";
+    out << "Program{";
+    builder.mLogger(out);
+    out << "}";
+    return out;
 }
 
-#endif
-
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

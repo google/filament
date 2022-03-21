@@ -26,7 +26,13 @@ int main(int argc, char** argv)
 	if (result == cgltf_result_success)
 		result = cgltf_load_buffers(&options, data, argv[1]);
 
-	if (result != cgltf_result_success || strstr(argv[1], "Draco"))
+	if (strstr(argv[1], "Draco"))
+	{
+		cgltf_free(data);
+		return 0;
+	}
+
+	if (result != cgltf_result_success)
 		return result;
 
 	//const cgltf_accessor* blobs = data->accessors;

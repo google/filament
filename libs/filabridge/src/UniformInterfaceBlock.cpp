@@ -18,8 +18,6 @@
 
 #include <utils/Panic.h>
 #include <utils/compiler.h>
-#include <private/filament/UniformInterfaceBlock.h>
-
 
 using namespace utils;
 
@@ -64,6 +62,14 @@ UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
     return *this;
 }
 
+UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
+        utils::CString const& uniformName, size_t size,
+        utils::CString const& structName, size_t stride) {
+    mEntries.emplace_back(uniformName, (uint32_t)size, structName, stride);
+    return *this;
+}
+
+
 UniformInterfaceBlock UniformInterfaceBlock::Builder::build() {
     return UniformInterfaceBlock(*this);
 }
@@ -89,7 +95,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
     uint16_t offset = 0;
     for (auto const& e : builder.mEntries) {
         size_t alignment = baseAlignmentForType(e.type);
-        uint8_t stride = strideForType(e.type);
+        uint8_t stride = strideForType(e.type, e.stride);
         if (e.size > 1) { // this is an array
             // round the alignment up to that of a float4
             alignment = (alignment + 3) & ~3;
@@ -101,7 +107,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
         offset += padding;
 
         UniformInfo& info = uniformsInfoList[i];
-        info = { e.name, offset, stride, e.type, e.size, e.precision };
+        info = { e.name, offset, stride, e.type, e.size, e.precision, e.structName };
 
         // record this uniform info
         infoMap[info.name.c_str()] = i;
@@ -154,11 +160,12 @@ uint8_t UTILS_NOINLINE UniformInterfaceBlock::baseAlignmentForType(UniformInterf
         case Type::UINT4:
         case Type::MAT3:
         case Type::MAT4:
+        case Type::STRUCT:
             return 4;
     }
 }
 
-uint8_t UTILS_NOINLINE UniformInterfaceBlock::strideForType(UniformInterfaceBlock::Type type) noexcept {
+uint8_t UTILS_NOINLINE UniformInterfaceBlock::strideForType(UniformInterfaceBlock::Type type, uint32_t stride) noexcept {
     switch (type) {
         case Type::BOOL:
         case Type::INT:
@@ -184,6 +191,8 @@ uint8_t UTILS_NOINLINE UniformInterfaceBlock::strideForType(UniformInterfaceBloc
             return 12;
         case Type::MAT4:
             return 16;
+        case Type::STRUCT:
+            return stride;
     }
 }
 

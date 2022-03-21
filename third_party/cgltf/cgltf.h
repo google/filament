@@ -474,6 +474,11 @@ typedef struct cgltf_sheen
 	cgltf_float sheen_roughness_factor;
 } cgltf_sheen;
 
+typedef struct cgltf_emissive_strength
+{
+	cgltf_float emissive_strength;
+} cgltf_emissive_strength;
+
 typedef struct cgltf_material
 {
 	char* name;
@@ -485,6 +490,7 @@ typedef struct cgltf_material
 	cgltf_bool has_ior;
 	cgltf_bool has_specular;
 	cgltf_bool has_sheen;
+	cgltf_bool has_emissive_strength;
 	cgltf_pbr_metallic_roughness pbr_metallic_roughness;
 	cgltf_pbr_specular_glossiness pbr_specular_glossiness;
 	cgltf_clearcoat clearcoat;
@@ -493,6 +499,7 @@ typedef struct cgltf_material
 	cgltf_sheen sheen;
 	cgltf_transmission transmission;
 	cgltf_volume volume;
+	cgltf_emissive_strength emissive_strength;
 	cgltf_texture_view normal_texture;
 	cgltf_texture_view occlusion_texture;
 	cgltf_texture_view emissive_texture;
@@ -779,7 +786,8 @@ cgltf_result cgltf_load_buffers(
 
 cgltf_result cgltf_load_buffer_base64(const cgltf_options* options, cgltf_size size, const char* base64, void** out_data);
 
-void cgltf_decode_uri(char* uri);
+cgltf_size cgltf_decode_string(char* string);
+cgltf_size cgltf_decode_uri(char* uri);
 
 cgltf_result cgltf_validate(cgltf_data* data);
 
@@ -1265,7 +1273,78 @@ static int cgltf_unhex(char ch)
 		-1;
 }
 
-void cgltf_decode_uri(char* uri)
+cgltf_size cgltf_decode_string(char* string)
+{
+	char* read = string + strcspn(string, "\\");
+	if (*read == 0)
+	{
+		return read - string;
+	}
+	char* write = string;
+	char* last = string;
+
+	for (;;)
+	{
+		// Copy characters since last escaped sequence
+		cgltf_size written = read - last;
+		memmove(write, last, written);
+		write += written;
+
+		if (*read++ == 0)
+		{
+			break;
+		}
+
+		// jsmn already checked that all escape sequences are valid
+		switch (*read++)
+		{
+		case '\"': *write++ = '\"'; break;
+		case '/':  *write++ = '/';  break;
+		case '\\': *write++ = '\\'; break;
+		case 'b':  *write++ = '\b'; break;
+		case 'f':  *write++ = '\f'; break;
+		case 'r':  *write++ = '\r'; break;
+		case 'n':  *write++ = '\n'; break;
+		case 't':  *write++ = '\t'; break;
+		case 'u':
+		{
+			// UCS-2 codepoint \uXXXX to UTF-8
+			int character = 0;
+			for (cgltf_size i = 0; i < 4; ++i)
+			{
+				character = (character << 4) + cgltf_unhex(*read++);
+			}
+
+			if (character <= 0x7F)
+			{
+				*write++ = character & 0xFF;
+			}
+			else if (character <= 0x7FF)
+			{
+				*write++ = 0xC0 | ((character >> 6) & 0xFF);
+				*write++ = 0x80 | (character & 0x3F);
+			}
+			else
+			{
+				*write++ = 0xE0 | ((character >> 12) & 0xFF);
+				*write++ = 0x80 | ((character >> 6) & 0x3F);
+				*write++ = 0x80 | (character & 0x3F);
+			}
+			break;
+		}
+		default:
+			break;
+		}
+
+		last = read;
+		read += strcspn(read, "\\");
+	}
+
+	*write = 0;
+	return write - string;
+}
+
+cgltf_size cgltf_decode_uri(char* uri)
 {
 	char* write = uri;
 	char* i = uri;
@@ -1293,6 +1372,7 @@ void cgltf_decode_uri(char* uri)
 	}
 
 	*write = 0;
+	return write - uri;
 }
 
 cgltf_result cgltf_load_buffers(const cgltf_options* options, cgltf_data* data, const char* gltf_path)
@@ -3771,6 +3851,39 @@ static int cgltf_parse_json_sheen(cgltf_options* options, jsmntok_t const* token
 	return i;
 }
 
+static int cgltf_parse_json_emissive_strength(jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_emissive_strength* out_emissive_strength)
+{
+	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+	int size = tokens[i].size;
+	++i;
+
+	// Default
+	out_emissive_strength->emissive_strength = 1.f;
+
+	for (int j = 0; j < size; ++j)
+	{
+		CGLTF_CHECK_KEY(tokens[i]);
+
+		if (cgltf_json_strcmp(tokens + i, json_chunk, "emissiveStrength") == 0)
+		{
+			++i;
+			out_emissive_strength->emissive_strength = cgltf_json_to_float(tokens + i, json_chunk);
+			++i;
+		}
+		else
+		{
+			i = cgltf_skip_json(tokens, i + 1);
+		}
+
+		if (i < 0)
+		{
+			return i;
+		}
+	}
+
+	return i;
+}
+
 static int cgltf_parse_json_image(cgltf_options* options, jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_image* out_image)
 {
 	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
@@ -4144,6 +4257,11 @@ static int cgltf_parse_json_material(cgltf_options* options, jsmntok_t const* to
 				{
 					out_material->has_sheen = 1;
 					i = cgltf_parse_json_sheen(options, tokens, i + 1, json_chunk, &out_material->sheen);
+				}
+				else if (cgltf_json_strcmp(tokens + i, json_chunk, "KHR_materials_emissive_strength") == 0)
+				{
+					out_material->has_emissive_strength = 1;
+					i = cgltf_parse_json_emissive_strength(tokens, i + 1, json_chunk, &out_material->emissive_strength);
 				}
 				else
 				{

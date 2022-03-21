@@ -43,18 +43,6 @@ public:
         return env;
     }
 
-    VirtualMachineEnv() noexcept : mVirtualMachine(sVirtualMachine) {
-        // We're not initializing the JVM here -- but we could -- because most of the time
-        // we don't need the jvm. Instead we do the initialization on first use. This means we could get
-        // a nasty slow down the very first time, but we'll live with it for now.
-    }
-
-    ~VirtualMachineEnv() {
-        if (mVirtualMachine) {
-            mVirtualMachine->DetachCurrentThread();
-        }
-    }
-
     inline JNIEnv* getEnvironment() noexcept {
         assert_invariant(mVirtualMachine);
         JNIEnv* env = mJniEnv;
@@ -67,6 +55,18 @@ public:
     static void handleException(JNIEnv* env) noexcept;
 
 private:
+    VirtualMachineEnv() noexcept : mVirtualMachine(sVirtualMachine) {
+        // We're not initializing the JVM here -- but we could -- because most of the time
+        // we don't need the jvm. Instead we do the initialization on first use. This means we could get
+        // a nasty slow down the very first time, but we'll live with it for now.
+    }
+
+    ~VirtualMachineEnv() {
+        if (mVirtualMachine) {
+            mVirtualMachine->DetachCurrentThread();
+        }
+    }
+
     JNIEnv* getEnvironmentSlow() noexcept;
     static JavaVM* sVirtualMachine;
     JNIEnv* mJniEnv = nullptr;

@@ -36,7 +36,7 @@ git clone https://github.com/google/googletest          external/googletest
 cd external && cd googletest && git reset --hard 1fb1bb23bb8418dc73a5a9a82bbed31dc610fec7 && cd .. && cd ..
 git clone --depth=1 https://github.com/google/effcee              external/effcee
 git clone --depth=1 https://github.com/google/re2                 external/re2
-git clone --depth=1 --branch v3.13.0 https://github.com/protocolbuffers/protobuf external/protobuf
+git clone --depth=1 --branch v3.13.0.1 https://github.com/protocolbuffers/protobuf external/protobuf
 
 mkdir build && cd $SRC/build
 

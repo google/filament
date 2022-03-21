@@ -31,7 +31,7 @@ NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver
 NoopDriver::~NoopDriver() noexcept = default;
 
 backend::ShaderModel NoopDriver::getShaderModel() const noexcept {
-#if defined(ANDROID) || defined(IOS) || defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
     return ShaderModel::GL_ES_30;
 #else
     return ShaderModel::GL_CORE_41;
@@ -160,7 +160,15 @@ bool NoopDriver::isFrameBufferFetchSupported() {
     return false;
 }
 
+bool NoopDriver::isFrameBufferFetchMultiSampleSupported() {
+    return false; // TODO: add support for MS framebuffer_fetch
+}
+
 bool NoopDriver::isFrameTimeSupported() {
+    return true;
+}
+
+bool NoopDriver::isAutoDepthResolveSupported() {
     return true;
 }
 
@@ -310,7 +318,8 @@ void NoopDriver::blit(TargetBufferFlags buffers,
         SamplerMagFilter filter) {
 }
 
-void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph) {
+void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
+        uint32_t instanceCount) {
 }
 
 void NoopDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

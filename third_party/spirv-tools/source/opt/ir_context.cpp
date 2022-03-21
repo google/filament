@@ -30,7 +30,8 @@ static const int kSpvDecorateBuiltinInIdx = 2;
 static const int kEntryPointInterfaceInIdx = 3;
 static const int kEntryPointFunctionIdInIdx = 1;
 
-// Constants for OpenCL.DebugInfo.100 extension instructions.
+// Constants for OpenCL.DebugInfo.100 / NonSemantic.Shader.DebugInfo.100
+// extension instructions.
 static const uint32_t kDebugFunctionOperandFunctionIndex = 13;
 static const uint32_t kDebugGlobalVariableOperandVariableIndex = 11;
 
@@ -170,7 +171,9 @@ Instruction* IRContext::KillInst(Instruction* inst) {
   KillOperandFromDebugInstructions(inst);
 
   if (AreAnalysesValid(kAnalysisDefUse)) {
-    get_def_use_mgr()->ClearInst(inst);
+    analysis::DefUseManager* def_use_mgr = get_def_use_mgr();
+    def_use_mgr->ClearInst(inst);
+    for (auto& l_inst : inst->dbg_line_insts()) def_use_mgr->ClearInst(&l_inst);
   }
   if (AreAnalysesValid(kAnalysisInstrToBlockMapping)) {
     instr_to_block_.erase(inst);
@@ -217,6 +220,8 @@ Instruction* IRContext::KillInst(Instruction* inst) {
 void IRContext::CollectNonSemanticTree(
     Instruction* inst, std::unordered_set<Instruction*>* to_kill) {
   if (!inst->HasResultId()) return;
+  // Debug[No]Line result id is not used, so we are done
+  if (inst->IsDebugLineInst()) return;
   std::vector<Instruction*> work_list;
   std::unordered_set<Instruction*> seen;
   work_list.push_back(inst);
@@ -437,8 +442,7 @@ void IRContext::KillOperandFromDebugInstructions(Instruction* inst) {
   if (opcode == SpvOpVariable || IsConstantInst(opcode)) {
     for (auto it = module()->ext_inst_debuginfo_begin();
          it != module()->ext_inst_debuginfo_end(); ++it) {
-      if (it->GetOpenCL100DebugOpcode() !=
-          OpenCLDebugInfo100DebugGlobalVariable)
+      if (it->GetCommonDebugOpcode() != CommonDebugInfoDebugGlobalVariable)
         continue;
       auto& operand = it->GetOperand(kDebugGlobalVariableOperandVariableIndex);
       if (operand.words[0] == id) {
@@ -930,7 +934,7 @@ void IRContext::EmitErrorMessage(std::string message, Instruction* inst) {
   while (line_inst != nullptr) {  // Stop at the beginning of the basic block.
     if (!line_inst->dbg_line_insts().empty()) {
       line_inst = &line_inst->dbg_line_insts().back();
-      if (line_inst->opcode() == SpvOpNoLine) {
+      if (line_inst->IsNoLine()) {
         line_inst = nullptr;
       }
       break;

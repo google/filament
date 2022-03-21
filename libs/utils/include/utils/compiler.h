@@ -65,19 +65,21 @@
 #endif
 
 #define UTILS_NO_SANITIZE_THREAD
-#if defined(__has_feature)
-#    if __has_feature(thread_sanitizer)
-#        undef UTILS_NO_SANITIZE_THREAD
-#        define UTILS_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
-#    endif
+#if __has_feature(thread_sanitizer)
+#undef UTILS_NO_SANITIZE_THREAD
+#define UTILS_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
+#endif
+
+#define UTILS_HAS_SANITIZE_THREAD 0
+#if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
+#undef UTILS_HAS_SANITIZE_THREAD
+#define UTILS_HAS_SANITIZE_THREAD 1
 #endif
 
 #define UTILS_HAS_SANITIZE_MEMORY 0
-#if defined(__has_feature)
-#    if __has_feature(memory_sanitizer)
-#        undef UTILS_HAS_SANITIZE_MEMORY
-#        define UTILS_HAS_SANITIZE_MEMORY 1
-#    endif
+#if __has_feature(memory_sanitizer)
+#undef UTILS_HAS_SANITIZE_MEMORY
+#define UTILS_HAS_SANITIZE_MEMORY 1
 #endif
 
 /*
@@ -163,6 +165,14 @@
 #   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 1
 #else
 #   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
+#endif
+
+#if defined(_MSC_VER)
+// MSVC does not support loop unrolling hints
+#   define UTILS_NOUNROLL
+#else
+// C++11 allows pragmas to be specified as part of defines using the _Pragma syntax.
+#   define UTILS_NOUNROLL _Pragma("nounroll")
 #endif
 
 #if __has_feature(cxx_rtti) || defined(_CPPRTTI)

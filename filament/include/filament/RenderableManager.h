@@ -20,6 +20,7 @@
 #include <filament/Box.h>
 #include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include <backend/DriverEnums.h>
 
@@ -44,6 +45,7 @@ class MaterialInstance;
 class Renderer;
 class SkinningBuffer;
 class VertexBuffer;
+class Texture;
 
 class FEngine;
 class FRenderPrimitive;
@@ -105,8 +107,8 @@ public:
      * Clients can specify bones either using this quat-vec3 pair, or by using 4x4 matrices.
      */
     struct Bone {
-        math::quatf unitQuaternion = { 1, 0, 0, 0 };
-        math::float3 translation = { 0, 0, 0 };
+        math::quatf unitQuaternion = { 1.f, 0.f, 0.f, 0.f };
+        math::float3 translation = { 0.f, 0.f, 0.f };
         float reserved = 0;
     };
 
@@ -298,15 +300,45 @@ public:
         Builder& skinning(size_t boneCount) noexcept; //!< \overload
 
         /**
-         * Controls if the renderable has vertex morphing targets, false by default.
+         * Controls if the renderable has vertex morphing targets, zero by default. This is
+         * required to enable GPU morphing.
          *
-         * This is required to enable GPU morphing for up to 4 attributes. The attached VertexBuffer
-         * must provide data in the appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc).
+         * Filament supports two morphing modes: standard (default) and legacy.
+         *
+         * For standard morphing, A MorphTargetBuffer must be created and provided via
+         * RenderableManager::setMorphTargetBufferAt(). Standard morphing supports up to
+         * \c CONFIG_MAX_MORPH_TARGET_COUNT morph targets.
+         *
+         * For legacy morphing, the attached VertexBuffer must provide data in the
+         * appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc). Legacy morphing only
+         * supports up to 4 morph targets and will be deprecated in the future. Legacy morphing must
+         * be enabled on the material definition: either via the legacyMorphing material attribute
+         * or by calling filamat::MaterialBuilder::useLegacyMorphing().
          *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
          */
-        Builder& morphing(bool enable) noexcept;
+        Builder& morphing(size_t targetCount) noexcept;
+
+        /**
+         * Specifies the morph target buffer for a primitive.
+         *
+         * The morph target buffer must have an associated renderable and geometry. Two conditions
+         * must be met:
+         * 1. The number of morph targets in the buffer must equal the renderable's morph target
+         *    count.
+         * 2. The vertex count of each morph target must equal the geometry's vertex count.
+         *
+         * @param level the level of detail (lod), only 0 can be specified
+         * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
+         * @param morphTargetBuffer specifies the morph target buffer
+         * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
+         * @param count number of vertices in the morph target buffer to read, must equal the geometry's count (for triangles, this should be a multiple of 3)
+         */
+        Builder& morphing(uint8_t level, size_t primitiveIndex,
+                MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept;
+        inline Builder& morphing(uint8_t level, size_t primitiveIndex,
+                MorphTargetBuffer* morphTargetBuffer) noexcept;
 
         /**
          * Sets an ordering index for blended primitives that all live at the same Z value.
@@ -315,6 +347,18 @@ public:
          * @param order draw order number (0 by default). Only the lowest 15 bits are used.
          */
         Builder& blendOrder(size_t primitiveIndex, uint16_t order) noexcept;
+
+        /**
+         * Specifies the number of draw instance of this renderable. The default is 1 instance and
+         * the maximum number of instances allowed is 65535. 0 is invalid.
+         * All instances are culled using the same bounding box, so care must be taken to make
+         * sure all instances render inside the specified bounding box.
+         * The material can use getInstanceIndex() in the vertex shader to get the instance index and
+         * possibly adjust the position or transform.
+         *
+         * @param instanceCount the number of instances silently clamped between 1 and 65535.
+         */
+        Builder& instances(size_t instanceCount) noexcept;
 
         /**
          * Adds the Renderable component to an entity.
@@ -350,6 +394,11 @@ public:
             MaterialInstance const* materialInstance = nullptr;
             PrimitiveType type = PrimitiveType::TRIANGLES;
             uint16_t blendOrder = 0;
+            struct {
+                MorphTargetBuffer* buffer = nullptr;
+                size_t offset = 0;
+                size_t count = 0;
+            } morphing;
         };
     };
 
@@ -444,24 +493,45 @@ public:
      * Updates the bone transforms in the range [offset, offset + boneCount).
      * The bones must be pre-allocated using Builder::skinning().
      */
-    void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
-    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept; //!< \overload
+    void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0);
+    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0); //!< \overload
 
     /**
      * Associates a SkinningBuffer to a renderable instance
      */
     void setSkinningBuffer(Instance instance, SkinningBuffer* skinningBuffer,
-            size_t count, size_t offset) noexcept;
+            size_t count, size_t offset);
 
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * This is specified using a 4-tuple, one float per morph target. If the renderable has fewer
-     * than 4 morph targets, then clients should fill the unused components with zeroes.
+     * The renderable must be built with morphing enabled, see Builder::morphing(). In legacy
+     * morphing mode, only the first 4 weights are considered.
      *
-     * The renderable must be built with morphing enabled, see Builder::morphing().
+     * @param instance Instance of the component obtained from getInstance().
+     * @param weights Pointer to morph target weights to be update.
+     * @param count Number of morph target weights.
+     * @param offset Index of the first first morph target weight to set at instance.
      */
-    void setMorphWeights(Instance instance, math::float4 const& weights) noexcept;
+    void setMorphWeights(Instance instance,
+            float const* weights, size_t count, size_t offset = 0);
+
+    /**
+     * Associates a MorphTargetBuffer to the given primitive.
+     */
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
+
+    /**
+     * Utility method to change a MorphTargetBuffer to the given primitive
+     */
+    inline void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            MorphTargetBuffer* morphTargetBuffer);
+
+    /**
+     * Gets the number of morphing in the given entity.
+     */
+    size_t getMorphTargetCount(Instance instance) const noexcept;
 
     /**
      * Gets the bounding box used for frustum culling.
@@ -564,6 +634,18 @@ public:
     static Box computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
             size_t stride = sizeof(VECTOR)) noexcept;
 };
+
+RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer) noexcept {
+    return morphing(level, primitiveIndex, morphTargetBuffer, 0,
+            morphTargetBuffer->getVertexCount());
+}
+
+void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+        MorphTargetBuffer* morphTargetBuffer) {
+    setMorphTargetBufferAt(instance, level, primitiveIndex, morphTargetBuffer, 0,
+            morphTargetBuffer->getVertexCount());
+}
 
 template<typename VECTOR, typename INDEX, typename, typename>
 Box RenderableManager::computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,

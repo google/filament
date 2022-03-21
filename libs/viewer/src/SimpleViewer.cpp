@@ -34,6 +34,7 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 
 using namespace filagui;
 using namespace filament::math;
@@ -41,10 +42,9 @@ using namespace filament::math;
 namespace filament {
 namespace viewer {
 
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset) {
-    using namespace filament::math;
-    auto minpt = bounds.min;
-    auto maxpt = bounds.max;
+mat4f fitIntoUnitCube(const Aabb& bounds, float zoffset) {
+    float3 minpt = bounds.min;
+    float3 maxpt = bounds.max;
     float maxExtent;
     maxExtent = std::max(maxpt.x - minpt.x, maxpt.y - minpt.y);
     maxExtent = std::max(maxExtent, maxpt.z - minpt.z);
@@ -137,7 +137,6 @@ static void computeToneMapPlot(ColorGradingSettings& settings, float* plot) {
         case ToneMapping::GENERIC:
             mapper = new GenericToneMapper(
                     settings.genericToneMapper.contrast,
-                    settings.genericToneMapper.shoulder,
                     settings.genericToneMapper.midGrayIn,
                     settings.genericToneMapper.midGrayOut,
                     settings.genericToneMapper.hdrMax
@@ -197,7 +196,6 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
             if (ImGui::CollapsingHeader("Tonemap parameters")) {
                 GenericToneMapperSettings& generic = colorGrading.genericToneMapper;
                 ImGui::SliderFloat("Contrast##genericToneMapper", &generic.contrast, 1e-5f, 3.0f);
-                ImGui::SliderFloat("Shoulder##genericToneMapper", &generic.shoulder, 0.0f, 1.0f);
                 ImGui::SliderFloat("Mid-gray in##genericToneMapper", &generic.midGrayIn, 0.0f, 1.0f);
                 ImGui::SliderFloat("Mid-gray out##genericToneMapper", &generic.midGrayOut, 0.0f, 1.0f);
                 ImGui::SliderFloat("HDR max", &generic.hdrMax, 1.0f, 64.0f);
@@ -470,9 +468,6 @@ void SimpleViewer::updateIndirectLight() {
 }
 
 void SimpleViewer::applyAnimation(double currentTime) {
-    if (!mAnimator) {
-        return;
-    }
     static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
     if (mResetAnimation) {
@@ -579,8 +574,22 @@ void SimpleViewer::updateUserInterface() {
         }
         auto instance = rm.getInstance(entity);
         bool scaster = rm.isShadowCaster(instance);
+        bool sreceiver = rm.isShadowReceiver(instance);
         ImGui::Checkbox("casts shadows", &scaster);
         rm.setCastShadows(instance, scaster);
+        ImGui::Checkbox("receives shadows", &sreceiver);
+        rm.setReceiveShadows(instance, sreceiver);
+        auto numMorphTargets = rm.getMorphTargetCount(instance);
+        if (numMorphTargets > 0) {
+            bool selected = entity == mCurrentMorphingEntity;
+            ImGui::Checkbox("morphing", &selected);
+            if (selected) {
+                mCurrentMorphingEntity = entity;
+                mMorphWeights.resize(numMorphTargets, 0.0f);
+            } else {
+                mCurrentMorphingEntity = utils::Entity();
+            }
+        }
         size_t numPrims = rm.getPrimitiveCount(instance);
         for (size_t prim = 0; prim < numPrims; ++prim) {
             const char* mname = rm.getMaterialInstanceAt(instance, prim)->getName();
@@ -689,6 +698,9 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
 
         ImGui::Checkbox("MSAA 4x", &mSettings.view.msaa.enabled);
+        ImGui::Indent();
+            ImGui::Checkbox("Custom resolve", &mSettings.view.msaa.customResolve);
+        ImGui::Unindent();
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
         if (ImGui::CollapsingHeader("SSAO Options")) {
@@ -727,7 +739,31 @@ void SimpleViewer::updateUserInterface() {
                 ssao.ssct.sampleCount = sampleCount;
             }
         }
+
+        ImGui::Checkbox("Screen-space reflections", &mSettings.view.screenSpaceReflections.enabled);
+        if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
+            auto& ssrefl = mSettings.view.screenSpaceReflections;
+            ImGui::SliderFloat("Ray thickness", &ssrefl.thickness, 0.001f, 0.2f);
+            ImGui::SliderFloat("Bias", &ssrefl.bias, 0.001f, 0.5f);
+            ImGui::SliderFloat("Max distance", &ssrefl.maxDistance, 0.1, 10.0f);
+            ImGui::SliderFloat("Stride", &ssrefl.stride, 1.0, 10.0f);
+        }
         ImGui::Unindent();
+    }
+
+    if (ImGui::CollapsingHeader("Dynamic Resolution")) {
+        auto& dsr = mSettings.view.dsr;
+        int quality = (int)dsr.quality;
+        ImGui::Checkbox("enabled", &dsr.enabled);
+        ImGui::Checkbox("homogeneous", &dsr.homogeneousScaling);
+        ImGui::SliderFloat("min. scale", &dsr.minScale.x, 0.25f, 1.0f);
+        ImGui::SliderFloat("max. scale", &dsr.maxScale.x, 0.25f, 1.0f);
+        ImGui::SliderInt("quality", &quality, 0, 3);
+        ImGui::SliderFloat("sharpness", &dsr.sharpness, 0.0f, 1.0f);
+        dsr.minScale.x = std::min(dsr.minScale.x, dsr.maxScale.x);
+        dsr.minScale.y = dsr.minScale.x;
+        dsr.maxScale.y = dsr.maxScale.x;
+        dsr.quality = (QualityLevel)quality;
     }
 
     auto& light = mSettings.lighting;
@@ -749,26 +785,32 @@ void SimpleViewer::updateUserInterface() {
             light.shadowOptions.mapSize = mapSize;
 
 
-            bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
-            ImGui::Checkbox("Enable VSM", &enableVsm);
-            mSettings.view.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
+            int shadowType = (int)mSettings.view.shadowType;
+            ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0PCSS\0\0");
+            mSettings.view.shadowType = (ShadowType)shadowType;
 
-            char label[32];
-            snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
-            ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
-            light.shadowOptions.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
+            if (mSettings.view.shadowType == ShadowType::VSM) {
+                char label[32];
+                snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
+                ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
+                light.shadowOptions.vsm.msaaSamples =
+                        static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
 
-            int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
-            snprintf(label, 32, "%d", 1 << vsmAnisotropy);
-            ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
-            mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
-            ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
-            ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
+                int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
+                snprintf(label, 32, "%d", 1 << vsmAnisotropy);
+                ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
+                mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
+                ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
+                ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
 
-            // These are not very useful in practice (defaults are good), but we keep them here for debugging
-            //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
-            //ImGui::SliderFloat("VSM Light bleed", &mSettings.view.vsmShadowOptions.lightBleedReduction, 0.0, 1.0f);
-            //ImGui::SliderFloat("VSM min variance scale", &mSettings.view.vsmShadowOptions.minVarianceScale, 0.0, 10.0f);
+                // These are not very useful in practice (defaults are good), but we keep them here for debugging
+                //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
+                //ImGui::SliderFloat("VSM Light bleed", &mSettings.view.vsmShadowOptions.lightBleedReduction, 0.0, 1.0f);
+                //ImGui::SliderFloat("VSM min variance scale", &mSettings.view.vsmShadowOptions.minVarianceScale, 0.0, 10.0f);
+            } else if (mSettings.view.shadowType == ShadowType::DPCF || mSettings.view.shadowType == ShadowType::PCSS) {
+                ImGui::SliderFloat("Penumbra scale", &light.softShadowOptions.penumbraScale, 0.0f, 100.0f);
+                ImGui::SliderFloat("Penumbra Ratio scale", &light.softShadowOptions.penumbraRatioScale, 1.0f, 100.0f);
+            }
 
             int shadowCascades = light.shadowOptions.shadowCascades;
             ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);
@@ -897,6 +939,8 @@ void SimpleViewer::updateUserInterface() {
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
 
+    mView->setSoftShadowOptions(mSettings.lighting.softShadowOptions);
+
     if (light.enableSunlight) {
         mScene->addEntity(mSunlight);
         auto sun = lm.getInstance(mSunlight);
@@ -924,8 +968,7 @@ void SimpleViewer::updateUserInterface() {
 
         // We do not yet support animation selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
-        if (mAnimator && mAnimator->getAnimationCount() > 0 &&
-                ImGui::CollapsingHeader("Animation")) {
+        if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;
             ImGui::RadioButton("Disable", &selectedAnimation, 0);
@@ -941,6 +984,25 @@ void SimpleViewer::updateUserInterface() {
                 mResetAnimation = true;
             }
             ImGui::Unindent();
+        }
+
+        if (mCurrentMorphingEntity && ImGui::CollapsingHeader("Morphing")) {
+            const bool isAnimating = mCurrentAnimation > 0 && mAnimator->getAnimationCount() > 0;
+            if (isAnimating) {
+                ImGui::BeginDisabled();
+            }
+            for (int i = 0; i != mMorphWeights.size(); ++i) {
+                const char* name = mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i);
+                std::string label = name ? name : "Unnamed target " + std::to_string(i);
+                ImGui::SliderFloat(label.c_str(), &mMorphWeights[i], 0.0f, 1.0);
+            }
+            if (isAnimating) {
+                ImGui::EndDisabled();
+            }
+            if (!isAnimating) {
+                auto instance = rm.getInstance(mCurrentMorphingEntity);
+                rm.setMorphWeights(instance, mMorphWeights.data(), mMorphWeights.size());
+            }
         }
 
         if (mEnableWireframe) {

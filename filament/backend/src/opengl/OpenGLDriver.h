@@ -44,7 +44,7 @@ namespace filament {
 namespace backend {
 class OpenGLPlatform;
 class PixelBufferDescriptor;
-class TargetBufferInfo;
+struct TargetBufferInfo;
 } // namespace backend
 
 class OpenGLProgram;

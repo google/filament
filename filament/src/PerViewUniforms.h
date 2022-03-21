@@ -28,11 +28,16 @@
 
 #include <utils/EntityInstance.h>
 
+#include <random>
+
 namespace filament {
 
-struct FogOptions;
-struct DynamicResolutionOptions;
 struct AmbientOcclusionOptions;
+struct DynamicResolutionOptions;
+struct FogOptions;
+struct ScreenSpaceReflectionsOptions;
+struct SoftShadowOptions;
+struct TemporalAntiAliasingOptions;
 struct VsmShadowOptions;
 
 struct CameraInfo;
@@ -48,20 +53,37 @@ class PerViewUniforms {
     using LightManagerInstance = utils::EntityInstance<LightManager>;
     using TextureHandle = backend::Handle<backend::HwTexture>;
 
-public:
-    PerViewUniforms(FEngine& engine) noexcept;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCF  = 0u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_VSM  = 1u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
 
-    void terminate(FEngine& engine);
+public:
+    explicit PerViewUniforms(FEngine& engine) noexcept;
+
+    void terminate(backend::DriverApi& driver);
 
     void prepareCamera(const CameraInfo& camera) noexcept;
     void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) noexcept;
     void prepareViewport(const filament::Viewport& viewport) noexcept;
-    void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
+    void prepareTime(math::float4 const& userTime) noexcept;
+    void prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept;
     void prepareExposure(float ev100) noexcept;
     void prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept;
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
-    void prepareSSR(TextureHandle ssr, float refractionLodOffset) noexcept;
+    void prepareBlending(bool needsAlphaChannel) noexcept;
+
+    // screen-space reflection and/or refraction (SSR)
+    void prepareSSR(TextureHandle ssr,
+            float refractionLodOffset,
+            ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
+
+    void prepareHistorySSR(TextureHandle ssr,
+            math::mat4f const& historyProjection,
+            math::mat4f const& uvFromViewMatrix,
+            ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
+
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
             VsmShadowOptions const& options) noexcept;
 
@@ -75,6 +97,8 @@ public:
     // maybe these should have their own UBO, they're needed only when GENERATING the shadowmaps
     void prepareShadowVSM(TextureHandle texture, VsmShadowOptions const& options) noexcept;
     void prepareShadowPCF(TextureHandle texture) noexcept;
+    void prepareShadowDPCF(TextureHandle texture, SoftShadowOptions const& options) noexcept;
+    void prepareShadowPCSS(TextureHandle texture, SoftShadowOptions const& options) noexcept;
 
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;
@@ -91,6 +115,7 @@ private:
     backend::SamplerGroup mPerViewSb;
     backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
     backend::Handle<backend::HwBufferObject> mPerViewUbh;
+    std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 };
 
 } // namespace filament

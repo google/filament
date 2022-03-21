@@ -118,8 +118,8 @@ public class SkinningBuffer {
      * @param offset Index of the first bone to set
      */
     public void setBonesAsMatrices(@NonNull Engine engine,
-                                   @NonNull Buffer matrices, @IntRange(from = 0, to = 255) int boneCount,
-                                   @IntRange(from = 0) int offset) {
+            @NonNull Buffer matrices, @IntRange(from = 0, to = 255) int boneCount,
+            @IntRange(from = 0) int offset) {
         int result = nSetBonesAsMatrices(mNativeObject, engine.getNativeObject(),
                 matrices, matrices.remaining(), boneCount, offset);
         if (result < 0) {
@@ -138,8 +138,8 @@ public class SkinningBuffer {
      * @param offset Index of the first bone to set
      */
     public void setBonesAsQuaternions(@NonNull Engine engine,
-                                      @NonNull Buffer quaternions, @IntRange(from = 0, to = 255) int boneCount,
-                                      @IntRange(from = 0) int offset) {
+            @NonNull Buffer quaternions, @IntRange(from = 0, to = 255) int boneCount,
+            @IntRange(from = 0) int offset) {
         int result = nSetBonesAsQuaternions(mNativeObject, engine.getNativeObject(),
                 quaternions, quaternions.remaining(), boneCount, offset);
         if (result < 0) {

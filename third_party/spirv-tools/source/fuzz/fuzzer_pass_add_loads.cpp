@@ -23,9 +23,10 @@ namespace fuzz {
 FuzzerPassAddLoads::FuzzerPassAddLoads(
     opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
-    protobufs::TransformationSequence* transformations)
+    protobufs::TransformationSequence* transformations,
+    bool ignore_inapplicable_transformations)
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
-                 transformations) {}
+                 transformations, ignore_inapplicable_transformations) {}
 
 void FuzzerPassAddLoads::Apply() {
   ForEachInstructionWithInstructionDescriptor(
@@ -38,15 +39,19 @@ void FuzzerPassAddLoads::Apply() {
                "The opcode of the instruction we might insert before must be "
                "the same as the opcode in the descriptor for the instruction");
 
-        // Check whether it is legitimate to insert a load before this
-        // instruction.
-        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad, inst_it)) {
-          return;
-        }
-
         // Randomly decide whether to try inserting a load here.
         if (!GetFuzzerContext()->ChoosePercentage(
                 GetFuzzerContext()->GetChanceOfAddingLoad())) {
+          return;
+        }
+
+        // Check whether it is legitimate to insert a load or atomic load before
+        // this instruction.
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad, inst_it)) {
+          return;
+        }
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpAtomicLoad,
+                                                          inst_it)) {
           return;
         }
 
@@ -79,13 +84,53 @@ void FuzzerPassAddLoads::Apply() {
           return;
         }
 
-        // Choose a pointer at random, and create and apply a loading
-        // transformation based on it.
-        ApplyTransformation(TransformationLoad(
-            GetFuzzerContext()->GetFreshId(),
+        auto chosen_instruction =
             relevant_instructions[GetFuzzerContext()->RandomIndex(
-                                      relevant_instructions)]
-                ->result_id(),
+                relevant_instructions)];
+
+        bool is_atomic_load = false;
+        uint32_t memory_scope_id = 0;
+        uint32_t memory_semantics_id = 0;
+
+        auto storage_class = static_cast<SpvStorageClass>(
+            GetIRContext()
+                ->get_def_use_mgr()
+                ->GetDef(chosen_instruction->type_id())
+                ->GetSingleWordInOperand(0));
+
+        switch (storage_class) {
+          case SpvStorageClassStorageBuffer:
+          case SpvStorageClassPhysicalStorageBuffer:
+          case SpvStorageClassWorkgroup:
+          case SpvStorageClassCrossWorkgroup:
+          case SpvStorageClassAtomicCounter:
+          case SpvStorageClassImage:
+            if (GetFuzzerContext()->ChoosePercentage(
+                    GetFuzzerContext()->GetChanceOfAddingAtomicLoad())) {
+              is_atomic_load = true;
+
+              memory_scope_id = FindOrCreateConstant(
+                  {SpvScopeInvocation},
+                  FindOrCreateIntegerType(32, GetFuzzerContext()->ChooseEven()),
+                  false);
+
+              memory_semantics_id = FindOrCreateConstant(
+                  {static_cast<uint32_t>(
+                      fuzzerutil::GetMemorySemanticsForStorageClass(
+                          storage_class))},
+                  FindOrCreateIntegerType(32, GetFuzzerContext()->ChooseEven()),
+                  false);
+            }
+            break;
+
+          default:
+            break;
+        }
+
+        // Create and apply the transformation.
+        ApplyTransformation(TransformationLoad(
+            GetFuzzerContext()->GetFreshId(), chosen_instruction->result_id(),
+            is_atomic_load, memory_scope_id, memory_semantics_id,
             instruction_descriptor));
       });
 }

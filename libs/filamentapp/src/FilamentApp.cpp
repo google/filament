@@ -19,7 +19,9 @@
 #include <filamentapp/FilamentApp.h>
 
 #if !defined(WIN32)
-#    include <unistd.h>
+#if defined(FILAMENT_SUPPORTS_WAYLAND)
+#    include <SDL_syswm.h>
+#endif
 #else
 #    include <SDL_syswm.h>
 #    include <utils/unwindows.h>
@@ -41,6 +43,10 @@
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/View.h>
+
+#ifndef NDEBUG
+#include <filament/DebugRegistry.h>
+#endif
 
 #include <filagui/ImGuiHelper.h>
 
@@ -270,6 +276,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                     if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
                         mClosed = true;
                     }
+#ifndef NDEBUG
+                    if (event.key.keysym.scancode == SDL_SCANCODE_PRINTSCREEN) {
+                        DebugRegistry& debug = mEngine->getDebugRegistry();
+                        bool* captureFrame =
+                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                        *captureFrame = true;
+                    }
+#endif
                     window->keyDown(event.key.keysym.scancode);
                     break;
                 case SDL_KEYUP:
@@ -396,10 +410,6 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             for (auto const& view : window->mViews) {
                 renderer->render(view->getView());
             }
-            renderer->endFrame();
-
-            // We call PostRender only when the frame has not been skipped. It might be used
-            // for taking screenshots under the assumption that a state change has taken effect.
             if (postRender) {
                 for (auto const& view : window->mViews) {
                     if (view.get() != window->mUiView) {
@@ -407,6 +417,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                     }
                 }
             }
+            renderer->endFrame();
 
         } else {
             ++mSkippedFrames;
@@ -510,7 +521,7 @@ void FilamentApp::initSDL() {
 
 FilamentApp::Window::Window(FilamentApp* filamentApp,
         const Config& config, std::string title, size_t w, size_t h)
-        : mFilamentApp(filamentApp) {
+        : mFilamentApp(filamentApp), mIsHeadless(config.headless) {
     const int x = SDL_WINDOWPOS_CENTERED;
     const int y = SDL_WINDOWPOS_CENTERED;
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
@@ -532,15 +543,37 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mWidth = w;
         mHeight = h;
     } else {
+
+#if defined(FILAMENT_SUPPORTS_WAYLAND)
+        struct {
+            struct wl_display *display;
+            struct wl_surface *surface;
+        } wayland{};
+
+        SDL_SysWMinfo wmi;
+        SDL_VERSION(&wmi.version);
+        ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(mWindow, &wmi), "SDL version unsupported!");
+        if (wmi.subsystem == SDL_SYSWM_WAYLAND) {
+            wayland.display = wmi.info.wl.display;
+            wayland.surface = wmi.info.wl.surface;
+        }
+        void* nativeWindow = &wayland;
+
+        // Create the Engine after the window in case this happens to be a single-threaded platform.
+        // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
+        // current, rather than the one created by SDL.
+        mFilamentApp->mEngine = Engine::create(config.backend, nullptr, nativeWindow);
+#else
+        void* nativeWindow = ::getNativeWindow(mWindow);
+
         // Create the Engine after the window in case this happens to be a single-threaded platform.
         // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
         // current, rather than the one created by SDL.
         mFilamentApp->mEngine = Engine::create(config.backend);
-
+#endif
         // get the resolved backend
         mBackend = config.backend = mFilamentApp->mEngine->getBackend();
 
-        void* nativeWindow = ::getNativeWindow(mWindow);
         void* nativeSwapChain = nativeWindow;
 
 #if defined(__APPLE__)
@@ -755,7 +788,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
     float dpiScaleY = 1.0f;
 
     // If the app is not headless, query the window for its physical & virtual sizes.
-    if (mWindow) {
+    if (!mIsHeadless) {
         uint32_t width, height;
         SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
         mWidth = (size_t) width;

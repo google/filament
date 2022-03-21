@@ -239,6 +239,10 @@ public class MaterialInstance {
 
     /**
      * Sets a texture and sampler parameter on this material's default instance.
+     * <p>
+     * Note: Depth textures can't be sampled with a linear filter unless the comparison mode is set
+     *       to COMPARE_TO_TEXTURE.
+     * </p>
      *
      * @param name The name of the material texture parameter
      * @param texture The texture to set as parameter

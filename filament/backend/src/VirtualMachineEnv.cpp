@@ -44,7 +44,11 @@ void VirtualMachineEnv::handleException(JNIEnv* const env) noexcept {
 
 UTILS_NOINLINE
 JNIEnv* VirtualMachineEnv::getEnvironmentSlow() noexcept {
+#if defined(__ANDROID__)
     mVirtualMachine->AttachCurrentThread(&mJniEnv, nullptr);
+#else
+    mVirtualMachine->AttachCurrentThread(reinterpret_cast<void**>(&mJniEnv), nullptr);
+#endif
     assert_invariant(mJniEnv);
     return mJniEnv;
 }

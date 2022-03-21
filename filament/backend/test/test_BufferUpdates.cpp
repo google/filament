@@ -126,7 +126,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
                     triangle.updateIndices(i);
                 }
             }
-            getDriverApi().draw(state, triangle.getRenderPrimitive());
+            getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
 
             triangleIndex++;
         }

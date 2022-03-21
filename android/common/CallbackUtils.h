@@ -25,7 +25,7 @@
 #include <filament/Engine.h>
 
 struct CallbackJni {
-#ifdef ANDROID
+#ifdef __ANDROID__
     jclass handlerClass = nullptr;
     jmethodID post = nullptr;
 #endif
@@ -39,30 +39,39 @@ void releaseCallbackJni(JNIEnv* env, CallbackJni callbackUtils, jobject handler,
 struct JniCallback : private filament::backend::CallbackHandler {
     JniCallback(JniCallback const &) = delete;
     JniCallback(JniCallback&&) = delete;
+    JniCallback& operator=(JniCallback const &) = delete;
+    JniCallback& operator=(JniCallback&&) = delete;
 
+    // create a JniCallback
     static JniCallback* make(JNIEnv* env, jobject handler, jobject runnable);
 
+    // execute the callback on the java thread and destroy ourselves
     static void postToJavaAndDestroy(JniCallback* callback);
 
+    // CallbackHandler interface.
     void post(void* user, Callback callback) override;
 
+    // Get the CallbackHandler interface
     filament::backend::CallbackHandler* getHandler() noexcept { return this; }
 
     jobject getCallbackObject() { return mCallback; }
 
 protected:
     JniCallback(JNIEnv* env, jobject handler, jobject runnable);
+    explicit JniCallback() = default; // this version does nothing
     virtual ~JniCallback();
-    jobject mHandler;
-    jobject mCallback;
-    CallbackJni mCallbackUtils;
+    jobject mHandler{};
+    jobject mCallback{};
+    CallbackJni mCallbackUtils{};
 };
 
 
 struct JniBufferCallback : public JniCallback {
+    // create a JniBufferCallback
     static JniBufferCallback* make(filament::Engine* engine,
             JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer);
 
+    // execute the callback on the java thread and destroy ourselves
     static void postToJavaAndDestroy(void*, size_t, void* user);
 
 private:
@@ -72,9 +81,11 @@ private:
 };
 
 struct JniImageCallback : public JniCallback {
+    // create a JniImageCallback
     static JniImageCallback* make(filament::Engine* engine, JNIEnv* env, jobject handler,
             jobject runnable, long image);
 
+    // execute the callback on the java thread and destroy ourselves
     static void postToJavaAndDestroy(void*, void* user);
 
 private:

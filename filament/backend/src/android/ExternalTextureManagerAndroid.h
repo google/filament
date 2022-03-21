@@ -25,12 +25,17 @@
 #include <android/api-level.h>
 #include <android/hardware_buffer.h>
 
-#if __ANDROID_API__ >= 26
-#   define PLATFORM_HAS_HARDWAREBUFFER
-#endif
-
 namespace filament {
 
+/*
+ * ExternalTextureManagerAndroid::ExternalTexture is basically a wrapper for AHardwareBuffer.
+ *
+ * This class doesn't rely on GL or EGL, and could be used for other Android platform if needed
+ * (e.g. Vulkan).
+ *
+ * ExternalTextureManagerAndroid handle allocation/destruction using either Java or the NDK,
+ * whichever is available.
+ */
 class ExternalTextureManagerAndroid {
 public:
 
@@ -39,26 +44,27 @@ public:
         AHardwareBuffer* hardwareBuffer = nullptr;
     };
 
-    static ExternalTextureManagerAndroid& get() noexcept;
+    // must be called on backend thread
+    static ExternalTextureManagerAndroid& create() noexcept;
 
-    // called on gl thread
-    ExternalTextureManagerAndroid() noexcept;
+    // must be called on backend thread
+    static void destroy(ExternalTextureManagerAndroid* pExternalTextureManager) noexcept;
 
-    // not quite sure on which thread this is going to be called
-    ~ExternalTextureManagerAndroid() noexcept;
-
-    // called on gl thread
-    backend::Platform::ExternalTexture* create() noexcept;
+    // must be called on backend thread (only because we don't synchronize
+    backend::Platform::ExternalTexture* createExternalTexture() noexcept;
 
     // called on app thread
     void reallocate(
         backend::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
         backend::TextureFormat format, uint64_t usage) noexcept;
 
-    // called on gl thread
+    // must be called on backend thread
     void destroy(backend::Platform::ExternalTexture* ets) noexcept;
 
 private:
+    ExternalTextureManagerAndroid() noexcept;
+    ~ExternalTextureManagerAndroid() noexcept;
+
     // called on app thread
     void alloc(backend::Platform::ExternalTexture* ets,
                uint32_t w, uint32_t h, backend::TextureFormat format, uint64_t usage) noexcept;
@@ -68,16 +74,9 @@ private:
 
     VirtualMachineEnv& mVm;
 
-#ifndef PLATFORM_HAS_HARDWAREBUFFER
-    // if we compile for API 26 (Oreo) and above, we're guaranteed to have AHardwareBuffer
-    // in all other cases, we need to get them at runtime.
-    int (*AHardwareBuffer_allocate)(const AHardwareBuffer_Desc*, AHardwareBuffer**) = nullptr;
-    void (*AHardwareBuffer_release)(AHardwareBuffer*) = nullptr;
-
     jclass mGraphicBufferClass = nullptr;
     jmethodID mGraphicBuffer_nCreateGraphicBuffer = nullptr;
     jmethodID mGraphicBuffer_nDestroyGraphicBuffer = nullptr;
-#endif
 };
 
 

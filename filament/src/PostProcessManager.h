@@ -29,6 +29,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
 
+#include <private/filament/Variant.h>
+
 #include <utils/CString.h>
 
 #include <tsl/robin_map.h>
@@ -42,7 +44,7 @@ class FEngine;
 class FMaterial;
 class FMaterialInstance;
 class FrameGraph;
-class FView;
+class PerViewUniforms;
 class RenderPass;
 struct CameraInfo;
 
@@ -50,6 +52,7 @@ class PostProcessManager {
 public:
     struct ColorGradingConfig {
         bool asSubpass{};
+        bool customResolve{};
         bool translucent{};
         bool fxaa{};
         bool dithering{};
@@ -62,6 +65,7 @@ public:
     };
 
     explicit PostProcessManager(FEngine& engine) noexcept;
+    ~PostProcessManager() noexcept;
 
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
@@ -69,18 +73,38 @@ public:
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
-    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
+    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg,
+            RenderPass const& pass, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
+
+    // reflections pass
+    FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
+            RenderPass const& pass,
+            FrameHistory const& frameHistory,
+            CameraInfo const& cameraInfo,
+            PerViewUniforms& uniforms,
+            ScreenSpaceReflectionsOptions const& options,
+            FrameGraphTexture::Descriptor const& desc) noexcept;
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
             filament::Viewport const& svp, const CameraInfo& cameraInfo,
             AmbientOcclusionOptions const& options) noexcept;
 
-    // Used in refraction pass
+    // Gaussian mipmap
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
-            size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
+            FrameGraphId<FrameGraphTexture> input, size_t levels, bool reinhard,
+            size_t kernelWidth, float sigma) noexcept;
+
+    // Helper to generate gaussian mipmaps for SSR (refraction and reflections).
+    // This performs the following tasks:
+    // - resolves input if needed
+    // - rescale input so it has a homogenous scale
+    // - generate a new texture with gaussian mips
+    static FrameGraphId<FrameGraphTexture> generateMipmapSSR(PostProcessManager& ppm,
+            FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, float verticalFieldOfView, math::float2 scale,
+            backend::TextureFormat format, float* pLodOffset) noexcept;
 
     // Depth-of-field
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
@@ -107,17 +131,29 @@ public:
     void colorGradingSubpass(backend::DriverApi& driver,
             ColorGradingConfig const& colorGradingConfig) noexcept;
 
+    // custom MSAA resolve as subpass
+    enum class CustomResolveOp { COMPRESS, UNCOMPRESS };
+    void customResolvePrepareSubpass(backend::DriverApi& driver, CustomResolveOp op) noexcept;
+    void customResolveSubpass(backend::DriverApi& driver) noexcept;
+    FrameGraphId<FrameGraphTexture> customResolveUncompressPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> inout) noexcept;
+
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
     // Temporal Anti-aliasing
-    void prepareTaa(FrameHistory& frameHistory, CameraInfo const& cameraInfo,
-            TemporalAntiAliasingOptions const& taaOptions) const noexcept;
+    void prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
+            CameraInfo* inoutCameraInfo,
+            PerViewUniforms& uniforms) const noexcept;
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameHistory& frameHistory,
+            FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 
@@ -131,8 +167,16 @@ public:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
-    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
+    // resolve base level of input and outputs a 1-level texture
+    FrameGraphId<FrameGraphTexture> resolveBaseLevel(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
+
+    // resolves base level of input and outputs a texture from outDesc. outDesc must
+    // have the same dimensions and format as input, or this will fail.
+    // outDesc can have mipmaps.
+    FrameGraphId<FrameGraphTexture> resolveBaseLevelNoCheck(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
@@ -140,13 +184,13 @@ public:
             math::float4 clearColor, bool finalize) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
-            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> output,
+            bool reinhard, size_t kernelWidth, float sigma) noexcept;
 
-    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
-    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
-    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwTexture> getOneTexture() const;
+    backend::Handle<backend::HwTexture> getZeroTexture() const;
+    backend::Handle<backend::HwTexture> getOneTextureArray() const;
 
     math::float2 halton(size_t index) const noexcept {
         return mHaltonSamples[index & 0xFu];
@@ -180,6 +224,10 @@ private:
             PostProcessMaterial const& material,
             backend::DriverApi& driver) const noexcept;
 
+    void render(FrameGraphResources::RenderPassInfo const& out,
+            backend::PipelineState const& pipeline,
+            backend::DriverApi& driver) const noexcept;
+
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept;
@@ -195,23 +243,18 @@ private:
 
         void terminate(FEngine& engine) noexcept;
 
-        FMaterial* getMaterial() const;
-        FMaterialInstance* getMaterialInstance() const;
+        FMaterial* getMaterial(FEngine& engine) const noexcept;
+        FMaterialInstance* getMaterialInstance(FEngine& engine) const noexcept;
 
-        backend::PipelineState getPipelineState(uint8_t variant = 0u) const noexcept;
+        backend::PipelineState getPipelineState(FEngine& engine,
+                Variant::type_t variantKey = 0u) const noexcept;
 
     private:
-        FMaterial* assertMaterial() const noexcept;
-        FMaterial* loadMaterial() const noexcept;
+        void loadMaterial(FEngine& engine) const noexcept;
 
         union {
-            struct {
-                mutable FMaterial* mMaterial;
-            };
-            struct {
-                FEngine* mEngine;
-                uint8_t const* mData;
-            };
+            mutable FMaterial* mMaterial;
+            uint8_t const* mData;
         };
         uint32_t mSize{};
         mutable bool mHasMaterial{};
@@ -222,16 +265,15 @@ private:
     void registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size);
     PostProcessMaterial& getPostProcessMaterial(utils::StaticString name) noexcept;
 
-    backend::Handle<backend::HwTexture> mDummyOneTexture;
-    backend::Handle<backend::HwTexture> mDummyOneTextureArray;
-    backend::Handle<backend::HwTexture> mDummyZeroTexture;
     backend::Handle<backend::HwTexture> mStarburstTexture;
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
-    const math::float2 mHaltonSamples[16];
+    static const math::float2 sHaltonSamples[16];
+    math::float2 const* mHaltonSamples = sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
+    bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;
 };
 
 } // namespace filament

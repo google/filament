@@ -642,6 +642,9 @@ class ConstantManager {
   // Returns the id of a 32-bit signed integer constant with value |val|.
   uint32_t GetSIntConst(int32_t val);
 
+  // Returns the id of a 32-bit unsigned integer constant with value |val|.
+  uint32_t GetUIntConst(uint32_t val);
+
  private:
   // Creates a Constant instance with the given type and a vector of constant
   // defining words. Returns a unique pointer to the created Constant instance

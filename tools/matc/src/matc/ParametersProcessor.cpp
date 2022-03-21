@@ -590,6 +590,13 @@ static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue
     return true;
 }
 
+static bool processLegacyMorphing(MaterialBuilder& builder, const JsonishValue& value) {
+    if (value.toJsonBool()->getBool()) {
+        builder.useLegacyMorphing();
+    }
+    return true;
+}
+
 static bool processCustomSurfaceShading(MaterialBuilder& builder, const JsonishValue& value) {
     builder.customSurfaceShading(value.toJsonBool()->getBool());
     return true;
@@ -659,6 +666,20 @@ static bool processRefractionMode(MaterialBuilder& builder, const JsonishValue& 
     return true;
 }
 
+static bool processReflectionMode(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::ReflectionMode> strToEnum {
+            { "default", MaterialBuilder::ReflectionMode ::DEFAULT },
+            { "screenspace", MaterialBuilder::ReflectionMode::SCREEN_SPACE },
+    };
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("reflection_mode", *jsonString, strToEnum);
+    }
+
+    builder.reflectionMode(stringToEnum(strToEnum, jsonString->getString()));
+    return true;
+}
+
 static bool processRefractionType(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::RefractionType> strToEnum {
             { "solid", MaterialBuilder::RefractionType::SOLID },
@@ -676,17 +697,20 @@ static bool processRefractionType(MaterialBuilder& builder, const JsonishValue& 
 static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
     // We avoid using an initializer list for this particular map to avoid build errors that are
     // due to static initialization ordering.
-    static const std::unordered_map<std::string, uint8_t> strToEnum  = [] {
-        std::unordered_map<std::string, uint8_t> strToEnum;
-        strToEnum["directionalLighting"] = filament::Variant::DIRECTIONAL_LIGHTING;
-        strToEnum["dynamicLighting"] = filament::Variant::DYNAMIC_LIGHTING;
-        strToEnum["shadowReceiver"] = filament::Variant::SHADOW_RECEIVER;
-        strToEnum["skinning"] = filament::Variant::SKINNING_OR_MORPHING;
-        strToEnum["vsm"] = filament::Variant::VSM;
-        strToEnum["fog"] = filament::Variant::FOG;
+    using filament::Variant;
+    static const std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum  = [] {
+        std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum;
+        strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
+        strToEnum["dynamicLighting"]        = filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
+        strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
+        strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
+        strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
+        strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
+        strToEnum["ssr"]                    = filament::UserVariantFilterBit::SSR;
         return strToEnum;
     }();
-    uint8_t variantFilter = 0;
+
+    filament::UserVariantFilterMask variantFilter = {};
     const JsonishArray* jsonArray = value.toJsonArray();
     const auto& elements = jsonArray->getElements();
 
@@ -705,7 +729,7 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
                       " is not a valid variant" << std::endl;
         }
 
-        variantFilter |= strToEnum.at(s);
+        variantFilter |= (uint32_t)strToEnum.at(s);
     }
 
     builder.variantFilter(variantFilter);
@@ -728,6 +752,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["depthCulling"]                  = { &processDepthCull, Type::BOOL };
     mParameters["doubleSided"]                   = { &processDoubleSided, Type::BOOL };
     mParameters["transparency"]                  = { &processTransparencyMode, Type::STRING };
+    mParameters["reflections"]                   = { &processReflectionMode, Type::STRING };
     mParameters["maskThreshold"]                 = { &processMaskThreshold, Type::NUMBER };
     mParameters["shadowMultiplier"]              = { &processShadowMultiplier, Type::BOOL };
     mParameters["transparentShadow"]             = { &processTransparentShadow, Type::BOOL };
@@ -744,6 +769,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
+    mParameters["legacyMorphing"]                = { &processLegacyMorphing, Type::BOOL };
     mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
     mParameters["quality"]                       = { &processQuality, Type::STRING };
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };

@@ -28,6 +28,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
+#include <filament/MorphTargetBuffer.h>
 
 #include <geometry/Transcoder.h>
 
@@ -45,7 +46,7 @@
 
 #include <string>
 
-#if defined(__EMSCRIPTEN__) || defined(ANDROID) || defined(IOS)
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(IOS)
 #define USE_FILESYSTEM 0
 #else
 #define USE_FILESYSTEM 1
@@ -86,12 +87,18 @@ struct ResourceLoader::Impl {
         mEngine = config.engine;
         mNormalizeSkinningWeights = config.normalizeSkinningWeights;
         mRecomputeBoundingBoxes = config.recomputeBoundingBoxes;
+        mIgnoreBindTransform = config.ignoreBindTransform;
     }
 
     Engine* mEngine;
     bool mNormalizeSkinningWeights;
     bool mRecomputeBoundingBoxes;
+    bool mIgnoreBindTransform;
     std::string mGltfPath;
+
+    // This is used to calculate skinIndex when updateBoundingBoxes, so that the correspondency between
+    // cgltf_node* and FFilamentInstance::Skin can be retrieved. This pointer doesn't need to be freed.
+    cgltf_skin* cgltfSkinBaseAddress;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
@@ -458,6 +465,11 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
 
     if (pImpl->mRecomputeBoundingBoxes) {
+        // asset->mSkins is unused for instanced assets
+        if (!pImpl->mIgnoreBindTransform) {
+            pImpl->mIgnoreBindTransform = asset->isInstanced();
+        }
+        pImpl->cgltfSkinBaseAddress = &gltf->skins[0];
         updateBoundingBoxes(asset);
     }
 
@@ -490,18 +502,28 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
                     uploadCallback, uploadUserdata(asset)));
             slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
             continue;
-        }
-        assert(slot.indexBuffer);
-        if (accessor->component_type == cgltf_component_type_r_8u) {
-            const size_t size16 = size * 2;
-            uint16_t* data16 = (uint16_t*) malloc(size16);
-            convertBytesToShorts(data16, data, size);
-            IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
+        } else if (slot.indexBuffer) {
+            if (accessor->component_type == cgltf_component_type_r_8u) {
+                const size_t size16 = size * 2;
+                uint16_t* data16 = (uint16_t*) malloc(size16);
+                convertBytesToShorts(data16, data, size);
+                IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
+                slot.indexBuffer->setBuffer(engine, std::move(bd));
+                continue;
+            }
+            IndexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
             slot.indexBuffer->setBuffer(engine, std::move(bd));
             continue;
         }
-        IndexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
-        slot.indexBuffer->setBuffer(engine, std::move(bd));
+        assert(slot.morphTargetBuffer);
+        if (accessor->type == cgltf_type_vec3) {
+            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float3*) data, slot.morphTargetBuffer->getVertexCount());
+        } else {
+            assert_invariant(accessor->type == cgltf_type_vec4);
+            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                    (const float4*) data, slot.morphTargetBuffer->getVertexCount());
+        }
     }
 
     // Apply sparse data modifications to base arrays, then upload the result.
@@ -517,6 +539,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
     // Finally, create Filament Textures and begin loading image files.
     asset->mResourcesLoaded = pImpl->createTextures(async);
+
+    asset->createAnimators();
+
     return asset->mResourcesLoaded;
 }
 
@@ -861,13 +886,8 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Collect all TANGENT vertex attribute slots that need to be populated.
     tsl::robin_map<VertexBuffer*, uint8_t> baseTangents;
-    tsl::robin_map<VertexBuffer*, uint8_t> morphTangents[4];
     for (auto slot : asset->mBufferSlots) {
         if (slot.accessor != kGenerateTangents && slot.accessor != kGenerateNormals) {
-            continue;
-        }
-        if (slot.morphTarget) {
-            morphTangents[slot.morphTarget - 1][slot.vertexBuffer] = slot.bufferIndex;
             continue;
         }
         baseTangents[slot.vertexBuffer] = slot.bufferIndex;
@@ -883,13 +903,42 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(Params {{ pair.first }, {vb, iter->second }});
+            jobParams.emplace_back(Params {{ pair.first }, {vb, nullptr, iter->second }});
         }
-        for (int morphTarget = 0; morphTarget < 4; morphTarget++) {
-            const auto& tangents = morphTangents[morphTarget];
-            auto iter = tangents.find(vb);
-            if (iter != tangents.end()) {
-                jobParams.emplace_back(Params {{ pair.first, morphTarget }, {vb, iter->second }});
+    }
+    // Create a job description for morph targets.
+    NodeMap& nodeMap = asset->isInstanced() ? asset->mInstances[0]->nodeMap : asset->mNodeMap;
+    for (auto iter : nodeMap) {
+        cgltf_node const* node = iter.first;
+        cgltf_mesh const* mesh = node->mesh;
+        if (UTILS_UNLIKELY(!mesh || !mesh->weights_count)) {
+            continue;
+        }
+        cgltf_primitive const* prims = mesh->primitives;
+        for (cgltf_size pindex = 0, pcount = mesh->primitives_count; pindex < pcount; ++pindex) {
+            const cgltf_primitive& prim = mesh->primitives[pindex];
+            const auto& gltfioPrim = asset->mMeshCache.at(mesh)[pindex];
+            MorphTargetBuffer* tb = gltfioPrim.targets;
+            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++ tindex) {
+                const cgltf_morph_target& target = prim.targets[tindex];
+                bool hasNormals = false;
+                for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
+                    const cgltf_attribute& attribute = target.attributes[aindex];
+                    const cgltf_accessor* accessor = attribute.data;
+                    const cgltf_attribute_type atype = attribute.type;
+                    if (atype != cgltf_attribute_type_tangent) {
+                        continue;
+                    }
+                    hasNormals = true;
+                    jobParams.emplace_back(Params { { &prim, (int) tindex },
+                                                    { nullptr, tb, (uint8_t) pindex } });
+                    break;
+                }
+                // Generate flat normals if necessary.
+                if (!hasNormals && !prim.material->unlit) {
+                    jobParams.emplace_back(Params { { &prim, (int) tindex },
+                                                    { nullptr, tb, (uint8_t) pindex } });
+                }
             }
         }
     }
@@ -905,12 +954,19 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Finally, upload quaternions to the GPU from the main thread.
     for (Params& params : jobParams) {
-        BufferObject* bo = BufferObject::Builder()
-                .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
-        asset->mBufferObjects.push_back(bo);
-        bo->setBuffer(*mEngine, BufferDescriptor(
-                params.out.results, bo->getByteCount(), FREE_CALLBACK));
-        params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
+        if (params.context.vb) {
+            BufferObject* bo = BufferObject::Builder()
+                    .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
+            asset->mBufferObjects.push_back(bo);
+            bo->setBuffer(*mEngine, BufferDescriptor(
+                    params.out.results, bo->getByteCount(), FREE_CALLBACK));
+            params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
+        } else {
+            assert_invariant(params.context.tb);
+            params.context.tb->setTangentsAt(*mEngine, params.in.morphTargetIndex,
+                    params.out.results, params.out.vertexCount);
+            free(params.out.results);
+        }
     }
 }
 
@@ -1005,27 +1061,99 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
         *result = aabb;
     };
 
-    // Collect all mesh primitives that we wish to find bounds for.
-    std::vector<cgltf_primitive const*> prims;
+    const size_t posAttrSize = cgltf_num_components(cgltf_type_vec3);
+    const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
+    auto computeBoundingBoxSkinned = [&](const cgltf_primitive* prim, const Skin* skin, Aabb* result) {
+        Aabb aabb;
+        std::vector<mat4f> inverseGlobalTransforms(skin->targets.size());
+        for (size_t i = 0; i < skin->targets.size(); i++) {
+            auto xformable = tm.getInstance(skin->targets[i]);
+            if (xformable) {
+                inverseGlobalTransforms[i] = inverse(tm.getWorldTransform(xformable));
+            }
+        }
+        std::vector<float> verts;
+        std::vector<float> rawJoints;
+        std::vector<float> weights;
+        for (cgltf_size slot = 0; slot < prim->attributes_count; slot++) {
+            const cgltf_attribute& attr = prim->attributes[slot];
+            const cgltf_accessor* accessor = attr.data;
+            if (attr.type == cgltf_attribute_type_position && cgltf_num_components(accessor->type) >= posAttrSize) {
+                verts.resize(accessor->count * posAttrSize);
+                cgltf_accessor_unpack_floats(accessor, &verts[0], accessor->count * posAttrSize);
+            }
+            if (attr.type == cgltf_attribute_type_joints && cgltf_num_components(accessor->type) >= skinningAttrSize) {
+                rawJoints.resize(accessor->count * skinningAttrSize);
+                cgltf_accessor_unpack_floats(accessor, &rawJoints[0], accessor->count * skinningAttrSize);
+            }
+            if (attr.type == cgltf_attribute_type_weights && cgltf_num_components(accessor->type) >= skinningAttrSize) {
+                weights.resize(accessor->count * skinningAttrSize);
+                cgltf_accessor_unpack_floats(accessor, &weights[0], accessor->count * skinningAttrSize);
+            }
+        }
+        std::vector<size_t> jointIndices(rawJoints.begin(), rawJoints.end());
+        auto primitiveCount = static_cast<size_t>(verts.size() / posAttrSize);
+        for (size_t i = 0; i < primitiveCount; i++) {
+            float3 point(verts[posAttrSize * i], verts[posAttrSize * i + 1], verts[posAttrSize * i + 2]);
+            mat4f tmp = mat4f(0.0f);
+            for (size_t j = 0; j < skinningAttrSize; j++) {
+                size_t jointIndex = jointIndices[skinningAttrSize * i + j];
+                float jointWeight = weights[skinningAttrSize * i + j];
+                Entity jointEntity = skin->joints[jointIndex];
+                mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
+                mat4f inverseBindMatrix = skin->inverseBindMatrices[jointIndex];
+                tmp += jointWeight * globalJointTransform * inverseBindMatrix;
+            }
+            for (const auto& inverseGlobalTransform: inverseGlobalTransforms) {
+                mat4f skinMatrix = inverseGlobalTransform * tmp;
+                if (!pImpl->mNormalizeSkinningWeights) {
+                    skinMatrix /= skinMatrix[3].w;
+                }
+                float3 skinnedPoint = (point.x * skinMatrix[0] + point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
+                aabb.min = min(aabb.min, skinnedPoint);
+                aabb.max = max(aabb.max, skinnedPoint);
+            }
+        }
+        *result = aabb;
+    };
+
+    // Collect all mesh primitives that we wish to find bounds for. For each mesh primitive, we also 
+    // collect the skin it bound to (nullptr if not skinned) for bounds computation.
+    std::vector<std::pair<cgltf_primitive*, const Skin*>> primitives;
     for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
-                prims.push_back(&mesh->primitives[index]);
+        const Skin* skin = nullptr;
+        cgltf_skin* const cgltfSkin = iter.first->skin;
+        if (cgltfSkin) {
+            // importSkins unpacked cgltfSkin into FFilamentInstance::SkinVector bijectively so that
+            // the unpacked Skin can be retrieved given cgltfSkin index
+            int skinIndex = cgltfSkin - pImpl->cgltfSkinBaseAddress;
+            skin = &asset->mSkins[skinIndex];
+        }
+        const cgltf_mesh* cgltfMesh = iter.first->mesh;
+        if (cgltfMesh) {
+            for (cgltf_size index = 0, nprims = cgltfMesh->primitives_count; index < nprims; ++index) {
+                primitives.push_back({&cgltfMesh->primitives[index], skin});
             }
         }
     }
 
     // Kick off a bounding box job for every primitive.
-    std::vector<Aabb> bounds(prims.size());
+    std::vector<Aabb> bounds(primitives.size());
     JobSystem* js = &pImpl->mEngine->getJobSystem();
     JobSystem::Job* parent = js->createJob();
-    for (size_t i = 0; i < prims.size(); ++i) {
-        cgltf_primitive const* prim = prims[i];
+    for (size_t i = 0; i < primitives.size(); ++i) {
         Aabb* result = &bounds[i];
-        js->run(jobs::createJob(*js, parent, [prim, result, computeBoundingBox] {
-            computeBoundingBox(prim, result);
-        }));
+        if (pImpl->mIgnoreBindTransform || !primitives[i].second) {
+            cgltf_primitive const* prim = primitives[i].first;
+            js->run(jobs::createJob(*js, parent, [prim, result, computeBoundingBox] {
+                computeBoundingBox(prim, result);
+            }));
+        } else {
+            std::pair<cgltf_primitive*, const Skin*> skinnedPrimitive = primitives[i];
+            js->run(jobs::createJob(*js, parent, [skinnedPrimitive, result, computeBoundingBoxSkinned] {
+                computeBoundingBoxSkinned(skinnedPrimitive.first, skinnedPrimitive.second, result);
+            }));
+        }
     }
     js->runAndWait(parent);
 

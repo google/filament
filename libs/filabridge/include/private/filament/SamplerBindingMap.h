@@ -19,25 +19,7 @@
 
 #include <private/filament/EngineEnums.h>
 
-#include <tsl/robin_map.h>
-
 namespace filament {
-
-// Binding information for a single sampler.
-//
-// This identifies the parent block, the offset within the parent, and
-// the finalized "global" offset, which uniquely identifies the
-// sampler across all sampler blocks in the shader program.
-//
-// Also contains a grouping index, which is a hint to the backend about
-// how to batch the updates. In Vulkan, this could be used to assign
-// samplers to desciptor sets.
-//
-struct SamplerBindingInfo {
-    uint8_t blockIndex;   // Binding point of the parent block (see filament::BindingPoints)
-    uint8_t localOffset;  // Index of this sampler within the block
-    uint8_t globalOffset; // Finalized binding point for the sampler
-};
 
 class SamplerInterfaceBlock;
 
@@ -51,37 +33,23 @@ public:
     void populate(const SamplerInterfaceBlock* perMaterialSib = nullptr,
             const char* materialName = nullptr);
 
-    // Given a valid Filament binding point and an offset within the block, returns true and sets
-    // the output argument 'globalOffset' to the globally unique binding index.
-    bool getSamplerBinding(uint8_t blockIndex, uint8_t localOffset, uint8_t* globalOffset) const {
-        assert(globalOffset);
-        auto iter = mBindingMap.find(getBindingKey(blockIndex, localOffset));
-        if (iter == mBindingMap.end()) {
-            return false;
-        }
-        *globalOffset = iter->second.globalOffset;
-        return true;
+    // Given a valid Filament binding point and an offset within the block, returns a global unique
+    // binding index.
+    uint8_t getSamplerBinding(uint8_t bindingPoint, uint8_t localOffset) const {
+        assert_invariant(mSamplerBlockOffsets[bindingPoint] != UNKNOWN_OFFSET);
+        return mSamplerBlockOffsets[bindingPoint] + localOffset;
     }
-
-    // Adds the given sampler to the mapping. Useful for deserialization.
-    void addSampler(SamplerBindingInfo info);
 
     // Gets the global offset of the first sampler in the given sampler block.
     uint8_t getBlockOffset(uint8_t bindingPoint) const {
-        assert(UNKNOWN_OFFSET != mSamplerBlockOffsets[bindingPoint]);
+        assert_invariant(mSamplerBlockOffsets[bindingPoint] != UNKNOWN_OFFSET);
         return mSamplerBlockOffsets[bindingPoint];
     }
 
 private:
     constexpr static uint8_t UNKNOWN_OFFSET = 0xff;
-    typedef uint32_t BindingKey;
-    static BindingKey getBindingKey(uint8_t blockIndex, uint8_t localOffset) {
-        return ((uint32_t) blockIndex << 8) + localOffset;
-    }
-    tsl::robin_map<BindingKey, SamplerBindingInfo> mBindingMap;
     uint8_t mSamplerBlockOffsets[filament::BindingPoints::COUNT] = { UNKNOWN_OFFSET };
 };
-
 
 } // namespace filament
 

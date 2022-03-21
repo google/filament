@@ -76,7 +76,7 @@ Pass::Status RelaxFloatOpsPass::ProcessImpl() {
   Pass::ProcessFunction pfn = [this](Function* fp) {
     return ProcessFunction(fp);
   };
-  bool modified = context()->ProcessEntryPointCallTree(pfn);
+  bool modified = context()->ProcessReachableCallTree(pfn);
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 

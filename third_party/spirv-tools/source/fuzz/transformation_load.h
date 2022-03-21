@@ -28,11 +28,20 @@ class TransformationLoad : public Transformation {
   explicit TransformationLoad(protobufs::TransformationLoad message);
 
   TransformationLoad(
-      uint32_t fresh_id, uint32_t pointer_id,
+      uint32_t fresh_id, uint32_t pointer_id, bool is_atomic,
+      uint32_t memory_scope, uint32_t memory_semantics,
       const protobufs::InstructionDescriptor& instruction_to_insert_before);
 
   // - |message_.fresh_id| must be fresh
   // - |message_.pointer_id| must be the id of a pointer
+  // - |message_.is_atomic| must be true if want to work with OpAtomicLoad
+  // - If |is_atomic| is true then |message_memory_scope_id| must be the id of
+  //   an OpConstant 32 bit integer instruction with the value
+  //   SpvScopeInvocation.
+  // - If |is_atomic| is true then |message_.memory_semantics_id| must be the id
+  //   of an OpConstant 32 bit integer instruction with the values
+  //   SpvMemorySemanticsWorkgroupMemoryMask or
+  //   SpvMemorySemanticsUniformMemoryMask.
   // - The pointer must not be OpConstantNull or OpUndef
   // - |message_.instruction_to_insert_before| must identify an instruction
   //   before which it is valid to insert an OpLoad, and where

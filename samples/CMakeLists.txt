@@ -94,20 +94,20 @@ set(CMGEN_ARGS --quiet --format=ktx --size=256 --extract-blur=0.1)
 function(add_envmap SOURCE TARGET)
     set(source_envmap "${ROOT_DIR}/${SOURCE}")
 
-    set(target_skybox   "${PROJECT_BINARY_DIR}/${TARGET}/${TARGET}_skybox.ktx")
-    set(target_envmap   "${PROJECT_BINARY_DIR}/${TARGET}/${TARGET}_ibl.ktx")
+    set(target_skybox "${PROJECT_BINARY_DIR}/assets/ibl/${TARGET}/${TARGET}_skybox.ktx")
+    set(target_envmap "${PROJECT_BINARY_DIR}/assets/ibl/${TARGET}/${TARGET}_ibl.ktx")
 
     set(target_envmaps ${target_envmaps} ${target_skybox} PARENT_SCOPE)
     set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
 
     add_custom_command(OUTPUT ${target_skybox} ${target_envmap}
-        COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
+        COMMAND cmgen -x assets/ibl/${TARGET} ${CMGEN_ARGS} ${source_envmap}
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen
         COMMENT "Generating environment map ${target_envmap}")
 endfunction()
 
-add_envmap("third_party/environments/lightroom_14b.hdr" "default_env")
+add_envmap("third_party/environments/lightroom_14b.hdr" "lightroom_14b")
 
 # ==================================================================================================
 # Build suzanne resources
@@ -263,6 +263,10 @@ if (NOT ANDROID)
     # ==============================================================================================
     install(TARGETS gltf_viewer RUNTIME DESTINATION bin)
     install(TARGETS material_sandbox RUNTIME DESTINATION bin)
+
+    # Install resources
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/fonts DESTINATION bin/assets)
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/ibl/ DESTINATION bin/assets)
 endif()
 
 # ==================================================================================================

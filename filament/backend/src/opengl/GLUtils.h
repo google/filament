@@ -168,8 +168,9 @@ constexpr inline GLenum getComponentType(backend::ElementType type) noexcept {
     }
 }
 
-constexpr inline GLenum getCubemapTarget(backend::TextureCubemapFace face) noexcept {
-    return GL_TEXTURE_CUBE_MAP_POSITIVE_X + GLenum(face);
+constexpr inline GLenum getCubemapTarget(uint16_t layer) noexcept {
+    assert_invariant(layer <= 5);
+    return GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer;
 }
 
 constexpr inline GLenum getWrapMode(backend::SamplerWrapMode mode) noexcept {

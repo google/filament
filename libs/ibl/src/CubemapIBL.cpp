@@ -280,7 +280,7 @@ static float UTILS_UNUSED VisibilityAshikhmin(float NoV, float NoL, float /*a*/)
  *              N  h
  *
  *                  N       4
- *    Er() = ------------- --- ∑ V(v) <n•l>
+ *    Er() = ------------- --- ∑ L(v) <n•l>
  *             4 ∑ <n•l>    N
  *
  *
@@ -541,7 +541,7 @@ void CubemapIBL::roughnessFilter(
  *            N   l        n•l
  *
  *
- *  To avoid to multiply by 1/PI in the shader, we do it here, which simplifies to:
+ *  To avoid multiplying by 1/PI in the shader, we do it here, which simplifies to:
  *
  *  +----------------------+
  *  |          1           |

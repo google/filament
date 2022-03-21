@@ -129,7 +129,7 @@ void TransformationExpandVectorReduction::Apply(
   // If it's possible to make a synonym of |instruction|, then add the fact that
   // the last |logical_instruction| is a synonym of |instruction|.
   if (fuzzerutil::CanMakeSynonymOf(ir_context, *transformation_context,
-                                   instruction)) {
+                                   *instruction)) {
     transformation_context->GetFactManager()->AddFactDataSynonym(
         MakeDataDescriptor(logical_instruction.result_id(), {}),
         MakeDataDescriptor(instruction->result_id(), {}));

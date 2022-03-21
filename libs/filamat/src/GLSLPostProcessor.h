@@ -22,6 +22,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/filament/Variant.h>
+
 #include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
 
 #include "ShaderMinifier.h"
@@ -48,9 +50,11 @@ public:
     ~GLSLPostProcessor();
 
     struct Config {
+        filament::Variant variant;
         filament::backend::ShaderType shaderType;
         filament::backend::ShaderModel shaderModel;
         filament::MaterialDomain domain;
+        const filamat::MaterialInfo* materialInfo;
         bool hasFramebufferFetch;
         struct {
             std::vector<std::pair<uint32_t, uint32_t>> subpassInputToColorLocation;

@@ -19,6 +19,7 @@
 #include <ostream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "libspirv.hpp"
@@ -27,7 +28,8 @@ namespace spvtools {
 
 namespace opt {
 class Pass;
-}
+struct DescriptorSetAndBinding;
+}  // namespace opt
 
 // C++ interface for SPIR-V optimization functionalities. It wraps the context
 // (including target environment and the corresponding SPIR-V grammar) and
@@ -512,7 +514,12 @@ Optimizer::PassToken CreateDeadInsertElimPass();
 // Conversion, which tends to cause cycles of dead code to be left after
 // Store/Load elimination passes are completed. These cycles cannot be
 // eliminated with standard dead code elimination.
-Optimizer::PassToken CreateAggressiveDCEPass();
+//
+// If |preserve_interface| is true, all non-io variables in the entry point
+// interface are considered live and are not eliminated. This mode is needed
+// by GPU-Assisted validation instrumentation, where a change in the interface
+// is not allowed.
+Optimizer::PassToken CreateAggressiveDCEPass(bool preserve_interface = false);
 
 // Creates a remove-unused-interface-variables pass.
 // Removes variables referenced on the |OpEntryPoint| instruction that are not
@@ -699,8 +706,11 @@ Optimizer::PassToken CreateVectorDCEPass();
 // Create a pass to reduce the size of loads.
 // This pass looks for loads of structures where only a few of its members are
 // used.  It replaces the loads feeding an OpExtract with an OpAccessChain and
-// a load of the specific elements.
-Optimizer::PassToken CreateReduceLoadSizePass();
+// a load of the specific elements.  The parameter is a threshold to determine
+// whether we have to replace the load or not.  If the ratio of the used
+// components of the load is less than the threshold, we replace the load.
+Optimizer::PassToken CreateReduceLoadSizePass(
+    double load_replacement_threshold = 0.9);
 
 // Create a pass to combine chained access chains.
 // This pass looks for access chains fed by other access chains and combines
@@ -823,6 +833,13 @@ Optimizer::PassToken CreateFixStorageClassPass();
 //   inclusive.
 Optimizer::PassToken CreateGraphicsRobustAccessPass();
 
+// Create a pass to replace a descriptor access using variable index.
+// This pass replaces every access using a variable index to array variable
+// |desc| that has a DescriptorSet and Binding decorations with a constant
+// element of the array. In order to replace the access using a variable index
+// with the constant element, it uses a switch statement.
+Optimizer::PassToken CreateReplaceDescArrayAccessUsingVarIndexPass();
+
 // Create descriptor scalar replacement pass.
 // This pass replaces every array variable |desc| that has a DescriptorSet and
 // Binding decorations with a new variable for each element of the array.
@@ -853,6 +870,16 @@ Optimizer::PassToken CreateAmdExtToKhrPass();
 // of HLSL legalization and should be called after interpolants have been
 // propagated into their final positions.
 Optimizer::PassToken CreateInterpolateFixupPass();
+
+// Creates a convert-to-sampled-image pass to convert images and/or
+// samplers with given pairs of descriptor set and binding to sampled image.
+// If a pair of an image and a sampler have the same pair of descriptor set and
+// binding that is one of the given pairs, they will be converted to a sampled
+// image. In addition, if only an image has the descriptor set and binding that
+// is one of the given pairs, it will be converted to a sampled image as well.
+Optimizer::PassToken CreateConvertToSampledImagePass(
+    const std::vector<opt::DescriptorSetAndBinding>&
+        descriptor_set_binding_pairs);
 
 }  // namespace spvtools
 

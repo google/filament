@@ -168,6 +168,18 @@ public:
         }
 
         /**
+         * Retrieves the subresource descriptor associated to a resource
+         * @tparam RESOURCE Type of the resource
+         * @param handle    Handle to a virtual resource
+         * @return          Reference to the subresource descriptor
+         */
+        template<typename RESOURCE>
+        typename RESOURCE::SubResourceDescriptor const& getSubResourceDescriptor(FrameGraphId<RESOURCE> handle) const {
+            return static_cast<Resource<RESOURCE> const*>(
+                    mFrameGraph.getResource(handle))->subResourceDescriptor;
+        }
+
+        /**
          * Retrieves the name of a resource
          * @param handle    Handle to a virtual resource
          * @return          C string to the name of the resource
@@ -358,6 +370,17 @@ public:
     }
 
     /**
+     * Retrieves the descriptor associated to a resource
+     * @tparam RESOURCE Type of the resource
+     * @param handle    Handle to a virtual resource
+     * @return          Reference to the descriptor
+     */
+    template<typename RESOURCE>
+    typename RESOURCE::SubResourceDescriptor const& getSubResourceDescriptor(FrameGraphId<RESOURCE> handle) const {
+        return static_cast<Resource<RESOURCE> const*>(getResource(handle))->subResourceDescriptor;
+    }
+
+    /**
      * Checks if the FrameGraph is acyclic. This is intended for testing only.
      * Performance is not expected to be good. Might always return true in Release builds.
      * @return True if the frame graph is acyclic.
@@ -389,13 +412,13 @@ private:
     void addPresentPass(std::function<void(Builder&)> setup) noexcept;
     Builder addPassInternal(const char* name, FrameGraphPassBase* base) noexcept;
     FrameGraphHandle createNewVersion(FrameGraphHandle handle, FrameGraphHandle parent = {}) noexcept;
-    FrameGraphHandle createNewVersionForSubresourceIfNeeded(FrameGraphHandle handle) noexcept;
+    ResourceNode* createNewVersionForSubresourceIfNeeded(ResourceNode* node) noexcept;
     FrameGraphHandle addResourceInternal(VirtualResource* resource) noexcept;
     FrameGraphHandle addSubResourceInternal(FrameGraphHandle parent, VirtualResource* resource) noexcept;
     FrameGraphHandle readInternal(FrameGraphHandle handle, PassNode* passNode,
-            std::function<bool(ResourceNode*, VirtualResource*)> connect);
+            const std::function<bool(ResourceNode*, VirtualResource*)>& connect);
     FrameGraphHandle writeInternal(FrameGraphHandle handle, PassNode* passNode,
-            std::function<bool(ResourceNode*, VirtualResource*)> connect);
+            const std::function<bool(ResourceNode*, VirtualResource*)>& connect);
     FrameGraphHandle forwardResourceInternal(FrameGraphHandle resourceHandle,
             FrameGraphHandle replaceResourceHandle);
 

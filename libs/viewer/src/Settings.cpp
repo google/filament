@@ -34,8 +34,7 @@
 
 using namespace utils;
 
-namespace filament {
-namespace viewer {
+namespace filament::viewer {
 
 static const char* to_string(bool b) { return b ? "true" : "false"; }
 
@@ -119,6 +118,13 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, bool* va
         return i + 1;
     }
     return -1;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float2* val) {
+    float values[2];
+    i = parse(tokens, i, jsonChunk, values, 2);
+    *val = {values[0], values[1]};
+    return i;
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float3* val) {
@@ -206,6 +212,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Ditherin
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ShadowType* out) {
     if (0 == compare(tokens[i], jsonChunk, "PCF")) { *out = ShadowType::PCF; }
     else if (0 == compare(tokens[i], jsonChunk, "VSM")) { *out = ShadowType::VSM; }
+    else if (0 == compare(tokens[i], jsonChunk, "DPCF")) { *out = ShadowType::DPCF; }
+    else if (0 == compare(tokens[i], jsonChunk, "PCSS")) { *out = ShadowType::PCSS; }
     else {
         slog.w << "Invalid ShadowType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
@@ -223,8 +231,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->anisotropy);
         } else if (0 == compare(tok, jsonChunk, "mipmapping")) {
             i = parse(tokens, i + 1, jsonChunk, &out->mipmapping);
-        } else if (0 == compare(tok, jsonChunk, "exponent")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->exponent);
         } else if (0 == compare(tok, jsonChunk, "minVarianceScale")) {
             i = parse(tokens, i + 1, jsonChunk, &out->minVarianceScale);
         } else if (0 == compare(tok, jsonChunk, "lightBleedReduction")) {
@@ -235,6 +241,37 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         }
         if (i < 0) {
             slog.e << "Invalid shadow options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        DynamicResolutionOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "minScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->minScale);
+        } else if (compare(tok, jsonChunk, "maxScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxScale);
+        } else if (compare(tok, jsonChunk, "sharpness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sharpness);
+        } else if (compare(tok, jsonChunk, "quality") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->quality);
+        } else if (compare(tok, jsonChunk, "homogeneousScaling") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->homogeneousScaling);
+        } else {
+            slog.w << "Invalid dsr key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid dsr value: '" << STR(tok, jsonChunk) << "'" << io::endl;
             return i;
         }
     }
@@ -299,8 +336,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GenericT
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "contrast") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->contrast);
-        } else if (compare(tok, jsonChunk, "shoulder") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->shoulder);
         } else if (compare(tok, jsonChunk, "midGrayIn") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->midGrayIn);
         } else if (compare(tok, jsonChunk, "midGrayOut") == 0) {
@@ -424,6 +459,35 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         }
         if (i < 0) {
             slog.e << "Invalid SSCT value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        ScreenSpaceReflectionsOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "thickness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->thickness);
+        } else if (compare(tok, jsonChunk, "bias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bias);
+        } else if (compare(tok, jsonChunk, "maxDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxDistance);
+        } else if (compare(tok, jsonChunk, "stride") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->stride);
+        } else {
+            slog.w << "Invalid screen-space reflections key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid screen-space reflections value: '" << STR(tok, jsonChunk) << "'" << io::endl;
             return i;
         }
     }
@@ -695,10 +759,14 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->msaa);
         } else if (compare(tok, jsonChunk, "taa") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->taa);
+        } else if (compare(tok, jsonChunk, "dsr") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->dsr);
         } else if (compare(tok, jsonChunk, "colorGrading") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->colorGrading);
         } else if (compare(tok, jsonChunk, "ssao") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->ssao);
+        } else if (compare(tok, jsonChunk, "screenSpaceReflections") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceReflections);
         } else if (compare(tok, jsonChunk, "bloom") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->bloom);
         } else if (compare(tok, jsonChunk, "fog") == 0) {
@@ -842,6 +910,30 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        SoftShadowOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    math::float3 splitsVector;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "penumbraScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->penumbraScale);
+        } else if (compare(tok, jsonChunk, "penumbraRatioScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->penumbraRatioScale);
+        } else {
+            slog.w << "Invalid soft shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid soft shadow options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSettings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -854,6 +946,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->enableSunlight);
         } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->shadowOptions);
+        } else if (compare(tok, jsonChunk, "softShadowOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->softShadowOptions);
         } else if (compare(tok, jsonChunk, "sunlightIntensity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->sunlightIntensity);
         } else if (compare(tok, jsonChunk, "sunlightDirection") == 0) {
@@ -944,7 +1038,9 @@ void applySettings(const ViewSettings& settings, View* dest) {
     dest->setAntiAliasing(settings.antiAliasing);
     dest->setTemporalAntiAliasingOptions(settings.taa);
     dest->setMultiSampleAntiAliasingOptions(settings.msaa);
+    dest->setDynamicResolutionOptions(settings.dsr);
     dest->setAmbientOcclusionOptions(settings.ssao);
+    dest->setScreenSpaceReflectionsOptions(settings.screenSpaceReflections);
     dest->setBloomOptions(settings.bloom);
     dest->setFogOptions(settings.fog);
     dest->setDepthOfFieldOptions(settings.dof);
@@ -966,13 +1062,13 @@ static void apply(MaterialProperty<T> prop, MaterialInstance* dest) {
 }
 
 void applySettings(const MaterialSettings& settings, MaterialInstance* dest) {
-    for (auto prop : settings.scalar) { apply(prop, dest); }
-    for (auto prop : settings.float3) { apply(prop, dest); }
-    for (auto prop : settings.float4) { apply(prop, dest); }
+    for (const auto& prop : settings.scalar) { apply(prop, dest); }
+    for (const auto& prop : settings.float3) { apply(prop, dest); }
+    for (const auto& prop : settings.float4) { apply(prop, dest); }
 }
 
 void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
-        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene) {
+        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view) {
     auto light = lm->getInstance(sunlight);
     if (light) {
         if (settings.enableSunlight) {
@@ -997,10 +1093,11 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
         }
         lm->setShadowOptions(light, settings.shadowOptions);
     }
+    view->setSoftShadowOptions(settings.softShadowOptions);
 }
 
 static LinearColor inverseTonemapSRGB(sRGBColor x) {
-    return (x * -0.155) / (x - 1.019);
+    return (x * -0.155f) / (x - 1.019f);
 }
 
 void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
@@ -1034,7 +1131,6 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
         case ToneMapping::FILMIC: return new FilmicToneMapper;
         case ToneMapping::GENERIC: return new GenericToneMapper(
                     settings.genericToneMapper.contrast,
-                    settings.genericToneMapper.shoulder,
                     settings.genericToneMapper.midGrayIn,
                     settings.genericToneMapper.midGrayOut,
                     settings.genericToneMapper.hdrMax
@@ -1090,6 +1186,8 @@ static std::ostream& operator<<(std::ostream& out, ShadowType in) {
     switch (in) {
         case ShadowType::PCF: return out << "\"PCF\"";
         case ShadowType::VSM: return out << "\"VSM\"";
+        case ShadowType::DPCF: return out << "\"DPCF\"";
+        case ShadowType::PCSS: return out << "\"PCSS\"";
     }
     return out << "\"INVALID\"";
 }
@@ -1154,12 +1252,27 @@ static std::ostream& writeJson(std::ostream& oss, const float* v, int count) {
     return oss;
 }
 
+static std::ostream& operator<<(std::ostream& out, math::float2 v) {
+    return writeJson(out, v.v, 2);
+}
+
 static std::ostream& operator<<(std::ostream& out, math::float3 v) {
-    return writeJson(out, &v.x, 3);
+    return writeJson(out, v.v, 3);
 }
 
 static std::ostream& operator<<(std::ostream& out, math::float4 v) {
-    return writeJson(out, &v.x, 4);
+    return writeJson(out, v.v, 4);
+}
+
+static std::ostream& operator<<(std::ostream& out, const DynamicResolutionOptions& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"minScale\": " << in.minScale << ",\n"
+        << "\"maxScale\": " << in.maxScale << ",\n"
+        << "\"sharpness\": " << in.sharpness << ",\n"
+        << "\"quality\": " << in.quality << ",\n"
+        << "\"homogeneousScaling\": " << to_string(in.homogeneousScaling) << "\n"
+        << "}";
 }
 
 static std::ostream& operator<<(std::ostream& out, const MultiSampleAntiAliasingOptions& in) {
@@ -1181,7 +1294,6 @@ static std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOpt
 static std::ostream& operator<<(std::ostream& out, const GenericToneMapperSettings& in) {
     return out << "{\n"
        << "\"contrast\": " << (in.contrast) << ",\n"
-       << "\"shoulder\": " << (in.shoulder) << ",\n"
        << "\"midGrayIn\": " << (in.midGrayIn) << ",\n"
        << "\"midGrayOut\": " << (in.midGrayOut) << ",\n"
        << "\"hdrMax\": " << (in.hdrMax) << "\n"
@@ -1233,6 +1345,16 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "\"sampleCount\": " << int(in.sampleCount) << ",\n"
         << "\"rayCount\": " << int(in.rayCount) << "\n"
         << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsOptions& in) {
+    return out << "{\n"
+               << "\"enabled\": " << to_string(in.enabled) << ",\n"
+               << "\"thickness\": " << in.thickness << ",\n"
+               << "\"bias\": " << in.bias << ",\n"
+               << "\"maxDistance\": " << in.maxDistance << ",\n"
+               << "\"stride\": " << in.stride << "\n"
+               << "}";
 }
 
 static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions& in) {
@@ -1316,18 +1438,18 @@ static std::ostream& operator<<(std::ostream& out, const MaterialSettings& in) {
     std::ostringstream oss;
     oss << "{\n";
     oss << "\"scalar\": {\n";
-    for (auto prop : in.scalar) { writeJson(prop, oss); }
+    for (const auto& prop : in.scalar) { writeJson(prop, oss); }
     oss << "},\n";
     oss << "\"float3\": {\n";
-    for (auto prop : in.float3) { writeJson(prop, oss); }
+    for (const auto& prop : in.float3) { writeJson(prop, oss); }
     oss << "},\n";
     oss << "\"float4\": {\n";
-    for (auto prop : in.float4) { writeJson(prop, oss); }
+    for (const auto& prop : in.float4) { writeJson(prop, oss); }
     oss << "},\n";
     oss << "}";
     std::string result = oss.str();
 
-    const auto replace = [&result](std::string s, std::string t) {
+    const auto replace = [&result](const std::string& s, const std::string& t) {
         std::string::size_type n = 0;
         while ((n = result.find(s, n )) != std::string::npos) {
             result.replace(n, s.size(), t);
@@ -1345,11 +1467,20 @@ static std::ostream& operator<<(std::ostream& out, const MaterialSettings& in) {
     return out << result;
 }
 
+
+static std::ostream& operator<<(std::ostream& out, const SoftShadowOptions& in) {
+    return out << "{\n"
+               << "\"penumbraScale\": " << in.penumbraScale << ",\n"
+               << "\"penumbraRatioScale\": " << in.penumbraRatioScale << "\n"
+               << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
     return out << "{\n"
         << "\"enableShadows\": " << to_string(in.enableShadows) << ",\n"
         << "\"enableSunlight\": " << to_string(in.enableSunlight) << ",\n"
         << "\"shadowOptions\": " << (in.shadowOptions) << ",\n"
+        << "\"softShadowOptions\": " << (in.softShadowOptions) << ",\n"
         << "\"sunlightIntensity\": " << (in.sunlightIntensity) << ",\n"
         << "\"sunlightDirection\": " << (in.sunlightDirection) << ",\n"
         << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
@@ -1415,7 +1546,6 @@ static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
         << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
         << "\"mipmapping\": " << to_string(in.mipmapping) << ",\n"
-        << "\"exponent\": " << in.exponent << ",\n"
         << "\"minVarianceScale\": " << in.minVarianceScale << ",\n"
         << "\"lightBleedReduction\": " << in.lightBleedReduction << "\n"
         << "}";
@@ -1426,8 +1556,10 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"antiAliasing\": " << in.antiAliasing << ",\n"
         << "\"msaa\": " << in.msaa << ",\n"
         << "\"taa\": " << in.taa << ",\n"
+        << "\"dsr\": " << in.dsr << ",\n"
         << "\"colorGrading\": " << (in.colorGrading) << ",\n"
         << "\"ssao\": " << (in.ssao) << ",\n"
+        << "\"screenSpaceReflections\": " << (in.screenSpaceReflections) << ",\n"
         << "\"bloom\": " << (in.bloom) << ",\n"
         << "\"fog\": " << (in.fog) << ",\n"
         << "\"dof\": " << (in.dof) << ",\n"
@@ -1451,9 +1583,8 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
 }
 
 bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs) const {
-    static_assert(sizeof(GenericToneMapperSettings) == 20, "Please update Settings.cpp");
+    static_assert(sizeof(GenericToneMapperSettings) == 16, "Please update Settings.cpp");
     return contrast == rhs.contrast &&
-           shoulder == rhs.shoulder &&
            midGrayIn == rhs.midGrayIn &&
            midGrayOut == rhs.midGrayOut &&
            hdrMax == rhs.hdrMax;
@@ -1462,7 +1593,7 @@ bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs)
 bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
-    static_assert(sizeof(ColorGradingSettings) == 232, "Please update Settings.cpp");
+    static_assert(sizeof(ColorGradingSettings) == 228, "Please update Settings.cpp");
     return enabled == rhs.enabled &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
@@ -1542,5 +1673,4 @@ bool JsonSerializer::readJson(const char* jsonChunk, size_t size, Settings* out)
     return i >= 0;
 }
 
-} // namespace viewer
-} // namespace filament
+} // namespace filament::viewer

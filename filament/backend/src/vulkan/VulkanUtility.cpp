@@ -501,6 +501,50 @@ VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]) {
     return map;
 }
 
+VkImageViewType getImageViewType(SamplerType target) {
+    switch (target) {
+        case SamplerType::SAMPLER_CUBEMAP:
+            return VK_IMAGE_VIEW_TYPE_CUBE;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        case  SamplerType::SAMPLER_3D:
+            return VK_IMAGE_VIEW_TYPE_3D;
+        default:
+            return VK_IMAGE_VIEW_TYPE_2D;
+    }
+}
+
+// Between Driver API calls, non-presentable texture images are generally kept either in the
+// UNDEFINED layout, or in the usage-specific layout specified by this function. This simple
+// convention allows the use of a bitfield to represent layout in RenderPassKey. However there are
+// exceptions for depth and for transient use of specialized layouts, which is why VulkanTexture
+// tracks actual layout at the subresource level.
+VkImageLayout getDefaultImageLayout(TextureUsage usage) {
+    // Filament sometimes samples from depth while it is bound to the current render target, (e.g.
+    // SSAO does this while depth writes are disabled) so let's keep it simple and use GENERAL for
+    // all depth textures.
+    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    // Filament sometimes samples from one miplevel while writing to another level in the same
+    // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
+    // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    // Finally, the layout for an immutable texture is optimal read-only.
+    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+}
+
+VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
+    VkShaderStageFlags flags = 0x0;
+    if (stageFlags.vertex)   flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if (stageFlags.fragment) flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    return flags;
+}
+
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition) {
     if (transition.oldLayout == transition.newLayout) {
         return;
@@ -557,6 +601,7 @@ VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition
             break;
         case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         case VK_IMAGE_LAYOUT_GENERAL:
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
             transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -564,7 +609,7 @@ VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition
             break;
 
             // We support PRESENT as a target layout to allow blitting from the swap chain.
-            // See also makeSwapChainPresentable().
+            // See also SwapChain::makePresentable().
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
             transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;

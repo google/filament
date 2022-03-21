@@ -25,13 +25,21 @@
 namespace filament {
 
 // This is where we store all the history of a frame
+// when adding things here, please update:
+//      FView::commitFrameHistory()
 struct FrameHistoryEntry {
-    FrameGraphTexture color;
-    FrameGraphTexture::Descriptor colorDesc;
-    math::mat4f projection;
-    math::float2 jitter{};
-    uint32_t frameId = 0;
-
+    struct TemporalAA{
+        FrameGraphTexture color;
+        FrameGraphTexture::Descriptor desc;
+        math::mat4f projection;     // world space to clip space
+        math::float2 jitter{};
+        uint32_t frameId = 0;   // used for halton sequence
+    } taa;
+    struct {
+        FrameGraphTexture color;
+        FrameGraphTexture::Descriptor desc;
+        math::mat4f projection;
+    } ssr;
 };
 
 /*
@@ -58,6 +66,18 @@ public:
     // the current frame info, this is where we store the current frame information
     T& getCurrent() noexcept {
         return mCurrentEntry;
+    }
+
+    const T& getCurrent() const noexcept {
+        return mCurrentEntry;
+    }
+
+    T& getPrevious() noexcept {
+        return mContainer[0];
+    }
+
+    const T& getPrevious() const noexcept {
+        return mContainer[0];
     }
 
     // This pushes the current frame info to the FIFO, effectively destroying

@@ -16,6 +16,7 @@
 
 package com.google.android.filament.gltfio;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -197,11 +198,11 @@ public class FilamentAsset {
     }
 
     /**
-     * Creates or retrieves the <code>Animator</code> interface for this asset.
+     * Retrieves the <code>Animator</code> interface for this asset.
      *
      * <p>When calling this for the first time, this must be called after
-     * {@link ResourceLoader#loadResources}. When the asset is destroyed, its
-     * animator becomes invalid.</p>
+     * {@link ResourceLoader#loadResources} or {@link ResourceLoader#asyncBeginLoad}. When the asset
+     * is destroyed, its animator becomes invalid.</p>
      */
     public @NonNull Animator getAnimator() {
         if (mAnimator != null) {
@@ -216,6 +217,13 @@ public class FilamentAsset {
     }
 
     /**
+     * Get the target name at target index in the given entity.
+     */
+    public String getMorphTargetNameAt(@Entity int entity, int targetIndex) {
+        return nGetMorphTargetNameAt(getNativeObject(), entity, targetIndex);
+    }
+
+    /**
      * Gets resource URIs for all externally-referenced buffers.
      */
     public @NonNull String[] getResourceUris() {
@@ -227,9 +235,9 @@ public class FilamentAsset {
     /**
      * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
      *
-     * This should only be called after ResourceLoader#loadResources().
-     * If using Animator, this should be called after getAnimator().
-     * If this is an instanced asset, this prevents creation of new instances.
+     * This should only be called after ResourceLoader#loadResources() or
+     * ResourceLoader#asyncBeginLoad(). If this is an instanced asset, this prevents creation of new
+     * instances.
      */
     public void releaseSourceData() {
         nReleaseSourceData(mNativeObject);
@@ -264,6 +272,7 @@ public class FilamentAsset {
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
+    private static native String nGetMorphTargetNameAt(long nativeAsset, int entity, int targetIndex);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
     private static native void nReleaseSourceData(long nativeAsset);

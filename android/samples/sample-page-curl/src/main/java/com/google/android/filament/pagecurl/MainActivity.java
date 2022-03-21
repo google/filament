@@ -70,11 +70,11 @@ public class MainActivity extends Activity
     private Page mPage;
     private PageMaterials mPageMaterials;
     private Scene mScene;
-    private Texture[] mTextures = new Texture[2];
+    private final Texture[] mTextures = new Texture[2];
     private @Entity int mLight;
     private IndirectLight mIndirectLight;
 
-    private float[] mTouchDownPoint = new float[2];
+    private final float[] mTouchDownPoint = new float[2];
     private float mTouchDownValue = 0;
     private float mPageAnimationRadians = 0;
     private float mPageAnimationValue = 0;

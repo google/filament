@@ -339,7 +339,7 @@ bool Froxelizer::update() noexcept {
 
 
         /*
-         * Now compute the bounding sphere of each froxel, which is needed for spot-lights
+         * Now compute the bounding sphere of each froxel, which is needed for spotlights
          * We intersect 3 planes of the frustum to find each 8 corners.
          * Currently the bounding sphere is computed from the bounding-box, which is probably,
          * not the best.
@@ -409,7 +409,7 @@ bool Froxelizer::update() noexcept {
                     minp.y = std::min(minp.y, py);
                     maxp.y = std::max(maxp.y, py);
                 }
-                assert_invariant(minp.y < maxp.y);
+                assert_invariant(minp.y <= maxp.y);
 
                 for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
                     // note: clang vectorizes this loop!
@@ -436,8 +436,11 @@ bool Froxelizer::update() noexcept {
             // orthographic projection
             // z_view = (1 - z_screen) * (near - far) - near
             // z_view = z_screen * (far - near) - far
-            mParamsZ[0] =       -1.0f / (Pz * mZLightFar);  // -(far-near) / mZLightFar
-            mParamsZ[1] = (0.5f - Pw) / (Pz * mZLightFar);  //         far / mZLightFar
+            // our ortho matrix is in inverted-DX convention
+            //   Pz =   1 / (far - near)
+            //   Pw = far / (far - near)
+            mParamsZ[0] = -1.0f / (Pz * mZLightFar);  // -(far-near) / mZLightFar
+            mParamsZ[1] =    Pw / (Pz * mZLightFar);  //         far / mZLightFar
             mParamsZ[2] = mLinearizer;
         }
         uniformsNeedUpdating = true;
@@ -560,16 +563,25 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
         const mat4f& projection = mProjection;
         const mat3f& vn = camera.view.upperLeft();
 
+        // We use minimum cone angle of 0.5 degrees because too small angles cause issues in the
+        // sphere/cone intersection test, due to floating-point precision.
+        constexpr float maxInvSin = 114.59301f;         // 1 / sin(0.5 degrees)
+        constexpr float maxCosSquared = 0.99992385f;    // cos(0.5 degrees)^2
+
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[j];
             LightParams light = {
                     .position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
-                    .cosSqr = lcm.getCosOuterSquared(li),   // spot only
-                    .axis = vn * directions[j],             // spot only
-                    .invSin = lcm.getSinInverse(li),        // spot only
+                    .cosSqr = std::min(maxCosSquared, lcm.getCosOuterSquared(li)),  // spot only
+                    .axis = vn * directions[j],                                     // spot only
+                    .invSin = lcm.getSinInverse(li),                                // spot only
                     .radius = spheres[j].w,
             };
+            // infinity means "pointlight"
+            if (light.invSin != std::numeric_limits<float>::infinity()) {
+                light.invSin = std::min(maxInvSin, light.invSin);
+            }
 
             const size_t group = i % GROUP_COUNT;
             const size_t bit   = i / GROUP_COUNT;

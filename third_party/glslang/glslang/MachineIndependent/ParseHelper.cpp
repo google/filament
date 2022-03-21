@@ -327,6 +327,16 @@ void TParseContext::setAtomicCounterBlockDefaults(TType& block) const
     block.getQualifier().layoutMatrix = ElmRowMajor;
 }
 
+void TParseContext::setInvariant(const TSourceLoc& loc, const char* builtin) {
+    TSymbol* symbol = symbolTable.find(builtin);
+    if (symbol && symbol->getType().getQualifier().isPipeOutput()) {
+        if (intermediate.inIoAccessed(builtin))
+            warn(loc, "changing qualification after use", "invariant", builtin);
+        TSymbol* csymbol = symbolTable.copyUp(symbol);
+        csymbol->getWritableType().getQualifier().invariant = true;
+    }
+}
+
 void TParseContext::handlePragma(const TSourceLoc& loc, const TVector<TString>& tokens)
 {
 #ifndef GLSLANG_WEB
@@ -404,8 +414,33 @@ void TParseContext::handlePragma(const TSourceLoc& loc, const TVector<TString>& 
         intermediate.setUseVariablePointers();
     } else if (tokens[0].compare("once") == 0) {
         warn(loc, "not implemented", "#pragma once", "");
-    } else if (tokens[0].compare("glslang_binary_double_output") == 0)
+    } else if (tokens[0].compare("glslang_binary_double_output") == 0) {
         intermediate.setBinaryDoubleOutput();
+    } else if (spvVersion.spv > 0 && tokens[0].compare("STDGL") == 0 &&
+               tokens[1].compare("invariant") == 0 && tokens[3].compare("all") == 0) {
+        intermediate.setInvariantAll();
+        // Set all builtin out variables invariant if declared
+        setInvariant(loc, "gl_Position");
+        setInvariant(loc, "gl_PointSize");
+        setInvariant(loc, "gl_ClipDistance");
+        setInvariant(loc, "gl_CullDistance");
+        setInvariant(loc, "gl_TessLevelOuter");
+        setInvariant(loc, "gl_TessLevelInner");
+        setInvariant(loc, "gl_PrimitiveID");
+        setInvariant(loc, "gl_Layer");
+        setInvariant(loc, "gl_ViewportIndex");
+        setInvariant(loc, "gl_FragDepth");
+        setInvariant(loc, "gl_SampleMask");
+        setInvariant(loc, "gl_ClipVertex");
+        setInvariant(loc, "gl_FrontColor");
+        setInvariant(loc, "gl_BackColor");
+        setInvariant(loc, "gl_FrontSecondaryColor");
+        setInvariant(loc, "gl_BackSecondaryColor");
+        setInvariant(loc, "gl_TexCoord");
+        setInvariant(loc, "gl_FogFragCoord");
+        setInvariant(loc, "gl_FragColor");
+        setInvariant(loc, "gl_FragData");
+    }
 #endif
 }
 
@@ -2273,6 +2308,10 @@ void TParseContext::builtInOpCheck(const TSourceLoc& loc, const TFunction& fnCan
         if (!(*argp)[10]->getAsConstantUnion())
             error(loc, "argument must be compile-time constant", "payload number", "a");
         break;
+    case EOpTraceRayMotionNV:
+        if (!(*argp)[11]->getAsConstantUnion())
+            error(loc, "argument must be compile-time constant", "payload number", "a");
+        break;
     case EOpTraceKHR:
         if (!(*argp)[10]->getAsConstantUnion())
             error(loc, "argument must be compile-time constant", "payload number", "a");
@@ -2409,6 +2448,14 @@ void TParseContext::builtInOpCheck(const TSourceLoc& loc, const TFunction& fnCan
                    arg0->getType().isFloatingDomain()) {
             requireExtensions(loc, 1, &E_GL_EXT_shader_atomic_float2, fnCandidate.getName().c_str());
         }
+
+        const TIntermTyped* base = TIntermediate::findLValueBase(arg0, true , true);
+        const TType* refType = (base->getType().isReference()) ? base->getType().getReferentType() : nullptr;
+        const TQualifier& qualifier = (refType != nullptr) ? refType->getQualifier() : base->getType().getQualifier();
+        if (qualifier.storage != EvqShared && qualifier.storage != EvqBuffer)
+            error(loc,"Atomic memory function can only be used for shader storage block member or shared variable.",
+            fnCandidate.getName().c_str(), "");
+
         break;
     }
 
@@ -2982,11 +3029,14 @@ void TParseContext::constantValueCheck(TIntermTyped* node, const char* token)
 
 //
 // Both test, and if necessary spit out an error, to see if the node is really
-// an integer.
+// a 32-bit integer or can implicitly convert to one.
 //
 void TParseContext::integerCheck(const TIntermTyped* node, const char* token)
 {
-    if ((node->getBasicType() == EbtInt || node->getBasicType() == EbtUint) && node->isScalar())
+    auto from_type = node->getBasicType();
+    if ((from_type == EbtInt || from_type == EbtUint ||
+         intermediate.canImplicitlyPromote(from_type, EbtInt, EOpNull) ||
+         intermediate.canImplicitlyPromote(from_type, EbtUint, EOpNull)) && node->isScalar())
         return;
 
     error(node->getLoc(), "scalar integer expression required", token, "");
@@ -3651,6 +3701,8 @@ void TParseContext::globalQualifierFixCheck(const TSourceLoc& loc, TQualifier& q
         profileRequires(loc, ENoProfile, 130, nullptr, "out for stage outputs");
         profileRequires(loc, EEsProfile, 300, nullptr, "out for stage outputs");
         qualifier.storage = EvqVaryingOut;
+        if (intermediate.isInvariantAll())
+            qualifier.invariant = true;
         break;
     case EvqInOut:
         qualifier.storage = EvqVaryingIn;
@@ -3667,7 +3719,7 @@ void TParseContext::globalQualifierFixCheck(const TSourceLoc& loc, TQualifier& q
         if (blockName == nullptr &&
             qualifier.layoutPacking == ElpStd430)
         {
-            error(loc, "it is invalid to declare std430 qualifier on uniform", "", "");
+            requireExtensions(loc, 1, &E_GL_EXT_scalar_block_layout, "default std430 layout for uniform");
         }
         break;
     default:
@@ -7642,7 +7694,13 @@ TIntermTyped* TParseContext::addConstructor(const TSourceLoc& loc, TIntermNode* 
             return nullptr;
     }
 
-    return intermediate.setAggregateOperator(aggrNode, op, type, loc);
+    TIntermTyped *ret_node = intermediate.setAggregateOperator(aggrNode, op, type, loc);
+
+    TIntermAggregate *agg_node = ret_node->getAsAggregate();
+    if (agg_node && (agg_node->isVector() || agg_node->isArray() || agg_node->isMatrix()))
+        agg_node->updatePrecision();
+
+    return ret_node;
 }
 
 // Function for constructor implementation. Calls addUnaryMath with appropriate EOp value
@@ -9188,10 +9246,13 @@ TIntermNode* TParseContext::addSwitch(const TSourceLoc& loc, TIntermTyped* expre
         // "it is an error to have no statement between a label and the end of the switch statement."
         // The specifications were updated to remove this (being ill-defined what a "statement" was),
         // so, this became a warning.  However, 3.0 tests still check for the error.
-        if (isEsProfile() && version <= 300 && ! relaxedErrors())
+        if (isEsProfile() && (version <= 300 || version >= 320) && ! relaxedErrors())
+            error(loc, "last case/default label not followed by statements", "switch", "");
+        else if (!isEsProfile() && (version <= 430 || version >= 460))
             error(loc, "last case/default label not followed by statements", "switch", "");
         else
             warn(loc, "last case/default label not followed by statements", "switch", "");
+
 
         // emulate a break for error recovery
         lastStatements = intermediate.makeAggregate(intermediate.addBranch(EOpBreak, loc));

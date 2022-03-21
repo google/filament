@@ -353,6 +353,7 @@ enum class ImageOperandsShift : unsigned {
     VolatileTexelKHR = 11,
     SignExtend = 12,
     ZeroExtend = 13,
+    Offsets = 16,
     Max = 0x7fffffff,
 };
 
@@ -376,6 +377,7 @@ enum class ImageOperandsMask : unsigned {
     VolatileTexelKHR = 0x00000800,
     SignExtend = 0x00001000,
     ZeroExtend = 0x00002000,
+    Offsets = 0x00010000,
 };
 
 enum class FPFastMathModeShift : unsigned {
@@ -499,6 +501,10 @@ enum class Decoration : unsigned {
     RestrictPointerEXT = 5355,
     AliasedPointer = 5356,
     AliasedPointerEXT = 5356,
+    BindlessSamplerNV = 5398,
+    BindlessImageNV = 5399,
+    BoundSamplerNV = 5400,
+    BoundImageNV = 5401,
     SIMTCallINTEL = 5599,
     ReferencedIndirectlyINTEL = 5602,
     ClobberINTEL = 5607,
@@ -653,6 +659,7 @@ enum class BuiltIn : unsigned {
     HitTNV = 5332,
     HitKindKHR = 5333,
     HitKindNV = 5333,
+    CurrentRayTimeNV = 5334,
     IncomingRayFlagsKHR = 5351,
     IncomingRayFlagsNV = 5351,
     RayGeometryIndexKHR = 5352,
@@ -722,6 +729,7 @@ enum class FunctionControlShift : unsigned {
     DontInline = 1,
     Pure = 2,
     Const = 3,
+    OptNoneINTEL = 16,
     Max = 0x7fffffff,
 };
 
@@ -731,6 +739,7 @@ enum class FunctionControlMask : unsigned {
     DontInline = 0x00000002,
     Pure = 0x00000004,
     Const = 0x00000008,
+    OptNoneINTEL = 0x00010000,
 };
 
 enum class MemorySemanticsShift : unsigned {
@@ -989,6 +998,7 @@ enum class Capability : unsigned {
     StorageTexelBufferArrayNonUniformIndexing = 5312,
     StorageTexelBufferArrayNonUniformIndexingEXT = 5312,
     RayTracingNV = 5340,
+    RayTracingMotionBlurNV = 5341,
     VulkanMemoryModel = 5345,
     VulkanMemoryModelKHR = 5345,
     VulkanMemoryModelDeviceScope = 5346,
@@ -1003,6 +1013,7 @@ enum class Capability : unsigned {
     ShaderSMBuiltinsNV = 5373,
     FragmentShaderPixelInterlockEXT = 5378,
     DemoteToHelperInvocationEXT = 5379,
+    BindlessTextureNV = 5390,
     SubgroupShuffleINTEL = 5568,
     SubgroupBufferBlockIOINTEL = 5569,
     SubgroupImageBlockIOINTEL = 5570,
@@ -1049,6 +1060,7 @@ enum class Capability : unsigned {
     AtomicFloat32AddEXT = 6033,
     AtomicFloat64AddEXT = 6034,
     LongConstantCompositeINTEL = 6089,
+    OptNoneINTEL = 6094,
     AtomicFloat16AddEXT = 6095,
     DebugInfoModuleINTEL = 6114,
     Max = 0x7fffffff,
@@ -1543,6 +1555,8 @@ enum class Op : unsigned {
     OpIgnoreIntersectionNV = 5335,
     OpTerminateRayNV = 5336,
     OpTraceNV = 5337,
+    OpTraceMotionNV = 5338,
+    OpTraceRayMotionNV = 5339,
     OpTypeAccelerationStructureKHR = 5341,
     OpTypeAccelerationStructureNV = 5341,
     OpExecuteCallableNV = 5344,
@@ -1555,6 +1569,13 @@ enum class Op : unsigned {
     OpEndInvocationInterlockEXT = 5365,
     OpDemoteToHelperInvocationEXT = 5380,
     OpIsHelperInvocationEXT = 5381,
+    OpConvertUToImageNV = 5391,
+    OpConvertUToSamplerNV = 5392,
+    OpConvertImageToUNV = 5393,
+    OpConvertSamplerToUNV = 5394,
+    OpConvertUToSampledImageNV = 5395,
+    OpConvertSampledImageToUNV = 5396,
+    OpSamplerImageAddressingModeNV = 5397,
     OpSubgroupShuffleINTEL = 5571,
     OpSubgroupShuffleDownINTEL = 5572,
     OpSubgroupShuffleUpINTEL = 5573,
@@ -1579,7 +1600,7 @@ enum class Op : unsigned {
     OpUSubSatINTEL = 5596,
     OpIMul32x16INTEL = 5597,
     OpUMul32x16INTEL = 5598,
-    OpConstFunctionPointerINTEL = 5600,
+    OpConstantFunctionPointerINTEL = 5600,
     OpFunctionPointerCallINTEL = 5601,
     OpAsmTargetINTEL = 5609,
     OpAsmINTEL = 5610,
@@ -2188,6 +2209,8 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpIgnoreIntersectionNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTerminateRayNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTraceNV: *hasResult = false; *hasResultType = false; break;
+    case Op::OpTraceMotionNV: *hasResult = false; *hasResultType = false; break;
+    case Op::OpTraceRayMotionNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTypeAccelerationStructureNV: *hasResult = true; *hasResultType = false; break;
     case Op::OpExecuteCallableNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTypeCooperativeMatrixNV: *hasResult = true; *hasResultType = false; break;
@@ -2199,6 +2222,13 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpEndInvocationInterlockEXT: *hasResult = false; *hasResultType = false; break;
     case Op::OpDemoteToHelperInvocationEXT: *hasResult = false; *hasResultType = false; break;
     case Op::OpIsHelperInvocationEXT: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertUToImageNV: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertUToSamplerNV: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertImageToUNV: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertSamplerToUNV: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertUToSampledImageNV: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertSampledImageToUNV: *hasResult = true; *hasResultType = true; break;
+    case Op::OpSamplerImageAddressingModeNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpSubgroupShuffleINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpSubgroupShuffleDownINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpSubgroupShuffleUpINTEL: *hasResult = true; *hasResultType = true; break;
@@ -2223,7 +2253,7 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpUSubSatINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpIMul32x16INTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpUMul32x16INTEL: *hasResult = true; *hasResultType = true; break;
-    case Op::OpConstFunctionPointerINTEL: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConstantFunctionPointerINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpFunctionPointerCallINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpAsmTargetINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpAsmINTEL: *hasResult = true; *hasResultType = true; break;

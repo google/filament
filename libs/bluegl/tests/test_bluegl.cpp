@@ -16,9 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#if defined(WIN32)
-#include <bluegl/BlueGLWindowsDefines.h>
-#endif
+#include <bluegl/BlueGLDefines.h>
 #include <bluegl/BlueGL.h>
 
 #include "OpenGLSupport.hpp"

@@ -305,34 +305,34 @@ bool CanInsertOpcodeBeforeInstruction(
 
 bool CanMakeSynonymOf(opt::IRContext* ir_context,
                       const TransformationContext& transformation_context,
-                      opt::Instruction* inst) {
-  if (inst->opcode() == SpvOpSampledImage) {
+                      const opt::Instruction& inst) {
+  if (inst.opcode() == SpvOpSampledImage) {
     // The SPIR-V data rules say that only very specific instructions may
     // may consume the result id of an OpSampledImage, and this excludes the
     // instructions that are used for making synonyms.
     return false;
   }
-  if (!inst->HasResultId()) {
+  if (!inst.HasResultId()) {
     // We can only make a synonym of an instruction that generates an id.
     return false;
   }
   if (transformation_context.GetFactManager()->IdIsIrrelevant(
-          inst->result_id())) {
+          inst.result_id())) {
     // An irrelevant id can't be a synonym of anything.
     return false;
   }
-  if (!inst->type_id()) {
+  if (!inst.type_id()) {
     // We can only make a synonym of an instruction that has a type.
     return false;
   }
-  auto type_inst = ir_context->get_def_use_mgr()->GetDef(inst->type_id());
+  auto type_inst = ir_context->get_def_use_mgr()->GetDef(inst.type_id());
   if (type_inst->opcode() == SpvOpTypeVoid) {
     // We only make synonyms of instructions that define objects, and an object
     // cannot have void type.
     return false;
   }
   if (type_inst->opcode() == SpvOpTypePointer) {
-    switch (inst->opcode()) {
+    switch (inst.opcode()) {
       case SpvOpConstantNull:
       case SpvOpUndef:
         // We disallow making synonyms of null or undefined pointers.  This is
@@ -348,7 +348,7 @@ bool CanMakeSynonymOf(opt::IRContext* ir_context,
   // not decorated analogously, using the original object vs. its synonymous
   // form may not be equivalent.
   return ir_context->get_decoration_mgr()
-      ->GetDecorationsFor(inst->result_id(), true)
+      ->GetDecorationsFor(inst.result_id(), true)
       .empty();
 }
 
@@ -455,6 +455,30 @@ uint32_t GetBoundForCompositeIndex(const opt::Instruction& composite_type_inst,
   }
 }
 
+SpvMemorySemanticsMask GetMemorySemanticsForStorageClass(
+    SpvStorageClass storage_class) {
+  switch (storage_class) {
+    case SpvStorageClassWorkgroup:
+      return SpvMemorySemanticsWorkgroupMemoryMask;
+
+    case SpvStorageClassStorageBuffer:
+    case SpvStorageClassPhysicalStorageBuffer:
+      return SpvMemorySemanticsUniformMemoryMask;
+
+    case SpvStorageClassCrossWorkgroup:
+      return SpvMemorySemanticsCrossWorkgroupMemoryMask;
+
+    case SpvStorageClassAtomicCounter:
+      return SpvMemorySemanticsAtomicCounterMemoryMask;
+
+    case SpvStorageClassImage:
+      return SpvMemorySemanticsImageMemoryMask;
+
+    default:
+      return SpvMemorySemanticsMaskNone;
+  }
+}
+
 bool IsValid(const opt::IRContext* context,
              spv_validator_options validator_options,
              MessageConsumer consumer) {
@@ -502,8 +526,12 @@ bool IsValidAndWellFormed(const opt::IRContext* ir_context,
   // this is a useful aid to debugging.
   std::unordered_map<uint32_t, opt::Instruction*> unique_ids;
   bool found_duplicate = false;
-  ir_context->module()->ForEachInst([&consumer, &found_duplicate,
+  ir_context->module()->ForEachInst([&consumer, &found_duplicate, ir_context,
                                      &unique_ids](opt::Instruction* inst) {
+    (void)ir_context;  // Only used in an assertion; keep release-mode compilers
+                       // happy.
+    assert(inst->context() == ir_context &&
+           "Instruction has wrong IR context.");
     if (unique_ids.count(inst->unique_id()) != 0) {
       consumer(SPV_MSG_INFO, nullptr, {},
                "Two instructions have the same unique id (set a breakpoint to "
@@ -787,11 +815,38 @@ uint32_t InOperandIndexFromOperandIndex(const opt::Instruction& inst,
   return absolute_index - inst.NumOperands() + inst.NumInOperands();
 }
 
-bool IsNullConstantSupported(const opt::analysis::Type& type) {
-  return type.AsBool() || type.AsInteger() || type.AsFloat() ||
-         type.AsMatrix() || type.AsVector() || type.AsArray() ||
-         type.AsStruct() || type.AsPointer() || type.AsEvent() ||
-         type.AsDeviceEvent() || type.AsReserveId() || type.AsQueue();
+bool IsNullConstantSupported(opt::IRContext* ir_context,
+                             const opt::Instruction& type_inst) {
+  switch (type_inst.opcode()) {
+    case SpvOpTypeArray:
+    case SpvOpTypeBool:
+    case SpvOpTypeDeviceEvent:
+    case SpvOpTypeEvent:
+    case SpvOpTypeFloat:
+    case SpvOpTypeInt:
+    case SpvOpTypeMatrix:
+    case SpvOpTypeQueue:
+    case SpvOpTypeReserveId:
+    case SpvOpTypeVector:
+    case SpvOpTypeStruct:
+      return true;
+    case SpvOpTypePointer:
+      // Null pointers are allowed if the VariablePointers capability is
+      // enabled, or if the VariablePointersStorageBuffer capability is enabled
+      // and the pointer type has StorageBuffer as its storage class.
+      if (ir_context->get_feature_mgr()->HasCapability(
+              SpvCapabilityVariablePointers)) {
+        return true;
+      }
+      if (ir_context->get_feature_mgr()->HasCapability(
+              SpvCapabilityVariablePointersStorageBuffer)) {
+        return type_inst.GetSingleWordInOperand(0) ==
+               SpvStorageClassStorageBuffer;
+      }
+      return false;
+    default:
+      return false;
+  }
 }
 
 bool GlobalVariablesMustBeDeclaredInEntryPointInterfaces(
@@ -1616,6 +1671,44 @@ bool IdUseCanBeReplaced(opt::IRContext* ir_context,
     return false;
   }
 
+  if (ir_context->get_feature_mgr()->HasCapability(SpvCapabilityShader)) {
+    // With the Shader capability, memory scope and memory semantics operands
+    // are required to be constants, so they cannot be replaced arbitrarily.
+    switch (use_instruction->opcode()) {
+      case SpvOpAtomicLoad:
+      case SpvOpAtomicStore:
+      case SpvOpAtomicExchange:
+      case SpvOpAtomicIIncrement:
+      case SpvOpAtomicIDecrement:
+      case SpvOpAtomicIAdd:
+      case SpvOpAtomicISub:
+      case SpvOpAtomicSMin:
+      case SpvOpAtomicUMin:
+      case SpvOpAtomicSMax:
+      case SpvOpAtomicUMax:
+      case SpvOpAtomicAnd:
+      case SpvOpAtomicOr:
+      case SpvOpAtomicXor:
+        if (use_in_operand_index == 1 || use_in_operand_index == 2) {
+          return false;
+        }
+        break;
+      case SpvOpAtomicCompareExchange:
+        if (use_in_operand_index == 1 || use_in_operand_index == 2 ||
+            use_in_operand_index == 3) {
+          return false;
+        }
+        break;
+      case SpvOpAtomicCompareExchangeWeak:
+      case SpvOpAtomicFlagTestAndSet:
+      case SpvOpAtomicFlagClear:
+      case SpvOpAtomicFAddEXT:
+        assert(false && "Not allowed with the Shader capability.");
+      default:
+        break;
+    }
+  }
+
   return true;
 }
 
@@ -1923,6 +2016,93 @@ opt::Module::iterator GetFunctionIterator(opt::IRContext* ir_context,
                       [function_id](const opt::Function& f) {
                         return f.result_id() == function_id;
                       });
+}
+
+// TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3582): Add all
+//  opcodes that are agnostic to signedness of operands to function.
+//  This is not exhaustive yet.
+bool IsAgnosticToSignednessOfOperand(SpvOp opcode,
+                                     uint32_t use_in_operand_index) {
+  switch (opcode) {
+    case SpvOpSNegate:
+    case SpvOpNot:
+    case SpvOpIAdd:
+    case SpvOpISub:
+    case SpvOpIMul:
+    case SpvOpSDiv:
+    case SpvOpSRem:
+    case SpvOpSMod:
+    case SpvOpShiftRightLogical:
+    case SpvOpShiftRightArithmetic:
+    case SpvOpShiftLeftLogical:
+    case SpvOpBitwiseOr:
+    case SpvOpBitwiseXor:
+    case SpvOpBitwiseAnd:
+    case SpvOpIEqual:
+    case SpvOpINotEqual:
+    case SpvOpULessThan:
+    case SpvOpSLessThan:
+    case SpvOpUGreaterThan:
+    case SpvOpSGreaterThan:
+    case SpvOpULessThanEqual:
+    case SpvOpSLessThanEqual:
+    case SpvOpUGreaterThanEqual:
+    case SpvOpSGreaterThanEqual:
+      return true;
+
+    case SpvOpAtomicStore:
+    case SpvOpAtomicExchange:
+    case SpvOpAtomicIAdd:
+    case SpvOpAtomicISub:
+    case SpvOpAtomicSMin:
+    case SpvOpAtomicUMin:
+    case SpvOpAtomicSMax:
+    case SpvOpAtomicUMax:
+    case SpvOpAtomicAnd:
+    case SpvOpAtomicOr:
+    case SpvOpAtomicXor:
+    case SpvOpAtomicFAddEXT:  // Capability AtomicFloat32AddEXT,
+      // AtomicFloat64AddEXT.
+      assert(use_in_operand_index != 0 &&
+             "Signedness check should not occur on a pointer operand.");
+      return use_in_operand_index == 1 || use_in_operand_index == 2;
+
+    case SpvOpAtomicCompareExchange:
+    case SpvOpAtomicCompareExchangeWeak:  // Capability Kernel.
+      assert(use_in_operand_index != 0 &&
+             "Signedness check should not occur on a pointer operand.");
+      return use_in_operand_index >= 1 && use_in_operand_index <= 3;
+
+    case SpvOpAtomicLoad:
+    case SpvOpAtomicIIncrement:
+    case SpvOpAtomicIDecrement:
+    case SpvOpAtomicFlagTestAndSet:  // Capability Kernel.
+    case SpvOpAtomicFlagClear:       // Capability Kernel.
+      assert(use_in_operand_index != 0 &&
+             "Signedness check should not occur on a pointer operand.");
+      return use_in_operand_index >= 1;
+
+    case SpvOpAccessChain:
+      // The signedness of indices does not matter.
+      return use_in_operand_index > 0;
+
+    default:
+      // Conservatively assume that the id cannot be swapped in other
+      // instructions.
+      return false;
+  }
+}
+
+bool TypesAreCompatible(opt::IRContext* ir_context, SpvOp opcode,
+                        uint32_t use_in_operand_index, uint32_t type_id_1,
+                        uint32_t type_id_2) {
+  assert(ir_context->get_type_mgr()->GetType(type_id_1) &&
+         ir_context->get_type_mgr()->GetType(type_id_2) &&
+         "Type ids are invalid");
+
+  return type_id_1 == type_id_2 ||
+         (IsAgnosticToSignednessOfOperand(opcode, use_in_operand_index) &&
+          fuzzerutil::TypesAreEqualUpToSign(ir_context, type_id_1, type_id_2));
 }
 
 }  // namespace fuzzerutil

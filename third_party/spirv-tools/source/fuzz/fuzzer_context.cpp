@@ -42,6 +42,8 @@ const std::pair<uint32_t, uint32_t> kChanceOfAddingAnotherPassToPassLoop = {50,
 const std::pair<uint32_t, uint32_t> kChanceOfAddingAnotherStructField = {20,
                                                                          90};
 const std::pair<uint32_t, uint32_t> kChanceOfAddingArrayOrStructType = {20, 90};
+const std::pair<uint32_t, uint32_t> KChanceOfAddingAtomicLoad = {30, 90};
+const std::pair<uint32_t, uint32_t> KChanceOfAddingAtomicStore = {20, 90};
 const std::pair<uint32_t, uint32_t> kChanceOfAddingBitInstructionSynonym = {5,
                                                                             20};
 const std::pair<uint32_t, uint32_t>
@@ -162,6 +164,7 @@ const std::pair<uint32_t, uint32_t> kChanceOfTogglingAccessChainInstruction = {
     20, 90};
 const std::pair<uint32_t, uint32_t> kChanceOfWrappingRegionInSelection = {70,
                                                                           90};
+const std::pair<uint32_t, uint32_t> kChanceOfWrappingVectorSynonym = {10, 90};
 
 // Default limits for various quantities that are chosen during fuzzing.
 // Keep them in alphabetical order.
@@ -215,6 +218,10 @@ FuzzerContext::FuzzerContext(std::unique_ptr<RandomGenerator> random_generator,
       ChooseBetweenMinAndMax(kChanceOfAddingAnotherStructField);
   chance_of_adding_array_or_struct_type_ =
       ChooseBetweenMinAndMax(kChanceOfAddingArrayOrStructType);
+  chance_of_adding_atomic_load_ =
+      ChooseBetweenMinAndMax(KChanceOfAddingAtomicLoad);
+  chance_of_adding_atomic_store_ =
+      ChooseBetweenMinAndMax(KChanceOfAddingAtomicStore);
   chance_of_adding_bit_instruction_synonym_ =
       ChooseBetweenMinAndMax(kChanceOfAddingBitInstructionSynonym);
   chance_of_adding_both_branches_when_replacing_opselect_ =
@@ -369,6 +376,8 @@ FuzzerContext::FuzzerContext(std::unique_ptr<RandomGenerator> random_generator,
       ChooseBetweenMinAndMax(kChanceOfTogglingAccessChainInstruction);
   chance_of_wrapping_region_in_selection_ =
       ChooseBetweenMinAndMax(kChanceOfWrappingRegionInSelection);
+  chance_of_wrapping_vector_synonym_ =
+      ChooseBetweenMinAndMax(kChanceOfWrappingVectorSynonym);
 }
 
 FuzzerContext::~FuzzerContext() = default;

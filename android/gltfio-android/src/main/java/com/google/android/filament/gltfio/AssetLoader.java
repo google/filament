@@ -45,7 +45,8 @@ import java.nio.Buffer;
  *
  *     ...
  *
- *     assetLoader = AssetLoader(engine, UbershaderLoader(engine), EntityManager.get())
+ *     materialProvider = UbershaderLoader(engine)
+ *     assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
  *
  *     filamentAsset = assets.open("models/lucy.gltf").use { input -&gt;
  *         val bytes = ByteArray(input.available())
@@ -60,7 +61,6 @@ import java.nio.Buffer;
  *     }
  *     resourceLoader.loadResources(filamentAsset)
  *     resourceLoader.destroy()
- *     animator = asset.getAnimator()
  *     filamentAsset.releaseSourceData();
  *
  *     scene.addEntities(filamentAsset.entities)
@@ -104,10 +104,12 @@ public class AssetLoader {
     }
 
     /**
-     * Frees all memory consumed by the native <code>AssetLoader</code> and its material cache.
+     * Frees all memory consumed by the native <code>AssetLoader</code>
+     *
+     * This does not not automatically free the cache of materials, nor
+     * does it free the entities for created assets (see destroyAsset).
      */
     public void destroy() {
-        mMaterialCache.destroyMaterials();
         nDestroyAssetLoader(mNativeObject);
         mNativeObject = 0;
     }

@@ -297,7 +297,7 @@ void TransformationCompositeConstruct::AddDataSynonymFacts(
         composite_type->AsVector() && component_type->AsVector();
     if (!fuzzerutil::CanMakeSynonymOf(
             ir_context, *transformation_context,
-            ir_context->get_def_use_mgr()->GetDef(component))) {
+            *ir_context->get_def_use_mgr()->GetDef(component))) {
       // We can't make a synonym of this component, so we skip on to the next
       // component.  In the case where we're packing a vector into a vector we
       // have to skip as many components of the resulting vectors as there are

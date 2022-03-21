@@ -28,12 +28,21 @@ class TransformationStore : public Transformation {
   explicit TransformationStore(protobufs::TransformationStore message);
 
   TransformationStore(
-      uint32_t pointer_id, uint32_t value_id,
+      uint32_t pointer_id, bool is_atomic, uint32_t memory_scope,
+      uint32_t memory_semantics, uint32_t value_id,
       const protobufs::InstructionDescriptor& instruction_to_insert_before);
 
   // - |message_.pointer_id| must be the id of a pointer
   // - The pointer type must not have read-only storage class
   // - The pointer must not be OpConstantNull or OpUndef
+  // - |message_.is_atomic| must be true if want to work with OpAtomicStore.
+  // - If |is_atomic| is true then |message_memory_scope_id| must be the id of
+  //   an OpConstant 32 bit integer instruction with the value
+  //   SpvScopeInvocation.
+  // - If |is_atomic| is true then |message_.memory_semantics_id| must be the id
+  //   of an OpConstant 32 bit integer instruction with the values
+  //   SpvMemorySemanticsWorkgroupMemoryMask or
+  //   SpvMemorySemanticsUniformMemoryMask.
   // - |message_.value_id| must be an instruction result id that has the same
   //   type as the pointee type of |message_.pointer_id|
   // - |message_.instruction_to_insert_before| must identify an instruction

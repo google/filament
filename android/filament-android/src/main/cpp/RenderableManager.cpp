@@ -209,9 +209,18 @@ Java_com_google_android_filament_RenderableManager_nBuilderSkinningBones(JNIEnv*
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jclass,
-        jlong nativeBuilder, jboolean enabled) {
+        jlong nativeBuilder, jint targetCount) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
-    builder->morphing(enabled);
+    builder->morphing(targetCount);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderSetMorphTargetBufferAt(JNIEnv*, jclass,
+        jlong nativeBuilder, int level, int primitiveIndex, jlong nativeMorphTargetBuffer,
+        int offset, int count) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+    builder->morphing(level, primitiveIndex, morphTargetBuffer, offset, count);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -219,6 +228,13 @@ Java_com_google_android_filament_RenderableManager_nBuilderLightChannel(JNIEnv*,
         jlong nativeBuilder, jint channel, jboolean enable) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
     builder->lightChannel(channel, (bool)enable);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderInstances(JNIEnv*, jclass,
+        jlong nativeBuilder, jint instanceCount) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->instances(instanceCount);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -267,12 +283,29 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsQuaternions(JNIEnv
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env, jclass,
-        jlong nativeRenderableManager, jint instance, jfloatArray weights) {
+        jlong nativeRenderableManager, jint instance, jfloatArray weights, jint offset) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     jfloat* vec = env->GetFloatArrayElements(weights, NULL);
-    math::float4 floatvec(vec[0], vec[1], vec[2], vec[3]);
+    jsize count = env->GetArrayLength(weights);
+    rm->setMorphWeights((RenderableManager::Instance)instance, vec, count, offset);
     env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
-    rm->setMorphWeights((RenderableManager::Instance)instance, floatvec);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferAt(JNIEnv*,
+        jclass, jlong nativeRenderableManager, jint i, int level, jint primitiveIndex,
+        jlong nativeMorphTargetBuffer, jint offset, jint count) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+    rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
+            (size_t) primitiveIndex, morphTargetBuffer, (size_t) offset, (size_t) count);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetMorphTargetCount(JNIEnv* env, jclass,
+        jlong nativeRenderableManager, jint instance) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return rm->getMorphTargetCount((RenderableManager::Instance)instance);
 }
 
 extern "C" JNIEXPORT void JNICALL

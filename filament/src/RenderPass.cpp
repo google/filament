@@ -47,6 +47,7 @@ RenderPass::RenderPass(FEngine& engine,
 
 RenderPass::RenderPass(RenderPass const& rhs) = default;
 
+// this destructor is actually heavy because it inlines ~vector<>
 RenderPass::~RenderPass() noexcept = default;
 
 RenderPass::Command* RenderPass::append(size_t count) noexcept {
@@ -94,6 +95,7 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
     FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     const RenderFlags renderFlags = mFlags;
+    const Variant variant = mVariant;
     const FScene::VisibleMaskType visibilityMask = mVisibilityMask;
     CameraInfo const& camera = mCamera;
 
@@ -113,11 +115,11 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
     // we extract camera position/forward outside of the loop, because these are not cheap.
     const float3 cameraPosition(camera.getPosition());
     const float3 cameraForwardVector(camera.getForwardVector());
-    auto work = [commandTypeFlags, curr, &soa, renderFlags, visibilityMask, cameraPosition,
+    auto work = [commandTypeFlags, curr, &soa, variant, renderFlags, visibilityMask, cameraPosition,
                  cameraForwardVector]
             (uint32_t startIndex, uint32_t indexCount) {
         RenderPass::generateCommands(commandTypeFlags, curr,
-                soa, { startIndex, startIndex + indexCount }, renderFlags, visibilityMask,
+                soa, { startIndex, startIndex + indexCount }, variant, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector);
     };
 
@@ -136,7 +138,7 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
 }
 
 void RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
-        std::function<void()> command) {
+        Executor::CustomCommandFn command) {
 
     assert((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
@@ -173,8 +175,8 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
         FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
-    uint8_t variant =
-            Variant::filterVariant(cmdDraw.primitive.materialVariant.key, ma->isVariantLit());
+    Variant variant = Variant::filterVariant(
+            cmdDraw.primitive.materialVariant, ma->isVariantLit());
 
     // Below, we evaluate both commands to avoid a branch
 
@@ -193,26 +195,37 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
     keyDraw |= uint64_t(hasScreenSpaceRefraction ? Pass::REFRACT : Pass::COLOR);
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
-    keyDraw |= makeField(variant, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
+    keyDraw |= makeField(variant.key, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
     cmdDraw.primitive.rasterState = ma->getRasterState();
+
+    // for SSR pass, the blending mode of opaques (including MASKED) must be off
+    // see Material.cpp.
+    const bool blendingMustBeOff = !isBlendingCommand && Variant::isSSRVariant(variant);
+    cmdDraw.primitive.rasterState.blendFunctionSrcAlpha = blendingMustBeOff ?
+            BlendFunction::ONE : cmdDraw.primitive.rasterState.blendFunctionSrcAlpha;
+    cmdDraw.primitive.rasterState.blendFunctionDstAlpha = blendingMustBeOff ?
+            BlendFunction::ZERO : cmdDraw.primitive.rasterState.blendFunctionDstAlpha;
+
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
     cmdDraw.primitive.rasterState.colorWrite = mi->getColorWrite();
     cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.primitive.mi = mi;
-    cmdDraw.primitive.materialVariant.key = variant;
+    cmdDraw.primitive.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
 /* static */
 UTILS_NOINLINE
 void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
-        FScene::RenderableSoa const& soa, Range<uint32_t> range, RenderFlags renderFlags,
-        FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward) noexcept {
+        FScene::RenderableSoa const& soa, Range<uint32_t> range,
+        Variant variant, RenderFlags renderFlags,
+        FScene::VisibleMaskType visibilityMask,
+        float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -239,11 +252,11 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
     switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
-                    soa, range, renderFlags, visibilityMask, cameraPosition, cameraForward);
+                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         case CommandTypeFlags::DEPTH:
             generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
-                    soa, range, renderFlags, visibilityMask, cameraPosition, cameraForward);
+                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         default:
             // we should never end-up here
@@ -257,7 +270,7 @@ UTILS_NOINLINE
 void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
-        RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
+        Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
@@ -270,34 +283,27 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
     static_assert(isColorPass != isDepthPass, "only color or depth pass supported");
 
-    const bool depthContainsShadowCasters = bool(extraFlags & CommandTypeFlags::DEPTH_CONTAINS_SHADOW_CASTERS);
-    const bool depthFilterTranslucentObjects = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_TRANSLUCENT_OBJECTS);
-    const bool depthFilterAlphaMaskedObjects = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
+    const bool depthContainsShadowCasters       = bool(extraFlags & CommandTypeFlags::DEPTH_CONTAINS_SHADOW_CASTERS);
+    const bool depthFilterAlphaMaskedObjects    = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
+    const bool filterTranslucentObjects         = bool(extraFlags & CommandTypeFlags::FILTER_TRANSLUCENT_OBJECTS);
 
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
+    auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
+    auto const* const UTILS_RESTRICT soaInstanceCount  = soa.data<FScene::INSTANCE_COUNT>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
-
-    Variant materialVariant;
-    materialVariant.setDirectionalLighting(renderFlags & HAS_DIRECTIONAL_LIGHT);
-    materialVariant.setDynamicLighting(renderFlags & HAS_DYNAMIC_LIGHTING);
-    materialVariant.setFog(renderFlags & HAS_FOG);
-    materialVariant.setVsm((renderFlags & HAS_VSM) && hasShadowing);
-    materialVariant.setShadowReceiver(false); // this is set per Renderable
 
     Command cmdColor;
 
     Command cmdDepth;
     if constexpr (isDepthPass) {
-        cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
-        cmdDepth.primitive.materialVariant.setPicking(renderFlags & HAS_PICKING);
-        cmdDepth.primitive.materialVariant.setVsm(renderFlags & HAS_VSM);
+        cmdDepth.primitive.materialVariant = variant;
         cmdDepth.primitive.rasterState = {};
-        cmdDepth.primitive.rasterState.colorWrite = renderFlags & (HAS_VSM | HAS_PICKING);
+        cmdDepth.primitive.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isVSMVariant(variant);
         cmdDepth.primitive.rasterState.depthWrite = true;
         cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::GE;
         cmdDepth.primitive.rasterState.alphaToCoverage = false;
@@ -350,11 +356,19 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
         // calculate the per-primitive face winding order inversion
         const bool inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
+        const bool hasMorphing = soaVisibility[i].morphing;
+        const bool hasSkinningOrMorphing = soaVisibility[i].skinning || hasMorphing;
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
-        materialVariant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
-        materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
+        cmdColor.primitive.instanceCount = soaInstanceCount[i];
+
+        // if we are already a SSR variant, the SRE bit is already set,
+        // there is no harm setting it again
+        static_assert(Variant::SPECIAL_SSR & Variant::SRE);
+        variant.setShadowReceiver(
+                Variant::isSSRVariant(variant) || (soaVisibility[i].receiveShadows & hasShadowing));
+        variant.setSkinning(hasSkinningOrMorphing);
 
         if constexpr (isDepthPass) {
             cmdDepth.key = uint64_t(Pass::DEPTH);
@@ -362,8 +376,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
             cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
-            cmdDepth.primitive.materialVariant.setSkinning(
-                    soaVisibility[i].skinning || soaVisibility[i].morphing);
+            cmdDepth.primitive.instanceCount = soaInstanceCount[i];
+            cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
         }
 
@@ -371,17 +385,23 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
+        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
 
         /*
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.
          */
-        for (auto const& primitive : primitives) {
+        for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
+            auto const& primitive = primitives[pi];
+            auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.materialVariant = materialVariant;
+                cmdColor.primitive.materialVariant = variant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
+
+                cmdColor.primitive.morphWeightBuffer = morphing.handle;
+                cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -424,6 +444,9 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // correct for TransparencyMode::DEFAULT -- i.e. cancel the command
                     key |= select(mode == TransparencyMode::DEFAULT);
 
+                    // cancel command if asked to filter translucents
+                    key |= select(filterTranslucentObjects);
+
                     *curr = cmdColor;
                     curr->key = key;
                     ++curr;
@@ -439,6 +462,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     cmdColor.primitive.rasterState.depthFunc =
                             (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
                             SamplerCompareFunc::GE : cmdColor.primitive.rasterState.depthFunc;
+
                 } else {
                     // color pass:
                     // This will bucket objects by Z, front-to-back and then sort by material
@@ -471,10 +495,13 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdDepth.primitive.mi = mi;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
+                cmdDepth.primitive.morphWeightBuffer = morphing.handle;
+                cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
+
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
                         & (mi->getDepthWrite() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
-                        & !(depthFilterTranslucentObjects & translucent)
+                        & !(filterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                             | writeDepthForShadowCasters;
                 *curr = cmdDepth;
@@ -514,14 +541,15 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(driver, mBegin, mEnd, mRenderableSoa);
+    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa, params.readOnlyDepthStencil);
     driver.endRenderPass();
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
+void RenderPass::Executor::recordDriverCommands(FEngine& engine,
+        backend::DriverApi& driver,
         const Command* first, const Command* last,
-        FScene::RenderableSoa const& soa) const noexcept {
+        FScene::RenderableSoa const& soa, uint16_t readOnlyDepthStencil) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
@@ -537,7 +565,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
         Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
-        auto const& customCommands = mCustomCommands;
+        auto customCommands = mCustomCommands.data();
 
         first--;
         while (++first != last) {
@@ -547,6 +575,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
 
             if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
                 uint32_t index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
+                assert_invariant(index < mCustomCommands.size());
                 customCommands[index]();
                 continue;
             }
@@ -554,6 +583,12 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
+
+#ifndef NDEBUG
+            const bool readOnlyDepthGuaranteed = readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH;
+            assert_invariant(!readOnlyDepthGuaranteed || !pipeline.rasterState.depthWrite);
+#endif
+
             if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
                 mi = info.mi;
@@ -563,7 +598,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                 mi->use(driver);
             }
 
-            pipeline.program = ma->getProgram(info.materialVariant.key);
+            pipeline.program = ma->getProgram(info.materialVariant);
             size_t offset = info.index * sizeof(PerRenderableUib);
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
                     uboHandle, offset, sizeof(PerRenderableUib));
@@ -575,10 +610,39 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         skinning.handle,
                         skinning.offset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
+                // note: even if skinning is only enabled, binding morphTargetBuffer is needed.
+                driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                        info.morphTargetBuffer);
             }
-            driver.draw(pipeline, info.primitiveHandle);
+
+            if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
+                // Instead of using a UBO per primitive, we could also have a single UBO for all
+                // primitives and use bindUniformBufferRange which might be more efficient.
+                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
+                        info.morphWeightBuffer);
+                driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                        info.morphTargetBuffer);
+            }
+
+            driver.draw(pipeline, info.primitiveHandle, info.instanceCount);
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+
+RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
+        : mEngine(pass->mEngine), mBegin(b), mEnd(e), mRenderableSoa(*pass->mRenderableSoa),
+          mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
+          mPolygonOffset(pass->mPolygonOffset),
+          mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {
+    assert_invariant(b >= pass->begin());
+    assert_invariant(e <= pass->end());
+}
+
+RenderPass::Executor::Executor(Executor const& rhs) = default;
+
+// this destructor is actually heavy because it inlines ~vector<>
+RenderPass::Executor::~Executor() noexcept = default;
 
 } // namespace filament

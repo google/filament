@@ -52,7 +52,8 @@ class RenderPass;
 struct ShadowMappingUniforms {
     std::array<math::mat4f, CONFIG_MAX_SHADOW_CASCADES> lightFromWorldMatrix;
     math::float4 cascadeSplits;
-    math::float3 shadowBias;
+    float shadowBulbRadiusLs;
+    float shadowBias;
     float ssContactShadowDistance;
     uint32_t directionalShadows;
     uint32_t cascades;
@@ -113,19 +114,13 @@ public:
     }
 
 private:
+    ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
+            FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+            ShadowMap::SceneInfo& sceneInfo) noexcept;
 
-    struct TextureRequirements {
-        uint16_t size = 0;
-        uint8_t layers = 0;
-        uint8_t levels = 0;
-    } mTextureRequirements;
-
-    ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
-
-    ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view,
-            TypedUniformBuffer<ShadowUib>& shadowUb,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
+    ShadowTechnique updateSpotShadowMaps(FEngine& engine,
+            FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+            ShadowMap::SceneInfo& sceneInfo, TypedUniformBuffer<ShadowUib>& shadowUb) noexcept;
 
     void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
 
@@ -192,6 +187,16 @@ private:
         size_t mSplitCount;
     };
 
+    // Atlas requirements, updated in ShadowMapManager::update(),
+    // consumed in ShadowMapManager::render()
+    struct TextureAtlasRequirements {
+        uint16_t size = 0;
+        uint8_t layers = 0;
+        uint8_t levels = 0;
+    } mTextureAtlasRequirements;
+
+    SoftShadowOptions mSoftShadowOptions;
+
     CascadeSplits::Params mCascadeSplitParams;
     CascadeSplits mCascadeSplits;
 
@@ -199,7 +204,6 @@ private:
     // TODO: make it an option.
     // TODO: iOS does not support the DEPTH16 texture format.
     backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
-    float mTextureZResolution = 1.0f / (1u << 16u);
 
     ShadowMappingUniforms mShadowMappingUniforms;
 

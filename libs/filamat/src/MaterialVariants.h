@@ -27,15 +27,13 @@ namespace filamat {
 
 struct Variant {
     using Stage = filament::backend::ShaderType;
-
-    Variant(uint8_t v, Stage s) : variant(v), stage(s) {}
-
-    uint8_t variant;
+    Variant(filament::Variant v, Stage s) noexcept : variant(v), stage(s) {}
+    filament::Variant variant;
     Stage stage;
 };
 
-std::vector<Variant> determineSurfaceVariants(uint8_t variantFilter, bool isLit,
-        bool shadowMultiplier);
+std::vector<Variant> determineSurfaceVariants(
+        filament::UserVariantFilterMask, bool isLit, bool shadowMultiplier);
 
 std::vector<Variant> determinePostProcessVariants();
 

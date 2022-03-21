@@ -22,11 +22,11 @@
 #include "private/backend/BackendUtils.h"
 
 #ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
-#    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 2
+#    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 3
 #endif
 
 #ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
-#    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 1
+#    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 2
 #endif
 
 namespace filament {

@@ -33,6 +33,13 @@ using namespace filament::math;
 using namespace utils;
 using namespace backend;
 
+static void logCompilationError(utils::io::ostream& out,
+        backend::Program::Shader shaderType, const char* name,
+        GLuint shaderId, std::string_view source) noexcept;
+
+static void logProgramLinkError(utils::io::ostream& out,
+        const char* name, GLuint program) noexcept;
+
 OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
         :  HwProgram(programBuilder.getName()), mIsValid(false) {
 
@@ -57,7 +64,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
         if (!shadersSource[i].empty()) {
             GLint status;
-            auto shader = shadersSource[i];
+            Program::ShaderBlob shader = shadersSource[i];
             std::string temp;
             std::string_view shaderView((const char*)shader.data(), shader.size());
 
@@ -123,17 +130,18 @@ highp uint packHalf2x16(vec2 v) {
                 shaderView = temp;
             }
 
-            const char * const source = shaderView.data();
-            GLint length = (GLint)shaderView.length();
-
             GLuint shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, 1, &source, &length);
-            glCompileShader(shaderId);
+            { // scope for source/length (we don't want them to leak out)
+                const char* const source = shaderView.data();
+                const GLint length = (GLint)shaderView.length();
+                glShaderSource(shaderId, 1, &source, &length);
+                glCompileShader(shaderId);
+            }
 
             glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
             if (UTILS_UNLIKELY(status != GL_TRUE)) {
                 logCompilationError(slog.e, type,
-                        programBuilder.getName().c_str_safe(), shaderId, source);
+                        programBuilder.getName().c_str_safe(), shaderId, shaderView);
                 glDeleteShader(shaderId);
                 return;
             }
@@ -191,14 +199,15 @@ highp uint packHalf2x16(vec2 v) {
             #pragma nounroll
             for (size_t i = 0, c = samplerGroupInfo.size(); i < c; i++) {
                 auto const& groupInfo = samplerGroupInfo[i];
-                if (!groupInfo.empty()) {
+                auto const& samplers = groupInfo.samplers;
+                if (!samplers.empty()) {
                     // Cache the sampler uniform locations for each interface block
                     BlockInfo& info = mBlockInfos[numUsedBindings];
                     info.binding = uint8_t(i);
                     uint8_t count = 0;
-                    for (uint8_t j = 0, m = uint8_t(groupInfo.size()); j < m; ++j) {
+                    for (uint8_t j = 0, m = uint8_t(samplers.size()); j < m; ++j) {
                         // find its location and associate a TMU to it
-                        GLint loc = glGetUniformLocation(program, groupInfo[j].name.c_str());
+                        GLint loc = glGetUniformLocation(program, samplers[j].name.c_str());
                         if (loc >= 0) {
                             glUniform1i(loc, tmu);
                             indicesRun[tmu] = j;
@@ -233,7 +242,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
     const bool isValid = mIsValid;
     GLuint program = gl.program;
     if (validShaderSet) {
-        #pragma nounroll
+        UTILS_NOUNROLL
         for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
             if (validShaderSet & (1U << i)) {
                 const GLuint shader = gl.shaders[i];
@@ -264,6 +273,10 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
         BlockInfo blockInfo = blockInfos[i];
         HwSamplerGroup const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
+        if (UTILS_UNLIKELY(!hwsb)) {
+            tmu += blockInfo.count + 1;
+            continue;
+        }
         SamplerGroup const& UTILS_RESTRICT sb = *(hwsb->sb);
         SamplerGroup::Sampler const* const UTILS_RESTRICT samplers = sb.getSamplers();
         for (uint8_t j = 0, m = blockInfo.count ; j <= m; ++j, ++tmu) { // "<=" on purpose here
@@ -296,6 +309,18 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 params.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
             }
 
+#ifndef NDEBUG
+            // GLES3.x specification forbids depth textures to be filtered.
+            if (isDepthFormat(t->format)
+                && params.compareMode == SamplerCompareMode::NONE
+                && params.filterMag != SamplerMagFilter::NEAREST
+                && params.filterMin != SamplerMinFilter::NEAREST
+                && params.filterMin != SamplerMinFilter::NEAREST_MIPMAP_NEAREST) {
+                slog.w << "In material " << name.c_str()
+                       << ": depth texture used with filtering sampler, tmu = "
+                       << +index << io::endl;
+            }
+#endif
             gld->bindTexture(tmu, t);
             gld->bindSampler(tmu, params);
 
@@ -315,8 +340,8 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 }
 
 UTILS_NOINLINE
-void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shaderType,
-        const char* name, GLuint shaderId, char const* source) noexcept {
+void logCompilationError(io::ostream& out, Program::Shader shaderType,
+        const char* name, GLuint shaderId, std::string_view shader) noexcept {
 
     auto to_string = [](Program::Shader type) -> const char* {
         switch (type) {
@@ -333,23 +358,26 @@ void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shader
         << io::endl;
 
     size_t lc = 1;
-    char* shader = strdup(source);
-    char* start = shader;
-    char* endl = strchr(start, '\n');
-
-    while (endl != nullptr) {
-        *endl = '\0';
-        out << lc++ << ":   ";
-        out << start << io::endl;
-        start = endl + 1;
-        endl = strchr(start, '\n');
+    size_t start = 0;
+    std::string line;
+    while (true) {
+        size_t end = shader.find('\n', start);
+        if (end == std::string::npos) {
+            line = shader.substr(start);
+        } else {
+            line = shader.substr(start, end - start);
+        }
+        out << lc++ << ":   "<< line.c_str() << '\n';
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
     }
-
-    free(shader);
+    out << io::endl;
 }
 
 UTILS_NOINLINE
-void OpenGLProgram::logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
+void logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
     char error[1024];
     glGetProgramInfoLog(program, sizeof(error), nullptr, error);
 

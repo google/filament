@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.12.7'
+    implementation 'com.google.android.filament:filament-android:1.20.4'
 }
 ```
 
@@ -52,7 +52,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.12.7'
+pod 'Filament', '~> 1.20.4'
 ```
 
 ### Snapshots
@@ -63,7 +63,7 @@ steps:
 1. Find the [commit](https://github.com/google/filament/commits/main) you're interested in.
 2. Click the green check mark under the commit message.
 3. Click on the _Details_ link for the platform you're interested in.
-4. On the top right, click on the _Artifacts_ dropdown and choose an artifact.
+4. On the top left click _Summary_, then in the _Artifacts_ section choose the desired artifact.
 
 ## Documentation
 
@@ -122,10 +122,11 @@ steps:
 - Specular anti-aliasing
 - Spot and directional light shadows
 - Cascaded shadows
-- EVSM or PCF shadows
+- EVSM, PCSS, DPCF, or PCF shadows
 - Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
+- Screen-space reflections
 - Screen-space refraction
 - Global fog
 - Dynamic resolution (with support for AMD FidelityFX FSR)
@@ -151,9 +152,9 @@ steps:
   - [x] Points
   - [x] Lines
   - [ ] Line Loop
-  - [ ] Line Strip
+  - [x] Line Strip
   - [x] Triangles
-  - [ ] Triangle Strip
+  - [x] Triangle Strip
   - [ ] Triangle Fan
 
 - Animation

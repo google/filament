@@ -15,12 +15,19 @@
 # limitations under the License.
 
 """
+----------------------------------------------------------------------------------------------------
+WARNING:
+
+When running this script, be sure to also update headers in bluevk/include as described below.
+Also, do not update vk_platform.h or accidentally add unused hpp headers.
+----------------------------------------------------------------------------------------------------
+
 Generates C++ code that binds Vulkan entry points at run time and provides enum-to-string
 conversion operators. By default this fetches the latest vk.xml from github; note that
 the XML needs to be consistent with the Vulkan headers that live in bluevk/include/vulkan,
 which are obtained from:
 
-https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/master/include/vulkan/vulkan_core.h
+https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/main/include/vulkan/vulkan_core.h
 
 If the XML file is inconsistent with the checked-in header files, compile errors can result
 such as missing enumeration values, or "type not found" errors.
@@ -41,7 +48,7 @@ from datetime import datetime
 
 VkFunction = namedtuple('VkFunction', ['name', 'type', 'group'])
 
-VK_XML_URL = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/master/registry/vk.xml"
+VK_XML_URL = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/main/registry/vk.xml"
 
 COPYRIGHT_HEADER = '''/*
  * Copyright (C) %(year)d The Android Open Source Project
@@ -210,15 +217,11 @@ def consumeXML(spec):
             cmdrefs = req.findall('command')
             command_groups.setdefault(key, []).extend([cmdref.get('name') for cmdref in cmdrefs])
 
-    # Build a list of provisional types that are not fully defined in the core Vulkan headers.
+    # Build a list of unnecessary types that should be skipped to avoid codegen problems. Many of
+    # these types seem to be only partially defined in the XML spec, or defined in a manner that
+    # is inconsistent with other types.
     provisional_types = set([
         'VkFullScreenExclusiveEXT',
-        'VkStencilFaceFlagBits',
-        'VkAccessFlagBits2KHR',
-        'VkExternalSemaphoreHandleTypeFlagBits',
-        'VkSwapchainImageUsageFlagBitsANDROID',
-        'VkSurfaceCounterFlagBitsEXT',
-        'VkPipelineStageFlagBits2KHR',
     ])
     for ext in spec.findall('extensions/extension'):
         if ext.get('platform') == 'provisional':
@@ -309,8 +312,6 @@ def consumeXML(spec):
             print '\t' + name,
             cmd = commands[name]
             type = cmd.findtext('param[1]/type')
-            if name == 'vkGetInstanceProcAddr':
-                type = ''
             if name == 'vkGetDeviceProcAddr':
                 type = 'VkInstance'
             if isAncestor(types, type, 'VkDevice'):
@@ -333,9 +334,6 @@ def produceHeader(function_groups, enum_vals, flag_vals, output_dir):
     for (enum_name, vals) in enum_vals.items():
         enum_decls.append('utils::io::ostream& operator<<(utils::io::ostream& out, ' +
             'const {}& value);'.format(enum_name))
-    for (flag_name, vals) in flag_vals.items():
-        enum_decls.append('utils::io::ostream& operator<<(utils::io::ostream& out, ' +
-            'const {}& value);'.format(flag_name))
     for (group, functions) in function_groups.items():
         if not len(functions):
             continue
@@ -368,17 +366,6 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
         enum_defs.append('    }')
         enum_defs.append('    return out;')
         enum_defs.append('}')
-    for (flag_name, vals) in flag_vals.items():
-        enum_defs.append('utils::io::ostream& operator<<(utils::io::ostream& out, ' +
-            'const {}& value) {{'.format(flag_name))
-        enum_defs.append('    switch (value) {')
-        for key, val in vals:
-            if val == '0x00000000': continue
-            enum_defs.append('        case {1}: out << "{0}"; break;'.format(key, val))
-        enum_defs.append('        default: out << "UNKNOWN_FLAGS"; break;')
-        enum_defs.append('    }')
-        enum_defs.append('    return out;')
-        enum_defs.append('}')
     for (group, functions) in function_groups.items():
         if not len(functions):
             continue
@@ -404,6 +391,14 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
             loader_functions.append('#if ' + preproc_expr)
 
         for (name, fn) in functions.items():
+            # Emit the function definition.
+            function_pointers.append("PFN_%(name)s %(name)s;" % {'name': fn.name})
+
+            # This function pointer is already manually loaded, so do not emit the loader call.
+            if name == 'vkGetInstanceProcAddr':
+                continue
+
+            # Emit the loader call.
             loadfn = '    %(name)s = (PFN_%(name)s) loadcb(context, "%(name)s");' % {
                 'name': fn.name }
             if fn.type == 'instance':
@@ -412,7 +407,6 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
                 device_functions.append(loadfn)
             elif fn.type == 'loader':
                 loader_functions.append(loadfn)
-            function_pointers.append("PFN_%(name)s %(name)s;" % {'name': fn.name})
 
         function_pointers.append('#endif // ' + preproc_expr)
         if has_instance:

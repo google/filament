@@ -34,6 +34,9 @@ struct UTILS_PUBLIC Loggers {
 
     // INFORMATION level logging stream
     io::ostream& i;
+
+    // VERBOSE level logging stream
+    io::ostream& v;
 };
 
 extern UTILS_PUBLIC Loggers const slog;

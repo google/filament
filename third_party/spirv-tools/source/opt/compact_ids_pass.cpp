@@ -86,9 +86,12 @@ Pass::Status CompactIdsPass::Process() {
       },
       true);
 
-  if (modified)
+  if (modified) {
     context()->module()->SetIdBound(
         static_cast<uint32_t>(result_id_mapping.size() + 1));
+    // There are ids in the feature manager that could now be invalid
+    context()->ResetFeatureManager();
+  }
 
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }

@@ -17,16 +17,19 @@
 #ifndef TNT_FILAMENT_DETAILS_SHADERGENERATOR_H
 #define TNT_FILAMENT_DETAILS_SHADERGENERATOR_H
 
-#include <algorithm>
+
+#include "MaterialInfo.h"
 
 #include <filament/MaterialEnums.h>
 
 #include <filamat/MaterialBuilder.h>
 
-#include "MaterialInfo.h"
+#include <private/filament/Variant.h>
 
 #include <utils/CString.h>
 #include <utils/sstream.h>
+
+#include <algorithm>
 
 namespace filamat {
 
@@ -45,17 +48,16 @@ public:
             size_t vertexLineOffset,
             MaterialBuilder::MaterialDomain materialDomain) noexcept;
 
-    std::string createVertexProgram(filament::backend::ShaderModel sm,
+    std::string createVertexProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, uint8_t variantKey,
+            MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation,
             filament::VertexDomain vertexDomain) const noexcept;
-    std::string createFragmentProgram(filament::backend::ShaderModel sm,
-            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, uint8_t variantKey,
-            filament::Interpolation interpolation) const noexcept;
 
-    bool hasCustomDepthShader() const noexcept;
+    std::string createFragmentProgram(filament::backend::ShaderModel shaderModel,
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialInfo const& material, filament::Variant variant,
+            filament::Interpolation interpolation) const noexcept;
 
     /**
      * When a GLSL shader is optimized we run it through an intermediate SPIR-V
@@ -64,14 +66,14 @@ public:
      * fixup step can be used to turn the samplers back into external samplers after
      * the optimizations have been applied.
      */
-    void fixupExternalSamplers(filament::backend::ShaderModel sm, std::string& shader,
-            MaterialInfo const& material) const noexcept;
+    static void fixupExternalSamplers(filament::backend::ShaderModel sm, std::string& shader,
+            MaterialInfo const& material) noexcept;
 
 private:
 
     std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, uint8_t variant,
+            MaterialInfo const& material, filament::Variant::type_t variantKey,
             const filament::SamplerBindingMap& samplerBindingMap) const noexcept;
 
     std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
@@ -84,10 +86,11 @@ private:
     MaterialBuilder::OutputList mOutputs;
     MaterialBuilder::MaterialDomain mMaterialDomain;
     MaterialBuilder::PreprocessorDefineList mDefines;
-    utils::CString mMaterialCode;
+    utils::CString mMaterialFragmentCode;
     utils::CString mMaterialVertexCode;
     size_t mMaterialLineOffset;
     size_t mMaterialVertexLineOffset;
+    bool mIsMaterialVertexShaderEmpty;
 };
 
 } // namespace filament

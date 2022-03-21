@@ -17,8 +17,10 @@
 #ifndef TNT_FILABRIDGE_SIBGENERATOR_H
 #define TNT_FILABRIDGE_SIBGENERATOR_H
 
-#include <private/filament/EngineEnums.h>
 #include <backend/DriverEnums.h>
+
+#include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,8 +31,9 @@ class SamplerInterfaceBlock;
 
 class SibGenerator {
 public:
-    static SamplerInterfaceBlock const& getPerViewSib(uint8_t variantKey) noexcept;
-    static SamplerInterfaceBlock const* getSib(uint8_t bindingPoint, uint8_t variantKey) noexcept;
+    static SamplerInterfaceBlock const& getPerViewSib(Variant variant) noexcept;
+    static SamplerInterfaceBlock const& getPerRenderPrimitiveMorphingSib(Variant variant) noexcept;
+    static SamplerInterfaceBlock const* getSib(uint8_t bindingPoint, Variant variant) noexcept;
     // When adding a sampler block here, make sure to also update
     //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
 };
@@ -46,6 +49,13 @@ struct PerViewSib {
     static constexpr size_t STRUCTURE      = 6;     // variable, DEPTH
 
     static constexpr size_t SAMPLER_COUNT  = 7;
+};
+
+struct PerRenderPrimitiveMorphingSib {
+    static constexpr size_t POSITIONS      = 0;
+    static constexpr size_t TANGENTS       = 1;
+
+    static constexpr size_t SAMPLER_COUNT  = 2;
 };
 
 }

@@ -45,7 +45,7 @@ public:
     ~UbershaderLoader() {}
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-            const char* label) override;
+            const char* label, const char* extras) override;
 
     size_t getMaterialsCount() const noexcept override;
     const Material* const* getMaterials() const noexcept override;
@@ -131,7 +131,7 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
         case MATINDEX(LIT, AlphaMode::OPAQUE, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
         #endif
 
-        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_BLEND_DATA)
+        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_FADE_DATA)
         case MATINDEX(LIT, AlphaMode::BLEND, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
         #endif
 
@@ -163,7 +163,7 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
 }
 
 MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-        const char* label) {
+        const char* label, const char* extras) {
     // Diagnostics are not supported with LOAD_UBERSHADERS, please use GENERATE_SHADERS instead.
     if (config->enableDiagnostics) {
         return nullptr;
@@ -218,6 +218,8 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     // running into a sampler count limitation. TODO: check if these constraints can now be relaxed.
     bool clearCoatNeedsTexture = true;
 
+    bool volumeThicknessNeedsTexture = false;
+
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);
     mi->setParameter("metallicRoughnessUvMatrix", identity);
@@ -248,6 +250,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         }
         if (config->hasVolume) {
             clearCoatNeedsTexture = false;
+            volumeThicknessNeedsTexture = true;
             mi->setParameter("volumeThicknessUvMatrix", identity);
             mi->setParameter("volumeThicknessIndex",
                     getUvIndex(config->transmissionUV, config->hasVolumeThicknessTexture));
@@ -267,6 +270,8 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     // starting point.
     const bool clearCoatNeedsTexture = false;
 
+    const bool volumeThicknessNeedsTexture = false;
+
     #endif
 
     TextureSampler sampler;
@@ -279,6 +284,9 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         mi->setParameter("clearCoatMap", mDummyTexture, sampler);
         mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
         mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
+    }
+    if (volumeThicknessNeedsTexture) {
+        mi->setParameter("volumeThicknessMap", mDummyTexture, sampler);
     }
     if (!config->hasClearCoat) {
         if (config->hasTransmission) {

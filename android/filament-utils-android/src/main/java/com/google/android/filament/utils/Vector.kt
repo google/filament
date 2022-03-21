@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:Suppress("NOTHING_TO_INLINE")
+@file:Suppress("NOTHING_TO_INLINE", "unused")
 
 package com.google.android.filament.utils
 
@@ -117,17 +117,8 @@ data class Float2(var x: Float = 0.0f, var y: Float = 0.0f) {
     }
 
     operator fun unaryMinus() = Float2(-x, -y)
-    operator fun inc(): Float2 {
-        x += 1.0f
-        y += 1.0f
-        return this
-    }
-
-    operator fun dec(): Float2 {
-        x -= 1.0f
-        y -= 1.0f
-        return this
-    }
+    operator fun inc() = Float2(x++, y++)
+    operator fun dec() = Float2(x--, y--)
 
     inline operator fun plus(v: Float) = Float2(x + v, y + v)
     inline operator fun minus(v: Float) = Float2(x - v, y - v)
@@ -144,6 +135,8 @@ data class Float2(var x: Float = 0.0f, var y: Float = 0.0f) {
         y = block(y)
         return this
     }
+
+    fun toFloatArray() = floatArrayOf(x, y)
 }
 
 data class Float3(var x: Float = 0.0f, var y: Float = 0.0f, var z: Float = 0.0f) {
@@ -284,29 +277,15 @@ data class Float3(var x: Float = 0.0f, var y: Float = 0.0f, var z: Float = 0.0f)
     }
 
     operator fun set(
-            index1: VectorComponent,
-            index2: VectorComponent,
-            index3: VectorComponent,
-            v: Float) {
+            index1: VectorComponent, index2: VectorComponent, index3: VectorComponent, v: Float) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
     }
 
     operator fun unaryMinus() = Float3(-x, -y, -z)
-    operator fun inc(): Float3 {
-        x += 1.0f
-        y += 1.0f
-        z += 1.0f
-        return this
-    }
-
-    operator fun dec(): Float3 {
-        x -= 1.0f
-        y -= 1.0f
-        z -= 1.0f
-        return this
-    }
+    operator fun inc() = Float3(x++, y++, z++)
+    operator fun dec() = Float3(x--, y--, z--)
 
     inline operator fun plus(v: Float) = Float3(x + v, y + v, z + v)
     inline operator fun minus(v: Float) = Float3(x - v, y - v, z - v)
@@ -329,6 +308,8 @@ data class Float3(var x: Float = 0.0f, var y: Float = 0.0f, var z: Float = 0.0f)
         z = block(z)
         return this
     }
+
+    fun toFloatArray() = floatArrayOf(x, y, z)
 }
 
 data class Float4(
@@ -529,14 +510,15 @@ data class Float4(
         set(index2, v)
     }
 
-    operator fun set(index1: VectorComponent, index2: VectorComponent, index3: VectorComponent,
-            v: Float) {
+    operator fun set(
+            index1: VectorComponent, index2: VectorComponent, index3: VectorComponent, v: Float) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
     }
 
-    operator fun set(index1: VectorComponent, index2: VectorComponent,
+    operator fun set(
+            index1: VectorComponent, index2: VectorComponent,
             index3: VectorComponent, index4: VectorComponent, v: Float) {
         set(index1, v)
         set(index2, v)
@@ -545,21 +527,8 @@ data class Float4(
     }
 
     operator fun unaryMinus() = Float4(-x, -y, -z, -w)
-    operator fun inc(): Float4 {
-        x += 1.0f
-        y += 1.0f
-        z += 1.0f
-        w += 1.0f
-        return this
-    }
-
-    operator fun dec(): Float4 {
-        x -= 1.0f
-        y -= 1.0f
-        z -= 1.0f
-        w -= 1.0f
-        return this
-    }
+    operator fun inc() = Float4(x++, y++, z++, w++)
+    operator fun dec() = Float4(x--, y--, z--, w--)
 
     inline operator fun plus(v: Float) = Float4(x + v, y + v, z + v, w + v)
     inline operator fun minus(v: Float) = Float4(x - v, y - v, z - v, w - v)
@@ -588,6 +557,8 @@ data class Float4(
         w = block(w)
         return this
     }
+
+    fun toFloatArray() = floatArrayOf(x, y, z, w)
 }
 
 inline operator fun Float.plus(v: Float2) = Float2(this + v.x, this + v.y)
@@ -615,25 +586,29 @@ fun refract(i: Float2, n: Float2, eta: Float): Float2 {
 inline fun clamp(v: Float2, min: Float, max: Float): Float2 {
     return Float2(
             clamp(v.x, min, max),
-            clamp(v.y, min, max))
+            clamp(v.y, min, max)
+    )
 }
 
 inline fun clamp(v: Float2, min: Float2, max: Float2): Float2 {
     return Float2(
             clamp(v.x, min.x, max.x),
-            clamp(v.y, min.y, max.y))
+            clamp(v.y, min.y, max.y)
+    )
 }
 
 inline fun mix(a: Float2, b: Float2, x: Float): Float2 {
     return Float2(
             mix(a.x, b.x, x),
-            mix(a.y, b.y, x))
+            mix(a.y, b.y, x)
+    )
 }
 
 inline fun mix(a: Float2, b: Float2, x: Float2): Float2 {
     return Float2(
             mix(a.x, b.x, x.x),
-            mix(a.y, b.y, x.y))
+            mix(a.y, b.y, x.y)
+    )
 }
 
 inline fun min(v: Float2) = min(v.x, v.y)
@@ -704,28 +679,32 @@ inline fun clamp(v: Float3, min: Float, max: Float): Float3 {
     return Float3(
             clamp(v.x, min, max),
             clamp(v.y, min, max),
-            clamp(v.z, min, max))
+            clamp(v.z, min, max)
+    )
 }
 
 inline fun clamp(v: Float3, min: Float3, max: Float3): Float3 {
     return Float3(
             clamp(v.x, min.x, max.x),
             clamp(v.y, min.y, max.y),
-            clamp(v.z, min.z, max.z))
+            clamp(v.z, min.z, max.z)
+    )
 }
 
 inline fun mix(a: Float3, b: Float3, x: Float): Float3 {
     return Float3(
             mix(a.x, b.x, x),
             mix(a.y, b.y, x),
-            mix(a.z, b.z, x))
+            mix(a.z, b.z, x)
+    )
 }
 
 inline fun mix(a: Float3, b: Float3, x: Float3): Float3 {
     return Float3(
             mix(a.x, b.x, x.x),
             mix(a.y, b.y, x.y),
-            mix(a.z, b.z, x.z))
+            mix(a.z, b.z, x.z)
+    )
 }
 
 inline fun min(v: Float3) = min(v.x, min(v.y, v.z))
@@ -784,7 +763,8 @@ inline fun clamp(v: Float4, min: Float, max: Float): Float4 {
             clamp(v.x, min, max),
             clamp(v.y, min, max),
             clamp(v.z, min, max),
-            clamp(v.w, min, max))
+            clamp(v.w, min, max)
+    )
 }
 
 inline fun clamp(v: Float4, min: Float4, max: Float4): Float4 {
@@ -792,7 +772,8 @@ inline fun clamp(v: Float4, min: Float4, max: Float4): Float4 {
             clamp(v.x, min.x, max.x),
             clamp(v.y, min.y, max.y),
             clamp(v.z, min.z, max.z),
-            clamp(v.w, min.z, max.w))
+            clamp(v.w, min.z, max.w)
+    )
 }
 
 inline fun mix(a: Float4, b: Float4, x: Float): Float4 {
@@ -800,7 +781,8 @@ inline fun mix(a: Float4, b: Float4, x: Float): Float4 {
             mix(a.x, b.x, x),
             mix(a.y, b.y, x),
             mix(a.z, b.z, x),
-            mix(a.w, b.w, x))
+            mix(a.w, b.w, x)
+    )
 }
 
 inline fun mix(a: Float4, b: Float4, x: Float4): Float4 {
@@ -1075,10 +1057,7 @@ data class Bool3(var x: Boolean = false, var y: Boolean = false, var z: Boolean 
     }
 
     operator fun set(
-            index1: VectorComponent,
-            index2: VectorComponent,
-            index3: VectorComponent,
-            v: Boolean) {
+            index1: VectorComponent, index2: VectorComponent, index3: VectorComponent, v: Boolean) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
@@ -1282,14 +1261,15 @@ data class Bool4(
         set(index2, v)
     }
 
-    operator fun set(index1: VectorComponent, index2: VectorComponent, index3: VectorComponent,
-            v: Boolean) {
+    operator fun set(
+            index1: VectorComponent, index2: VectorComponent, index3: VectorComponent, v: Boolean) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
     }
 
-    operator fun set(index1: VectorComponent, index2: VectorComponent,
+    operator fun set(
+            index1: VectorComponent, index2: VectorComponent,
             index3: VectorComponent, index4: VectorComponent, v: Boolean) {
         set(index1, v)
         set(index2, v)

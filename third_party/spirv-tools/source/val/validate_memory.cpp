@@ -893,6 +893,12 @@ spv_result_t ValidateLoad(ValidationState_t& _, const Instruction* inst) {
            << "'s type.";
   }
 
+  if (!_.options()->before_hlsl_legalization &&
+      _.ContainsRuntimeArray(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Cannot load a runtime-sized array";
+  }
+
   if (auto error = CheckMemoryAccess(_, inst, 3)) return error;
 
   if (_.HasCapability(SpvCapabilityShader) &&

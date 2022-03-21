@@ -15,11 +15,10 @@
  */
 
 #include <gltfio/Animator.h>
+#include <gltfio/math.h>
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
-#include "MorphHelper.h"
-#include "math.h"
 #include "upcast.h"
 
 #include <filament/MaterialEnums.h>
@@ -76,7 +75,6 @@ struct AnimatorImpl {
     RenderableManager* renderableManager;
     TransformManager* transformManager;
     vector<float> weights;
-    MorphHelper* morpher;
     void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst);
     void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
 };
@@ -176,7 +174,6 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
-    mImpl->morpher = new MorphHelper(asset, instance);
 
     const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
@@ -235,7 +232,6 @@ void Animator::addInstance(FFilamentInstance* instance) {
 }
 
 Animator::~Animator() {
-    delete mImpl->morpher;
     delete mImpl;
 }
 
@@ -461,7 +457,8 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                 }
             }
 
-            morpher->applyWeights(channel.targetEntity, weights.data(), weights.size());
+            auto ci = renderableManager->getInstance(channel.targetEntity);
+            renderableManager->setMorphWeights(ci, weights.data(), weights.size());
             return;
         }
     }

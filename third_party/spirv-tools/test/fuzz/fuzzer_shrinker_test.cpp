@@ -1068,7 +1068,7 @@ void RunFuzzerAndShrinker(const std::string& shader,
   Fuzzer fuzzer(std::move(ir_context), std::move(transformation_context),
                 std::move(fuzzer_context), kConsoleMessageConsumer,
                 donor_suppliers, enable_all_passes, repeated_pass_strategy,
-                true, validator_options);
+                true, validator_options, false);
   auto fuzzer_result = fuzzer.Run(0);
   ASSERT_NE(Fuzzer::Status::kFuzzerPassLedToInvalidModule,
             fuzzer_result.status);

@@ -64,16 +64,19 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
 
     initializeSupportedGpuFamilies(mContext);
 
-    utils::slog.d << "Supported GPU families: " << utils::io::endl;
+    utils::slog.v << "Supported GPU families: " << utils::io::endl;
     if (mContext->highestSupportedGpuFamily.common > 0) {
-        utils::slog.d << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common << utils::io::endl;
+        utils::slog.v << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common << utils::io::endl;
     }
     if (mContext->highestSupportedGpuFamily.apple > 0) {
-        utils::slog.d << "  MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
+        utils::slog.v << "  MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
     }
     if (mContext->highestSupportedGpuFamily.mac > 0) {
-        utils::slog.d << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
+        utils::slog.v << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
     }
+    utils::slog.v << "Features:" << utils::io::endl;
+    utils::slog.v << "  readWriteTextureSupport: " <<
+            (bool) mContext->device.readWriteTextureSupport << utils::io::endl;
 
     // In order to support texture swizzling, the GPU needs to support it and the system be running
     // iOS 13+.
@@ -650,11 +653,14 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
-#if defined(IOS) && !defined(FILAMENT_IOS_SIMULATOR)
-    return true;
-#else
-    return false;
-#endif
+    // FrameBuffer fetch is achievable via "programmable blending" in Metal, and only supported on
+    // Apple GPUs with readWriteTextureSupport.
+    return mContext->highestSupportedGpuFamily.apple >= 1 &&
+            mContext->device.readWriteTextureSupport;
+}
+
+bool MetalDriver::isFrameBufferFetchMultiSampleSupported() {
+    return isFrameBufferFetchSupported();
 }
 
 bool MetalDriver::isFrameTimeSupported() {
@@ -665,10 +671,16 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
+bool MetalDriver::isAutoDepthResolveSupported() {
+    return true;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
             return false;
+        case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
+            return true;
     }
     return false;
 }
@@ -973,6 +985,11 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     id<MTLTexture> srcTexture = color.getTexture();
     size_t miplevel = color.level;
 
+    // Clamp height and width to actual texture's height and width
+    MTLSize srcTextureSize = MTLSizeMake(srcTexture.width >> miplevel, srcTexture.height >> miplevel, 1);
+    height = std::min(static_cast<uint32_t>(srcTextureSize.height), height);
+    width = std::min(static_cast<uint32_t>(srcTextureSize.width), width);
+
     const MTLPixelFormat format = getMetalFormat(data.format, data.type);
     ASSERT_PRECONDITION(format != MTLPixelFormatInvalid,
             "The chosen combination of PixelDataFormat (%d) and PixelDataType (%d) is not supported for "
@@ -988,8 +1005,8 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     MTLTextureDescriptor* textureDescriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
-                                                               width:(srcTexture.width >> miplevel)
-                                                              height:(srcTexture.height >> miplevel)
+                                                               width:srcTextureSize.width
+                                                              height:srcTextureSize.height
                                                            mipmapped:NO];
 #if defined(IOS)
     textureDescriptor.storageMode = MTLStorageModeShared;
@@ -1138,7 +1155,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
 }
 
-void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph) {
+void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
@@ -1218,10 +1235,11 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     }
 
     // Set the depth-stencil state, if a state change is needed.
-    DepthStencilState depthState {
-        .compareFunction = getMetalCompareFunction(rs.depthFunc),
-        .depthWriteEnabled = rs.depthWrite,
-    };
+    DepthStencilState depthState;
+    if (depthAttachment) {
+        depthState.compareFunction = getMetalCompareFunction(rs.depthFunc);
+        depthState.depthWriteEnabled = rs.depthWrite;
+    }
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {
         id<MTLDepthStencilState> state =
@@ -1255,60 +1273,101 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
 
-    id<MTLTexture> texturesToBind[SAMPLER_BINDING_COUNT] = {};
-    id<MTLSamplerState> samplersToBind[SAMPLER_BINDING_COUNT] = {};
-
-    enumerateSamplerGroups(program, [this, &texturesToBind, &samplersToBind](
-            const SamplerGroup::Sampler* sampler,
-            uint8_t binding) {
-        // We currently only support a max of SAMPLER_BINDING_COUNT samplers. Ignore any additional
-        // samplers that may be bound.
-        if (binding >= SAMPLER_BINDING_COUNT) {
-            return;
-        }
+    auto getTextureToBind = [this](const SamplerGroup::Sampler* sampler) {
         const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
-        texturesToBind[binding] = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
-                                                                    : metalTexture->texture;
-
+        id<MTLTexture> textureToBind = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
+                                                                         : metalTexture->texture;
         if (metalTexture->externalImage.isValid()) {
-            texturesToBind[binding] = metalTexture->externalImage.getMetalTextureForDraw();
+            textureToBind = metalTexture->externalImage.getMetalTextureForDraw();
         }
+        return textureToBind;
+    };
 
-        if (!texturesToBind[binding]) {
-            utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
-                    << "." << utils::io::endl;
-            texturesToBind[binding] = getOrCreateEmptyTexture(mContext);
-        }
-
+    auto getSamplerToBind = [this](const SamplerGroup::Sampler* sampler) {
+        const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
         SamplerState s {
             .samplerParams = sampler->s,
             .minLod = metalTexture->minLod,
             .maxLod = metalTexture->maxLod
         };
-        id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(s);
-        samplersToBind[binding] = samplerState;
+        return mContext->samplerStateCache.getOrCreateState(s);
+    };
+
+    id<MTLTexture> texturesToBindVertex[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindVertex[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
+
+    enumerateSamplerGroups(program, ShaderType::VERTEX,
+            [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
+                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
+        // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
+        // samplers that may be bound.
+        if (binding >= backend::MAX_VERTEX_SAMPLER_COUNT) {
+            return;
+        }
+
+        auto& textureToBind = texturesToBindVertex[binding];
+        textureToBind = getTextureToBind(sampler);
+        if (!textureToBind) {
+            utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
+                    << " at the vertex shader." << utils::io::endl;
+            textureToBind = getOrCreateEmptyTexture(mContext);
+        }
+
+        auto& samplerToBind = samplersToBindVertex[binding];
+        samplerToBind = getSamplerToBind(sampler);
     });
 
     // Assign a default sampler to empty slots, in case Filament hasn't bound all samplers.
     // Metal requires all samplers referenced in shaders to be bound.
-    for (auto& sampler : samplersToBind) {
+    for (auto& sampler : samplersToBindVertex) {
         if (!sampler) {
             sampler = mContext->samplerStateCache.getOrCreateState({});
         }
     }
 
-    // Similar to uniforms, we can't tell which stage will use the textures / samplers, so bind
-    // to both the vertex and fragment stages.
+    NSRange vertexSamplerRange = NSMakeRange(0, backend::MAX_VERTEX_SAMPLER_COUNT);
+    [mContext->currentRenderPassEncoder setVertexTextures:texturesToBindVertex
+                                                withRange:vertexSamplerRange];
+    [mContext->currentRenderPassEncoder setVertexSamplerStates:samplersToBindVertex
+                                                     withRange:vertexSamplerRange];
 
-    NSRange samplerRange = NSMakeRange(0, SAMPLER_BINDING_COUNT);
-    [mContext->currentRenderPassEncoder setFragmentTextures:texturesToBind
-                                                  withRange:samplerRange];
-    [mContext->currentRenderPassEncoder setVertexTextures:texturesToBind
-                                                withRange:samplerRange];
-    [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBind
-                                                       withRange:samplerRange];
-    [mContext->currentRenderPassEncoder setVertexSamplerStates:samplersToBind
-                                                     withRange:samplerRange];
+    id<MTLTexture> texturesToBindFragment[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindFragment[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
+
+    enumerateSamplerGroups(program, ShaderType::FRAGMENT,
+            [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
+                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
+        // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
+        // samplers that may be bound.
+        if (binding >= backend::MAX_FRAGMENT_SAMPLER_COUNT) {
+            return;
+        }
+
+        auto& textureToBind = texturesToBindFragment[binding];
+        textureToBind = getTextureToBind(sampler);
+        if (!textureToBind) {
+            utils::slog.w << "Warning: no texture bound at binding point " << (size_t) binding
+                          << " at the fragment shader." << utils::io::endl;
+            textureToBind = getOrCreateEmptyTexture(mContext);
+        }
+
+        auto& samplerToBind = samplersToBindFragment[binding];
+        samplerToBind = getSamplerToBind(sampler);
+    });
+
+    // Assign a default sampler to empty slots, in case Filament hasn't bound all samplers.
+    // Metal requires all samplers referenced in shaders to be bound.
+    for (auto& sampler : samplersToBindFragment) {
+        if (!sampler) {
+            sampler = mContext->samplerStateCache.getOrCreateState({});
+        }
+    }
+
+    NSRange fragmentSamplerRange = NSMakeRange(0, backend::MAX_FRAGMENT_SAMPLER_COUNT);
+    [mContext->currentRenderPassEncoder setFragmentTextures:texturesToBindFragment
+                                                  withRange:fragmentSamplerRange];
+    [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBindFragment
+                                                       withRange:fragmentSamplerRange];
 
     // Bind the vertex buffers.
 
@@ -1349,7 +1408,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                                    indexCount:primitive->count
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
-                                            indexBufferOffset:primitive->offset + offset];
+                                            indexBufferOffset:primitive->offset + offset
+                                                instanceCount:instanceCount];
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
@@ -1367,33 +1427,33 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::enumerateSamplerGroups(
-        const MetalProgram* program,
+        const MetalProgram* program, ShaderType shaderType,
         const std::function<void(const SamplerGroup::Sampler*, size_t)>& f) {
-    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < SAMPLER_GROUP_COUNT; samplerGroupIdx++) {
-        const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
-        if (samplerGroup.empty()) {
+    auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ?
+            program->vertexSamplerBlockInfo : program->fragmentSamplerBlockInfo;
+    auto maxSamplerCount = (shaderType == ShaderType::VERTEX) ?
+            MAX_VERTEX_SAMPLER_COUNT : MAX_FRAGMENT_SAMPLER_COUNT;
+    for (size_t bindingIdx = 0; bindingIdx != maxSamplerCount; ++bindingIdx) {
+        auto& blockInfo = samplerBlockInfo[bindingIdx];
+        if (blockInfo.samplerGroup == UINT8_MAX) {
             continue;
         }
-        const auto* metalSamplerGroup = mContext->samplerBindings[samplerGroupIdx];
+
+        const auto* metalSamplerGroup = mContext->samplerBindings[blockInfo.samplerGroup];
         if (!metalSamplerGroup) {
-            utils::slog.w << "Program has non-empty samplerGroup (index " << samplerGroupIdx <<
-                    ") but has not bound any samplers." << utils::io::endl;
+            // Do not emit warning here. For example this can arise when skinning is enabled
+            // and the morphing texture is unused.
             continue;
         }
+
         SamplerGroup* sb = metalSamplerGroup->sb.get();
-        assert_invariant(sb->getSize() == samplerGroup.size());
-        size_t samplerIdx = 0;
-        for (const auto& sampler : samplerGroup) {
-            size_t bindingPoint = sampler.binding;
-            const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
-            samplerIdx++;
+        const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + blockInfo.sampler;
 
-            if (!boundSampler->t) {
-                continue;
-            }
-
-            f(boundSampler, bindingPoint);
+        if (!boundSampler->t) {
+            continue;
         }
+
+        f(boundSampler, bindingIdx);
     }
 }
 

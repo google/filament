@@ -28,6 +28,7 @@ set(PUBLIC_HDRS
         include/filament/LightManager.h
         include/filament/Material.h
         include/filament/MaterialInstance.h
+        include/filament/MorphTargetBuffer.h
         include/filament/Options.h
         include/filament/RenderTarget.h
         include/filament/RenderableManager.h
@@ -51,7 +52,6 @@ set(SRCS
         src/BufferObject.cpp
         src/Camera.cpp
         src/Color.cpp
-        src/ColorGrading.cpp
         src/ColorSpace.cpp
         src/Culler.cpp
         src/DFG.cpp
@@ -63,19 +63,22 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
-        src/fsr.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
+        src/LightManager.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
+        src/MorphTargetBuffer.cpp
         src/PerViewUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
+        src/RenderableManager.cpp
         src/Renderer.cpp
         src/ResourceAllocator.cpp
+        src/ResourceList.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
@@ -85,6 +88,7 @@ set(SRCS
         src/SwapChain.cpp
         src/Texture.cpp
         src/ToneMapper.cpp
+        src/TransformManager.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/View.cpp
@@ -93,6 +97,27 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/details/BufferObject.cpp
+        src/details/Camera.cpp
+        src/details/ColorGrading.cpp
+        src/details/DebugRegistry.cpp
+        src/details/Engine.cpp
+        src/details/Fence.cpp
+        src/details/IndexBuffer.cpp
+        src/details/IndirectLight.cpp
+        src/details/Material.cpp
+        src/details/MaterialInstance.cpp
+        src/details/MorphTargetBuffer.cpp
+        src/details/RenderTarget.cpp
+        src/details/Renderer.cpp
+        src/details/Scene.cpp
+        src/details/SkinningBuffer.cpp
+        src/details/Skybox.cpp
+        src/details/Stream.cpp
+        src/details/SwapChain.cpp
+        src/details/Texture.cpp
+        src/details/VertexBuffer.cpp
+        src/details/View.cpp
         src/fg2/Blackboard.cpp
         src/fg2/DependencyGraph.cpp
         src/fg2/FrameGraph.cpp
@@ -101,6 +126,7 @@ set(SRCS
         src/fg2/FrameGraphTexture.cpp
         src/fg2/PassNode.cpp
         src/fg2/ResourceNode.cpp
+        src/fsr.cpp
 )
 
 set(PRIVATE_HDRS
@@ -116,6 +142,7 @@ set(PRIVATE_HDRS
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h
+        src/PIDController.h
         src/PostProcessManager.h
         src/RenderPass.h
         src/RenderPrimitive.h
@@ -139,6 +166,7 @@ set(PRIVATE_HDRS
         src/details/IndirectLight.h
         src/details/Material.h
         src/details/MaterialInstance.h
+        src/details/MorphTargetBuffer.h
         src/details/RenderTarget.h
         src/details/Renderer.h
         src/details/Scene.h
@@ -176,6 +204,7 @@ set(MATERIAL_SRCS
         src/materials/fsr/fsr_rcas.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
+        src/materials/colorGrading/customResolveAsSubpass.mat
         src/materials/defaultMaterial.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
@@ -196,7 +225,14 @@ set(MATERIAL_SRCS
         src/materials/skybox.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
-        src/materials/separableGaussianBlur.mat
+        src/materials/separableGaussianBlur1.mat
+        src/materials/separableGaussianBlur2.mat
+        src/materials/separableGaussianBlur3.mat
+        src/materials/separableGaussianBlur4.mat
+        src/materials/separableGaussianBlur1L.mat
+        src/materials/separableGaussianBlur2L.mat
+        src/materials/separableGaussianBlur3L.mat
+        src/materials/separableGaussianBlur4L.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
         src/materials/vsmMipmap.mat
@@ -273,6 +309,7 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
+        DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
@@ -280,6 +317,7 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpass.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
+        DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
@@ -386,6 +424,34 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fsr_rcas.filamat"
         DEPENDS src/materials/fsr/ffx_a.h
         DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur1.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur2.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur3.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur4.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
         APPEND
 )
 

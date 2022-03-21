@@ -92,7 +92,7 @@ TEST(FuzzerPassConstructCompositesTest, IsomorphicStructs) {
 
     FuzzerPassConstructComposites fuzzer_pass(
         context.get(), &transformation_context, &fuzzer_context,
-        &transformation_sequence);
+        &transformation_sequence, false);
 
     fuzzer_pass.Apply();
 
@@ -173,7 +173,7 @@ TEST(FuzzerPassConstructCompositesTest, IsomorphicArrays) {
 
     FuzzerPassConstructComposites fuzzer_pass(
         context.get(), &transformation_context, &fuzzer_context,
-        &transformation_sequence);
+        &transformation_sequence, false);
 
     fuzzer_pass.Apply();
 

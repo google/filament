@@ -63,7 +63,8 @@ static void usage(char* name) {
             "       Reflect the specified metadata as JSON: parameters\n\n"
             "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
-            "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog\n"
+            "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,"
+            "           ssr (screen-space reflections)\n"
             "       This variant filter is merged with the filter from the material, if any\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
@@ -99,23 +100,25 @@ static void license() {
         std::cout << *p++ << std::endl;
 }
 
-static uint8_t parseVariantFilter(const std::string& arg) {
+static filament::UserVariantFilterMask parseVariantFilter(const std::string& arg) {
     std::stringstream ss(arg);
     std::string item;
-    uint8_t variantFilter = 0;
+    filament::UserVariantFilterMask variantFilter = 0;
     while (std::getline(ss, item, ',')) {
         if (item == "directionalLighting") {
-            variantFilter |= filament::Variant::DIRECTIONAL_LIGHTING;
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
         } else if (item == "dynamicLighting") {
-            variantFilter |= filament::Variant::DYNAMIC_LIGHTING;
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
         } else if (item == "shadowReceiver") {
-            variantFilter |= filament::Variant::SHADOW_RECEIVER;
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SHADOW_RECEIVER;
         } else if (item == "skinning") {
-            variantFilter |= filament::Variant::SKINNING_OR_MORPHING;
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SKINNING;
         } else if (item == "vsm") {
-            variantFilter |= filament::Variant::VSM;
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::VSM;
         } else if (item == "fog") {
-            variantFilter |= filament::Variant::FOG;
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::FOG;
+        } else if (item == "ssr") {
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SSR;
         }
     }
     return variantFilter;

@@ -51,12 +51,15 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // directional light
             .add("lightColorIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                     1, UniformInterfaceBlock::Type::FLOAT4)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("lightFarAttenuationParams",1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("needsAlphaChannel",       1, UniformInterfaceBlock::Type::FLOAT)
             .add("lightChannels",           1, UniformInterfaceBlock::Type::UINT)
             .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
             .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)
             // shadow
-            .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("shadowBulbRadiusLs",      1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowPenumbraRatioScale",1, UniformInterfaceBlock::Type::FLOAT)
             .add("oneOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
             // froxels
             .add("zParams",                 1, UniformInterfaceBlock::Type::FLOAT4)
@@ -107,15 +110,23 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowSamplingType",      1, UniformInterfaceBlock::Type::UINT)
 
             .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
-            .add("reserved1",               1, UniformInterfaceBlock::Type::FLOAT)
-            .add("reserved2",               1, UniformInterfaceBlock::Type::FLOAT)
-            .add("reserved3",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("oneOverFarMinusNear",     1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("nearOverFarMinusNear",    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("temporalNoise",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+
+            // Screen-space reflection parameters
+            .add("ssrReprojection",         1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("ssrUvFromViewMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("ssrThickness",            1, UniformInterfaceBlock::Type::FLOAT)
+            .add("ssrBias",                 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("ssrDistance",             1, UniformInterfaceBlock::Type::FLOAT)
+            .add("ssrStride",               1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring PerViewUib to 2 KiB
-            .add("padding2", 58, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding3", 49, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }
@@ -125,7 +136,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .name(PerRenderableUib::_name)
             .add("worldFromModelMatrix",       1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromModelNormalMatrix", 1, UniformInterfaceBlock::Type::MAT3, Precision::HIGH)
-            .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            .add("morphTargetCount", 1, UniformInterfaceBlock::Type::UINT)
             .add("flags", 1, UniformInterfaceBlock::Type::UINT)
             .add("channels", 1, UniformInterfaceBlock::Type::UINT)
             .add("objectId", 1, UniformInterfaceBlock::Type::UINT)
@@ -145,8 +156,7 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(ShadowUib::_name)
-            .add("spotLightFromWorldMatrix", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("directionShadowBias", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            .add("shadows", CONFIG_MAX_SHADOW_CASTING_SPOTS, "ShadowData", sizeof(ShadowUib::ShadowData))
             .build();
     return uib;
 }
@@ -154,7 +164,15 @@ UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerRenderableUibBone::_name)
-            .add("bones", CONFIG_MAX_BONE_COUNT * 4, UniformInterfaceBlock::Type::FLOAT4, Precision::MEDIUM)
+            .add("bones", CONFIG_MAX_BONE_COUNT, "BoneData", sizeof(PerRenderableUibBone::BoneData))
+            .build();
+    return uib;
+}
+
+UniformInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept {
+    static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
+            .name(PerRenderableMorphingUib::_name)
+            .add("weights", CONFIG_MAX_MORPH_TARGET_COUNT, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

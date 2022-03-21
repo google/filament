@@ -51,9 +51,9 @@ if(WIN32)
 endif()
 set(CMAKE_C_COMPILER   ${TOOLCHAIN}/bin/${ARCH}${API_LEVEL}-clang${COMPILER_SUFFIX})
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN}/bin/${ARCH}${API_LEVEL}-clang++${COMPILER_SUFFIX})
-set(CMAKE_AR           ${TOOLCHAIN}/bin/${AR_ARCH}-ar${TOOL_SUFFIX}  CACHE FILEPATH "Archiver")
-set(CMAKE_RANLIB       ${TOOLCHAIN}/bin/${AR_ARCH}-ranlib${TOOL_SUFFIX})
-set(CMAKE_STRIP        ${TOOLCHAIN}/bin/${AR_ARCH}-strip${TOOL_SUFFIX})
+set(CMAKE_AR           ${TOOLCHAIN}/bin/llvm-ar${TOOL_SUFFIX} CACHE FILEPATH "Archiver")
+set(CMAKE_RANLIB       ${TOOLCHAIN}/bin/llvm-ranlib${TOOL_SUFFIX})
+set(CMAKE_STRIP        ${TOOLCHAIN}/bin/llvm-strip${TOOL_SUFFIX})
 
 # where is the target environment
 set(CMAKE_FIND_ROOT_PATH  ${TOOLCHAIN}/sysroot)
@@ -81,7 +81,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 # for hardfp: CFLAGS must have -mhard-float
 #             LDFLAGS must have -Wl,--no-warn-mismatch
 #
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -mthumb -march=armv7-a -mcpu=cortex-a15 -mfloat-abi=softfp -mfpu=neon-vfpv4 -DANDROID -fPIE" CACHE STRING "Toolchain CFLAGS")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -mthumb -march=armv7-a -mcpu=cortex-a15 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fPIE" CACHE STRING "Toolchain CFLAGS")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}" CACHE STRING "Toolchain CXXFLAGS")
 set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    -march=armv7-a -Wl,--no-warn-mismatch -L${TOOLCHAIN}/arm-linux-androideabi/lib/armv7-a -static-libstdc++ -fPIE -pie" CACHE STRING "Toolchain LDFLAGS")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -march=armv7-a -Wl,--no-warn-mismatch -L${TOOLCHAIN}/arm-linux-androideabi/lib/armv7-a -static-libstdc++" CACHE STRING "Toolchain LDFLAGS")

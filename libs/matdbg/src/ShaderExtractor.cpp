@@ -73,7 +73,7 @@ bool ShaderExtractor::getDictionary(BlobDictionary& dictionary) noexcept {
 }
 
 bool ShaderExtractor::getShader(ShaderModel shaderModel,
-        uint8_t variant, ShaderType stage, ShaderBuilder& shader) noexcept {
+        Variant variant, ShaderType stage, ShaderBuilder& shader) noexcept {
 
     ChunkContainer const& cc = mChunkContainer;
     if (!cc.hasChunk(mMaterialTag) || !cc.hasChunk(mDictionaryTag)) {

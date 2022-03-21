@@ -58,7 +58,7 @@ void DefUseManager::AnalyzeInstUse(Instruction* inst) {
       case SPV_OPERAND_TYPE_SCOPE_ID: {
         uint32_t use_id = inst->GetSingleWordOperand(i);
         Instruction* def = GetDef(use_id);
-        assert(def && "Definition is not registered.");
+        if (!def) assert(false && "Definition is not registered.");
         id_to_users_.insert(UserEntry(def, inst));
         used_ids->push_back(use_id);
       } break;
@@ -71,6 +71,9 @@ void DefUseManager::AnalyzeInstUse(Instruction* inst) {
 void DefUseManager::AnalyzeInstDefUse(Instruction* inst) {
   AnalyzeInstDef(inst);
   AnalyzeInstUse(inst);
+  // Analyze lines last otherwise they will be cleared when inst is
+  // cleared by preceding two calls
+  for (auto& l_inst : inst->dbg_line_insts()) AnalyzeInstDefUse(&l_inst);
 }
 
 void DefUseManager::UpdateDefUse(Instruction* inst) {
@@ -224,9 +227,11 @@ void DefUseManager::AnalyzeDefUse(Module* module) {
   if (!module) return;
   // Analyze all the defs before any uses to catch forward references.
   module->ForEachInst(
-      std::bind(&DefUseManager::AnalyzeInstDef, this, std::placeholders::_1));
+      std::bind(&DefUseManager::AnalyzeInstDef, this, std::placeholders::_1),
+      true);
   module->ForEachInst(
-      std::bind(&DefUseManager::AnalyzeInstUse, this, std::placeholders::_1));
+      std::bind(&DefUseManager::AnalyzeInstUse, this, std::placeholders::_1),
+      true);
 }
 
 void DefUseManager::ClearInst(Instruction* inst) {
@@ -261,6 +266,16 @@ void DefUseManager::EraseUseRecordsOfOperandIds(const Instruction* inst) {
 
 bool operator==(const DefUseManager& lhs, const DefUseManager& rhs) {
   if (lhs.id_to_def_ != rhs.id_to_def_) {
+    for (auto p : lhs.id_to_def_) {
+      if (rhs.id_to_def_.find(p.first) == rhs.id_to_def_.end()) {
+        return false;
+      }
+    }
+    for (auto p : rhs.id_to_def_) {
+      if (lhs.id_to_def_.find(p.first) == lhs.id_to_def_.end()) {
+        return false;
+      }
+    }
     return false;
   }
 

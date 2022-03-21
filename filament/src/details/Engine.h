@@ -36,6 +36,7 @@
 #include "details/IndexBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/SkinningBuffer.h"
+#include "details/MorphTargetBuffer.h"
 #include "details/Skybox.h"
 
 #include "private/backend/CommandBufferQueue.h"
@@ -162,6 +163,7 @@ public:
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
     const FTexture* getDummyCubemap() const noexcept { return mDefaultIblTexture; }
     const FColorGrading* getDefaultColorGrading() const noexcept { return mDefaultColorGrading; }
+    FMorphTargetBuffer* getDummyMorphTargetBuffer() const { return mDummyMorphTargetBuffer; }
 
     backend::Handle<backend::HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
         return mFullScreenTriangleRph;
@@ -173,6 +175,10 @@ public:
 
     FIndexBuffer* getFullScreenIndexBuffer() const noexcept {
         return mFullScreenTriangleIb;
+    }
+
+    math::mat4f getUvFromClipMatrix() const noexcept {
+        return mUvFromClipMatrix;
     }
 
     PostProcessManager const& getPostProcessManager() const noexcept {
@@ -227,6 +233,10 @@ public:
         return clock::now() - getEngineEpoch();
     }
 
+    backend::Handle<backend::HwRenderTarget> getDefaultRenderTarget() const noexcept {
+        return mDefaultRenderTarget;
+    }
+
     template <typename T>
     T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
 
@@ -234,6 +244,7 @@ public:
     FVertexBuffer* createVertexBuffer(const VertexBuffer::Builder& builder) noexcept;
     FIndexBuffer* createIndexBuffer(const IndexBuffer::Builder& builder) noexcept;
     FSkinningBuffer* createSkinningBuffer(const SkinningBuffer::Builder& builder) noexcept;
+    FMorphTargetBuffer* createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept;
     FIndirectLight* createIndirectLight(const IndirectLight::Builder& builder) noexcept;
     FMaterial* createMaterial(const Material::Builder& builder) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
@@ -265,6 +276,7 @@ public:
     bool destroy(const FFence* p);
     bool destroy(const FIndexBuffer* p);
     bool destroy(const FSkinningBuffer* p);
+    bool destroy(const FMorphTargetBuffer* p);
     bool destroy(const FIndirectLight* p);
     bool destroy(const FMaterial* p);
     bool destroy(const FMaterialInstance* p);
@@ -329,9 +341,14 @@ public:
         return mRandomEngine;
     }
 
-    void pumpMessageQueues() {
+    void pumpMessageQueues() const {
         getDriver().purge();
     }
+
+    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
+    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
+    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
 
 private:
     FEngine(Backend backend, Platform* platform, void* sharedGLContext);
@@ -341,13 +358,20 @@ private:
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
 
-    template<typename T, typename L>
-    bool terminateAndDestroy(const T* p, ResourceList<T, L>& list);
+    template<typename T>
+    bool terminateAndDestroy(const T* p, ResourceList<T>& list);
 
-    template<typename T, typename L>
-    void cleanupResourceList(ResourceList<T, L>& list);
+    template<typename T, typename Lock>
+    bool terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>& list);
+
+    template<typename T>
+    void cleanupResourceList(ResourceList<T>&& list);
+
+    template<typename T, typename Lock>
+    void cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list);
 
     backend::Driver* mDriver = nullptr;
+    backend::Handle<backend::HwRenderTarget> mDefaultRenderTarget;
 
     Backend mBackend;
     Platform* mPlatform = nullptr;
@@ -357,6 +381,7 @@ private:
     backend::Handle<backend::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;
     FIndexBuffer* mFullScreenTriangleIb = nullptr;
+    math::mat4f mUvFromClipMatrix;
 
     PostProcessManager mPostProcessManager;
 
@@ -371,11 +396,11 @@ private:
     ResourceList<FRenderer> mRenderers{ "Renderer" };
     ResourceList<FView> mViews{ "View" };
     ResourceList<FScene> mScenes{ "Scene" };
-    ResourceList<FFence, utils::LockingPolicy::SpinLock> mFences{"Fence"};
     ResourceList<FSwapChain> mSwapChains{ "SwapChain" };
     ResourceList<FStream> mStreams{ "Stream" };
     ResourceList<FIndexBuffer> mIndexBuffers{ "IndexBuffer" };
     ResourceList<FSkinningBuffer> mSkinningBuffers{ "SkinningBuffer" };
+    ResourceList<FMorphTargetBuffer> mMorphTargetBuffers{ "MorphTargetBuffer" };
     ResourceList<FVertexBuffer> mVertexBuffers{ "VertexBuffer" };
     ResourceList<FIndirectLight> mIndirectLights{ "IndirectLight" };
     ResourceList<FMaterial> mMaterials{ "Material" };
@@ -383,6 +408,10 @@ private:
     ResourceList<FSkybox> mSkyboxes{ "Skybox" };
     ResourceList<FColorGrading> mColorGradings{ "ColorGrading" };
     ResourceList<FRenderTarget> mRenderTargets{ "RenderTarget" };
+
+    // the fence list is accessed from multiple threads
+    utils::SpinLock mFenceListLock;
+    ResourceList<FFence> mFences{"Fence"};
 
     mutable uint32_t mMaterialId = 0;
 
@@ -413,12 +442,18 @@ private:
     mutable FIndirectLight* mDefaultIbl = nullptr;
 
     mutable FColorGrading* mDefaultColorGrading = nullptr;
+    FMorphTargetBuffer* mDummyMorphTargetBuffer = nullptr;
 
     mutable utils::CountDownLatch mDriverBarrier;
 
     mutable filaflat::ShaderBuilder mVertexShaderBuilder;
     mutable filaflat::ShaderBuilder mFragmentShaderBuilder;
     FDebugRegistry mDebugRegistry;
+
+    backend::Handle<backend::HwTexture> mDummyOneTexture;
+    backend::Handle<backend::HwTexture> mDummyOneTextureArray;
+    backend::Handle<backend::HwTexture> mDummyOneIntegerTextureArray;
+    backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     std::thread::id mMainThreadId{};
 
@@ -443,6 +478,11 @@ public:
         } ssao;
         struct {
             bool camera_at_origin = true;
+            struct {
+                float kp = 0.0f;
+                float ki = 0.0f;
+                float kd = 0.0f;
+            } pid;
         } view;
         struct {
             // When set to true, the backend will attempt to capture the next frame and write the

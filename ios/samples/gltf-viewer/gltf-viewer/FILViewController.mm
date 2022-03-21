@@ -45,6 +45,7 @@ using namespace utils;
 
 @implementation FILViewController {
     CADisplayLink* _displayLink;
+    CFTimeInterval _startTime;
     viewer::RemoteServer* _server;
     viewer::AutomationEngine* _automation;
 
@@ -102,6 +103,7 @@ using namespace utils;
     [self stopDisplayLink];
 
     // Call our render method 60 times a second.
+    _startTime = CACurrentMediaTime();
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(render)];
     _displayLink.preferredFramesPerSecond = 60;
     [_displayLink addToRunLoop:NSRunLoop.currentRunLoop forMode:NSDefaultRunLoopMode];
@@ -230,7 +232,8 @@ using namespace utils;
     auto* animator = self.modelView.animator;
     if (animator) {
         if (animator->getAnimationCount() > 0) {
-            animator->applyAnimation(0, CACurrentMediaTime());
+            CFTimeInterval elapsedTime = CACurrentMediaTime() - _startTime;
+            animator->applyAnimation(0, static_cast<float>(elapsedTime));
         }
         animator->updateBoneMatrices();
     }

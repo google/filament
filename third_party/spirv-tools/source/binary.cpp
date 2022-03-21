@@ -507,7 +507,8 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
 
     case SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER: {
       assert(SpvOpSpecConstantOp == opcode);
-      if (grammar_.lookupSpecConstantOpcode(SpvOp(word))) {
+      if (word > static_cast<uint32_t>(SpvOp::SpvOpMax) ||
+          grammar_.lookupSpecConstantOpcode(SpvOp(word))) {
         return diagnostic()
                << "Invalid " << spvOperandTypeStr(type) << ": " << word;
       }
