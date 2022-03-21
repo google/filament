@@ -27,7 +27,7 @@ conversion operators. By default this fetches the latest vk.xml from github; not
 the XML needs to be consistent with the Vulkan headers that live in bluevk/include/vulkan,
 which are obtained from:
 
-https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/master/include/vulkan/vulkan_core.h
+https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/main/include/vulkan/vulkan_core.h
 
 If the XML file is inconsistent with the checked-in header files, compile errors can result
 such as missing enumeration values, or "type not found" errors.
@@ -48,7 +48,7 @@ from datetime import datetime
 
 VkFunction = namedtuple('VkFunction', ['name', 'type', 'group'])
 
-VK_XML_URL = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/master/registry/vk.xml"
+VK_XML_URL = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/main/registry/vk.xml"
 
 COPYRIGHT_HEADER = '''/*
  * Copyright (C) %(year)d The Android Open Source Project
@@ -222,15 +222,6 @@ def consumeXML(spec):
     # is inconsistent with other types.
     provisional_types = set([
         'VkFullScreenExclusiveEXT',
-        'VkStencilFaceFlagBits',
-        'VkAccessFlagBits2KHR',
-        'VkExternalSemaphoreHandleTypeFlagBits',
-        'VkSwapchainImageUsageFlagBitsANDROID',
-        'VkSurfaceCounterFlagBitsEXT',
-        'VkPipelineStageFlagBits2KHR',
-        'VkSemaphoreCreateFlagBits',
-        'VkShaderModuleCreateFlagBits',
-        'VkPipelineLayoutCreateFlagBits',
     ])
     for ext in spec.findall('extensions/extension'):
         if ext.get('platform') == 'provisional':
@@ -343,9 +334,6 @@ def produceHeader(function_groups, enum_vals, flag_vals, output_dir):
     for (enum_name, vals) in enum_vals.items():
         enum_decls.append('utils::io::ostream& operator<<(utils::io::ostream& out, ' +
             'const {}& value);'.format(enum_name))
-    for (flag_name, vals) in flag_vals.items():
-        enum_decls.append('utils::io::ostream& operator<<(utils::io::ostream& out, ' +
-            'const {}& value);'.format(flag_name))
     for (group, functions) in function_groups.items():
         if not len(functions):
             continue
@@ -375,17 +363,6 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
             enum_defs.append('        case {0}: out << "{0}"; break;'.format(val))
         # Always include a "default" to catch aliases (such as MAX_ENUM) and eliminate warnings.
         enum_defs.append('        default: out << "UNKNOWN"; break;')
-        enum_defs.append('    }')
-        enum_defs.append('    return out;')
-        enum_defs.append('}')
-    for (flag_name, vals) in flag_vals.items():
-        enum_defs.append('utils::io::ostream& operator<<(utils::io::ostream& out, ' +
-            'const {}& value) {{'.format(flag_name))
-        enum_defs.append('    switch (value) {')
-        for key, val in vals:
-            if val == '0x00000000': continue
-            enum_defs.append('        case {1}: out << "{0}"; break;'.format(key, val))
-        enum_defs.append('        default: out << "UNKNOWN_FLAGS"; break;')
         enum_defs.append('    }')
         enum_defs.append('    return out;')
         enum_defs.append('}')

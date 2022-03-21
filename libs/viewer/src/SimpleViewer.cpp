@@ -42,10 +42,9 @@ using namespace filament::math;
 namespace filament {
 namespace viewer {
 
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset) {
-    using namespace filament::math;
-    auto minpt = bounds.min;
-    auto maxpt = bounds.max;
+mat4f fitIntoUnitCube(const Aabb& bounds, float zoffset) {
+    float3 minpt = bounds.min;
+    float3 maxpt = bounds.max;
     float maxExtent;
     maxExtent = std::max(maxpt.x - minpt.x, maxpt.y - minpt.y);
     maxExtent = std::max(maxExtent, maxpt.z - minpt.z);
@@ -469,9 +468,6 @@ void SimpleViewer::updateIndirectLight() {
 }
 
 void SimpleViewer::applyAnimation(double currentTime) {
-    if (!mAnimator) {
-        return;
-    }
     static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
     if (mResetAnimation) {
@@ -972,8 +968,7 @@ void SimpleViewer::updateUserInterface() {
 
         // We do not yet support animation selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
-        if (mAnimator && mAnimator->getAnimationCount() > 0 &&
-                ImGui::CollapsingHeader("Animation")) {
+        if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;
             ImGui::RadioButton("Disable", &selectedAnimation, 0);
@@ -992,14 +987,14 @@ void SimpleViewer::updateUserInterface() {
         }
 
         if (mCurrentMorphingEntity && ImGui::CollapsingHeader("Morphing")) {
-            const bool isAnimating = mCurrentAnimation > 0 && mAnimator && mAnimator->getAnimationCount() > 0;
+            const bool isAnimating = mCurrentAnimation > 0 && mAnimator->getAnimationCount() > 0;
             if (isAnimating) {
                 ImGui::BeginDisabled();
             }
             for (int i = 0; i != mMorphWeights.size(); ++i) {
                 const char* name = mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i);
-                ImGui::SliderFloat(name ? name : "Unnamed target",
-                        &mMorphWeights[i], 0.0f, 1.0);
+                std::string label = name ? name : "Unnamed target " + std::to_string(i);
+                ImGui::SliderFloat(label.c_str(), &mMorphWeights[i], 0.0f, 1.0);
             }
             if (isAnimating) {
                 ImGui::EndDisabled();

@@ -233,6 +233,10 @@ public:
         return clock::now() - getEngineEpoch();
     }
 
+    backend::Handle<backend::HwRenderTarget> getDefaultRenderTarget() const noexcept {
+        return mDefaultRenderTarget;
+    }
+
     template <typename T>
     T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
 
@@ -367,6 +371,7 @@ private:
     void cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list);
 
     backend::Driver* mDriver = nullptr;
+    backend::Handle<backend::HwRenderTarget> mDefaultRenderTarget;
 
     Backend mBackend;
     Platform* mPlatform = nullptr;

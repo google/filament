@@ -320,6 +320,8 @@ void FEngine::init() {
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
             PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
 
+    mDefaultRenderTarget = driverApi.createDefaultRenderTarget();
+
     mPostProcessManager.init();
     mLightManager.init(*this);
     mDFG = std::make_unique<DFG>(*this);
@@ -408,6 +410,8 @@ void FEngine::shutdown() {
     driver.destroyTexture(mDummyOneTextureArray);
     driver.destroyTexture(mDummyOneIntegerTextureArray);
     driver.destroyTexture(mDummyZeroTexture);
+
+    driver.destroyRenderTarget(mDefaultRenderTarget);
 
     /*
      * Shutdown the backend...

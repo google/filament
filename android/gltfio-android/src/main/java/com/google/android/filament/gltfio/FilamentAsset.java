@@ -198,11 +198,11 @@ public class FilamentAsset {
     }
 
     /**
-     * Creates or retrieves the <code>Animator</code> interface for this asset.
+     * Retrieves the <code>Animator</code> interface for this asset.
      *
      * <p>When calling this for the first time, this must be called after
-     * {@link ResourceLoader#loadResources}. When the asset is destroyed, its
-     * animator becomes invalid.</p>
+     * {@link ResourceLoader#loadResources} or {@link ResourceLoader#asyncBeginLoad}. When the asset
+     * is destroyed, its animator becomes invalid.</p>
      */
     public @NonNull Animator getAnimator() {
         if (mAnimator != null) {
@@ -235,9 +235,9 @@ public class FilamentAsset {
     /**
      * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
      *
-     * This should only be called after ResourceLoader#loadResources().
-     * If using Animator, this should be called after getAnimator().
-     * If this is an instanced asset, this prevents creation of new instances.
+     * This should only be called after ResourceLoader#loadResources() or
+     * ResourceLoader#asyncBeginLoad(). If this is an instanced asset, this prevents creation of new
+     * instances.
      */
     public void releaseSourceData() {
         nReleaseSourceData(mNativeObject);

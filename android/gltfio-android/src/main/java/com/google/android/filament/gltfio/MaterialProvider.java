@@ -127,4 +127,10 @@ public interface MaterialProvider {
      * clients to take ownership of the cache if desired.
      */
     public void destroyMaterials();
+
+    /**
+     * Frees memory consumed by the native <code>MaterialProvider</code>, but does not destroy
+     * cached materials.
+     */
+    public void destroy();
 }

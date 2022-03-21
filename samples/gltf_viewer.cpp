@@ -425,9 +425,6 @@ int main(int argc, char** argv) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
-
-        // Load animation data then free the source hierarchy.
-        app.asset->getAnimator();
         app.asset->releaseSourceData();
 
         auto ibl = FilamentApp::get().getIBL();

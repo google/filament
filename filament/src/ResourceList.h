@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_RESOURCELIST_H
-#define TNT_FILAMENT_DETAILS_RESOURCELIST_H
+#ifndef TNT_FILAMENT_RESOURCELIST_H
+#define TNT_FILAMENT_RESOURCELIST_H
 
 #include <utils/compiler.h>
-#include <utils/Allocator.h>
-#include <utils/Log.h>
 
 #include <tsl/robin_set.h>
 
-#include <algorithm>
-#include <mutex>
+#include <stdint.h>
 
 namespace filament {
 
 class ResourceListBase {
 public:
+    using iterator = typename tsl::robin_set<void*>::iterator;
+
     explicit ResourceListBase(const char* typeName);
     ResourceListBase(ResourceListBase&& rhs) noexcept = default;
 
@@ -48,13 +47,6 @@ public:
     size_t size() const noexcept {
         return mList.size();
     }
-
-
-    tsl::robin_set<void*> getListAndClear() noexcept {
-        return std::move(mList);
-    }
-
-    using iterator = typename tsl::robin_set<void*>::iterator;
 
     iterator begin() noexcept {
         return mList.begin();
@@ -77,34 +69,22 @@ private:
 // The split ResourceListBase / ResourceList allows us to reduce code size by keeping
 // common code (operating on void*) separate.
 //
-template <typename T>
+template<typename T>
 class ResourceList : private ResourceListBase {
-    static_assert(sizeof(tsl::robin_set<T*>) == sizeof(tsl::robin_set<void*>),
-            "robin_set<void*> and robin_set<T*> are incompatible");
-
 public:
+    using ResourceListBase::ResourceListBase;
     using ResourceListBase::forEach;
+    using ResourceListBase::insert;
+    using ResourceListBase::remove;
+    using ResourceListBase::empty;
+    using ResourceListBase::size;
+    using ResourceListBase::clear;
 
-    explicit ResourceList(const char* name) noexcept : ResourceListBase(name) { }
+    explicit ResourceList(const char* name) noexcept: ResourceListBase(name) {}
+
     ResourceList(ResourceList&& rhs) noexcept = default;
 
     ~ResourceList() noexcept = default;
-
-    void insert(T* item) {
-        ResourceListBase::insert(item);
-    }
-    bool remove(T const* item) {
-        return ResourceListBase::remove(item);
-    }
-    bool empty() const noexcept {
-        return ResourceListBase::empty();
-    }
-    size_t size() const noexcept {
-        return ResourceListBase::size();
-    }
-    void clear() noexcept {
-        return ResourceListBase::clear();
-    }
 
     template<typename F>
     inline void forEach(F func) const noexcept {
@@ -117,4 +97,4 @@ public:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_RESOURCELIST_H
+#endif // TNT_FILAMENT_RESOURCELIST_H

@@ -201,7 +201,6 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nDestroyAssetLoader(JNIEnv*, jclass,
         jlong nativeLoader) {
     AssetLoader* loader = (AssetLoader*) nativeLoader;
-    delete loader->getMaterialProvider();
     NameComponentManager* names = loader->getNames();
     AssetLoader::destroy(&loader);
     delete names;
