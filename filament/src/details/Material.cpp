@@ -441,7 +441,11 @@ Program FMaterial::getProgramBuilderWithVariants(
             mName.c_str(), variant.key, fragmentVariant.key);
 
     Program pb;
-    pb      .diagnostics(mName, variant)
+    pb.diagnostics(mName,
+              [this, variant](io::ostream& out) -> io::ostream& {
+                  return out << mName.c_str_safe()
+                             << ", variant=(" << io::hex << variant.key << io::dec << ")";
+              })
             .withVertexShader(vsBuilder.data(), vsBuilder.size())
             .withFragmentShader(fsBuilder.data(), fsBuilder.size());
     return pb;

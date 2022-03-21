@@ -16,8 +16,6 @@
 
 #include "BackendTest.h"
 
-#include <private/filament/EngineEnums.h>
-
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
