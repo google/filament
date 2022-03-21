@@ -3,13 +3,18 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.5 (currently main branch)
+## v1.20.6 (currently main branch)
+
+## v1.20.5
+
+- New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
 
 ## v1.20.4
 
 - gltfio: Java clients must now destroy the MaterialProvider [⚠️ **API Change**].
-
-- New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
+- gltfio: Fix, bone pose not applied if glTF model doesn't have animations.
+- libs: Added `math::quat::fromDirectedRotation` [**NEW API**].
+- WebGL: Restore GL state when frame ends.
 
 ## v1.20.3
 
