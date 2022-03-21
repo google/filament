@@ -144,7 +144,7 @@ private:
     explicit SamplerInterfaceBlock(Builder const& builder) noexcept;
 
     utils::CString mName;
-    backend::ShaderStageFlags mStageFlags; // It's needed to check if MAX_SAMPLER_COUNT is exceeded.
+    backend::ShaderStageFlags mStageFlags{}; // It's needed to check if MAX_SAMPLER_COUNT is exceeded.
     std::vector<SamplerInfo> mSamplersInfoList;
     tsl::robin_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
     uint32_t mSize = 0; // size in Samplers (i.e.: count)
