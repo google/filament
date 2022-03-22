@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-#include <utils/sstream.h>
+#ifndef TNT_UTILS_OSTREAM__H
+#define TNT_UTILS_OSTREAM__H
+
+#include <utils/ostream.h>
+#include <mutex>
 
 namespace utils::io {
 
-utils::io::ostream& sstream::flush() noexcept {
-    // no-op.
-    return *this;
-}
+struct ostream_ {
+    std::mutex mLock;
+    ostream::Buffer mData;
+    bool mShowHex = false;
+};
 
-const char* sstream::c_str() const noexcept {
-    char const* buffer = getBuffer().get();
-    return buffer ? buffer : "";
-}
+} // utils::io
 
-} // namespace utils::io
+#endif // TNT_UTILS_OSTREAM__H
