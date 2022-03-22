@@ -21,23 +21,27 @@
 
 #include <utils/CString.h>
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/vec4.h>
 
-#include <tsl/robin_map.h>
+#include <unordered_map>
+#include <vector>
 
 #include <assert.h>
-#include <vector>
 
 namespace filament {
 
 class UniformInterfaceBlock {
 public:
     UniformInterfaceBlock();
-    UniformInterfaceBlock(const UniformInterfaceBlock& rhs);
+
+    UniformInterfaceBlock(const UniformInterfaceBlock& rhs) = delete;
+    UniformInterfaceBlock& operator=(const UniformInterfaceBlock& rhs) = delete;
+
     UniformInterfaceBlock(UniformInterfaceBlock&& rhs) noexcept;
-    UniformInterfaceBlock& operator=(const UniformInterfaceBlock& rhs);
-    UniformInterfaceBlock& operator=(UniformInterfaceBlock&& rhs) /*noexcept*/;
+    UniformInterfaceBlock& operator=(UniformInterfaceBlock&& rhs) noexcept;
+
     ~UniformInterfaceBlock() noexcept;
 
     using Type = backend::UniformType;
@@ -45,50 +49,27 @@ public:
 
     class Builder {
     public:
-        // Give a name to this uniform interface block
-        Builder& name(utils::CString const& interfaceBlockName);
-        Builder& name(utils::CString&& interfaceBlockName);
-        Builder& name(utils::StaticString const& interfaceBlockName);
+        Builder() noexcept;
+        ~Builder() noexcept;
 
-        template<size_t N>
-        Builder& name(utils::StringLiteral<N> const& interfaceBlockName) {
-            return name(utils::StaticString{ interfaceBlockName });
-        }
+        // Give a name to this uniform interface block
+        Builder& name(utils::CString interfaceBlockName);
 
         // Add a uniform
-        Builder& add(utils::CString const& uniformName, size_t size,
-                Type type, Precision precision = Precision::DEFAULT);
-        Builder& add(utils::CString&& uniformName, size_t size,
-                Type type, Precision precision = Precision::DEFAULT);
-        Builder& add(utils::StaticString const& uniformName, size_t size,
+        Builder& add(utils::CString uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT);
 
         // Add a known struct
-        Builder& add(utils::CString const& uniformName, size_t size,
-                utils::CString const& structName, size_t stride);
-
-        template<size_t N>
-        Builder& add(utils::StringLiteral<N> const& uniformName, size_t size,
-                Type type, Precision precision = Precision::DEFAULT) {
-            return add(utils::StaticString{ uniformName }, size, type, precision);
-        }
-
-        template<size_t N0, size_t N1>
-        Builder& add(utils::StringLiteral<N0> const& uniformName, size_t size,
-                utils::StringLiteral<N1> const& structName, size_t stride) {
-            return add(utils::StaticString{ uniformName }, size,
-                    utils::StaticString{ structName }, stride);
-        }
+        Builder& add(utils::CString uniformName, size_t size,
+                utils::CString structName, size_t stride);
 
         // build and return the UniformInterfaceBlock
         UniformInterfaceBlock build();
     private:
         friend class UniformInterfaceBlock;
         struct Entry {
-            Entry(utils::CString name, uint32_t size, Type type, Precision precision) noexcept
-                    : name(std::move(name)), size(size), type(type), precision(precision), stride(strideForType(type, 0)) { }
-            Entry(utils::CString name, uint32_t size, utils::CString structName, size_t stride) noexcept
-                    : name(std::move(name)), size(size), type(Type::STRUCT), structName(std::move(structName)), stride(stride) { }
+            Entry(utils::CString name, uint32_t size, Type type, Precision precision) noexcept;
+            Entry(utils::CString name, uint32_t size, utils::CString structName, size_t stride) noexcept;
             utils::CString name;
             uint32_t size;
             Type type;
@@ -122,7 +103,9 @@ public:
     size_t getSize() const noexcept { return mSize; }
 
     // list of information records for each uniform
-    std::vector<UniformInfo> const& getUniformInfoList() const noexcept { return mUniformsInfoList; }
+    utils::FixedCapacityVector<UniformInfo> const& getUniformInfoList() const noexcept {
+        return mUniformsInfoList;
+    }
 
     // negative value if name doesn't exist or Panic if exceptions are enabled
     ssize_t getUniformOffset(const char* name, size_t index) const;
@@ -144,9 +127,9 @@ private:
     static uint8_t strideForType(Type type, uint32_t stride) noexcept;
 
     utils::CString mName;
-    std::vector<UniformInfo> mUniformsInfoList;
-    tsl::robin_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
-    uint32_t mSize = 0; // size in bytes
+    utils::FixedCapacityVector<UniformInfo> mUniformsInfoList;
+    std::unordered_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
+    uint32_t mSize = 0; // size in bytes rounded to multiple of 4
 };
 
 } // namespace filament
