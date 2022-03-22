@@ -24,37 +24,6 @@
 
 #include <filament/FilamentAPI.h>
 
-#include <utility>
-
-namespace filament {
-
-template<typename T>
-BuilderBase<T>::BuilderBase() noexcept
-        : mImpl(new T) {
-}
-
-template<typename T>
-template<typename ... ARGS>
-BuilderBase<T>::BuilderBase(ARGS&& ... args) noexcept
-        : mImpl(new T(std::forward<ARGS>(args)...)) {
-}
-
-template<typename T>
-BuilderBase<T>::~BuilderBase() noexcept {
-    delete mImpl;
-}
-
-template<typename T>
-BuilderBase<T>::BuilderBase(BuilderBase const& rhs) noexcept
-        : mImpl(new T(*rhs.mImpl)) {
-}
-
-template<typename T>
-BuilderBase<T>& BuilderBase<T>::operator=(BuilderBase<T> const& rhs) noexcept {
-    *mImpl = *rhs.mImpl;
-    return *this;
-}
-
-} // namespace filament
+#include <utils/PrivateImplementation-impl.h>
 
 #endif // TNT_FILAMENT_FILAMENTAPI_IMPL_H
