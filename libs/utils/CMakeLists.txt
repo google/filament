@@ -33,6 +33,8 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/ostream.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Panic.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SpinLock.h
