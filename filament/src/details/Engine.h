@@ -348,6 +348,7 @@ public:
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
     backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
 
 private:
@@ -452,6 +453,7 @@ private:
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
+    backend::Handle<backend::HwTexture> mDummyZeroTextureArray;
     backend::Handle<backend::HwTexture> mDummyOneIntegerTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
