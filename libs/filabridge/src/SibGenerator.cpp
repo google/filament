@@ -17,8 +17,7 @@
 #include "private/filament/SibGenerator.h"
 
 #include "private/filament/Variant.h"
-
-#include <backend/DriverEnums.h>
+#include "private/filament/EngineEnums.h"
 
 #include <private/filament/SamplerInterfaceBlock.h>
 

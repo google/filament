@@ -28,7 +28,7 @@ using namespace utils;
 
 // ------------------------------------------------------------------------------------------------
 // Stream operators for all types in DriverEnums.h
-// (These must live outside of the filament namespace)
+// (These must live outside the filament namespace)
 // ------------------------------------------------------------------------------------------------
 
 #if !defined(NDEBUG)
@@ -495,6 +495,18 @@ io::ostream& operator<<(io::ostream& out, MRT const& mrt) {
     // TODO: implement decoding of enum
     out << "MRT{...}";
     return out;
+}
+
+io::ostream& operator<<(io::ostream& stream, ShaderStageFlags stageFlags) {
+    unsigned int v = +stageFlags.vertex + 2u * +stageFlags.fragment;
+    const char* str = nullptr;
+    switch (v & 3) {
+        case 0: str = "{ }"; break;
+        case 1: str = "{ vertex }"; break;
+        case 2: str = "{ fragment }"; break;
+        case 3: str = "{ vertex | fragment }"; break;
+    }
+    return stream << str;
 }
 
 #undef CASE

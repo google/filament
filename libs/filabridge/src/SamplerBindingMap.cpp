@@ -20,9 +20,23 @@
 
 #include <private/filament/SibGenerator.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Log.h>
 
 namespace filament {
+
+// we can't use operator<< because it's defined in libbackend, which is only a header dependency
+static const char* to_string(backend::ShaderStageFlags stageFlags) noexcept {
+    unsigned int v = +stageFlags.vertex + 2u * +stageFlags.fragment;
+    switch (v & 3u) {
+        case 0: return "{ }";
+        case 1: return "{ vertex }";
+        case 2: return "{ fragment }";
+        case 3: return "{ vertex | fragment }";
+    }
+    return nullptr;
+}
 
 void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
             const char* materialName) {
@@ -67,6 +81,7 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
         utils::slog.e << utils::io::endl;
         offset = 0;
 
+
         UTILS_NOUNROLL
         for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
             SamplerInterfaceBlock const* const sib =
@@ -74,9 +89,10 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
                     perMaterialSib : SibGenerator::getSib(blockIndex, dummyVariant);
             if (sib) {
                 auto const& sibFields = sib->getSamplerInfoList();
+                auto const stageFlagsAsString = to_string(sib->getStageFlags());
                 for (auto const& sInfo : sibFields) {
                     utils::slog.e << "  " << +offset << " " << sInfo.name.c_str()
-                        << " " << sib->getStageFlags() << '\n';
+                        << " " <<  stageFlagsAsString << '\n';
                     offset++;
                 }
                 flush(utils::slog.e);

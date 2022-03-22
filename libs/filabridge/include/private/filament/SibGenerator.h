@@ -17,9 +17,6 @@
 #ifndef TNT_FILABRIDGE_SIBGENERATOR_H
 #define TNT_FILABRIDGE_SIBGENERATOR_H
 
-#include <backend/DriverEnums.h>
-
-#include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
 #include <stdint.h>

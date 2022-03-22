@@ -19,7 +19,6 @@
 
 
 #include <backend/DriverEnums.h>
-#include <backend/ShaderStageFlags.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
