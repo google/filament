@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_DRIVER_VULKANUTILITY_H
 
 #include <backend/DriverEnums.h>
-#include <backend/ShaderStageFlags.h>
 
 #include <bluevk/BlueVK.h>
 

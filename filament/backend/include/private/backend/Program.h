@@ -25,7 +25,6 @@
 #include <utils/ostream.h>
 
 #include <backend/DriverEnums.h>
-#include <backend/ShaderStageFlags.h>
 
 #include <array>
 

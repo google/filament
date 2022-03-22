@@ -73,4 +73,4 @@ constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_driver/EngineEnums.h
+#endif // TNT_FILAMENT_ENGINE_ENUM_H

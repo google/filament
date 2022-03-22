@@ -906,6 +906,16 @@ enum ShaderType : uint8_t {
 };
 static constexpr size_t PIPELINE_STAGE_COUNT = 2;
 
+struct ShaderStageFlags {
+    bool vertex : 1;
+    bool fragment : 1;
+    bool hasShaderType(ShaderType type) const {
+        return (vertex && type == ShaderType::VERTEX) ||
+               (fragment && type == ShaderType::FRAGMENT);
+    }
+};
+static constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { .vertex = true, .fragment = true };
+
 /**
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
  * can be discarded at the beginning and end of the render pass.
@@ -1026,6 +1036,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend:
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderStageFlags stageFlags);
 #endif
 
 #endif // TNT_FILAMENT_BACKEND_DRIVERENUMS_H
