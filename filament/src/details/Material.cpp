@@ -464,7 +464,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 
     const auto& uniforms = mUniformInterfaceBlock.getUniformInfoList();
     size_t i = 0;
-    size_t uniformCount = std::min(count, uniforms.size());
+    size_t uniformCount = std::min(count, size_t(uniforms.size()));
     for ( ; i < uniformCount; i++) {
         ParameterInfo& info = parameters[i];
         const auto& uniformInfo = uniforms[i];

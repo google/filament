@@ -16,9 +16,6 @@
 
 #include "GLSLPostProcessor.h"
 
-#include <sstream>
-#include <vector>
-
 #include <GlslangToSpv.h>
 #include <SPVRemapper.h>
 #include <localintermediate.h>
@@ -30,10 +27,15 @@
 #include "sca/GLSLTools.h"
 #include "shaders/MaterialInfo.h"
 
-#include <utils/Log.h>
 #include <filament/MaterialEnums.h>
 #include <private/filament/Variant.h>
 #include <private/filament/SibGenerator.h>
+
+#include <utils/Log.h>
+
+#include <sstream>
+#include <unordered_map>
+#include <vector>
 
 using namespace glslang;
 using namespace spirv_cross;
@@ -45,7 +47,7 @@ namespace filamat {
 
 namespace msl {  // this is only used for MSL
 
-using BindingIndexMap = tsl::robin_map<std::string, uint16_t>;
+using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 
 UTILS_NOINLINE
 static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
