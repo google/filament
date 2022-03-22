@@ -137,7 +137,7 @@ public:
      * To use this, you must first call enableExternalBuffer() on the Builder.
      *
      * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
-     * @param externalBuffer Pointer to the external buffer that will be used in this buffer slot.
+     * @param externalBuffer Pointer to the external buffer that will be used.
      */
     void setExternalBuffer(Engine& engine, intptr_t externalBuffer);
 
