@@ -64,7 +64,7 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const IndexBuffer::Builder& builder)
     mHandle = driver.createIndexBuffer(
             (backend::ElementType)builder->mIndexType,
             uint32_t(builder->mIndexCount),
-            backend::BufferUsage::STATIC,
+            backend::BufferUsage::STATIC, 
             mExternalBuffersEnabled);
 }
 
