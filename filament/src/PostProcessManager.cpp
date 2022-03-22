@@ -318,6 +318,10 @@ backend::Handle<backend::HwTexture> PostProcessManager::getOneTextureArray() con
     return mEngine.getOneTextureArray();
 }
 
+backend::Handle<backend::HwTexture> PostProcessManager::getZeroTextureArray() const {
+    return mEngine.getZeroTextureArray();
+}
+
 UTILS_NOINLINE
 void PostProcessManager::render(FrameGraphResources::RenderPassInfo const& out,
         backend::PipelineState const& pipeline,
@@ -542,7 +546,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 mat4f reprojection = uvFromClipMatrix * historyProjection
                                      * inverse(cameraInfo.view * cameraInfo.worldOrigin);
                 TextureHandle history = data.history ?
-                        resources.getTexture(data.history) : getZeroTexture();
+                        resources.getTexture(data.history) : getZeroTextureArray();
                 uniforms.prepareHistorySSR(history,reprojection, uvFromViewMatrix,options);
 
                 uniforms.commit(driver);
