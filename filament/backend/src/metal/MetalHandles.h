@@ -288,7 +288,7 @@ private:
 
     static MTLLoadAction getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
     static MTLStoreAction getStoreAction(const RenderPassParams& params, TargetBufferFlags buffer);
-    static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
+    static id<MTLTexture> createMultisampledTexture(MetalContext& context, MTLPixelFormat format,
             uint32_t width, uint32_t height, uint8_t samples);
 
     MetalContext* context;

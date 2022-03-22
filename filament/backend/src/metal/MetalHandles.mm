@@ -773,7 +773,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && color[i].getSampleCount() == 1) {
             auto& sidecar = color[i].metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, color[i].getPixelFormat(),
+                sidecar = createMultisampledTexture(*context, color[i].getPixelFormat(),
                         color[i].metalTexture->width, color[i].metalTexture->height, samples);
             }
         }
@@ -791,7 +791,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && depth.getSampleCount() == 1) {
             auto& sidecar = depth.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
+                sidecar = createMultisampledTexture(*context, depth.getPixelFormat(),
                         depth.metalTexture->width, depth.metalTexture->height, samples);
             }
         }
@@ -921,7 +921,7 @@ MTLStoreAction MetalRenderTarget::getStoreAction(const RenderPassParams& params,
     return MTLStoreActionStore;
 }
 
-id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device,
+id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MetalContext& context,
         MTLPixelFormat format, uint32_t width, uint32_t height, uint8_t samples) {
     MTLTextureDescriptor* descriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
@@ -933,7 +933,13 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.usage = MTLTextureUsageRenderTarget;
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
-    return [device newTextureWithDescriptor:descriptor];
+    if (context.supportsMemorylessRenderTargets) {
+        if (@available(macOS 11.0, macCatalyst 14.0, *)) {
+            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
+        }
+    }
+
+    return [context.device newTextureWithDescriptor:descriptor];
 }
 
 MetalFence::MetalFence(MetalContext& context) : context(context), value(context.signalId++) { }

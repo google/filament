@@ -47,6 +47,7 @@ class TimerQueryInterface;
 struct MetalUniformBuffer;
 struct MetalIndexBuffer;
 struct MetalSamplerGroup;
+struct MetalTexture;
 struct MetalVertexBuffer;
 
 constexpr static uint8_t MAX_SAMPLE_COUNT = 8;  // Metal devices support at most 8 MSAA samples
@@ -59,8 +60,11 @@ struct MetalContext {
     id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
 
+    std::atomic<bool> memorylessLimitsReached = false;
+
     // Supported features.
     bool supportsTextureSwizzling = false;
+    bool supportsMemorylessRenderTargets = false;
     uint8_t maxColorRenderTargets = 4;
     struct {
         uint8_t common;
@@ -92,8 +96,9 @@ struct MetalContext {
 
     MetalSamplerGroup* samplerBindings[SAMPLER_BINDING_COUNT] = {};
 
-    // Keeps track of all alive sampler groups.
+    // Keeps track of all alive sampler groups, textures.
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;
+    tsl::robin_set<MetalTexture*> textures;
 
     MetalBufferPool* bufferPool;
 

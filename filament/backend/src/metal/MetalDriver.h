@@ -37,6 +37,7 @@ class MetalBuffer;
 struct MetalUniformBuffer;
 struct MetalContext;
 struct MetalProgram;
+struct MetalTexture;
 struct UniformBufferState;
 
 #ifndef FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB

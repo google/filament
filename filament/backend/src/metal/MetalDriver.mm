@@ -88,6 +88,9 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
             mContext->highestSupportedGpuFamily.macCatalyst >= 2;   // newer Mac Catalyst GPUs
     }
 
+    // In order to support memoryless render targets, an Apple GPU is needed.
+    mContext->supportsMemorylessRenderTargets = mContext->highestSupportedGpuFamily.apple >= 1;
+
     mContext->maxColorRenderTargets = 4;
     if (mContext->highestSupportedGpuFamily.apple >= 2 ||
         mContext->highestSupportedGpuFamily.mac >= 1 ||
@@ -190,6 +193,18 @@ void MetalDriver::endFrame(uint32_t frameId) {
 
     assert_invariant(mContext->groupMarkers.empty());
 
+    // If we exceeded memoryless limits, turn it off for the rest of the lifetime of the driver.
+    if (mContext->supportsMemorylessRenderTargets && mContext->memorylessLimitsReached) {
+        for (MetalTexture* texture : mContext->textures) {
+            // Release memoryless MTLTexture-s, which are currently only the MSAA sidecars.
+            // Creation of new render targets is going to trigger the re-allocation of sidecars,
+            // with private storage mode from now on. Here, at the end of the frame,
+            // all render targets that have textures with sidecars are assumed to be destroyed.
+            texture->msaaSidecar = nil;
+        }
+        mContext->supportsMemorylessRenderTargets = false;
+    }
+
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, mContext->signpostId, "Frame encoding");
 #endif
@@ -235,9 +250,9 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
             width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
+            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -513,6 +528,7 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
         }
     }
 
+    mContext->textures.erase(handle_cast<MetalTexture>(th));
     destruct_handle<MetalTexture>(th);
 }
 

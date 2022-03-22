@@ -113,6 +113,13 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
     // all frames and their completion handlers finish before context is deallocated.
     [context->pendingCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
         context->resourceTracker.clearResources((__bridge void*) buffer);
+        
+        auto errorCode = (MTLCommandBufferError)buffer.error.code;
+        if (@available(macOS 11.0, macCatalyst 14.0, *)) {
+            if (errorCode == MTLCommandBufferErrorMemoryless) {
+                context->memorylessLimitsReached = true;
+            }
+        }
     }];
     ASSERT_POSTCONDITION(context->pendingCommandBuffer, "Could not obtain command buffer.");
     return context->pendingCommandBuffer;
