@@ -487,8 +487,7 @@ function build_android {
             cp gltfio-android/build/outputs/aar/gltfio-android-full-debug.aar ../out/gltfio-android-debug.aar
 
             echo "Installing out/filament-utils-android-debug.aar..."
-            cp filament-utils-android/build/outputs/aar/filament-utils-android-lite-debug.aar ../out/
-            cp filament-utils-android/build/outputs/aar/filament-utils-android-full-debug.aar ../out/filament-utils-android-debug.aar
+            cp filament-utils-android/build/outputs/aar/filament-utils-android-debug.aar ../out/filament-utils-android-debug.aar
 
             if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
                 for sample in ${ANDROID_SAMPLES}; do
@@ -536,8 +535,7 @@ function build_android {
             cp gltfio-android/build/outputs/aar/gltfio-android-full-release.aar ../out/gltfio-android-release.aar
 
             echo "Installing out/filament-utils-android-release.aar..."
-            cp filament-utils-android/build/outputs/aar/filament-utils-android-lite-release.aar ../out/
-            cp filament-utils-android/build/outputs/aar/filament-utils-android-full-release.aar ../out/filament-utils-android-release.aar
+            cp filament-utils-android/build/outputs/aar/filament-utils-android-release.aar ../out/filament-utils-android-release.aar
 
             if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
                 for sample in ${ANDROID_SAMPLES}; do

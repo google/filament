@@ -1,28 +1,14 @@
 apply plugin: 'kotlin-android'
 
 android {
-    flavorDimensions "functionality"
-    productFlavors {
-        full {
-            dimension "functionality"
-        }
-
-        lite {
-            dimension "functionality"
-            externalNativeBuild {
-                cmake {
-                    // hack: this is needed because filament-utils-android/CMakeLists.txt builds
-                    // gltfio from source, which needs this defined
-                    arguments.add("-DGLTFIO_LITE=ON")
-                }
-            }
-        }
-    }
-
     sourceSets {
         main {
             kotlin.srcDirs += "src/main/java"
         }
+    }
+
+    defaultConfig {
+        missingDimensionStrategy 'functionality', 'full'
     }
 
     // No need to package up the following shared libs, which arise as a side effect of our
@@ -55,9 +41,7 @@ dependencies {
     implementation deps.coroutines.android
 
     api project(':filament-android')
-
-    fullApi module("com.google.android.filament:gltfio-android:${VERSION_NAME}")
-    liteApi module("com.google.android.filament:gltfio-android-lite:${VERSION_NAME}")
+    api module("com.google.android.filament:gltfio-android:${VERSION_NAME}")
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
@@ -65,14 +49,9 @@ apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 afterEvaluate {
     publishing {
         publications {
-            fullRelease(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID_FULL
-                from components.fullRelease
-            }
-
-            liteRelease(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID_LITE
-                from components.liteRelease
+            release(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID
+                from components.release
             }
         }
     }
