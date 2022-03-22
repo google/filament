@@ -130,13 +130,13 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmLightBleedReduction;
     float vsmReserved0;
 
-    math::float3 iblCenter;      // center of the sphere or IBL AABB
     float lodBias;
-    math::float3 iblHalfExtents; // .x is radius squared for sphere; otherwise the half extents of the box along the X, Y, Z axes
-    uint32_t iblTechnique;       // 0: infinite cubemap IBL, 1: (origin centered) finite sphere IBL, 2: (origin centered) finite cube IBL
+    float reserved1;
+    float reserved2;
+    float reserved3;
 
     // bring PerViewUib to 2 KiB
-    math::float4 arrayPadding[56];
+    math::float4 padding3[57];
 };
 
 // 2 KiB == 128 float4s

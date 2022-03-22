@@ -268,38 +268,6 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
    return getColorEstimate(mIrradianceCoefs.data(), direction);
 }
 
-void FIndirectLight::setIblOptions(IblOptions const& options) noexcept {
-    mIblOptions = options;
-}
-
-IblOptions const& FIndirectLight::getIblOptions() const noexcept {
-    return mIblOptions;
-}
-
-void FIndirectLight::setIblTechnique(const IblOptions::IblTechnique iblTechnique) noexcept {
-    mIblOptions.iblTechnique = iblTechnique;
-}
-
-IblOptions::IblTechnique FIndirectLight::getIblTechnique() const noexcept {
-    return mIblOptions.iblTechnique;
-}
-
-void FIndirectLight::setIblCenter(const math::float3& iblCenter) noexcept {
-    mIblOptions.iblCenter = iblCenter;
-}
-
-const math::float3& FIndirectLight::getIblCenter() const noexcept {
-    return mIblOptions.iblCenter;
-}
-
-void FIndirectLight::setIblHalfExtents(const math::float3& iblHalfExtents) noexcept {
-    mIblOptions.iblHalfExtents = iblHalfExtents;
-}
-
-const math::float3& FIndirectLight::getIblHalfExtents() const noexcept {
-    return mIblOptions.iblHalfExtents;
-}
-
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -334,38 +302,6 @@ math::float3 IndirectLight::getDirectionEstimate() const noexcept {
 
 math::float4 IndirectLight::getColorEstimate(math::float3 direction) const noexcept {
     return upcast(this)->getColorEstimate(direction);
-}
-
-void IndirectLight::setIblOptions(IblOptions const& options) noexcept {
-    upcast(this)->setIblOptions(options);
-}
-
-IblOptions const& IndirectLight::getIblOptions() const noexcept {
-    return upcast(this)->getIblOptions();
-}
-
-void IndirectLight::setIblTechnique(const IblOptions::IblTechnique iblTechnique) noexcept {
-    upcast(this)->setIblTechnique(iblTechnique);
-}
-
-IblOptions::IblTechnique IndirectLight::getIblTechnique() const noexcept {
-    return upcast(this)->getIblTechnique();
-}
-
-void IndirectLight::setIblCenter(const math::float3& iblCenter) noexcept {
-    upcast(this)->setIblCenter(iblCenter);
-}
-
-const math::float3& IndirectLight::getIblCenter() const noexcept {
-    return upcast(this)->getIblCenter();
-}
-
-void IndirectLight::setIblHalfExtents(const math::float3& iblHalfExtents) noexcept {
-    upcast(this)->setIblHalfExtents(iblHalfExtents);
-}
-
-const math::float3& IndirectLight::getIblHalfExtents() const noexcept {
-    return upcast(this)->getIblHalfExtents();
 }
 
 math::float3 IndirectLight::getDirectionEstimate(const math::float3* sh) noexcept {

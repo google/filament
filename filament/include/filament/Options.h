@@ -357,17 +357,6 @@ struct VsmShadowOptions {
     float lightBleedReduction = 0.15f;
 };
 
-struct IblOptions {    
-    enum class IblTechnique : uint32_t {
-        IBL_INFINITE, IBL_FINITE_SPHERE, IBL_FINITE_BOX
-    };
-
-    IblTechnique iblTechnique = IblTechnique::IBL_INFINITE;
-
-    math::float3 iblCenter;       // center of the sphere or IBL AABB
-    math::float3 iblHalfExtents;  // .x is radius for sphere; otherwise the half extents of the box along the X, Y, Z axes
-};
-
 } // namespace filament
 
 #endif //TNT_FILAMENT_OPTIONS_H

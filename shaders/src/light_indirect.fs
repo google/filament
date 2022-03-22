@@ -2,11 +2,6 @@
 // Image based lighting configuration
 //------------------------------------------------------------------------------
 
-// IBL techniques
-#define IBL_TECHNIQUE_INFINITE      0u
-#define IBL_TECHNIQUE_FINITE_SPHERE 1u
-#define IBL_TECHNIQUE_FINITE_BOX    2u
-
 // Number of spherical harmonics bands (1, 2 or 3)
 #define SPHERICAL_HARMONICS_BANDS           3
 
@@ -21,39 +16,6 @@
 //------------------------------------------------------------------------------
 // IBL utilities
 //------------------------------------------------------------------------------
-
-void Swap(inout float a, inout float b)
-{
-    float tmp = a;
-    a = b;
-    b = tmp;
-}
-
-// Returns the two roots of Ax^2 + Bx + C = 0, assuming that A != 0
-// The returned roots (if finite) satisfy roots.x <= roots.y
-vec2 SolveQuadratic(float A, float B, float C)
-{
-    // From Numerical Recipes in C
-    float q = -0.5 * (B + sign(B) * sqrt(B * B - 4.0 * A * C));
-    vec2 roots = vec2(q / A, C / q);
-    if (roots.x > roots.y) Swap(roots.x, roots.y);
-    return roots;
-}
-
-vec2 IntersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
-    vec3 tMin = (boxMin - rayOrigin) / rayDir;
-    vec3 tMax = (boxMax - rayOrigin) / rayDir;
-    vec3 t1 = min(tMin, tMax);
-    vec3 t2 = max(tMin, tMax);
-    float tNear = max3(t1);
-    float tFar = min3(t2);
-    return vec2(tNear, tFar);
-}
-
-// Assume: a <= b
-float GetSmallestPositive(float a, float b) {
-    return a >= 0.0 ? a : b;
-}
 
 vec3 decodeDataForIBL(const vec4 data) {
     return data.rgb;
@@ -206,39 +168,6 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
     vec3 r = shading_reflected;
 #endif
     return getSpecularDominantDirection(n, r, pixel.roughness);
-}
-
-// This function returns an IBL lookup direction, taking into account the current IBL type (e.g. infinite spherical, finite/local sphere/box).
-vec3 GetAdjustedReflectedDirection(const MaterialInputs material, const PixelParams pixel, const vec3 normal) {
-    vec3 defaultReflected = getReflectedVector(pixel, normal);
-
-    if (frameUniforms.iblTechnique == IBL_TECHNIQUE_INFINITE) return defaultReflected;
-
-    // intersect the ray rayPos + t * rayDir with the finite geometry; done in the coordinate system of the finite geometry
-    vec3 rayPos = getWorldPosition() + getWorldOffset() - frameUniforms.iblCenter;
-    vec3 rayDir = defaultReflected;
-
-    vec3  r  = vec3(0.0); // resulting direction
-    float t0 = -1.0f;     // intersection parameter between ray and finite IBL geometry
-    
-    if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_SPHERE) {
-        float R2 = frameUniforms.iblHalfExtents.r; // we store the squared radius to shave off a multiplication here
-        float A = 1.0; // in general, this should be dot(rayDir, rayDir) but we have just normalized it a couple of lines ago
-        float B = 2.0 * dot(rayPos, rayDir);
-        float C = dot(rayPos, rayPos) - R2;
-        vec2 roots = SolveQuadratic(A, B, C);
-        t0 = GetSmallestPositive(roots.x, roots.y);
-    }
-    else if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_BOX) {
-        vec2 roots = IntersectAABB(rayPos, rayDir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
-        t0 = GetSmallestPositive(roots.x, roots.y);
-    }
-
-    // translate results back to world space
-    vec3 intersection_point = ( t0 >= 0.0 ) ? rayPos + t0 * rayDir : defaultReflected;
-    r = normalize(intersection_point);
-
-    return r;
 }
 
 //------------------------------------------------------------------------------
@@ -495,12 +424,11 @@ void evaluateClearCoatIBL(const MaterialInputs material, const PixelParams pixel
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
     float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
-    vec3 clearCoatR = GetAdjustedReflectedDirection(material, pixel, shading_clearCoatNormal);
+    vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
 #else
     float clearCoatNoV = shading_NoV;
     vec3 clearCoatR = shading_reflected;
 #endif
-
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
@@ -677,8 +605,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
-    vec3 r = GetAdjustedReflectedDirection(material, pixel, shading_normal);
-
+    vec3 r = getReflectedVector(pixel, shading_normal);
     Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling

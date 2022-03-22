@@ -22,7 +22,6 @@
 #include <backend/Handle.h>
 
 #include <filament/IndirectLight.h>
-#include <filament/Options.h>
 #include <filament/Texture.h>
 
 #include <utils/compiler.h>
@@ -34,8 +33,6 @@
 namespace filament {
 
 class FEngine;
-
-using IblOptions = filament::IblOptions;
 
 class FIndirectLight : public IndirectLight {
 public:
@@ -60,18 +57,6 @@ public:
     static math::float3 getDirectionEstimate(const math::float3 sh[9]) noexcept;
     static math::float4 getColorEstimate(const math::float3 sh[9], math::float3 direction) noexcept;
 
-    void setIblOptions(IblOptions const& options) noexcept;
-    const IblOptions& getIblOptions() const noexcept;
-
-    void setIblTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
-    IblOptions::IblTechnique getIblTechnique() const noexcept;
-
-    void setIblCenter(const math::float3& iblCenter) noexcept;
-    const math::float3& getIblCenter() const noexcept;
-
-    void setIblHalfExtents(const math::float3& iblHalfExtents) noexcept;
-    const math::float3& getIblHalfExtents() const noexcept;
-
 private:
     FTexture const* mReflectionsTexture = nullptr;
     FTexture const* mIrradianceTexture = nullptr;
@@ -79,7 +64,6 @@ private:
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;
     uint8_t mLevelCount = 0;
-    IblOptions mIblOptions;
 };
 
 FILAMENT_UPCAST(IndirectLight)

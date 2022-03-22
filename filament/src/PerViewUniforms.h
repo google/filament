@@ -34,7 +34,6 @@ struct FogOptions;
 struct DynamicResolutionOptions;
 struct AmbientOcclusionOptions;
 struct VsmShadowOptions;
-struct IblOptions;
 
 struct CameraInfo;
 struct ShadowMappingUniforms;
@@ -68,8 +67,6 @@ public:
 
     void prepareDirectionalLight(float exposure,
             math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;
-
-    void prepareIblLight(const IblOptions& options) noexcept;
 
     void prepareAmbientLight(FIndirectLight const& ibl, float intensity, float exposure) noexcept;
 

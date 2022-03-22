@@ -191,7 +191,6 @@ struct LightSettings {
     float skyIntensity = 30000.0f;
     float iblRotation = 0.0f;
     Skybox::SkyboxType skyboxType = Skybox::SkyboxType::ENVIRONMENT;
-    IblOptions iblOptions{};
 };
 
 struct ViewerOptions {

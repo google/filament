@@ -1441,7 +1441,6 @@ void SimpleViewer::updateUserInterface() {
     }
 
     auto& light = mSettings.lighting;
-    auto& iblOptions = mSettings.lighting.iblOptions;
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();
         if (ImGui::CollapsingHeader("Skybox")) {
@@ -1451,35 +1450,6 @@ void SimpleViewer::updateUserInterface() {
         if (ImGui::CollapsingHeader("Indirect light")) {
             ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
             ImGui::SliderAngle("IBL rotation", &light.iblRotation);
-
-            if (ImGui::RadioButton("Infinite", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_INFINITE)) {
-                iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_INFINITE;
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Sphere", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_SPHERE)) {
-                iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_SPHERE;
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Box", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_BOX)) {
-                iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_BOX;
-            }
-
-            if (iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_SPHERE) {
-                static float radius = std::sqrt(iblOptions.iblHalfExtents.x);
-
-                ImGui::SliderFloat3("Sphere center", iblOptions.iblCenter.v, -10.0f, 10.0f);
-                ImGui::SliderFloat("Sphere radius", &radius, 0.0f, 256.0f);
-
-                iblOptions.iblHalfExtents.x = radius * radius;
-            }
-            else if (iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_BOX) {
-                static filament::math::float3 iblHalfExtents = iblOptions.iblHalfExtents;
-
-                ImGui::SliderFloat3("Box center", iblOptions.iblCenter.v, -10.0f, 10.0f);
-                ImGui::SliderFloat3("Box half extents", iblHalfExtents.v, -10.0f, 10.0f);
-
-                iblOptions.iblHalfExtents = iblHalfExtents;
-            }
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
@@ -1645,7 +1615,6 @@ void SimpleViewer::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
-    mIndirectLight->setIblOptions(mSettings.lighting.iblOptions);
 
     if (light.enableSunlight) {
         mScene->addEntity(mSunlight);
