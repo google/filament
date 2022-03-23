@@ -589,7 +589,6 @@ Filament.loadClassExtensions = function() {
             asyncInterval, config) {
         const asset = this;
         const engine = this.getEngine();
-        const names = this.getResourceUris();
         const interval = asyncInterval || 30;
         const defaults = {
             normalizeSkinningWeights: true,
@@ -605,13 +604,10 @@ Filament.loadClassExtensions = function() {
         // Construct the set of URI strings to fetch.
         const urlset = new Set();
         const urlToName = {};
-        for (let i = 0; i < names.size(); i++) {
-            const name = names.get(i);
-            if (name) {
-                const url = '' + new URL(name, basePath);
-                urlToName[url] = name;
-                urlset.add(url);
-            }
+        for (const name of this.getResourceUris()) {
+            const url = '' + new URL(name, basePath);
+            urlToName[url] = name;
+            urlset.add(url);
         }
 
         // Construct a resource loader and start decoding after all textures are fetched.
@@ -672,4 +668,12 @@ Filament.loadClassExtensions = function() {
     Filament.gltfio$FilamentAsset.prototype.getCameraEntities = function() {
         return Filament.vectorToArray(this._getCameraEntities());
     };
+
+    Filament.gltfio$FilamentAsset.prototype.getResourceUris = function(buffer, instances) {
+        return Filament.vectorToArray(this._getResourceUris());
+    }
+
+    Filament.gltfio$FilamentAsset.prototype.getMaterialVariantNames = function(buffer, instances) {
+        return Filament.vectorToArray(this._getMaterialVariantNames());
+    }
 };

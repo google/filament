@@ -289,6 +289,14 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         mResult->mAssetExtras = CString(srcAsset->json + asset.extras.start_offset, extras_size);
     }
 
+    // Check if the asset has variants.
+    if (srcAsset->variants_count > 0) {
+        mResult->mVariants.reserve(srcAsset->variants_count);
+        for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
+            mResult->mVariants.push_back({CString(srcAsset->variants[i].name)});
+        }
+    }
+
     if (numInstances == 0) {
         // For each scene root, recursively create all entities.
         for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
@@ -481,6 +489,23 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             continue;
         }
 
+        // Add variants if they exist.
+        for (size_t i = 0, n = inputPrim->mappings_count; i < n; i++) {
+            const size_t variantIndex = inputPrim->mappings[i].variant;
+            const cgltf_material* material = inputPrim->mappings[i].material;
+            if (variantIndex >= mResult->mVariants.size()) {
+                mError = true;
+                break;
+            }
+            MaterialInstance* mi = createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
+            if (!mi) {
+                mError = true;
+                break;
+            }
+            mResult->mDependencyGraph.addEdge(entity, mi);
+            mResult->mVariants[variantIndex].mappings.push_back({entity, index, mi});
+        }
+
         // Expand the object-space bounding box.
         aabb.min = min(outputPrim->aabb.min, aabb.min);
         aabb.max = max(outputPrim->aabb.max, aabb.max);
@@ -499,9 +524,9 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
 
     auto& morphTargetNames = mResult->mMorphTargetNames[entity];
     assert_invariant(morphTargetNames.empty());
-    morphTargetNames.resize(numMorphTargets);
+    morphTargetNames = FixedCapacityVector<CString>(numMorphTargets);
     for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
-        morphTargetNames[i] = utils::StaticString::make(mesh->target_names[i]);
+        morphTargetNames[i] = StaticString::make(mesh->target_names[i]);
     }
 
     const Aabb transformed = aabb.transform(worldTransform);

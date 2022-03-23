@@ -235,6 +235,30 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* e
     }
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMaterialVariantCount(JNIEnv*, jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return (jint) asset->getMaterialVariantCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMaterialVariantNames(JNIEnv* env, jclass,
+        jlong nativeAsset, jobjectArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    for (int i = 0; i < asset->getMaterialVariantCount(); ++i) {
+        const char* name = asset->getMaterialVariantName(i);
+        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(name));
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nApplyMaterialVariant(JNIEnv* env, jclass,
+        jlong nativeAsset, jint variantIndex) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    asset->applyMaterialVariant(variantIndex);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nReleaseSourceData(JNIEnv* env, jclass,
         jlong nativeAsset) {

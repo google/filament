@@ -1822,6 +1822,8 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
 
     .function("popRenderable", &FilamentAsset::popRenderable)
 
+    .function("applyMaterialVariant", &FilamentAsset::applyMaterialVariant)
+
     .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<const MaterialInstance*>,
             (FilamentAsset* self), {
         const filament::MaterialInstance* const* ptr = self->getMaterialInstances();
@@ -1834,11 +1836,19 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return std::vector<FilamentInstance*>(ptr, ptr + self->getAssetInstanceCount());
     }), allow_raw_pointers())
 
-    .function("getResourceUris", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
+    .function("_getResourceUris", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
         std::vector<std::string> retval;
         auto uris = self->getResourceUris();
         for (size_t i = 0, len = self->getResourceUriCount(); i < len; ++i) {
             retval.push_back(uris[i]);
+        }
+        return retval;
+    }), allow_raw_pointers())
+
+    .function("_getMaterialVariantNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
+        std::vector<std::string> retval(self->getMaterialVariantCount());
+        for (size_t i = 0, len = retval.size(); i < len; ++i) {
+            retval[i] = self->getMaterialVariantName(i);
         }
         return retval;
     }), allow_raw_pointers())
