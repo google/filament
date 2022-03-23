@@ -63,6 +63,7 @@ class FilamentViewer extends LitElement {
         this.sky = null;          // Path to skybox ktx.
         this.enableDrop = null;   // Enables drag and drop.
         this.intensity = 30000;   // Intensity of the image based light.
+        this.materialVariant = 0; // Index of material variant.
 
         // Private properties:
         this.filamentTasks = new FilamentTasks();
@@ -79,6 +80,7 @@ class FilamentViewer extends LitElement {
             sky: { type: String },
             enableDrop: { type: Boolean },
             intensity: { type: Number },
+            materialVariant: { type: Number },
         }
     }
 
@@ -111,6 +113,7 @@ class FilamentViewer extends LitElement {
         if (props.has("intensity") && this.indirectLight) {
             this.indirectLight.setIntensity(this.intensity);
         }
+        if (props.has("materialVariant") && this.asset) this._applyMaterialVariant();
     }
 
     static get styles() {
@@ -370,6 +373,7 @@ class FilamentViewer extends LitElement {
             this.asset.loadResources(() => {
                 this.animator = this.asset.getAnimator();
                 this.animationStartTime = Date.now();
+                this._applyMaterialVariant();
             }, null, basePath);
 
             this._updateOverlay();
@@ -422,6 +426,20 @@ class FilamentViewer extends LitElement {
         this.engine.execute();
 
         window.requestAnimationFrame(this._renderFrame.bind(this));
+    }
+
+    _applyMaterialVariant() {
+        if (!this.hasAttribute("materialVariant")) {
+            return;
+        }
+        const names = this.asset.getMaterialVariantNames();
+        const index = this.materialVariant;
+        if (index < 0 || index >= names.length) {
+            console.error(`Material variant ${index} does not exist in this asset.`);
+            return;
+        }
+        console.info(this.src, `Applying material variant: ${names[index]}`);
+        this.asset.applyMaterialVariant(index);
     }
 }
 

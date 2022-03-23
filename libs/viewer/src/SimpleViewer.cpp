@@ -966,8 +966,24 @@ void SimpleViewer::updateUserInterface() {
             ImGui::Unindent();
         }
 
-        // We do not yet support animation selection in the remote UI. To support this feature, we
-        // would need to send a message from DebugServer to the WebSockets client.
+        // TODO(prideout): add support for animation and variant selection in the remote UI. To
+        // support these features, we will need to send a message (list of strings) from DebugServer
+        // to the WebSockets client.
+
+        if (mAsset->getMaterialVariantCount() > 0 && ImGui::CollapsingHeader("Variants")) {
+            ImGui::Indent();
+            int selectedVariant = mCurrentVariant;
+            for (size_t i = 0, count = mAsset->getMaterialVariantCount(); i < count; ++i) {
+                const char* label = mAsset->getMaterialVariantName(i);
+                ImGui::RadioButton(label, &selectedVariant, i);
+            }
+            if (selectedVariant != mCurrentVariant) {
+                mCurrentVariant = selectedVariant;
+                mAsset->applyMaterialVariant(mCurrentVariant);
+            }
+            ImGui::Unindent();
+        }
+
         if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;

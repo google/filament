@@ -237,6 +237,7 @@ private:
 
     // Properties that can be changed from the UI.
     int mCurrentAnimation = 1; // It is a 1-based index and 0 means not playing animation
+    int mCurrentVariant = 0;
     bool mResetAnimation = true;
     bool mEnableWireframe = false;
     int mVsmMsaaSamplesLog2 = 1;
