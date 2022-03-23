@@ -80,6 +80,7 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
 
 void FIndexBuffer::setExternalBuffer(FEngine& engine, intptr_t externalBuffer) {
     ASSERT_PRECONDITION(mExternalBuffersEnabled, "Please use setBuffer()");
+    engine.getDriverApi().setupExternalResource(externalBuffer);
     engine.getDriverApi().setExternalIndexBuffer(mHandle, externalBuffer);
 }
 

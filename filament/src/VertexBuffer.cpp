@@ -261,9 +261,11 @@ void FVertexBuffer::setExternalBufferAt(FEngine& engine, uint8_t bufferIndex,
     ASSERT_PRECONDITION(mExternalBuffersEnabled, "Please use setBufferAt()");
     if (bufferIndex < mBufferCount) {
         assert_invariant(mBufferObjects[bufferIndex]);
+        engine.getDriverApi().setupExternalResource(externalBuffer);
         engine.getDriverApi().setExternalBuffer(mBufferObjects[bufferIndex], externalBuffer);
     } else {
         ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
+        engine.getDriverApi().cancelExternalResource(externalBuffer);
     }
 }
 

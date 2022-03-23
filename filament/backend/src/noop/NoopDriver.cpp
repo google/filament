@@ -189,6 +189,12 @@ void NoopDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor
     scheduleDestroy(std::move(p));
 }
 
+void NoopDriver::setupExternalResource(intptr_t externalResource) {
+}
+
+void NoopDriver::cancelExternalResource(intptr_t externalResource) {
+}
+
 void NoopDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
 }
 

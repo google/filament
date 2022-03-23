@@ -722,6 +722,16 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
     scheduleDestroy(std::move(data));
 }
 
+void MetalDriver::setupExternalResource(intptr_t externalResource) {
+    CFTypeRef bufferRef = (CFTypeRef) externalResource;
+    CFRetain(bufferRef);
+}
+
+void MetalDriver::cancelExternalResource(intptr_t externalResource) {
+    CFTypeRef bufferRef = (CFTypeRef) externalResource;
+    CFRelease(bufferRef);
+}
+
 void MetalDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
     ib->buffer.releaseExternalBuffer();

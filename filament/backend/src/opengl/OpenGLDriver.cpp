@@ -1612,6 +1612,12 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
+void OpenGLDriver::setupExternalResource(intptr_t externalBuffer) {
+}
+
+void OpenGLDriver::cancelExternalResource(intptr_t externalBuffer) {
+}
+
 void OpenGLDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
 #ifdef GL_EXT_external_buffer
     DEBUG_MARKER()
