@@ -17,6 +17,7 @@
 #include "MetalBlitter.h"
 
 #include "MetalContext.h"
+#include "MetalUtils.h"
 
 #include <utils/Panic.h>
 
@@ -145,8 +146,6 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     bool blitColor = args.blitColor();
     bool blitDepth = args.blitDepth();
 
-    ASSERT_PRECONDITION(args.source.slice == 0u, "Source attachment must have slice of 0.");
-
     ASSERT_PRECONDITION(args.source.region.size.depth == args.destination.region.size.depth,
             "Blitting requires the source and destination regions to have the same depth.");
 
@@ -223,7 +222,7 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
 
             id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
             [blitEncoder copyFromTexture:args.source.color
-                             sourceSlice:0
+                             sourceSlice:args.source.slice
                              sourceLevel:args.source.level
                             sourceOrigin:args.source.region.origin
                               sourceSize:args.source.region.size
@@ -244,7 +243,7 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
 
             id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
             [blitEncoder copyFromTexture:args.source.depth
-                             sourceSlice:0
+                             sourceSlice:args.source.slice
                              sourceLevel:args.source.level
                             sourceOrigin:args.source.region.origin
                               sourceSize:args.source.region.size
@@ -323,12 +322,22 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
     id<MTLRenderPipelineState> pipeline = mContext.pipelineStateCache.getOrCreateState(pipelineState);
     [encoder setRenderPipelineState:pipeline];
 
+    // For texture arrays, create a view of the texture at the given slice (layer).
+    id<MTLTexture> srcTextureColor = args.source.color;
+    if (srcTextureColor && srcTextureColor.textureType == MTLTextureType2DArray) {
+        srcTextureColor = createTextureViewWithSingleSlice(srcTextureColor, args.source.slice);
+    }
+    id<MTLTexture> srcTextureDepth = args.source.depth;
+    if (srcTextureDepth && srcTextureDepth.textureType == MTLTextureType2DArray) {
+        srcTextureDepth = createTextureViewWithSingleSlice(srcTextureDepth, args.source.slice);
+    }
+
     if (blitColor) {
-        [encoder setFragmentTexture:args.source.color atIndex:0];
+        [encoder setFragmentTexture:srcTextureColor atIndex:0];
     }
 
     if (blitDepth) {
-        [encoder setFragmentTexture:args.source.depth atIndex:1];
+        [encoder setFragmentTexture:srcTextureDepth atIndex:1];
     }
 
     SamplerMinFilter filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
