@@ -102,7 +102,7 @@ public:
         return false;
     }
 
-    // called on the application thread to allow Filament to take ownership of the image
+    // called on the application thread to allow Filament to take ownership of the resource
     virtual void retainExternalResource(intptr_t externalResource) noexcept {}
 
     // called once when a new SAMPLER_EXTERNAL texture is created.
