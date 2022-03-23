@@ -307,7 +307,6 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, getTimerQueryValue, backend::TimerQueryHandl
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::SyncStatus, getSyncStatus, backend::SyncHandle, sh)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalResource, intptr_t, externalResource)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, cancelExternalResource, intptr_t, externalResource)
 
 /*
  * Updating driver objects

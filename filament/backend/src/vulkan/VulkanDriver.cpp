@@ -847,9 +847,6 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
 void VulkanDriver::setupExternalResource(intptr_t externalResource) {
 }
 
-void VulkanDriver::cancelExternalResource(intptr_t externalResource) {
-}
-
 void VulkanDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
     ASSERT_PRECONDITION(false, "setExternalIndexBuffer() is not implemented for backend!");
 }
