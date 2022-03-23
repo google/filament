@@ -4,12 +4,9 @@ set(SOURCES
         ../Logger.cpp
         ../SpvBuilder.cpp
         ../SpvPostProcess.cpp
+        ../SPVRemapper.cpp
         ../doc.cpp
         ../disassemble.cpp)
-
-set(SPVREMAP_SOURCES
-        ../SPVRemapper.cpp
-        ../doc.cpp)
 
 set(HEADERS
         ../bitutils.h
@@ -23,11 +20,8 @@ set(HEADERS
         ../SpvBuilder.h
         ../spvIR.h
         ../doc.h
-        ../disassemble.h)
-
-set(SPVREMAP_HEADERS
         ../SPVRemapper.h
-        ../doc.h)
+        ../disassemble.h)
 
 if(ENABLE_AMD_EXTENSIONS)
     list(APPEND
@@ -49,28 +43,20 @@ set_property(TARGET SPIRV PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 glslang_add_build_info_dependency(SPIRV)
 
-add_library(SPVRemapper STATIC ${SPVREMAP_SOURCES} ${SPVREMAP_HEADERS})
-set_property(TARGET SPVRemapper PROPERTY FOLDER glslang)
-set_property(TARGET SPVRemapper PROPERTY POSITION_INDEPENDENT_CODE ON)
-
 if(ENABLE_OPT)
     target_include_directories(SPIRV
             PRIVATE ${spirv-tools_SOURCE_DIR}/include
             PRIVATE ${spirv-tools_SOURCE_DIR}/source
             )
-    target_link_libraries(SPIRV glslang SPIRV-Tools-opt SPVRemapper)
+    target_link_libraries(SPIRV glslang SPIRV-Tools-opt)
 else()
     target_link_libraries(SPIRV glslang)
 endif(ENABLE_OPT)
 
 if(WIN32)
     source_group("Source" FILES ${SOURCES} ${HEADERS})
-    source_group("Source" FILES ${SPVREMAP_SOURCES} ${SPVREMAP_HEADERS})
 endif(WIN32)
 
 if(ENABLE_GLSLANG_INSTALL)
-    install(TARGETS SPIRV SPVRemapper
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-    install(FILES ${HEADERS} ${SPVREMAP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/SPIRV/)
+    install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/SPIRV/)
 endif(ENABLE_GLSLANG_INSTALL)
