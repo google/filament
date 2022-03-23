@@ -146,7 +146,8 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mLevelCount = std::min(builder->mLevels, FTexture::maxLevelCount(mWidth, mHeight));
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    if (UTILS_LIKELY(builder->mImportedId == 0)) {
+    intptr_t importedId = builder->mImportedId;
+    if (UTILS_LIKELY(importedId == 0)) {
         if (UTILS_LIKELY(!builder->mTextureIsSwizzled)) {
             mHandle = driver.createTexture(
                     mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
@@ -157,8 +158,10 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
                     builder->mSwizzle[3]);
         }
     } else {
-        mHandle = driver.importTexture(builder->mImportedId,
-                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+        driver.setupExternalResource(importedId);
+        mHandle = driver.importTexture(
+                importedId, mTarget, mLevelCount, mFormat, mSampleCount,
+                mWidth, mHeight, mDepth, mUsage);
     }
 }
 
