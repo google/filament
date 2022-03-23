@@ -723,8 +723,9 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
 }
 
 void MetalDriver::setupExternalResource(intptr_t externalResource) {
-    CFTypeRef bufferRef = (CFTypeRef) externalResource;
-    CFRetain(bufferRef);
+    if(externalResource) {
+        CFRetain((CFTypeRef) bufferRef);
+    }
 }
 
 void MetalDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
