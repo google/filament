@@ -907,12 +907,6 @@ void VulkanDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     scheduleDestroy(std::move(data));
 }
 
-void VulkanDriver::setupExternalImage(void* image) {
-}
-
-void VulkanDriver::cancelExternalImage(void* image) {
-}
-
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery*>(tqh);
 

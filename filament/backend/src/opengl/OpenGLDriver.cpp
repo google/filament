@@ -1612,7 +1612,8 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::setupExternalResource(intptr_t externalBuffer) {
+void OpenGLDriver::setupExternalResource(intptr_t externalResource) {
+    mPlatform.retainExternalResource(externalResource);
 }
 
 void OpenGLDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
@@ -2064,14 +2065,6 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
     scheduleDestroy(std::move(p));
 
     CHECK_GL_ERROR(utils::slog.e)
-}
-
-void OpenGLDriver::setupExternalImage(void* image) {
-    mPlatform.retainExternalImage(image);
-}
-
-void OpenGLDriver::cancelExternalImage(void* image) {
-    mPlatform.releaseExternalImage(image);
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {

@@ -362,18 +362,18 @@ void FTexture::setImage(FEngine& engine, size_t level,
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
+        // The call to setupExternalResource is synchronous, and allows the driver to take ownership of
+        // the external resource (here: an image) on this thread, if necessary.
+        engine.getDriverApi().setupExternalResource((intptr_t) image);
         engine.getDriverApi().setExternalImage(mHandle, image);
     }
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
     if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
+        // The call to setupExternalResource is synchronous, and allows the driver to take ownership of
+        // the external resource (here: an image) on this thread, if necessary.
+        engine.getDriverApi().setupExternalResource((intptr_t) image);
         engine.getDriverApi().setExternalImagePlane(mHandle, image, plane);
     }
 }

@@ -103,10 +103,7 @@ public:
     }
 
     // called on the application thread to allow Filament to take ownership of the image
-    virtual void retainExternalImage(void* externalImage) noexcept {}
-
-    // called to release ownership of the image
-    virtual void releaseExternalImage(void* externalImage) noexcept {}
+    virtual void retainExternalResource(intptr_t externalResource) noexcept {}
 
     // called once when a new SAMPLER_EXTERNAL texture is created.
     virtual void createExternalImageTexture(void* texture) noexcept {}

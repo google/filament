@@ -223,12 +223,6 @@ void NoopDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     scheduleDestroy(std::move(data));
 }
 
-void NoopDriver::setupExternalImage(void* image) {
-}
-
-void NoopDriver::cancelExternalImage(void* image) {
-}
-
 bool NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     return false;
 }

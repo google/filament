@@ -723,8 +723,13 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
 }
 
 void MetalDriver::setupExternalResource(intptr_t externalResource) {
+    // This is called when passing in some kind of external resource. The expected inputs are
+    // objects of type id<MTLBuffer>, id<MTLTexture> casted with __bridge cast or
+    // CVPixelBufferRef objects, as either an external image or swap chain. Here we take
+    // ownership of the passed in buffer. It will be released the next time setExternal* is called.
     if(externalResource) {
-        CFRetain((CFTypeRef) bufferRef);
+        CFTypeRef resourceRef = (CFTypeRef) externalResource;
+        CFRetain(resourceRef);
     }
 }
 
@@ -778,20 +783,6 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     auto tex = handle_cast<MetalTexture>(th);
     tex->loadCubeImage(faceOffsets, level, data);
     scheduleDestroy(std::move(data));
-}
-
-void MetalDriver::setupExternalImage(void* image) {
-    // This is called when passing in a CVPixelBuffer as either an external image or swap chain.
-    // Here we take ownership of the passed in buffer. It will be released the next time
-    // setExternalImage is called, when the texture is destroyed, or when the swap chain is
-    // destroyed.
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
-    CVPixelBufferRetain(pixelBuffer);
-}
-
-void MetalDriver::cancelExternalImage(void* image) {
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
-    CVPixelBufferRelease(pixelBuffer);
 }
 
 void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
