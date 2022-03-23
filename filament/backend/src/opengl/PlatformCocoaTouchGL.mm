@@ -184,7 +184,7 @@ bool PlatformCocoaTouchGL::setExternalImage(void* externalImage, void* texture) 
 void PlatformCocoaTouchGL::retainExternalResource(intptr_t externalResource) noexcept {
     // Take ownership of the passed in buffer. It will be released the next time
     // setExternalResource is called, or when the texture is destroyed.
-    if(externalResource) {
+    if (externalResource) {
         CFTypeRef resourceRef = (CFTypeRef) externalResource;
         CFRetain(resourceRef);
     }

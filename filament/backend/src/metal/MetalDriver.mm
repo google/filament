@@ -727,7 +727,7 @@ void MetalDriver::setupExternalResource(intptr_t externalResource) {
     // objects of type id<MTLBuffer>, id<MTLTexture> casted with __bridge cast or
     // CVPixelBufferRef objects, as either an external image or swap chain. Here we take
     // ownership of the passed in buffer. It will be released the next time setExternal* is called.
-    if(externalResource) {
+    if (externalResource) {
         CFTypeRef resourceRef = (CFTypeRef) externalResource;
         CFRetain(resourceRef);
     }
