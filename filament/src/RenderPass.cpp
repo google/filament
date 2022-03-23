@@ -444,7 +444,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // correct for TransparencyMode::DEFAULT -- i.e. cancel the command
                     key |= select(mode == TransparencyMode::DEFAULT);
 
-                    // cancel command if asked to filter translucents
+                    // cancel command if asked to filter translucent
                     key |= select(filterTranslucentObjects);
 
                     *curr = cmdColor;
