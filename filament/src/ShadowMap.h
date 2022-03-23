@@ -202,7 +202,8 @@ private:
 
     static size_t intersectFrustumWithBox(
             FrustumBoxIntersection& outVertices,
-            const math::float3* wsFrustumCorners,
+            Frustum const& wsFrustum,
+            math::float3 const* wsFrustumCorners,
             Aabb const& wsBox);
 
     static math::mat4f warpFrustum(float n, float f) noexcept;
