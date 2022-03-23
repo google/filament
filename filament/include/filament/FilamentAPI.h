@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_FILAMENTAPI_H
 
 #include <utils/compiler.h>
+#include <utils/PrivateImplementation.h>
 
 #include <stddef.h>
 
@@ -52,39 +53,8 @@ public:
     static void  operator delete[](void*)  = delete;
 };
 
-
-/**
- * \privatesection
- * BuilderBase is used to hide the implementation details of builders and ensure a higher
- * level of backward binary compatibility.
- * The actual implementation is in src/FilamentAPI-impl.h"
- */
-template <typename T>
-class BuilderBase {
-public:
-    // none of these methods must be implemented inline because it's important that their
-    // implementation be hidden from the public headers.
-    template<typename ... ARGS>
-    explicit BuilderBase(ARGS&& ...) noexcept;
-    BuilderBase() noexcept;
-    ~BuilderBase() noexcept;
-    BuilderBase(BuilderBase const& rhs) noexcept;
-    BuilderBase& operator = (BuilderBase const& rhs) noexcept;
-
-    // move ctor and copy operator can be implemented inline and don't need to be exported
-    BuilderBase(BuilderBase&& rhs) noexcept : mImpl(rhs.mImpl) { rhs.mImpl = nullptr; }
-    BuilderBase& operator = (BuilderBase&& rhs) noexcept {
-        auto temp = mImpl;
-        mImpl = rhs.mImpl;
-        rhs.mImpl = temp;
-        return *this;
-    }
-
-protected:
-    T* mImpl = nullptr;
-    inline T* operator->() noexcept { return mImpl; }
-    inline T const* operator->() const noexcept { return mImpl; }
-};
+template<typename T>
+using BuilderBase = utils::PrivateImplementation<T>;
 
 } // namespace filament
 

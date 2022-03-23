@@ -15,80 +15,43 @@
  */
 
 #include <utils/ostream.h>
+
+#include "ostream_.h"
+
 #include <utils/compiler.h>
+
+#define UTILS_PRIVATE_IMPLEMENTATION_NON_COPYABLE
+#include <utils/PrivateImplementation-impl.h>
 
 #include <algorithm>
 #include <stdarg.h>
-#include <string>
+
+template class utils::PrivateImplementation<utils::io::ostream_>;
 
 namespace utils::io {
 
 ostream::~ostream() = default;
 
-// don't allocate any memory before we actually use the log because one of these is created
-// per thread.
-ostream::Buffer::Buffer() noexcept = default;
-
-ostream::Buffer::~Buffer() noexcept {
-    // note: on Android pre r14, thread_local destructors are not called
-    free(buffer);
+ostream::Buffer& ostream::getBuffer() noexcept {
+    return mImpl->mData;
 }
 
-void ostream::Buffer::advance(ssize_t n) noexcept {
-    if (n > 0) {
-        size_t written = n < size ? size_t(n) : size;
-        curr += written;
-        size -= written;
-    }
-}
-
-void ostream::Buffer::reserve(size_t newSize) noexcept {
-    size_t offset = curr - buffer;
-    if (buffer == nullptr) {
-        buffer = (char*)malloc(newSize);
-    } else {
-        buffer = (char*)realloc(buffer, newSize);
-    }
-    assert(buffer);
-    capacity = newSize;
-    curr = buffer + offset;
-    size = capacity - offset;
-}
-
-void ostream::Buffer::reset() noexcept {
-    // aggressively shrink the buffer
-    if (capacity > 1024) {
-        free(buffer);
-        buffer = (char*)malloc(1024);
-        capacity = 1024;
-    }
-    curr = buffer;
-    size = capacity;
-}
-
-
-std::pair<char*, size_t> ostream::Buffer::grow(size_t s) noexcept {
-    if (UTILS_UNLIKELY(size < s)) {
-        size_t used = curr - buffer;
-        size_t newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
-        reserve(newCapacity);
-        assert(size >= s);
-    }
-    return { curr, size };
+ostream::Buffer const& ostream::getBuffer() const noexcept {
+    return mImpl->mData;
 }
 
 const char* ostream::getFormat(ostream::type t) const noexcept {
     switch (t) {
-        case type::SHORT:       return mShowHex ? "0x%hx"  : "%hd";
-        case type::USHORT:      return mShowHex ? "0x%hx"  : "%hu";
+        case type::SHORT:       return mImpl->mShowHex ? "0x%hx"  : "%hd";
+        case type::USHORT:      return mImpl->mShowHex ? "0x%hx"  : "%hu";
         case type::CHAR:        return "%c";
         case type::UCHAR:       return "%c";
-        case type::INT:         return mShowHex ? "0x%x"   : "%d";
-        case type::UINT:        return mShowHex ? "0x%x"   : "%u";
-        case type::LONG:        return mShowHex ? "0x%lx"  : "%ld";
-        case type::ULONG:       return mShowHex ? "0x%lx"  : "%lu";
-        case type::LONG_LONG:   return mShowHex ? "0x%llx" : "%lld";
-        case type::ULONG_LONG:  return mShowHex ? "0x%llx" : "%llu";
+        case type::INT:         return mImpl->mShowHex ? "0x%x"   : "%d";
+        case type::UINT:        return mImpl->mShowHex ? "0x%x"   : "%u";
+        case type::LONG:        return mImpl->mShowHex ? "0x%lx"  : "%ld";
+        case type::ULONG:       return mImpl->mShowHex ? "0x%lx"  : "%lu";
+        case type::LONG_LONG:   return mImpl->mShowHex ? "0x%llx" : "%lld";
+        case type::ULONG_LONG:  return mImpl->mShowHex ? "0x%llx" : "%llu";
         case type::DOUBLE:      return "%f";
         case type::LONG_DOUBLE: return "%Lf";
     }
@@ -107,7 +70,7 @@ ostream& ostream::print(const char* format, ...) noexcept {
 
 
     { // scope for the lock
-        std::lock_guard lock(mLock);
+        std::lock_guard lock(mImpl->mLock);
 
         Buffer& buf = getBuffer();
 
@@ -207,13 +170,66 @@ ostream& ostream::operator<<(const void* value) noexcept {
 }
 
 ostream& ostream::hex() noexcept {
-    mShowHex = true;
+    mImpl->mShowHex = true;
     return *this;
 }
 
 ostream& ostream::dec() noexcept {
-    mShowHex = false;
+    mImpl->mShowHex = false;
     return *this;
+}
+
+// ------------------------------------------------------------------------------------------------
+
+// don't allocate any memory before we actually use the log because one of these is created
+// per thread.
+ostream::Buffer::Buffer() noexcept = default;
+
+ostream::Buffer::~Buffer() noexcept {
+    // note: on Android pre r14, thread_local destructors are not called
+    free(buffer);
+}
+
+void ostream::Buffer::advance(ssize_t n) noexcept {
+    if (n > 0) {
+        size_t written = n < size ? size_t(n) : size;
+        curr += written;
+        size -= written;
+    }
+}
+
+void ostream::Buffer::reserve(size_t newSize) noexcept {
+    size_t offset = curr - buffer;
+    if (buffer == nullptr) {
+        buffer = (char*)malloc(newSize);
+    } else {
+        buffer = (char*)realloc(buffer, newSize);
+    }
+    assert(buffer);
+    capacity = newSize;
+    curr = buffer + offset;
+    size = capacity - offset;
+}
+
+void ostream::Buffer::reset() noexcept {
+    // aggressively shrink the buffer
+    if (capacity > 1024) {
+        free(buffer);
+        buffer = (char*)malloc(1024);
+        capacity = 1024;
+    }
+    curr = buffer;
+    size = capacity;
+}
+
+std::pair<char*, size_t> ostream::Buffer::grow(size_t s) noexcept {
+    if (UTILS_UNLIKELY(size < s)) {
+        size_t used = curr - buffer;
+        size_t newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
+        reserve(newCapacity);
+        assert(size >= s);
+    }
+    return { curr, size };
 }
 
 } // namespace utils::io

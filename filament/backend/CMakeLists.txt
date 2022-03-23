@@ -13,7 +13,6 @@ set(PUBLIC_HDRS
         include/backend/CallbackHandler.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
-        include/backend/ShaderStageFlags.h
         include/backend/PipelineState.h
         include/backend/PixelBufferDescriptor.h
         include/backend/Platform.h

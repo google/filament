@@ -19,24 +19,26 @@
 
 
 #include <backend/DriverEnums.h>
-#include <backend/ShaderStageFlags.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 
-#include <tsl/robin_map.h>
-
-#include <vector>
+#include <initializer_list>
+#include <unordered_map>
 
 namespace filament {
 
 class SamplerInterfaceBlock {
 public:
     SamplerInterfaceBlock();
-    SamplerInterfaceBlock(const SamplerInterfaceBlock& rhs);
+
+    SamplerInterfaceBlock(const SamplerInterfaceBlock& rhs) = delete;
     SamplerInterfaceBlock(SamplerInterfaceBlock&& rhs) noexcept;
-    SamplerInterfaceBlock& operator=(const SamplerInterfaceBlock& rhs);
-    SamplerInterfaceBlock& operator=(SamplerInterfaceBlock&& rhs) /*noexcept*/;
+
+    SamplerInterfaceBlock& operator=(const SamplerInterfaceBlock& rhs) = delete;
+    SamplerInterfaceBlock& operator=(SamplerInterfaceBlock&& rhs) noexcept;
+
     ~SamplerInterfaceBlock() noexcept;
 
     using Type = backend::SamplerType;
@@ -44,76 +46,49 @@ public:
     using Precision = backend::Precision;
     using SamplerParams = backend::SamplerParams;
 
+    struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
+        utils::CString name;    // name of this sampler
+        uint8_t offset;         // offset in "Sampler" of this sampler in the buffer
+        Type type;              // type of this sampler
+        Format format;          // format of this sampler
+        Precision precision;    // precision of this sampler
+        bool multisample;       // multisample capable
+    };
+
     class Builder {
     public:
-        Builder() = default;
-        Builder(Builder const&) = default;
+        Builder();
         ~Builder() noexcept;
 
-        // Give a name to this sampler interface block
-        Builder& name(utils::CString const& interfaceBlockName);
-        Builder& name(utils::CString&& interfaceBlockName);
-        Builder& name(utils::StaticString const& interfaceBlockName);
+        struct ListEntry { // NOLINT(cppcoreguidelines-pro-type-member-init)
+            utils::StaticString name;       // name of this sampler
+            Type type;                      // type of this sampler
+            Format format;                  // format of this sampler
+            Precision precision;            // precision of this sampler
+            bool multisample = false;       // multisample capable
+        };
 
-        template<size_t N>
-        Builder& name(utils::StringLiteral<N> const& interfaceBlockName) {
-            return name(utils::StaticString{ interfaceBlockName });
-        }
+        // Give a name to this sampler interface block
+        Builder& name(utils::CString interfaceBlockName);
 
         Builder& stageFlags(backend::ShaderStageFlags stageFlags);
 
         // Add a sampler
-        Builder& add(utils::CString const& samplerName, Type type, Format format,
+        Builder& add(utils::CString samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
 
-        Builder& add(utils::CString&& samplerName, Type type, Format format,
-                Precision precision = Precision::MEDIUM,
-                bool multisample = false) noexcept;
-
-        Builder& add(utils::StaticString const& samplerName, Type type, Format format,
-                Precision precision = Precision::MEDIUM,
-                bool multisample = false) noexcept;
-
-        template<size_t N>
-        Builder& add(utils::StringLiteral<N> const& samplerName, Type type, Format format,
-                Precision precision = Precision::MEDIUM, bool multisample = false) {
-            return add(utils::StaticString{ samplerName }, type, format, precision);
-        }
+        // Add multiple samplers
+        Builder& add(std::initializer_list<ListEntry> list) noexcept;
 
         // build and return the SamplerInterfaceBlock
         SamplerInterfaceBlock build();
     private:
         friend class SamplerInterfaceBlock;
-        struct Entry {
-            Entry(utils::CString name, Type type, Format format, Precision precision, bool multisample) noexcept
-                    : name(std::move(name)), type(type), format(format),
-                      multisample(multisample), precision(precision) { }
-            utils::CString name;
-            Type type;
-            Format format;
-            bool multisample;
-            Precision precision;
-        };
         utils::CString mName;
         backend::ShaderStageFlags mStageFlags = backend::ALL_SHADER_STAGE_FLAGS;
-        std::vector<Entry> mEntries;
-    };
-
-    struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
-        SamplerInfo() noexcept = default;
-        SamplerInfo(utils::CString name, uint8_t offset, Type type, Format format,
-                Precision precision, bool multisample) noexcept
-                : name(std::move(name)),
-                  offset(offset), type(type), format(format),
-                  multisample(multisample), precision(precision) {
-        }
-        utils::CString name;    // name of this sampler
-        uint8_t offset;         // offset in "Sampler" of this sampler in the buffer
-        Type type;              // type of this sampler
-        Format format;          // format of this sampler
-        bool multisample;       // multisample capable
-        Precision precision;    // precision of this sampler
+        utils::FixedCapacityVector<SamplerInfo> mEntries =
+                utils::FixedCapacityVector<SamplerInfo>::with_capacity(backend::MAX_SAMPLER_COUNT);
     };
 
     // name of this sampler interface block
@@ -122,10 +97,12 @@ public:
     backend::ShaderStageFlags getStageFlags() const noexcept { return mStageFlags; }
 
     // size needed to store the samplers described by this interface block in a SamplerGroup
-    size_t getSize() const noexcept { return mSize; }
+    size_t getSize() const noexcept { return mSamplersInfoList.size(); }
 
     // list of information records for each sampler
-    std::vector<SamplerInfo> const& getSamplerInfoList() const noexcept { return mSamplersInfoList; }
+    utils::FixedCapacityVector<SamplerInfo> const& getSamplerInfoList() const noexcept {
+        return mSamplersInfoList;
+    }
 
     // information record for sampler of the given name
     SamplerInfo const* getSamplerInfo(const char* name) const;
@@ -144,10 +121,9 @@ private:
     explicit SamplerInterfaceBlock(Builder const& builder) noexcept;
 
     utils::CString mName;
-    backend::ShaderStageFlags mStageFlags; // It's needed to check if MAX_SAMPLER_COUNT is exceeded.
-    std::vector<SamplerInfo> mSamplersInfoList;
-    tsl::robin_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
-    uint32_t mSize = 0; // size in Samplers (i.e.: count)
+    backend::ShaderStageFlags mStageFlags{}; // It's needed to check if MAX_SAMPLER_COUNT is exceeded.
+    utils::FixedCapacityVector<SamplerInfo> mSamplersInfoList;
+    std::unordered_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
 };
 
 } // namespace filament

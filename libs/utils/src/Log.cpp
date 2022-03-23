@@ -16,7 +16,8 @@
 
 #include <utils/Log.h>
 
-#include <string>
+#include "ostream_.h"
+
 #include <utils/compiler.h>
 
 #ifdef __ANDROID__
@@ -27,7 +28,6 @@
 #endif
 
 namespace utils {
-
 namespace io {
 
 class LogStream : public ostream {
@@ -46,7 +46,7 @@ private:
 };
 
 ostream& LogStream::flush() noexcept {
-    std::lock_guard lock(mLock);
+    std::lock_guard lock(mImpl->mLock);
     Buffer& buf = getBuffer();
 #ifdef __ANDROID__
     switch (mPriority) {

@@ -291,11 +291,15 @@ void FEngine::init() {
     mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+    mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
     mDummyOneIntegerTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8I, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
 
     // initialize the dummy textures so that their contents are not undefined
 
@@ -318,6 +322,9 @@ void FEngine::init() {
             PixelBufferDescriptor(&signedOnes, 4, Texture::Format::RGBA_INTEGER, Texture::Type::BYTE));
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
+            PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
+
+    driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
             PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
 
     mDefaultRenderTarget = driverApi.createDefaultRenderTarget();
@@ -410,6 +417,7 @@ void FEngine::shutdown() {
     driver.destroyTexture(mDummyOneTextureArray);
     driver.destroyTexture(mDummyOneIntegerTextureArray);
     driver.destroyTexture(mDummyZeroTexture);
+    driver.destroyTexture(mDummyZeroTextureArray);
 
     driver.destroyRenderTarget(mDefaultRenderTarget);
 

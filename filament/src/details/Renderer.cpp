@@ -926,7 +926,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 // set screen-space reflections and screen-space refractions
                 TextureHandle ssr = data.ssr ?
-                        resources.getTexture(data.ssr) : ppm.getOneTexture();
+                        resources.getTexture(data.ssr) : ppm.getOneTextureArray();
 
                 view.prepareSSR(ssr, config.ssrLodOffset,
                         view.getScreenSpaceReflectionsOptions());

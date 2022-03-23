@@ -191,6 +191,7 @@ public:
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;
     backend::Handle<backend::HwTexture> getOneTextureArray() const;
+    backend::Handle<backend::HwTexture> getZeroTextureArray() const;
 
     math::float2 halton(size_t index) const noexcept {
         return mHaltonSamples[index & 0xFu];
