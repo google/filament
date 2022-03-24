@@ -189,10 +189,13 @@ void NoopDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor
     scheduleDestroy(std::move(p));
 }
 
-void NoopDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* externalBuffer) {
+void NoopDriver::setupExternalResource(intptr_t externalResource) {
 }
 
-void NoopDriver::setExternalBuffer(Handle<HwBufferObject> boh, void* externalBuffer) {
+void NoopDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
+}
+
+void NoopDriver::setExternalBuffer(Handle<HwBufferObject> boh, intptr_t externalBuffer) {
 }
 
 void NoopDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
@@ -218,12 +221,6 @@ void NoopDriver::update3DImage(Handle<HwTexture> th,
 void NoopDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     scheduleDestroy(std::move(data));
-}
-
-void NoopDriver::setupExternalImage(void* image) {
-}
-
-void NoopDriver::cancelExternalImage(void* image) {
 }
 
 bool NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {

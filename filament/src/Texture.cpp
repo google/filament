@@ -146,7 +146,8 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mLevelCount = std::min(builder->mLevels, FTexture::maxLevelCount(mWidth, mHeight));
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    if (UTILS_LIKELY(builder->mImportedId == 0)) {
+    intptr_t importedId = builder->mImportedId;
+    if (UTILS_LIKELY(importedId == 0)) {
         if (UTILS_LIKELY(!builder->mTextureIsSwizzled)) {
             mHandle = driver.createTexture(
                     mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
@@ -157,8 +158,10 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
                     builder->mSwizzle[3]);
         }
     } else {
-        mHandle = driver.importTexture(builder->mImportedId,
-                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+        driver.setupExternalResource(importedId);
+        mHandle = driver.importTexture(
+                importedId, mTarget, mLevelCount, mFormat, mSampleCount,
+                mWidth, mHeight, mDepth, mUsage);
     }
 }
 
@@ -359,18 +362,18 @@ void FTexture::setImage(FEngine& engine, size_t level,
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
+        // The call to setupExternalResource is synchronous, and allows the driver to take ownership of
+        // the external resource (here: an image) on this thread, if necessary.
+        engine.getDriverApi().setupExternalResource((intptr_t) image);
         engine.getDriverApi().setExternalImage(mHandle, image);
     }
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
     if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
+        // The call to setupExternalResource is synchronous, and allows the driver to take ownership of
+        // the external resource (here: an image) on this thread, if necessary.
+        engine.getDriverApi().setupExternalResource((intptr_t) image);
         engine.getDriverApi().setExternalImagePlane(mHandle, image, plane);
     }
 }

@@ -181,16 +181,13 @@ bool PlatformCocoaTouchGL::setExternalImage(void* externalImage, void* texture) 
     return true;
 }
 
-void PlatformCocoaTouchGL::retainExternalImage(void* externalImage) noexcept {
+void PlatformCocoaTouchGL::retainExternalResource(intptr_t externalResource) noexcept {
     // Take ownership of the passed in buffer. It will be released the next time
-    // setExternalImage is called, or when the texture is destroyed.
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) externalImage;
-    CVPixelBufferRetain(pixelBuffer);
-}
-
-void PlatformCocoaTouchGL::releaseExternalImage(void* externalImage) noexcept {
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) externalImage;
-    CVPixelBufferRelease(pixelBuffer);
+    // setExternal* is called, or when the wrapper class is destroyed.
+    if (externalResource) {
+        CFTypeRef resourceRef = (CFTypeRef) externalResource;
+        CFRetain(resourceRef);
+    }
 }
 
 void PlatformCocoaTouchGL::createExternalImageTexture(void* texture) noexcept {

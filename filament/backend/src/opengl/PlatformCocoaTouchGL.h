@@ -64,9 +64,8 @@ public:
 
     int getOSVersion() const noexcept final { return 0; }
 
+    void retainExternalResource(intptr_t externalResource) noexcept final;
     bool setExternalImage(void* externalImage, void* texture) noexcept final;
-    void retainExternalImage(void* externalImage) noexcept final;
-    void releaseExternalImage(void* externalImage) noexcept final;
     void createExternalImageTexture(void* texture) noexcept final;
     void destroyExternalImage(void* texture) noexcept final;
 

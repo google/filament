@@ -61,7 +61,7 @@ public:
             FBufferObject const * bufferObject);
 
     void setExternalBufferAt(FEngine& engine, uint8_t bufferIndex,
-            void* externalBuffer);
+            intptr_t externalBuffer);
 
 private:
     friend class VertexBuffer;

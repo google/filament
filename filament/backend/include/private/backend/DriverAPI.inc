@@ -301,11 +301,10 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, cancelExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::SyncStatus, getSyncStatus, backend::SyncHandle, sh)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalResource, intptr_t, externalResource)
 
 /*
  * Updating driver objects
@@ -314,11 +313,11 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, wor
 
 DECL_DRIVER_API_N(setExternalIndexBuffer,
         backend::IndexBufferHandle, ibh,
-        void*, externalBuffer)
+        intptr_t, externalBuffer)
 
 DECL_DRIVER_API_N(setExternalBuffer,
         backend::BufferObjectHandle, boh,
-        void*, externalBuffer)
+        intptr_t, externalBuffer)
 
 DECL_DRIVER_API_N(setVertexBufferObject,
         backend::VertexBufferHandle, vbh,

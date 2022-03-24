@@ -130,16 +130,15 @@ public:
      * The externalBuffer pointer is backend-specific:
      *   - Metal: id<MTLBuffer>
      *
-     * With Metal, the id<MTLBuffer> object should be cast to an void* using
-     * CFBridgingRetain to transfer ownership to Filament. Filament will release ownership of
-     * the buffer object when the Filament index buffer is destroyed.
+     * With Metal, the id<MTLTexture> object should be cast to an intptr_t using
+     * __bridge cast to transfer to Filament. Management of ownership is done by Filament.
      *
      * To use this, you must first call enableExternalBuffer() on the Builder.
      *
      * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
-     * @param externalBuffer Pointer to the external buffer that will be used in this buffer slot.
+     * @param externalBuffer Pointer to the external buffer that will be used.
      */
-    void setExternalBuffer(Engine& engine, void* externalBuffer);
+    void setExternalBuffer(Engine& engine, intptr_t externalBuffer);
 
     /**
      * Returns the size of this IndexBuffer in elements.

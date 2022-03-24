@@ -722,16 +722,27 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* externalBuffer) {
-    auto* ib = handle_cast<MetalIndexBuffer>(ibh);
-    ib->buffer.releaseExternalBuffer();
-    ib->buffer.wrapExternalBuffer((id<MTLBuffer>) CFBridgingRelease(externalBuffer));
+void MetalDriver::setupExternalResource(intptr_t externalResource) {
+    // This is called when passing in some kind of external resource. The expected inputs are
+    // objects of type id<MTLBuffer>, id<MTLTexture> casted with __bridge cast or
+    // CVPixelBufferRef objects, as either an external image or swap chain. Here we take
+    // ownership of the passed in buffer. It will be released the next time setExternal* is called.
+    if (externalResource) {
+        CFTypeRef resourceRef = (CFTypeRef) externalResource;
+        CFRetain(resourceRef);
+    }
 }
 
-void MetalDriver::setExternalBuffer(Handle<HwBufferObject> boh, void* externalBuffer) {
+void MetalDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
+    auto* ib = handle_cast<MetalIndexBuffer>(ibh);
+    ib->buffer.releaseExternalBuffer();
+    ib->buffer.wrapExternalBuffer((id<MTLBuffer>) CFBridgingRelease((void*) externalBuffer));
+}
+
+void MetalDriver::setExternalBuffer(Handle<HwBufferObject> boh, intptr_t externalBuffer) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
     bo->getBuffer()->releaseExternalBuffer();
-    bo->getBuffer()->wrapExternalBuffer((id<MTLBuffer>) CFBridgingRelease(externalBuffer));
+    bo->getBuffer()->wrapExternalBuffer((id<MTLBuffer>) CFBridgingRelease((void*) externalBuffer));
 }
 
 void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
@@ -772,20 +783,6 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     auto tex = handle_cast<MetalTexture>(th);
     tex->loadCubeImage(faceOffsets, level, data);
     scheduleDestroy(std::move(data));
-}
-
-void MetalDriver::setupExternalImage(void* image) {
-    // This is called when passing in a CVPixelBuffer as either an external image or swap chain.
-    // Here we take ownership of the passed in buffer. It will be released the next time
-    // setExternalImage is called, when the texture is destroyed, or when the swap chain is
-    // destroyed.
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
-    CVPixelBufferRetain(pixelBuffer);
-}
-
-void MetalDriver::cancelExternalImage(void* image) {
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
-    CVPixelBufferRelease(pixelBuffer);
 }
 
 void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {

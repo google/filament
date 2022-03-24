@@ -844,11 +844,14 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
     return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
-void VulkanDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* externalBuffer) {
+void VulkanDriver::setupExternalResource(intptr_t externalResource) {
+}
+
+void VulkanDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t externalBuffer) {
     ASSERT_PRECONDITION(false, "setExternalIndexBuffer() is not implemented for backend!");
 }
 
-void VulkanDriver::setExternalBuffer(Handle<HwBufferObject> boh, void* externalBuffer) {
+void VulkanDriver::setExternalBuffer(Handle<HwBufferObject> boh, intptr_t externalBuffer) {
     ASSERT_PRECONDITION(false, "setExternalBuffer() is not implemented for backend!");
 }
 
@@ -902,12 +905,6 @@ void VulkanDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     handle_cast<VulkanTexture*>(th)->updateCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
-}
-
-void VulkanDriver::setupExternalImage(void* image) {
-}
-
-void VulkanDriver::cancelExternalImage(void* image) {
 }
 
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {

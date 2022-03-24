@@ -42,7 +42,7 @@ public:
 
     void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
-    void setExternalBuffer(FEngine& engine, void* externalBuffer);
+    void setExternalBuffer(FEngine& engine, intptr_t externalBuffer);
 
 private:
     friend class IndexBuffer;

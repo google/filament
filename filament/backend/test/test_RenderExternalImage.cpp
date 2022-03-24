@@ -196,7 +196,7 @@ TEST_F(BackendTest, RenderExternalImage) {
         }
     }
 
-    getDriverApi().setupExternalImage(pixBuffer);
+    getDriverApi().setupExternalResource((intptr_t) pixBuffer);
     getDriverApi().setExternalImage(texture, pixBuffer);
 
     // We're now free to release the buffer.
