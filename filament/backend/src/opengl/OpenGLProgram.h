@@ -72,13 +72,15 @@ private:
     static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(backend::Program::Shader::FRAGMENT);
 
     static void compileShaders(OpenGLContext& context,
-            const backend::Program::ShaderSource& shadersSource,
-            GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept;
+            backend::Program::ShaderSource shadersSource,
+            GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
+            std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
 
     static GLuint linkProgram(const GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept;
 
     static bool checkProgramStatus(const char* name,
-            GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept;
+            GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
+            std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT>&& shaderSourceCode) noexcept;
 
     void initializeProgramState(OpenGLContext& context, GLuint program,
             backend::Program::UniformBlockInfo const& uniformBlockInfo,

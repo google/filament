@@ -35,7 +35,7 @@ using namespace backend;
 
 static void logCompilationError(utils::io::ostream& out,
         backend::Program::Shader shaderType, const char* name,
-        GLuint shaderId) noexcept;
+        GLuint shaderId, CString sourceCode) noexcept;
 
 static void logProgramLinkError(utils::io::ostream& out,
         const char* name, GLuint program) noexcept;
@@ -47,10 +47,12 @@ OpenGLProgram::OpenGLProgram(OpenGLContext& context, Program&& programBuilder) n
 
     auto samplerGroupInfo = std::move(programBuilder.getSamplerGroupInfo());
     auto uniformBlockInfo = std::move(programBuilder.getUniformBlockInfo());
+    auto shaderSource     = std::move(programBuilder.getShadersSource());
+    std::array<CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
 
     // this cannot fail because we check compilation status after linking the program
     // shaders[] is filled with id of shader stages present.
-    OpenGLProgram::compileShaders(context, programBuilder.getShadersSource(), gl.shaders);
+    OpenGLProgram::compileShaders(context, std::move(shaderSource), gl.shaders, shaderSourceCode);
 
     // link the program, this also cannot fail because status is checked later.
     // TODO: defer this until beginRenderPass()
@@ -60,7 +62,7 @@ OpenGLProgram::OpenGLProgram(OpenGLContext& context, Program&& programBuilder) n
     // in case of error.
     // TODO: defer this until first use
     bool success = OpenGLProgram::checkProgramStatus(name.c_str_safe(),
-            gl.program, gl.shaders);
+            gl.program, gl.shaders, std::move(shaderSourceCode));
 
     // Failing to compile a program can't be fatal, because this will happen a lot in
     // the material tools. We need to have a better way to handle these errors and
@@ -98,8 +100,9 @@ OpenGLProgram::~OpenGLProgram() noexcept {
  * This always returns the GL shader IDs or zero a shader stage is not present.
  */
 void OpenGLProgram::compileShaders(OpenGLContext& context,
-        Program::ShaderSource const& shadersSource,
-        GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept {
+        Program::ShaderSource shadersSource,
+        GLuint shaderIds[Program::SHADER_TYPE_COUNT],
+        std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
 
     // build all shaders
     UTILS_NOUNROLL
@@ -189,8 +192,10 @@ highp uint packHalf2x16(vec2 v) {
                 const GLint length = (GLint)shaderView.length();
                 glShaderSource(shaderId, 1, &source, &length);
                 glCompileShader(shaderId);
+#ifndef NDEBUG
+                outShaderSourceCode[i] = { source, static_cast<size_t>(length) };
+#endif
             }
-
             shaderIds[i] = shaderId;
         }
     }
@@ -217,7 +222,8 @@ GLuint OpenGLProgram::linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_CO
  * Returns true on success.
  */
 bool OpenGLProgram::checkProgramStatus(const char* name,
-        GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept {
+        GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
+        std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT>&& shaderSourceCode) noexcept {
 
     GLint status;
     glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -232,7 +238,7 @@ bool OpenGLProgram::checkProgramStatus(const char* name,
         const GLuint shader = shaderIds[i];
         glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
         if (status != GL_TRUE) {
-            logCompilationError(slog.e, type, name, shader);
+            logCompilationError(slog.e, type, name, shader, std::move(shaderSourceCode[i]));
         }
         glDetachShader(program, shader);
         glDeleteShader(shader);
@@ -389,7 +395,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 
 UTILS_NOINLINE
 void logCompilationError(io::ostream& out, Program::Shader shaderType,
-        const char* name, GLuint shaderId) noexcept {
+        const char* name, GLuint shaderId, CString sourceCode) noexcept {
 
     auto to_string = [](Program::Shader type) -> const char* {
         switch (type) {
@@ -398,21 +404,50 @@ void logCompilationError(io::ostream& out, Program::Shader shaderType,
         }
     };
 
-    char error[1024];
-    glGetShaderInfoLog(shaderId, sizeof(error), nullptr, error);
+    { // scope for the temporary string storage
+        GLint length = 0;
+        glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &length);
 
-    out << "Compilation error in " << to_string(shaderType) << " shader \"" << name << "\":\n"
-        << "\"" << error << "\""
-        << io::endl;
+        CString infoLog(length);
+        glGetShaderInfoLog(shaderId, length, nullptr, infoLog.data());
+
+        out << "Compilation error in " << to_string(shaderType) << " shader \"" << name << "\":\n"
+            << "\"" << infoLog.c_str() << "\""
+            << io::endl;
+    }
+
+#ifndef NDEBUG
+    std::string_view shader{ sourceCode.data(), sourceCode.size() };
+    size_t lc = 1;
+    size_t start = 0;
+    std::string line;
+    while (true) {
+        size_t end = shader.find('\n', start);
+        if (end == std::string::npos) {
+            line = shader.substr(start);
+        } else {
+            line = shader.substr(start, end - start);
+        }
+        out << lc++ << ":   " << line.c_str() << '\n';
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+    out << io::endl;
+#endif
 }
 
 UTILS_NOINLINE
 void logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
-    char error[1024];
-    glGetProgramInfoLog(program, sizeof(error), nullptr, error);
+    GLint length = 0;
+    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+
+    CString infoLog(length);
+    glGetProgramInfoLog(program, length, nullptr, infoLog.data());
 
     out << "Link error in \"" << name << "\":\n"
-        << "\"" << error << "\""
+        << "\"" << infoLog.c_str() << "\""
         << io::endl;
 }
 

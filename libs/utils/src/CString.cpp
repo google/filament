@@ -45,6 +45,16 @@ CString::CString(const char* cstr, size_t length) {
     }
 }
 
+CString::CString(size_t length) {
+    if (length) {
+        Data* p = (Data*)malloc(sizeof(Data) + length + 1);
+        p->length = (size_type)length;
+        mCStr = (value_type*)(p + 1);
+        std::fill_n(mCStr, length, 0);
+        mCStr[length] = '\0';
+    }
+}
+
 CString::CString(const char* cstr)
         : CString(cstr, size_type(cstr ? strlen(cstr) : 0)) {
 }

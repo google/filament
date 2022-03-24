@@ -94,9 +94,8 @@ public:
 
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
-    ShaderSource const& getShadersSource() const noexcept {
-        return mShadersSource;
-    }
+    ShaderSource const& getShadersSource() const noexcept { return mShadersSource; }
+    ShaderSource& getShadersSource() noexcept { return mShadersSource; }
 
     UniformBlockInfo const& getUniformBlockInfo() const noexcept { return mUniformBlocks; }
     UniformBlockInfo& getUniformBlockInfo() noexcept { return mUniformBlocks; }
