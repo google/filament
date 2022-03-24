@@ -37,13 +37,13 @@ namespace filament {
 class OpenGLProgram : public backend::HwProgram {
 public:
 
-    OpenGLProgram() noexcept = default;
-    OpenGLProgram(OpenGLDriver* gl, const backend::Program& builder) noexcept;
+    OpenGLProgram() noexcept;
+    OpenGLProgram(OpenGLContext& context, backend::Program&& builder) noexcept;
     ~OpenGLProgram() noexcept;
 
-    bool isValid() const noexcept { return mIsValid; }
+    bool isValid() const noexcept { return gl.program != 0; }
 
-    void use(OpenGLDriver* const gl) noexcept {
+    void use(OpenGLDriver* const gld) noexcept {
         if (UTILS_UNLIKELY(mUsedBindingsCount)) {
             // We rely on GL state tracking to avoid unnecessary glBindTexture / glBindSampler
             // calls.
@@ -57,19 +57,34 @@ public:
             // a bit less. Compared to what updateSamplers() actually does, which is
             // pretty little, I'm not sure we'll get ahead.
 
-            updateSamplers(gl);
+            updateSamplers(gld);
         }
     }
 
     struct {
-        GLuint shaders[backend::Program::SHADER_TYPE_COUNT];
-        GLuint program;
+        GLuint shaders[backend::Program::SHADER_TYPE_COUNT] = {};
+        GLuint program = 0;
     } gl; // 12 bytes
 
 private:
     static constexpr uint8_t TEXTURE_UNIT_COUNT = OpenGLContext::MAX_TEXTURE_UNIT_COUNT;
     static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(backend::Program::Shader::VERTEX);
     static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(backend::Program::Shader::FRAGMENT);
+
+    static void compileShaders(OpenGLContext& context,
+            const backend::Program::ShaderSource& shadersSource,
+            GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept;
+
+    static GLuint linkProgram(const GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept;
+
+    static bool checkProgramStatus(const char* name,
+            GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept;
+
+    void initializeProgramState(OpenGLContext& context, GLuint program,
+            backend::Program::UniformBlockInfo const& uniformBlockInfo,
+            backend::Program::SamplerGroupInfo const& samplers) noexcept;
+
+    void updateSamplers(OpenGLDriver* gld) noexcept;
 
     struct BlockInfo {
         uint8_t binding : 3;    // binding (i.e.: index in mSamplerBindings)
@@ -87,16 +102,12 @@ private:
     static_assert(sizeof(BlockInfo) == sizeof(uint8_t), "BlockInfo must be 8 bits");
 
     uint8_t mUsedBindingsCount = 0;
-    uint8_t mValidShaderSet = 0;
-    bool mIsValid = false;
 
     // information about each USED sampler buffer (no gaps)
     std::array<BlockInfo, backend::Program::BINDING_COUNT> mBlockInfos;   // 8 bytes
 
     // runs of indices into SamplerGroup -- run start index and size given by BlockInfo
-    std::array<uint8_t, TEXTURE_UNIT_COUNT> mIndicesRuns;    // 16 bytes
-
-    void updateSamplers(OpenGLDriver* gld) noexcept;
+    std::array<uint8_t, TEXTURE_UNIT_COUNT> mIndicesRuns;    // 32 bytes
 };
 
 

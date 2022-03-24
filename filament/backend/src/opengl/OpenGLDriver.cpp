@@ -450,7 +450,7 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
 void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     DEBUG_MARKER()
 
-    construct<OpenGLProgram>(ph, this, program);
+    construct<OpenGLProgram>(ph, mContext, std::move(program));
     CHECK_GL_ERROR(utils::slog.e)
 }
 

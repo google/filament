@@ -35,43 +35,96 @@ using namespace backend;
 
 static void logCompilationError(utils::io::ostream& out,
         backend::Program::Shader shaderType, const char* name,
-        GLuint shaderId, std::string_view source) noexcept;
+        GLuint shaderId) noexcept;
 
 static void logProgramLinkError(utils::io::ostream& out,
         const char* name, GLuint program) noexcept;
 
-OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
-        :  HwProgram(programBuilder.getName()), mIsValid(false) {
+OpenGLProgram::OpenGLProgram() noexcept = default;
 
-    using Shader = Program::Shader;
+OpenGLProgram::OpenGLProgram(OpenGLContext& context, Program&& programBuilder) noexcept
+        :  HwProgram(programBuilder.getName()) {
 
-    const auto& shadersSource = programBuilder.getShadersSource();
-    OpenGLContext& context = gl->getContext();
+    auto samplerGroupInfo = std::move(programBuilder.getSamplerGroupInfo());
+    auto uniformBlockInfo = std::move(programBuilder.getUniformBlockInfo());
+
+    // this cannot fail because we check compilation status after linking the program
+    // shaders[] is filled with id of shader stages present.
+    OpenGLProgram::compileShaders(context, programBuilder.getShadersSource(), gl.shaders);
+
+    // link the program, this also cannot fail because status is checked later.
+    // TODO: defer this until beginRenderPass()
+    gl.program = OpenGLProgram::linkProgram(gl.shaders);
+
+    // check status of program linking and shader compilation, logs error and free all resources
+    // in case of error.
+    // TODO: defer this until first use
+    bool success = OpenGLProgram::checkProgramStatus(name.c_str_safe(),
+            gl.program, gl.shaders);
+
+    // Failing to compile a program can't be fatal, because this will happen a lot in
+    // the material tools. We need to have a better way to handle these errors and
+    // return to the editor.
+    if (UTILS_UNLIKELY(!success)) {
+        PANIC_LOG("Failed to compile GLSL program.");
+    }
+
+    if (success) {
+        // TODO: defer this until first use
+        initializeProgramState(context, gl.program,
+                uniformBlockInfo, samplerGroupInfo);
+    }
+}
+
+OpenGLProgram::~OpenGLProgram() noexcept {
+    const GLuint program = gl.program;
+    UTILS_NOUNROLL
+    for (GLuint shader: gl.shaders) {
+        if (shader) {
+            if (program) {
+                glDetachShader(program, shader);
+            }
+            glDeleteShader(shader);
+        }
+    }
+    if (program) {
+        glDeleteProgram(program);
+    }
+}
+
+/*
+ * Compile shaders in the ShaderSource. This cannot fail because compilation failures are not
+ * checked until after the program is linked.
+ * This always returns the GL shader IDs or zero a shader stage is not present.
+ */
+void OpenGLProgram::compileShaders(OpenGLContext& context,
+        Program::ShaderSource const& shadersSource,
+        GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept {
 
     // build all shaders
-    #pragma nounroll
+    UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        Program::Shader type = static_cast<Program::Shader>(i);
         GLenum glShaderType;
-        Shader type = (Shader)i;
         switch (type) {
-            case Shader::VERTEX:
+            case Program::Shader::VERTEX:
                 glShaderType = GL_VERTEX_SHADER;
                 break;
-            case Shader::FRAGMENT:
+            case Program::Shader::FRAGMENT:
                 glShaderType = GL_FRAGMENT_SHADER;
                 break;
         }
 
-        if (!shadersSource[i].empty()) {
-            GLint status;
-            Program::ShaderBlob shader = shadersSource[i];
+        if (UTILS_LIKELY(!shadersSource[i].empty())) {
+            Program::ShaderBlob const& shader = shadersSource[i];
+            std::string_view shaderView(reinterpret_cast<const char*>(shader.data()), shader.size());
             std::string temp;
-            std::string_view shaderView((const char*)shader.data(), shader.size());
 
             if (!context.ext.GOOGLE_cpp_style_line_directive) {
                 // If usages of the Google-style line directive are present, remove them, as some
                 // drivers don't allow the quotation marks.
-                if (UTILS_UNLIKELY(requestsGoogleLineDirectivesExtension(shaderView.data(), shaderView.size()))) {
+                if (UTILS_UNLIKELY(requestsGoogleLineDirectivesExtension(
+                        shaderView.data(), shaderView.size()))) {
                     temp = shaderView; // copy string
                     removeGoogleLineDirectives(temp.data(), temp.size()); // length is unaffected
                     shaderView = temp;
@@ -138,124 +191,119 @@ highp uint packHalf2x16(vec2 v) {
                 glCompileShader(shaderId);
             }
 
-            glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
-            if (UTILS_UNLIKELY(status != GL_TRUE)) {
-                logCompilationError(slog.e, type,
-                        programBuilder.getName().c_str_safe(), shaderId, shaderView);
-                glDeleteShader(shaderId);
-                return;
-            }
-            this->gl.shaders[i] = shaderId;
-            mValidShaderSet |= 1U << i;
+            shaderIds[i] = shaderId;
         }
-    }
-
-    // we need at least a vertex and fragment program
-    const uint8_t validShaderSet = mValidShaderSet;
-    const uint8_t mask = VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT;
-    if (UTILS_LIKELY((mValidShaderSet & mask) == mask)) {
-        GLint status;
-        GLuint program = glCreateProgram();
-        for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-            if (validShaderSet & (1U << i)) {
-                glAttachShader(program, this->gl.shaders[i]);
-            }
-        }
-        glLinkProgram(program);
-
-        glGetProgramiv(program, GL_LINK_STATUS, &status);
-        if (UTILS_UNLIKELY(status != GL_TRUE)) {
-            logProgramLinkError(slog.e, programBuilder.getName().c_str_safe(), program);
-            glDeleteProgram(program);
-            return;
-        }
-
-        this->gl.program = program;
-
-        // Associate each UniformBlock in the program to a known binding.
-        auto const& uniformBlockInfo = programBuilder.getUniformBlockInfo();
-        #pragma nounroll
-        for (GLuint binding = 0, n = uniformBlockInfo.size(); binding < n; binding++) {
-            auto const& name = uniformBlockInfo[binding];
-            if (!name.empty()) {
-                GLint index = glGetUniformBlockIndex(program, name.c_str());
-                if (index >= 0) {
-                    glUniformBlockBinding(program, GLuint(index), binding);
-                }
-                CHECK_GL_ERROR(utils::slog.e)
-            }
-        }
-
-        if (programBuilder.hasSamplers()) {
-            // if we have samplers, we need to do a bit of extra work
-            // activate this program so we can set all its samplers once and for all (glUniform1i)
-            context.useProgram(program);
-
-            auto const& samplerGroupInfo = programBuilder.getSamplerGroupInfo();
-            auto& indicesRun = mIndicesRuns;
-            uint8_t numUsedBindings = 0;
-            uint8_t tmu = 0;
-
-            #pragma nounroll
-            for (size_t i = 0, c = samplerGroupInfo.size(); i < c; i++) {
-                auto const& groupInfo = samplerGroupInfo[i];
-                auto const& samplers = groupInfo.samplers;
-                if (!samplers.empty()) {
-                    // Cache the sampler uniform locations for each interface block
-                    BlockInfo& info = mBlockInfos[numUsedBindings];
-                    info.binding = uint8_t(i);
-                    uint8_t count = 0;
-                    for (uint8_t j = 0, m = uint8_t(samplers.size()); j < m; ++j) {
-                        // find its location and associate a TMU to it
-                        GLint loc = glGetUniformLocation(program, samplers[j].name.c_str());
-                        if (loc >= 0) {
-                            glUniform1i(loc, tmu);
-                            indicesRun[tmu] = j;
-                            count++;
-                            tmu++;
-                        } else {
-                            // glGetUniformLocation could fail if the uniform is not used
-                            // in the program. We should just ignore the error in that case.
-                        }
-                    }
-                    if (count > 0) {
-                        numUsedBindings++;
-                        info.count = uint8_t(count - 1);
-                    }
-                }
-            }
-            mUsedBindingsCount = numUsedBindings;
-        }
-        mIsValid = true;
-    }
-
-    // Failing to compile a program can't be fatal, because this will happen a lot in
-    // the material tools. We need to have a better way to handle these errors and
-    // return to the editor. Also note the early "return" statements in this function.
-    if (UTILS_UNLIKELY(!isValid())) {
-        PANIC_LOG("Failed to compile GLSL program.");
     }
 }
 
-OpenGLProgram::~OpenGLProgram() noexcept {
-    const size_t validShaderSet = mValidShaderSet;
-    const bool isValid = mIsValid;
-    GLuint program = gl.program;
-    if (validShaderSet) {
-        UTILS_NOUNROLL
-        for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-            if (validShaderSet & (1U << i)) {
-                const GLuint shader = gl.shaders[i];
-                if (isValid) {
-                    glDetachShader(program, shader);
+/*
+ * Create a program from the given shader IDs and links it. This cannot fail because errors
+ * are checked later. This always returns a valid GL program ID (which doesn't mean the
+ * program itself is valid).
+ */
+GLuint OpenGLProgram::linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept {
+    GLuint program = glCreateProgram();
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        if (shaderIds[i]) {
+            glAttachShader(program, shaderIds[i]);
+        }
+    }
+    glLinkProgram(program);
+    return program;
+}
+
+/*
+ * Checks a program link status and logs errors and frees resources on failure.
+ * Returns true on success.
+ */
+bool OpenGLProgram::checkProgramStatus(const char* name,
+        GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept {
+
+    GLint status;
+    glGetProgramiv(program, GL_LINK_STATUS, &status);
+    if (UTILS_LIKELY(status == GL_TRUE)) {
+        return true;
+    }
+
+    // only if the link fails, we check the compilation status
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        const Program::Shader type = static_cast<Program::Shader>(i);
+        const GLuint shader = shaderIds[i];
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        if (status != GL_TRUE) {
+            logCompilationError(slog.e, type, name, shader);
+        }
+        glDetachShader(program, shader);
+        glDeleteShader(shader);
+        shaderIds[i] = 0;
+    }
+    // log the link error as well
+    logProgramLinkError(slog.e, name, program);
+    glDeleteProgram(program);
+    program = 0;
+    return false;
+}
+
+/*
+ * Initializes our internal state from a valid program. This must only be called after
+ * checkProgramStatus() has been successfully called.
+ */
+void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
+        Program::UniformBlockInfo const& uniformBlockInfo,
+        Program::SamplerGroupInfo const& samplerGroupInfo) noexcept {
+
+    // Associate each UniformBlock in the program to a known binding.
+    UTILS_NOUNROLL
+    for (GLuint binding = 0, n = uniformBlockInfo.size(); binding < n; binding++) {
+        auto const& name = uniformBlockInfo[binding];
+        if (!name.empty()) {
+            GLint index = glGetUniformBlockIndex(program, name.c_str());
+            if (index >= 0) {
+                glUniformBlockBinding(program, GLuint(index), binding);
+            }
+            CHECK_GL_ERROR(utils::slog.e)
+        }
+    }
+
+    auto& indicesRun = mIndicesRuns;
+    uint8_t numUsedBindings = 0;
+    uint8_t tmu = 0;
+
+    UTILS_NOUNROLL
+    for (size_t i = 0, c = samplerGroupInfo.size(); i < c; i++) {
+        auto const& groupInfo = samplerGroupInfo[i];
+        auto const& samplers = groupInfo.samplers;
+        if (!samplers.empty()) {
+
+            // keep this in the loop so we skip it in the rare case a program doesn't have
+            // sampler. The context cache will prevent repeated calls to GL.
+            context.useProgram(program);
+
+            // Cache the sampler uniform locations for each interface block
+            BlockInfo& info = mBlockInfos[numUsedBindings];
+            info.binding = uint8_t(i);
+            uint8_t count = 0;
+            for (uint8_t j = 0, m = uint8_t(samplers.size()); j < m; ++j) {
+                // find its location and associate a TMU to it
+                GLint loc = glGetUniformLocation(program, samplers[j].name.c_str());
+                if (loc >= 0) {
+                    glUniform1i(loc, tmu);
+                    indicesRun[tmu] = j;
+                    count++;
+                    tmu++;
+                } else {
+                    // glGetUniformLocation could fail if the uniform is not used
+                    // in the program. We should just ignore the error in that case.
                 }
-                glDeleteShader(shader);
+            }
+            if (count > 0) {
+                numUsedBindings++;
+                info.count = uint8_t(count - 1);
             }
         }
     }
-    if (isValid) {
-        glDeleteProgram(program);
-    }
+    mUsedBindingsCount = numUsedBindings;
 }
 
 void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
@@ -341,7 +389,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 
 UTILS_NOINLINE
 void logCompilationError(io::ostream& out, Program::Shader shaderType,
-        const char* name, GLuint shaderId, std::string_view shader) noexcept {
+        const char* name, GLuint shaderId) noexcept {
 
     auto to_string = [](Program::Shader type) -> const char* {
         switch (type) {
@@ -356,24 +404,6 @@ void logCompilationError(io::ostream& out, Program::Shader shaderType,
     out << "Compilation error in " << to_string(shaderType) << " shader \"" << name << "\":\n"
         << "\"" << error << "\""
         << io::endl;
-
-    size_t lc = 1;
-    size_t start = 0;
-    std::string line;
-    while (true) {
-        size_t end = shader.find('\n', start);
-        if (end == std::string::npos) {
-            line = shader.substr(start);
-        } else {
-            line = shader.substr(start, end - start);
-        }
-        out << lc++ << ":   "<< line.c_str() << '\n';
-        if (end == std::string::npos) {
-            break;
-        }
-        start = end + 1;
-    }
-    out << io::endl;
 }
 
 UTILS_NOINLINE
