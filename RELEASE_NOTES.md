@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.20.6 (currently main branch)
 
+- gltfio: add support for KHR_materials_variants
+- gltfio: Java now exposes morph target names as an array for consistency [⚠️ **API Change**].
+
 ## v1.20.5
 
 - New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]

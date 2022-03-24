@@ -217,12 +217,12 @@ public class FilamentAsset {
     }
 
     /**
-     * Gets the morph target name at the given index in the given entity.
-     *
-     * TODO(prideout): This should be "getMorphTargetNames"
+     * Gets the names of all morph targets in the given entity.
      */
-    public String getMorphTargetNameAt(@Entity int entity, @IntRange(from = 0) int targetIndex) {
-        return nGetMorphTargetNameAt(getNativeObject(), entity, targetIndex);
+    public @NonNull String[] getMorphTargetNames(@Entity int entity) {
+        String[] names = new String[nGetMorphTargetCount(mNativeObject, entity)];
+        nGetMorphTargetNames(mNativeObject, entity, names);
+        return names;
     }
 
     /**
@@ -297,11 +297,13 @@ public class FilamentAsset {
     private static native int nGetMaterialVariantCount(long nativeAsset);
     private static native void nGetMaterialVariantNames(long nativeAsset, String[] result);
 
+    private static native int nGetMorphTargetCount(long nativeAsset, int entity);
+    private static native void nGetMorphTargetNames(long nativeAsset, int entity, String[] result);
+
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
-    private static native String nGetMorphTargetNameAt(long nativeAsset, int entity, int targetIndex);
     private static native void nApplyMaterialVariant(long nativeAsset, int variantIndex);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);

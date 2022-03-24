@@ -215,15 +215,6 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUriCount(JNIEn
     return (jint) asset->getResourceUriCount();
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetNameAt(JNIEnv* env, jclass,
-        jlong nativeAsset, jint entityId, jint targetIndex) {
-    Entity entity = Entity::import(entityId);
-    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
-    const char* val = asset->getMorphTargetNameAt(entity, (size_t) targetIndex);
-    return val ? env->NewStringUTF(val) : nullptr;
-}
-
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* env, jclass,
                                                                        jlong nativeAsset,
@@ -232,6 +223,25 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* e
     auto resourceUris = asset->getResourceUris();
     for (int i = 0; i < asset->getResourceUriCount(); ++i) {
         env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(resourceUris[i]));
+    }
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetCount(JNIEnv*, jclass,
+        jlong nativeAsset, jint entityId) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    Entity entity = Entity::import(entityId);
+    return (jint) asset->getMorphTargetCountAt(entity);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetNames(JNIEnv* env, jclass,
+        jlong nativeAsset, jint entityId, jobjectArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    Entity entity = Entity::import(entityId);
+    for (int i = 0, n = asset->getMorphTargetCountAt(entity); i < n; ++i) {
+        const char* name = asset->getMorphTargetNameAt(entity, i);
+        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(name));
     }
 }
 
