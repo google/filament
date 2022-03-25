@@ -92,8 +92,8 @@ Driver* OpenGLDriver::create(
     //    GLBufferObject            :  24       many
     //    GLSync                    :  24       few
     //    GLTimerQuery              :  32       few
+    //    OpenGLProgram             :  32       moderate
     //    GLRenderPrimitive         :  48       many
-    //    OpenGLProgram             :  64       moderate
     // -- less than or equal 64 bytes
     //    GLTexture                 :  72       moderate
     //    GLRenderTarget            : 112       few
