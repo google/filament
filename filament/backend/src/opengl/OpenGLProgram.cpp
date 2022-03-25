@@ -35,50 +35,36 @@ using namespace backend;
 
 static void logCompilationError(utils::io::ostream& out,
         backend::Program::Shader shaderType, const char* name,
-        GLuint shaderId, CString sourceCode) noexcept;
+        GLuint shaderId, CString const& sourceCode) noexcept;
 
 static void logProgramLinkError(utils::io::ostream& out,
         const char* name, GLuint program) noexcept;
 
-OpenGLProgram::OpenGLProgram() noexcept = default;
+OpenGLProgram::OpenGLProgram() noexcept
+    : mInitialized(false), mValid(true), mLazyInitializationData(nullptr) {
+}
 
-OpenGLProgram::OpenGLProgram(OpenGLContext& context, Program&& programBuilder) noexcept
-        :  HwProgram(programBuilder.getName()) {
+OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& programBuilder) noexcept
+        : HwProgram(programBuilder.getName()),
+          mInitialized(false), mValid(true),
+          mLazyInitializationData{ new(LazyInitializationData) } {
 
-    auto samplerGroupInfo = std::move(programBuilder.getSamplerGroupInfo());
-    auto uniformBlockInfo = std::move(programBuilder.getUniformBlockInfo());
-    auto shaderSource     = std::move(programBuilder.getShadersSource());
-    std::array<CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
+    OpenGLContext& context = gld.getContext();
+
+    mLazyInitializationData->uniformBlockInfo = std::move(programBuilder.getUniformBlockInfo());
+    mLazyInitializationData->samplerGroupInfo = std::move(programBuilder.getSamplerGroupInfo());
 
     // this cannot fail because we check compilation status after linking the program
     // shaders[] is filled with id of shader stages present.
-    OpenGLProgram::compileShaders(context, std::move(shaderSource), gl.shaders, shaderSourceCode);
-
-    // link the program, this also cannot fail because status is checked later.
-    // TODO: defer this until beginRenderPass()
-    gl.program = OpenGLProgram::linkProgram(gl.shaders);
-
-    // check status of program linking and shader compilation, logs error and free all resources
-    // in case of error.
-    // TODO: defer this until first use
-    bool success = OpenGLProgram::checkProgramStatus(name.c_str_safe(),
-            gl.program, gl.shaders, std::move(shaderSourceCode));
-
-    // Failing to compile a program can't be fatal, because this will happen a lot in
-    // the material tools. We need to have a better way to handle these errors and
-    // return to the editor.
-    if (UTILS_UNLIKELY(!success)) {
-        PANIC_LOG("Failed to compile GLSL program.");
-    }
-
-    if (success) {
-        // TODO: defer this until first use
-        initializeProgramState(context, gl.program,
-                uniformBlockInfo, samplerGroupInfo);
-    }
+    OpenGLProgram::compileShaders(context, programBuilder.getShadersSource(),
+            gl.shaders, mLazyInitializationData->shaderSourceCode);
 }
 
 OpenGLProgram::~OpenGLProgram() noexcept {
+    if (!mInitialized) {
+        // mLazyInitializationData is aliased with mIndicesRuns
+        delete mLazyInitializationData;
+    }
     const GLuint program = gl.program;
     UTILS_NOUNROLL
     for (GLuint shader: gl.shaders) {
@@ -223,7 +209,7 @@ GLuint OpenGLProgram::linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_CO
  */
 bool OpenGLProgram::checkProgramStatus(const char* name,
         GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
-        std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT>&& shaderSourceCode) noexcept {
+        std::array<CString, 2> const& shaderSourceCode) noexcept {
 
     GLint status;
     glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -238,7 +224,7 @@ bool OpenGLProgram::checkProgramStatus(const char* name,
         const GLuint shader = shaderIds[i];
         glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
         if (status != GL_TRUE) {
-            logCompilationError(slog.e, type, name, shader, std::move(shaderSourceCode[i]));
+            logCompilationError(slog.e, type, name, shader, shaderSourceCode[i]);
         }
         glDetachShader(program, shader);
         glDeleteShader(shader);
@@ -249,6 +235,38 @@ bool OpenGLProgram::checkProgramStatus(const char* name,
     glDeleteProgram(program);
     program = 0;
     return false;
+}
+
+void OpenGLProgram::initialize(OpenGLContext& context) {
+    // by this point we must have a GL program
+    assert_invariant(!gl.program);
+    // we also can't be in the initialized state
+    assert_invariant(!mInitialized);
+    // we must have our lazy initialization data
+    assert_invariant(mLazyInitializationData);
+
+    // we must copy mLazyInitializationData locally because it is aliased with mIndicesRuns
+    auto* const initializationData = mLazyInitializationData;
+
+    // link the program, this also cannot fail because status is checked later.
+    // TODO: move this earlier, to beginRenderPass()
+    gl.program = OpenGLProgram::linkProgram(gl.shaders);
+
+    // check status of program linking and shader compilation, logs error and free all resources
+    // in case of error.
+    mValid = OpenGLProgram::checkProgramStatus(name.c_str_safe(),
+            gl.program, gl.shaders, initializationData->shaderSourceCode);
+
+    if (mValid) {
+        initializeProgramState(context, gl.program,
+                initializationData->uniformBlockInfo,
+                initializationData->samplerGroupInfo);
+    }
+
+    // and destroy all temporary init data
+    delete initializationData;
+    // mInitialized means mLazyInitializationData is no more valid
+    mInitialized = true;
 }
 
 /*
@@ -315,7 +333,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
 void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     using GLTexture = OpenGLDriver::GLTexture;
 
-    // cache a few member variable locally, outside of the loop
+    // cache a few member variable locally, outside the loop
     OpenGLContext& glc = gld->getContext();
     const bool anisotropyWorkaround = glc.ext.EXT_texture_filter_anisotropic &&
                                       glc.bugs.texture_filter_anisotropic_broken_on_sampler;
@@ -395,7 +413,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 
 UTILS_NOINLINE
 void logCompilationError(io::ostream& out, Program::Shader shaderType,
-        const char* name, GLuint shaderId, CString sourceCode) noexcept {
+        const char* name, GLuint shaderId, CString const& sourceCode) noexcept {
 
     auto to_string = [](Program::Shader type) -> const char* {
         switch (type) {
