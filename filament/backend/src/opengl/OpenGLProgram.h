@@ -38,12 +38,17 @@ class OpenGLProgram : public backend::HwProgram {
 public:
 
     OpenGLProgram() noexcept;
-    OpenGLProgram(OpenGLContext& context, backend::Program&& builder) noexcept;
+    OpenGLProgram(OpenGLDriver& gld, backend::Program&& builder) noexcept;
     ~OpenGLProgram() noexcept;
 
-    bool isValid() const noexcept { return gl.program != 0; }
+    bool isValid() const noexcept { return mValid; }
 
-    void use(OpenGLDriver* const gld) noexcept {
+    void use(OpenGLDriver* const gld, OpenGLContext& context) noexcept {
+        if (UTILS_UNLIKELY(!mInitialized)) {
+            initialize(context);
+        }
+
+        context.useProgram(gl.program);
         if (UTILS_UNLIKELY(mUsedBindingsCount)) {
             // We rely on GL state tracking to avoid unnecessary glBindTexture / glBindSampler
             // calls.
@@ -80,38 +85,43 @@ private:
 
     static bool checkProgramStatus(const char* name,
             GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
-            std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT>&& shaderSourceCode) noexcept;
+            std::array<utils::CString, 2> const& shaderSourceCode) noexcept;
+
+    void initialize(OpenGLContext& context);
 
     void initializeProgramState(OpenGLContext& context, GLuint program,
             backend::Program::UniformBlockInfo const& uniformBlockInfo,
-            backend::Program::SamplerGroupInfo const& samplers) noexcept;
+            backend::Program::SamplerGroupInfo const& samplerGroupInfo) noexcept;
 
     void updateSamplers(OpenGLDriver* gld) noexcept;
 
-    struct BlockInfo {
-        uint8_t binding : 3;    // binding (i.e.: index in mSamplerBindings)
-        uint8_t count   : 5;    // number of TMUs actually used minus 1
-
-        // if TEXTURE_UNIT_COUNT > 32, the count bitfield must be increased accordingly
-        static_assert(TEXTURE_UNIT_COUNT <= 32, "TEXTURE_UNIT_COUNT must be <= 32");
-
-        // if SAMPLER_BINDING_COUNT > 8, the binding bitfield must be increased accordingly
-        static_assert(backend::Program::BINDING_COUNT <= 8, "BINDING_COUNT must be <= 8");
+    // keep these away from of other class attributes
+    struct LazyInitializationData {
+        backend::Program::UniformBlockInfo uniformBlockInfo;
+        backend::Program::SamplerGroupInfo samplerGroupInfo;
+        std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT> shaderSourceCode;
     };
 
-    // This assert checks that the struct is the size we expect without any "hidden" padding bytes
-    // inserted by the compiler.
-    static_assert(sizeof(BlockInfo) == sizeof(uint8_t), "BlockInfo must be 8 bits");
+    // number of bindings actually used by this program
+    uint8_t mUsedBindingsCount = 0u;
+    // whether lazy initialization has been performed
+    bool mInitialized : 1;
+    // whether lazy initialization was successful
+    bool mValid : 1;
+    UTILS_UNUSED uint8_t padding[2] = {};
 
-    uint8_t mUsedBindingsCount = 0;
-
-    // information about each USED sampler buffer (no gaps)
-    std::array<BlockInfo, backend::Program::BINDING_COUNT> mBlockInfos;   // 8 bytes
-
-    // runs of indices into SamplerGroup -- run start index and size given by BlockInfo
-    std::array<uint8_t, TEXTURE_UNIT_COUNT> mIndicesRuns;    // 32 bytes
+    union {
+        // when mInitialized == true:
+        // information about each USED sampler buffer per binding (no gaps)
+        std::array<uint8_t, backend::Program::BINDING_COUNT> mUsedBindingPoints;   // 8 bytes
+        // when mInitialized == false:
+        // lazy initialization data pointer
+        LazyInitializationData* mLazyInitializationData;
+    };
 };
 
+// if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.
+static_assert(sizeof(OpenGLProgram) <= 64);
 
 } // namespace filament
 
