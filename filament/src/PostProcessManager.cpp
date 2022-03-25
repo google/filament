@@ -545,9 +545,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 mat4f uvFromViewMatrix = uvFromClipMatrix * cameraInfo.projection;
                 mat4f reprojection = uvFromClipMatrix * historyProjection
                                      * inverse(cameraInfo.view * cameraInfo.worldOrigin);
+
+                // the history sampler is a regular texture2D
                 TextureHandle history = data.history ?
-                        resources.getTexture(data.history) : getZeroTextureArray();
-                uniforms.prepareHistorySSR(history,reprojection, uvFromViewMatrix,options);
+                        resources.getTexture(data.history) : getZeroTexture();
+                uniforms.prepareHistorySSR(history, reprojection, uvFromViewMatrix,options);
 
                 uniforms.commit(driver);
 
