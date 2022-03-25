@@ -1215,6 +1215,7 @@ void OpenGLDriver::destroyProgram(Handle<HwProgram> ph) {
     DEBUG_MARKER()
     if (ph) {
         OpenGLProgram* p = handle_cast<OpenGLProgram*>(ph);
+        cancelRunAtNextPassOp(p);
         destruct(ph, p);
     }
 }
@@ -2222,6 +2223,9 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
     DEBUG_MARKER()
+
+    executeRenderPassOps();
+
     auto& gl = mContext;
 
     mRenderPassTarget = rth;
@@ -2924,6 +2928,25 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
         } else {
             ++it;
         }
+    }
+}
+
+void OpenGLDriver::runAtNextRenderPass(void* token, std::function<void()> fn) noexcept {
+    assert_invariant(mRunAtNextRenderPassOps.find(token) == mRunAtNextRenderPassOps.end());
+    mRunAtNextRenderPassOps[token] = std::move(fn);
+}
+
+void OpenGLDriver::cancelRunAtNextPassOp(void* token) noexcept {
+    mRunAtNextRenderPassOps.erase(token);
+}
+
+void OpenGLDriver::executeRenderPassOps() noexcept {
+    auto& ops = mRunAtNextRenderPassOps;
+    if (!ops.empty()) {
+        for (auto& item: ops) {
+            item.second();
+        }
+        ops.clear();
     }
 }
 

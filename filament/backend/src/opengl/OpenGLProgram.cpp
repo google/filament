@@ -58,6 +58,17 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& programBuilder) noexce
     // shaders[] is filled with id of shader stages present.
     OpenGLProgram::compileShaders(context, programBuilder.getShadersSource(),
             gl.shaders, mLazyInitializationData->shaderSourceCode);
+
+    gld.runAtNextRenderPass(this, [this]() {
+        // by this point we must not have a GL program
+        assert_invariant(!gl.program);
+        // we also can't be in the initialized state
+        assert_invariant(!mInitialized);
+        // we must have our lazy initialization data
+        assert_invariant(mLazyInitializationData);
+        // link the program, this also cannot fail because status is checked later.
+        gl.program = OpenGLProgram::linkProgram(gl.shaders);
+    });
 }
 
 OpenGLProgram::~OpenGLProgram() noexcept {
@@ -239,7 +250,7 @@ bool OpenGLProgram::checkProgramStatus(const char* name,
 
 void OpenGLProgram::initialize(OpenGLContext& context) {
     // by this point we must have a GL program
-    assert_invariant(!gl.program);
+    assert_invariant(gl.program);
     // we also can't be in the initialized state
     assert_invariant(!mInitialized);
     // we must have our lazy initialization data
@@ -247,10 +258,6 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
 
     // we must copy mLazyInitializationData locally because it is aliased with mIndicesRuns
     auto* const initializationData = mLazyInitializationData;
-
-    // link the program, this also cannot fail because status is checked later.
-    // TODO: move this earlier, to beginRenderPass()
-    gl.program = OpenGLProgram::linkProgram(gl.shaders);
 
     // check status of program linking and shader compilation, logs error and free all resources
     // in case of error.

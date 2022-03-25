@@ -393,6 +393,11 @@ private:
     void executeEveryNowAndThenOps() noexcept;
     std::vector<std::function<bool()>> mEveryNowAndThenOps;
 
+    void runAtNextRenderPass(void* token, std::function<void()> fn) noexcept;
+    void executeRenderPassOps() noexcept;
+    void cancelRunAtNextPassOp(void* token) noexcept;
+    tsl::robin_map<void*, std::function<void()>> mRunAtNextRenderPassOps;
+
     // timer query implementation
     TimerQueryInterface* mTimerQueryImpl = nullptr;
     bool mFrameTimeSupported = false;
