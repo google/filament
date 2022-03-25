@@ -290,77 +290,71 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         }
     }
 
-    auto& indicesRun = mIndicesRuns;
-    uint8_t numUsedBindings = 0;
+    uint8_t usedBindingCount = 0;
     uint8_t tmu = 0;
 
     UTILS_NOUNROLL
     for (size_t i = 0, c = samplerGroupInfo.size(); i < c; i++) {
-        auto const& groupInfo = samplerGroupInfo[i];
-        auto const& samplers = groupInfo.samplers;
-        if (!samplers.empty()) {
+        auto const& samplers = samplerGroupInfo[i].samplers;
+        if (samplers.empty()) {
+            // this binding point doesn't have any samplers, skip it.
+            continue;
+        }
 
-            // keep this in the loop so we skip it in the rare case a program doesn't have
-            // sampler. The context cache will prevent repeated calls to GL.
-            context.useProgram(program);
+        // keep this in the loop, so we skip it in the rare case a program doesn't have
+        // sampler. The context cache will prevent repeated calls to GL.
+        context.useProgram(program);
 
+        bool atLeastOneSamplerUsed = false;
+        UTILS_NOUNROLL
+        for (const Program::Sampler& sampler: samplers) {
+            // find its location and associate a TMU to it
+            GLint loc = glGetUniformLocation(program, sampler.name.c_str());
+            if (loc >= 0) {
+                // this can fail if the program doesn't use this sampler
+                glUniform1i(loc, tmu);
+                atLeastOneSamplerUsed = true;
+            }
+            tmu++;
+        }
+
+        // if this program doesn't use any sampler from this SamplerGroup, just cancel the
+        // whole group.
+        if (atLeastOneSamplerUsed) {
             // Cache the sampler uniform locations for each interface block
-            BlockInfo& info = mBlockInfos[numUsedBindings];
-            info.binding = uint8_t(i);
-            uint8_t count = 0;
-            for (uint8_t j = 0, m = uint8_t(samplers.size()); j < m; ++j) {
-                // find its location and associate a TMU to it
-                GLint loc = glGetUniformLocation(program, samplers[j].name.c_str());
-                if (loc >= 0) {
-                    glUniform1i(loc, tmu);
-                    indicesRun[tmu] = j;
-                    count++;
-                    tmu++;
-                } else {
-                    // glGetUniformLocation could fail if the uniform is not used
-                    // in the program. We should just ignore the error in that case.
-                }
-            }
-            if (count > 0) {
-                numUsedBindings++;
-                info.count = uint8_t(count - 1);
-            }
+            mUsedBindingPoints[usedBindingCount] = i;
+            usedBindingCount++;
+        } else {
+            tmu -= samplers.size();
         }
     }
-    mUsedBindingsCount = numUsedBindings;
+    mUsedBindingsCount = usedBindingCount;
 }
 
 void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     using GLTexture = OpenGLDriver::GLTexture;
 
     // cache a few member variable locally, outside the loop
-    OpenGLContext& glc = gld->getContext();
-    const bool anisotropyWorkaround = glc.ext.EXT_texture_filter_anisotropic &&
-                                      glc.bugs.texture_filter_anisotropic_broken_on_sampler;
-    auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
-    auto const& UTILS_RESTRICT indicesRun = mIndicesRuns;
-    auto const& UTILS_RESTRICT blockInfos = mBlockInfos;
-
-    UTILS_ASSUME(mUsedBindingsCount > 0);
-    for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
-        BlockInfo blockInfo = blockInfos[i];
-        HwSamplerGroup const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
-        if (UTILS_UNLIKELY(!hwsb)) {
-            tmu += blockInfo.count + 1;
-            continue;
-        }
-        SamplerGroup const& UTILS_RESTRICT sb = *(hwsb->sb);
-        SamplerGroup::Sampler const* const UTILS_RESTRICT samplers = sb.getSamplers();
-        for (uint8_t j = 0, m = blockInfo.count ; j <= m; ++j, ++tmu) { // "<=" on purpose here
-            const uint8_t index = indicesRun[tmu];
-            assert_invariant(index < sb.getSize());
-
-            Handle<HwTexture> th = samplers[index].t;
-            if (UTILS_UNLIKELY(!th)) {
-#ifndef NDEBUG
-                slog.w << "In material " << name.c_str()
-                       << ": no texture bound to unit " << +index << io::endl;
+    OpenGLContext& context = gld->getContext();
+#if defined(GL_EXT_texture_filter_anisotropic)
+    const bool anisotropyWorkaround = context.ext.EXT_texture_filter_anisotropic &&
+                                      context.bugs.texture_filter_anisotropic_broken_on_sampler;
 #endif
+    auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
+    auto const& UTILS_RESTRICT usedBindingPoints = mUsedBindingPoints;
+
+    for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
+        const auto binding = usedBindingPoints[i];
+        HwSamplerGroup const * const hwsb = samplerBindings[binding];
+        assert_invariant(hwsb);
+
+        SamplerGroup const& sb = *(hwsb->sb);
+        SamplerGroup::Sampler const* const samplers = sb.getSamplers();
+        for (uint8_t j = 0, m = sb.getSize(); j < m; ++j, ++tmu) { // "<=" on purpose here
+            Handle<HwTexture> th = samplers[j].t;
+            if (!th) {
+                // this happens if the program doesn't use all samplers of a sampler group,
+                // which is not an error.
                 continue;
             }
 
@@ -371,7 +365,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 t->gl.fence = nullptr;
             }
 
-            SamplerParams params{ samplers[index].s };
+            SamplerParams params{ samplers[j].s };
             if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
                 // From OES_EGL_image_external spec:
                 // "The default s and t wrap modes are CLAMP_TO_EDGE and it is an INVALID_ENUM
@@ -388,7 +382,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 && params.filterMag != SamplerMagFilter::NEAREST
                 && params.filterMin != SamplerMinFilter::NEAREST
                 && params.filterMin != SamplerMinFilter::NEAREST_MIPMAP_NEAREST) {
-                slog.w << "In material " << name.c_str()
+                slog.w << "In program " << name.c_str()
                        << ": depth texture used with filtering sampler, tmu = "
                        << +index << io::endl;
             }
@@ -403,7 +397,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 // The texture is already bound here.
                 GLfloat anisotropy = float(1u << params.anisotropyLog2);
                 glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                        std::min(glc.gets.max_anisotropy, anisotropy));
+                        std::min(context.gets.max_anisotropy, anisotropy));
             }
 #endif
         }
