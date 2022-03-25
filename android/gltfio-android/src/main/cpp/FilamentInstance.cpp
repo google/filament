@@ -54,3 +54,10 @@ Java_com_google_android_filament_gltfio_FilamentInstance_nGetAnimator(JNIEnv* , 
     FilamentInstance* instance = (FilamentInstance*) nativeInstance;
     return (jlong) instance->getAnimator();
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentInstance_nApplyMaterialVariant(JNIEnv* env, jclass,
+        jlong nativeInstance, jint variantIndex) {
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    instance->applyMaterialVariant(variantIndex);
+}

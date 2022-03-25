@@ -16,6 +16,7 @@
 
 package com.google.android.filament.gltfio;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 
 import com.google.android.filament.Entity;
@@ -84,8 +85,18 @@ public class FilamentInstance {
         return mAnimator;
     }
 
+    /**
+     * Applies the given material variant to all primitives in this instance.
+     *
+     * Ignored if variantIndex is out of bounds.
+     */
+    void applyMaterialVariant(@IntRange(from = 0) int variantIndex) {
+        nApplyMaterialVariant(mNativeObject, variantIndex);
+    }
+
     private static native int nGetRoot(long nativeAsset);
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
     private static native long nGetAnimator(long nativeAsset);
+    private static native void nApplyMaterialVariant(long nativeAsset, int variantIndex);
 }

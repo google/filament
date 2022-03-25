@@ -140,6 +140,8 @@ struct FAssetLoader : public AssetLoader {
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
+    void createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh, Entity entity,
+            FFilamentInstance* instance);
 
     static LightManager::Type getLightType(const cgltf_light_type type);
 
@@ -355,6 +357,12 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
     instance->owner = primary;
     primary->mInstances.push_back(instance);
 
+    // Check if the asset has variants.
+    instance->variants.reserve(srcAsset->variants_count);
+    for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
+        instance->variants.push_back({CString(srcAsset->variants[i].name)});
+    }
+
     // For each scene root, recursively create all entities.
     for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
         cgltf_node** nodes = scene->nodes;
@@ -414,6 +422,9 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
         createRenderable(srcAsset, node, entity, name);
+        if (srcAsset->variants_count > 0) {
+            createMaterialVariants(srcAsset, node->mesh, entity, instance);
+        }
     }
 
     if (node->light && enableLight) {
@@ -489,23 +500,6 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             continue;
         }
 
-        // Add variants if they exist.
-        for (size_t i = 0, n = inputPrim->mappings_count; i < n; i++) {
-            const size_t variantIndex = inputPrim->mappings[i].variant;
-            const cgltf_material* material = inputPrim->mappings[i].material;
-            if (variantIndex >= mResult->mVariants.size()) {
-                mError = true;
-                break;
-            }
-            MaterialInstance* mi = createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
-            if (!mi) {
-                mError = true;
-                break;
-            }
-            mResult->mDependencyGraph.addEdge(entity, mi);
-            mResult->mVariants[variantIndex].mappings.push_back({entity, index, mi});
-        }
-
         // Expand the object-space bounding box.
         aabb.min = min(outputPrim->aabb.min, aabb.min);
         aabb.max = max(outputPrim->aabb.max, aabb.max);
@@ -569,6 +563,36 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             weights[i] = node->weights[i];
         }
         mRenderableManager.setMorphWeights(renderable, weights.data(), size);
+    }
+}
+
+void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh,
+        Entity entity, FFilamentInstance* instance) {
+    UvMap uvmap {};
+    for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
+        const cgltf_primitive* srcPrim = &mesh->primitives[prim];
+        for (size_t i = 0, m = srcPrim->mappings_count; i < m; i++) {
+            const size_t variantIndex = srcPrim->mappings[i].variant;
+            const cgltf_material* material = srcPrim->mappings[i].material;
+            assert_invariant(variantIndex < mResult->mVariants.size());
+            if (variantIndex >= mResult->mVariants.size()) {
+                mError = true;
+                break;
+            }
+            bool hasVertexColor = primitiveHasVertexColor(srcPrim);
+            MaterialInstance* mi = createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
+            assert_invariant(mi);
+            if (!mi) {
+                mError = true;
+                break;
+            }
+            mResult->mDependencyGraph.addEdge(entity, mi);
+            if (instance) {
+                instance->variants[variantIndex].mappings.push_back({entity, prim, mi});
+            } else {
+                mResult->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
+            }
+        }
     }
 }
 

@@ -283,6 +283,13 @@ int main(int argc, char** argv) {
         static double previous = 0.0;
         if (now - previous > 1.0 && app.asset->getAssetInstanceCount() < 100) {
             FilamentInstance* instance = app.loader->createInstance(app.asset);
+
+            // If the asset has variants, rotate through each variant.
+            const size_t variantCount = app.asset->getMaterialVariantCount();
+            if (variantCount > 1) {
+                instance->applyMaterialVariant(app.instances.size() % variantCount);
+            }
+
             app.instances.push_back(instance);
             arrangeIntoCircle();
             previous = now;

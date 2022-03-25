@@ -243,7 +243,7 @@ public class FilamentAsset {
         return names;
     }
 
-    /*
+    /**
      * Applies the given material variant to all primitives that it affects.
      *
      * This is efficient because it merely swaps around persistent MaterialInstances. If you change
@@ -251,6 +251,7 @@ public class FilamentAsset {
      * after you re-apply that variant.
      *
      * If the asset is instanced, this affects all instances in the same way.
+     * To set the variant on an individual instance, use FilamentInstance#applyMaterialVariant.
      *
      * Ignored if variantIndex is out of bounds.
      */
