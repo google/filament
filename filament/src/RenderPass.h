@@ -378,7 +378,7 @@ private:
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
-    static void setupColorCommand(Command& cmdDraw,
+    static void setupColorCommand(Command& cmdDraw, Variant variant,
             FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
 
     static void updateSummedPrimitiveCounts(

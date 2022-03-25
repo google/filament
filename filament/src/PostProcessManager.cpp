@@ -142,6 +142,7 @@ UTILS_NOINLINE
 PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(
         FEngine& engine, Variant::type_t variantKey) const noexcept {
     FMaterial* const material = getMaterial(engine);
+    material->prepareProgram(Variant{ variantKey });
     return {
             .program = material->getProgram(Variant{variantKey}),
             .rasterState = material->getRasterState(),
@@ -2284,6 +2285,10 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
     mi->setParameter("fxaa", colorGradingConfig.fxaa);
     mi->setParameter("temporalNoise", temporalNoise);
     mi->commit(driver);
+
+    // load both variants
+    material.getMaterial(mEngine)->getProgram(Variant{Variant::type_t(PostProcessVariant::TRANSLUCENT)});
+    material.getMaterial(mEngine)->getProgram(Variant{Variant::type_t(PostProcessVariant::OPAQUE)});
 }
 
 void PostProcessManager::colorGradingSubpass(DriverApi& driver,
@@ -2295,19 +2300,19 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     // the UBO has been set and committed in colorGradingPrepareSubpass()
     FMaterialInstance* mi = material.getMaterialInstance(mEngine);
     mi->use(driver);
-    const uint8_t variant = uint8_t(colorGradingConfig.translucent ?
+    const Variant::type_t variant = Variant::type_t(colorGradingConfig.translucent ?
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
     driver.nextSubpass();
     driver.draw(material.getPipelineState(mEngine, variant), fullScreenRenderPrimitive, 1);
 }
 
-
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     FMaterialInstance* mi = material.getMaterialInstance(mEngine);
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver);
+    material.getMaterial(mEngine)->getProgram(Variant{});
 }
 
 void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
@@ -2680,9 +2685,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;
                 }
+                PipelineState pipeline(material.getPipelineState(mEngine, variant));
                 driver.beginRenderPass(out.target, out.params);
-                driver.draw(material.getPipelineState(mEngine, variant),
-                        mEngine.getFullScreenRenderPrimitive(), 1);
+                driver.draw(pipeline, mEngine.getFullScreenRenderPrimitive(), 1);
                 if (colorGradingConfig.asSubpass) {
                     colorGradingSubpass(driver, colorGradingConfig);
                 }
@@ -2875,7 +2880,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                 // render pass with draw calls
 
                 auto out = resources.getRenderPassInfo();
-                driver.beginRenderPass(out.target, out.params);
 
                 if (twoPassesEASU) {
                     auto* mi = splitEasuMaterial->getMaterialInstance(mEngine);
@@ -2884,6 +2888,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     if (translucent) {
                         enableTranslucentBlending(pipeline);
                     }
+
+                    driver.beginRenderPass(out.target, out.params);
                     driver.draw(pipeline, fullScreenRenderPrimitive, 1);
                 }
 
@@ -2897,6 +2903,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     }
                     if (twoPassesEASU) {
                         pipeline.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
+                    }
+
+                    if (!twoPassesEASU) {
+                        driver.beginRenderPass(out.target, out.params);
                     }
                     driver.draw(pipeline, fullScreenRenderPrimitive, 1);
                 }

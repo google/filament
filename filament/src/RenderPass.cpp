@@ -171,12 +171,11 @@ void RenderPass::sortCommands() noexcept {
 /* static */
 UTILS_ALWAYS_INLINE // this function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
-void RenderPass::setupColorCommand(Command& cmdDraw,
+void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
         FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
-    Variant variant = Variant::filterVariant(
-            cmdDraw.primitive.materialVariant, ma->isVariantLit());
+    variant = Variant::filterVariant(variant, ma->isVariantLit());
 
     // Below, we evaluate both commands to avoid a branch
 
@@ -395,10 +394,12 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             auto const& primitive = primitives[pi];
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
+            FMaterial const* const ma = mi->getMaterial();
+
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.materialVariant = variant;
-                RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
+                RenderPass::setupColorCommand(cmdColor, variant, mi, inverseFrontFaces);
+                ma->prepareProgram(cmdColor.primitive.materialVariant);
 
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
@@ -483,7 +484,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             }
 
             if constexpr (isDepthPass) {
-                FMaterial const* const ma = mi->getMaterial();
+                ma->prepareProgram(cmdDepth.primitive.materialVariant);
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();

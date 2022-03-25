@@ -286,7 +286,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
             const Variant variant(k);
             if (Variant::isValidDepthVariant(variant)) {
-                cachedPrograms[k] = engine.getDefaultMaterial()->getProgram(variant);
+                FMaterial const* const pMaterial = engine.getDefaultMaterial();
+                pMaterial->prepareProgram(variant);
+                cachedPrograms[k] = pMaterial->getProgram(variant);
             }
         }
     }
@@ -344,17 +346,19 @@ UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
     return mUniformInterfaceBlock.getUniformInfo(name.c_str());
 }
 
-Handle<HwProgram> FMaterial::getProgramSlow(Variant variant) const noexcept {
+void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
-            return getSurfaceProgramSlow(variant);
+            getSurfaceProgramSlow(variant);
+            break;
 
         case MaterialDomain::POST_PROCESS:
-            return getPostProcessProgramSlow(variant);
+            getPostProcessProgramSlow(variant);
+            break;
     }
 }
 
-Handle<HwProgram> FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
+void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
     assert_invariant(variant == Variant::filterVariant(variant, isVariantLit()) );
@@ -387,11 +391,10 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(Variant variant) const noexce
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 
     // getSurfaceBindingIndexMap in GLSLPostProcessor.cpp also needs to update if sampler groups are added.
-
-    return createAndCacheProgram(std::move(pb), variant);
+    createAndCacheProgram(std::move(pb), variant);
 }
 
-Handle<HwProgram> FMaterial::getPostProcessProgramSlow(Variant variant)
+void FMaterial::getPostProcessProgramSlow(Variant variant)
     const noexcept {
 
     Program pb = getProgramBuilderWithVariants(variant, variant, variant);
@@ -401,8 +404,7 @@ Handle<HwProgram> FMaterial::getPostProcessProgramSlow(Variant variant)
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 
     // getPostProcessBindingIndexMap in GLSLPostProcessor.cpp also needs to update if sampler groups are added.
-
-    return createAndCacheProgram(std::move(pb), variant);
+    createAndCacheProgram(std::move(pb), variant);
 }
 
 Program FMaterial::getProgramBuilderWithVariants(
@@ -451,12 +453,10 @@ Program FMaterial::getProgramBuilderWithVariants(
     return pb;
 }
 
-Handle<HwProgram> FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
+void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
     auto program = mEngine.getDriverApi().createProgram(std::move(p));
     assert_invariant(program);
-
     mCachedPrograms[variant.key] = program;
-    return program;
 }
 
 size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
