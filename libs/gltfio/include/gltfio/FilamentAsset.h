@@ -200,8 +200,6 @@ public:
      * Must be called after loadResources or asyncBeginLoad, otherwise returns null.
      * If the asset is instanced, this returns a "primary" animator that controls all instances.
      * To animate each instance individually, use \see FilamentInstance.
-     *
-     * TODO(prideout): this should return a ref not a ptr
      */
     Animator* getAnimator() const noexcept;
 
@@ -245,7 +243,7 @@ public:
      */
     const char* getMaterialVariantName(size_t variantIndex) const noexcept;
 
-    /*
+    /**
      * Applies the given material variant to all primitives that it affects.
      *
      * This is efficient because it merely swaps around persistent MaterialInstances. If you change
@@ -253,6 +251,7 @@ public:
      * after you re-apply that variant.
      *
      * If the asset is instanced, this affects all instances in the same way.
+     * To set the variant on an individual instance, use FilamentInstance::applyMaterialVariant.
      *
      * Ignored if variantIndex is out of bounds.
      */

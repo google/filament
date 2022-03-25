@@ -158,7 +158,7 @@ void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dst
         Skin& dstSkin = dstSkins[i];
         const cgltf_skin& srcSkin = gltf->skins[i];
         if (srcSkin.name) {
-            dstSkin.name = srcSkin.name;
+            dstSkin.name = CString(srcSkin.name);
         }
 
         // Build a list of transformables for this skin, one for each joint.

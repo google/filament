@@ -61,6 +61,18 @@ const utils::Entity* FFilamentInstance::getJointsAt(size_t skinIndex) const noex
     return skins[skinIndex].joints.data();
 }
 
+void FFilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
+    if (variantIndex >= variants.size()) {
+        return;
+    }
+    const auto& mappings = variants[variantIndex].mappings;
+    RenderableManager& rm = owner->mEngine->getRenderableManager();
+    for (const auto& mapping : mappings) {
+        auto renderable = rm.getInstance(mapping.renderable);
+        rm.setMaterialInstanceAt(renderable, mapping.primitiveIndex, mapping.material);
+    }
+}
+
 FilamentAsset* FilamentInstance::getAsset() const noexcept {
     return upcast(this)->owner;
 }
@@ -76,6 +88,10 @@ const Entity* FilamentInstance::getEntities() const noexcept {
 
 Entity FilamentInstance::getRoot() const noexcept {
     return upcast(this)->root;
+}
+
+void FilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
+    return upcast(this)->applyMaterialVariant(variantIndex);
 }
 
 Animator* FilamentInstance::getAnimator() noexcept {

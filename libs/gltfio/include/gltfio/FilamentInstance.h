@@ -57,6 +57,13 @@ public:
     utils::Entity getRoot() const noexcept;
 
     /**
+     * Applies the given material variant to all primitives in this instance.
+     *
+     * Ignored if variantIndex is out of bounds.
+     */
+    void applyMaterialVariant(size_t variantIndex) noexcept;
+
+    /**
      * Returns the animation engine for the instance.
      *
      * Note that an animator can be obtained either from an individual instance, or from the

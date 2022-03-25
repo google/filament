@@ -1872,6 +1872,7 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
         return EntityVector(ptr, ptr + self->getEntityCount());
     }), allow_raw_pointers())
     .function("getRoot", &FilamentInstance::getRoot)
+    .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
     .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
 
 // This little wrapper exists to get around RTTI requirements in embind.

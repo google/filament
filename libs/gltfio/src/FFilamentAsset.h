@@ -246,17 +246,6 @@ struct FFilamentAsset : public FilamentAsset {
 
     void createAnimators();
 
-    struct VariantMapping {
-        utils::Entity renderable;
-        size_t primitiveIndex;
-        filament::MaterialInstance* material;
-    };
-
-    struct Variant {
-        utils::CString name;
-        std::vector<VariantMapping> mappings;
-    };
-
     filament::Engine* mEngine;
     utils::NameComponentManager* mNameManager;
     utils::EntityManager* mEntityManager;
