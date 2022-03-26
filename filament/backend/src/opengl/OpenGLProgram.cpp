@@ -384,7 +384,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 && params.filterMin != SamplerMinFilter::NEAREST_MIPMAP_NEAREST) {
                 slog.w << "In program " << name.c_str()
                        << ": depth texture used with filtering sampler, tmu = "
-                       << +index << io::endl;
+                       << +tmu << io::endl;
             }
 #endif
             gld->bindTexture(tmu, t);
