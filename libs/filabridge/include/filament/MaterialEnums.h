@@ -196,7 +196,7 @@ enum class ReflectionMode : uint8_t {
     SCREEN_SPACE    = 1, //! reflections sample from screen space, and fallback to the scene's IBL
 };
 
-// can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
+// can't really use std::underlying_type<AttributeIndex>::type because the driver takes an uint32_t
 using AttributeBitset = utils::bitset32;
 
 static constexpr size_t MATERIAL_PROPERTIES_COUNT = 26;
