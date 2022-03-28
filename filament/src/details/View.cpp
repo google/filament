@@ -878,9 +878,10 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
     }
 }
 
-void FView::renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
+FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FrameGraph& fg, FEngine& engine,
+        FEngine::DriverApi& driver,
         RenderPass const& pass) noexcept {
-    mShadowMapManager.render(fg, engine, driver, pass, *this);
+    return mShadowMapManager.render(fg, engine, driver, pass, *this);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {

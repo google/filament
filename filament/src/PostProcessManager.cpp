@@ -357,7 +357,7 @@ void PostProcessManager::commitAndRender(FrameGraphResources::RenderPassInfo con
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
+PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph& fg,
         RenderPass const& pass, uint8_t structureRenderFlags,
         uint32_t width, uint32_t height,
         StructurePassConfig const& config) noexcept {
@@ -461,9 +461,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
                 driver.setMinMaxLevels(in, 0, levelCount - 1);
             });
 
-    fg.getBlackboard().put("structure", depth);
-    fg.getBlackboard().put("picking", structurePass->picking);
-    return depth;
+    return { depth, structurePass->picking };
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -473,10 +471,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
         FrameHistory const& frameHistory,
         CameraInfo const& cameraInfo,
         PerViewUniforms& uniforms,
+        FrameGraphId<FrameGraphTexture> structure,
         ScreenSpaceReflectionsOptions const& options,
         FrameGraphTexture::Descriptor const& desc) noexcept {
-
-    Blackboard& blackboard = fg.getBlackboard();
 
     struct SSRPassData {
         // our output, the reflection map
@@ -527,9 +524,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH });
 
                 // get the structure buffer
-                data.structure = blackboard.get<FrameGraphTexture>("structure");
-                assert_invariant(data.structure);
-                data.structure = builder.sample(data.structure);
+                assert_invariant(structure);
+                data.structure = builder.sample(structure);
 
                 if (history) {
                     data.history = builder.sample(history);
@@ -575,9 +571,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(FrameGraph& fg,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
+        FrameGraphId<FrameGraphTexture> depth,
         AmbientOcclusionOptions const& options) noexcept {
-
-    FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
     assert_invariant(depth);
 
     const size_t levelCount = fg.getDescriptor(depth).levels;
@@ -840,22 +835,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
      */
 
     if (lowPassFilterEnabled) {
-        ssao = bilateralBlurPass(fg, ssao, { config.scale, 0 }, cameraInfo.zf,
+        ssao = bilateralBlurPass(fg, ssao, depth, { config.scale, 0 },
+                cameraInfo.zf,
                 TextureFormat::RGB8,
                 config);
 
-        ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
-                (highQualityUpsampling || computeBentNormals) ? TextureFormat::RGB8 : TextureFormat::R8,
+        ssao = bilateralBlurPass(fg, ssao, depth, { 0, config.scale },
+                cameraInfo.zf,
+                (highQualityUpsampling || computeBentNormals) ? TextureFormat::RGB8
+                                                              : TextureFormat::R8,
                 config);
     }
 
-    fg.getBlackboard().put("ssao", ssao);
     return ssao;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
-        FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
-        TextureFormat format, BilateralPassConfig config) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> depth,
+        math::int2 axis, float zf, TextureFormat format,
+        BilateralPassConfig const& config) noexcept {
+    assert_invariant(depth);
 
     struct BlurPassData {
         FrameGraphId<FrameGraphTexture> input;
@@ -878,8 +878,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                         .type = desc.type,
                         .format = format });
 
-                FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
-                assert_invariant(depth);
                 depth = builder.read(depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 if (config.bentNormals) {
@@ -1312,8 +1310,14 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::generateMipmapSSR(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, const DepthOfFieldOptions& dofOptions,
-        bool translucent, const CameraInfo& cameraInfo, float2 scale) noexcept {
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> depth,
+        const CameraInfo& cameraInfo,
+        bool translucent,
+        float bokehAspectRatio,
+        const DepthOfFieldOptions& dofOptions) noexcept {
+
+    assert_invariant(depth);
 
     const uint8_t variant = uint8_t(
             translucent ? PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
@@ -1410,10 +1414,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
               K * focusDistance * p[2][3] / p[3][2],
               K * (1.0 + focusDistance * p[2][2] / p[3][2])
     };
-
-    Blackboard& blackboard = fg.getBlackboard();
-    auto depth = blackboard.get<FrameGraphTexture>("depth");
-    assert_invariant(depth);
 
     /*
      * dofResolution is used (at compile time for now) to chose between full- or quarter-resolution
@@ -1703,13 +1703,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 mi->setParameter("tiles", tilesCocMinMax,
                         { .filterMin = SamplerMinFilter::NEAREST });
 
-                // The bokeh height is always correct regardless of the dynamic resolution scaling.
-                // (because the CoC is calculated w.r.t. the height), so we only need to adjust
-                // the width.
-                const float aspectRatio = scale.x / scale.y;
                 mi->setParameter("cocToTexelScale", float2{
-                        aspectRatio / (inputDesc.width  * dofResolution),
-                                1.0 / (inputDesc.height * dofResolution)
+                        bokehAspectRatio / (inputDesc.width  * dofResolution),
+                                     1.0 / (inputDesc.height * dofResolution)
                 });
 
                 mi->setParameter("cocToPixelScale", (1.0f / dofResolution));
@@ -1838,20 +1834,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     return ppDoFCombine->output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::bloom(FrameGraph& fg,
+PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
         math::float2 scale) noexcept {
-
-    FrameGraphId<FrameGraphTexture> bloom = bloomPass(fg, input,
-            outFormat, inoutBloomOptions, scale);
-
-    fg.getBlackboard().put("bloom", bloom);
-
-    return bloom;
+    return bloomPass(fg, input, outFormat, inoutBloomOptions, scale);
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
+PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
         BloomOptions& inoutBloomOptions, float2 scale) noexcept {
     // Chrome does not support feedback loops in WebGL 2.0. See also:
@@ -2020,8 +2010,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
         constexpr float sigma = (kernelWidth + 1.0f) / 6.0f;
         auto flare = gaussianBlurPass(fg, flarePass->out, {}, false, kernelWidth, sigma);
 
-        fg.getBlackboard().put("flare", flare);
-
         // upsample phase
         auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
                 [&](FrameGraph::Builder& builder, auto& data) {
@@ -2070,7 +2058,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     driver.setMinMaxLevels(hwIn, 0, inoutBloomOptions.levels - 1);
                 });
 
-        return bloomUpsamplePass->out;
+        return { bloomUpsamplePass->out, flare };
 
     } else { // !isWebGL
 
@@ -2221,7 +2209,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                                 in.target, in.params.viewport, filter);
                     }
                 });
-        return bloomUpsamplePass->out;
+
+        return { bloomUpsamplePass->out, {} };
     }
 }
 
@@ -2352,16 +2341,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
-        FColorGrading const* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions,
+        FrameGraphId<FrameGraphTexture> bloom,
+        FrameGraphId<FrameGraphTexture> flare,
+        FColorGrading const* colorGrading,
+        ColorGradingConfig const& colorGradingConfig,
+        BloomOptions const& bloomOptions,
+        VignetteOptions const& vignetteOptions,
         float2 scale) noexcept
 {
-    Blackboard& blackboard = fg.getBlackboard();
-
     FrameGraphId<FrameGraphTexture> bloomDirt;
     FrameGraphId<FrameGraphTexture> starburst;
-    FrameGraphId<FrameGraphTexture> bloom = blackboard.get<FrameGraphTexture>("bloom");
-    FrameGraphId<FrameGraphTexture> flare = blackboard.get<FrameGraphTexture>("flare");
 
     float bloomStrength = 0.0f;
     if (bloomOptions.enabled) {
@@ -2570,10 +2559,12 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> depth,
         FrameHistory& frameHistory,
         FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
         TemporalAntiAliasingOptions const& taaOptions,
-        ColorGradingConfig colorGradingConfig) noexcept {
+        ColorGradingConfig const& colorGradingConfig) noexcept {
+    assert_invariant(depth);
 
     auto const& previous = frameHistory.getPrevious().*pTaa;
     auto& current = frameHistory.getCurrent().*pTaa;
@@ -2589,10 +2580,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
         historyProjection = previous.projection;
     }
-
-    Blackboard& blackboard = fg.getBlackboard();
-    auto depth = blackboard.get<FrameGraphTexture>("depth");
-    assert_invariant(depth);
 
     struct TAAData {
         FrameGraphId<FrameGraphTexture> color;
