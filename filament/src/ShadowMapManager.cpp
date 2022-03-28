@@ -101,7 +101,8 @@ void ShadowMapManager::addSpotShadowMap(size_t lightIndex,
     mSpotShadowMaps.emplace_back(shadowMap, lightIndex, options);
 }
 
-void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverApi& driver,
+FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
+        FEngine& engine, backend::DriverApi& driver,
         RenderPass const& pass, FView& view) noexcept {
 
     constexpr size_t MAX_SHADOW_LAYERS =
@@ -333,7 +334,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
         }
     }
 
-    fg.getBlackboard().put("shadows", shadows);
+    return shadows;
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,

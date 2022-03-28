@@ -317,7 +317,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         RenderPass shadowPass(pass);
         shadowPass.setVariant(shadowVariant);
-        view.renderShadowMaps(fg, engine, driver, shadowPass);
+        auto shadows = view.renderShadowMaps(fg, engine, driver, shadowPass);
+        blackboard["shadows"] = shadows;
     }
 
     // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
@@ -434,16 +435,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // This is normally used by SSAO and contact-shadows
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
+    const auto [structure, picking_] = ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
+    blackboard["structure"] = structure;
+    const auto picking = picking_;
+
 
     if (view.hasPicking()) {
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
-        auto picking = blackboard.get<FrameGraphTexture>("picking");
         fg.addPass<PickingResolvePassData>("Picking Resolve Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.picking = builder.read(picking,
@@ -472,7 +475,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (aoOptions.enabled) {
         // we could rely on FrameGraph culling, but this creates unnecessary CPU work
-        ppm.screenSpaceAmbientOcclusion(fg, svp, cameraInfo, aoOptions);
+        auto ssao = ppm.screenSpaceAmbientOcclusion(fg, svp, cameraInfo, structure, aoOptions);
+        blackboard["ssao"] = ssao;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -481,7 +485,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (config.hasScreenSpaceReflections) {
         auto reflections = ppm.ssr(fg, pass,
                 view.getFrameHistory(), cameraInfo,
-                view.getPerViewUniforms(), view.getScreenSpaceReflectionsOptions(),
+                view.getPerViewUniforms(),
+                structure,
+                ssReflectionsOptions,
                 { .width = svp.width, .height = svp.height });
 
         // generate the mipchain
@@ -604,9 +610,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // resolve depth -- which might be needed because of TAA or DoF. This pass will be culled
     // if the depth is not used below.
-    auto depth = blackboard.get<FrameGraphTexture>("depth");
-    depth = ppm.resolveBaseLevel(fg, "Resolved Depth Buffer", depth);
-    blackboard.put("depth", depth);
+    auto const depth = ppm.resolveBaseLevel(fg, "Resolved Depth Buffer",
+            blackboard.get<FrameGraphTexture>("depth"));
 
     // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of
     //       fireflies due to the instability of the highlights. This can be fixed with a
@@ -615,7 +620,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, view.getFrameHistory(), &FrameHistoryEntry::taa,
+        input = ppm.taa(fg, input, depth, view.getFrameHistory(), &FrameHistoryEntry::taa,
                 taaOptions, colorGradingConfig);
     }
 
@@ -625,18 +630,26 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool mightNeedFinalBlit = true;
     if (hasPostProcess) {
         if (dofOptions.enabled) {
-            input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo, scale);
+            // The bokeh height is always correct regardless of the dynamic resolution scaling.
+            // (because the CoC is calculated w.r.t. the height), so we only need to adjust
+            // the width.
+            float bokehAspectRatio = scale.x / scale.y;
+            input = ppm.dof(fg, input, depth, cameraInfo, needsAlphaChannel,
+                    bokehAspectRatio, dofOptions);
         }
 
+        FrameGraphId<FrameGraphTexture> bloom, flare;
         if (bloomOptions.enabled) {
             // generate the bloom buffer, which is stored in the blackboard as "bloom". This is
             // consumed by the colorGrading pass and will be culled if colorGrading is disabled.
-            ppm.bloom(fg, input, bloomOptions, TextureFormat::R11F_G11F_B10F, scale);
+            auto [bloom_, flare_] = ppm.bloom(fg, input, bloomOptions, TextureFormat::R11F_G11F_B10F, scale);
+            bloom = bloom_;
+            flare = flare_;
         }
 
         if (hasColorGrading) {
             if (!colorGradingConfig.asSubpass) {
-                input = ppm.colorGrading(fg, input,
+                input = ppm.colorGrading(fg, input, bloom, flare,
                         colorGrading, colorGradingConfig,
                         bloomOptions, vignetteOptions, scale);
             }
@@ -695,7 +708,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
 
-//    auto debug = fg.getBlackboard().get<FrameGraphTexture>("structure");
+//    auto debug = structure
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
 
     fg.forwardResource(fgViewRenderTarget, input);
