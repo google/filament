@@ -1836,7 +1836,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
 PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
-        BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
+        BloomOptions& inoutBloomOptions,
+        backend::TextureFormat outFormat,
         math::float2 scale) noexcept {
     return bloomPass(fg, input, outFormat, inoutBloomOptions, scale);
 }
@@ -1967,48 +1968,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
         input = bloomDownsamplePass->out;
 
         // flare pass
-        auto& flarePass = fg.addPass<BloomPassData>("Flare",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.in = builder.sample(input);
-                    data.out = builder.createTexture("Flare Texture", {
-                            .width  = std::max(1u, width  / 2),
-                            .height = std::max(1u, height / 2),
-                            .format = outFormat
-                    });
-                    data.out = builder.declareRenderPass(data.out);
-                },
-                [=](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) {
-                    auto in = resources.getTexture(data.in);
-                    auto out = resources.getRenderPassInfo(0);
-                    const float aspectRatio = float(width) / height;
-
-                    auto const& material = getPostProcessMaterial("flare");
-                    FMaterialInstance* mi = material.getMaterialInstance(mEngine);
-
-                    mi->setParameter("color", in, {
-                            .filterMag = SamplerMagFilter::LINEAR,
-                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                    });
-
-                    mi->setParameter("level", 1.0f);    // adjust with resolution
-                    mi->setParameter("aspectRatio",
-                            float2{ aspectRatio, 1.0f / aspectRatio });
-                    mi->setParameter("threshold",
-                            float2{ inoutBloomOptions.ghostThreshold, inoutBloomOptions.haloThreshold });
-                    mi->setParameter("chromaticAberration",
-                            inoutBloomOptions.chromaticAberration);
-                    mi->setParameter("ghostCount", (float)inoutBloomOptions.ghostCount);
-                    mi->setParameter("ghostSpacing", inoutBloomOptions.ghostSpacing);
-                    mi->setParameter("haloRadius", inoutBloomOptions.haloRadius);
-                    mi->setParameter("haloThickness", inoutBloomOptions.haloThickness);
-
-                    commitAndRender(out, material, driver);
-                });
-
-        constexpr float kernelWidth = 9;
-        constexpr float sigma = (kernelWidth + 1.0f) / 6.0f;
-        auto flare = gaussianBlurPass(fg, flarePass->out, {}, false, kernelWidth, sigma);
+        auto flare = flarePass(fg, input, width, height, outFormat, inoutBloomOptions);
 
         // upsample phase
         auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
@@ -2149,6 +2109,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
         FrameGraphId<FrameGraphTexture> output = bloomDownsamplePass->out;
         FrameGraphId<FrameGraphTexture> stage = bloomDownsamplePass->stage;
 
+        // flare pass
+        auto flare = flarePass(fg, bloomDownsamplePass->out, width, height, outFormat, inoutBloomOptions);
+
         // upsample phase
         auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
                 [&](FrameGraph::Builder& builder, auto& data) {
@@ -2210,8 +2173,62 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                     }
                 });
 
-        return { bloomUpsamplePass->out, {} };
+        return { bloomUpsamplePass->out, flare };
     }
+}
+
+UTILS_NOINLINE
+FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        uint32_t width, uint32_t height,
+        backend::TextureFormat outFormat,
+        BloomOptions const& bloomOptions) noexcept {
+
+    struct FlarePassData {
+        FrameGraphId<FrameGraphTexture> in;
+        FrameGraphId<FrameGraphTexture> out;
+    };
+    auto& flarePass = fg.addPass<FlarePassData>("Flare",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.in = builder.sample(input);
+                data.out = builder.createTexture("Flare Texture", {
+                        .width  = std::max(1u, width  / 2),
+                        .height = std::max(1u, height / 2),
+                        .format = outFormat
+                });
+                data.out = builder.declareRenderPass(data.out);
+            },
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
+                auto in = resources.getTexture(data.in);
+                auto out = resources.getRenderPassInfo(0);
+                const float aspectRatio = float(width) / height;
+
+                auto const& material = getPostProcessMaterial("flare");
+                FMaterialInstance* mi = material.getMaterialInstance(mEngine);
+
+                mi->setParameter("color", in, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                });
+
+                mi->setParameter("level", 1.0f);    // adjust with resolution
+                mi->setParameter("aspectRatio", float2{ aspectRatio, 1.0f / aspectRatio });
+                mi->setParameter("threshold",
+                        float2{ bloomOptions.ghostThreshold, bloomOptions.haloThreshold });
+                mi->setParameter("chromaticAberration", bloomOptions.chromaticAberration);
+                mi->setParameter("ghostCount", (float)bloomOptions.ghostCount);
+                mi->setParameter("ghostSpacing", bloomOptions.ghostSpacing);
+                mi->setParameter("haloRadius", bloomOptions.haloRadius);
+                mi->setParameter("haloThickness", bloomOptions.haloThickness);
+
+                commitAndRender(out, material, driver);
+            });
+
+    constexpr float kernelWidth = 9;
+    constexpr float sigma = (kernelWidth + 1.0f) / 6.0f;
+    auto flare = gaussianBlurPass(fg, flarePass->out, {}, false, kernelWidth, sigma);
+    return flare;
 }
 
 UTILS_NOINLINE

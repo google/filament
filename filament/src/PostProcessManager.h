@@ -130,7 +130,13 @@ public:
             BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
             math::float2 scale) noexcept;
 
-    // Color grading, tone mapping, dithering and bloom
+    FrameGraphId<FrameGraphTexture> flarePass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            uint32_t width, uint32_t height,
+            backend::TextureFormat outFormat,
+            BloomOptions const& bloomOptions) noexcept;
+
+        // Color grading, tone mapping, dithering and bloom
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> bloom,
