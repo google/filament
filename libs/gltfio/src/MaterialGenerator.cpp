@@ -100,7 +100,8 @@ std::string shaderFromKey(const MaterialKey& config) {
                     "materialParams.clearCoatNormalUvMatrix).xy;\n";
         }
         shader += R"SHADER(
-            material.clearCoatNormal = texture(materialParams_clearCoatNormalMap, clearCoatNormalUV).xyz * 2.0 - 1.0;
+            material.clearCoatNormal =
+                texture(materialParams_clearCoatNormalMap, clearCoatNormalUV).xyz * 2.0 - 1.0;
             material.clearCoatNormal.xy *= materialParams.clearCoatNormalScale;
         )SHADER";
     }
@@ -154,13 +155,15 @@ std::string shaderFromKey(const MaterialKey& config) {
             shader += R"SHADER(
                 material.glossiness = materialParams.glossinessFactor;
                 material.specularColor = materialParams.specularFactor;
-                material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
+                material.emissive = vec4(materialParams.emissiveStrength *
+                    materialParams.emissiveFactor.rgb, 0.0);
             )SHADER";
         } else {
             shader += R"SHADER(
                 material.roughness = materialParams.roughnessFactor;
                 material.metallic = materialParams.metallicFactor;
-                material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
+                material.emissive = vec4(materialParams.emissiveStrength *
+                    materialParams.emissiveFactor.rgb, 0.0);
             )SHADER";
         }
         if (config.hasMetallicRoughnessTexture) {
@@ -399,6 +402,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
 
     // EMISSIVE
     builder.parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
+    builder.parameter(MaterialBuilder::UniformType::FLOAT, "emissiveStrength");
     if (config.hasEmissiveTexture) {
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "emissiveMap");
         if (config.hasTextureTransforms) {

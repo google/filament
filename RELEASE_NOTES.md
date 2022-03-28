@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.20.6 (currently main branch)
 
 - gltfio: add support for KHR_materials_variants
+- gltfio: add support for KHR_materials_emissive_strength
 - gltfio: Java now exposes morph target names as an array for consistency [⚠️ **API Change**].
 
 ## v1.20.5

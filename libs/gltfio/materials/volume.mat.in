@@ -41,6 +41,7 @@ material {
         // Emissive Map
         { type : int, name : emissiveIndex },
         { type : float3, name : emissiveFactor },
+        { type : float, name : emissiveStrength },
         { type : sampler2d, name : emissiveMap },
         { type : mat3, name : emissiveUvMatrix, precision: high },
 
@@ -92,11 +93,13 @@ fragment {
 
         material.roughness = materialParams.roughnessFactor;
         material.metallic = materialParams.metallicFactor;
-        material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
         material.transmission = materialParams.transmissionFactor;
         material.absorption = materialParams.volumeAbsorption;
         material.thickness = materialParams.volumeThicknessFactor * objectUniforms.userData;
         material.ior = materialParams.ior;
+
+        material.emissive = vec4(materialParams.emissiveStrength *
+                materialParams.emissiveFactor.rgb, 0.0);
 
         if (materialParams.transmissionIndex > -1) {
             highp float2 uv = uvs[materialParams.transmissionIndex];

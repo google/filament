@@ -1294,6 +1294,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         }
     }
 
+    if (mi->getMaterial()->hasParameter("emissiveStrength")) {
+        mi->setParameter("emissiveStrength", inputMat->has_emissive_strength ?
+                inputMat->emissive_strength.emissive_strength : 1.0f);
+    }
+
     mResult->mMatInstanceCache[key] = {mi, *uvmap};
     return mi;
 }

@@ -168,6 +168,7 @@ steps:
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
   - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_emissive_strength
   - [x] KHR_materials_ior
   - [x] KHR_materials_pbrSpecularGlossiness
   - [x] KHR_materials_sheen
