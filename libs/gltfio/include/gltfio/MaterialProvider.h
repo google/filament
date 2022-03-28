@@ -34,6 +34,11 @@ enum class AlphaMode : uint8_t {
     BLEND
 };
 
+// The following struct gets hashed so all padding bits should be explicit.
+// Tell the compiler to emit a warning if it adds any padding.
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wpadded"
+
 /**
  * \struct MaterialKey MaterialProvider.h gltfio/MaterialProvider.h
  * \brief Small POD structure that specifies the requirements for a glTF material.
@@ -88,9 +93,12 @@ struct alignas(4) MaterialKey {
     bool hasSheen : 1;
     bool hasIOR : 1;
     bool hasVolume : 1;
+    uint8_t padding : 5;
 };
 
-static_assert(sizeof(MaterialKey) == 16, "MaterialKey has unexpected padding.");
+static_assert(sizeof(MaterialKey) == 16, "MaterialKey has unexpected size.");
+
+#pragma clang diagnostic pop
 
 bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 

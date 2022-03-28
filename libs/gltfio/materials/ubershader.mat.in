@@ -43,6 +43,7 @@ material {
         // Emissive Map
         { type : int, name : emissiveIndex },
         { type : float3, name : emissiveFactor },
+        { type : float, name : emissiveStrength },
         { type : sampler2d, name : emissiveMap },
         { type : mat3, name : emissiveUvMatrix, precision: high },
 
@@ -126,7 +127,8 @@ fragment {
                 }
             #endif
 
-            material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
+            material.emissive = vec4(materialParams.emissiveStrength *
+                    materialParams.emissiveFactor.rgb, 0.0);
 
             #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
                 material.glossiness = materialParams.glossinessFactor;
