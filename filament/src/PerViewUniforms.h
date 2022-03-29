@@ -111,11 +111,11 @@ public:
 private:
     FEngine& mEngine;
     math::float2 mClipControl{};
-    TypedUniformBuffer<PerViewUib> mPerViewUb;
-    backend::SamplerGroup mPerViewSb;
-    backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
-    backend::Handle<backend::HwBufferObject> mPerViewUbh;
-    std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
+    TypedUniformBuffer<PerViewUib> mUniforms;
+    backend::SamplerGroup mSamplers;
+    backend::Handle<backend::HwBufferObject> mUniformBufferHandle;
+    backend::Handle<backend::HwSamplerGroup> mSamplerGroupHandle;
+    std::uniform_real_distribution<float> mUniformDistribution{ 0.0f, 1.0f };
 };
 
 } // namespace filament
