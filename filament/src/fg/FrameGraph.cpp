@@ -233,12 +233,16 @@ FrameGraph::Builder FrameGraph::addPassInternal(char const* name, FrameGraphPass
     PassNode* node = mArena.make<RenderPassNode>(*this, name, base);
     base->setNode(node);
     mPassNodes.push_back(node);
-    return Builder(*this, node);
+    return { *this, node };
 }
 
-FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle, FrameGraphHandle parent) noexcept {
+FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle) noexcept {
+    assert_invariant(handle);
+    ResourceNode* const node = getActiveResourceNode(handle);
+    assert_invariant(node);
+    FrameGraphHandle parent = node->getParentHandle();
     ResourceSlot& slot = getResourceSlot(handle);
-    slot.version = ++handle.version;   // increase the parent's version
+    slot.version = ++handle.version;    // increase the parent's version
     slot.nid = mResourceNodes.size();   // create the new parent node
     ResourceNode* newNode = mArena.make<ResourceNode>(*this, handle, parent);
     mResourceNodes.push_back(newNode);
@@ -252,7 +256,7 @@ ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* n
         // we keep the old ResourceNode index so we can direct all the reads to it.
         slot.sid = slot.nid; // record the current ResourceNode of the parent
         slot.nid = mResourceNodes.size();   // create the new parent node
-        node = mArena.make<ResourceNode>(*this, node->resourceHandle, FrameGraphHandle{});
+        node = mArena.make<ResourceNode>(*this, node->resourceHandle, node->getParentHandle());
         mResourceNodes.push_back(node);
     }
     return node;
@@ -361,8 +365,7 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
             // if we don't already have a writer or a reader, it just means the resource was just created
             // and was never written to, so we don't need a new node or increase the version number
         } else {
-            handle = createNewVersion(handle,
-                    parentNode ? parentNode->resourceHandle : FrameGraphHandle{});
+            handle = createNewVersion(handle);
             // refresh the node
             node = getActiveResourceNode(handle);
         }

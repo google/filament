@@ -410,7 +410,7 @@ private:
     void reset() noexcept;
     void addPresentPass(std::function<void(Builder&)> setup) noexcept;
     Builder addPassInternal(const char* name, FrameGraphPassBase* base) noexcept;
-    FrameGraphHandle createNewVersion(FrameGraphHandle handle, FrameGraphHandle parent = {}) noexcept;
+    FrameGraphHandle createNewVersion(FrameGraphHandle handle) noexcept;
     ResourceNode* createNewVersionForSubresourceIfNeeded(ResourceNode* node) noexcept;
     FrameGraphHandle addResourceInternal(VirtualResource* resource) noexcept;
     FrameGraphHandle addSubResourceInternal(FrameGraphHandle parent, VirtualResource* resource) noexcept;
@@ -431,7 +431,7 @@ private:
     FrameGraphId<RESOURCE> createSubresource(FrameGraphId<RESOURCE> parent,
             char const* name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept;
 
-        template<typename RESOURCE>
+    template<typename RESOURCE>
     FrameGraphId<RESOURCE> read(PassNode* passNode,
             FrameGraphId<RESOURCE> input, typename RESOURCE::Usage usage);
 
@@ -458,6 +458,7 @@ private:
     }
 
     ResourceNode* getActiveResourceNode(FrameGraphHandle handle) noexcept {
+        assert_invariant(handle);
         ResourceSlot const& slot = getResourceSlot(handle);
         assert_invariant((size_t)slot.nid < mResourceNodes.size());
         return mResourceNodes[slot.nid];

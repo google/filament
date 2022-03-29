@@ -38,8 +38,14 @@ ResourceNode::~ResourceNode() noexcept {
 }
 
 ResourceNode* ResourceNode::getParentNode() noexcept {
-    return mParentHandle.isInitialized() ?
-           mFrameGraph.getActiveResourceNode(mParentHandle) : nullptr;
+    ResourceNode* const parentNode = mParentHandle ?
+            mFrameGraph.getActiveResourceNode(mParentHandle) : nullptr;
+    assert_invariant(mParentHandle == ResourceNode::getHandle(parentNode));
+    return parentNode;
+}
+
+FrameGraphHandle ResourceNode::getParentHandle() noexcept {
+    return mParentHandle;
 }
 
 char const* ResourceNode::getName() const noexcept {
