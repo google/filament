@@ -77,7 +77,7 @@ inline size_t getSize(size_t vertexCount) noexcept;
 
 template<>
 inline size_t getSize<VertexAttribute::POSITION>(size_t vertexCount) noexcept {
-    const size_t stride = getWidth(vertexCount) * sizeof(float3);
+    const size_t stride = getWidth(vertexCount);
     const size_t height = getHeight(vertexCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
             Texture::PixelBufferDescriptor::PixelDataFormat::RGBA,
@@ -87,7 +87,7 @@ inline size_t getSize<VertexAttribute::POSITION>(size_t vertexCount) noexcept {
 
 template<>
 inline size_t getSize<VertexAttribute::TANGENTS>(size_t vertexCount) noexcept {
-    const size_t stride = getWidth(vertexCount) * sizeof(short4);
+    const size_t stride = getWidth(vertexCount);
     const size_t height = getHeight(vertexCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
             Texture::PixelBufferDescriptor::PixelDataFormat::RGBA_INTEGER,
