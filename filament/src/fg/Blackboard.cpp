@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "fg2/Blackboard.h"
+#include "fg/Blackboard.h"
 
 #include <utils/CString.h>
 

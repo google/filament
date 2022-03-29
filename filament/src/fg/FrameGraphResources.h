@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_FRAMEGRAPHRESOURCES_H
-#define TNT_FILAMENT_FG2_FRAMEGRAPHRESOURCES_H
+#ifndef TNT_FILAMENT_FG_FRAMEGRAPHRESOURCES_H
+#define TNT_FILAMENT_FG_FRAMEGRAPHRESOURCES_H
 
-#include "fg2/details/Resource.h"
-#include "fg2/FrameGraphId.h"
+#include "fg/details/Resource.h"
+#include "fg/FrameGraphId.h"
 
 #include "backend/DriverEnums.h"
 #include "backend/Handle.h"
@@ -165,4 +165,4 @@ void FrameGraphResources::detach(FrameGraphId<RESOURCE> handle, RESOURCE* pOutRe
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_FRAMEGRAPHRESOURCES_H
+#endif //TNT_FILAMENT_FG_FRAMEGRAPHRESOURCES_H

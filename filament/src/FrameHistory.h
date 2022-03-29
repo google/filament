@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_FRAMEHISTORY_H
 #define TNT_FILAMENT_FRAMEHISTORY_H
 
-#include <fg2/FrameGraphId.h>
-#include <fg2/FrameGraphTexture.h>
+#include <fg/FrameGraphId.h>
+#include <fg/FrameGraphTexture.h>
 
 #include <math/mat4.h>
 

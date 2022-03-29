@@ -29,8 +29,8 @@
 
 #include "private/backend/DriverApiForward.h"
 
-#include <fg2/FrameGraphId.h>
-#include <fg2/FrameGraphTexture.h>
+#include <fg/FrameGraphId.h>
+#include <fg/FrameGraphTexture.h>
 
 #include <filament/Renderer.h>
 #include <filament/View.h>

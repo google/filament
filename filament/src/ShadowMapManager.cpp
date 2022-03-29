@@ -22,7 +22,7 @@
 #include "details/Texture.h"
 #include "details/View.h"
 
-#include <fg2/FrameGraph.h>
+#include <fg/FrameGraph.h>
 
 #include <private/filament/SibGenerator.h>
 

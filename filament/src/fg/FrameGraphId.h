@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_FRAMEGRAPHID_H
-#define TNT_FILAMENT_FG2_FRAMEGRAPHID_H
+#ifndef TNT_FILAMENT_FG_FRAMEGRAPHID_H
+#define TNT_FILAMENT_FG_FRAMEGRAPHID_H
 
 #include <stdint.h>
 #include <limits>
@@ -92,4 +92,4 @@ public:
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_FRAMEGRAPHID_H
+#endif //TNT_FILAMENT_FG_FRAMEGRAPHID_H

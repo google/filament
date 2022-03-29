@@ -26,8 +26,8 @@
 
 #include "details/Engine.h"
 
-#include "fg2/FrameGraph.h"
-#include "fg2/FrameGraphResources.h"
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphResources.h"
 
 #include "fsr.h"
 #include "PerViewUniforms.h"
