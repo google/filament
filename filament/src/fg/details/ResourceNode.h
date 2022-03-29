@@ -73,6 +73,8 @@ public:
 
     ResourceNode* getParentNode() noexcept;
 
+    FrameGraphHandle getParentHandle() noexcept;
+
     // this is the parent resource we're reading from, as a propagating effect of
     // us being read from.
     void setParentReadDependency(ResourceNode* parent) noexcept;
@@ -85,6 +87,10 @@ public:
 
     // virtuals from DependencyGraph::Node
     char const* getName() const noexcept override;
+
+    static FrameGraphHandle getHandle(ResourceNode const* node) noexcept {
+        return node ? node->resourceHandle : FrameGraphHandle{};
+    }
 
 private:
     FrameGraph& mFrameGraph;
