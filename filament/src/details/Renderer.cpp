@@ -32,9 +32,9 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
-#include "fg2/FrameGraph.h"
-#include "fg2/FrameGraphId.h"
-#include "fg2/FrameGraphResources.h"
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphResources.h"
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>

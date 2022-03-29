@@ -21,8 +21,8 @@
 
 #include "FrameHistory.h"
 
-#include <fg2/FrameGraphId.h>
-#include <fg2/FrameGraphResources.h>
+#include <fg/FrameGraphId.h>
+#include <fg/FrameGraphResources.h>
 
 #include <filament/Options.h>
 

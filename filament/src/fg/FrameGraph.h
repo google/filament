@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_FRAMEGRAPH_H
-#define TNT_FILAMENT_FG2_FRAMEGRAPH_H
+#ifndef TNT_FILAMENT_FG_FRAMEGRAPH_H
+#define TNT_FILAMENT_FG_FRAMEGRAPH_H
 
 #include "Allocators.h"
 
-#include "fg2/Blackboard.h"
-#include "fg2/FrameGraphId.h"
-#include "fg2/FrameGraphPass.h"
-#include "fg2/FrameGraphRenderPass.h"
-#include "fg2/FrameGraphTexture.h"
+#include "fg/Blackboard.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphPass.h"
+#include "fg/FrameGraphRenderPass.h"
+#include "fg/FrameGraphTexture.h"
 
-#include "fg2/details/DependencyGraph.h"
-#include "fg2/details/Resource.h"
-#include "fg2/details/Utilities.h"
+#include "fg/details/DependencyGraph.h"
+#include "fg/details/Resource.h"
+#include "fg/details/Utilities.h"
 
 #include "private/backend/DriverApiForward.h"
 
@@ -35,7 +35,6 @@
 #include <backend/Handle.h>
 
 #include <functional>
-#include <vector>
 
 namespace filament {
 
@@ -595,4 +594,4 @@ extern template FrameGraphId<FrameGraphTexture> FrameGraph::forwardResource(
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_FRAMEGRAPH_H
+#endif //TNT_FILAMENT_FG_FRAMEGRAPH_H

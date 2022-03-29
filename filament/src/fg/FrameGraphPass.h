@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_FRAMEGRAPHPASS_H
-#define TNT_FILAMENT_FG2_FRAMEGRAPHPASS_H
+#ifndef TNT_FILAMENT_FG_FRAMEGRAPHPASS_H
+#define TNT_FILAMENT_FG_FRAMEGRAPHPASS_H
 
 #include "private/backend/DriverApiForward.h"
 
-#include "fg2/FrameGraphResources.h"
+#include "fg/FrameGraphResources.h"
 
 #include <utils/Allocator.h>
 
@@ -79,4 +79,4 @@ public:
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_FRAMEGRAPHPASS_H
+#endif //TNT_FILAMENT_FG_FRAMEGRAPHPASS_H

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_DETAILS_RESOURCENODE_H
-#define TNT_FILAMENT_FG2_DETAILS_RESOURCENODE_H
+#ifndef TNT_FILAMENT_FG_DETAILS_RESOURCENODE_H
+#define TNT_FILAMENT_FG_DETAILS_RESOURCENODE_H
 
-#include "fg2/details/DependencyGraph.h"
-#include "fg2/details/Utilities.h"
+#include "fg/details/DependencyGraph.h"
+#include "fg/details/Utilities.h"
 
 namespace utils {
 class CString;
@@ -102,4 +102,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_FG2_DETAILS_RESOURCENODE_H
+#endif // TNT_FILAMENT_FG_DETAILS_RESOURCENODE_H
