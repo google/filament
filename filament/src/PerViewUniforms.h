@@ -72,6 +72,7 @@ public:
     void prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept;
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
+    void prepareBlending(bool needsAlphaChannel) noexcept;
 
     // screen-space reflection and/or refraction (SSR)
     void prepareSSR(TextureHandle ssr,

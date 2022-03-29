@@ -119,7 +119,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
-            Viewport const& viewport, math::float4 const& userTime) noexcept;
+            Viewport const& viewport, math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }

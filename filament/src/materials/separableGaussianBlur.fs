@@ -7,12 +7,12 @@ float vmax(const float v) {
 }
 
 void tap(inout highp BLUR_TYPE sum, const float weight, const highp vec2 position) {
-    vec4 s = textureLod(materialParams_source, position, materialParams.level);
+    vec4 s = TEXTURE_LOD(materialParams_source, position, materialParams.level, materialParams.layer);
     sum.BLUR_SWIZZLE += s.BLUR_SWIZZLE * weight;
 }
 
 void tapReinhard(inout highp BLUR_TYPE sum, inout float totalWeight, const float weight, const highp vec2 position) {
-    vec4 s = textureLod(materialParams_source, position, materialParams.level);
+    vec4 s = TEXTURE_LOD(materialParams_source, position, materialParams.level, materialParams.layer);
     float w = weight / (1.0 + vmax(s.BLUR_SWIZZLE));
     totalWeight += w;
     sum.BLUR_SWIZZLE += s.BLUR_SWIZZLE * w;

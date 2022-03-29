@@ -104,15 +104,13 @@
 
 #else
 
-    #if defined(WIN32)
-        // On Windows, bluegl exposes symbols prefixed with bluegl_ to avoid clashing with
-        // client's usage of opengl32.lib.
-        // This header re-defines GL function names with the bluegl prefix.
-        // For example:
-        //   #define glFunction bluegl_glFunction
-        // This header must come before <bluegl/BlueGL.h>.
-        #include <bluegl/BlueGLWindowsDefines.h>
-    #endif
+    // bluegl exposes symbols prefixed with bluegl_ to avoid clashing with clients that also link
+    // against GL.
+    // This header re-defines GL function names with the bluegl_ prefix.
+    // For example:
+    //   #define glFunction bluegl_glFunction
+    // This header must come before <bluegl/BlueGL.h>.
+    #include <bluegl/BlueGLDefines.h>
     #include <bluegl/BlueGL.h>
 
 #endif

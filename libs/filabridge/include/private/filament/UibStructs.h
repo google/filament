@@ -65,7 +65,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
     math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
-    float padding0;
+    float needsAlphaChannel;
     uint32_t lightChannels;
 
     math::float3 lightDirection;

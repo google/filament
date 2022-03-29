@@ -291,7 +291,6 @@ endif()
 
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
-target_link_libraries(${TARGET} PRIVATE filabridge)
 
 # Android, iOS, and WebGL do not use bluegl.
 if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
@@ -397,7 +396,6 @@ if (APPLE)
 
     target_link_libraries(backend_test PRIVATE
         backend
-        filabridge
         getopt
         gtest
         SPIRV
@@ -410,7 +408,6 @@ if (APPLE)
             SPIRV-Tools
             SPIRV-Tools-opt
             backend_test
-            filabridge
             getopt
             gtest
             glslang

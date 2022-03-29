@@ -35,6 +35,12 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     if (color.a <= 0.0) {
         discard;
     }
+
+    // Output 1.0 for translucent view to prevent "punch through" artifacts. We do not do this
+    // for opaque views to enable proper usage of ALPHA_TO_COVERAGE.
+    if (frameUniforms.needsAlphaChannel == 1.0) {
+        color.a = 1.0;
+    }
 #endif
 
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)

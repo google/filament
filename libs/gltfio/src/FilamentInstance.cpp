@@ -36,6 +36,31 @@ void FFilamentInstance::createAnimator() {
     animator = new Animator(owner, this);
 }
 
+size_t FFilamentInstance::getSkinCount() const noexcept {
+    return skins.size();
+}
+
+const char* FFilamentInstance::getSkinNameAt(size_t skinIndex) const noexcept {
+    if (skins.size() <= skinIndex) {
+        return nullptr;
+    }
+    return skins[skinIndex].name.c_str();
+}
+
+size_t FFilamentInstance::getJointCountAt(size_t skinIndex) const noexcept {
+    if (skins.size() <= skinIndex) {
+        return 0;
+    }
+    return skins[skinIndex].joints.size();
+}
+
+const utils::Entity* FFilamentInstance::getJointsAt(size_t skinIndex) const noexcept {
+    if (skins.size() <= skinIndex) {
+        return nullptr;
+    }
+    return skins[skinIndex].joints.data();
+}
+
 FilamentAsset* FilamentInstance::getAsset() const noexcept {
     return upcast(this)->owner;
 }

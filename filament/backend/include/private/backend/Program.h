@@ -18,14 +18,14 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H
 
 #include <utils/compiler.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/ShaderStageFlags.h>
-
-#include <private/filament/Variant.h>
 
 #include <array>
 
@@ -64,7 +64,8 @@ public:
     ~Program() noexcept;
 
     // sets the material name and variant for diagnostic purposes only
-    Program& diagnostics(utils::CString const& name, Variant variant);
+    Program& diagnostics(utils::CString const& name,
+            utils::Invocable<utils::io::ostream&(utils::io::ostream& out)>&& logger);
 
     // sets one of the program's shader (e.g. vertex, fragment)
     Program& shader(Shader shader, void const* data, size_t size) noexcept;
@@ -103,21 +104,17 @@ public:
 
     const utils::CString& getName() const noexcept { return mName; }
 
-    Variant getVariant() const noexcept { return mVariant; }
-
     bool hasSamplers() const noexcept { return mHasSamplers; }
 
 private:
-#if !defined(NDEBUG)
-    friend utils::io::ostream& operator<< (utils::io::ostream& out, const Program& builder);
-#endif
+    friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     std::array<ShaderBlob, SHADER_TYPE_COUNT> mShadersSource;
-    utils::CString mName;
     bool mHasSamplers = false;
-    Variant mVariant;
+    utils::CString mName;
+    utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
 };
 
 } // namespace filament::backend

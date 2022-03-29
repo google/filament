@@ -96,11 +96,15 @@ public:
             FrameGraphId<FrameGraphTexture> input, size_t levels, bool reinhard,
             size_t kernelWidth, float sigma) noexcept;
 
-    FrameGraphId<FrameGraphTexture> generateMipmapSSR(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, float verticalFieldOfView,
-            filament::Viewport const& svp, math::float2 scale, backend::TextureFormat format,
-            float* pLodOffset) const noexcept;
-
+    // Helper to generate gaussian mipmaps for SSR (refraction and reflections).
+    // This performs the following tasks:
+    // - resolves input if needed
+    // - rescale input so it has a homogenous scale
+    // - generate a new texture with gaussian mips
+    static FrameGraphId<FrameGraphTexture> generateMipmapSSR(PostProcessManager& ppm,
+            FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, float verticalFieldOfView, math::float2 scale,
+            backend::TextureFormat format, float* pLodOffset) noexcept;
 
     // Depth-of-field
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
@@ -180,8 +184,8 @@ public:
             math::float4 clearColor, bool finalize) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> output,
             bool reinhard, size_t kernelWidth, float sigma) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const;

@@ -91,6 +91,31 @@ void FFilamentAsset::createAnimators() {
     }
 }
 
+size_t FFilamentAsset::getSkinCount() const noexcept {
+    return mSkins.size();
+}
+
+const char* FFilamentAsset::getSkinNameAt(size_t skinIndex) const noexcept {
+    if (mSkins.size() <= skinIndex) {
+        return nullptr;
+    }
+    return mSkins[skinIndex].name.c_str();
+}
+
+size_t FFilamentAsset::getJointCountAt(size_t skinIndex) const noexcept {
+    if (mSkins.size() <= skinIndex) {
+        return 0;
+    }
+    return mSkins[skinIndex].joints.size();
+}
+
+const utils::Entity* FFilamentAsset::getJointsAt(size_t skinIndex) const noexcept {
+    if (mSkins.size() <= skinIndex) {
+        return nullptr;
+    }
+    return mSkins[skinIndex].joints.data();
+}
+
 const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         size_t targetIndex) const noexcept {
     if (!mResourcesLoaded) {
@@ -287,6 +312,22 @@ const char* FilamentAsset::getExtras(Entity entity) const noexcept {
 
 Animator* FilamentAsset::getAnimator() const noexcept {
     return upcast(this)->getAnimator();
+}
+
+size_t FilamentAsset::getSkinCount() const noexcept {
+    return upcast(this)->getSkinCount();
+}
+
+const char* FilamentAsset::getSkinNameAt(size_t skinIndex) const noexcept {
+    return upcast(this)->getSkinNameAt(skinIndex);
+}
+
+size_t FilamentAsset::getJointCountAt(size_t skinIndex) const noexcept {
+    return upcast(this)->getJointCountAt(skinIndex);
+}
+
+const utils::Entity* FilamentAsset::getJointsAt(size_t skinIndex) const noexcept {
+    return upcast(this)->getJointsAt(skinIndex);
 }
 
 const char* FilamentAsset::getMorphTargetNameAt(utils::Entity entity,

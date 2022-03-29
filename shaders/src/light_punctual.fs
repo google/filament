@@ -129,9 +129,8 @@ float getAngleAttenuation(const highp vec3 lightDir, const highp vec3 l, const h
  * lightsUniforms uniform buffer.
  */
 
-Light getLight(const uint index) {
+Light getLight(const uint lightIndex) {
     // retrieve the light data from the UBO
-    uint lightIndex = getLightIndex(index);
 
     highp mat4 data = lightsUniforms.lights[lightIndex];
 
@@ -200,7 +199,8 @@ void evaluatePunctualLights(const MaterialInputs material,
 
     // Iterate point lights
     for ( ; index < end; index++) {
-        Light light = getLight(index);
+        uint lightIndex = getLightIndex(index);
+        Light light = getLight(lightIndex);
         if ((light.channels & channels) == 0u) {
             continue;
         }

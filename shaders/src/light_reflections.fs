@@ -200,12 +200,13 @@ highp mat4 scaleMatrix(const highp float x, const highp float y) {
  *
  * If there is no hit, the return value is vec4(0).
  */
-vec4 evaluateScreenSpaceReflections(const vec3 wsRayDirection) {
+vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
     vec4 Fr = vec4(0.0f);
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 
     // ray start/end in view space
     highp vec3 vsOrigin = mulMat4x4Float3(getViewFromWorldMatrix(), wsRayStart).xyz;
+
     // the view matrix is guaranteed to be a rigid transform
     highp vec3 vsDirection = mulMat3x3Float3(getViewFromWorldMatrix(), wsRayDirection);
 
@@ -233,8 +234,8 @@ vec4 evaluateScreenSpaceReflections(const vec3 wsRayDirection) {
     if (traceScreenSpaceRay(vsOrigin, vsDirection, uvFromViewMatrix, light_structure,
             vsZThickness, nearPlaneZ, stride, jitterFraction, maxSteps,
             maxRayTraceDistance, hitPixel, vsHitPoint)) {
-        highp vec4 reprojected = frameUniforms.ssrReprojection * vec4(vsHitPoint, 1.0f);
-        reprojected *= (1.0 / reprojected.w);
+        highp vec4 reprojected = mulMat4x4Float3(frameUniforms.ssrReprojection, vsHitPoint);
+        reprojected.xy *= (1.0 / reprojected.w);
 
         // Compute the screen-space reflection's contribution.
 

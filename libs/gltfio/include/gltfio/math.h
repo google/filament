@@ -26,7 +26,7 @@
 namespace gltfio {
 
 template <typename T>
-T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const T& tang1, float t) {
+UTILS_PUBLIC T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const T& tang1, float t) {
     float tt = t * t, ttt = tt * t;
     float s2 = -2 * ttt + 3 * tt, s3 = ttt - tt;
     float s0 = 1 - s2, s1 = s3 - tt + t;
@@ -37,7 +37,7 @@ T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const T& tang1, fl
     return s0 * p0 + s1 * m0 * t + s2 * p1 + s3 * m1 * t;
 }
 
-inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::float3* translation,
+UTILS_PUBLIC inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::float3* translation,
         filament::math::quatf* rotation, filament::math::float3* scale) {
     using namespace filament::math;
 
@@ -83,7 +83,7 @@ inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::fl
     }
 }
 
-inline filament::math::mat4f composeMatrix(const filament::math::float3& translation,
+UTILS_PUBLIC inline filament::math::mat4f composeMatrix(const filament::math::float3& translation,
         const filament::math::quatf& rotation, const filament::math::float3& scale) {
     float tx = translation[0];
     float ty = translation[1];

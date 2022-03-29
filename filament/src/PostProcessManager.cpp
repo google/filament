@@ -230,6 +230,10 @@ static const MaterialInfo sMaterialList[] = {
         { "separableGaussianBlur2",     MATERIAL(SEPARABLEGAUSSIANBLUR2) },
         { "separableGaussianBlur3",     MATERIAL(SEPARABLEGAUSSIANBLUR3) },
         { "separableGaussianBlur4",     MATERIAL(SEPARABLEGAUSSIANBLUR4) },
+        { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR1L) },
+        { "separableGaussianBlur2L",    MATERIAL(SEPARABLEGAUSSIANBLUR2L) },
+        { "separableGaussianBlur3L",    MATERIAL(SEPARABLEGAUSSIANBLUR3L) },
+        { "separableGaussianBlur4L",    MATERIAL(SEPARABLEGAUSSIANBLUR4L) },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
         { "fsr_easu",                   MATERIAL(FSR_EASU) },
@@ -937,21 +941,48 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, size_t levels,
+        const FrameGraphId<FrameGraphTexture> input, size_t levels,
         bool reinhard, size_t kernelWidth, float sigma) noexcept {
-    for (size_t i = 1; i < levels; i++) {
-        input = gaussianBlurPass(fg, input, i - 1, input, i, 0, reinhard, kernelWidth, sigma);
+
+    auto const subResourceDesc = fg.getSubResourceDescriptor(input);
+
+    // create one subresource per level to be generated from the input. These will be our
+    // destinations.
+    struct MipmapPassData {
+        FixedCapacityVector<FrameGraphId<FrameGraphTexture>> out;
+    };
+    auto& mipmapPass = fg.addPass<MipmapPassData>("Mipmap Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.out.reserve(levels - 1);
+                for (size_t i = 1; i < levels; i++) {
+                    data.out.push_back(builder.createSubresource(input,
+                            "Mipmap output", {
+                                    .level =uint8_t(subResourceDesc.level + i),
+                                    .layer = subResourceDesc.layer }));
+                }
+            },
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {});
+
+    // Then generate a blur pass for each level, using the previous level as source
+    auto from = input;
+    for (size_t i = 0; i < levels - 1; i++) {
+        auto output = mipmapPass->out[i];
+        gaussianBlurPass(fg, from, output, reinhard, kernelWidth, sigma);
+        from = output;
         reinhard = false; // only do the reinhard filtering on the first level
     }
+
+    // return our original input (we only wrote into sub resources)
     return input;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-        FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> output,
         bool reinhard, size_t kernelWidth, const float sigma) noexcept {
 
-    auto computeGaussianCoefficients = [kernelWidth, sigma](float2* kernel, size_t size) -> size_t {
+    auto computeGaussianCoefficients =
+            [kernelWidth, sigma](float2* kernel, size_t size) -> size_t {
         const float alpha = 1.0f / (2.0f * sigma * sigma);
 
         // number of positive-side samples needed, using linear sampling
@@ -998,48 +1029,60 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     // and because it's a separable filter, the effective 2D filter kernel size is 17*17
     // The total number of samples needed over the two passes is 18.
 
-    fg.addPass<BlurPassData>("Gaussian Blur Passes",
+    fg.addPass<BlurPassData>("Gaussian Blur Pass (separable)",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto desc = builder.getDescriptor(input);
+                auto inDesc = builder.getDescriptor(input);
 
                 if (!output) {
-                    output = builder.createTexture("Blurred texture", desc);
+                    output = builder.createTexture("Blurred texture", inDesc);
                 }
 
+                auto outDesc = builder.getDescriptor(output);
+                auto tempDesc = inDesc;
+                tempDesc.width = outDesc.width; // width of the destination level (b/c we're blurring horizontally)
+                tempDesc.levels = 1;
+
                 data.in = builder.sample(input);
-
-                // width of the destination level (b/c we're blurring horizontally)
-                desc.width = FTexture::valueForLevel(dstLevel, desc.width);
-                // height of the source level (b/c it's not blurred in this pass)
-                desc.height = FTexture::valueForLevel(srcLevel, desc.height);
-                // only one level
-                desc.levels = 1;
-
-                data.temp = builder.createTexture("Horizontal temporary buffer", desc);
+                data.temp = builder.createTexture("Horizontal temporary buffer", tempDesc);
                 data.temp = builder.sample(data.temp);
                 data.temp = builder.declareRenderPass(data.temp);
-
-                data.out = builder.createSubresource(output, "Blurred texture mip",
-                        { .level = dstLevel, .layer = layer });
-                data.out = builder.declareRenderPass(data.out);
+                data.out = builder.declareRenderPass(output);
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
+
+                // don't use auto for those, b/c the can't resolve them
+                using FGTD = FrameGraphTexture::Descriptor;
+                using FGTSD = FrameGraphTexture::SubResourceDescriptor;
 
                 auto hwTempRT = resources.getRenderPassInfo(0);
                 auto hwOutRT = resources.getRenderPassInfo(1);
                 auto hwTemp = resources.getTexture(data.temp);
                 auto hwIn = resources.getTexture(data.in);
-                auto const& inDesc = resources.getDescriptor(data.in);
-                auto const& outDesc = resources.getDescriptor(data.out);
-                auto const& tempDesc = resources.getDescriptor(data.temp);
+                FGTD const& inDesc = resources.getDescriptor(data.in);
+                FGTSD const& inSubDesc = resources.getSubResourceDescriptor(data.in);
+                FGTD const& outDesc = resources.getDescriptor(data.out);
+                FGTD const& tempDesc = resources.getDescriptor(data.temp);
 
                 utils::StaticString materialName;
+                const bool is2dArray = inDesc.type == SamplerType::SAMPLER_2D_ARRAY;
                 switch (backend::getFormatSize(outDesc.format)) {
-                    case 1: materialName = "separableGaussianBlur1";    break;
-                    case 2: materialName = "separableGaussianBlur2";    break;
-                    case 3: materialName = "separableGaussianBlur3";    break;
-                    default: materialName = "separableGaussianBlur4";   break;
+                    case 1: materialName  = is2dArray ?
+                            utils::StaticString("separableGaussianBlur1L") :
+                            utils::StaticString("separableGaussianBlur1");
+                            break;
+                    case 2: materialName  = is2dArray ?
+                            utils::StaticString("separableGaussianBlur2L") :
+                            utils::StaticString("separableGaussianBlur2");
+                            break;
+                    case 3: materialName  = is2dArray ?
+                            utils::StaticString("separableGaussianBlur3L") :
+                            utils::StaticString("separableGaussianBlur3");
+                            break;
+                    default: materialName = is2dArray ?
+                            utils::StaticString("separableGaussianBlur4L") :
+                            utils::StaticString("separableGaussianBlur4");
+                            break;
                 }
 
                 auto const& separableGaussianBlur = getPostProcessMaterial(materialName);
@@ -1056,13 +1099,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
-                mi->setParameter("level", (float)srcLevel);
+                mi->setParameter("level", float(inSubDesc.level));
+                mi->setParameter("layer", float(inSubDesc.layer));
                 mi->setParameter("reinhard", reinhard ? uint32_t(1) : uint32_t(0));
                 mi->setParameter("resolution", float4{
-                        tempDesc.width, tempDesc.height,
-                        1.0f / tempDesc.width, 1.0f / tempDesc.height });
-                mi->setParameter("axis",
-                        float2{ 1.0f / FTexture::valueForLevel(srcLevel, inDesc.width), 0 });
+                        tempDesc.width, tempDesc.height, 1.0f / tempDesc.width, 1.0f / tempDesc.height });
+                mi->setParameter("axis",float2{ 1.0f / inDesc.width, 0 });
                 mi->setParameter("count", (int32_t)m);
                 mi->setParameter("kernel", kernel, m);
 
@@ -1094,12 +1136,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        const float verticalFieldOfView,
-        filament::Viewport const& svp, float2 scale,
-        TextureFormat format,
-        float* pLodOffset) const noexcept {
+FrameGraphId <FrameGraphTexture> PostProcessManager::generateMipmapSSR(
+        PostProcessManager& ppm, FrameGraph& fg, FrameGraphId <FrameGraphTexture> input,
+        const float verticalFieldOfView, float2 scale, TextureFormat format,
+        float* pLodOffset) noexcept {
 
     // TODO: add an option to generate a 1/4 res texture (for performance)
 
@@ -1215,44 +1255,40 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
 
     // Then copy the color buffer into a texture, making sure that we keep the original
     // buffer aspect-ratio (this is because dynamic-resolution is not necessarily homogenous).
-    uint32_t w = svp.width;
-    uint32_t h = svp.height;
+    uint32_t w = desc.width;
+    uint32_t h = desc.height;
     if (scale.x != scale.y) {
         // dynamic resolution wasn't homogenous, which would affect the blur, so make sure to
         // keep an intermediary buffer that has the same aspect-ratio as the original.
         const float homogenousScale = std::sqrt(scale.x * scale.y);
-        w = uint32_t((homogenousScale / scale.x) * float(svp.width));
-        h = uint32_t((homogenousScale / scale.y) * float(svp.height));
+        w = uint32_t((homogenousScale / scale.x) * float(desc.width));
+        h = uint32_t((homogenousScale / scale.y) * float(desc.height));
     }
-
-    PostProcessManager& ppm = mEngine.getPostProcessManager();
 
     /*
      * Resolve if needed + copy the image into first LOD
      */
 
+    FrameGraphId<FrameGraphTexture> output;
+    const FrameGraphTexture::Descriptor outDesc{
+            .width = w, .height = h, .depth = 1,
+            .levels = roughnessLodCount,
+            .type = SamplerType::SAMPLER_2D_ARRAY,
+            .format = format,
+    };
+
     if (desc.samples > 1 &&
-        (w == svp.width && h == svp.height) &&
+        (w == desc.width && h == desc.height) &&
         desc.format == format) {
         // Here we can resolve directly into a texture with the right dimensions, level count and format
         // (resolve CANNOT scale or convert formats)
-        input = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, {
-                .width = w,
-                .height = h,
-                .levels = roughnessLodCount,
-                .format = format,
-        });
+        output = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, outDesc);
     } else {
         // first resolve (if needed)
-        input = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
+        output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
         // then blit into an appropriate texture
         // this handles scaling, format conversion and mipmaping
-        input = ppm.opaqueBlit(fg, input, {
-                .width = w,
-                .height = h,
-                .levels = roughnessLodCount,
-                .format = format,
-        });
+        output = ppm.opaqueBlit(fg, output, outDesc);
         // Note: it's not possible to use the FrameGraph's forwardResource(), as an optimization
         // because the SSR buffer must be distinct from the color buffer (input here), because
         // we can't read and write into the same buffer, later in the refraction pass.
@@ -1263,8 +1299,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(FrameGraph
      */
 
     *pLodOffset = refractionLodOffset;
-    input = ppm.generateGaussianMipmap(fg, input, roughnessLodCount, true, kernelSize, sigma0);
-    return input;
+    output = ppm.generateGaussianMipmap(fg, output, roughnessLodCount,
+            true, kernelSize, sigma0);
+    return output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
@@ -1974,10 +2011,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
         constexpr float kernelWidth = 9;
         constexpr float sigma = (kernelWidth + 1.0f) / 6.0f;
-        auto flare = gaussianBlurPass(fg,
-                flarePass->out, 0,
-                {}, 0, 0,
-                false, kernelWidth, sigma);
+        auto flare = gaussianBlurPass(fg, flarePass->out, {}, false, kernelWidth, sigma);
 
         fg.getBlackboard().put("flare", flare);
 

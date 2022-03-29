@@ -1279,8 +1279,9 @@ Description
     - **Screen**: blending is enabled. Effectively the opposite of the `multiply`, the content of the
       render target is brightened.
     - **Masked**: blending is disabled. This blending mode enables alpha masking. The alpha channel
-      of the material's output defines whether a fragment is discarded or not. See the maskThreshold
-      section for more information.
+      of the material's output defines whether a fragment is discarded or not. Additionally,
+      ALPHA_TO_COVERAGE is enabled for non-translucent views. See the maskThreshold section for more
+      information.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1364,8 +1365,9 @@ Value
 
 Description
 :     Sets the minimum alpha value a fragment must have to not be discarded when the `blending` mode
-      is set to `masked`. When the blending mode is not `masked`, this value is ignored. This value
-      can be used to controlled the appearance of alpha-masked objects.
+      is set to `masked`. If the fragment is not discarded, its source alpha is set to 1. When the
+      blending mode is not `masked`, this value is ignored. This value can be used to controlled the
+      appearance of alpha-masked objects.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {

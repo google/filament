@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
         include/gltfio/ResourceLoader.h
         include/gltfio/FilamentAsset.h
         include/gltfio/FilamentInstance.h
+        include/gltfio/math.h
 )
 
 set(SRCS
@@ -35,7 +36,6 @@ set(SRCS
         src/UbershaderLoader.cpp
         src/Wireframe.cpp
         src/Wireframe.h
-        src/math.h
         src/upcast.h
         src/Image.cpp
 )

@@ -29,20 +29,34 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
     using Format = SamplerInterfaceBlock::Format;
     using Precision = SamplerInterfaceBlock::Precision;
 
-    auto buildSib = [] (bool hasVsm) {
-        auto builder = SamplerInterfaceBlock::Builder();
-
-        builder
+    static SamplerInterfaceBlock sibPcf = SamplerInterfaceBlock::Builder()
             .name("Light")
-            .stageFlags({ .fragment = true });
+            .stageFlags({ .fragment = true })
+            .add("shadowMap",     Type::SAMPLER_2D_ARRAY,  Format::SHADOW,   Precision::MEDIUM)
+            .add("froxels",       Type::SAMPLER_2D,         Format::UINT,    Precision::MEDIUM)
+            .add("iblDFG",        Type::SAMPLER_2D,         Format::FLOAT,   Precision::MEDIUM)
+            .add("iblSpecular",   Type::SAMPLER_CUBEMAP,    Format::FLOAT,   Precision::MEDIUM)
+            .add("ssao",          Type::SAMPLER_2D_ARRAY,   Format::FLOAT,   Precision::MEDIUM)
+            .add("ssr",           Type::SAMPLER_2D_ARRAY,   Format::FLOAT,   Precision::MEDIUM)
+            .add("structure",     Type::SAMPLER_2D,         Format::FLOAT,   Precision::HIGH)
+            .build();
 
-        if (hasVsm) {
-            builder.add("shadowMap", Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::HIGH);
-        } else {
-            builder.add("shadowMap", Type::SAMPLER_2D_ARRAY, Format::SHADOW, Precision::MEDIUM);
-        }
+    static SamplerInterfaceBlock sibVsm = SamplerInterfaceBlock::Builder()
+            .name("Light")
+            .stageFlags({ .fragment = true })
+            .add("shadowMap",     Type::SAMPLER_2D_ARRAY,   Format::FLOAT,   Precision::HIGH)
+            .add("froxels",       Type::SAMPLER_2D,         Format::UINT,    Precision::MEDIUM)
+            .add("iblDFG",        Type::SAMPLER_2D,         Format::FLOAT,   Precision::MEDIUM)
+            .add("iblSpecular",   Type::SAMPLER_CUBEMAP,    Format::FLOAT,   Precision::MEDIUM)
+            .add("ssao",          Type::SAMPLER_2D_ARRAY,   Format::FLOAT,   Precision::MEDIUM)
+            .add("ssr",           Type::SAMPLER_2D_ARRAY,   Format::FLOAT,   Precision::MEDIUM)
+            .add("structure",     Type::SAMPLER_2D,         Format::FLOAT,   Precision::HIGH)
+            .build();
 
-        return builder
+    static SamplerInterfaceBlock sibSsr = SamplerInterfaceBlock::Builder()
+            .name("Light")
+            .stageFlags({ .fragment = true })
+            .add("shadowMap",     Type::SAMPLER_2D_ARRAY,  Format::SHADOW,   Precision::MEDIUM)
             .add("froxels",       Type::SAMPLER_2D,         Format::UINT,    Precision::MEDIUM)
             .add("iblDFG",        Type::SAMPLER_2D,         Format::FLOAT,   Precision::MEDIUM)
             .add("iblSpecular",   Type::SAMPLER_CUBEMAP,    Format::FLOAT,   Precision::MEDIUM)
@@ -50,19 +64,20 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
             .add("ssr",           Type::SAMPLER_2D,         Format::FLOAT,   Precision::MEDIUM)
             .add("structure",     Type::SAMPLER_2D,         Format::FLOAT,   Precision::HIGH)
             .build();
-    };
-
-    // TODO: ideally we'd want these to be constexpr, these are compile time structures.
-
-    static SamplerInterfaceBlock sibPcf = buildSib(false);
-    static SamplerInterfaceBlock sibVsm = buildSib(true);
 
     // SamplerBindingMap relies the assumption that Sibs have the same names and offsets
     // regardless of variant.
     assert(sibPcf.getSize() == PerViewSib::SAMPLER_COUNT);
     assert(sibVsm.getSize() == PerViewSib::SAMPLER_COUNT);
+    assert(sibSsr.getSize() == PerViewSib::SAMPLER_COUNT);
 
-    return Variant::isVSMVariant(variant) ? sibVsm : sibPcf;
+    if (Variant::isSSRVariant(variant)) {
+        return sibSsr;
+    } else if (Variant::isVSMVariant(variant)) {
+        return sibVsm;
+    } else {
+        return sibPcf;
+    }
 }
 
 SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Variant variant) noexcept {

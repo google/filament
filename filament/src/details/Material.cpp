@@ -137,9 +137,7 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
             CString uniformName(
                     SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
                             list[i].name.c_str()));
-            uint8_t binding = 0;
-            UTILS_UNUSED bool ok = map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
-            assert_invariant(ok);
+            uint8_t binding = map.getSamplerBinding(bindingPoint, (uint8_t)i);
             const bool strict = (bindingPoint == filament::BindingPoints::PER_MATERIAL_INSTANCE);
             samplers[i] = { std::move(uniformName), binding, strict };
         }
@@ -213,22 +211,15 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     using BlendFunction = RasterState::BlendFunction;
     using DepthFunc = RasterState::DepthFunc;
     switch (mBlendingMode) {
+        // Do not change the MASKED behavior without checking for regressions with
+        // AlphaBlendModeTest and TextureLinearInterpolationTest, with and without
+        // View::BlendMode::TRANSLUCENT.
+        case BlendingMode::MASKED:
         case BlendingMode::OPAQUE:
             mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
             mRasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
             mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;
             mRasterState.blendFunctionDstAlpha = BlendFunction::ZERO;
-            mRasterState.depthWrite = true;
-            break;
-        case BlendingMode::MASKED:
-            // MASKED mode now leaves destination alpha intact.
-            // This prevents strange behavior with semi-transparent render targets, which the
-            // model viewer team discovered when testing against the Khronos alpha test
-            // conformance model.
-            mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
-            mRasterState.blendFunctionSrcAlpha = BlendFunction::ZERO;
-            mRasterState.blendFunctionDstRGB   = BlendFunction::ZERO;
-            mRasterState.blendFunctionDstAlpha = BlendFunction::ONE;
             mRasterState.depthWrite = true;
             break;
         case BlendingMode::TRANSPARENT:
@@ -450,7 +441,11 @@ Program FMaterial::getProgramBuilderWithVariants(
             mName.c_str(), variant.key, fragmentVariant.key);
 
     Program pb;
-    pb      .diagnostics(mName, variant)
+    pb.diagnostics(mName,
+              [this, variant](io::ostream& out) -> io::ostream& {
+                  return out << mName.c_str_safe()
+                             << ", variant=(" << io::hex << variant.key << io::dec << ")";
+              })
             .withVertexShader(vsBuilder.data(), vsBuilder.size())
             .withFragmentShader(fsBuilder.data(), fsBuilder.size());
     return pb;

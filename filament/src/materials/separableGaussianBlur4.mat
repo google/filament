@@ -20,6 +20,10 @@ material {
             name : level
         },
         {
+            type : float,
+            name : layer
+        },
+        {
             type : int,
             name : count
         },
@@ -48,6 +52,7 @@ fragment {
 
 #define BLUR_TYPE    vec4
 #define BLUR_SWIZZLE rgba
+#define TEXTURE_LOD(s, p, m, l) textureLod(s, p, m)
 
 #include "separableGaussianBlur.fs"
 

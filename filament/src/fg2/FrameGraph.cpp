@@ -245,17 +245,17 @@ FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle, FrameGrap
     return handle;
 }
 
-FrameGraphHandle FrameGraph::createNewVersionForSubresourceIfNeeded(FrameGraphHandle handle) noexcept {
-    ResourceSlot& slot = getResourceSlot(handle);
+ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* node) noexcept {
+    ResourceSlot& slot = getResourceSlot(node->resourceHandle);
     if (slot.sid < 0) {
         // if we don't already have a new ResourceNode for this resource, create one.
         // we keep the old ResourceNode index so we can direct all the reads to it.
         slot.sid = slot.nid; // record the current ResourceNode of the parent
         slot.nid = mResourceNodes.size();   // create the new parent node
-        ResourceNode* newNode = mArena.make<ResourceNode>(*this, handle, FrameGraphHandle{});
-        mResourceNodes.push_back(newNode);
+        node = mArena.make<ResourceNode>(*this, node->resourceHandle, FrameGraphHandle{});
+        mResourceNodes.push_back(node);
     }
-    return handle;
+    return node;
 }
 
 FrameGraphHandle FrameGraph::addResourceInternal(VirtualResource* resource) noexcept {
@@ -275,7 +275,7 @@ FrameGraphHandle FrameGraph::addSubResourceInternal(FrameGraphHandle parent,
 }
 
 FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* passNode,
-        std::function<bool(ResourceNode*, VirtualResource*)> connect) {
+        const std::function<bool(ResourceNode*, VirtualResource*)>& connect) {
 
     if (!assertValid(handle)) {
         return {};
@@ -301,16 +301,25 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
     // Connect can fail if usage flags are incorrectly used
     if (connect(node, resource)) {
         if (resource->isSubResource()) {
-            // this is read() to a subresource, so we need to add a "read" from the the parent's
+            // this is a read() from a subresource, so we need to add a "read" from the parent's
             // node to the subresource -- but we may have two parent nodes, one for reads and
             // one for writes, so we need to use the one for reads.
             auto* parentNode = node->getParentNode();
             ResourceSlot& slot = getResourceSlot(parentNode->resourceHandle);
             if (slot.sid >= 0) {
-                // we have a parent's node for reads, use the one
+                // we have a parent's node for reads, use that one
                 parentNode = mResourceNodes[slot.sid];
             }
             node->setParentReadDependency(parentNode);
+        } else {
+            // we're reading from a top-level resource (i.e. not a subresource), but this
+            // resource is a parent of some subresource and it might exist as a version for
+            // writing, in this case we need to add a dependency from its "read" version to
+            // itself.
+            ResourceSlot& slot = getResourceSlot(handle);
+            if (slot.sid >= 0) {
+                node->setParentReadDependency(mResourceNodes[slot.sid]);
+            }
         }
 
         // if a resource has a subresource, then its handle becomes valid again as soon as it's used.
@@ -328,7 +337,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
 }
 
 FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* passNode,
-        std::function<bool(ResourceNode*, VirtualResource*)> connect) {
+        const std::function<bool(ResourceNode*, VirtualResource*)>& connect) {
     if (!assertValid(handle)) {
         return {};
     }
@@ -342,8 +351,7 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
     if (resource->isSubResource()) {
         assert_invariant(parentNode);
         // FIXME: do we need the equivalent of hasWriterPass() test below
-        createNewVersionForSubresourceIfNeeded(parentNode->resourceHandle);
-        parentNode = node->getParentNode();
+        parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
     }
 
     // if this node already writes to this resource, just update the used bits
@@ -387,14 +395,31 @@ FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle resourceHa
         return {};
     }
 
-    getActiveResourceNode(replaceResourceHandle)->setForwardResourceDependency(
-            getActiveResourceNode(resourceHandle));
+    ResourceSlot& replacedResourceSlot = getResourceSlot(replaceResourceHandle);
+    ResourceNode* const replacedResourceNode = getActiveResourceNode(replaceResourceHandle);
 
     ResourceSlot const& resourceSlot = getResourceSlot(resourceHandle);
-    ResourceSlot& replacedResourceSlot = getResourceSlot(replaceResourceHandle);
+    ResourceNode* const resourceNode = getActiveResourceNode(resourceHandle);
+    VirtualResource* const resource = getResource(resourceHandle);
+
+    replacedResourceNode->setForwardResourceDependency(resourceNode);
+
+    if (resource->isSubResource() && replacedResourceNode->hasWriterPass()) {
+        // if the replaced resource is written to and replaced by a subresource -- meaning
+        // that now it's that subresource that is being written to, we need to add a
+        // write-dependency from this subresource to its parent node (which effectively is
+        // being written as well). This would normally happen during write(), but here
+        // the write has already happened.
+        // We create a new version of the parent node to ensure nobody writes into it beyond
+        // this point (note: it's not completely clear to me if this is needed/correct).
+        ResourceNode* parentNode = resourceNode->getParentNode();
+        parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
+        resourceNode->setParentWriteDependency(parentNode);
+    }
 
     replacedResourceSlot.rid = resourceSlot.rid;
-    // FIXME: what should happen with .sid and .nid?
+    // nid is unchanged, because we keep our node which has the graph information
+    // FIXME: what should happen with .sid?
 
     // makes the replaceResourceHandle forever invalid
     replacedResourceSlot.version = -1;
