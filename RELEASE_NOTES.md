@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.6 (currently main branch)
+## v1.20.7 (currently main branch)
+
+## v1.20.6
 
 - gltfio: add support for KHR_materials_variants
 - gltfio: add support for KHR_materials_emissive_strength
@@ -11,7 +13,12 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.20.5
 
-- New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
+- engine: New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
+- engine: Fix screen-space reflections when post-processing and MSAA are off.
+- engine: Update MAX_MORPH_TARGETS constant to 256.
+- engine: Fix point light lighting with ortho projection.
+- libs: BlueGL symbols are now prefixed with `bluegl` on all platforms.
+- gltfio: Add skinning getters to `FilamentAsset`.
 
 ## v1.20.4
 
