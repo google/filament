@@ -1141,10 +1141,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     return output;
 }
 
-FrameGraphId <FrameGraphTexture> PostProcessManager::generateMipmapSSR(
-        PostProcessManager& ppm, FrameGraph& fg, FrameGraphId <FrameGraphTexture> input,
-        const float verticalFieldOfView, float2 scale, TextureFormat format,
-        float* pLodOffset) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
+        PostProcessManager& ppm, FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
+        bool needInputDuplication, const float verticalFieldOfView, float2 scale,
+        TextureFormat format, float* pLodOffset) noexcept {
 
     // TODO: add an option to generate a 1/4 res texture (for performance)
 
@@ -1282,21 +1282,27 @@ FrameGraphId <FrameGraphTexture> PostProcessManager::generateMipmapSSR(
             .format = format,
     };
 
-    if (desc.samples > 1 &&
-        (w == desc.width && h == desc.height) &&
-        desc.format == format) {
-        // Here we can resolve directly into a texture with the right dimensions, level count and format
-        // (resolve CANNOT scale or convert formats)
-        output = ppm.resolveBaseLevelNoCheck(fg, "Resolved Color Buffer", input, outDesc);
+    // needInputDuplication:
+    // In some situations it's not possible to use the FrameGraph's forwardResource(),
+    // as an optimization because the SSR buffer must be distinct from the color buffer
+    // (input here), because we can't read and write into the same buffer (e.g. for refraction).
+
+    if (needInputDuplication || w != desc.width || h != desc.height) {
+        if (desc.samples > 1 && w == desc.width && h == desc.height && desc.format == format) {
+            // resolve directly into the destination
+            output = ppm.resolveBaseLevelNoCheck(fg, "ssr", input, outDesc);
+        } else {
+            // first resolve (if needed)
+            output = ppm.resolveBaseLevel(fg, "ssr", input);
+            // then blit into an appropriate texture
+            // this handles scaling, format conversion and mipmaping
+            output = ppm.opaqueBlit(fg, output, outDesc);
+        }
     } else {
-        // first resolve (if needed)
-        output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", input);
-        // then blit into an appropriate texture
-        // this handles scaling, format conversion and mipmaping
-        output = ppm.opaqueBlit(fg, output, outDesc);
-        // Note: it's not possible to use the FrameGraph's forwardResource(), as an optimization
-        // because the SSR buffer must be distinct from the color buffer (input here), because
-        // we can't read and write into the same buffer, later in the refraction pass.
+        // note: this takes care of MSAA via the "auto-resolve" feature
+        auto const& inDesc = fg.getSubResourceDescriptor(input);
+        output = fg.forwardResource("ssr", outDesc, {
+                .level = 0u, .layer = inDesc.layer }, input);
     }
 
     /*
