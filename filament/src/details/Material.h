@@ -89,7 +89,7 @@ public:
 
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
-    backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
+    [[nodiscard]] backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
         assert_invariant(variant.key < VARIANT_COUNT);
         mActivePrograms.set(variant.key);
