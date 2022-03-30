@@ -304,6 +304,42 @@ public:
             FrameGraphId<RESOURCE> replacedResource);
 
     /**
+     * Create a new resource from the descriptor and forwards it to a specified resource that
+     * gets replaced.
+     * The replaced resource's handle becomes forever invalid.
+     *
+     * @tparam RESOURCE             Type of the resources
+     * @param name                  A name for the new resource
+     * @param desc                  Descriptor to create the new resource
+     * @param replacedResource      Handle of the subresource being replaced
+     *                              This handle becomes invalid after this call
+     * @return                      Handle to a new version of the forwarded resource
+     */
+    template<typename RESOURCE>
+    FrameGraphId<RESOURCE> forwardResource(char const* name,
+            typename RESOURCE::Descriptor const& desc,
+            FrameGraphId<RESOURCE> replacedResource);
+
+    /**
+     * Create a new subresource from the descriptors and forwards it to a specified resource that
+     * gets replaced.
+     * The replaced resource's handle becomes forever invalid.
+     *
+     * @tparam RESOURCE             Type of the resources
+     * @param name                  A name for the new subresource
+     * @param desc                  Descriptor to create the new subresource
+     * @param subdesc               Descriptor to create the new subresource
+     * @param replacedResource      Handle of the subresource being replaced
+     *                              This handle becomes invalid after this call
+     * @return                      Handle to a new version of the forwarded resource
+     */
+    template<typename RESOURCE>
+    FrameGraphId<RESOURCE> forwardResource(char const* name,
+            typename RESOURCE::Descriptor const& desc,
+            typename RESOURCE::SubResourceDescriptor const& subdesc,
+            FrameGraphId<RESOURCE> replacedResource);
+
+    /**
      * Adds a reference to 'input', preventing it from being culled
      *
      * @param input a resource handle
@@ -564,6 +600,24 @@ template<typename RESOURCE>
 FrameGraphId<RESOURCE> FrameGraph::forwardResource(FrameGraphId<RESOURCE> resource,
         FrameGraphId<RESOURCE> replacedResource) {
     return FrameGraphId<RESOURCE>(forwardResourceInternal(resource, replacedResource));
+}
+
+template<typename RESOURCE>
+FrameGraphId<RESOURCE> FrameGraph::forwardResource(char const* name,
+        typename RESOURCE::Descriptor const& desc,
+        FrameGraphId<RESOURCE> replacedResource) {
+    FrameGraphId<RESOURCE> handle = create<RESOURCE>(name, desc);
+    return forwardResource(handle, replacedResource);
+}
+
+template<typename RESOURCE>
+FrameGraphId<RESOURCE> FrameGraph::forwardResource(char const* name,
+        typename RESOURCE::Descriptor const& desc,
+        typename RESOURCE::SubResourceDescriptor const& subdesc,
+        FrameGraphId<RESOURCE> replacedResource) {
+    FrameGraphId<RESOURCE> handle = create<RESOURCE>(name, desc);
+    handle = createSubresource<RESOURCE>(handle, name, subdesc);
+    return forwardResource(handle, replacedResource);
 }
 
 // ------------------------------------------------------------------------------------------------
