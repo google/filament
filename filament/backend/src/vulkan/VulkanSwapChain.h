@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
- #ifndef TNT_FILAMENT_DRIVER_VULKANSWAPCHAIN_H
- #define TNT_FILAMENT_DRIVER_VULKANSWAPCHAIN_H
+ #ifndef TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
+ #define TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
 
 #include "VulkanContext.h"
 #include "VulkanDriver.h"
@@ -24,8 +24,8 @@
 
 #include <utils/FixedCapacityVector.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
+
 
 struct VulkanSwapChain : public HwSwapChain {
     VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface);
@@ -70,7 +70,6 @@ private:
     std::unique_ptr<VulkanTexture> mDepth;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANSWAPCHAIN_H
+#endif // TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H

@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_TOUCH_H
-#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_TOUCH_H
+#ifndef TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_COCOA_TOUCH_H
+#define TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_COCOA_TOUCH_H
 
 #include <stdint.h>
 
 #include <backend/DriverEnums.h>
 #include "VulkanPlatform.h"
 
-namespace filament {
+namespace filament::backend {
 
-class PlatformVkCocoaTouch final : public backend::VulkanPlatform {
+class PlatformVkCocoaTouch final : public VulkanPlatform {
 public:
-    backend::Driver* createDriver(void* const sharedContext) noexcept override;
+    Driver* createDriver(void* const sharedContext) noexcept override;
     void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKCOCOATOUCH_H
+#endif // TNT_FILAMENT_BACKEND_VULKAN_CONTEXTMANAGERVKCOCOATOUCH_H

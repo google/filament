@@ -25,9 +25,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-
-using namespace backend;
+namespace filament::backend {
 
 Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
@@ -51,4 +49,4 @@ void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance, 
     return surface;
 }
 
-} // namespace filament
+} // namespace filament::backend

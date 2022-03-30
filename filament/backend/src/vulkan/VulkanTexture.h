@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
- #ifndef TNT_FILAMENT_DRIVER_VULKANTEXTURE_H
- #define TNT_FILAMENT_DRIVER_VULKANTEXTURE_H
+ #ifndef TNT_FILAMENT_BACKEND_VULKANTEXTURE_H
+ #define TNT_FILAMENT_BACKEND_VULKANTEXTURE_H
 
 #include "VulkanDriver.h"
 #include "VulkanBuffer.h"
@@ -23,8 +23,7 @@
 
 #include <utils/RangeMap.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct VulkanTexture : public HwTexture {
 
@@ -109,7 +108,6 @@ private:
     VulkanStagePool& mStagePool;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANTEXTURE_H
+#endif // TNT_FILAMENT_BACKEND_VULKANTEXTURE_H

@@ -85,8 +85,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 
 #endif
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
         const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept {
@@ -373,12 +372,12 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 }
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        backend::FrameScheduledCallback callback, void* user) {
+        FrameScheduledCallback callback, void* user) {
 
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        backend::FrameCompletedCallback callback, void* user) {
+        FrameCompletedCallback callback, void* user) {
 
 }
 
@@ -531,7 +530,7 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
-        backend::MRT color, TargetBufferInfo depth, TargetBufferInfo stencil) {
+        MRT color, TargetBufferInfo depth, TargetBufferInfo stencil) {
     VulkanAttachment colorTargets[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (color[i].handle) {
@@ -744,7 +743,7 @@ Handle<HwStream> VulkanDriver::createStreamAcquired() {
 }
 
 void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
@@ -799,7 +798,7 @@ bool VulkanDriver::isTextureSwizzleSupported() {
     return true;
 }
 
-bool VulkanDriver::isTextureFormatMipmappable(backend::TextureFormat format) {
+bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
     switch (format) {
         case TextureFormat::DEPTH16:
         case TextureFormat::DEPTH24:
@@ -863,7 +862,7 @@ math::float2 VulkanDriver::getClipSpaceParams() {
 }
 
 uint8_t VulkanDriver::getMaxDrawBuffers() {
-    return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+    return MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
@@ -1722,8 +1721,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
     VulkanPipelineCache::VertexArray varray = {};
-    VkBuffer buffers[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
-    VkDeviceSize offsets[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
+    VkBuffer buffers[MAX_VERTEX_ATTRIBUTE_COUNT] = {};
+    VkDeviceSize offsets[MAX_VERTEX_ATTRIBUTE_COUNT] = {};
 
     // For each attribute, append to each of the above lists.
     const uint32_t bufferCount = prim.vertexBuffer->attributes.size();
@@ -1942,7 +1941,6 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<VulkanDriver>;
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #pragma clang diagnostic pop

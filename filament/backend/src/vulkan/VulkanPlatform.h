@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANPLATFORM_H
-#define TNT_FILAMENT_DRIVER_VULKANPLATFORM_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANPLATFORM_H
+#define TNT_FILAMENT_BACKEND_VULKANPLATFORM_H
 
 #include <backend/Platform.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 class VulkanPlatform : public DefaultPlatform {
 public:
@@ -30,7 +29,6 @@ public:
    ~VulkanPlatform() override;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
-#endif //TNT_FILAMENT_DRIVER_VULKANPLATFORM_H
+#endif //TNT_FILAMENT_BACKEND_VULKANPLATFORM_H

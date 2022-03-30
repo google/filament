@@ -31,8 +31,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
@@ -923,7 +922,6 @@ static VulkanPipelineCache::RasterState createDefaultRasterState() {
     };
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
 #pragma clang diagnostic pop

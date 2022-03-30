@@ -20,8 +20,7 @@
 #include <utils/debug.h>
 #include <utils/Log.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // Always wait at least 3 frames after a DriverAPI-level resource has been destroyed for safe
 // destruction, due to potential usage by outstanding command buffers and triple buffering.
@@ -95,5 +94,4 @@ void VulkanDisposer::reset() noexcept {
     mDisposables.clear();
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

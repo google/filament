@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANMEMORY_H
-#define TNT_FILAMENT_DRIVER_VULKANMEMORY_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANMEMORY_H
+#define TNT_FILAMENT_BACKEND_VULKANMEMORY_H
 
 #include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
 
 #include "vk_mem_alloc.h"
 
-#endif // TNT_FILAMENT_DRIVER_VULKANMEMORY_H
+#endif // TNT_FILAMENT_BACKEND_VULKANMEMORY_H
