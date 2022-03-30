@@ -18,9 +18,9 @@
 
 #include "noop/NoopDriver.h"
 
-namespace filament {
+namespace filament::backend {
 
-backend::Driver* PlatformNoop::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformNoop::createDriver(void* const sharedGLContext) noexcept {
     return NoopDriver::create();
 }
 

@@ -17,9 +17,7 @@
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
 
-namespace filament {
-
-using namespace backend;
+namespace filament::backend {
 
 Driver* NoopDriver::create() {
     return new NoopDriver();
@@ -30,7 +28,7 @@ NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver
 
 NoopDriver::~NoopDriver() noexcept = default;
 
-backend::ShaderModel NoopDriver::getShaderModel() const noexcept {
+ShaderModel NoopDriver::getShaderModel() const noexcept {
 #if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
     return ShaderModel::GL_ES_30;
 #else
@@ -39,7 +37,7 @@ backend::ShaderModel NoopDriver::getShaderModel() const noexcept {
 }
 
 // explicit instantiation of the Dispatcher
-template class backend::ConcreteDispatcher<NoopDriver>;
+template class ConcreteDispatcher<NoopDriver>;
 
 
 void NoopDriver::terminate() {
@@ -52,12 +50,12 @@ void NoopDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 }
 
 void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        backend::FrameScheduledCallback callback, void* user) {
+        FrameScheduledCallback callback, void* user) {
 
 }
 
 void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        backend::FrameCompletedCallback callback, void* user) {
+        FrameCompletedCallback callback, void* user) {
 
 }
 
@@ -118,7 +116,7 @@ Handle<HwStream> NoopDriver::createStreamAcquired() {
 }
 
 void NoopDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
 void NoopDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
@@ -148,7 +146,7 @@ bool NoopDriver::isTextureSwizzleSupported() {
     return true;
 }
 
-bool NoopDriver::isTextureFormatMipmappable(backend::TextureFormat format) {
+bool NoopDriver::isTextureFormatMipmappable(TextureFormat format) {
     return true;
 }
 
@@ -181,7 +179,7 @@ math::float2 NoopDriver::getClipSpaceParams() {
 }
 
 uint8_t NoopDriver::getMaxDrawBuffers() {
-    return backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
+    return MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
 }
 
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
@@ -313,8 +311,8 @@ void NoopDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, u
 }
 
 void NoopDriver::blit(TargetBufferFlags buffers,
-        Handle<HwRenderTarget> dst, backend::Viewport dstRect,
-        Handle<HwRenderTarget> src, backend::Viewport srcRect,
+        Handle<HwRenderTarget> dst, Viewport dstRect,
+        Handle<HwRenderTarget> src, Viewport srcRect,
         SamplerMagFilter filter) {
 }
 
