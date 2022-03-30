@@ -23,8 +23,7 @@
 using namespace bluevk;
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
@@ -355,5 +354,4 @@ VulkanTexture& VulkanSwapChain::getDepthTexture() {
     return *mDepth;
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

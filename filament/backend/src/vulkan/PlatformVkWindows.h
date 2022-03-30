@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H
-#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H
+#ifndef TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_WINDOWS_H
+#define TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_WINDOWS_H
 
 #include <stdint.h>
 
 #include <backend/DriverEnums.h>
 #include "VulkanPlatform.h"
 
-namespace filament {
+namespace filament::backend {
 
-class PlatformVkWindows final : public backend::VulkanPlatform {
+class PlatformVkWindows final : public VulkanPlatform {
 public:
 
-    backend::Driver* createDriver(void* const sharedContext) noexcept override;
+    Driver* createDriver(void* const sharedContext) noexcept override;
 
     void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept override;
 
@@ -37,6 +37,6 @@ private:
 
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H
+#endif // TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_WINDOWS_H

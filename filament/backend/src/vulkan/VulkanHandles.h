@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
- #ifndef TNT_FILAMENT_DRIVER_VULKANHANDLES_H
- #define TNT_FILAMENT_DRIVER_VULKANHANDLES_H
+ #ifndef TNT_FILAMENT_BACKEND_VULKANHANDLES_H
+ #define TNT_FILAMENT_BACKEND_VULKANHANDLES_H
 
 #include "VulkanDriver.h"
 #include "VulkanPipelineCache.h"
@@ -24,8 +24,7 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct VulkanProgram : public HwProgram {
     VulkanProgram(VulkanContext& context, const Program& builder) noexcept;
@@ -106,7 +105,7 @@ struct VulkanSamplerGroup : public HwSamplerGroup {
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
-    void setPrimitiveType(backend::PrimitiveType pt);
+    void setPrimitiveType(PrimitiveType pt);
     void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer);
     VulkanVertexBuffer* vertexBuffer = nullptr;
     VulkanIndexBuffer* indexBuffer = nullptr;
@@ -145,7 +144,6 @@ inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
     }
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANHANDLES_H
+#endif // TNT_FILAMENT_BACKEND_VULKANHANDLES_H

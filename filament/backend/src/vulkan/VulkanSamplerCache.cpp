@@ -20,8 +20,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 constexpr inline VkSamplerAddressMode getWrapMode(SamplerWrapMode mode) noexcept {
     switch (mode) {
@@ -99,7 +98,7 @@ constexpr inline VkBool32 getCompareEnable(SamplerCompareMode mode) noexcept {
 
 VulkanSamplerCache::VulkanSamplerCache(VulkanContext& context) : mContext(context) {}
 
-VkSampler VulkanSamplerCache::getSampler(backend::SamplerParams params) noexcept {
+VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
     auto iter = mCache.find(params.u);
     if (UTILS_LIKELY(iter != mCache.end())) {
         return iter->second;
@@ -135,5 +134,4 @@ void VulkanSamplerCache::reset() noexcept {
     mCache.clear();
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

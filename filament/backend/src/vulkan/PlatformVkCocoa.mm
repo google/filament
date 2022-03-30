@@ -32,9 +32,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-
-using namespace backend;
+namespace filament::backend {
 
 Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
@@ -61,4 +59,4 @@ void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance, ui
     return surface;
 }
 
-} // namespace filament
+} // namespace filament::backend

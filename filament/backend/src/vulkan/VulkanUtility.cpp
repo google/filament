@@ -24,8 +24,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
     VkSemaphoreCreateInfo createInfo = {};
@@ -333,7 +332,7 @@ uint32_t getBytesPerPixel(TextureFormat format) {
 }
 
 VkCompareOp getCompareOp(SamplerCompareFunc func) {
-    using Compare = backend::SamplerCompareFunc;
+    using Compare = SamplerCompareFunc;
     switch (func) {
         case Compare::LE: return VK_COMPARE_OP_LESS_OR_EQUAL;
         case Compare::GE: return VK_COMPARE_OP_GREATER_OR_EQUAL;
@@ -347,7 +346,6 @@ VkCompareOp getCompareOp(SamplerCompareFunc func) {
 }
 
 VkBlendFactor getBlendFactor(BlendFunction mode) {
-    using BlendFunction = filament::backend::BlendFunction;
     switch (mode) {
         case BlendFunction::ZERO:                  return VK_BLEND_FACTOR_ZERO;
         case BlendFunction::ONE:                   return VK_BLEND_FACTOR_ONE;
@@ -364,7 +362,6 @@ VkBlendFactor getBlendFactor(BlendFunction mode) {
 }
 
 VkCullModeFlags getCullMode(CullingMode mode) {
-    using CullingMode = filament::backend::CullingMode;
     switch (mode) {
         case CullingMode::NONE:           return VK_CULL_MODE_NONE;
         case CullingMode::FRONT:          return VK_CULL_MODE_FRONT_BIT;
@@ -659,8 +656,7 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
     return mostSignificantBit((sampleCount - 1) & mask);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b) {
     if (a.aspectMask < b.aspectMask) return true;

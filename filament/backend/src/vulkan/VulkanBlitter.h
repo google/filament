@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANBLITTER_H
-#define TNT_FILAMENT_DRIVER_VULKANBLITTER_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANBLITTER_H
+#define TNT_FILAMENT_BACKEND_VULKANBLITTER_H
 
 #include "VulkanContext.h"
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 class VulkanBuffer;
 class VulkanFboCache;
@@ -73,7 +72,6 @@ private:
     VulkanSamplerCache& mSamplerCache;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANBLITTER_H
+#endif // TNT_FILAMENT_BACKEND_VULKANBLITTER_H

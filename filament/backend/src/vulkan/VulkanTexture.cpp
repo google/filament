@@ -26,8 +26,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 VulkanTexture::VulkanTexture(VulkanContext& context, VkImage image, VkFormat format, uint8_t samples,
         uint32_t width, uint32_t height, TextureUsage tusage, VulkanStagePool& stagePool) :
@@ -488,5 +487,4 @@ VkImageLayout VulkanTexture::getVkLayout(uint32_t layer, uint32_t level) const {
     return mSubresourceLayouts.get(key);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

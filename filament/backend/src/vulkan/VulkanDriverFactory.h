@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANDRIVERFACTORY_H
-#define TNT_FILAMENT_DRIVER_VULKANDRIVERFACTORY_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANDRIVERFACTORY_H
+#define TNT_FILAMENT_BACKEND_VULKANDRIVERFACTORY_H
 
 #include <stdint.h>
 
-namespace filament {
+namespace filament::backend {
 
-namespace backend {
 class VulkanPlatform;
 class Driver;
 
 class VulkanDriverFactory {
 public:
-    static backend::Driver* create(backend::VulkanPlatform* platform,
+    static Driver* create(VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
-#endif //TNT_FILAMENT_DRIVER_VULKANDRIVERFACTORY_H
+#endif //TNT_FILAMENT_BACKEND_VULKANDRIVERFACTORY_H

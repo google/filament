@@ -30,8 +30,7 @@
 using namespace bluevk;
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct BlitterUniforms {
     int sampleCount;
@@ -419,5 +418,4 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     mPipelineCache.bindUniformBuffer(0, previousUbo.buffer, previousUbo.offset, previousUbo.size);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

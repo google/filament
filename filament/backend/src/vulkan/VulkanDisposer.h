@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANDISPOSER_H
-#define TNT_FILAMENT_DRIVER_VULKANDISPOSER_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANDISPOSER_H
+#define TNT_FILAMENT_BACKEND_VULKANDISPOSER_H
 
 #include <tsl/robin_map.h>
 
 #include <functional>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // VulkanDisposer tracks resources (such as textures or vertex buffers) that need deferred
 // destruction due to potential use by a Vulkan command buffer. Resources are represented with void*
@@ -56,7 +55,6 @@ private:
     tsl::robin_map<Key, Disposable> mDisposables;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANDISPOSER_H
+#endif // TNT_FILAMENT_BACKEND_VULKANDISPOSER_H
