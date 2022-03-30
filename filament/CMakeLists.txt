@@ -92,7 +92,6 @@ set(SRCS
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/View.cpp
-        src/Viewport.cpp
         src/components/CameraManager.cpp
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
