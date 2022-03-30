@@ -142,9 +142,9 @@ struct Viewport {
     uint32_t width;     //!< width in pixels
     uint32_t height;    //!< height in pixels
     //! get the right coordinate in window space of the viewport
-    int32_t right() const noexcept { return left + width; }
+    int32_t right() const noexcept { return left + int32_t(width); }
     //! get the top coordinate in window space of the viewport
-    int32_t top() const noexcept { return bottom + height; }
+    int32_t top() const noexcept { return bottom + int32_t(height); }
 };
 
 /**
