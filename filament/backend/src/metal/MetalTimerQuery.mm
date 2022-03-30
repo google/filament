@@ -20,11 +20,10 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
-TimerQueryInterface::~TimerQueryInterface() = default;
+MetalTimerQueryInterface::~MetalTimerQueryInterface() = default;
 
-void TimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
+void MetalTimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
     auto* fence = new MetalFence(mContext);
     fence->encode();
     query->status->elapsed = 0;
@@ -41,7 +40,7 @@ void TimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
     });
 }
 
-void TimerQueryFence::endTimeElapsedQuery(MetalTimerQuery* query) {
+void MetalTimerQueryFence::endTimeElapsedQuery(MetalTimerQuery* query) {
     auto* fence = new MetalFence(mContext);
     fence->encode();
 
@@ -57,7 +56,7 @@ void TimerQueryFence::endTimeElapsedQuery(MetalTimerQuery* query) {
     });
 }
 
-bool TimerQueryFence::getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) {
+bool MetalTimerQueryFence::getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) {
     if (!query->status->available.load()) {
         return false;
     }
@@ -71,6 +70,5 @@ bool TimerQueryNoop::getQueryResult(MetalTimerQuery* query, uint64_t* outElapsed
     return false;
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

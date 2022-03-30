@@ -40,7 +40,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 class MetalSwapChain : public HwSwapChain {
 public:
@@ -357,7 +356,6 @@ struct MetalTimerQuery : public HwTimerQuery {
     std::shared_ptr<Status> status;
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

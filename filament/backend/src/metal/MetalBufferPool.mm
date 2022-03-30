@@ -26,7 +26,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -110,6 +109,5 @@ void MetalBufferPool::reset() noexcept {
     mFreeStages.clear();
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

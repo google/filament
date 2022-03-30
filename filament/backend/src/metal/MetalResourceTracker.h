@@ -25,7 +25,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 /**
  * MetalResourceTracker is a simple utility that maps individual command buffers to a set of
@@ -76,7 +75,6 @@ private:
     std::mutex mMutex;
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

@@ -31,24 +31,21 @@
 namespace filament {
 namespace backend {
 
-inline bool operator==(const backend::SamplerParams& lhs, const backend::SamplerParams& rhs) {
+inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
     return lhs.u == rhs.u;
 }
 
-namespace metal {
-
-static constexpr uint32_t MAX_VERTEX_ATTRIBUTE_COUNT = backend::MAX_VERTEX_ATTRIBUTE_COUNT;
 static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::BINDING_COUNT;
-static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
+static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
 static constexpr uint32_t VERTEX_BUFFER_START = Program::BINDING_COUNT;
 
 // The "zero" buffer is a small buffer for missing attributes that resides in the vertex slot
 // immediately following any user-provided vertex buffers.
-static constexpr uint32_t ZERO_VERTEX_BUFFER = backend::MAX_VERTEX_BUFFER_COUNT;
+static constexpr uint32_t ZERO_VERTEX_BUFFER = MAX_VERTEX_BUFFER_COUNT;
 
 // The total number of vertex buffer "slots" that the Metal backend can bind.
 // + 1 to account for the zero buffer.
-static constexpr uint32_t VERTEX_BUFFER_COUNT = backend::MAX_VERTEX_BUFFER_COUNT + 1;
+static constexpr uint32_t VERTEX_BUFFER_COUNT = MAX_VERTEX_BUFFER_COUNT + 1;
 
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);
@@ -212,7 +209,7 @@ private:
 
 // Pipeline state
 
-struct PipelineState {
+struct MetalPipelineState {
     id<MTLFunction> vertexFunction = nil;                                      // 8 bytes
     id<MTLFunction> fragmentFunction = nil;                                    // 8 bytes
     VertexDescription vertexDescription;                                       // 528 bytes
@@ -223,7 +220,7 @@ struct PipelineState {
     bool colorWrite = true;                                                    // 1 byte
     char padding[7] = { 0 };                                                   // 7 bytes
 
-    bool operator==(const PipelineState& rhs) const noexcept {
+    bool operator==(const MetalPipelineState& rhs) const noexcept {
         return (
                 this->vertexFunction == rhs.vertexFunction &&
                 this->fragmentFunction == rhs.fragmentFunction &&
@@ -237,23 +234,23 @@ struct PipelineState {
         );
     }
 
-    bool operator!=(const PipelineState& rhs) const noexcept {
+    bool operator!=(const MetalPipelineState& rhs) const noexcept {
         return !operator==(rhs);
     }
 };
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(PipelineState) == 688, "PipelineState unexpected size.");
+static_assert(sizeof(MetalPipelineState) == 688, "MetalPipelineState unexpected size.");
 
 struct PipelineStateCreator {
-    id<MTLRenderPipelineState> operator()(id<MTLDevice> device, const PipelineState& state)
+    id<MTLRenderPipelineState> operator()(id<MTLDevice> device, const MetalPipelineState& state)
             noexcept;
 };
 
-using PipelineStateTracker = StateTracker<PipelineState>;
+using PipelineStateTracker = StateTracker<MetalPipelineState>;
 
-using PipelineStateCache = StateCache<PipelineState, id<MTLRenderPipelineState>,
+using PipelineStateCache = StateCache<MetalPipelineState, id<MTLRenderPipelineState>,
         PipelineStateCreator>;
 
 // Depth-stencil State
@@ -315,7 +312,7 @@ using UniformBufferStateTracker = StateTracker<UniformBufferState>;
 // Sampler states
 
 struct SamplerState {
-    backend::SamplerParams samplerParams;
+    SamplerParams samplerParams;
     uint32_t minLod = 0;
     uint32_t maxLod = UINT_MAX;
 
@@ -343,7 +340,6 @@ using SamplerStateCache = StateCache<SamplerState, id<MTLSamplerState>, SamplerS
 using CullModeStateTracker = StateTracker<MTLCullMode>;
 using WindingStateTracker = StateTracker<MTLWinding>;
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

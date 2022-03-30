@@ -20,7 +20,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexcept {
     switch (format) {
@@ -207,6 +206,5 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
     return MTLPixelFormatInvalid;
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

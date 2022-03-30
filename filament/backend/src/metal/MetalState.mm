@@ -20,10 +20,9 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device,
-        const PipelineState& state) noexcept {
+        const MetalPipelineState& state) noexcept {
     MTLRenderPipelineDescriptor* descriptor = [MTLRenderPipelineDescriptor new];
 
     // Shader Functions
@@ -105,7 +104,7 @@ id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
 
 id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
         const SamplerState& state) noexcept {
-    backend::SamplerParams params = state.samplerParams;
+    SamplerParams params = state.samplerParams;
     MTLSamplerDescriptor* samplerDescriptor = [MTLSamplerDescriptor new];
     samplerDescriptor.minFilter = getFilter(params.filterMin);
     samplerDescriptor.magFilter = getFilter(params.filterMag);
@@ -133,6 +132,5 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
     return [device newSamplerStateWithDescriptor:samplerDescriptor];
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

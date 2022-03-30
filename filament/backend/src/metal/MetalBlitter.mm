@@ -23,7 +23,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 static const char* functionLibrary = R"(
 #include <metal_stdlib>
@@ -300,7 +299,7 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
     }
     id<MTLFunction> fragmentFunction = getBlitFragmentFunction(key);
 
-    PipelineState pipelineState {
+    MetalPipelineState pipelineState {
         .vertexFunction = getBlitVertexFunction(),
         .fragmentFunction = fragmentFunction,
         .vertexDescription = {},
@@ -530,6 +529,5 @@ id<MTLFunction> MetalBlitter::getBlitFragmentFunction(BlitFunctionKey key) {
     return function;
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

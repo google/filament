@@ -31,8 +31,6 @@ namespace backend {
 
 class MetalPlatform;
 
-namespace metal {
-
 class MetalBuffer;
 struct MetalUniformBuffer;
 struct MetalContext;
@@ -44,17 +42,17 @@ struct UniformBufferState;
 #endif
 
 class MetalDriver final : public DriverBase {
-    explicit MetalDriver(backend::MetalPlatform* platform) noexcept;
+    explicit MetalDriver(MetalPlatform* platform) noexcept;
     ~MetalDriver() noexcept override;
 
 public:
-    static Driver* create(backend::MetalPlatform* platform);
+    static Driver* create(MetalPlatform* platform);
 
 private:
 
     friend class MetalSwapChain;
 
-    backend::MetalPlatform& mPlatform;
+    MetalPlatform& mPlatform;
 
     MetalContext* mContext;
 
@@ -68,7 +66,7 @@ private:
      */
 
     template<typename T>
-    friend class backend::ConcreteDispatcher;
+    friend class ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE inline void methodName(paramsDecl);
@@ -86,7 +84,7 @@ private:
      * Memory management
      */
 
-    backend::HandleAllocatorMTL mHandleAllocator;
+    HandleAllocatorMTL mHandleAllocator;
 
     template<typename D>
     Handle<D> alloc_handle() {
@@ -126,7 +124,6 @@ private:
 
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 
