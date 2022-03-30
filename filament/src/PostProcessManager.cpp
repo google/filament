@@ -2324,7 +2324,7 @@ void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomRe
     FMaterialInstance* mi = material.getMaterialInstance(mEngine);
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver);
-    material.getMaterial(mEngine)->getProgram(Variant{});
+    material.getMaterial(mEngine)->prepareProgram(Variant{});
 }
 
 void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
