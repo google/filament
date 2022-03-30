@@ -18,8 +18,7 @@
 
 #include "OpenGLDriverFactory.h"
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
@@ -27,5 +26,4 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform, void* shar
     return OpenGLDriverFactory::create(platform, sharedContext);
 }
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

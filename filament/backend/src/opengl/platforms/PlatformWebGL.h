@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H
-#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_WEBGL_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_WEBGL_H
 
 #include <stdint.h>
 
@@ -26,12 +26,12 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-namespace filament {
+namespace filament::backend {
 
-class PlatformWebGL final : public backend::OpenGLPlatform {
+class PlatformWebGL final : public OpenGLPlatform {
 public:
 
-    backend::Driver* createDriver(void* const sharedGLContext) noexcept override;
+    Driver* createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override;
@@ -42,7 +42,7 @@ public:
 
     Fence* createFence() noexcept final override;
     void destroyFence(Fence* fence) noexcept final override;
-    backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override;
+    FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override;
 
     void setPresentationTime(int64_t time) noexcept final override {}
 
@@ -54,12 +54,12 @@ public:
 
     ExternalTexture* createExternalTextureStorage() noexcept final override { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final override { }
+            uint32_t w, uint32_t h, TextureFormat format) noexcept final override { }
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override { }
 
     int getOSVersion() const noexcept final override { return 0; }
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_WEBGL_H

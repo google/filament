@@ -30,11 +30,11 @@
 #include <set>
 #include <utility>
 
-namespace filament {
+namespace filament::backend {
 
 class OpenGLContext {
 public:
-    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = backend::MAX_SAMPLER_COUNT;
+    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = MAX_SAMPLER_COUNT;
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
     typedef math::details::TVec4<GLint> vec4gli;
     typedef math::details::TVec2<GLclampf> vec2glf;
@@ -51,7 +51,7 @@ public:
         // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
         // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
         // immutable.
-        backend::Handle<backend::HwVertexBuffer> vertexBufferWithObjects = {};
+        Handle<HwVertexBuffer> vertexBufferWithObjects = {};
 
         // If this version number does not match vertexBufferWithObjects->bufferObjectsVersion,
         // then the VAO needs to be updated.
@@ -70,7 +70,7 @@ public:
     constexpr        inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
 
-    backend::ShaderModel getShaderModel() const noexcept { return mShaderModel; }
+    ShaderModel getShaderModel() const noexcept { return mShaderModel; }
 
 
     inline void useProgram(GLuint program) noexcept;
@@ -256,7 +256,7 @@ public:
     void resetProgram() noexcept { state.program.use = 0; }
 
 private:
-    backend::ShaderModel mShaderModel;
+    ShaderModel mShaderModel;
 
     // Try to keep the State structure sorted by data-access patterns
     struct State {

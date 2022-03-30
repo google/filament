@@ -27,14 +27,14 @@
 
 #include <ctype.h>
 
-namespace filament {
+namespace filament::backend {
 
 using namespace filament::math;
 using namespace utils;
 using namespace backend;
 
 static void logCompilationError(utils::io::ostream& out,
-        backend::Program::Shader shaderType, const char* name,
+        Program::Shader shaderType, const char* name,
         GLuint shaderId, CString const& sourceCode) noexcept;
 
 static void logProgramLinkError(utils::io::ostream& out,
@@ -219,7 +219,7 @@ GLuint OpenGLProgram::linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_CO
  * Returns true on success.
  */
 bool OpenGLProgram::checkProgramStatus(const char* name,
-        GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
+        GLuint& program, GLuint shaderIds[Program::SHADER_TYPE_COUNT],
         std::array<CString, 2> const& shaderSourceCode) noexcept {
 
     GLint status;
@@ -470,4 +470,4 @@ void logProgramLinkError(io::ostream& out, char const* name, GLuint program) noe
         << io::endl;
 }
 
-} // namespace filament
+} // namespace filament::backend

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
-#define TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H
 
 #include "DriverBase.h"
 #include "OpenGLDriver.h"
@@ -32,13 +32,13 @@
 #include <stdint.h>
 
 
-namespace filament {
+namespace filament::backend {
 
-class OpenGLProgram : public backend::HwProgram {
+class OpenGLProgram : public HwProgram {
 public:
 
     OpenGLProgram() noexcept;
-    OpenGLProgram(OpenGLDriver& gld, backend::Program&& builder) noexcept;
+    OpenGLProgram(OpenGLDriver& gld, Program&& builder) noexcept;
     ~OpenGLProgram() noexcept;
 
     bool isValid() const noexcept { return mValid; }
@@ -67,39 +67,39 @@ public:
     }
 
     struct {
-        GLuint shaders[backend::Program::SHADER_TYPE_COUNT] = {};
+        GLuint shaders[Program::SHADER_TYPE_COUNT] = {};
         GLuint program = 0;
     } gl; // 12 bytes
 
 private:
     static constexpr uint8_t TEXTURE_UNIT_COUNT = OpenGLContext::MAX_TEXTURE_UNIT_COUNT;
-    static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(backend::Program::Shader::VERTEX);
-    static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(backend::Program::Shader::FRAGMENT);
+    static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(Program::Shader::VERTEX);
+    static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(Program::Shader::FRAGMENT);
 
     static void compileShaders(OpenGLContext& context,
-            backend::Program::ShaderSource shadersSource,
-            GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
-            std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
+            Program::ShaderSource shadersSource,
+            GLuint shaderIds[Program::SHADER_TYPE_COUNT],
+            std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
 
-    static GLuint linkProgram(const GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT]) noexcept;
+    static GLuint linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept;
 
     static bool checkProgramStatus(const char* name,
-            GLuint& program, GLuint shaderIds[backend::Program::SHADER_TYPE_COUNT],
+            GLuint& program, GLuint shaderIds[Program::SHADER_TYPE_COUNT],
             std::array<utils::CString, 2> const& shaderSourceCode) noexcept;
 
     void initialize(OpenGLContext& context);
 
     void initializeProgramState(OpenGLContext& context, GLuint program,
-            backend::Program::UniformBlockInfo const& uniformBlockInfo,
-            backend::Program::SamplerGroupInfo const& samplerGroupInfo) noexcept;
+            Program::UniformBlockInfo const& uniformBlockInfo,
+            Program::SamplerGroupInfo const& samplerGroupInfo) noexcept;
 
     void updateSamplers(OpenGLDriver* gld) noexcept;
 
     // keep these away from of other class attributes
     struct LazyInitializationData {
-        backend::Program::UniformBlockInfo uniformBlockInfo;
-        backend::Program::SamplerGroupInfo samplerGroupInfo;
-        std::array<utils::CString, backend::Program::SHADER_TYPE_COUNT> shaderSourceCode;
+        Program::UniformBlockInfo uniformBlockInfo;
+        Program::SamplerGroupInfo samplerGroupInfo;
+        std::array<utils::CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
     };
 
     // number of bindings actually used by this program
@@ -113,7 +113,7 @@ private:
     union {
         // when mInitialized == true:
         // information about each USED sampler buffer per binding (no gaps)
-        std::array<uint8_t, backend::Program::BINDING_COUNT> mUsedBindingPoints;   // 8 bytes
+        std::array<uint8_t, Program::BINDING_COUNT> mUsedBindingPoints;   // 8 bytes
         // when mInitialized == false:
         // lazy initialization data pointer
         LazyInitializationData* mLazyInitializationData;
@@ -123,6 +123,6 @@ private:
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.
 static_assert(sizeof(OpenGLProgram) <= 64);
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H

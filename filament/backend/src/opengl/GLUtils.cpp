@@ -20,7 +20,7 @@
 
 #include "private/backend/Driver.h"
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 using namespace utils;
@@ -122,4 +122,4 @@ void assertFramebufferStatus(io::ostream& out, GLenum target, const char* functi
 }
 
 } // namespace GLUtils
-} // namespace filament
+} // namespace filament::backend

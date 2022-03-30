@@ -26,7 +26,7 @@
 
 using namespace utils;
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 using Stream = Platform::Stream;
@@ -166,4 +166,4 @@ void ExternalStreamManagerAndroid::updateTexImage(Stream* handle, int64_t* times
     }
 }
 
-} // namespace filament
+} // namespace filament::backend

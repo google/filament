@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGLBLITTER_H
-#define TNT_FILAMENT_DRIVER_OPENGLBLITTER_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLBLITTER_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGLBLITTER_H
 
 #include <utils/compiler.h>
 #include "gl_headers.h"
 
-namespace filament {
+namespace filament::backend {
 
 class OpenGLContext;
 
@@ -62,6 +62,6 @@ private:
     GLuint mFBO{};
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_OPENGLBLITTER_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGLBLITTER_H

@@ -74,8 +74,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/OpenGLProgram.cpp
             src/opengl/OpenGLProgram.h
             src/opengl/OpenGLPlatform.cpp
-            src/opengl/TimerQuery.cpp
-            src/opengl/TimerQuery.h
+            src/opengl/OpenGLTimerQuery.cpp
+            src/opengl/OpenGLTimerQuery.h
             include/private/backend/OpenGLPlatform.h
     )
     if (EGL)
