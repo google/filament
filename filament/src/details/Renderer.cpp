@@ -254,14 +254,24 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
 
+    // whether we're scaled at all
     const bool scaled = any(notEqual(scale, float2(1.0f)));
-    filament::Viewport svp = vp.scale(scale);
+
+    // The scale factor guarantees that the width and height are integers (multiple of 8, in fact),
+    // and all the code below ignores entirely svp's origin -- because we want to render the view
+    // at the origin of the buffer, so we set it to zero here to make that fact clear.
+    const filament::Viewport svp = {
+            0, 0, // this is ignored
+            uint32_t(float(vp.width ) * scale.x),
+            uint32_t(float(vp.height) * scale.y)
+    };
+
     if (svp.empty()) {
         return;
     }
 
     const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
-    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
+    // If the swap-chain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
     const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
     view.prepare(engine, driver, arena, svp, getShaderUserTime(), needsAlphaChannel);
@@ -910,6 +920,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
+                /*
+                 * There is a bit of magic happening here regarding the viewport used.
+                 * We do not specify the viewport in declareRenderPass() below, so it will be
+                 * deduced automatically to be { 0, 0, w, h }, with w,h the min width/height of
+                 * all the attachments. This has the side effect of moving the viewport to the
+                 * origin and ignore the left/bottom of 'svp'. The attachment sizes are set from
+                 * svp's width/height, however.
+                 * But that's not all! When we're rendering directly into the swap-chain (by way
+                 * of calling forwardResource() later), the effective viewport comes from the
+                 * imported resource (i.e. the swap-chain) and is set to 'vp' which has its
+                 * left/bottom honored -- the view is therefore rendered directly where it should
+                 * be (the imported resource viewport is set to 'vp', see  how 'fgViewRenderTarget'
+                 * is initialized in this file).
+                 */
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output }, .depth = data.depth },
                         .samples = config.msaa,
