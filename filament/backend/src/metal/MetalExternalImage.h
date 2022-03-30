@@ -24,7 +24,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 struct MetalContext;
 
@@ -129,7 +128,6 @@ private:
     } mSwizzle;
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

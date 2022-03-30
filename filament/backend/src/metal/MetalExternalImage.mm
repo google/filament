@@ -32,7 +32,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 static const auto cvBufferDeleter = [](const void* buffer) {
     CVBufferRelease((CVMetalTextureRef) buffer);
@@ -300,6 +299,5 @@ id<MTLCommandBuffer> MetalExternalImage::encodeColorConversionPass(id<MTLTexture
     return commandBuffer;
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

@@ -26,7 +26,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 class MetalBuffer {
 public:
@@ -94,7 +93,6 @@ private:
     void copyIntoStreamBuffer(void* src, size_t size);
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

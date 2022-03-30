@@ -22,7 +22,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 MetalBuffer::MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer)
         : mBufferSize(size), mContext(context) {
@@ -206,6 +205,5 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
     }
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

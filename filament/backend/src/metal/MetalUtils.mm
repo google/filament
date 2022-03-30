@@ -16,7 +16,7 @@
 
 #include "MetalUtils.h"
 
-namespace filament::backend::metal {
+namespace filament::backend {
 
 id<MTLTexture> createTextureViewWithSwizzle(id<MTLTexture> texture,
         MTLTextureSwizzleChannels swizzle) {
@@ -48,4 +48,4 @@ id<MTLTexture> createTextureViewWithSingleSlice(id<MTLTexture> texture, NSUInteg
                                            slices:NSMakeRange(slice, 1)];
 }
 
-}
+} // namespace filament::backend

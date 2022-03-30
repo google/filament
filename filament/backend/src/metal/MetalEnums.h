@@ -27,7 +27,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 struct MetalContext;
 
@@ -405,7 +404,6 @@ inline MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwi
             getSwizzle(a));
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

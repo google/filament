@@ -41,10 +41,8 @@ namespace filament {
 namespace backend {
 
 Driver* MetalDriverFactory::create(MetalPlatform* const platform) {
-    return metal::MetalDriver::create(platform);
+    return MetalDriver::create(platform);
 }
-
-namespace metal {
 
 UTILS_NOINLINE
 Driver* MetalDriver::create(MetalPlatform* const platform) {
@@ -52,7 +50,7 @@ Driver* MetalDriver::create(MetalPlatform* const platform) {
     return new MetalDriver(platform);
 }
 
-MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
+MetalDriver::MetalDriver(MetalPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<MetalDriver>()),
         mPlatform(*platform),
         mContext(new MetalContext),
@@ -108,7 +106,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     mContext->blitter = new MetalBlitter(*mContext);
 
     if (@available(iOS 12, *)) {
-        mContext->timerQueryImpl = new TimerQueryFence(*mContext);
+        mContext->timerQueryImpl = new MetalTimerQueryFence(*mContext);
     } else {
         mContext->timerQueryImpl = new TimerQueryNoop();
     }
@@ -149,13 +147,13 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 }
 
 void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        backend::FrameScheduledCallback callback, void* user) {
+        FrameScheduledCallback callback, void* user) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
     swapChain->setFrameScheduledCallback(callback, user);
 }
 
 void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        backend::FrameCompletedCallback callback, void* user) {
+        FrameCompletedCallback callback, void* user) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
     swapChain->setFrameCompletedCallback(callback, user);
 }
@@ -291,7 +289,7 @@ void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dum
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, backend::MRT color,
+        uint8_t samples, MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
     // Clamp sample count to what the device supports.
     auto& sc = mContext->sampleCountLookup;
@@ -344,7 +342,7 @@ void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
 }
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    if (UTILS_UNLIKELY(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
+    if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, pixelBuffer, flags);
     } else {
@@ -569,7 +567,7 @@ Handle<HwStream> MetalDriver::createStreamAcquired() {
 }
 
 void MetalDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
 void MetalDriver::setStreamDimensions(Handle<HwStream> stream, uint32_t width,
@@ -581,7 +579,7 @@ int64_t MetalDriver::getStreamTimestamp(Handle<HwStream> stream) {
     return 0;
 }
 
-void MetalDriver::updateStreams(backend::DriverApi* driver) {
+void MetalDriver::updateStreams(DriverApi* driver) {
 
 }
 
@@ -1058,8 +1056,8 @@ void MetalDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, 
 }
 
 void MetalDriver::blit(TargetBufferFlags buffers,
-        Handle<HwRenderTarget> dst, backend::Viewport dstRect,
-        Handle<HwRenderTarget> src, backend::Viewport srcRect,
+        Handle<HwRenderTarget> dst, Viewport dstRect,
+        Handle<HwRenderTarget> src, Viewport srcRect,
         SamplerMagFilter filter) {
     // If we're the in middle of a render pass, finish it.
     // This condition should only occur during copyFrame. It's okay to end the render pass because
@@ -1166,7 +1164,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
 }
 
-void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
+void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
@@ -1196,7 +1194,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph,
     if (depthAttachment) {
         depthPixelFormat = depthAttachment.getPixelFormat();
     }
-    metal::PipelineState pipelineState {
+    MetalPipelineState pipelineState {
         .vertexFunction = program->vertexFunction,
         .fragmentFunction = program->fragmentFunction,
         .vertexDescription = primitive->vertexDescription,
@@ -1304,15 +1302,15 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph,
         return mContext->samplerStateCache.getOrCreateState(s);
     };
 
-    id<MTLTexture> texturesToBindVertex[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindVertex[backend::MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLTexture> texturesToBindVertex[MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindVertex[MAX_VERTEX_SAMPLER_COUNT] = {};
 
     enumerateSamplerGroups(program, ShaderType::VERTEX,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
                     const SamplerGroup::Sampler* sampler, uint8_t binding) {
         // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
-        if (binding >= backend::MAX_VERTEX_SAMPLER_COUNT) {
+        if (binding >= MAX_VERTEX_SAMPLER_COUNT) {
             return;
         }
 
@@ -1336,21 +1334,21 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph,
         }
     }
 
-    NSRange vertexSamplerRange = NSMakeRange(0, backend::MAX_VERTEX_SAMPLER_COUNT);
+    NSRange vertexSamplerRange = NSMakeRange(0, MAX_VERTEX_SAMPLER_COUNT);
     [mContext->currentRenderPassEncoder setVertexTextures:texturesToBindVertex
                                                 withRange:vertexSamplerRange];
     [mContext->currentRenderPassEncoder setVertexSamplerStates:samplersToBindVertex
                                                      withRange:vertexSamplerRange];
 
-    id<MTLTexture> texturesToBindFragment[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindFragment[backend::MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLTexture> texturesToBindFragment[MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindFragment[MAX_FRAGMENT_SAMPLER_COUNT] = {};
 
     enumerateSamplerGroups(program, ShaderType::FRAGMENT,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
                     const SamplerGroup::Sampler* sampler, uint8_t binding) {
         // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
-        if (binding >= backend::MAX_FRAGMENT_SAMPLER_COUNT) {
+        if (binding >= MAX_FRAGMENT_SAMPLER_COUNT) {
             return;
         }
 
@@ -1374,7 +1372,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph,
         }
     }
 
-    NSRange fragmentSamplerRange = NSMakeRange(0, backend::MAX_FRAGMENT_SAMPLER_COUNT);
+    NSRange fragmentSamplerRange = NSMakeRange(0, MAX_FRAGMENT_SAMPLER_COUNT);
     [mContext->currentRenderPassEncoder setFragmentTextures:texturesToBindFragment
                                                   withRange:fragmentSamplerRange];
     [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBindFragment
@@ -1479,10 +1477,8 @@ void MetalDriver::enumerateBoundUniformBuffers(
     }
 }
 
-} // namespace metal
-
 // explicit instantiation of the Dispatcher
-template class ConcreteDispatcher<metal::MetalDriver>;
+template class ConcreteDispatcher<MetalDriver>;
 
 } // namespace backend
 } // namespace filament

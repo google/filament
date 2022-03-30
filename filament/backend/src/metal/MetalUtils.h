@@ -19,7 +19,7 @@
 
 #include <Metal/Metal.h>
 
-namespace filament::backend::metal {
+namespace filament::backend {
 
 /**
  * Creates a texture view of the passed-in texture with the given swizzle. If swizzle is the default
@@ -42,6 +42,6 @@ id<MTLTexture> createTextureViewWithSwizzle(id<MTLTexture> texture,
  */
 id<MTLTexture> createTextureViewWithSingleSlice(id<MTLTexture> texture, NSUInteger slice);
 
-} // namespace filament::backend::metal
+} // namespace filament::backend
 
 #endif //TNT_FILAMENT_DRIVER_METALUTILS_H
