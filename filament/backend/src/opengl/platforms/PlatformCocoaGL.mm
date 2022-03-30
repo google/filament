@@ -30,7 +30,7 @@
 
 #include <vector>
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 
@@ -171,7 +171,7 @@ void PlatformCocoaGL::terminate() noexcept {
 
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
     // Transparent SwapChain is not supported
-    flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
     NSView* nsView = (__bridge NSView*)nativewindow;
 
     CocoaGLSwapChain* swapChain = new CocoaGLSwapChain( nsView );
@@ -295,6 +295,6 @@ void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView,
     }
 }
 
-} // namespace filament
+} // namespace filament::backend
 
 #pragma clang diagnostic pop

@@ -25,7 +25,7 @@
 #include <android/api-level.h>
 #include <android/hardware_buffer.h>
 
-namespace filament {
+namespace filament::backend {
 
 /*
  * ExternalTextureManagerAndroid::ExternalTexture is basically a wrapper for AHardwareBuffer.
@@ -39,7 +39,7 @@ namespace filament {
 class ExternalTextureManagerAndroid {
 public:
 
-    struct ExternalTexture : public backend::Platform::ExternalTexture {
+    struct ExternalTexture : public Platform::ExternalTexture {
         void* clientBuffer = nullptr;
         AHardwareBuffer* hardwareBuffer = nullptr;
     };
@@ -51,26 +51,26 @@ public:
     static void destroy(ExternalTextureManagerAndroid* pExternalTextureManager) noexcept;
 
     // must be called on backend thread (only because we don't synchronize
-    backend::Platform::ExternalTexture* createExternalTexture() noexcept;
+    Platform::ExternalTexture* createExternalTexture() noexcept;
 
     // called on app thread
     void reallocate(
-        backend::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
-        backend::TextureFormat format, uint64_t usage) noexcept;
+        Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
+        TextureFormat format, uint64_t usage) noexcept;
 
     // must be called on backend thread
-    void destroy(backend::Platform::ExternalTexture* ets) noexcept;
+    void destroy(Platform::ExternalTexture* ets) noexcept;
 
 private:
     ExternalTextureManagerAndroid() noexcept;
     ~ExternalTextureManagerAndroid() noexcept;
 
     // called on app thread
-    void alloc(backend::Platform::ExternalTexture* ets,
-               uint32_t w, uint32_t h, backend::TextureFormat format, uint64_t usage) noexcept;
+    void alloc(Platform::ExternalTexture* ets,
+               uint32_t w, uint32_t h, TextureFormat format, uint64_t usage) noexcept;
 
     // called on gl thread
-    void destroyStorage(backend::Platform::ExternalTexture* ets) noexcept;
+    void destroyStorage(Platform::ExternalTexture* ets) noexcept;
 
     VirtualMachineEnv& mVm;
 
@@ -79,8 +79,6 @@ private:
     jmethodID mGraphicBuffer_nDestroyGraphicBuffer = nullptr;
 };
 
-
-
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_DRIVER_ANDROID_EXTERNAL_TEXTURE_MANAGER_ANDROID_H

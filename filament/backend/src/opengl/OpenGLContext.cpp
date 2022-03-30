@@ -22,7 +22,7 @@
 
 using namespace utils;
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 

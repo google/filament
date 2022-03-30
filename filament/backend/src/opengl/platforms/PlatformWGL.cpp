@@ -66,7 +66,7 @@ void reportLastWindowsError() {
 
 } // namespace
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 
@@ -265,8 +265,8 @@ Platform::Fence* PlatformWGL::createFence() noexcept {
 void PlatformWGL::destroyFence(Fence* fence) noexcept {
 }
 
-backend::FenceStatus PlatformWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return backend::FenceStatus::ERROR;
+FenceStatus PlatformWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
+    return FenceStatus::ERROR;
 }
 
-} // namespace filament
+} // namespace filament::backend

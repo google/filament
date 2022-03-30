@@ -35,7 +35,7 @@
 #include "../OpenGLDriver.h"
 #include "CocoaTouchExternalImage.h"
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 
@@ -103,7 +103,7 @@ void PlatformCocoaTouchGL::terminate() noexcept {
 
 Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
     // Transparent swap chain is not supported
-    flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
     return (SwapChain*) nativewindow;
 }
 
@@ -206,4 +206,4 @@ void PlatformCocoaTouchGL::destroyExternalImage(void* texture) noexcept {
     delete p;
 }
 
-} // namespace filament
+} // namespace filament::backend

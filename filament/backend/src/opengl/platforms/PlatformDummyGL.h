@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_DUMMY_GL_H
-#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_DUMMY_GL_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_DUMMY_GL_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_DUMMY_GL_H
 
 #include <stdint.h>
 
@@ -23,12 +23,12 @@
 
 #include "private/backend/OpenGLPlatform.h"
 
-namespace filament {
+namespace filament::backend {
 
-class PlatformDummyGL final : public backend::OpenGLPlatform {
+class PlatformDummyGL final : public OpenGLPlatform {
 public:
 
-    backend::Driver* createDriver(void* const sharedGLContext) noexcept override;
+    Driver* createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override { }
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override {
@@ -41,8 +41,8 @@ public:
 
     Fence* createFence() noexcept final override { return nullptr; }
     void destroyFence(Fence* fence) noexcept final override {}
-    backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override {
-        return backend::FenceStatus::ERROR;
+    FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override {
+        return FenceStatus::ERROR;
     }
 
     Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
@@ -53,12 +53,12 @@ public:
 
     ExternalTexture* createExternalTextureStorage() noexcept final override { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final override { }
+            uint32_t w, uint32_t h, TextureFormat format) noexcept final override { }
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override { }
 
     int getOSVersion() const noexcept final override { return 0; }
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_DUMMY_GL_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_DUMMY_GL_H

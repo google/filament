@@ -21,7 +21,7 @@
 
 #include <CoreVideo/CoreVideo.h>
 
-namespace filament {
+namespace filament::backend {
 
 class CocoaTouchExternalImage final {
 public:
@@ -95,6 +95,6 @@ private:
 
 };
 
-} // namespace filament
+} // namespace filament::backend
 
 #endif

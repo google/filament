@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_NULLGLES_H
-#define TNT_FILAMENT_DRIVER_NULLGLES_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_NULLGLES_H
+#define TNT_FILAMENT_BACKEND_OPENGL_NULLGLES_H
 
 /*
  * This is used for debugging (stubbing out GLES calls)
@@ -27,7 +27,7 @@
  *
  */
 
-namespace filament {
+namespace filament::backend {
 namespace nullgles {
 
 inline void glScissor(GLint, GLint, GLsizei, GLsizei) { }
@@ -81,6 +81,6 @@ inline GLenum glGetError() { return GL_NO_ERROR; }
 // turn GLES calls defined above into no-ops
 //using namespace nullgles;
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_NULLGLES_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_NULLGLES_H
