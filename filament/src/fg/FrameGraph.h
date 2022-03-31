@@ -261,7 +261,10 @@ public:
      * @return          A reference to a Pass object
      */
     template<typename Data, typename Setup, typename Execute>
-    FrameGraphPass<Data, Execute>& addPass(const char* name, Setup setup, Execute&& execute);
+    FrameGraphPass<Data>& addPass(const char* name, Setup setup, Execute&& execute);
+
+    template<typename Data, typename Setup>
+    FrameGraphPass<Data>& addPass(const char* name, Setup setup);
 
     /**
      * Adds a simple execute-only pass with side-effect. Use with caution as such a pass is never
@@ -444,7 +447,7 @@ private:
         Version version = 0;
     };
     void reset() noexcept;
-    void addPresentPass(std::function<void(Builder&)> setup) noexcept;
+    void addPresentPass(const std::function<void(Builder&)>& setup) noexcept;
     Builder addPassInternal(const char* name, FrameGraphPassBase* base) noexcept;
     FrameGraphHandle createNewVersion(FrameGraphHandle handle) noexcept;
     ResourceNode* createNewVersionForSubresourceIfNeeded(ResourceNode* node) noexcept;
@@ -523,11 +526,23 @@ private:
 };
 
 template<typename Data, typename Setup, typename Execute>
-FrameGraphPass<Data, Execute>& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
+FrameGraphPass<Data>& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
     static_assert(sizeof(Execute) < 1024, "Execute() lambda is capturing too much data.");
 
     // create the FrameGraph pass
-    auto* const pass = mArena.make<FrameGraphPass<Data, Execute>>(std::forward<Execute>(execute));
+    auto* const pass = mArena.make<FrameGraphPassConcrete<Data, Execute>>(std::forward<Execute>(execute));
+
+    Builder builder(addPassInternal(name, pass));
+    setup(builder, const_cast<Data&>(pass->getData()));
+
+    // return a reference to the pass to the user
+    return *pass;
+}
+
+template<typename Data, typename Setup>
+FrameGraphPass<Data>& FrameGraph::addPass(char const* name, Setup setup) {
+    // create the FrameGraph pass without an execute stage
+    auto* const pass = mArena.make<FrameGraphPass<Data>>();
 
     Builder builder(addPassInternal(name, pass));
     setup(builder, const_cast<Data&>(pass->getData()));
