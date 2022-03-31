@@ -173,6 +173,7 @@ private:
 
     FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
             ColorPassConfig config,
+            PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
@@ -197,8 +198,6 @@ private:
     duration getUserTime() const noexcept {
         return clock::now() - getUserEpoch();
     }
-
-    math::mat4f getClipSpaceToTextureSpaceMatrix() const noexcept;
 
     // keep a reference to our engine
     FEngine& mEngine;

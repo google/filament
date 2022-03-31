@@ -490,6 +490,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     // --------------------------------------------------------------------------------------------
+    // prepare screen-space reflection/refraction passes
+
+    PostProcessManager::ScreenSpaceRefConfig ssrConfig = PostProcessManager::prepareMipmapSSR(
+            fg, svp.width, svp.height,
+            config.hasScreenSpaceReflections ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
+            view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
+    config.ssrLodOffset = ssrConfig.lodOffset;
+
+    // --------------------------------------------------------------------------------------------
     // screen-space reflections pass
 
     if (config.hasScreenSpaceReflections) {
@@ -501,10 +510,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         // generate the mipchain
-        reflections = PostProcessManager::generateMipmapSSR(ppm, fg, reflections, false,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
-                TextureFormat::RGBA16F,
-                &config.ssrLodOffset);
+        reflections = PostProcessManager::generateMipmapSSR(ppm, fg,
+                reflections, ssrConfig.reflection, false, ssrConfig);
 
         blackboard["ssr"] = reflections;
     }
@@ -577,7 +584,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
         // the color pass + refraction + color-grading as subpass if needed
-        colorPassOutput = refractionPass(fg, config, colorGradingConfigForColor, pass, view);
+        colorPassOutput = refractionPass(fg, config, ssrConfig, colorGradingConfigForColor, pass, view);
     }
 
     if (colorGradingConfig.customResolve) {
@@ -739,6 +746,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
 FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         ColorPassConfig config,
+        PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
         PostProcessManager::ColorGradingConfig colorGradingConfig,
         RenderPass const& pass,
         FView const& view) const noexcept {
@@ -759,7 +767,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
     // if there wasn't any refractive object, just skip everything below.
     if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
         PostProcessManager& ppm = mEngine.getPostProcessManager();
-        float refractionLodOffset = 0.0f;
 
         // clear the color/depth buffers, which will orphan (and cull) the color pass
         input.clear();
@@ -781,10 +788,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 view);
 
         // generate the mipmap chain
-        input = PostProcessManager::generateMipmapSSR(ppm, fg, input, true,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
-                TextureFormat::R11F_G11F_B10F,
-                &refractionLodOffset);
+        input = PostProcessManager::generateMipmapSSR(ppm, fg,
+                input, ssrConfig.refraction, true, ssrConfig);
 
         // and this becomes our SSR buffer
         blackboard["ssr"] = input;
@@ -797,7 +802,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // height.
         config.clearFlags = TargetBufferFlags::NONE;
         config.hasScreenSpaceReflections = false; // FIXME: for now we can't have both
-        config.ssrLodOffset = refractionLodOffset;
         output = colorPass(fg, "Color Pass (transparent)",
                 {
                         .width = config.svp.width,

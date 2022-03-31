@@ -962,11 +962,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
                 for (size_t i = 1; i < levels; i++) {
                     data.out.push_back(builder.createSubresource(input,
                             "Mipmap output", {
-                                    .level =uint8_t(subResourceDesc.level + i),
+                                    .level = uint8_t(subResourceDesc.level + i),
                                     .layer = subResourceDesc.layer }));
                 }
-            },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {});
+            });
+
 
     // Then generate a blur pass for each level, using the previous level as source
     auto from = input;
@@ -1046,6 +1046,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 auto tempDesc = inDesc;
                 tempDesc.width = outDesc.width; // width of the destination level (b/c we're blurring horizontally)
                 tempDesc.levels = 1;
+                tempDesc.depth = 1;
+                // note: we don't systematically use a Sampler2D for the temp buffer because
+                // this could force us to use two different programs below
 
                 data.in = builder.sample(input);
                 data.temp = builder.createTexture("Horizontal temporary buffer", tempDesc);
@@ -1129,6 +1132,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                         .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
                 });
                 mi->setParameter("level", 0.0f);
+                mi->setParameter("layer", 0.0f);
                 mi->setParameter("resolution",
                         float4{ width, height, 1.0f / width, 1.0f / height });
                 mi->setParameter("axis", float2{ 0, 1.0f / tempDesc.height });
@@ -1141,33 +1145,33 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
-        PostProcessManager& ppm, FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
-        bool needInputDuplication, const float verticalFieldOfView, float2 scale,
-        TextureFormat format, float* pLodOffset) noexcept {
-
-    // TODO: add an option to generate a 1/4 res texture (for performance)
-
-    auto const& desc = fg.getDescriptor(input);
-
-    // texel size of the reflection buffer in world units at 1 meter
-    constexpr float d = 1.0f; // 1m
-    const float texelSizeAtOneMeter = d * std::tan(verticalFieldOfView) / float(desc.height);
+PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(FrameGraph& fg,
+        uint32_t width, uint32_t height, backend::TextureFormat format,
+        float verticalFieldOfView, float2 scale) noexcept {
 
     // The kernel-size was determined empirically so that we don't get too many artifacts
     // due to the down-sampling with a box filter (which happens implicitly).
+    // requires only 6 stored coefficients and 11 tap/pass
     // e.g.: size of 13 (4 stored coefficients)
     //      +-------+-------+-------*===*-------+-------+-------+
     //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
     //      +-------+-------+-------*===*-------+-------+-------+
-    const size_t kernelSize = 21;   // requires only 6 stored coefficients and 11 tap/pass
-    static_assert(kernelSize & 1u, "kernel size must be odd");
-    static_assert((((kernelSize - 1u) / 2u) & 1u) == 0, "kernel positive side size must be even");
+    constexpr size_t kernelSize = 21u;
 
     // The relation between the kernel size N and sigma (standard deviation) is 6*sigma - 1 = N
     // and is designed so the filter keeps its "gaussian-ness".
     // The standard deviation sigma0 is expressed in texels.
-    constexpr float sigma0 = (kernelSize + 1) / 6.0f;
+    constexpr float sigma0 = (kernelSize + 1u) / 6.0f;
+
+    static_assert(kernelSize & 1u,
+            "kernel size must be odd");
+
+    static_assert((((kernelSize - 1u) / 2u) & 1u) == 0,
+            "kernel positive side size must be even");
+
+    // texel size of the reflection buffer in world units at 1 meter
+    constexpr float d = 1.0f; // 1m
+    const float texelSizeAtOneMeter = d * std::tan(verticalFieldOfView) / float(height);
 
     /*
      * 1. Relation between standard deviation and LOD
@@ -1253,66 +1257,103 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
      *   +-------------------------------------------------------------------------------------+
      */
 
-    const float refractionLodOffset = -std::log2(f::SQRT2 * sigma0 * texelSizeAtOneMeter);
-    uint8_t roughnessLodCount = FTexture::maxLevelCount(desc.width, desc.height);
-    // we don't go lower than 16 texel in one dimension
+    const float refractionLodOffset =
+            -std::log2(f::SQRT2 * sigma0 * texelSizeAtOneMeter);
+
+    // LOD count, we don't go lower than 16 texel in one dimension
+    uint8_t roughnessLodCount = FTexture::maxLevelCount(width, height);
     roughnessLodCount = std::max(std::min(4, +roughnessLodCount), +roughnessLodCount - 4);
 
-    // Then copy the color buffer into a texture, making sure that we keep the original
-    // buffer aspect-ratio (this is because dynamic-resolution is not necessarily homogenous).
-    uint32_t w = desc.width;
-    uint32_t h = desc.height;
+    // Make sure we keep the original buffer aspect ratio (this is because dynamic-resolution is
+    // not necessarily homogenous).
+    uint32_t w = width;
+    uint32_t h = height;
     if (scale.x != scale.y) {
         // dynamic resolution wasn't homogenous, which would affect the blur, so make sure to
         // keep an intermediary buffer that has the same aspect-ratio as the original.
         const float homogenousScale = std::sqrt(scale.x * scale.y);
-        w = uint32_t((homogenousScale / scale.x) * float(desc.width));
-        h = uint32_t((homogenousScale / scale.y) * float(desc.height));
+        w = uint32_t((homogenousScale / scale.x) * float(width));
+        h = uint32_t((homogenousScale / scale.y) * float(height));
     }
 
-    /*
-     * Resolve if needed + copy the image into first LOD
-     */
-
-    FrameGraphId<FrameGraphTexture> output;
     const FrameGraphTexture::Descriptor outDesc{
-            .width = w, .height = h, .depth = 1,
+            .width = w, .height = h, .depth = 2,
             .levels = roughnessLodCount,
             .type = SamplerType::SAMPLER_2D_ARRAY,
             .format = format,
     };
+
+    struct PrepareMipmapSSRPassData {
+        FrameGraphId<FrameGraphTexture> refraction;
+        FrameGraphId<FrameGraphTexture> reflection;
+    };
+    auto& pass = fg.addPass<PrepareMipmapSSRPassData>("Prepare MipmapSSR Pass",
+            [&](FrameGraph::Builder& builder, auto& data){
+                // create the SSR 2D array
+                auto ssr = builder.createTexture("ssr", outDesc);
+                // create the refraction subresource at layer 0
+                data.refraction = builder.createSubresource(ssr, "refraction", {.layer = 0 });
+                // create the reflection subresource at layer 1
+                data.reflection = builder.createSubresource(ssr, "reflection", {.layer = 1 });
+            });
+
+    return {
+            .refraction = pass->refraction,
+            .reflection = pass->reflection,
+            .lodOffset = refractionLodOffset,
+            .roughnessLodCount = roughnessLodCount,
+            .kernelSize = kernelSize,
+            .sigma0 = sigma0
+    };
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
+        PostProcessManager& ppm, FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> output,
+        bool needInputDuplication, ScreenSpaceRefConfig const& config) noexcept {
+
+    // descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
+    auto const& desc = fg.getDescriptor(input);
+
+    // descriptor of the destination. output is a subresource (i.e. a layer of a 2D array)
+    auto const& outDesc = fg.getDescriptor(output);
+
+    /*
+     * Resolve if needed + copy the image into first LOD
+     */
 
     // needInputDuplication:
     // In some situations it's not possible to use the FrameGraph's forwardResource(),
     // as an optimization because the SSR buffer must be distinct from the color buffer
     // (input here), because we can't read and write into the same buffer (e.g. for refraction).
 
-    if (needInputDuplication || w != desc.width || h != desc.height) {
-        if (desc.samples > 1 && w == desc.width && h == desc.height && desc.format == format) {
+    if (needInputDuplication || outDesc.width != desc.width || outDesc.height != desc.height) {
+        if (desc.samples > 1 &&
+                outDesc.width == desc.width && outDesc.height == desc.height &&
+                desc.format == outDesc.format) {
             // resolve directly into the destination
-            output = ppm.resolveBaseLevelNoCheck(fg, "ssr", input, outDesc);
+            input = ppm.resolveBaseLevelNoCheck(fg, "ssr", input, outDesc);
         } else {
             // first resolve (if needed)
-            output = ppm.resolveBaseLevel(fg, "ssr", input);
+            input = ppm.resolveBaseLevel(fg, "ssr", input);
             // then blit into an appropriate texture
             // this handles scaling, format conversion and mipmaping
-            output = ppm.opaqueBlit(fg, output, outDesc);
+            input = ppm.opaqueBlit(fg, input, outDesc);
         }
-    } else {
-        // note: this takes care of MSAA via the "auto-resolve" feature
-        auto const& inDesc = fg.getSubResourceDescriptor(input);
-        output = fg.forwardResource("ssr", outDesc, {
-                .level = 0u, .layer = inDesc.layer }, input);
     }
+
+    // A lot of magic happens right here. This forward call replaces 'input' (which is either
+    // the actual input we received when entering this function, or, a resolved version of it) by
+    // our output. Effectively, forcing the methods *above* to render into our output.
+    output = fg.forwardResource(output, input);
 
     /*
      * Generate mipmap chain
      */
 
-    *pLodOffset = refractionLodOffset;
-    output = ppm.generateGaussianMipmap(fg, output, roughnessLodCount,
-            true, kernelSize, sigma0);
-    return output;
+    return ppm.generateGaussianMipmap(fg, output, config.roughnessLodCount,
+            true, config.kernelSize, config.sigma0);
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
