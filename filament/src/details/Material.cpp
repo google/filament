@@ -394,8 +394,7 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     createAndCacheProgram(std::move(pb), variant);
 }
 
-void FMaterial::getPostProcessProgramSlow(Variant variant)
-    const noexcept {
+void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
 
     Program pb = getProgramBuilderWithVariants(variant, variant, variant);
     pb.setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
@@ -526,6 +525,8 @@ void FMaterial::applyPendingEdits() noexcept {
  * @{
  */
 
+#if FILAMENT_ENABLE_MATDBG
+
 void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
         size_t packageSize) {
     FMaterial* material = upcast((Material*) userdata);
@@ -537,14 +538,14 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
 }
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
-#if FILAMENT_ENABLE_MATDBG
     FMaterial* material = upcast((Material*) userdata);
     *pVariants = material->mActivePrograms;
     material->mActivePrograms.reset();
-#endif
 }
 
- /** @}*/
+#endif
+
+/** @}*/
 
 void FMaterial::destroyPrograms(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();
