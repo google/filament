@@ -25,10 +25,11 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
+#include <utils/Log.h>
 
 #include <filameshio/MeshReader.h>
 
-#include <ktxreader/Ktx1Reader.h>
+#include <ktxreader/Ktx2Reader.h>
 
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
@@ -66,7 +67,7 @@ static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
-            "SHOWCASE renders a Suzanne model with S3TC textures.\n"
+            "SHOWCASE renders a Suzanne model with compressed textures.\n"
             "Usage:\n"
             "    SHOWCASE [options]\n"
             "Options:\n"
@@ -144,15 +145,28 @@ int main(int argc, char** argv) {
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
 
-        // Create textures. The KTX bundles are freed by KtxUtility.
-        auto albedo = new image::Ktx1Bundle(MONKEY_ALBEDO_S3TC_DATA, MONKEY_ALBEDO_S3TC_SIZE);
-        auto ao = new image::Ktx1Bundle(MONKEY_AO_DATA, MONKEY_AO_SIZE);
-        auto metallic = new image::Ktx1Bundle(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE);
-        auto roughness = new image::Ktx1Bundle(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE);
-        app.albedo = Ktx1Reader::createTexture(engine, albedo, true);
-        app.ao = Ktx1Reader::createTexture(engine, ao, false);
-        app.metallic = Ktx1Reader::createTexture(engine, metallic, false);
-        app.roughness = Ktx1Reader::createTexture(engine, roughness, false);
+        Ktx2Reader reader(*engine);
+
+        reader.requestFormat(Texture::InternalFormat::DXT3_SRGBA);
+        reader.requestFormat(Texture::InternalFormat::DXT3_RGBA);
+
+        // Uncompressed formats are lower priority, so they get added last.
+        reader.requestFormat(Texture::InternalFormat::SRGB8_A8);
+        reader.requestFormat(Texture::InternalFormat::RGBA8);
+
+        app.albedo = reader.load(MONKEY_ALBEDO_DATA, MONKEY_ALBEDO_SIZE, Ktx2Reader::sRGB);
+        app.ao = reader.load(MONKEY_AO_DATA, MONKEY_AO_SIZE);
+        app.metallic = reader.load(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE);
+        app.roughness = reader.load(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE);
+
+#if !defined(NDEBUG)
+        using namespace utils;
+        slog.i << "Resolved format for albedo: " << app.albedo->getFormat() << io::endl;
+        slog.i << "Resolved format for ambient occlusion: " << app.ao->getFormat() << io::endl;
+        slog.i << "Resolved format for metallic: " << app.metallic->getFormat() << io::endl;
+        slog.i << "Resolved format for roughness: " << app.roughness->getFormat() << io::endl;
+#endif
+
         app.normal = loadNormalMap(engine, MONKEY_NORMAL_DATA, MONKEY_NORMAL_SIZE);
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                 TextureSampler::MagFilter::LINEAR);

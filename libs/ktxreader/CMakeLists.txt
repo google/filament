@@ -9,10 +9,12 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/ktxreader/Ktx1Reader.h
+        include/ktxreader/Ktx2Reader.h
 )
 
 set(SRCS
         src/Ktx1Reader.cpp
+        src/Ktx2Reader.cpp
 )
 
 # ==================================================================================================
@@ -22,7 +24,7 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC utils image filament)
+target_link_libraries(${TARGET} PUBLIC utils image filament basis_transcoder)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 

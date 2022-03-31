@@ -246,7 +246,7 @@ class FilamentViewer extends LitElement {
             return response.arrayBuffer();
         }).then(arrayBuffer => {
             const ktxData = new Uint8Array(arrayBuffer);
-            this.indirectLight = this.engine.createIblFromKtx(ktxData);
+            this.indirectLight = this.engine.createIblFromKtx1(ktxData);
             this.indirectLight.setIntensity(this.intensity);
             this.scene.setIndirectLight(this.indirectLight);
         });
@@ -264,7 +264,7 @@ class FilamentViewer extends LitElement {
             return response.arrayBuffer();
         }).then(arrayBuffer => {
             const ktxData = new Uint8Array(arrayBuffer);
-            this.skybox = this.engine.createSkyFromKtx(ktxData);
+            this.skybox = this.engine.createSkyFromKtx1(ktxData);
             this.scene.setSkybox(this.skybox);
         });
     }

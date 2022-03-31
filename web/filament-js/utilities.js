@@ -240,14 +240,14 @@ Filament.loadMathExtensions = function() {
 // Texture helpers
 // ---------------
 
-Filament._createTextureFromKtx = function(ktxdata, engine, options) {
+Filament._createTextureFromKtx1 = function(ktxdata, engine, options) {
     options = options || {};
     const ktx = options['ktx'] || new Filament.Ktx1Bundle(ktxdata);
     const srgb = !!options['srgb'];
-    return Filament.ktx$createTexture(engine, ktx, srgb);
+    return Filament.ktx1reader$createTexture(engine, ktx, srgb);
 };
 
-Filament._createIblFromKtx = function(ktxdata, engine, options) {
+Filament._createIblFromKtx1 = function(ktxdata, engine, options) {
     options = options || {};
     const iblktx = options['ktx'] = new Filament.Ktx1Bundle(ktxdata);
 
@@ -258,7 +258,7 @@ Filament._createIblFromKtx = function(ktxdata, engine, options) {
             ' which is not an expected floating-point format. Please use cmgen to generate IBL.');
     }
 
-    const ibltex = Filament._createTextureFromKtx(ktxdata, engine, options);
+    const ibltex = Filament._createTextureFromKtx1(ktxdata, engine, options);
     const shstring = iblktx.getMetadata("sh");
     const ibl = Filament.IndirectLight.Builder()
         .reflections(ibltex)

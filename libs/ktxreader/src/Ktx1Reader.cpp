@@ -17,6 +17,9 @@
 #include <ktxreader/Ktx1Reader.h>
 #include <utils/Log.h>
 
+#include <filament/Engine.h>
+#include <filament/Texture.h>
+
 namespace ktxreader {
 namespace Ktx1Reader {
 
