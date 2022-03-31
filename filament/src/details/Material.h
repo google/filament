@@ -93,9 +93,6 @@ public:
 #if FILAMENT_ENABLE_MATDBG
         assert_invariant(variant.key < VARIANT_COUNT);
         mActivePrograms.set(variant.key);
-        if (UTILS_UNLIKELY(mPendingEdits.load())) {
-            const_cast<FMaterial*>(this)->applyPendingEdits();
-        }
 #endif
         assert_invariant(mCachedPrograms[variant.key]);
         return mCachedPrograms[variant.key];
@@ -153,6 +150,7 @@ public:
 
     void destroyPrograms(FEngine& engine);
 
+#if FILAMENT_ENABLE_MATDBG
     /**
      * Callback handlers for the debug server, potentially called from any thread. The userdata
      * argument has the same value that was passed to DebugServer::addMaterial(), which should
@@ -173,7 +171,14 @@ public:
      */
     static void onQueryCallback(void* userdata, VariantList* pActiveVariants);
 
+    void checkProgramEdits() noexcept {
+        if (UTILS_UNLIKELY(mPendingEdits.load())) {
+            applyPendingEdits();
+        }
+    }
+
     /** @}*/
+#endif
 
 private:
     void prepareProgramSlow(Variant variant) const noexcept;
@@ -185,11 +190,6 @@ private:
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
-
-#if FILAMENT_ENABLE_MATDBG
-    // TODO: this should be protected with a mutex
-    mutable VariantList mActivePrograms;
-#endif
 
     backend::RasterState mRasterState;
     BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
@@ -227,6 +227,8 @@ private:
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
+    // TODO: this should be protected with a mutex
+    mutable VariantList mActivePrograms;
 #endif
 
     utils::CString mName;
