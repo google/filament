@@ -71,22 +71,11 @@ function(add_rawfile SOURCE TARGET)
         MAIN_DEPENDENCY ${source_path})
 endfunction()
 
-set(ETC_R11_ARGS "--grayscale;--compression=etc_r11_numeric_40")
-
-# TODO: Instead of "rgb8" we should be using "rg11", but that causes an assertion in etc2comp.
-set(ETC_NORMALS_ARGS "--kernel=NORMALS;--linear;--compression=etc_rgb8_normalxyz_40")
-
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx" "")
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo_astc.ktx" "--compression=astc_fast_ldr_4x4")
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc_srgb.ktx" "--compression=s3tc_rgb_dxt1")
-add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx" "--kernel=NORMALS;--linear")
-add_ktxfiles("assets/models/monkey/normal.png" "normal_etc.ktx" "${ETC_NORMALS_ARGS}")
-add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "--grayscale")
-add_ktxfiles("assets/models/monkey/roughness.png" "roughness_etc.ktx" "${ETC_R11_ARGS}")
-add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx" "--grayscale")
-add_ktxfiles("assets/models/monkey/metallic.png" "metallic_etc.ktx" "${ETC_R11_ARGS}")
-add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "--grayscale")
-add_ktxfiles("assets/models/monkey/ao.png" "ao_etc.ktx" "${ETC_R11_ARGS}")
+add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx2" "--compression=uastc")
+add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx2" "--compression=uastc_normals;--kernel=NORMALS;--linear")
+add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx2" "--compression=uastc;--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx2" "--compression=uastc;--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx2" "--compression=uastc;--grayscale;--linear")
 
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet_baseColor.png" "FlightHelmet_baseColor.png")
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet_baseColor1.png" "FlightHelmet_baseColor1.png")

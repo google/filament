@@ -23,10 +23,6 @@
 #include <ibl/Image.h>
 #include <ibl/utilities.h>
 
-#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
-#include <imageio/BlockCompression.h>
-#endif
-
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
 
@@ -167,20 +163,13 @@ static void printUsage(char* name) {
             "       Quiet mode. Suppress all non-error output\n\n"
             "   --type=[cubemap|equirect|octahedron|ktx], -t [cubemap|equirect|octahedron|ktx]\n"
             "       Specify output type (default: cubemap)\n\n"
-            "   --format=[exr|hdr|psd|rgbm|rgb32f|png|dds|ktx], -f [exr|hdr|psd|rgbm|rgb32f|png|dds|ktx]\n"
+            "   --format=[exr|hdr|psd|rgbm|rgb32f|png|dds|ktx], -f [format]\n"
             "       Specify output file format. ktx implies -type=ktx.\n"
-            "       KTX files are always encoded with 3-channel RGB_10_11_11_REV data\n\n"
+            "       KTX files are always KTX1 files, not KTX2.\n"
+            "       They are encoded with 3-channel RGB_10_11_11_REV data\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
             "       Format specific compression:\n"
-#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
-            "           KTX:\n"
-            "             astc_[fast|thorough]_[ldr|hdr]_WxH, where WxH is a valid block size\n"
-            "             s3tc_rgba_dxt5\n"
-            "             etc_FORMAT_METRIC_EFFORT\n"
-            "               FORMAT is rgb8_alpha, srgb8_alpha, rgba8, or srgb8_alpha8\n"
-            "               METRIC is rgba, rgbx, rec709, numeric, or normalxyz\n"
-            "               EFFORT is an integer between 0 and 100\n"
-#endif
+            "           KTX: ignored\n"
             "           PNG: Ignored\n"
             "           PNG RGBM: Ignored\n"
             "           Radiance: Ignored\n"
@@ -1270,31 +1259,6 @@ static void saveImage(const std::string& path, ImageEncoder::Format format, cons
 
 static void exportKtxFaces(Ktx1Bundle& container, uint32_t miplevel, const Cubemap& cm) {
     auto& info = container.info();
-
-#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
-    CompressionConfig compression {};
-    if (!g_compression.empty()) {
-        bool valid = parseOptionString(g_compression, &compression);
-        if (!valid) {
-            std::cerr << "Unrecognized compression: " << g_compression << std::endl;
-            exit(1);
-        }
-        // The KTX spec says the following for compressed textures: glTypeSize should 1,
-        // glFormat should be 0, and glBaseInternalFormat should be RED, RG, RGB, or RGBA.
-        // The glInternalFormat field is the only field that specifies the actual format.
-        info.glTypeSize = 1;
-        info.glFormat = 0;
-        // FIXME: not sure this is always correct to use RGB here, does this work with HDR formats?
-        info.glBaseInternalFormat = Ktx1Bundle::RGB;
-        info.glInternalFormat = Ktx1Bundle::RGB;
-    }
-#else
-    if (!g_compression.empty()) {
-        std::cerr << "Block compression is not supported in this build." << std::endl;
-        exit(1);
-    }
-#endif
-
     const uint32_t dim = (const uint32_t) cm.getDimensions();
     for (uint32_t j = 0; j < 6; j++) {
         KtxBlobIndex blobIndex {(uint32_t) miplevel, 0, j};
@@ -1309,16 +1273,6 @@ static void exportKtxFaces(Ktx1Bundle& container, uint32_t miplevel, const Cubem
             default: face = Cubemap::Face::PX; break; // make linters happy
         }
         LinearImage image = toLinearImage(cm.getImageForFace(face));
-
-#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
-        if (compression.type != CompressionConfig::INVALID) {
-            CompressedTexture tex = compressTexture(compression, image);
-            container.setBlob(blobIndex, tex.data.get(), tex.size);
-            info.glInternalFormat = (uint32_t) tex.format;
-            continue;
-        }
-#endif
-
         auto uintData = fromLinearToRGB_10_11_11_REV(image);
         container.setBlob(blobIndex, uintData.get(), dim * dim * 4);
     }

@@ -69,6 +69,7 @@
 #include <gltfio/ResourceLoader.h>
 
 #include <ktxreader/Ktx1Reader.h>
+#include <ktxreader/Ktx2Reader.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -1616,12 +1617,21 @@ class_<Ktx1Bundle>("Ktx1Bundle")
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
 
-function("ktx$createTexture", EMBIND_LAMBDA(Texture*,
+function("ktx1reader$createTexture", EMBIND_LAMBDA(Texture*,
         (Engine* engine, const Ktx1Bundle& ktx, bool srgb), {
     return Ktx1Reader::createTexture(engine, ktx, srgb, nullptr, nullptr);
 }), allow_raw_pointers());
 
-/// KtxInfo ::class:: Property accessor for KTX header.
+class_<Ktx2Reader>("Ktx2Reader")
+    .constructor<Engine&, bool>()
+    .function("requestFormat", &Ktx2Reader::requestFormat)
+    .function("unrequestFormat", &Ktx2Reader::unrequestFormat)
+    .function("load", EMBIND_LAMBDA(Texture*, (Ktx2Reader* self, BufferDescriptor bd,
+            Ktx2Reader::TransferFunction transfer), {
+        return self->load((uint8_t*) bd.bd->buffer, (uint32_t) bd.bd->size, transfer);
+    }), allow_raw_pointers());
+
+/// KtxInfo ::class:: Property accessor for KTX1 header.
 /// For example, `Ktx1Bundle.info().pixelWidth`. See the
 /// [KTX spec](https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/) for the list of
 /// properties.

@@ -563,15 +563,18 @@ export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
-    public createIblFromKtx(urlOrBuffer: BufferReference): IndirectLight;
     public createMaterial(urlOrBuffer: BufferReference): Material;
     public createRenderer(): Renderer;
     public createScene(): Scene;
-    public createSkyFromKtx(urlOrBuffer: BufferReference): Skybox;
     public createSwapChain(): SwapChain;
     public createTextureFromJpeg(urlOrBuffer: BufferReference, options?: object): Texture;
     public createTextureFromPng(urlOrBuffer: BufferReference, options?: object): Texture;
-    public createTextureFromKtx(urlOrBuffer: BufferReference, options?: object): Texture;
+
+    public createIblFromKtx1(urlOrBuffer: BufferReference): IndirectLight;
+    public createSkyFromKtx1(urlOrBuffer: BufferReference): Skybox;
+    public createTextureFromKtx1(urlOrBuffer: BufferReference, options?: object): Texture;
+    public createTextureFromKtx2(urlOrBuffer: BufferReference, options?: object): Texture;
+
     public createView(): View;
 
     public createAssetLoader(): gltfio$AssetLoader;
@@ -599,6 +602,13 @@ export class Engine {
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
     public loadFilamesh(urlOrBuffer: BufferReference, definstance?: MaterialInstance, matinstances?: object): Filamesh;
+}
+
+export class Ktx2Reader {
+    constructor(engine: Engine, quiet: boolean)
+    public requestFormat(format: Texture$InternalFormat): void;
+    public unrequestFormat(format: Texture$InternalFormat): void;
+    public load(urlOrBuffer: BufferReference, transfer: TransferFunction): Texture|null;
 }
 
 export class gltfio$AssetLoader {
@@ -718,6 +728,10 @@ export enum CompressedPixelDataType {
     DXT1_RGBA,
     DXT3_RGBA,
     DXT5_RGBA,
+    DXT1_SRGB,
+    DXT1_SRGBA,
+    DXT3_SRGBA,
+    DXT5_SRGBA,
     RGBA_ASTC_4x4,
     RGBA_ASTC_5x4,
     RGBA_ASTC_5x5,
@@ -921,6 +935,10 @@ export enum Texture$InternalFormat {
     DXT1_RGBA,
     DXT3_RGBA,
     DXT5_RGBA,
+    DXT1_SRGB,
+    DXT1_SRGBA,
+    DXT3_SRGBA,
+    DXT5_SRGBA,
     RGBA_ASTC_4x4,
     RGBA_ASTC_5x4,
     RGBA_ASTC_5x5,

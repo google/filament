@@ -99,8 +99,8 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
 
     int rc;
 
-    // KTXLoader
-    jclass ktxloaderClass = env->FindClass("com/google/android/filament/utils/KTXLoader");
+    // KTX1Loader
+    jclass ktxloaderClass = env->FindClass("com/google/android/filament/utils/KTX1Loader");
     if (ktxloaderClass == nullptr) return JNI_ERR;
     static const JNINativeMethod ktxMethods[] = {
         {(char*)"nCreateKTXTexture", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},

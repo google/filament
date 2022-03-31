@@ -28,6 +28,8 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <ktxreader/Ktx2Reader.h>
+
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
@@ -251,6 +253,10 @@ enum_<Texture::InternalFormat>("Texture$InternalFormat") // aka backend::Texture
     .value("DXT1_RGBA", Texture::InternalFormat::DXT1_RGBA)
     .value("DXT3_RGBA", Texture::InternalFormat::DXT3_RGBA)
     .value("DXT5_RGBA", Texture::InternalFormat::DXT5_RGBA)
+    .value("DXT1_SRGB", Texture::InternalFormat::DXT1_SRGB)
+    .value("DXT1_SRGBA", Texture::InternalFormat::DXT1_SRGBA)
+    .value("DXT3_SRGBA", Texture::InternalFormat::DXT3_SRGBA)
+    .value("DXT5_SRGBA", Texture::InternalFormat::DXT5_SRGBA)
     .value("RGBA_ASTC_4x4", Texture::InternalFormat::RGBA_ASTC_4x4)
     .value("RGBA_ASTC_5x4", Texture::InternalFormat::RGBA_ASTC_5x4)
     .value("RGBA_ASTC_5x5", Texture::InternalFormat::RGBA_ASTC_5x5)
@@ -345,6 +351,10 @@ enum_<backend::CompressedPixelDataType>("CompressedPixelDataType")
     .value("DXT1_RGBA", backend::CompressedPixelDataType::DXT1_RGBA)
     .value("DXT3_RGBA", backend::CompressedPixelDataType::DXT3_RGBA)
     .value("DXT5_RGBA", backend::CompressedPixelDataType::DXT5_RGBA)
+    .value("DXT1_SRGB", backend::CompressedPixelDataType::DXT1_SRGB)
+    .value("DXT1_SRGBA", backend::CompressedPixelDataType::DXT1_SRGBA)
+    .value("DXT3_SRGBA", backend::CompressedPixelDataType::DXT3_SRGBA)
+    .value("DXT5_SRGBA", backend::CompressedPixelDataType::DXT5_SRGBA)
     .value("RGBA_ASTC_4x4", backend::CompressedPixelDataType::RGBA_ASTC_4x4)
     .value("RGBA_ASTC_5x4", backend::CompressedPixelDataType::RGBA_ASTC_5x4)
     .value("RGBA_ASTC_5x5", backend::CompressedPixelDataType::RGBA_ASTC_5x5)
@@ -410,5 +420,9 @@ enum_<backend::CullingMode>("CullingMode")
     .value("FRONT", backend::CullingMode::FRONT)
     .value("BACK", backend::CullingMode::BACK)
     .value("FRONT_AND_BACK", backend::CullingMode::FRONT_AND_BACK);
+
+enum_<ktxreader::Ktx2Reader::TransferFunction>("TransferFunction")
+    .value("LINEAR", ktxreader::Ktx2Reader::TransferFunction::LINEAR)
+    .value("sRGB", ktxreader::Ktx2Reader::TransferFunction::sRGB);
 
 }

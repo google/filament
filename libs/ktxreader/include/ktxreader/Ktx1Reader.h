@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef IMAGE_KTXUTILITY_H
-#define IMAGE_KTXUTILITY_H
-
-#include <filament/Engine.h>
-#include <filament/Texture.h>
+#ifndef KTXREADER_KTX1READER_H
+#define KTXREADER_KTX1READER_H
 
 #include <image/Ktx1Bundle.h>
+
+#include <filament/Texture.h>
+
+namespace filament {
+    class Engine;
+}
 
 namespace ktxreader {
 

@@ -16,17 +16,14 @@ canvas { touch-action: none; width: 100%; height: 100%; }
 <script src="gl-matrix-min.js"></script>
 <script>
 
-const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
-const texture_suffix = Filament.getSupportedFormatSuffix('etc');
-
 const env = 'default_env'
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
-const albedo_url = `albedo${albedo_suffix}.ktx`;
-const ao_url = `ao${texture_suffix}.ktx`;
-const metallic_url = `metallic${texture_suffix}.ktx`;
-const normal_url = `normal${texture_suffix}.ktx`;
-const roughness_url = `roughness${texture_suffix}.ktx`;
+const albedo_url = `albedo.ktx2`;
+const ao_url = `ao.ktx2`;
+const metallic_url = `metallic.ktx2`;
+const normal_url = `normal.ktx2`;
+const roughness_url = `roughness.ktx2`;
 const filamat_url = 'textured.filamat';
 const filamesh_url = 'suzanne.filamesh';
 
@@ -41,12 +38,13 @@ Filament.init([
     ibl_url,
     sky_url
 ], () => {
-    window.VertexAttribute = Filament.VertexAttribute;
     window.AttributeType = Filament.VertexBuffer$AttributeType;
-    window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
-    window.IndexType = Filament.IndexBuffer$IndexType;
+    window.Format = Filament.Texture$InternalFormat;
     window.Fov = Filament.Camera$Fov;
+    window.IndexType = Filament.IndexBuffer$IndexType;
     window.LightType = Filament.LightManager$Type;
+    window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
+    window.VertexAttribute = Filament.VertexAttribute;
     window.app = new App(document.getElementsByTagName('canvas')[0]);
 });
 
@@ -68,11 +66,11 @@ class App {
             .build(engine, sunlight);
         this.scene.addEntity(sunlight);
 
-        const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
+        const indirectLight = this.ibl = engine.createIblFromKtx1(ibl_url);
         this.scene.setIndirectLight(indirectLight);
         indirectLight.setIntensity(80000);
 
-        const skybox = engine.createSkyFromKtx(sky_url);
+        const skybox = engine.createSkyFromKtx1(sky_url);
         this.scene.setSkybox(skybox);
 
         const material = engine.createMaterial(filamat_url);
@@ -83,11 +81,20 @@ class App {
             Filament.MagFilter.LINEAR,
             Filament.WrapMode.CLAMP_TO_EDGE);
 
-        const albedo = engine.createTextureFromKtx(albedo_url, {srgb: true});
-        const roughness = engine.createTextureFromKtx(roughness_url);
-        const metallic = engine.createTextureFromKtx(metallic_url);
-        const normal = engine.createTextureFromKtx(normal_url);
-        const ao = engine.createTextureFromKtx(ao_url);
+        // Fiament requests support for the following extensions, but none are guaranteed.
+        //   WEBGL_compressed_texture_s3tc, WEBGL_compressed_texture_s3tc_srgb
+        //   WEBGL_compressed_texture_astc, WEBGL_compressed_texture_etc
+        const albedo = engine.createTextureFromKtx2(albedo_url, {
+                srgb: true,
+                formats: [ Format.DXT5_RGBA, Format.DXT5_SRGBA, Format.ETC2_EAC_SRGBA8 ]
+        });
+
+        console.assert(albedo, "Unable to create albedo texture.")
+
+        const roughness = engine.createTextureFromKtx2(roughness_url);
+        const metallic = engine.createTextureFromKtx2(metallic_url);
+        const ao = engine.createTextureFromKtx2(ao_url);
+        const normal = engine.createTextureFromKtx2(normal_url);
 
         matinstance.setTextureParameter('albedo', albedo, sampler)
         matinstance.setTextureParameter('roughness', roughness, sampler)
