@@ -67,9 +67,8 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow
     }
 
     // Needed so we can use the SwapChain as a blit source.
-    if (flags & SwapChain::CONFIG_READABLE) {
-        nativeWindow.framebufferOnly = NO;
-    }
+    // Also needed for rendering directly into the SwapChain during refraction.
+    nativeWindow.framebufferOnly = NO;
 
     layer.device = context.device;
 }
