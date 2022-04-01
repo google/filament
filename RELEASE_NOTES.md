@@ -3,9 +3,11 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.7 (currently main branch)
+## v1.21.1 (currently main branch)
 
-## v1.20.6
+- engine: allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].
+
+## v1.21.0
 
 - gltfio: add support for KHR_materials_variants
 - gltfio: add support for KHR_materials_emissive_strength
