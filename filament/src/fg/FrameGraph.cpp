@@ -317,7 +317,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
             node->setParentReadDependency(parentNode);
         } else {
             // we're reading from a top-level resource (i.e. not a subresource), but this
-            // resource is a parent of some subresource and it might exist as a version for
+            // resource is a parent of some subresource, and it might exist as a version for
             // writing, in this case we need to add a dependency from its "read" version to
             // itself.
             ResourceSlot& slot = getResourceSlot(handle);
@@ -354,6 +354,9 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
     // node to a new version of the parent's node, if we don't already have one.
     if (resource->isSubResource()) {
         assert_invariant(parentNode);
+        // this could be a subresource from a subresource, and in this case, we want the oldest
+        // ancestor, that is, the node that started it all.
+        parentNode = ResourceNode::getAncestorNode(parentNode);
         // FIXME: do we need the equivalent of hasWriterPass() test below
         parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
     }
@@ -415,7 +418,7 @@ FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle resourceHa
         // the write has already happened.
         // We create a new version of the parent node to ensure nobody writes into it beyond
         // this point (note: it's not completely clear to me if this is needed/correct).
-        ResourceNode* parentNode = resourceNode->getParentNode();
+        ResourceNode* parentNode = ResourceNode::getAncestorNode(resourceNode);
         parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
         resourceNode->setParentWriteDependency(parentNode);
     }

@@ -44,8 +44,13 @@ ResourceNode* ResourceNode::getParentNode() noexcept {
     return parentNode;
 }
 
-FrameGraphHandle ResourceNode::getParentHandle() noexcept {
-    return mParentHandle;
+ResourceNode* ResourceNode::getAncestorNode(ResourceNode* node) noexcept {
+    ResourceNode* ancestor = node;
+    do {
+        node = node->getParentNode();
+        ancestor = node ? node : ancestor;
+    } while (node);
+    return ancestor;
 }
 
 char const* ResourceNode::getName() const noexcept {
