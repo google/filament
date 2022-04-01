@@ -71,9 +71,16 @@ public:
 
     void resolveResourceUsage(DependencyGraph& graph) noexcept;
 
+    // return the parent's handle
+    FrameGraphHandle getParentHandle() noexcept {
+        return mParentHandle;
+    }
+
+    // return the parent's node
     ResourceNode* getParentNode() noexcept;
 
-    FrameGraphHandle getParentHandle() noexcept;
+    // return the oldest ancestor node
+    static ResourceNode* getAncestorNode(ResourceNode* node) noexcept;
 
     // this is the parent resource we're reading from, as a propagating effect of
     // us being read from.
