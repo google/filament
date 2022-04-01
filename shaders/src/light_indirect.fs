@@ -565,10 +565,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
             const float invLog2sqrt5 = 0.8614;
             float d = -mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
             float lod = max(0.0, (log2(pixel.roughness / d) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
-#if !defined(MATERIAL_HAS_REFRACTION)
-            // this is temporary, until we can access the SSR buffer when we have refraction
             ssrFr = textureLod(light_ssr, vec3(interpolationCache.uv, 1.0), lod);
-#endif
         }
     }
 #else // BLEND_MODE_OPAQUE

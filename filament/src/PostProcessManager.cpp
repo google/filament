@@ -1284,20 +1284,22 @@ PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(Fr
     };
 
     struct PrepareMipmapSSRPassData {
+        FrameGraphId<FrameGraphTexture> ssr;
         FrameGraphId<FrameGraphTexture> refraction;
         FrameGraphId<FrameGraphTexture> reflection;
     };
     auto& pass = fg.addPass<PrepareMipmapSSRPassData>("Prepare MipmapSSR Pass",
             [&](FrameGraph::Builder& builder, auto& data){
                 // create the SSR 2D array
-                auto ssr = builder.createTexture("ssr", outDesc);
+                data.ssr = builder.createTexture("ssr", outDesc);
                 // create the refraction subresource at layer 0
-                data.refraction = builder.createSubresource(ssr, "refraction", {.layer = 0 });
+                data.refraction = builder.createSubresource(data.ssr, "refraction", {.layer = 0 });
                 // create the reflection subresource at layer 1
-                data.reflection = builder.createSubresource(ssr, "reflection", {.layer = 1 });
+                data.reflection = builder.createSubresource(data.ssr, "reflection", {.layer = 1 });
             });
 
     return {
+            .ssr = pass->ssr,
             .refraction = pass->refraction,
             .reflection = pass->reflection,
             .lodOffset = refractionLodOffset,

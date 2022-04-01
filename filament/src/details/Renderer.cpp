@@ -394,8 +394,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .clearFlags = clearFlags,
             .clearColor = clearColor,
             .ssrLodOffset = 0.0f,
-            .hasContactShadows = scene.hasContactShadows(),
-            .hasScreenSpaceReflections = ssReflectionsOptions.enabled
+            .hasContactShadows = scene.hasContactShadows()
     };
 
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
@@ -494,14 +493,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     PostProcessManager::ScreenSpaceRefConfig ssrConfig = PostProcessManager::prepareMipmapSSR(
             fg, svp.width, svp.height,
-            config.hasScreenSpaceReflections ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
+            ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
             view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
     config.ssrLodOffset = ssrConfig.lodOffset;
+    blackboard["ssr"] = ssrConfig.ssr;
 
     // --------------------------------------------------------------------------------------------
     // screen-space reflections pass
 
-    if (config.hasScreenSpaceReflections) {
+    if (ssReflectionsOptions.enabled) {
         auto reflections = ppm.ssr(fg, pass,
                 view.getFrameHistory(), cameraInfo,
                 view.getPerViewUniforms(),
@@ -512,8 +512,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // generate the mipchain
         reflections = PostProcessManager::generateMipmapSSR(ppm, fg,
                 reflections, ssrConfig.reflection, false, ssrConfig);
-
-        blackboard["ssr"] = reflections;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -788,12 +786,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 view);
 
         // generate the mipmap chain
-        input = PostProcessManager::generateMipmapSSR(ppm, fg,
+        PostProcessManager::generateMipmapSSR(ppm, fg,
                 input, ssrConfig.refraction, true, ssrConfig);
-
-        // and this becomes our SSR buffer
-        blackboard["ssr"] = input;
-
 
         // Now we're doing the refraction pass proper.
         // This uses the same framebuffer (color and depth) used by the opaque pass. This happens
@@ -801,7 +795,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // pass). For this reason, `desc` below is only used in colorPass() for the width and
         // height.
         config.clearFlags = TargetBufferFlags::NONE;
-        config.hasScreenSpaceReflections = false; // FIXME: for now we can't have both
         output = colorPass(fg, "Color Pass (transparent)",
                 {
                         .width = config.svp.width,
@@ -861,7 +854,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.ssr = builder.sample(data.ssr);
                 }
 
-                if (config.hasContactShadows || config.hasScreenSpaceReflections) {
+                if (config.hasContactShadows) {
                     data.structure = blackboard.get<FrameGraphTexture>("structure");
                     assert_invariant(data.structure);
                     data.structure = builder.sample(data.structure);
