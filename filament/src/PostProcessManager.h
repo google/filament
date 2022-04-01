@@ -103,6 +103,8 @@ public:
             size_t kernelWidth, float sigma) noexcept;
 
     struct ScreenSpaceRefConfig {
+        // The SSR texture (i.e. the 2d Array)
+        FrameGraphId<FrameGraphTexture> ssr;
         // handle to subresource to receive the refraction
         FrameGraphId<FrameGraphTexture> refraction;
         // handle to subresource to receive the reflections

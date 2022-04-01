@@ -161,8 +161,6 @@ private:
         float ssrLodOffset;
         // Contact shadow enabled?
         bool hasContactShadows;
-        // Screen-space reflections enabled?
-        bool hasScreenSpaceReflections;
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
