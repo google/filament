@@ -210,7 +210,11 @@ void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams p
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 direction = material.anisotropyDirection;
     pixel.anisotropy = material.anisotropy;
+#if defined(IN_SHAPR_SHADER)
     pixel.anisotropicT = normalize(shading_tangentToWorld * direction);
+#else
+    pixel.anisotropicT = normalize(shading_tangentToWorld * direction.yxz);
+#endif
     pixel.anisotropicB = normalize(cross(getWorldGeometricNormalVector(), pixel.anisotropicT));
 #endif
 }
