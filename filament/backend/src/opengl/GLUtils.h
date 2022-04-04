@@ -22,7 +22,7 @@
 
 #include <backend/DriverEnums.h>
 
-#include <string>
+#include <string_view>
 #include <unordered_set>
 
 #include <string.h>
@@ -507,27 +507,14 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
     }
 }
 
-class unordered_string_set : public std::unordered_set<std::string> {
+class unordered_string_set : public std::unordered_set<std::string_view> {
 public:
-    bool has(const char* str) {
-        return find(std::string(str)) != end();
+    bool has(const char* str) const noexcept {
+        return find(str) != end();
     }
 };
 
-inline unordered_string_set split(const char* spacedList) {
-    unordered_string_set set;
-    const char* current = spacedList;
-    const char* head = current;
-    do {
-        head = strchr(current, ' ');
-        std::string s(current, head ? head - current : strlen(current));
-        if (s.length()) {
-            set.insert(std::move(s));
-        }
-        current = head + 1;
-    } while (head);
-    return set;
-}
+unordered_string_set split(const char* extensions) noexcept;
 
 } // namespace GLUtils
 } // namespace filament::backend

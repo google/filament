@@ -125,13 +125,12 @@ Driver* OpenGLDriver::create(
         return {};
     }
 
-    if (GLES30_HEADERS) {
-        // we require GLES 3.1 headers, but we support GLES 3.0
+    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
             PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
             goto cleanup;
         }
-    } else if (GL41_HEADERS) {
+    } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // we require GL 4.1 headers and minimum version
         if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
             PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
@@ -181,7 +180,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         mContext.resetProgram();
     }
 
-    if (mContext.ext.EXT_disjoint_timer_query || GL41_HEADERS) {
+    if (mContext.ext.EXT_disjoint_timer_query ||
+            BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // timer queries are available
         if (mContext.bugs.dont_use_timer_query && mPlatform.canCreateFence()) {
             // however, they don't work well, revert to using fences if we can.
@@ -478,14 +478,14 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             break;
         }
         case GL_TEXTURE_2D_MULTISAMPLE:
-            if (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
+            if constexpr (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
                 // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
                 // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
-#if GLES31_HEADERS
-                // only supported from GL 4.3 and GLES 3.1
+#if BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES31
+                // only supported from GL 4.3 and GLES 3.1 headers
                 glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
-#elif GL41_HEADERS
+#elif defined(GL_VERSION_4_1)
                 // only supported in GL (GL4.1 doesn't support glTexStorage2DMultisample)
                 glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
@@ -1512,7 +1512,7 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
 
         // Three-component SRGB is a color-renderable texture format in core OpenGL on desktop.
         case TextureFormat::SRGB8:
-            return GL41_HEADERS;
+            return BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL;
 
         // Half-float formats, requires extension.
         case TextureFormat::R16F:
@@ -2238,7 +2238,8 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES30_HEADERS) {
+    if (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES &&
+            BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             AttachmentArray attachments; // NOLINT
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
@@ -2312,7 +2313,8 @@ void OpenGLDriver::endRenderPass(int) {
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES30_HEADERS) {
+    if (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES &&
+            BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
         auto effectiveDiscardFlags = discardFlags;
         if (gl.bugs.invalidate_end_only_if_invalidate_start) {
             effectiveDiscardFlags &= mRenderPassParams.flags.discardStart;

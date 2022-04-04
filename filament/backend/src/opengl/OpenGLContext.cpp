@@ -50,12 +50,12 @@ OpenGLContext::OpenGLContext() noexcept {
     for (GLint i = 0; i < n; i++) {
         const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
         exts.insert(StaticString::make(extension, strlen(extension)));
-        if (DEBUG_PRINT_EXTENSIONS) {
+        if constexpr (DEBUG_PRINT_EXTENSIONS) {
             slog.d << extension << io::endl;
         }
     }
     ShaderModel shaderModel = ShaderModel::UNKNOWN;
-    if (GLES30_HEADERS) {
+    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         if (major == 3 && minor >= 0) {
             shaderModel = ShaderModel::GL_ES_30;
         }
@@ -63,7 +63,7 @@ OpenGLContext::OpenGLContext() noexcept {
             features.multisample_texture = true;
         }
         initExtensionsGLES(major, minor, exts);
-    } else if (GL41_HEADERS) {
+    } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         if (major == 4 && minor >= 1) {
             shaderModel = ShaderModel::GL_CORE_41;
         }
@@ -186,7 +186,7 @@ OpenGLContext::OpenGLContext() noexcept {
 
     // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
     // In OpenGL ES, these flags do not exist because they are always on.
-#if GL41_HEADERS
+#if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
     enable(GL_PROGRAM_POINT_SIZE);
 #endif
 
@@ -423,9 +423,9 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
     }
     if (target == GL_UNIFORM_BUFFER || target == GL_TRANSFORM_FEEDBACK_BUFFER) {
         auto& indexedBuffer = state.buffers.targets[targetIndex];
-        #pragma nounroll // clang generates >1 KiB of code!!
+        UTILS_NOUNROLL // clang generates >1 KiB of code!!
         for (GLsizei i = 0; i < n; ++i) {
-            #pragma nounroll
+            UTILS_NOUNROLL
             for (auto& buffer : indexedBuffer.buffers) {
                 if (buffer.name == buffers[i]) {
                     buffer.name = 0;
