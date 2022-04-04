@@ -85,14 +85,13 @@ def choose_from_zip(path: Path):
     return result_path
 
 
-def extract_resgen(path: Path):
-    with open(path, mode='rb') as file:
-        content = file.read()
-    offset = content.find(RESGEN_MAGIC)
+def extract_single_blob(content, index, jsons, blobs):
+    offset = content.find(RESGEN_MAGIC, index)
     if offset < 0:
-        print("Unable to find resgen blob.")
-        return {}, b''
+        return 0
     idx = offset + len(RESGEN_MAGIC)
+    if chr(content[idx]) == '_':
+        return idx
     size_string = ""
     while chr(content[idx]) != '{':
         size_string += chr(content[idx])
@@ -105,7 +104,19 @@ def extract_resgen(path: Path):
     for mat in resgen_json:
         total_size += resgen_json[mat]
     resgen_blob = content[offset - total_size:offset]
-    return resgen_json, resgen_blob
+    jsons.append(resgen_json)
+    blobs.append(resgen_blob)
+    return idx+int(size_string)
+
+
+def extract_resgen(path: Path):
+    with open(path, mode='rb') as file:
+        content = file.read()
+    index, jsons, blobs = 0, [], []
+    while True:
+        index = extract_single_blob(content, index, jsons, blobs)
+        if index == 0:
+            return jsons, blobs
 
 
 def get_compressed_size(blob):
@@ -115,7 +126,7 @@ def get_compressed_size(blob):
     return tmpzip.stat().st_size
 
 
-def treeify_resgen(resgen_json, resgen_blob):
+def treeify_single_blob(resgen_json, resgen_blob):
     csize = format_bytes(get_compressed_size(resgen_blob))
     result = {}
     total_size = 0
@@ -152,6 +163,13 @@ def treeify_resgen(resgen_json, resgen_blob):
     return result
 
 
+def treeify_resgen(resgen_jsons, resgen_blobs):
+    result = []
+    for resgen_json, resgen_blob in zip(resgen_jsons, resgen_blobs):
+        result.append(treeify_single_blob(resgen_json, resgen_blob))
+    return result
+
+
 def main(args):
     path = Path(args.input)
     path.exists() or quit("No file or folder at the specified path.")
@@ -166,7 +184,7 @@ def main(args):
     info = f'{size} ({csize})'
 
     print('Scanning for resgen resources...')
-    resgen_json, resgen_blob = extract_resgen(dsopath)
+    resgen_jsons, resgen_blobs = extract_resgen(dsopath)
 
     print('Running nm... (this might take a while)')
     os.system(f'nm -C -S {path} > {TEMPDIR}/nm.out')
@@ -177,8 +195,8 @@ def main(args):
     if DEBUG: os.system(f'cp {TEMPDIR}/objdump.out .')
 
     print('Generating treemap JSON...')
-    os.system(f'cd {TEMPDIR} ; python {SCRIPTDIR}/evmar_bloat.py syms > syms.json')
-    os.system(f'cd {TEMPDIR} ; python {SCRIPTDIR}/evmar_bloat.py sections > sections.json')
+    os.system(f'cd {TEMPDIR} ; python3 {SCRIPTDIR}/evmar_bloat.py syms > syms.json')
+    os.system(f'cd {TEMPDIR} ; python3 {SCRIPTDIR}/evmar_bloat.py sections > sections.json')
 
     # Splice the materials JSON into the sections JSON.
     sections_json = json.loads(open(f'{TEMPDIR}/sections.json').read())
@@ -188,7 +206,7 @@ def main(args):
             trimmed_json = child
             for section in trimmed_json['children']:
                 if section["name"].startswith('rodata'):
-                    section["children"] = [ treeify_resgen(resgen_json, resgen_blob) ]
+                    section["children"] = treeify_resgen(resgen_jsons, resgen_blobs)
     sections_json = "const kSections = " + json.dumps(trimmed_json) + ";\n"
 
     symbols_json = open(f'{TEMPDIR}/syms.json').read()

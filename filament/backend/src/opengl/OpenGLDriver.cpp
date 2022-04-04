@@ -92,12 +92,12 @@ Driver* OpenGLDriver::create(
     //    GLBufferObject            :  24       many
     //    GLSync                    :  24       few
     //    GLTimerQuery              :  32       few
+    //    OpenGLProgram             :  32       moderate
     //    GLRenderPrimitive         :  48       many
-    //    OpenGLProgram             :  48       moderate
     // -- less than or equal 64 bytes
     //    GLTexture                 :  72       moderate
     //    GLRenderTarget            : 112       few
-    //    GLStream                  : 168       few
+    //    GLStream                  : 184       few
     //    GLVertexBuffer            : 200       moderate
     // -- less than or equal to 208 bytes
 
@@ -254,9 +254,8 @@ void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
 }
 
 void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
-    mContext.useProgram(p->gl.program);
     // set-up textures and samplers in the proper TMUs (as specified in setSamplers)
-    p->use(this);
+    p->use(this, mContext);
 }
 
 
@@ -450,7 +449,7 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
 void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     DEBUG_MARKER()
 
-    construct<OpenGLProgram>(ph, this, program);
+    construct<OpenGLProgram>(ph, *this, std::move(program));
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -1216,6 +1215,7 @@ void OpenGLDriver::destroyProgram(Handle<HwProgram> ph) {
     DEBUG_MARKER()
     if (ph) {
         OpenGLProgram* p = handle_cast<OpenGLProgram*>(ph);
+        cancelRunAtNextPassOp(p);
         destruct(ph, p);
     }
 }
@@ -2223,6 +2223,9 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
     DEBUG_MARKER()
+
+    executeRenderPassOps();
+
     auto& gl = mContext;
 
     mRenderPassTarget = rth;
@@ -2925,6 +2928,25 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
         } else {
             ++it;
         }
+    }
+}
+
+void OpenGLDriver::runAtNextRenderPass(void* token, std::function<void()> fn) noexcept {
+    assert_invariant(mRunAtNextRenderPassOps.find(token) == mRunAtNextRenderPassOps.end());
+    mRunAtNextRenderPassOps[token] = std::move(fn);
+}
+
+void OpenGLDriver::cancelRunAtNextPassOp(void* token) noexcept {
+    mRunAtNextRenderPassOps.erase(token);
+}
+
+void OpenGLDriver::executeRenderPassOps() noexcept {
+    auto& ops = mRunAtNextRenderPassOps;
+    if (!ops.empty()) {
+        for (auto& item: ops) {
+            item.second();
+        }
+        ops.clear();
     }
 }
 

@@ -37,4 +37,15 @@ id<MTLTexture> createTextureViewWithSwizzle(id<MTLTexture> texture,
                                           swizzle:swizzle];
 }
 
+id<MTLTexture> createTextureViewWithSingleSlice(id<MTLTexture> texture, NSUInteger slice) {
+    if (texture.textureType == MTLTextureType2D) {
+        return texture;
+    }
+    NSUInteger mips = texture.mipmapLevelCount;
+    return [texture newTextureViewWithPixelFormat:texture.pixelFormat
+                                      textureType:MTLTextureType2D
+                                           levels:NSMakeRange(0, mips)
+                                           slices:NSMakeRange(slice, 1)];
+}
+
 }

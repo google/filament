@@ -3,7 +3,18 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.20.6 (currently main branch)
+## v1.21.1 (currently main branch)
+
+- engine: allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].
+
+## v1.21.0
+
+- engine: OpenGL performance improvements with some drivers.
+- engine: Fix incorrect shadows with some custom projection matrices.
+- engine: Fix low frame rates seen with a lot of morph targets.
+- gltfio: Add support for KHR_materials_variants.
+- gltfio: Add support for KHR_materials_emissive_strength.
+- gltfio: Java now exposes morph target names as an array for consistency [⚠️ **API Change**].
 
 ## v1.20.5
 

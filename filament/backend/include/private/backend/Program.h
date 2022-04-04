@@ -25,7 +25,6 @@
 #include <utils/ostream.h>
 
 #include <backend/DriverEnums.h>
-#include <backend/ShaderStageFlags.h>
 
 #include <array>
 
@@ -94,13 +93,15 @@ public:
     }
 
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
-    std::array<ShaderBlob, SHADER_TYPE_COUNT> const& getShadersSource() const noexcept {
-        return mShadersSource;
-    }
+    using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
+    ShaderSource const& getShadersSource() const noexcept { return mShadersSource; }
+    ShaderSource& getShadersSource() noexcept { return mShadersSource; }
 
     UniformBlockInfo const& getUniformBlockInfo() const noexcept { return mUniformBlocks; }
+    UniformBlockInfo& getUniformBlockInfo() noexcept { return mUniformBlocks; }
 
     SamplerGroupInfo const& getSamplerGroupInfo() const { return mSamplerGroups; }
+    SamplerGroupInfo& getSamplerGroupInfo() { return mSamplerGroups; }
 
     const utils::CString& getName() const noexcept { return mName; }
 
@@ -111,7 +112,7 @@ private:
 
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
-    std::array<ShaderBlob, SHADER_TYPE_COUNT> mShadersSource;
+    ShaderSource mShadersSource;
     bool mHasSamplers = false;
     utils::CString mName;
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;

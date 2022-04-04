@@ -206,12 +206,17 @@ public:
     // inside the string (i.e. it can contain nulls or non-ASCII encodings).
     CString(const char* cstr, size_t length);
 
+    // Allocates memory for a string of size length plus space for the null terminating character.
+    // Also initializes the memory to 0. This constructor can be used to hold arbitrary data
+    // inside the string.
+    explicit CString(size_t length);
+
     // Allocates memory and copies traditional C string content. Unlike the above constructor, this
     // does not alllow embedded nulls. This is explicit because this operation is costly.
     explicit CString(const char* cstr);
 
     template<size_t N>
-    explicit CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
+    CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
             : CString(other, N - 1) {
     }
 

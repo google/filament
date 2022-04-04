@@ -203,6 +203,14 @@ struct FFilamentAsset : public FilamentAsset {
 
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
+    size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
+
+    size_t getMaterialVariantCount() const noexcept;
+
+    const char* getMaterialVariantName(size_t variantIndex) const noexcept;
+
+    void applyMaterialVariant(size_t variantIndex) noexcept;
+
     utils::Entity getWireframe() noexcept;
 
     filament::Engine* getEngine() const noexcept {
@@ -250,6 +258,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<filament::IndexBuffer*> mIndexBuffers;
     std::vector<filament::MorphTargetBuffer*> mMorphTargetBuffers;
     std::vector<filament::Texture*> mTextures;
+    utils::FixedCapacityVector<Variant> mVariants;
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
@@ -260,7 +269,7 @@ struct FFilamentAsset : public FilamentAsset {
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
     tsl::robin_map<utils::Entity, utils::CString> mNodeExtras;
-    tsl::robin_map<utils::Entity, std::vector<utils::CString>> mMorphTargetNames;
+    tsl::robin_map<utils::Entity, utils::FixedCapacityVector<utils::CString>> mMorphTargetNames;
     utils::CString mAssetExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.

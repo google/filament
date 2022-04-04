@@ -1099,7 +1099,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             dstRect.width, dstRect.height);
 
     auto isBlitableTextureType = [](MTLTextureType t) {
-        return t == MTLTextureType2D || t == MTLTextureType2DMultisample;
+        return t == MTLTextureType2D || t == MTLTextureType2DMultisample ||
+               t == MTLTextureType2DArray;
     };
 
     MetalBlitter::BlitArgs args;
@@ -1121,6 +1122,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             args.destination.color = dstColorAttachment.getTexture();
             args.source.level = srcColorAttachment.level;
             args.destination.level = dstColorAttachment.level;
+            args.source.slice = srcColorAttachment.layer;
+            args.destination.slice = dstColorAttachment.layer;
         }
     }
 
@@ -1137,18 +1140,26 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             args.destination.depth = dstDepthAttachment.getTexture();
 
             if (args.blitColor()) {
-                // If blitting color, we've already set the source and destination levels.
-                // Check that they match the requested depth levels.
+                // If blitting color, we've already set the source and destination levels and slices.
+                // Check that they match the requested depth levels/slices.
                 ASSERT_PRECONDITION(args.source.level == srcDepthAttachment.level,
                                    "Color and depth source LOD must match. (%d != %d)",
                                    args.source.level, srcDepthAttachment.level);
                 ASSERT_PRECONDITION(args.destination.level == dstDepthAttachment.level,
                                    "Color and depth destination LOD must match. (%d != %d)",
                                    args.destination.level, dstDepthAttachment.level);
+                ASSERT_PRECONDITION(args.source.slice == srcDepthAttachment.layer,
+                        "Color and depth source layer must match. (%d != %d)",
+                        args.source.slice, srcDepthAttachment.layer);
+                ASSERT_PRECONDITION(args.destination.slice == dstDepthAttachment.layer,
+                        "Color and depth destination layer must match. (%d != %d)",
+                        args.destination.slice, dstDepthAttachment.layer);
             }
 
             args.source.level = srcDepthAttachment.level;
             args.destination.level = dstDepthAttachment.level;
+            args.source.slice = srcDepthAttachment.layer;
+            args.destination.slice = dstDepthAttachment.layer;
         }
     }
 

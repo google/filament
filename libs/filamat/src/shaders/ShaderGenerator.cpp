@@ -28,6 +28,8 @@
 #include "CodeGenerator.h"
 #include "../UibGenerator.h"
 
+#include <iterator>
+
 namespace filamat {
 
 using namespace filament;

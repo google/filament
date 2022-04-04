@@ -217,10 +217,12 @@ public class FilamentAsset {
     }
 
     /**
-     * Get the target name at target index in the given entity.
+     * Gets the names of all morph targets in the given entity.
      */
-    public String getMorphTargetNameAt(@Entity int entity, int targetIndex) {
-        return nGetMorphTargetNameAt(getNativeObject(), entity, targetIndex);
+    public @NonNull String[] getMorphTargetNames(@Entity int entity) {
+        String[] names = new String[nGetMorphTargetCount(mNativeObject, entity)];
+        nGetMorphTargetNames(mNativeObject, entity, names);
+        return names;
     }
 
     /**
@@ -230,6 +232,31 @@ public class FilamentAsset {
         String[] uris = new String[nGetResourceUriCount(mNativeObject)];
         nGetResourceUris(mNativeObject, uris);
         return uris;
+    }
+
+    /**
+     * Returns the names of all material variants.
+     */
+    public @NonNull String[] getMaterialVariantNames() {
+        String[] names = new String[nGetMaterialVariantCount(mNativeObject)];
+        nGetMaterialVariantNames(mNativeObject, names);
+        return names;
+    }
+
+    /**
+     * Applies the given material variant to all primitives that it affects.
+     *
+     * This is efficient because it merely swaps around persistent MaterialInstances. If you change
+     * a material parameter while a certain variant is active, the updated value will be remembered
+     * after you re-apply that variant.
+     *
+     * If the asset is instanced, this affects all instances in the same way.
+     * To set the variant on an individual instance, use FilamentInstance#applyMaterialVariant.
+     *
+     * Ignored if variantIndex is out of bounds.
+     */
+    public void applyMaterialVariant(@IntRange(from = 0) int variantIndex) {
+        nApplyMaterialVariant(getNativeObject(), variantIndex);
     }
 
     /**
@@ -268,11 +295,17 @@ public class FilamentAsset {
     private static native int nGetMaterialInstanceCount(long nativeAsset);
     private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
 
+    private static native int nGetMaterialVariantCount(long nativeAsset);
+    private static native void nGetMaterialVariantNames(long nativeAsset, String[] result);
+
+    private static native int nGetMorphTargetCount(long nativeAsset, int entity);
+    private static native void nGetMorphTargetNames(long nativeAsset, int entity, String[] result);
+
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
-    private static native String nGetMorphTargetNameAt(long nativeAsset, int entity, int targetIndex);
+    private static native void nApplyMaterialVariant(long nativeAsset, int variantIndex);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
     private static native void nReleaseSourceData(long nativeAsset);

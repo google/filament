@@ -18,6 +18,8 @@
 
 #include <gltfio/Animator.h>
 
+#include <filament/RenderableManager.h>
+
 #include <utils/EntityManager.h>
 #include <utils/Log.h>
 #include <utils/NameComponentManager.h>
@@ -133,6 +135,42 @@ const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
     }
 
     return morphTargetNames[targetIndex].c_str();
+}
+
+size_t FFilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcept {
+    if (!mResourcesLoaded) {
+        return 0;
+    }
+
+    const auto iter = mMorphTargetNames.find(entity);
+    if (iter == mMorphTargetNames.end()) {
+        return 0;
+    }
+
+    return iter->second.size();
+}
+
+size_t FFilamentAsset::getMaterialVariantCount() const noexcept {
+    return mVariants.size();
+}
+
+const char* FFilamentAsset::getMaterialVariantName(size_t variantIndex) const noexcept {
+    if (variantIndex >= mVariants.size()) {
+        return nullptr;
+    }
+    return mVariants[variantIndex].name.c_str();
+}
+
+void FFilamentAsset::applyMaterialVariant(size_t variantIndex) noexcept {
+    if (variantIndex >= mVariants.size()) {
+        return;
+    }
+    const std::vector<VariantMapping>& mappings = mVariants[variantIndex].mappings;
+    RenderableManager& rm = mEngine->getRenderableManager();
+    for (const auto& mapping : mappings) {
+        auto instance = rm.getInstance(mapping.renderable);
+        rm.setMaterialInstanceAt(instance, mapping.primitiveIndex, mapping.material);
+    }
 }
 
 Entity FFilamentAsset::getWireframe() noexcept {
@@ -333,6 +371,22 @@ const utils::Entity* FilamentAsset::getJointsAt(size_t skinIndex) const noexcept
 const char* FilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         size_t targetIndex) const noexcept {
     return upcast(this)->getMorphTargetNameAt(entity, targetIndex);
+}
+
+size_t FilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcept {
+    return upcast(this)->getMorphTargetCountAt(entity);
+}
+
+const char* FilamentAsset::getMaterialVariantName(size_t variantIndex) const noexcept {
+    return upcast(this)->getMaterialVariantName(variantIndex);
+}
+
+void FilamentAsset::applyMaterialVariant(size_t variantIndex) noexcept {
+    return upcast(this)->applyMaterialVariant(variantIndex);
+}
+
+size_t FilamentAsset::getMaterialVariantCount() const noexcept {
+    return upcast(this)->getMaterialVariantCount();
 }
 
 Entity FilamentAsset::getWireframe() noexcept {

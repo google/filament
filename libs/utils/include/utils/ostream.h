@@ -17,18 +17,21 @@
 #ifndef TNT_UTILS_OSTREAM_H
 #define TNT_UTILS_OSTREAM_H
 
-#include <mutex>
 #include <string>
 #include <utility>
 
 #include <utils/bitset.h>
-#include <utils/compiler.h> // ssize_t is a POSIX type.
+#include <utils/compiler.h>
+#include <utils/PrivateImplementation.h>
 
 namespace utils::io {
 
-class UTILS_PUBLIC  ostream {
-public:
+struct ostream_;
 
+class UTILS_PUBLIC  ostream : protected utils::PrivateImplementation<ostream_> {
+    friend struct ostream_;
+
+public:
     virtual ~ostream();
 
     ostream& operator<<(short value) noexcept;
@@ -63,6 +66,8 @@ public:
     ostream& hex() noexcept;
 
 protected:
+    ostream& print(const char* format, ...) noexcept;
+
     class Buffer {
     public:
         Buffer() noexcept;
@@ -86,11 +91,8 @@ protected:
         size_t capacity = 0;        // total capacity of the buffer
     };
 
-    std::mutex mLock;
-    Buffer mData;
-    Buffer& getBuffer() noexcept { return mData; }
-
-    ostream& print(const char* format, ...) noexcept;
+    Buffer& getBuffer() noexcept;
+    Buffer const& getBuffer() const noexcept;
 
 private:
     virtual ostream& flush() noexcept = 0;
@@ -105,9 +107,7 @@ private:
         LONG_DOUBLE
     };
 
-    inline const char* getFormat(type t) const noexcept;
-
-    bool mShowHex = false;
+    const char* getFormat(type t) const noexcept;
 };
 
 // handles std::string

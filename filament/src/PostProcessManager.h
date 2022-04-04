@@ -73,7 +73,11 @@ public:
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
-    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg,
+    struct StructurePassOutput {
+        FrameGraphId<FrameGraphTexture> structure;
+        FrameGraphId<FrameGraphTexture> picking;
+    };
+    StructurePassOutput structure(FrameGraph& fg,
             RenderPass const& pass, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
@@ -83,12 +87,14 @@ public:
             FrameHistory const& frameHistory,
             CameraInfo const& cameraInfo,
             PerViewUniforms& uniforms,
+            FrameGraphId<FrameGraphTexture> structure,
             ScreenSpaceReflectionsOptions const& options,
             FrameGraphTexture::Descriptor const& desc) noexcept;
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
             filament::Viewport const& svp, const CameraInfo& cameraInfo,
+            FrameGraphId<FrameGraphTexture> structure,
             AmbientOcclusionOptions const& options) noexcept;
 
     // Gaussian mipmap
@@ -107,20 +113,38 @@ public:
             backend::TextureFormat format, float* pLodOffset) noexcept;
 
     // Depth-of-field
-    FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
-            const DepthOfFieldOptions& dofOptions, bool translucent,
-            const CameraInfo& cameraInfo, math::float2 scale) noexcept;
+    FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> depth,
+            const CameraInfo& cameraInfo,
+            bool translucent,
+            float bokehAspectRatio,
+            const DepthOfFieldOptions& dofOptions) noexcept;
 
     // Bloom
-    FrameGraphId<FrameGraphTexture> bloom(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
+    struct BloomPassOutput {
+        FrameGraphId<FrameGraphTexture> bloom;
+        FrameGraphId<FrameGraphTexture> flare;
+    };
+    BloomPassOutput bloom(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
             BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
             math::float2 scale) noexcept;
 
-    // Color grading, tone mapping, dithering and bloom
+    FrameGraphId<FrameGraphTexture> flarePass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            uint32_t width, uint32_t height,
+            backend::TextureFormat outFormat,
+            BloomOptions const& bloomOptions) noexcept;
+
+        // Color grading, tone mapping, dithering and bloom
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
-            const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-            BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions,
+            FrameGraphId<FrameGraphTexture> bloom,
+            FrameGraphId<FrameGraphTexture> flare,
+            const FColorGrading* colorGrading,
+            ColorGradingConfig const& colorGradingConfig,
+            BloomOptions const& bloomOptions,
+            VignetteOptions const& vignetteOptions,
             math::float2 scale) noexcept;
 
     void colorGradingPrepareSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
@@ -152,10 +176,11 @@ public:
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> depth,
             FrameHistory& frameHistory,
             FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             TemporalAntiAliasingOptions const& taaOptions,
-            ColorGradingConfig colorGradingConfig) noexcept;
+            ColorGradingConfig const& colorGradingConfig) noexcept;
 
     // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
@@ -191,6 +216,7 @@ public:
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;
     backend::Handle<backend::HwTexture> getOneTextureArray() const;
+    backend::Handle<backend::HwTexture> getZeroTextureArray() const;
 
     math::float2 halton(size_t index) const noexcept {
         return mHaltonSamples[index & 0xFu];
@@ -208,11 +234,12 @@ private:
         float scale = 1.0f;
     };
 
-    FrameGraphId<FrameGraphTexture> bilateralBlurPass(
-            FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
-            backend::TextureFormat format, BilateralPassConfig config) noexcept;
+    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphId<FrameGraphTexture> depth,
+            math::int2 axis, float zf, backend::TextureFormat format,
+            BilateralPassConfig const& config) noexcept;
 
-    FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
+    BloomPassOutput bloomPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             BloomOptions& inoutBloomOptions, math::float2 scale) noexcept;
 

@@ -383,7 +383,7 @@ TEST(FilamentTest, UniformBuffer) {
         EXPECT_EQ((mat4f{100, 200, 300, 0, 400, 500, 600, 0, 700, 800, 900, 0, 0, 0, 0, 1}), data->m1);
     };
 
-    auto CHECK2 = [](std::vector<UniformInterfaceBlock::UniformInfo> const& info) {
+    auto CHECK2 = [](auto const& info) {
         EXPECT_EQ(offsetof(ubo, f0)/4, info[0].offset);
         EXPECT_EQ(offsetof(ubo, f1)/4, info[1].offset);
         EXPECT_EQ(offsetof(ubo, f2)/4, info[2].offset);

@@ -209,24 +209,53 @@ public:
     size_t getSkinCount() const noexcept;
 
     /**
-     * Get the skin name at skin index.
+     * Gets the skin name at skin index.
      */
     const char* getSkinNameAt(size_t skinIndex) const noexcept;
 
     /**
-     * Get the number of joints at skin index.
+     * Gets the number of joints at skin index.
      */
     size_t getJointCountAt(size_t skinIndex) const noexcept;
 
     /**
-     * Get joints at skin index.
+     * Gets joints at skin index.
      */
     const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
 
     /**
-     * Get the target name at target index in the given entity.
+     * Gets the morph target name at the given index in the given entity.
      */
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
+
+    /**
+     * Returns the number of morph targets in the given entity.
+     */
+    size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
+
+    /**
+     * Returns the number of material variants in the asset.
+     */
+    size_t getMaterialVariantCount() const noexcept;
+
+    /**
+     * Returns the name of the given material variant, or null if it is out of bounds.
+     */
+    const char* getMaterialVariantName(size_t variantIndex) const noexcept;
+
+    /**
+     * Applies the given material variant to all primitives that it affects.
+     *
+     * This is efficient because it merely swaps around persistent MaterialInstances. If you change
+     * a material parameter while a certain variant is active, the updated value will be remembered
+     * after you re-apply that variant.
+     *
+     * If the asset is instanced, this affects all instances in the same way.
+     * To set the variant on an individual instance, use FilamentInstance::applyMaterialVariant.
+     *
+     * Ignored if variantIndex is out of bounds.
+     */
+    void applyMaterialVariant(size_t variantIndex) noexcept;
 
     /**
      * Lazily creates a single LINES renderable that draws the transformed bounding-box hierarchy

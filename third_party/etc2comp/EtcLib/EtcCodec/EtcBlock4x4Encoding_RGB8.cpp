@@ -24,6 +24,13 @@ Block4x4Encoding_ETC1 encodes the ETC1 subset of RGB8.
 
 */
 
+#if defined(__clang__)
+// Workaround for relying on undefined behavior (casting nan to unsigned int) which can cause hang
+// behavior when the resulting int is used as a loop upper bound. Ideally this pragma would go in
+// EtcConfig.h, but moving it there triggers asserts.
+#pragma float_control(precise, off)
+#endif
+
 #include "EtcConfig.h"
 #include "EtcBlock4x4Encoding_RGB8.h"
 

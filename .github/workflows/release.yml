@@ -131,7 +131,6 @@ jobs:
           mv out/gltfio-android-release.aar out/gltfio-${TAG}-android.aar
           mv out/gltfio-android-lite-release.aar out/gltfio-${TAG}-lite-android.aar
           mv out/filament-utils-android-release.aar out/filament-utils-${TAG}-android.aar
-          mv out/filament-utils-android-lite-release.aar out/filament-utils-${TAG}-lite-android.aar
           python3 build/common/upload-assets.py ${TAG} out/*.aar out/*.apk
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}

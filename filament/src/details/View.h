@@ -195,8 +195,8 @@ public:
     bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
 
-    void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
-            RenderPass const& pass) noexcept;
+    FrameGraphId<FrameGraphTexture> renderShadowMaps(FrameGraph& fg, FEngine& engine,
+            FEngine::DriverApi& driver, RenderPass const& pass) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,

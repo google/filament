@@ -140,6 +140,8 @@ struct FAssetLoader : public AssetLoader {
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
+    void createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh, Entity entity,
+            FFilamentInstance* instance);
 
     static LightManager::Type getLightType(const cgltf_light_type type);
 
@@ -289,6 +291,14 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         mResult->mAssetExtras = CString(srcAsset->json + asset.extras.start_offset, extras_size);
     }
 
+    // Check if the asset has variants.
+    if (srcAsset->variants_count > 0) {
+        mResult->mVariants.reserve(srcAsset->variants_count);
+        for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
+            mResult->mVariants.push_back({CString(srcAsset->variants[i].name)});
+        }
+    }
+
     if (numInstances == 0) {
         // For each scene root, recursively create all entities.
         for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
@@ -346,6 +356,12 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
     instance->animator = nullptr;
     instance->owner = primary;
     primary->mInstances.push_back(instance);
+
+    // Check if the asset has variants.
+    instance->variants.reserve(srcAsset->variants_count);
+    for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
+        instance->variants.push_back({CString(srcAsset->variants[i].name)});
+    }
 
     // For each scene root, recursively create all entities.
     for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
@@ -406,6 +422,9 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
         createRenderable(srcAsset, node, entity, name);
+        if (srcAsset->variants_count > 0) {
+            createMaterialVariants(srcAsset, node->mesh, entity, instance);
+        }
     }
 
     if (node->light && enableLight) {
@@ -499,9 +518,9 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
 
     auto& morphTargetNames = mResult->mMorphTargetNames[entity];
     assert_invariant(morphTargetNames.empty());
-    morphTargetNames.resize(numMorphTargets);
+    morphTargetNames = FixedCapacityVector<CString>(numMorphTargets);
     for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
-        morphTargetNames[i] = utils::StaticString::make(mesh->target_names[i]);
+        morphTargetNames[i] = StaticString::make(mesh->target_names[i]);
     }
 
     const Aabb transformed = aabb.transform(worldTransform);
@@ -544,6 +563,36 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
             weights[i] = node->weights[i];
         }
         mRenderableManager.setMorphWeights(renderable, weights.data(), size);
+    }
+}
+
+void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh,
+        Entity entity, FFilamentInstance* instance) {
+    UvMap uvmap {};
+    for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
+        const cgltf_primitive* srcPrim = &mesh->primitives[prim];
+        for (size_t i = 0, m = srcPrim->mappings_count; i < m; i++) {
+            const size_t variantIndex = srcPrim->mappings[i].variant;
+            const cgltf_material* material = srcPrim->mappings[i].material;
+            assert_invariant(variantIndex < mResult->mVariants.size());
+            if (variantIndex >= mResult->mVariants.size()) {
+                mError = true;
+                break;
+            }
+            bool hasVertexColor = primitiveHasVertexColor(srcPrim);
+            MaterialInstance* mi = createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
+            assert_invariant(mi);
+            if (!mi) {
+                mError = true;
+                break;
+            }
+            mResult->mDependencyGraph.addEdge(entity, mi);
+            if (instance) {
+                instance->variants[variantIndex].mappings.push_back({entity, prim, mi});
+            } else {
+                mResult->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
+            }
+        }
     }
 }
 
@@ -1243,6 +1292,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             float reflectance = std::sqrt(f0 / 0.16f);
             mi->setParameter("reflectance", reflectance);
         }
+    }
+
+    if (mi->getMaterial()->hasParameter("emissiveStrength")) {
+        mi->setParameter("emissiveStrength", inputMat->has_emissive_strength ?
+                inputMat->emissive_strength.emissive_strength : 1.0f);
     }
 
     mResult->mMatInstanceCache[key] = {mi, *uvmap};

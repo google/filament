@@ -86,8 +86,8 @@ public:
             TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
-    // Renders all of the shadow maps.
-    void render(FrameGraph& fg, FEngine& engine, backend::DriverApi& driver,
+    // Renders all the shadow maps.
+    FrameGraphId<FrameGraphTexture> render(FrameGraph& fg, FEngine& engine, backend::DriverApi& driver,
             RenderPass const& pass, FView& view) noexcept;
 
     ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {
