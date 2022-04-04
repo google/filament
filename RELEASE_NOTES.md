@@ -9,8 +9,11 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.21.0
 
-- gltfio: add support for KHR_materials_variants
-- gltfio: add support for KHR_materials_emissive_strength
+- engine: OpenGL performance improvements with some drivers.
+- engine: Fix incorrect shadows with some custom projection matrices.
+- engine: Fix low frame rates seen with a lot of morph targets.
+- gltfio: Add support for KHR_materials_variants.
+- gltfio: Add support for KHR_materials_emissive_strength.
 - gltfio: Java now exposes morph target names as an array for consistency [⚠️ **API Change**].
 
 ## v1.20.5
