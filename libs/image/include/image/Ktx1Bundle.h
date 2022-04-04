@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef IMAGE_KTXBUNDLE_H
-#define IMAGE_KTXBUNDLE_H
+#ifndef IMAGE_KTX1BUNDLE_H
+#define IMAGE_KTX1BUNDLE_H
 
 #include <math/vec3.h>
 
@@ -48,7 +48,7 @@ struct KtxBlobList;
 struct KtxMetadata;
 
 /**
- * KtxBundle is a structured set of opaque data blobs that can be passed straight to the GPU, such
+ * Ktx1Bundle is a structured set of opaque data blobs that can be passed straight to the GPU, such
  * that a single bundle corresponds to a single texture object. It is well suited for storing
  * block-compressed texture data.
  *
@@ -63,22 +63,22 @@ struct KtxMetadata;
  *
  *     https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
  */
-class UTILS_PUBLIC KtxBundle {
+class UTILS_PUBLIC Ktx1Bundle {
 public:
 
-    ~KtxBundle();
+    ~Ktx1Bundle();
 
     /**
      * Creates a hierarchy of empty texture blobs, to be filled later via setBlob().
      */
-    KtxBundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap);
+    Ktx1Bundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap);
 
     /**
      * Creates a new bundle by deserializing the given data.
      *
      * Typically, this constructor is used to consume the contents of a KTX file.
      */
-    KtxBundle(uint8_t const* bytes, uint32_t nbytes);
+    Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes);
 
     /**
      * Serializes the bundle into the given target memory. Returns false if there's not enough
@@ -276,4 +276,4 @@ private:
 
 } // namespace image
 
-#endif /* IMAGE_KTXBUNDLE_H */
+#endif /* IMAGE_Ktx1Bundle_H */

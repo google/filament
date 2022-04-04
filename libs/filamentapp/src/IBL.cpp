@@ -23,8 +23,7 @@
 #include <filament/Skybox.h>
 #include <filament/Texture.h>
 
-#include <image/KtxBundle.h>
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include <filament-iblprefilter/IBLPrefilterContext.h>
 
@@ -39,8 +38,8 @@
 #include <string.h>
 
 using namespace filament;
-using namespace image;
 using namespace filament::math;
+using namespace ktxreader;
 using namespace utils;
 
 static constexpr float IBL_INTENSITY = 30000.0f;
@@ -128,14 +127,14 @@ bool IBL::loadFromKtx(const std::string& prefix) {
         using namespace std;
         ifstream file(path.getPath(), ios::binary);
         vector<uint8_t> contents((istreambuf_iterator<char>(file)), {});
-        return new image::KtxBundle(contents.data(), contents.size());
+        return new image::Ktx1Bundle(contents.data(), contents.size());
     };
 
-    KtxBundle* iblKtx = createKtx(iblPath);
-    KtxBundle* skyKtx = createKtx(skyPath);
+    Ktx1Bundle* iblKtx = createKtx(iblPath);
+    Ktx1Bundle* skyKtx = createKtx(skyPath);
 
-    mSkyboxTexture = ktx::createTexture(&mEngine, skyKtx, false);
-    mTexture = ktx::createTexture(&mEngine, iblKtx, false);
+    mSkyboxTexture = Ktx1Reader::createTexture(&mEngine, skyKtx, false);
+    mTexture = Ktx1Reader::createTexture(&mEngine, iblKtx, false);
 
     if (!iblKtx->getSphericalHarmonics(mBands)) {
         return false;

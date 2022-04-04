@@ -40,19 +40,20 @@ set(SRCS
 
 set(LIBS
         assimp
+        camutils
+        filagui
+        filamat
         filament
         filament-iblprefilter
+        geometry
+        getopt
+        image
+        imgui
+        ktxreader
+        math
         sdl2
         stb
-        math
-        filamat
         utils
-        getopt
-        imgui
-        filagui
-        image
-        camutils
-        geometry
 )
 
 set(MATERIAL_SRCS
