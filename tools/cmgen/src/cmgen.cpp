@@ -30,7 +30,7 @@
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
 
-#include <image/KtxBundle.h>
+#include <image/Ktx1Bundle.h>
 #include <image/ColorTransform.h>
 
 #include <utils/JobSystem.h>
@@ -137,7 +137,7 @@ static void UTILS_UNUSED outputSpectrum(std::ostream& out,
 static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
         const std::string& compression);
 static LinearImage toLinearImage(const Image& image);
-static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubemap& cm);
+static void exportKtxFaces(Ktx1Bundle& container, uint32_t miplevel, const Cubemap& cm);
 
 // -----------------------------------------------------------------------------------------------
 
@@ -936,14 +936,14 @@ void iblRoughnessPrefilter(
 
     // It's convenient to create an empty KTX bundle on the stack in this scope, regardless of
     // whether KTX is requested. It does not consume memory if empty.
-    KtxBundle container((uint32_t) numLevels, 1, true);
+    Ktx1Bundle container((uint32_t) numLevels, 1, true);
     container.info() = {
-        .endianness = KtxBundle::ENDIAN_DEFAULT,
-        .glType = KtxBundle::R11F_G11F_B10F,
+        .endianness = Ktx1Bundle::ENDIAN_DEFAULT,
+        .glType = Ktx1Bundle::R11F_G11F_B10F,
         .glTypeSize = 1,
-        .glFormat = KtxBundle::RGB,
-        .glInternalFormat = KtxBundle::R11F_G11F_B10F,
-        .glBaseInternalFormat = KtxBundle::R11F_G11F_B10F,
+        .glFormat = Ktx1Bundle::RGB,
+        .glInternalFormat = Ktx1Bundle::R11F_G11F_B10F,
+        .glBaseInternalFormat = Ktx1Bundle::R11F_G11F_B10F,
         .pixelWidth = 1U << baseExp,
         .pixelHeight = 1U << baseExp,
         .pixelDepth = 0,
@@ -1195,14 +1195,14 @@ void extractCubemapFaces(utils::JobSystem& js, const utils::Path& iname, const C
 
     if (g_type == OutputType::KTX) {
         const uint32_t dim = (const uint32_t) cm.getDimensions();
-        KtxBundle container(1, 1, true);
+        Ktx1Bundle container(1, 1, true);
         container.info() = {
-            .endianness = KtxBundle::ENDIAN_DEFAULT,
-            .glType = KtxBundle::R11F_G11F_B10F,
+            .endianness = Ktx1Bundle::ENDIAN_DEFAULT,
+            .glType = Ktx1Bundle::R11F_G11F_B10F,
             .glTypeSize = 1,
-            .glFormat = KtxBundle::RGB,
-            .glInternalFormat = KtxBundle::R11F_G11F_B10F,
-            .glBaseInternalFormat = KtxBundle::R11F_G11F_B10F,
+            .glFormat = Ktx1Bundle::RGB,
+            .glInternalFormat = Ktx1Bundle::R11F_G11F_B10F,
+            .glBaseInternalFormat = Ktx1Bundle::R11F_G11F_B10F,
             .pixelWidth = dim,
             .pixelHeight = dim,
             .pixelDepth = 0,
@@ -1268,7 +1268,7 @@ static void saveImage(const std::string& path, ImageEncoder::Format format, cons
     }
 }
 
-static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubemap& cm) {
+static void exportKtxFaces(Ktx1Bundle& container, uint32_t miplevel, const Cubemap& cm) {
     auto& info = container.info();
 
 #ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
@@ -1285,8 +1285,8 @@ static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubema
         info.glTypeSize = 1;
         info.glFormat = 0;
         // FIXME: not sure this is always correct to use RGB here, does this work with HDR formats?
-        info.glBaseInternalFormat = KtxBundle::RGB;
-        info.glInternalFormat = KtxBundle::RGB;
+        info.glBaseInternalFormat = Ktx1Bundle::RGB;
+        info.glInternalFormat = Ktx1Bundle::RGB;
     }
 #else
     if (!g_compression.empty()) {

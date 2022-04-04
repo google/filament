@@ -21,13 +21,15 @@
 
 #include <filameshio/MeshReader.h>
 
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include <sstream>
 
 // This file is generated via the "Run Script" build phase and contains the mesh, material, and IBL
 // textures this app uses.
 #include "resources.h"
+
+using namespace ktxreader;
 
 using namespace filament;
 using namespace filamesh;
@@ -46,15 +48,15 @@ void FilamentApp::initialize() {
 
     filaView = engine->createView();
 
-    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
+    image::Ktx1Bundle* iblBundle = new image::Ktx1Bundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
             RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     filament::math::float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
-    app.iblTexture = image::ktx::createTexture(engine, iblBundle, false);
+    app.iblTexture = Ktx1Reader::createTexture(engine, iblBundle, false);
 
-    image::KtxBundle* skyboxBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
+    image::Ktx1Bundle* skyboxBundle = new image::Ktx1Bundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
             RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_SIZE);
-    app.skyboxTexture = image::ktx::createTexture(engine, skyboxBundle, false);
+    app.skyboxTexture = Ktx1Reader::createTexture(engine, skyboxBundle, false);
 
     app.skybox = Skybox::Builder()
         .environment(app.skyboxTexture)

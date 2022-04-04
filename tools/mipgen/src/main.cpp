@@ -17,7 +17,7 @@
 #include <image/ColorTransform.h>
 #include <image/ImageOps.h>
 #include <image/ImageSampler.h>
-#include <image/KtxBundle.h>
+#include <image/Ktx1Bundle.h>
 #include <image/LinearImage.h>
 
 #ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
@@ -326,11 +326,11 @@ int main(int argc, char* argv[]) {
         // The libimage API does not include the original image in the mip array,
         // which might make sense when generating individual files, but for a KTX
         // bundle, we want to include level 0, so add 1 to the KTX level count.
-        KtxBundle container(1 + miplevels.size(), 1, false);
+        Ktx1Bundle container(1 + miplevels.size(), 1, false);
         auto& info = container.info();
         info = {
-            .endianness = KtxBundle::ENDIAN_DEFAULT,
-            .glType = KtxBundle::UNSIGNED_BYTE,
+            .endianness = Ktx1Bundle::ENDIAN_DEFAULT,
+            .glType = Ktx1Bundle::UNSIGNED_BYTE,
             .glTypeSize = 1,
             .pixelWidth = sourceImage.getWidth(),
             .pixelHeight = sourceImage.getHeight(),
@@ -338,14 +338,14 @@ int main(int argc, char* argv[]) {
         };
         size_t componentCount = sourceImage.getChannels();
         if (componentCount == 1) {
-            info.glFormat = info.glBaseInternalFormat = KtxBundle::RED;
-            info.glInternalFormat = KtxBundle::R8;
+            info.glFormat = info.glBaseInternalFormat = Ktx1Bundle::RED;
+            info.glInternalFormat = Ktx1Bundle::R8;
         } else if (componentCount == 3) {
-            info.glFormat = info.glBaseInternalFormat = KtxBundle::RGB;
-            info.glInternalFormat = KtxBundle::RGB8;
+            info.glFormat = info.glBaseInternalFormat = Ktx1Bundle::RGB;
+            info.glInternalFormat = Ktx1Bundle::RGB8;
         } else if (componentCount == 4) {
-            info.glFormat = info.glBaseInternalFormat = KtxBundle::RGBA;
-            info.glInternalFormat = KtxBundle::RGBA8;
+            info.glFormat = info.glBaseInternalFormat = Ktx1Bundle::RGBA;
+            info.glInternalFormat = Ktx1Bundle::RGBA8;
         }
 #ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
         CompressionConfig config {};

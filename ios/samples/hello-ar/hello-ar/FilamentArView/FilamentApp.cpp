@@ -26,7 +26,7 @@
 
 #include <filameshio/MeshReader.h>
 #include <geometry/SurfaceOrientation.h>
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include <sstream>
 
@@ -35,6 +35,7 @@
 #include "resources.h"
 
 using namespace filamesh;
+using namespace ktxreader;
 
 static constexpr float OBJECT_SCALE = 0.02f;
 
@@ -205,11 +206,11 @@ void FilamentApp::setupFilament() {
 }
 
 void FilamentApp::setupIbl() {
-    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
+    image::Ktx1Bundle* iblBundle = new image::Ktx1Bundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
                                                        RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
-    app.iblTexture = image::ktx::createTexture(engine, iblBundle, false);
+    app.iblTexture = Ktx1Reader::createTexture(engine, iblBundle, false);
 
     app.indirectLight = IndirectLight::Builder()
         .reflections(app.iblTexture)
