@@ -79,8 +79,6 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
     // Performs the rendering and schedules new frames
     private val frameScheduler = FrameCallback()
 
-    private var externalTextureID: Int = 0
-
     @RequiresApi(30)
     class Api30Impl {
         companion object {
@@ -103,8 +101,6 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         setupView()
         setupScene()
 
-        externalTextureID = createExternalTexture()
-
         @Suppress("deprecation")
         val display = if (Build.VERSION.SDK_INT >= 30) {
             Api30Impl.getDisplay(this)
@@ -112,7 +108,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
             windowManager.defaultDisplay!!
         }
 
-        streamHelper = StreamHelper(engine, materialInstance, display, externalTextureID)
+        streamHelper = StreamHelper(engine, materialInstance, display)
         this.title = streamHelper.getTestName()
     }
 
@@ -445,31 +441,4 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         check(EGL14.eglMakeCurrent(display, surface, surface, context)) { "Error making GL context." }
         return context
     }
-
-    private  fun createExternalTexture(): Int {
-        val textures = IntArray(1)
-        GLES30.glGenTextures(1, textures, 0)
-        val result = textures[0]
-
-        val textureTarget = GLES11Ext.GL_TEXTURE_EXTERNAL_OES
-        GLES30.glBindTexture(textureTarget, result)
-        GLES30.glTexParameteri(textureTarget, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
-        GLES30.glTexParameteri(textureTarget, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
-        GLES30.glTexParameteri(textureTarget, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST)
-        GLES30.glTexParameteri(textureTarget, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST)
-
-        if (!GLES30.glIsTexture(result)) {
-            throw RuntimeException("OpenGL error: $result is an invalid texture.")
-        }
-
-        val error = GLES30.glGetError()
-        if (error != GLES30.GL_NO_ERROR) {
-            val errorString = GLU.gluErrorString(error)
-            throw RuntimeException("OpenGL error: $errorString!")
-        }
-
-        return result
-    }
-
-
 }

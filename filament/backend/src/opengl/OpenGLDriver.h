@@ -145,7 +145,6 @@ public:
     };
 
     struct GLStream : public HwStream {
-        static constexpr size_t ROUND_ROBIN_TEXTURE_COUNT = 3;      // 3 maximum
         using HwStream::HwStream;
         struct Info {
             // storage for the read/write textures below
@@ -153,29 +152,11 @@ public:
             GLuint width = 0;
             GLuint height = 0;
         };
-        struct {
-            // id of the texture where the external frames are streamed (i.e. the texture
-            // used by SurfaceTexture on Android)
-            GLuint externalTextureId = 0;
-
-            /*
-             * This is for making a cpu copy of the camera frame
-             */
-            GLuint externalTexture2DId = 0;
-            GLuint fbo = 0;
-        } gl;   // 20 bytes
-
-
         /*
          * The fields below are accessed from the main application thread
          * (not the GL thread)
          */
         struct {
-            // texture id used to texture from, always used in the GL thread
-            GLuint read[ROUND_ROBIN_TEXTURE_COUNT];     // 12 bytes
-            // texture id to write into, always used from the user thread
-            GLuint write[ROUND_ROBIN_TEXTURE_COUNT];    // 12 bytes
-            Info infos[ROUND_ROBIN_TEXTURE_COUNT];      // 48 bytes
             int64_t timestamp = 0;
             uint8_t cur = 0;
             AcquiredImage acquired;
@@ -375,8 +356,6 @@ private:
 
     OpenGLPlatform& mPlatform;
 
-    OpenGLBlitter* mOpenGLBlitter = nullptr;
-    void updateStreamTexId(GLTexture* t, DriverApi* driver) noexcept;
     void updateStreamAcquired(GLTexture* t, DriverApi* driver) noexcept;
     void updateBuffer(GLBufferObject* buffer, BufferDescriptor const& p,
             uint32_t byteOffset, uint32_t alignment = 16) noexcept;

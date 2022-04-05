@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.21.2
 
+- remove deprecated `Stream` APIs, see `Texture::import()` for an alternative [⚠️ **API Change**].
+
 ## v1.21.1
 
 - engine: Allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].

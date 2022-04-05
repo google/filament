@@ -82,15 +82,6 @@ public:
     virtual void detach(Stream* stream) noexcept = 0;
     virtual void updateTexImage(Stream* stream, int64_t* timestamp) noexcept = 0;
 
-    // external texture storage
-    virtual ExternalTexture* createExternalTextureStorage() noexcept = 0;
-
-    // this is called synchronously in the application thread (NOT the Driver thread)
-    virtual void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, TextureFormat format) noexcept = 0;
-
-    virtual void destroyExternalTextureStorage(ExternalTexture* ets) noexcept = 0;
-
     // The method allows platforms to convert a user-supplied external image object into a new type
     // (e.g. HardwareBuffer => EGLImage). It makes sense for the default implementation to do nothing.
     virtual AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept { return source; }

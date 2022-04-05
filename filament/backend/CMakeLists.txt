@@ -65,8 +65,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/gl_headers.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
-            src/opengl/OpenGLBlitter.cpp
-            src/opengl/OpenGLBlitter.h
             src/opengl/OpenGLContext.cpp
             src/opengl/OpenGLContext.h
             src/opengl/OpenGLDriver.cpp
@@ -89,7 +87,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     endif ()
     if (ANDROID)
         list(APPEND SRCS src/opengl/platforms/ExternalStreamManagerAndroid.cpp)
-        list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
         list(APPEND SRCS src/opengl/platforms/PlatformEGLAndroid.cpp)
     elseif (IOS)
         list(APPEND SRCS src/opengl/platforms/PlatformCocoaTouchGL.mm)

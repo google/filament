@@ -359,10 +359,6 @@ void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     construct_handle<MetalSwapChain>(sch, *mContext, width, height, flags);
 }
 
-void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
-        uint32_t width, uint32_t height) {
-}
-
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
@@ -429,10 +425,6 @@ Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
 
 Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
     return alloc_handle<MetalSwapChain>();
-}
-
-Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {
-    return {};
 }
 
 Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
@@ -1051,11 +1043,6 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                         mipmapLevel:0];
         scheduleDestroy(std::move(*p));
     }];
-}
-
-void MetalDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, PixelBufferDescriptor&& data) {
-
 }
 
 void MetalDriver::blit(TargetBufferFlags buffers,
