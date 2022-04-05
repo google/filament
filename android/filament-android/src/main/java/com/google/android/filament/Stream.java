@@ -103,9 +103,6 @@ public class Stream {
         /** Not synchronized but copy-free. Good for video. */
         NATIVE,
 
-        /** Synchronized, but GL-only and incurs copies. Good for AR on devices before API 26. */
-        TEXTURE_ID,
-
         /** Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+. */
         ACQUIRED,
     };
@@ -121,7 +118,7 @@ public class Stream {
      * By default, Stream objects are {@link StreamType#ACQUIRED ACQUIRED} and must have external images pushed to them via
      * {@link #setAcquiredImage}.
      *
-     * To create a {@link StreamType#NATIVE NATIVE} or {@link StreamType#TEXTURE_ID TEXTURE_ID} stream, call one of the <pre>stream</pre> methods
+     * To create a {@link StreamType#NATIVE NATIVE} stream, call one of the <pre>stream</pre> methods
      * on the builder.
      */
     public static class Builder {
@@ -154,27 +151,6 @@ public class Stream {
                 return this;
             }
             throw new IllegalArgumentException("Invalid stream source: " + streamSource);
-        }
-
-        /**
-         * Creates a {@link StreamType#TEXTURE_ID TEXTURE_ID} stream. A copy stream will sample data from the supplied
-         * external texture and copy it into an internal private texture.
-         *
-         * <p>Currently only OpenGL external texture ids are supported.</p>
-         *
-         * @param externalTextureId An opaque texture id (typically a GLuint created with
-         *                          <code>glGenTextures()</code>) in a context shared with
-         *                          filament -- in that case this texture's target must be
-         *                          <code>GL_TEXTURE_EXTERNAL_OES.</code>
-         * @return This Builder, for chaining calls.
-         * @see Texture#setExternalStream
-         * @deprecated this method existed only for ARCore which doesn't need this anymore, use {@link Texture.Builder#importTexture(long)} instead.
-         */
-        @Deprecated
-        @NonNull
-        public Builder stream(long externalTextureId) {
-            nBuilderStream(mNativeBuilder, externalTextureId);
-            return this;
         }
 
         /**
@@ -277,92 +253,6 @@ public class Stream {
     }
 
     /**
-     * Reads back the content of the last frame of a <code>Stream</code> since the last call to
-     * {@link Renderer#beginFrame}.
-     *
-     * <p>The Stream must be a copy stream, which can be checked with {@link #getStreamType()}.
-     * This function is a no-op otherwise.</p>
-     *
-     * <pre>
-     *
-     *  Stream buffer                  User buffer (PixelBufferDescriptor)
-     *  +--------------------+
-     *  |                    |                .stride         .alignment
-     *  |                    |         ----------------------->-->
-     *  |                    |         O----------------------+--+   low addresses
-     *  |                    |         |          |           |  |
-     *  |             w      |         |          | .top      |  |
-     *  |       <--------->  |         |          V           |  |
-     *  |       +---------+  |         |     +---------+      |  |
-     *  |       |     ^   |  | ======> |     |         |      |  |
-     *  |   x   |    h|   |  |         |.left|         |      |  |
-     *  +------>|     v   |  |         +---->|         |      |  |
-     *  |       +.........+  |         |     +.........+      |  |
-     *  |            ^       |         |                      |  |
-     *  |          y |       |         +----------------------+--+  high addresses
-     *  O------------+-------+
-     *
-     * </pre>
-     *
-     * <p>Typically readPixels() will be called after {@link Renderer#beginFrame}.</p>
-     *
-     * <p>After calling this method, the callback associated with <code>buffer</code>
-     * will be invoked on the main thread, indicating that the read-back has completed.
-     * Typically, this will happen after multiple calls to {@link Renderer#beginFrame},
-     * {@link Renderer#render}, {@link Renderer#endFrame}.</p>
-     *
-     * <p><code>readPixels</code> is intended for debugging and testing.
-     * It will impact performance significantly.</p>
-     *
-     * @param xoffset   left offset of the sub-region to read back
-     * @param yoffset   bottom offset of the sub-region to read back
-     * @param width     width of the sub-region to read back
-     * @param height    height of the sub-region to read back
-     * @param buffer    client-side buffer where the read-back will be written
-     *
-     *                  <p>
-     *                  The following format are always supported:
-     *                      <li>{@link Texture.Format#RGBA}</li>
-     *                      <li>{@link Texture.Format#RGBA_INTEGER}</li>
-     *                  </p>
-     *
-     *                  <p>
-     *                  The following types are always supported:
-     *                      <li>{@link Texture.Type#UBYTE}</li>
-     *                      <li>{@link Texture.Type#UINT}</li>
-     *                      <li>{@link Texture.Type#INT}</li>
-     *                      <li>{@link Texture.Type#FLOAT}</li>
-     *                  </p>
-     *
-     *                  <p>Other combination of format/type may be supported. If a combination is
-     *                  not supported, this operation may fail silently. Use a DEBUG build
-     *                  to get some logs about the failure.</p>
-     *
-     * @exception BufferOverflowException if the specified parameters would result in reading
-     * outside of <code>buffer</code>.
-     */
-    public void readPixels(
-            @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
-            @IntRange(from = 0) int width, @IntRange(from = 0) int height,
-            @NonNull Texture.PixelBufferDescriptor buffer) {
-
-        if (buffer.storage.isReadOnly()) {
-            throw new ReadOnlyBufferException();
-        }
-
-        int result = nReadPixels(getNativeObject(), mNativeEngine,
-                xoffset, yoffset, width, height,
-                buffer.storage, buffer.storage.remaining(),
-                buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
-                buffer.stride, buffer.format.ordinal(),
-                buffer.handler, buffer.callback);
-
-        if (result < 0) {
-            throw new BufferOverflowException();
-        }
-    }
-
-    /**
      * Returns the presentation time of the currently displayed frame in nanosecond.
      *
      * This value can change at any time.
@@ -387,7 +277,6 @@ public class Stream {
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeStreamBuilder);
     private static native void nBuilderStreamSource(long nativeStreamBuilder, Object streamSource);
-    private static native void nBuilderStream(long nativeStreamBuilder, long externalTextureId);
     private static native void nBuilderWidth(long nativeStreamBuilder, int width);
     private static native void nBuilderHeight(long nativeStreamBuilder, int height);
     private static native long nBuilderBuild(long nativeStreamBuilder, long nativeEngine);

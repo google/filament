@@ -62,11 +62,6 @@ public:
     void detach(Stream* stream) noexcept override {}
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override {}
 
-    ExternalTexture* createExternalTextureStorage() noexcept override { return nullptr; }
-    void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, TextureFormat format) noexcept override {}
-    void destroyExternalTextureStorage(ExternalTexture* ets) noexcept override {}
-
 protected:
     static void logEglError(const char* name) noexcept;
 

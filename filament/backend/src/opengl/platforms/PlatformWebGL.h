@@ -52,11 +52,6 @@ public:
     void detach(Stream* stream) noexcept final override {}
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final override {}
 
-    ExternalTexture* createExternalTextureStorage() noexcept final override { return nullptr; }
-    void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, TextureFormat format) noexcept final override { }
-    void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override { }
-
     int getOSVersion() const noexcept final override { return 0; }
 };
 

@@ -20,7 +20,6 @@
 #include "private/backend/OpenGLPlatform.h"
 
 #include "CommandStreamDispatcher.h"
-#include "OpenGLBlitter.h"
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
 #include "OpenGLTimerQuery.h"
@@ -168,13 +167,6 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     slog.i << "OS version: " << mPlatform.getOSVersion() << io::endl;
 #endif
 
-    // Initialize the blitter only if we have OES_EGL_image_external_essl3
-    if (mContext.ext.OES_EGL_image_external_essl3) {
-        mOpenGLBlitter = new OpenGLBlitter(mContext);
-        mOpenGLBlitter->init();
-        mContext.resetProgram();
-    }
-
     if (mContext.ext.EXT_disjoint_timer_query ||
             BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // timer queries are available
@@ -197,7 +189,6 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
 }
 
 OpenGLDriver::~OpenGLDriver() noexcept {
-    delete mOpenGLBlitter;
 }
 
 Dispatcher OpenGLDriver::getDispatcher() const noexcept {
@@ -223,9 +214,6 @@ void OpenGLDriver::terminate() {
         glDeleteSamplers(1, &item.second);
     }
     mSamplerMap.clear();
-    if (mOpenGLBlitter) {
-        mOpenGLBlitter->terminate();
-    }
 
     delete mTimerQueryImpl;
 
@@ -379,10 +367,6 @@ Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
     return initHandle<HwSwapChain>();
-}
-
-Handle<HwStream> OpenGLDriver::createStreamFromTextureIdS() noexcept {
-    return initHandle<GLStream>();
 }
 
 Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
@@ -1137,24 +1121,6 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
 }
 
-void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
-        intptr_t externalTextureId, uint32_t width, uint32_t height) {
-    DEBUG_MARKER()
-
-    GLStream* s = handle_cast<GLStream*>(sh);
-    // It would be better if we could query the externalTextureId size, unfortunately
-    // this is not supported in GL for GL_TEXTURE_EXTERNAL_OES targets
-    s->width = width;
-    s->height = height;
-    s->gl.externalTextureId = static_cast<GLuint>(externalTextureId);
-    s->streamType = StreamType::TEXTURE_ID;
-    glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
-    glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
-    for (auto& info : s->user_thread.infos) {
-        info.ets = mPlatform.createExternalTextureStorage();
-    }
-}
-
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     DEBUG_MARKER()
 
@@ -1301,15 +1267,6 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
         }
         if (s->streamType == StreamType::NATIVE) {
             mPlatform.destroyStream(s->stream);
-        } else if (s->streamType == StreamType::TEXTURE_ID) {
-            glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
-            glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
-            if (s->gl.fbo) {
-                glDeleteFramebuffers(1, &s->gl.fbo);
-            }
-            for (auto const& info : s->user_thread.infos) {
-                mPlatform.destroyExternalTextureStorage(info.ets);
-            }
         }
         destruct(sh, s);
     }
@@ -1368,7 +1325,6 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
 
 void OpenGLDriver::updateStreams(DriverApi* driver) {
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
-        OpenGLBlitter::State state;
         for (GLTexture* t : mExternalStreams) {
             assert_invariant(t);
 
@@ -1377,11 +1333,6 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
                 // this can happen because we're called synchronously and the setExternalStream()
                 // call may not have been processed yet.
                 continue;
-            }
-
-            if (s->streamType == StreamType::TEXTURE_ID) {
-                state.setup();
-                updateStreamTexId(t, driver);
             }
 
             if (s->streamType == StreamType::ACQUIRED) {
@@ -2080,19 +2031,11 @@ void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) 
 
 UTILS_NOINLINE
 void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
-    auto& gl = mContext;
     mExternalStreams.push_back(t);
 
     switch (hwStream->streamType) {
         case StreamType::NATIVE:
             mPlatform.attach(hwStream->stream, t->gl.id);
-            break;
-        case StreamType::TEXTURE_ID:
-            assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
-            // The texture doesn't need a texture name anymore, get rid of it
-            gl.unbindTexture(t->gl.target, t->gl.id);
-            glDeleteTextures(1, &t->gl.id);
-            t->gl.id = hwStream->user_thread.read[hwStream->user_thread.cur];
             break;
         case StreamType::ACQUIRED:
             break;
@@ -2114,8 +2057,6 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
         case StreamType::NATIVE:
             mPlatform.detach(t->hwStream->stream);
             // ^ this deletes the texture id
-            break;
-        case StreamType::TEXTURE_ID:
             break;
         case StreamType::ACQUIRED:
             gl.unbindTexture(t->gl.target, t->gl.id);
@@ -2141,7 +2082,6 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
             mPlatform.detach(texture->hwStream->stream);
             // ^ this deletes the texture id
             break;
-        case StreamType::TEXTURE_ID:
         case StreamType::ACQUIRED:
             break;
     }
@@ -2150,10 +2090,6 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
         case StreamType::NATIVE:
             glGenTextures(1, &texture->gl.id);
             mPlatform.attach(newStream->stream, texture->gl.id);
-            break;
-        case StreamType::TEXTURE_ID:
-            assert_invariant(texture->target == SamplerType::SAMPLER_EXTERNAL);
-            texture->gl.id = newStream->user_thread.read[newStream->user_thread.cur];
             break;
         case StreamType::ACQUIRED:
             // Just re-use the old texture id.
@@ -2522,179 +2458,6 @@ void OpenGLDriver::updateStreamAcquired(GLTexture* gltexture, DriverApi* driver)
             scheduleRelease(AcquiredImage(previousImage));
         }
     });
-}
-
-#define DEBUG_NO_EXTERNAL_STREAM_COPY false
-
-void OpenGLDriver::updateStreamTexId(GLTexture* t, DriverApi* driver) noexcept {
-    SYSTRACE_CALL();
-    auto& gl = mContext;
-
-    GLStream* s = static_cast<GLStream*>(t->hwStream);
-    assert_invariant(s);
-    assert_invariant(s->streamType == StreamType::TEXTURE_ID);
-
-    // round-robin to the next texture name
-    if (UTILS_UNLIKELY(DEBUG_NO_EXTERNAL_STREAM_COPY ||
-                       gl.bugs.disable_shared_context_draws || !mOpenGLBlitter)) {
-        driver->queueCommand([this, t, s]() {
-            // the stream may have been destroyed since we enqueued the command
-            // also make sure that this texture is still associated with the same stream
-            auto& streams = mExternalStreams;
-            if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
-                    (t->hwStream == s)) {
-                t->gl.id = s->gl.externalTextureId;
-            }
-        });
-    } else {
-        s->user_thread.cur = uint8_t(
-                (s->user_thread.cur + 1) % GLStream::ROUND_ROBIN_TEXTURE_COUNT);
-        GLuint writeTexture = s->user_thread.write[s->user_thread.cur];
-        GLuint readTexture = s->user_thread.read[s->user_thread.cur];
-
-        // Make sure we're using the proper size
-        GLStream::Info& info = s->user_thread.infos[s->user_thread.cur];
-        if (UTILS_UNLIKELY(info.width != s->width || info.height != s->height)) {
-
-            // nothing guarantees that this buffer is free (i.e. has been consumed by the
-            // GL thread), so we could potentially cause a glitch by reallocating the
-            // texture here. This should be very rare though.
-            // This could be fixed by always using a new temporary texture here, and
-            // replacing it in the queueCommand() below. imho, not worth it.
-
-            info.width = s->width;
-            info.height = s->height;
-
-            Platform::ExternalTexture* ets = s->user_thread.infos[s->user_thread.cur].ets;
-            mPlatform.reallocateExternalStorage(ets, info.width, info.height, TextureFormat::RGB8);
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, writeTexture);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, readTexture);
-#ifdef GL_OES_EGL_image
-            glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)ets->image);
-            glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, (GLeglImageOES)ets->image);
-#endif
-        }
-
-        // copy the texture...
-#ifndef NDEBUG
-        if (t->gl.fence) {
-            // we're about to overwrite a buffer that hasn't been consumed
-            slog.d << "OpenGLDriver::updateStream(): about to overwrite buffer " <<
-                   int(s->user_thread.cur) << " of Texture at " << t << " of Stream at " << s
-                   << io::endl;
-        }
-#endif
-        mOpenGLBlitter->blit(s->gl.externalTextureId, writeTexture, s->width, s->height);
-
-        // We need a fence to guarantee that this copy has happened when we need the texture
-        // in OpenGLProgram::updateSamplers(), i.e. when we bind textures just before use.
-        GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-        // Per https://www.khronos.org/opengl/wiki/Sync_Object, flush to make sure that the
-        // sync object is in the driver's command queue.
-        glFlush();
-
-        // Update the stream timestamp. It's not clear to me that this is correct; which
-        // timestamp do we really want? Here we use "now" because we have nothing else we
-        // can use.
-        s->user_thread.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
-
-        driver->queueCommand([this, t, s, fence, readTexture, writeTexture]() {
-            // the stream may have been destroyed since we enqueued the command
-            // also make sure that this texture is still associated with the same stream
-            auto& streams = mExternalStreams;
-            if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
-                (t->hwStream == s)) {
-                if (UTILS_UNLIKELY(t->gl.fence)) {
-                    // if the texture still has a fence set, destroy it now, so it's not leaked.
-                    glDeleteSync(t->gl.fence);
-                }
-                t->gl.id = readTexture;
-                t->gl.fence = fence;
-                s->gl.externalTexture2DId = writeTexture;
-            } else {
-                glDeleteSync(fence);
-            }
-        });
-    }
-}
-
-void OpenGLDriver::readStreamPixels(Handle<HwStream> sh,
-        uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& p) {
-    DEBUG_MARKER()
-    auto& gl = mContext;
-
-    GLStream* s = handle_cast<GLStream*>(sh);
-
-    if (UTILS_UNLIKELY(s->streamType == StreamType::ACQUIRED)) {
-        PANIC_LOG("readStreamPixels with ACQUIRED streams is not yet implemented.");
-        return;
-    }
-
-    if (UTILS_LIKELY(s->streamType == StreamType::TEXTURE_ID)) {
-        GLuint tid = s->gl.externalTexture2DId;
-        if (tid == 0) {
-            return;
-        }
-
-        GLenum glFormat = getFormat(p.format);
-        GLenum glType = getType(p.type);
-
-        gl.pixelStore(GL_PACK_ROW_LENGTH, p.stride);
-        gl.pixelStore(GL_PACK_ALIGNMENT, p.alignment);
-        gl.pixelStore(GL_PACK_SKIP_PIXELS, p.left);
-        gl.pixelStore(GL_PACK_SKIP_ROWS, p.top);
-
-        if (s->gl.fbo == 0) {
-            glGenFramebuffers(1, &s->gl.fbo);
-        }
-        gl.bindFramebuffer(GL_FRAMEBUFFER, s->gl.fbo);
-
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tid, 0);
-        CHECK_GL_ERROR(utils::slog.e)
-
-        /*
-         * It looks like glReadPixels() behaves differently, or even wrongly,
-         * when the FBO is backed by an EXTERNAL texture...
-         *
-         *
-         *  External texture FBO           User buffer
-         *
-         *  O---+----------------+
-         *  |   |                |                .stride         .alignment
-         *  |   |                |         ----------------------->-->
-         *  |   | y              |         O----------------------+--+   low adresses
-         *  |   |                |         |          |           |  |
-         *  |   |         w      |         |          | .bottom   |  |
-         *  |   V   <--------->  |         |          V           |  |
-         *  |       +---------+  |         |     +---------+      |  |
-         *  |       |     ^   |  | ======> |     |         |      |  |
-         *  |   x   |    h|   |  |         |.left|         |      |  |
-         *  +------>|     v   |  |         +---->|         |      |  |
-         *  |       +.........+  |         |     +.........+      |  |
-         *  |                    |         |                      |  |
-         *  |                    |         +----------------------+--+  high adresses
-         *  +--------------------+
-         *
-         *  Origin is at the                The image is NOT y-reversed
-         *  top-left corner                 and bottom is counted from
-         *                                  the top! "bottom" is in fact treated
-         *                                  as "top".
-         */
-
-        // The filament API provides yoffset as the "bottom" offset, therefore it needs to
-        // be corrected to match glReadPixels()'s behavior.
-        y = (s->height - height) - y;
-
-        // TODO: we could use a PBO to make this asynchronous
-        glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, p.buffer);
-        CHECK_GL_ERROR(utils::slog.e)
-
-        gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
-        scheduleDestroy(std::move(p));
-    }
 }
 
 // ------------------------------------------------------------------------------------------------

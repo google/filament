@@ -788,7 +788,6 @@ enum class BlendFunction : uint8_t {
 //! Stream for external textures
 enum class StreamType {
     NATIVE,     //!< Not synchronized but copy-free. Good for video.
-    TEXTURE_ID, //!< Synchronized, but GL-only and incurs copies. Good for AR on devices before API 26.
     ACQUIRED,   //!< Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+.
 };
 

@@ -608,10 +608,6 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     construct<VulkanSwapChain>(sch, mContext, mStagePool, width, height);
 }
 
-void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
-        uint32_t width, uint32_t height) {
-}
-
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
@@ -676,10 +672,6 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
     return allocHandle<VulkanSwapChain>();
-}
-
-Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
-    return {};
 }
 
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
@@ -1627,11 +1619,6 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     });
 
     scheduleDestroy(std::move(pbd));
-}
-
-void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, PixelBufferDescriptor&& p) {
-    scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,

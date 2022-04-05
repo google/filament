@@ -37,7 +37,6 @@ class StreamHelper(
     private val filamentEngine: Engine,
     private val filamentMaterial: MaterialInstance,
     private val display: Display,
-    private val externalTextureId: Int
 ) {
     /**
      * The StreamSource configures the source data for the texture.
@@ -51,7 +50,6 @@ class StreamHelper(
      */
     enum class StreamSource {
         CANVAS_STREAM_NATIVE,     // copy-free but does not guarantee synchronization
-        CANVAS_STREAM_TEXID,      // synchronized but incurs a copy
         CANVAS_STREAM_ACQUIRED,   // synchronized and copy-free
     }
 
@@ -127,10 +125,6 @@ class StreamHelper(
 
             surface.unlockCanvasAndPost(canvas)
 
-            if (streamSource == StreamSource.CANVAS_STREAM_TEXID) {
-                surfaceTexture!!.updateTexImage()
-            }
-
             if (streamSource == StreamSource.CANVAS_STREAM_ACQUIRED) {
                 val image = imageReader!!.acquireLatestImage()
                 filamentStream!!.setAcquiredImage(
@@ -146,7 +140,7 @@ class StreamHelper(
 
     fun nextTest() {
         stopTest()
-        streamSource = StreamSource.values()[(streamSource.ordinal + 1) % 3]
+        streamSource = StreamSource.values()[(streamSource.ordinal + 1) % StreamSource.values().size]
         startTest()
     }
 
@@ -208,23 +202,6 @@ class StreamHelper(
             // Create the Filament Stream object that gets bound to the Texture.
             filamentStream = Stream.Builder()
                     .stream(surfaceTexture!!)
-                    .build(filamentEngine)
-
-            filamentTexture.setExternalStream(filamentEngine, filamentStream!!)
-        }
-
-        if (streamSource == StreamSource.CANVAS_STREAM_TEXID) {
-
-            // Create the Android surface that will hold the canvas image.
-            surfaceTexture = SurfaceTexture(externalTextureId)
-            surfaceTexture!!.setDefaultBufferSize(resolution.width, resolution.height)
-            canvasSurface = Surface(surfaceTexture)
-
-            // Create the Filament Stream object that gets bound to the Texture.
-            filamentStream = Stream.Builder()
-                    .stream(externalTextureId.toLong())
-                    .width(resolution.width)
-                    .height(resolution.height)
                     .build(filamentEngine)
 
             filamentTexture.setExternalStream(filamentEngine, filamentStream!!)

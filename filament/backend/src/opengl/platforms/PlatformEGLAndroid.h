@@ -22,7 +22,6 @@
 namespace filament::backend {
 
 class ExternalStreamManagerAndroid;
-class ExternalTextureManagerAndroid;
 
 class PlatformEGLAndroid final : public PlatformEGL {
 public:
@@ -44,17 +43,11 @@ public:
     void detach(Stream* stream) noexcept final;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final;
 
-    ExternalTexture* createExternalTextureStorage() noexcept final;
-    void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, TextureFormat format) noexcept final;
-    void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final;
-
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept final;
 
 private:
     int mOSVersion;
     ExternalStreamManagerAndroid& mExternalStreamManager;
-    ExternalTextureManagerAndroid& mExternalTextureManager;
 };
 
 } // namespace filament::backend
