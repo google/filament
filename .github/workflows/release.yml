@@ -50,6 +50,7 @@ jobs:
           cd build/$WORKFLOW_OS && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
+          pip3 install wheel
           pip3 install setuptools
           pip3 install PyGithub
           if [ -f out/filament-release-darwin.tgz ]; then mv out/filament-release-darwin.tgz out/filament-${TAG}-mac.tgz; fi;
@@ -80,6 +81,7 @@ jobs:
           cd build/web && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
+          pip3 install wheel
           pip3 install setuptools
           pip3 install PyGithub
           mv out/filament-release-web.tgz out/filament-${TAG}-web.tgz
@@ -123,6 +125,7 @@ jobs:
           APK_KEYSTORE_PASS: ${{ secrets.APK_KEYSTORE_PASS }}
       - name: Upload release assets
         run: |
+          pip3 install wheel
           pip3 install setuptools
           pip3 install PyGithub
           mv out/filament-android-release.aar out/filament-${TAG}-android.aar
@@ -157,6 +160,7 @@ jobs:
           cd build/ios && printf "y" | ./build.sh release
       - name: Upload release assets
         run: |
+          pip3 install wheel
           pip3 install setuptools
           pip3 install PyGithub
           mv out/filament-release-ios.tgz out/filament-${TAG}-ios.tgz
