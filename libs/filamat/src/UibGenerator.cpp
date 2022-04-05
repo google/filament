@@ -118,13 +118,12 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("iblTechnique",            1, UniformInterfaceBlock::Type::UINT)
 
             .add("iblTintAndIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
-            .add("iblTintParams",           1, UniformInterfaceBlock::Type::FLOAT4)        
 
             // this is a mat3, but in struct PerViewUib is a mat4 for std140 compliance
             .add("iblRotation",             1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
 
             // bring PerViewUib to 2 KiB
-            .add("arrayPadding", 50, UniformInterfaceBlock::Type::FLOAT4)
+            .add("arrayPadding", 51, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

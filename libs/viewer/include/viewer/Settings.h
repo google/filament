@@ -201,7 +201,7 @@ struct ViewerOptions {
     float groundShadowStrength = 0.75f;
     bool groundPlaneEnabled = false;
     bool skyboxEnabled = true;
-    sRGBColor backgroundColor = { 0.0f };
+    sRGBColor backgroundColor = { 1.0f };
     float cameraFocalLength = 28.0f;
     float cameraFocusDistance = 10.0f;
     bool autoScaleEnabled = true;

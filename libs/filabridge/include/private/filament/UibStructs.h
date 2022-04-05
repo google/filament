@@ -138,12 +138,10 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     math::float4 iblTintAndIntensity; // .rgb is IBL tint, .a is the intensity of the tint
 
-    math::float4 iblTintParams; 
-
     math::mat4f iblRotation; // contains the IBL's rotation
 
     // bring PerViewUib to 2 KiB
-    math::float4 arrayPadding[50];
+    math::float4 arrayPadding[51];
 };
 
 // 2 KiB == 128 float4s

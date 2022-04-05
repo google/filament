@@ -149,16 +149,18 @@ vec3 zUpToIblDirection(vec3 r) {
 }
 
 float OverlayBlend(float a, float b) {
-    // Visually almost luminance preserving formulation
-    float T = frameUniforms.iblTintParams.y;
-    return (a < T) ? a / T * b : a - T + b;
+    // Visually almost-luminance-preserving formulation. This uses an artist-provided constant below
+    // that they've found the visually most pleasing under _most_ (but not all) circumstances.
+    const float kT = 0.65;
+    const float kOneOverT = 1.0 / kT;
+    return (a < kT) ? a * kOneOverT * b : a - kT + b;
 }
 vec3 OverlayBlend(vec3 a, vec3 b) {
-    return vec3(OverlayBlend(a.x, b.x), OverlayBlend(a.y, b.y), OverlayBlend(a.z, b.z) );
+    return vec3(OverlayBlend(a.x, b.x), OverlayBlend(a.y, b.y), OverlayBlend(a.z, b.z));
 }
 
 vec3 TintIbl(vec3 color) {
-    return mix( color, OverlayBlend(color, frameUniforms.iblTintAndIntensity.rgb), frameUniforms.iblTintAndIntensity.w );
+    return mix(color, OverlayBlend(color, frameUniforms.iblTintAndIntensity.rgb), frameUniforms.iblTintAndIntensity.w);
 }
 
 float perceptualRoughnessToLod(float perceptualRoughness) {
