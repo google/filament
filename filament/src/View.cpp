@@ -319,6 +319,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     }
 
     mPerViewUniforms.prepareAmbientLight(*ibl, intensity, exposure);
+    mPerViewUniforms.prepareIblLight(ibl->getIblOptions());
 
     /*
      * Directional light (always at index 0)
