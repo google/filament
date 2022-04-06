@@ -12,7 +12,9 @@ textures.</p>
 <a href="tutorial_triangle.html">previous tutorial</a>. Change the last script tag from <code>triangle.js</code> to <code>redball.js</code>.</p>
 <p>Next you'll need to get a couple command-line tools: <code>matc</code> and <code>cmgen</code>. You can find these in the
 appropriate <a href="//github.com/google/filament/releases">Filament release</a>. You should choose the
-archive that corresponds to your development machine rather than the one for web.</p>
+archive that corresponds to your development machine rather than the one for web, and the version
+that matches the <code>unpkg.com/filament@x.x.x</code> url in the script tag of <code>redball.html</code> (you may check
+out the last available release of <a href="https://www.npmjs.com/package/filament">filament on npm</a>).</p>
 <h2>Define plastic material</h2>
 <p>The <code>matc</code> tool consumes a text file containing a high-level description of a PBR material, and
 produces a binary material package that contains shader code and associated metadata. For more
@@ -60,12 +62,12 @@ IBL KTX contains these coefficients in its metadata.</p>
 <h2>Create JavaScript</h2>
 <p>Next, create <code>redball.js</code> with the following content.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;pillars_2k&#39;</span>;
-<span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> sky_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> sky_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
 <span style="color: #008000; font-weight: bold">const</span> filamat_url <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;plastic.filamat&#39;</span>
 
 Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
-  <span style="color: #408080; font-style: italic">// Create some global aliases to enums for convenience.</span>
+  <span style="color: #3D7B7B; font-style: italic">// Create some global aliases to enums for convenience.</span>
   <span style="color: #008000">window</span>.VertexAttribute <span style="color: #666666">=</span> Filament.VertexAttribute;
   <span style="color: #008000">window</span>.AttributeType <span style="color: #666666">=</span> Filament.VertexBuffer$AttributeType;
   <span style="color: #008000">window</span>.PrimitiveType <span style="color: #666666">=</span> Filament.RenderableManager$PrimitiveType;
@@ -73,7 +75,7 @@ Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
   <span style="color: #008000">window</span>.Fov <span style="color: #666666">=</span> Filament.Camera$Fov;
   <span style="color: #008000">window</span>.LightType <span style="color: #666666">=</span> Filament.LightManager$Type;
 
-  <span style="color: #408080; font-style: italic">// Obtain the canvas DOM object and pass it to the App.</span>
+  <span style="color: #3D7B7B; font-style: italic">// Obtain the canvas DOM object and pass it to the App.</span>
   <span style="color: #008000; font-weight: bold">const</span> canvas <span style="color: #666666">=</span> <span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>];
   <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> App(canvas);
 } );
@@ -84,11 +86,11 @@ Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
     <span style="color: #008000; font-weight: bold">const</span> engine <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine <span style="color: #666666">=</span> Filament.Engine.create(canvas);
     <span style="color: #008000; font-weight: bold">const</span> scene <span style="color: #666666">=</span> engine.createScene();
 
-    <span style="color: #408080; font-style: italic">// TODO: create material</span>
-    <span style="color: #408080; font-style: italic">// TODO: create sphere</span>
-    <span style="color: #408080; font-style: italic">// TODO: create lights</span>
-    <span style="color: #408080; font-style: italic">// TODO: create IBL</span>
-    <span style="color: #408080; font-style: italic">// TODO: create skybox</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: create material</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: create sphere</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: create lights</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: create IBL</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: create skybox</span>
 
     <span style="color: #008000; font-weight: bold">this</span>.swapChain <span style="color: #666666">=</span> engine.createSwapChain();
     <span style="color: #008000; font-weight: bold">this</span>.renderer <span style="color: #666666">=</span> engine.createRenderer();
@@ -209,9 +211,9 @@ following (don't type this out, there's an easier way).</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> format <span style="color: #666666">=</span> Filament.PixelDataFormat.RGB;
 <span style="color: #008000; font-weight: bold">const</span> datatype <span style="color: #666666">=</span> Filament.PixelDataType.UINT_10F_11F_11F_REV;
 
-<span style="color: #408080; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span>
+<span style="color: #3D7B7B; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span>
 <span style="color: #008000; font-weight: bold">const</span> ibl_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[ibl_url]);
-<span style="color: #008000; font-weight: bold">const</span> iblktx <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.KtxBundle(ibl_package);
+<span style="color: #008000; font-weight: bold">const</span> iblktx <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.Ktx1Bundle(ibl_package);
 
 <span style="color: #008000; font-weight: bold">const</span> ibltex <span style="color: #666666">=</span> Filament.Texture.Builder()
   .width(iblktx.info().pixelWidth)
@@ -227,11 +229,11 @@ following (don't type this out, there's an easier way).</p>
   ibltex.setImageCube(engine, level, pixelbuffer);
 }
 
-<span style="color: #408080; font-style: italic">// Parse the spherical harmonics metadata.</span>
+<span style="color: #3D7B7B; font-style: italic">// Parse the spherical harmonics metadata.</span>
 <span style="color: #008000; font-weight: bold">const</span> shstring <span style="color: #666666">=</span> iblktx.getMetadata(<span style="color: #BA2121">&#39;sh&#39;</span>);
-<span style="color: #008000; font-weight: bold">const</span> shfloats <span style="color: #666666">=</span> shstring.split(<span style="color: #BB6688">/\s/</span>, <span style="color: #666666">9</span> <span style="color: #666666">*</span> <span style="color: #666666">3</span>).map(<span style="color: #008000">parseFloat</span>);
+<span style="color: #008000; font-weight: bold">const</span> shfloats <span style="color: #666666">=</span> shstring.split(<span style="color: #A45A77">/\s/</span>, <span style="color: #666666">9</span> <span style="color: #666666">*</span> <span style="color: #666666">3</span>).map(<span style="color: #008000">parseFloat</span>);
 
-<span style="color: #408080; font-style: italic">// Build the IBL object and insert it into the scene.</span>
+<span style="color: #3D7B7B; font-style: italic">// Build the IBL object and insert it into the scene.</span>
 <span style="color: #008000; font-weight: bold">const</span> indirectLight <span style="color: #666666">=</span> Filament.IndirectLight.Builder()
   .reflections(ibltex)
   .irradianceSh(<span style="color: #666666">3</span>, shfloats)
@@ -253,7 +255,7 @@ scene.setIndirectLight(indirectLight);
 Without a skybox, the reflections on the ball are not representative of its surroundings.
 Here's one way to create a texture for the skybox:</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> sky_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[sky_url]);
-<span style="color: #008000; font-weight: bold">const</span> skyktx <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.KtxBundle(sky_package);
+<span style="color: #008000; font-weight: bold">const</span> skyktx <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> Filament.Ktx1Bundle(sky_package);
 <span style="color: #008000; font-weight: bold">const</span> skytex <span style="color: #666666">=</span> Filament.Texture.Builder()
   .width(skyktx.info().pixelWidth)
   .height(skyktx.info().pixelHeight)

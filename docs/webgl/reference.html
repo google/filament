@@ -64,7 +64,7 @@
 <td align="left">Array of 16-bit or 32-bit unsigned integers consumed by the GPU.</td>
 </tr>
 <tr>
-<td align="left"><a href="#KtxBundle">KtxBundle</a></td>
+<td align="left"><a href="#Ktx1Bundle">Ktx1Bundle</a></td>
 <td align="left">In-memory representation of a KTX file.</td>
 </tr>
 <tr>
@@ -583,6 +583,11 @@
 <li><em>overrides</em> Dictionary with one or more of the following properties: enabled, sampleCount, customResolve.</li>
 </ul>
 </li>
+<li><strong>engine.setScreenSpaceReflectionsOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: thickness, bias, maxDistance, stride, enabled.</li>
+</ul>
+</li>
 <li><strong>engine.setShadowOptions(instance, overrides)</strong>
 <ul>
 <li><em>instance</em> Instance of a light component obtained from <code>getInstance</code>.</li>
@@ -662,63 +667,63 @@ as quaternions.</li>
 </ul>
 </div>
 <div class='classdoc'>
-<h2>class <a id='KtxBundle' href='#KtxBundle'>KtxBundle</a></h2>
+<h2>class <a id='Ktx1Bundle' href='#Ktx1Bundle'>Ktx1Bundle</a></h2>
 <p>In-memory representation of a KTX file.</p>
 <ul>
-<li><strong>ktxBundle.getArrayLength()</strong>
+<li><strong>ktx1Bundle.getArrayLength()</strong>
 <ul>
 <li>Obtains length of the texture array.</li>
 <li><em>returns</em> The number of elements in the texture array</li>
 </ul>
 </li>
-<li><strong>ktxBundle.getCompressedPixelDataType()</strong>
+<li><strong>ktx1Bundle.getCompressedPixelDataType()</strong>
 <ul>
 <li><em>returns</em> <a href="#CompressedPixelDataType">CompressedPixelDataType</a></li>
 </ul>
 </li>
-<li><strong>ktxBundle.getInternalFormat(srgb)</strong>
+<li><strong>ktx1Bundle.getInternalFormat(srgb)</strong>
 <ul>
 <li><em>srgb</em> boolean that forces the resulting format to SRGB if possible.</li>
 <li><em>returns</em> <a href="#Texture%24InternalFormat">Texture$InternalFormat</a></li>
 </ul>
 </li>
-<li><strong>ktxBundle.getMetadata(key)</strong>
+<li><strong>ktx1Bundle.getMetadata(key)</strong>
 <ul>
 <li>Obtains arbitrary metadata from the KTX file.</li>
 <li><em>key</em> string</li>
 <li><em>returns</em> string</li>
 </ul>
 </li>
-<li><strong>ktxBundle.getPixelDataFormat()</strong>
+<li><strong>ktx1Bundle.getPixelDataFormat()</strong>
 <ul>
 <li><em>returns</em> <a href="#PixelDataFormat">PixelDataFormat</a></li>
 </ul>
 </li>
-<li><strong>ktxBundle.getPixelDataType()</strong>
+<li><strong>ktx1Bundle.getPixelDataType()</strong>
 <ul>
 <li><em>returns</em> <a href="#PixelDataType">PixelDataType</a></li>
 </ul>
 </li>
-<li><strong>ktxBundle.info()</strong>
+<li><strong>ktx1Bundle.info()</strong>
 <ul>
 <li>Obtains properties of the KTX header.</li>
 <li><em>returns</em> The <a href="#KtxInfo">KtxInfo</a> property accessor object.</li>
 </ul>
 </li>
-<li><strong>ktxBundle.info()</strong>
+<li><strong>ktx1Bundle.info()</strong>
 <ul>
 <li>Obtains properties of the KTX header.</li>
 <li><em>returns</em> The <a href="#KtxInfo">KtxInfo</a> property accessor object.</li>
 </ul>
 </li>
-<li><strong>ktxBundle.isCompressed()</strong>
+<li><strong>ktx1Bundle.isCompressed()</strong>
 <ul>
 <li><em>returns</em> boolean</li>
 </ul>
 </li>
 </ul>
 <p>Most clients should use one of the <code>create*FromKtx</code> utility methods in the JavaScript <a href="#Engine">Engine</a>
-wrapper rather than interacting with <code>KtxBundle</code> directly.</p>
+wrapper rather than interacting with <code>Ktx1Bundle</code> directly.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='KtxInfo' href='#KtxInfo'>KtxInfo</a></h2>
@@ -743,7 +748,7 @@ wrapper rather than interacting with <code>KtxBundle</code> directly.</p>
 </ul>
 </li>
 </ul>
-<p>For example, <code>ktxbundle.info().pixelWidth</code>. See the
+<p>For example, <code>Ktx1Bundle.info().pixelWidth</code>. See the
 <a href="https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/">KTX spec</a> for the list of
 properties.</p>
 </div>
@@ -1267,7 +1272,9 @@ This defines the following functions:</p>
 <ul>
 <li>POINTS</li>
 <li>LINES</li>
+<li>LINE_STRIP</li>
 <li>TRIANGLES</li>
+<li>TRIANGLE_STRIP</li>
 <li>NONE</li>
 </ul>
 </div>
