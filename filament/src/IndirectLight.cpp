@@ -300,6 +300,15 @@ const math::float3& FIndirectLight::getIblHalfExtents() const noexcept {
     return mIblOptions.iblHalfExtents;
 }
 
+void FIndirectLight::setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept {
+    mIblOptions.iblTintAndIntensity = iblTintAndIntensity;
+}
+
+const math::float4& FIndirectLight::getIblTintAndIntensity() const noexcept {
+    return mIblOptions.iblTintAndIntensity;
+}
+
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -366,6 +375,13 @@ void IndirectLight::setIblHalfExtents(const math::float3& iblHalfExtents) noexce
 
 const math::float3& IndirectLight::getIblHalfExtents() const noexcept {
     return upcast(this)->getIblHalfExtents();
+}
+
+void IndirectLight::setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept {
+    upcast(this)->setIblTintAndIntensity(iblTintAndIntensity);
+}
+const math::float4& IndirectLight::getIblTintAndIntensity() const noexcept {
+    return upcast(this)->getIblTintAndIntensity();
 }
 
 math::float3 IndirectLight::getDirectionEstimate(const math::float3* sh) noexcept {

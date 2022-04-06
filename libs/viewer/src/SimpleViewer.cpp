@@ -1452,7 +1452,7 @@ void SimpleViewer::updateUserInterface() {
             ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
             ImGui::SliderAngle("IBL rotation", &light.iblRotation);
 
-            ImGui::SliderFloat("IBL tint intensity", &mSettings.ibl.iblTintAndIntensity.w, 0.0f, 1.0f);
+            ImGui::SliderFloat("IBL tint intensity", &iblOptions.iblTintAndIntensity.w, 0.0f, 1.0f);
 
             if (ImGui::RadioButton("Infinite", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_INFINITE)) {
                 iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_INFINITE;
@@ -1650,13 +1650,11 @@ void SimpleViewer::updateUserInterface() {
 
     // Set IBL options
     {        
-        float intensity = mSettings.ibl.iblTintAndIntensity.w;
         filament::math::float3 linearBgColor = filament::Color::toLinear(mSettings.viewer.backgroundColor);
-        mSettings.ibl.iblTintAndIntensity.r = linearBgColor.r;
-        mSettings.ibl.iblTintAndIntensity.g = linearBgColor.g;
-        mSettings.ibl.iblTintAndIntensity.b = linearBgColor.b;
-        mSettings.ibl.iblTintAndIntensity.a = intensity;
-        mView->setIblOptions(mSettings.ibl);
+        mSettings.lighting.iblOptions.iblTintAndIntensity.r = linearBgColor.r;
+        mSettings.lighting.iblOptions.iblTintAndIntensity.g = linearBgColor.g;
+        mSettings.lighting.iblOptions.iblTintAndIntensity.b = linearBgColor.b;
+        mSettings.lighting.iblOptions.iblTintAndIntensity.a = mSettings.lighting.iblOptions.iblTintAndIntensity.w;
     }
 
     if (light.enableSunlight) {
