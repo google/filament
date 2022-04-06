@@ -50,8 +50,8 @@ void main() {
             vertex_worldTangent.xyz = vec3(0.0, 0.0, -1.0);
         } else {
             float a = 1.0 / (1.0 + material.worldNormal.y);
-            float b = -material.worldNormal.x * material.worldNormal.z * a;
-            vertex_worldTangent.xyz = vec3(1.0 - material.worldNormal.x * material.worldNormal.x * a, b, -material.worldNormal.x);
+            float b = material.worldNormal.x * material.worldNormal.z * a;
+            vertex_worldTangent.xyz = vec3(1.0 - material.worldNormal.x * material.worldNormal.x * a, b, material.worldNormal.x);
         }
         #endif
 
