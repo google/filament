@@ -286,6 +286,7 @@
 					"-libl",
 					"-lfilameshio",
 					"-lmeshoptimizer",
+					"-lktxreader",
 					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-ar";
@@ -329,6 +330,7 @@
 					"-libl",
 					"-lfilameshio",
 					"-lmeshoptimizer",
+					"-lktxreader",
 					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-ar";
@@ -431,6 +433,7 @@
 					"-libl",
 					"-lfilameshio",
 					"-lmeshoptimizer",
+					"-lktxreader",
 					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-ar";
@@ -584,6 +587,7 @@
 					"-libl",
 					"-lfilameshio",
 					"-lmeshoptimizer",
+					"-lktxreader",
 					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-ar";
