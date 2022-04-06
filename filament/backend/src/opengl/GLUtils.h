@@ -509,9 +509,7 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
 
 class unordered_string_set : public std::unordered_set<std::string_view> {
 public:
-    bool has(const char* str) const noexcept {
-        return find(str) != end();
-    }
+    bool has(std::string_view str) const noexcept;
 };
 
 unordered_string_set split(const char* extensions) noexcept;

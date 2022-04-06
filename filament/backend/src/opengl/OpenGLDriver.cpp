@@ -2438,7 +2438,7 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         gl.bindVertexArray(&rp->gl);
         CHECK_GL_ERROR(utils::slog.e)
 
-        rp->gl.indicesType = ib->elementSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+        rp->gl.indicesSize = (ib->elementSize == 4u) ? 4u : 2u;
         rp->gl.vertexBufferWithObjects = vbh;
 
         // update the VBO bindings in the VAO
@@ -2458,7 +2458,7 @@ void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 
     GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
     rp->type = pt;
-    rp->offset = offset * ((rp->gl.indicesType == GL_UNSIGNED_INT) ? 4 : 2);
+    rp->offset = offset * rp->gl.indicesSize;
     rp->count = count;
     rp->minIndex = minIndex;
     rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
@@ -3215,10 +3215,10 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 
     if (UTILS_LIKELY(instanceCount <= 1)) {
         glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
-                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+                rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset));
     } else {
         glDrawElementsInstanced(GLenum(rp->type), rp->count,
-                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset),
+                rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset),
                 instanceCount);
     }
 
