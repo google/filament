@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# requirements.txt created via:
+#
+# pip3 install virtualenv
+# python3 -m venv env
+# pip3 install PyGithub
+# pip3 install wheel
+# --all includes wheel and setuputils, which is needed for GitHub Actions
+# pip3 freeze --all > requirements.txt
+
 from github import Github
 import os, sys
 
