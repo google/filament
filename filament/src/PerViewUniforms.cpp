@@ -221,7 +221,8 @@ void PerViewUniforms::prepareIblLight(const IblOptions& options) noexcept {
     s.iblHalfExtents = options.iblHalfExtents;
 }
 
-void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl, float intensity, float exposure) noexcept {
+void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
+        float intensity, float exposure) noexcept {
     auto& engine = mEngine;
     auto& s = mPerViewUb.edit();
 
