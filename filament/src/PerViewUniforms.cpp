@@ -223,6 +223,7 @@ void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
     float iblRoughnessOneLevel = ibl.getLevelCount() - 1.0f;
     s.iblRoughnessOneLevel = iblRoughnessOneLevel;
     s.iblLuminance = intensity * exposure;
+    s.iblRotation = math::mat4f(ibl.getRotation());
     std::transform(ibl.getSH(), ibl.getSH() + 9, s.iblSH, [](float3 v) {
         return float4(v, 0.0f);
     });

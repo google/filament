@@ -101,11 +101,13 @@ vec3 diffuseIrradiance(const vec3 n) {
 // Helper function that converts the incoming Z-up world space reflection vector
 // to a Filament IBL texture lookup vector, where the top face is actually +Y.
 vec3 zUpToIblDirection(vec3 r) {
+    mat3 rotationMat = mat3(frameUniforms.iblRotation);
+    r = rotationMat * r;
 #if defined(IN_SHAPR_SHADER)
     return vec3(-r.x, r.z, r.y);
 #else
     return r;
-#endif    
+#endif
 }
 
 float perceptualRoughnessToLod(float perceptualRoughness) {

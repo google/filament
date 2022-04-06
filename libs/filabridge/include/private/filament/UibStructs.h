@@ -135,8 +135,10 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float reserved2;
     float reserved3;
 
+    math::mat4f iblRotation; // contains the IBL's rotation
+
     // bring PerViewUib to 2 KiB
-    math::float4 padding3[57];
+    math::float4 padding3[53];
 };
 
 // 2 KiB == 128 float4s

@@ -347,13 +347,6 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * close to the camera position to improve fp precision in the shader for large scenes.
      */
     mat4 worldOriginScene;
-    FIndirectLight const* const ibl = scene->getIndirectLight();
-    if (ibl) {
-        // the IBL transformation must be a rigid transform
-        mat3f rotation{ scene->getIndirectLight()->getRotation() };
-        // for a rigid-body transform, the inverse is the transpose
-        worldOriginScene = mat4{ transpose(rotation) };
-    }
 
     /*
      * Calculate all camera parameters needed to render this View for this frame.
