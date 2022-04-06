@@ -19,7 +19,7 @@ targetTemplates:
                 - OpenGL
         settings:
             base:
-                OTHER_LDFLAGS: ["-lfilament", "-lbackend", "-lfilaflat",
+                OTHER_LDFLAGS: ["-lfilament", "-lbackend", "-lfilaflat", "-lktxreader",
                                 "-lfilabridge", "-lutils", "-lsmol-v", "-lgeometry", "-libl"]
                 ENABLE_BITCODE: NO
             configs:
