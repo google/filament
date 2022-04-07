@@ -82,7 +82,7 @@ private:
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;
     uint8_t mLevelCount = 0;
-    IblOptions mIblOptions;
+    IblOptions mIblOptions = {};
 };
 
 FILAMENT_UPCAST(IndirectLight)
