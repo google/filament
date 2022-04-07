@@ -64,8 +64,10 @@ public:
 
     // executes this command and returns the next one
     inline CommandBase* execute(Driver& driver) {
-        // it is important to return the next command offset by output parameter instead
-        // of return value -- it allows the compiler to perform the tail call optimization.
+        // returning the next command by output parameter allows the compiler to perform the
+        // tail-call optimization in the function called by mExecute, however that comes at
+        // a cost here (writing and reading the stack at each iteration), in the end it's
+        // probably better to pay the cost at just one location.
         intptr_t next;
         mExecute(driver, this, &next);
         return reinterpret_cast<CommandBase*>(reinterpret_cast<intptr_t>(this) + next);
@@ -184,8 +186,8 @@ public:
 #if !defined(NDEBUG) || (FILAMENT_DEBUG_COMMANDS >= FILAMENT_DEBUG_COMMANDS_ENABLE)
     // For now, simply pass the method name down as a string and throw away the parameters.
     // This is good enough for certain debugging needs and we can improve this later.
-    #define DEBUG_COMMAND_BEGIN(methodName, sync, ...) mDriver->debugCommandBegin(this, sync, #methodName)
-    #define DEBUG_COMMAND_END(methodName, sync) mDriver->debugCommandEnd(this, sync, #methodName)
+    #define DEBUG_COMMAND_BEGIN(methodName, sync, ...) mDriver.debugCommandBegin(this, sync, #methodName)
+    #define DEBUG_COMMAND_END(methodName, sync) mDriver.debugCommandEnd(this, sync, #methodName)
 #else
     #define DEBUG_COMMAND_BEGIN(methodName, sync, ...)
     #define DEBUG_COMMAND_END(methodName, sync)
@@ -200,8 +202,10 @@ class CommandStream {
     };
 
 public:
-    CommandStream() noexcept = default;
     CommandStream(Driver& driver, CircularBuffer& buffer) noexcept;
+
+    CommandStream(CommandStream const& rhs) noexcept = delete;
+    CommandStream& operator=(CommandStream const& rhs) noexcept = delete;
 
 public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
@@ -219,13 +223,13 @@ public:
         AutoExecute callOnExit([=](){                                                           \
             DEBUG_COMMAND_END(methodName, true);                                                \
         });                                                                                     \
-        return apply(&Driver::methodName, *mDriver, std::forward_as_tuple(params));             \
+        return apply(&Driver::methodName, mDriver, std::forward_as_tuple(params));              \
     }
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \
     inline RetType methodName(paramsDecl) {                                                     \
         DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
-        RetType result = mDriver->methodName##S();                                              \
+        RetType result = mDriver.methodName##S();                                               \
         using Cmd = COMMAND_TYPE(methodName##R);                                                \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher.methodName##_, RetType(result), APPLY(std::move, params));       \
@@ -271,14 +275,14 @@ public:
 private:
     inline void* allocateCommand(size_t size) {
         assert_invariant(utils::ThreadUtils::isThisThread(mThreadId));
-        return mCurrentBuffer->allocate(size);
+        return mCurrentBuffer.allocate(size);
     }
 
     // We use a copy of Dispatcher (instead of a pointer) because this removes one dereference
     // when executing driver commands.
+    Driver& UTILS_RESTRICT mDriver;
+    CircularBuffer& UTILS_RESTRICT mCurrentBuffer;
     Dispatcher mDispatcher;
-    Driver* UTILS_RESTRICT mDriver = nullptr;
-    CircularBuffer* UTILS_RESTRICT mCurrentBuffer = nullptr;
 
 #ifndef NDEBUG
     // just for debugging...
