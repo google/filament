@@ -1651,9 +1651,7 @@ void SimpleViewer::updateUserInterface() {
     // Set IBL options
     {        
         filament::math::float3 linearBgColor = filament::Color::toLinear(mSettings.viewer.backgroundColor);
-        mSettings.lighting.iblOptions.iblTintAndIntensity.r = linearBgColor.r;
-        mSettings.lighting.iblOptions.iblTintAndIntensity.g = linearBgColor.g;
-        mSettings.lighting.iblOptions.iblTintAndIntensity.b = linearBgColor.b;
+        mSettings.lighting.iblOptions.iblTintAndIntensity.rgb = linearBgColor;
         mSettings.lighting.iblOptions.iblTintAndIntensity.a = mSettings.lighting.iblOptions.iblTintAndIntensity.w;
     }
 
