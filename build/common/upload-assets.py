@@ -21,6 +21,15 @@
 # pip3 install wheel
 # --all includes wheel and setuputils, which is needed for GitHub Actions
 # pip3 freeze --all > requirements.txt
+# Manually move 'setuptools' and 'wheel' lines to the beginning of the file.
+# Manually remove the 'pip' line.
+#
+# Requirements are installed in GitHub Actions via:
+# xargs -L 1 sudo pip3 install < build/common/requirements.txt
+# xargs must be used because the ordering of the dependencies matters (namely, setuptools).
+# sudo must be used to uninstall non-matching versions of packages.
+# pip is removed to avoid conflicts with the pre-installed pip version on Actions.
+# This technique does not work with Windows, unfortunately.
 
 from github import Github
 import os, sys
