@@ -69,20 +69,32 @@ public:
 
     OpenGLContext() noexcept;
 
-    constexpr bool isAtLeastGL(int major, int minor) const noexcept {
+    template<int MAJOR, int MINOR>
+    inline bool isAtLeastGL() const noexcept {
 #ifdef BACKEND_OPENGL_VERSION_GL
-        return state.major > major || (state.major == major && state.minor >= minor);
+        return state.major > MAJOR || (state.major == MAJOR && state.minor >= MINOR);
 #else
-        (void)major, (void)minor;
         return false;
 #endif
     }
 
-    constexpr bool isAtLeastGLES(int major, int minor) const noexcept {
+    template<int MAJOR, int MINOR>
+    inline bool isAtLeastGLES() const noexcept {
 #ifdef BACKEND_OPENGL_VERSION_GLES
-        return state.major > major || (state.major == major && state.minor >= minor);
+        return state.major > MAJOR || (state.major == MAJOR && state.minor >= MINOR);
 #else
-        (void)major, (void)minor;
+        return false;
+#endif
+    }
+
+    inline bool isES2() const noexcept {
+#if defined(BACKEND_OPENGL_VERSION_GLES) && !defined(IOS)
+#   ifndef BACKEND_OPENGL_LEVEL_GLES30
+            return true;
+#   else
+            return state.major == 2;
+#   endif
+#else
         return false;
 #endif
     }
@@ -186,6 +198,7 @@ public:
         bool EXT_color_buffer_half_float;
         bool EXT_debug_marker;
         bool EXT_disjoint_timer_query;
+        bool EXT_discard_framebuffer;
         bool EXT_multisampled_render_to_texture2;
         bool EXT_multisampled_render_to_texture;
         bool EXT_shader_framebuffer_fetch;
@@ -201,7 +214,14 @@ public:
         bool KHR_debug;
         bool KHR_texture_compression_astc_hdr;
         bool KHR_texture_compression_astc_ldr;
+        bool OES_depth_texture;
+        bool OES_depth24;
+        bool OES_packed_depth_stencil;
         bool OES_EGL_image_external_essl3;
+        bool OES_rgb8_rgba8;
+        bool OES_standard_derivatives;
+        bool OES_texture_npot;
+        bool OES_vertex_array_object;
         bool WEBGL_compressed_texture_etc;
         bool WEBGL_compressed_texture_s3tc;
         bool WEBGL_compressed_texture_s3tc_srgb;
@@ -381,6 +401,21 @@ public:
         } window;
     } state;
 
+    struct {
+        void (* bindVertexArray)(GLuint array);
+        void (* deleteVertexArrays)(GLsizei n, const GLuint* arrays);
+        void (* genVertexArrays)(GLsizei n, GLuint* arrays);
+
+        void (* genQueries)(GLsizei n, GLuint* ids);
+        void (* deleteQueries)(GLsizei n, const GLuint* ids);
+        void (* beginQuery)(GLenum target, GLuint id);
+        void (* endQuery)(GLenum target);
+        void (* getQueryObjectuiv)(GLuint id, GLenum pname, GLuint* params);
+        void (* getQueryObjectui64v)(GLuint id, GLenum pname, GLuint64* params);
+
+        void (* invalidateFramebuffer)(GLenum target, GLsizei numAttachments, const GLenum *attachments);
+    } procs{};
+
 private:
     ShaderModel mShaderModel = ShaderModel::MOBILE;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
@@ -499,15 +534,19 @@ constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept 
     size_t index = 0;
     switch (target) {
         // The indexed buffers MUST be first in this list (those usable with bindBufferRange)
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         case GL_UNIFORM_BUFFER:             index = 0; break;
         case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
         case GL_SHADER_STORAGE_BUFFER:      index = 2; break;
 #endif
+#endif
         case GL_ARRAY_BUFFER:               index = 3; break;
         case GL_ELEMENT_ARRAY_BUFFER:       index = 4; break;
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         case GL_PIXEL_PACK_BUFFER:          index = 5; break;
         case GL_PIXEL_UNPACK_BUFFER:        index = 6; break;
+#endif
         default: break;
     }
     assert_invariant(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
@@ -525,9 +564,12 @@ void OpenGLContext::activeTexture(GLuint unit) noexcept {
 
 void OpenGLContext::bindSampler(GLuint unit, GLuint sampler) noexcept {
     assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
+    assert_invariant(state.major > 2);
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     update_state(state.textures.units[unit].sampler, sampler, [&]() {
         glBindSampler(unit, sampler);
     });
+#endif
 }
 
 void OpenGLContext::setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept {
@@ -554,7 +596,7 @@ void OpenGLContext::depthRange(GLclampf near, GLclampf far) noexcept {
 void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
     RenderPrimitive* vao = p ? const_cast<RenderPrimitive *>(p) : &mDefaultVAO;
     update_state(state.vao.p, vao, [&]() {
-        glBindVertexArray(vao->vao);
+        procs.bindVertexArray(vao->vao);
         // update GL_ELEMENT_ARRAY_BUFFER, which is updated by glBindVertexArray
         size_t const targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
         state.buffers.genericBinding[targetIndex] = vao->elementArray;
@@ -568,12 +610,19 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
+    assert_invariant(state.major > 2);
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    assert_invariant(false
+            || target == GL_UNIFORM_BUFFER
+            || target == GL_TRANSFORM_FEEDBACK_BUFFER
+#ifdef BACKEND_OPENGL_LEVEL_GLES31
+            || target == GL_SHADER_STORAGE_BUFFER
+#endif
+    );
     size_t const targetIndex = getIndexForBufferTarget(target);
-
-    // validity check
-    assert_invariant(targetIndex < sizeof(state.buffers.targets) / sizeof(*state.buffers.targets));
-
     // this ALSO sets the generic binding
+    assert_invariant(targetIndex < sizeof(state.buffers.targets) / sizeof(*state.buffers.targets));
     if (   state.buffers.targets[targetIndex].buffers[index].name != buffer
            || state.buffers.targets[targetIndex].buffers[index].offset != offset
            || state.buffers.targets[targetIndex].buffers[index].size != size) {
@@ -583,6 +632,7 @@ void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         state.buffers.genericBinding[targetIndex] = buffer;
         glBindBufferRange(target, index, buffer, offset, size);
     }
+#endif
 }
 
 void OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
@@ -593,6 +643,7 @@ void OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
                 glBindFramebuffer(target, buffer);
             }
             break;
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         case GL_DRAW_FRAMEBUFFER:
             if (state.draw_fbo != buffer) {
                 state.draw_fbo = buffer;
@@ -605,6 +656,7 @@ void OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
                 glBindFramebuffer(target, buffer);
             }
             break;
+#endif
         default:
             break;
     }

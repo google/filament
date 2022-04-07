@@ -1,7 +1,11 @@
 #if defined(VARIANT_HAS_VSM)
 layout(location = 0) out vec4 fragColor;
 #elif defined(VARIANT_HAS_PICKING)
+#   if __VERSION__ == 100
+highp vec2 outPicking;
+#   else
 layout(location = 0) out highp vec2 outPicking;
+#   endif
 #else
 // not color output
 #endif
@@ -51,6 +55,9 @@ void main() {
 #elif defined(VARIANT_HAS_PICKING)
     outPicking.x = float(object_uniforms.objectId);
     outPicking.y = vertex_position.z / vertex_position.w;
+#if __VERSION__ == 100
+    gl_FragData[0].xy = outPicking;
+#endif
 #else
     // that's it
 #endif

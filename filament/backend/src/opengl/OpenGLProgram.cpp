@@ -209,7 +209,7 @@ std::string_view OpenGLProgram::process_GOOGLE_cpp_style_line_directive(OpenGLCo
 std::string_view OpenGLProgram::process_ARB_shading_language_packing(OpenGLContext& context) noexcept {
     using namespace std::literals;
 #ifdef BACKEND_OPENGL_VERSION_GL
-        if (!context.isAtLeastGL(4, 2) && !context.ext.ARB_shading_language_packing) {
+        if (!context.isAtLeastGL<4, 2>() && !context.ext.ARB_shading_language_packing) {
             return R"(
 
 // these don't handle denormals, NaNs or inf
@@ -357,18 +357,26 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
 void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
         LazyInitializationData const& lazyInitializationData) noexcept {
 
-    // Note: This is only needed, because the layout(binding=) syntax is not permitted in glsl
-    // (ES3.0 and GL4.1). The backend needs a way to associate a uniform block to a binding point.
-    UTILS_NOUNROLL
-    for (GLuint binding = 0, n = lazyInitializationData.uniformBlockInfo.size(); binding < n; binding++) {
-        auto const& name = lazyInitializationData.uniformBlockInfo[binding];
-        if (!name.empty()) {
-            GLuint const index = glGetUniformBlockIndex(program, name.c_str());
-            if (index != GL_INVALID_INDEX) {
-                glUniformBlockBinding(program, index, binding);
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    if (!context.isES2()) {
+        // Note: This is only needed, because the layout(binding=) syntax is not permitted in glsl
+        // (ES3.0 and GL4.1). The backend needs a way to associate a uniform block to a binding point.
+        UTILS_NOUNROLL
+        for (GLuint binding = 0, n = lazyInitializationData.uniformBlockInfo.size();
+             binding < n; binding++) {
+            auto const& name = lazyInitializationData.uniformBlockInfo[binding];
+            if (!name.empty()) {
+                GLuint const index = glGetUniformBlockIndex(program, name.c_str());
+                if (index != GL_INVALID_INDEX) {
+                    glUniformBlockBinding(program, index, binding);
+                }
+                CHECK_GL_ERROR(utils::slog.e)
             }
-            CHECK_GL_ERROR(utils::slog.e)
         }
+    } else
+#endif
+    {
+        // ES2 initialization
     }
 
     uint8_t usedBindingCount = 0;
@@ -412,8 +420,12 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     mUsedBindingsCount = usedBindingCount;
 }
 
-void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
+void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {
     using GLTexture = OpenGLDriver::GLTexture;
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    bool const es2 = gld->getContext().isES2();
+#endif
 
     // cache a few member variable locally, outside the loop
     auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
@@ -425,10 +437,14 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
         assert_invariant(sb);
         for (uint8_t j = 0, m = sb->textureUnitEntries.size(); j < m; ++j, ++tmu) { // "<=" on purpose here
             const GLTexture* const t = sb->textureUnitEntries[j].texture;
-            GLuint const s = sb->textureUnitEntries[j].sampler;
             if (t) { // program may not use all samplers of sampler group
                 gld->bindTexture(tmu, t);
-                gld->bindSampler(tmu, s);
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+                if (UTILS_LIKELY(!es2)) {
+                    GLuint const s = sb->textureUnitEntries[j].sampler;
+                    gld->bindSampler(tmu, s);
+                }
+#endif
             }
         }
     }

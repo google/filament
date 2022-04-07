@@ -106,7 +106,8 @@ static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 4;   // This is guarantee
  * Defines the backend's feature levels.
  */
 enum class FeatureLevel : uint8_t {
-    FEATURE_LEVEL_1 = 1,  //!< OpenGL ES 3.0 features (default)
+    FEATURE_LEVEL_0 = 0,  //!< OpenGL ES 2.0 features
+    FEATURE_LEVEL_1,      //!< OpenGL ES 3.0 features (default)
     FEATURE_LEVEL_2,      //!< OpenGL ES 3.1 features + 16 textures units + cubemap arrays
     FEATURE_LEVEL_3       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
 };

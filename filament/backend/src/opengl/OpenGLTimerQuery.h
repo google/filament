@@ -60,6 +60,7 @@ private:
     void endTimeElapsedQuery(GLTimerQuery* query) override;
     bool queryResultAvailable(GLTimerQuery* query) override;
     uint64_t queryResult(GLTimerQuery* query) override;
+    OpenGLContext& mContext;
 };
 
 #endif

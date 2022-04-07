@@ -42,9 +42,19 @@
     #if defined(__EMSCRIPTEN__)
     #   include <GLES3/gl3.h>
     #else
+//    #   include <GLES2/gl2.h>
     #   include <GLES3/gl31.h>
     #endif
     #include <GLES2/gl2ext.h>
+
+    // For development and debugging purpose only, we want to support compiling this backend
+    // with ES2 only headers, in this case (i.e. we have VERSION_2 but not VERSION_3+),
+    // we define FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2 with the purpose of compiling out
+    // code that cannot be compiled with ES2 headers. In production, this code is compiled in but
+    // is never executed thanks to runtime checks or asserts.
+    #if defined(GL_ES_VERSION_2_0) && !defined(GL_ES_VERSION_3_0)
+    #   define FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    #endif
 
 #elif defined(IOS)
 
@@ -122,9 +132,22 @@ extern PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 extern PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
+extern PFNGLGENQUERIESEXTPROC glGenQueriesEXT;
+extern PFNGLDELETEQUERIESEXTPROC glDeleteQueriesEXT;
+extern PFNGLBEGINQUERYEXTPROC glBeginQueryEXT;
+extern PFNGLENDQUERYEXTPROC glEndQueryEXT;
+extern PFNGLGETQUERYOBJECTUIVEXTPROC glGetQueryObjectuivEXT;
+extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64vEXT;
 #endif
-#if defined(__ANDROID__)
+#ifdef GL_OES_vertex_array_object
+extern PFNGLBINDVERTEXARRAYOESPROC glBindVertexArrayOES;
+extern PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArraysOES;
+extern PFNGLGENVERTEXARRAYSOESPROC glGenVertexArraysOES;
+#endif
+#ifdef GL_EXT_discard_framebuffer
+extern PFNGLDISCARDFRAMEBUFFEREXTPROC glDiscardFramebufferEXT;
+#endif
+#if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 #endif
 } // namespace glext
@@ -137,6 +160,10 @@ using namespace glext;
 
 #ifdef GL_EXT_disjoint_timer_query
 #   define GL_TIME_ELAPSED                          GL_TIME_ELAPSED_EXT
+#   ifndef GL_ES_VERSION_3_0
+#       define GL_QUERY_RESULT_AVAILABLE            GL_QUERY_RESULT_AVAILABLE_EXT
+#       define GL_QUERY_RESULT                      GL_QUERY_RESULT_EXT
+#   endif
 #endif
 
 #ifdef GL_EXT_clip_control
@@ -169,6 +196,30 @@ using namespace glext;
 #   define glDebugMessageCallback                   glDebugMessageCallbackKHR
 #endif
 
+// token that exist in ES3 core but are extensions (mandatory or not) in ES2
+#ifndef GL_ES_VERSION_3_0
+#   ifdef GL_OES_vertex_array_object
+#       define GL_VERTEX_ARRAY_BINDING             GL_VERTEX_ARRAY_BINDING_OES
+#   endif
+#   ifdef GL_OES_rgb8_rgba8
+#       define GL_RGB8                             0x8051
+#       define GL_RGBA8                            0x8058
+#   endif
+#   ifdef GL_OES_depth24
+#       define GL_DEPTH_COMPONENT24                GL_DEPTH_COMPONENT24_OES
+#   endif
+#   ifdef GL_EXT_discard_framebuffer
+#       define GL_COLOR                             GL_COLOR_EXT
+#       define GL_DEPTH                             GL_DEPTH_EXT
+#       define GL_STENCIL                           GL_STENCIL_EXT
+#   endif
+#   ifdef GL_OES_packed_depth_stencil
+#       define GL_DEPTH_STENCIL                     GL_DEPTH_STENCIL_OES
+#       define GL_UNSIGNED_INT_24_8                 GL_UNSIGNED_INT_24_8_OES
+#       define GL_DEPTH24_STENCIL8                  GL_DEPTH24_STENCIL8_OES
+#   endif
+#endif
+
 #endif // GL_ES_VERSION_2_0
 
 // This is just to simplify the implementation (i.e. so we don't have to have #ifdefs everywhere)
@@ -181,6 +232,20 @@ using namespace glext;
 extern "C" {
 void glGetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, void *data);
 }
+#endif
+
+#ifdef GL_ES_VERSION_2_0
+#   ifndef IOS
+#      ifndef GL_OES_vertex_array_object
+#          error "Headers with GL_OES_vertex_array_object are mandatory unless on iOS"
+#      endif
+#      ifndef GL_EXT_disjoint_timer_query
+#          error "Headers with GL_EXT_disjoint_timer_query are mandatory unless on iOS"
+#      endif
+#      ifndef GL_OES_rgb8_rgba8
+#          error "Headers with GL_OES_rgb8_rgba8 are mandatory unless on iOS"
+#      endif
+#   endif
 #endif
 
 #if defined(GL_ES_VERSION_2_0)

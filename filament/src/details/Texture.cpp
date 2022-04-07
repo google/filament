@@ -133,6 +133,25 @@ Texture* Texture::Builder::build(Engine& engine) {
     ASSERT_PRECONDITION(!swizzled, "WebGL does not support texture swizzling.");
     #endif
 
+    auto validateSamplerType = [&engine = downcast(engine)](SamplerType sampler) -> bool {
+        switch (sampler) {
+            case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_CUBEMAP:
+                return true;
+            case SamplerType::SAMPLER_3D:
+            case SamplerType::SAMPLER_2D_ARRAY:
+                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1);
+            case SamplerType::SAMPLER_EXTERNAL:
+                return false;
+            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_2);
+        }
+    };
+
+    ASSERT_PRECONDITION(validateSamplerType(mImpl->mTarget),
+            "SamplerType %u not support at feature level %u",
+            mImpl->mTarget, engine.getActiveFeatureLevel());
+
     ASSERT_PRECONDITION((swizzled && sampleable) || !swizzled,
             "Swizzled texture must be SAMPLEABLE");
 
@@ -208,19 +227,10 @@ void FTexture::setImage(FEngine& engine, size_t level,
         uint32_t width, uint32_t height, uint32_t depth,
         FTexture::PixelBufferDescriptor&& buffer) const {
 
-    auto validateTarget = [&engine](SamplerType sampler) -> bool {
-        switch (sampler) {
-            case SamplerType::SAMPLER_2D:
-            case SamplerType::SAMPLER_3D:
-            case SamplerType::SAMPLER_2D_ARRAY:
-            case SamplerType::SAMPLER_CUBEMAP:
-                return true;
-            case SamplerType::SAMPLER_EXTERNAL:
-                return false;
-            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_2);
-        }
-    };
+    if (UTILS_UNLIKELY(!engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))) {
+        ASSERT_PRECONDITION(buffer.stride == 0 || buffer.stride == width,
+                "PixelBufferDescriptor stride must be 0 (or width) at FEATURE_LEVEL_0");
+    }
 
     // this should have been validated already
     assert_invariant(isTextureFormatSupported(engine, mFormat));
@@ -235,19 +245,22 @@ void FTexture::setImage(FEngine& engine, size_t level,
     ASSERT_PRECONDITION(level < mLevelCount,
             "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount));
 
-    ASSERT_PRECONDITION(validateTarget(mTarget),
-            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget));
+    ASSERT_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL,
+            "Texture SamplerType::SAMPLER_EXTERNAL not supported for this operation.",
+            unsigned(mTarget));
 
     ASSERT_PRECONDITION(mSampleCount <= 1,
             "Operation not supported with multisample (%u) texture.", unsigned(mSampleCount));
 
     ASSERT_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth),
             "xoffset (%u) + width (%u) > texture width (%u) at level (%u)",
-            unsigned(xoffset), unsigned(width), unsigned(valueForLevel(level, mWidth)), unsigned(level));
+            unsigned(xoffset), unsigned(width), unsigned(valueForLevel(level, mWidth)),
+            unsigned(level));
 
     ASSERT_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight),
             "yoffset (%u) + height (%u) > texture height (%u) at level (%u)",
-            unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)), unsigned(level));
+            unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)),
+            unsigned(level));
 
     ASSERT_PRECONDITION(buffer.buffer, "Data buffer is nullptr.");
 
