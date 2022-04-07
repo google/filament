@@ -29,10 +29,17 @@ namespace filament::backend {
 
 bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 #ifdef BACKEND_OPENGL_VERSION_GLES
+#   ifdef BACKEND_OPENGL_LEVEL_GLES30
     char const* version = (char const*)glGetString(GL_VERSION);
     // This works on all versions of GLES
     int const n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
     return n == 2;
+#   else
+    // when we compile with GLES2.0 only, we force the context version to 2.0
+    *major = 2;
+    *minor = 0;
+    return true;
+#   endif
 #else
     // OpenGL version
     glGetIntegerv(GL_MAJOR_VERSION, major);
@@ -60,18 +67,53 @@ OpenGLContext::OpenGLContext() noexcept {
     queryOpenGLVersion(&state.major, &state.minor);
 
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
-    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
-    glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
-    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &gets.max_texture_image_units);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &gets.max_combined_texture_image_units);
-    glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS, &gets.max_transform_feedback_separate_attribs);
-    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &gets.max_uniform_buffer_bindings);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
+
+    if (state.major > 2) { // this check works for both GL and GLES, but is intended for GLES
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
+        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &gets.max_uniform_buffer_bindings);
+        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
+        glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
+        glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
+        glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS,
+                &gets.max_transform_feedback_separate_attribs);
+#endif
+    } else {
+        gets.max_uniform_block_size = 0;
+        gets.max_uniform_buffer_bindings = 0;
+        gets.uniform_buffer_offset_alignment = 0;
+        gets.max_samples = 1;
+        gets.max_draw_buffers = 1;
+        gets.max_transform_feedback_separate_attribs = 0;
+    }
 
     constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
     constexpr GLint MAX_VERTEX_SAMPLER_COUNT = caps3.MAX_VERTEX_SAMPLER_COUNT;
     constexpr GLint MAX_FRAGMENT_SAMPLER_COUNT = caps3.MAX_FRAGMENT_SAMPLER_COUNT;
+
+    // default procs that can be overridden based on runtime version
+#ifdef BACKEND_OPENGL_LEVEL_GLES30
+    procs.genVertexArrays = glGenVertexArrays;
+    procs.bindVertexArray = glBindVertexArray;
+    procs.deleteVertexArrays = glDeleteVertexArrays;
+
+    // these are core in GL and GLES 3.x
+    procs.genQueries = glGenQueries;
+    procs.deleteQueries = glDeleteQueries;
+    procs.beginQuery = glBeginQuery;
+    procs.endQuery = glEndQuery;
+    procs.getQueryObjectuiv = glGetQueryObjectuiv;
+#   ifdef BACKEND_OPENGL_VERSION_GL
+        procs.getQueryObjectui64v = glGetQueryObjectui64v; // only core in GL
+#   elif defined(GL_EXT_disjoint_timer_query)
+        procs.getQueryObjectui64v = glGetQueryObjectui64vEXT;
+#   endif // BACKEND_OPENGL_VERSION_GL
+
+     // core in ES 3.0 and GL 4.3
+    procs.invalidateFramebuffer = glInvalidateFramebuffer;
+#endif // BACKEND_OPENGL_LEVEL_GLES30
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
     initExtensionsGLES();
@@ -92,6 +134,38 @@ OpenGLContext::OpenGLContext() noexcept {
             }
         }
     }
+#ifndef IOS // IOS is guaranteed to have ES3.x
+    else if (UTILS_UNLIKELY(state.major == 2)) {
+        // Runtime OpenGL version is ES 2.x
+
+#if defined(BACKEND_OPENGL_LEVEL_GLES30)
+        // mandatory extensions (all supported by Mali-400 and Adreno 304)
+        assert_invariant(ext.OES_depth_texture);
+        assert_invariant(ext.OES_depth24);
+        assert_invariant(ext.OES_packed_depth_stencil);
+        assert_invariant(ext.OES_rgb8_rgba8);
+        assert_invariant(ext.OES_standard_derivatives);
+        assert_invariant(ext.OES_texture_npot);
+        assert_invariant(ext.OES_vertex_array_object);
+#endif
+
+        procs.genVertexArrays = glGenVertexArraysOES;
+        procs.bindVertexArray = glBindVertexArrayOES;
+        procs.deleteVertexArrays = glDeleteVertexArraysOES;
+
+        // EXT_disjoint_timer_query is optional -- pointers will be null if not available
+        procs.genQueries = glGenQueriesEXT;
+        procs.deleteQueries = glDeleteQueriesEXT;
+        procs.beginQuery = glBeginQueryEXT;
+        procs.endQuery = glEndQueryEXT;
+        procs.getQueryObjectuiv = glGetQueryObjectuivEXT;
+        procs.getQueryObjectui64v = glGetQueryObjectui64vEXT;
+
+        procs.invalidateFramebuffer = glDiscardFramebufferEXT;
+
+        mFeatureLevel = FeatureLevel::FEATURE_LEVEL_0;
+    }
+#endif // IOS
 #else
     initExtensionsGL();
     if (state.major == 4) {
@@ -239,8 +313,6 @@ OpenGLContext::OpenGLContext() noexcept {
     }
     flush(slog.v);
 
-    assert_invariant(gets.max_draw_buffers >= 4); // minspec
-
 #ifndef NDEBUG
     // this is useful for development
     slog.v  << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers << '\n'
@@ -254,10 +326,15 @@ OpenGLContext::OpenGLContext() noexcept {
     flush(slog.v);
 #endif
 
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    assert_invariant(state.major <= 2 || gets.max_draw_buffers >= 4); // minspec
+#endif
+
     setDefaultState();
 
 #ifdef GL_EXT_texture_filter_anisotropic
-    if (ext.EXT_texture_filter_anisotropic) {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    if (state.major > 2 && ext.EXT_texture_filter_anisotropic) {
         // make sure we don't have any error flag
         while (glGetError() != GL_NO_ERROR) { }
 
@@ -271,6 +348,7 @@ OpenGLContext::OpenGLContext() noexcept {
         }
         glDeleteSamplers(1, &s);
     }
+#endif
 #endif
 
     // in practice KHR_Debug has never been useful, and actually is confusing. We keep this
@@ -377,6 +455,7 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     ext.EXT_color_buffer_float = exts.has("GL_EXT_color_buffer_float"sv);
     ext.EXT_color_buffer_half_float = exts.has("GL_EXT_color_buffer_half_float"sv);
     ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+    ext.EXT_discard_framebuffer = exts.has("GL_EXT_discard_framebuffer"sv);
     ext.EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
     ext.EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
     ext.EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
@@ -393,12 +472,25 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     ext.KHR_debug = exts.has("GL_KHR_debug"sv);
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
+    ext.OES_depth_texture = exts.has("GL_OES_depth_texture"sv);
+    ext.OES_depth24 = exts.has("GL_OES_depth24"sv);
+    ext.OES_packed_depth_stencil = exts.has("GL_OES_packed_depth_stencil"sv);
     ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
+    ext.OES_rgb8_rgba8 = exts.has("GL_OES_rgb8_rgba8"sv);
+    ext.OES_standard_derivatives = exts.has("GL_OES_standard_derivatives"sv);
+    ext.OES_texture_npot = exts.has("GL_OES_texture_npot"sv);
+    ext.OES_vertex_array_object = exts.has("GL_OES_vertex_array_object"sv);
     ext.WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
     ext.WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
     ext.WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
+
     // ES 3.2 implies EXT_color_buffer_float
-    if (state.major >= 3 && state.minor >= 2) {
+    if (state.major > 3 || (state.major == 3 && state.minor >= 2)) {
+        ext.EXT_color_buffer_float = true;
+    }
+
+    // ES 3.x implies EXT_discard_framebuffer
+    if (state.major >= 3) {
         ext.EXT_color_buffer_float = true;
     }
 }
@@ -422,14 +514,12 @@ void OpenGLContext::initExtensionsGL() noexcept {
     }
 
     using namespace std::literals;
-    auto major = state.major;
-    auto minor = state.minor;
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
-    ext.ARB_shading_language_packing = exts.has("GL_ARB_shading_language_packing"sv) || (major == 4 && minor >= 2);
-    ext.EXT_clip_control = (major == 4 && minor >= 5);
+    ext.ARB_shading_language_packing = exts.has("GL_ARB_shading_language_packing"sv);
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
     ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+    ext.EXT_discard_framebuffer = false;
     ext.EXT_disjoint_timer_query = true;
     ext.EXT_multisampled_render_to_texture = false;
     ext.EXT_multisampled_render_to_texture2 = false;
@@ -443,13 +533,35 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
-    ext.KHR_debug = major >= 4 && minor >= 3;
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
+    ext.OES_depth_texture = true;
+    ext.OES_depth24 = true;
     ext.OES_EGL_image_external_essl3 = false;
+    ext.OES_rgb8_rgba8 = true;
+    ext.OES_standard_derivatives = true;
+    ext.OES_texture_npot = true;
+    ext.OES_vertex_array_object = true;
     ext.WEBGL_compressed_texture_etc = false;
     ext.WEBGL_compressed_texture_s3tc = false;
     ext.WEBGL_compressed_texture_s3tc_srgb = false;
+
+    auto const major = state.major;
+    auto const minor = state.minor;
+
+    // OpenGL 4.2 implies ARB_shading_language_packing
+    if (major > 4 || (major == 4 && minor >= 2)) {
+        ext.ARB_shading_language_packing = true;
+    }
+    // OpenGL 4.3 implies EXT_discard_framebuffer
+    if (major > 4 || (major == 4 && minor >= 3)) {
+        ext.EXT_discard_framebuffer = true;
+        ext.KHR_debug = true;
+    }
+    // OpenGL 4.5 implies EXT_clip_control
+    if (major > 4 || (major == 4 && minor >= 5)) {
+        ext.EXT_clip_control = true;
+    }
 }
 
 #endif // BACKEND_OPENGL_VERSION_GL
@@ -485,9 +597,18 @@ void OpenGLContext::pixelStore(GLenum pname, GLint param) noexcept {
     // that cannot be duplicated at the call site (e.g. glTexImage2D or glReadPixels)
 
     switch (pname) {
-        case GL_PACK_ALIGNMENT:     pcur = &state.pack.alignment;       break;
-        case GL_UNPACK_ALIGNMENT:   pcur = &state.unpack.alignment;     break;
-        case GL_UNPACK_ROW_LENGTH:  pcur = &state.unpack.row_length;    break;
+        case GL_PACK_ALIGNMENT:
+            pcur = &state.pack.alignment;
+            break;
+        case GL_UNPACK_ALIGNMENT:
+            pcur = &state.unpack.alignment;
+            break;
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        case GL_UNPACK_ROW_LENGTH:
+            assert_invariant(state.major > 2);
+            pcur = &state.unpack.row_length;
+            break;
+#endif
         default:
             goto default_case;
     }
@@ -533,6 +654,11 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
             genericBuffer = 0;
         }
     }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    assert_invariant(state.major > 2 ||
+            (target != GL_UNIFORM_BUFFER && target != GL_TRANSFORM_FEEDBACK_BUFFER));
+
     if (target == GL_UNIFORM_BUFFER || target == GL_TRANSFORM_FEEDBACK_BUFFER) {
         auto& indexedBuffer = state.buffers.targets[targetIndex];
         UTILS_NOUNROLL // clang generates >1 KiB of code!!
@@ -547,10 +673,11 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
             }
         }
     }
+#endif
 }
 
 void OpenGLContext::deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept {
-    glDeleteVertexArrays(1, arrays);
+    procs.deleteVertexArrays(1, arrays);
     // binding of a bound VAO is reset to 0
     for (GLsizei i = 0; i < n; ++i) {
         if (state.vao.p->vao == arrays[i]) {
@@ -561,15 +688,24 @@ void OpenGLContext::deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept
 
 void OpenGLContext::resetState() noexcept {
     // Force GL state to match the Filament state
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.draw_fbo);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, state.read_fbo);
+    if (state.major > 2) {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.draw_fbo);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, state.read_fbo);
+#endif
+    } else {
+        assert_invariant(state.read_fbo == state.draw_fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, state.draw_fbo);
+        state.read_fbo = state.draw_fbo;
+    }
+
 
     // state.program
     glUseProgram(state.program.use);
 
     // state.vao
     if (state.vao.p) {
-        glBindVertexArray(state.vao.p->vao);
+        procs.bindVertexArray(state.vao.p->vao);
     } else {
         bindVertexArray(nullptr);
     }
@@ -631,29 +767,34 @@ void OpenGLContext::resetState() noexcept {
     // Reset state.buffers to its default state to avoid the complexity and error-prone
     // nature of resetting the GL state to its existing state
     state.buffers = {};
-    GLenum const bufferTargets[] = {
-        GL_UNIFORM_BUFFER,
-        GL_TRANSFORM_FEEDBACK_BUFFER,
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    if (state.major > 2) {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        for (auto const target: {
+                GL_UNIFORM_BUFFER,
+                GL_TRANSFORM_FEEDBACK_BUFFER,
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
-        GL_SHADER_STORAGE_BUFFER,
+                GL_SHADER_STORAGE_BUFFER,
 #endif
-        GL_ARRAY_BUFFER,
-        GL_ELEMENT_ARRAY_BUFFER,
-        GL_PIXEL_PACK_BUFFER,
-        GL_PIXEL_UNPACK_BUFFER,
-    };
-    for (auto const target : bufferTargets) {
-        glBindBuffer(target, 0);
-    }
-
-    for (size_t bufferIndex = 0; bufferIndex < MAX_BUFFER_BINDINGS; ++bufferIndex) {
-        if (bufferIndex < (size_t)gets.max_uniform_buffer_bindings) {
-            glBindBufferBase(GL_UNIFORM_BUFFER, bufferIndex, 0);
+                GL_PIXEL_PACK_BUFFER,
+                GL_PIXEL_UNPACK_BUFFER,
+        }) {
+            glBindBuffer(target, 0);
         }
 
-        if (bufferIndex < (size_t)gets.max_transform_feedback_separate_attribs) {
-            glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, bufferIndex, 0);
+        for (size_t bufferIndex = 0; bufferIndex < MAX_BUFFER_BINDINGS; ++bufferIndex) {
+            if (bufferIndex < (size_t)gets.max_uniform_buffer_bindings) {
+                glBindBufferBase(GL_UNIFORM_BUFFER, bufferIndex, 0);
+            }
+
+            if (bufferIndex < (size_t)gets.max_transform_feedback_separate_attribs) {
+                glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, bufferIndex, 0);
+            }
         }
+#endif
     }
 
     // state.textures
@@ -679,7 +820,11 @@ void OpenGLContext::resetState() noexcept {
     };
     for (GLint unit = 0; unit < gets.max_combined_texture_image_units; ++unit) {
         glActiveTexture(GL_TEXTURE0 + unit);
-        glBindSampler(unit, 0);
+        if (state.major > 2) {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+            glBindSampler(unit, 0);
+#endif
+        }
         for (auto [target, available] : textureTargets) {
             if (available) {
                 glBindTexture(target, 0);
@@ -690,11 +835,20 @@ void OpenGLContext::resetState() noexcept {
 
     // state.unpack
     glPixelStorei(GL_UNPACK_ALIGNMENT, state.unpack.alignment);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, state.unpack.row_length);
+    if (state.major > 2) {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, state.unpack.row_length);
+#endif
+    }
+
 
     // state.pack
     glPixelStorei(GL_PACK_ALIGNMENT, state.pack.alignment);
-    glPixelStorei(GL_PACK_ROW_LENGTH, 0); // we rely on GL_PACK_ROW_LENGTH being zero
+    if (state.major > 2) {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        glPixelStorei(GL_PACK_ROW_LENGTH, 0); // we rely on GL_PACK_ROW_LENGTH being zero
+#endif
+    }
 
     // state.window
     glScissor(
@@ -714,20 +868,50 @@ void OpenGLContext::resetState() noexcept {
 }
 
 OpenGLContext::FenceSync OpenGLContext::createFenceSync(
-        OpenGLPlatform&) noexcept {
+        OpenGLPlatform& platform) noexcept {
+
+    if (UTILS_UNLIKELY(isES2())) {
+        assert_invariant(platform.canCreateFence());
+        return { .fence = platform.createFence() };
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     auto sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     CHECK_GL_ERROR(utils::slog.e)
     return { .sync = sync };
+#else
+    return {};
+#endif
 }
 
 void OpenGLContext::destroyFenceSync(
-        OpenGLPlatform&, FenceSync sync) noexcept {
+        OpenGLPlatform& platform, FenceSync sync) noexcept {
+
+    if (UTILS_UNLIKELY(isES2())) {
+        platform.destroyFence(static_cast<Platform::Fence*>(sync.fence));
+        return;
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     glDeleteSync(sync.sync);
     CHECK_GL_ERROR(utils::slog.e)
+#endif
 }
 
 OpenGLContext::FenceSync::Status OpenGLContext::clientWaitSync(
-        OpenGLPlatform&, FenceSync sync) const noexcept {
+        OpenGLPlatform& platform, FenceSync sync) const noexcept {
+
+    if (UTILS_UNLIKELY(isES2())) {
+        using Status = OpenGLContext::FenceSync::Status;
+        auto const status = platform.waitFence(static_cast<Platform::Fence*>(sync.fence), 0u);
+        switch (status) {
+            case FenceStatus::ERROR:                return Status::FAILURE;
+            case FenceStatus::CONDITION_SATISFIED:  return Status::CONDITION_SATISFIED;
+            case FenceStatus::TIMEOUT_EXPIRED:      return Status ::TIMEOUT_EXPIRED;
+        }
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     GLenum const status = glClientWaitSync(sync.sync, 0, 0u);
     CHECK_GL_ERROR(utils::slog.e)
     using Status = OpenGLContext::FenceSync::Status;
@@ -737,6 +921,9 @@ OpenGLContext::FenceSync::Status OpenGLContext::clientWaitSync(
         case GL_CONDITION_SATISFIED:    return Status::CONDITION_SATISFIED;
         default:                        return Status::FAILURE;
     }
+#else
+    return FenceSync::Status::FAILURE;
+#endif
 }
 
 } // namesapce filament

@@ -306,6 +306,7 @@ private:
     void resolvePass(ResolveAction action, GLRenderTarget const* rt,
             TargetBufferFlags discardFlags) noexcept;
 
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     GLuint getSamplerSlow(SamplerParams sp) const noexcept;
 
     inline GLuint getSampler(SamplerParams sp) const noexcept {
@@ -323,6 +324,7 @@ private:
     const std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
+#endif
 
     using AttachmentArray = std::array<GLenum, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2>;
     static GLsizei getAttachments(AttachmentArray& attachments,

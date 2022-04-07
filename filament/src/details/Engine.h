@@ -353,7 +353,10 @@ public:
     }
 
     void setAutomaticInstancingEnabled(bool enable) noexcept {
-        mAutomaticInstancingEnabled = enable;
+        // instancing is not allowed at feature level 0
+        if (hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
+            mAutomaticInstancingEnabled = enable;
+        }
     }
 
     bool isAutomaticInstancingEnabled() const noexcept {

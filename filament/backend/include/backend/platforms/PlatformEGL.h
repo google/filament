@@ -131,8 +131,10 @@ protected:
             bool OES_EGL_image_external_essl3 = false;
         } gl;
         struct {
-            bool KHR_no_config_context = false;
+            bool ANDROID_recordable = false;
+            bool KHR_create_context = false;
             bool KHR_gl_colorspace = false;
+            bool KHR_no_config_context = false;
         } egl;
     } ext;
 

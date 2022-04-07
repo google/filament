@@ -266,7 +266,11 @@ void FEngine::init() {
 
     DriverApi& driverApi = getDriverApi();
 
-    slog.i << "FEngine feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
+    mActiveFeatureLevel = std::min(mActiveFeatureLevel, driverApi.getFeatureLevel());
+
+    slog.i << "Backend feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
+    slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
+
 
     mResourceAllocator = new ResourceAllocator(driverApi);
 

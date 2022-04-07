@@ -21,8 +21,16 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#if defined(__ANDROID__)
+#include <sys/system_properties.h>
+#endif
+
 #include <utils/compiler.h>
 #include <utils/Log.h>
+
+#ifndef EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE
+#   define EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE 0x3483
+#endif
 
 using namespace utils;
 
@@ -105,9 +113,10 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
 #endif
 
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
-
-    ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
+    ext.egl.ANDROID_recordable = extensions.has("EGL_ANDROID_recordable");
+    ext.egl.KHR_create_context = extensions.has("EGL_KHR_create_context");
     ext.egl.KHR_gl_colorspace = extensions.has("EGL_KHR_gl_colorspace");
+    ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
@@ -122,12 +131,29 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
             EGL_NONE
     };
 
+#ifdef __ANDROID__
+    bool requestES2Context = false;
+    char property[PROP_VALUE_MAX];
+    int const length = __system_property_get("debug.filament.es2", property);
+    if (length > 0) {
+        requestES2Context = bool(atoi(property));
+    }
+#else
+    constexpr bool requestES2Context = false;
+#endif
 
-    // Request a ES3 context
-
+    // Request a ES2 context, devices that support ES3 will return an ES3 context
     Config contextAttribs = {
-            { EGL_CONTEXT_CLIENT_VERSION, 3 },
+            { EGL_CONTEXT_CLIENT_VERSION, 2 },
     };
+
+    // FOR TESTING ONLY, enforce the ES version we're asking for.
+    // FIXME: we should check EGL_ANGLE_create_context_backwards_compatible, however, at least
+    //        some versions of ANGLE don't advertise this extension but do support it.
+    if (requestES2Context) {
+        // TODO: is there a way to request the ANGLE driver if available?
+        contextAttribs[EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE] = EGL_FALSE;
+    }
 
 #ifdef NDEBUG
     // When we don't have a shared context, and we're in release mode, we always activate the
@@ -143,6 +169,9 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
     // for the dummy pbuffer surface.
     mEGLConfig = findSwapChainConfig(0);
+    if (UTILS_UNLIKELY(mEGLConfig == EGL_NO_CONFIG_KHR)) {
+        goto error; // error already logged
+    }
 
     if (UTILS_UNLIKELY(!ext.egl.KHR_no_config_context)) {
         // if we don't have the EGL_KHR_no_config_context the context must be created with
@@ -166,8 +195,13 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         }
 
         GLint const error = eglGetError();
+        if (error == EGL_BAD_ATTRIBUTE) {
+            // ANGLE doesn't always advertise this extension, so we have to try
+            contextAttribs.erase(EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE);
+            continue;
+        }
 #ifdef NDEBUG
-        if (error == EGL_BAD_MATCH &&
+        else if (error == EGL_BAD_MATCH &&
                    sharedContext && extensions.has("EGL_KHR_create_context_no_error")) {
             // context creation could fail because of EGL_CONTEXT_OPENGL_NO_ERROR_KHR
             // not matching the sharedContext. Try with it.
@@ -239,14 +273,22 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
     EGLConfig config = EGL_NO_CONFIG_KHR;
     EGLint configsCount;
     Config configAttribs = {
-            { EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR },
-            { EGL_RED_SIZE,            8 },
-            { EGL_GREEN_SIZE,          8 },
-            { EGL_BLUE_SIZE,           8 },
-            { EGL_ALPHA_SIZE,         (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ? 8 : 0 },
-            { EGL_DEPTH_SIZE,         24 },
-            { EGL_RECORDABLE_ANDROID,  1 },
+            { EGL_RENDERABLE_TYPE,  EGL_OPENGL_ES2_BIT },
+            { EGL_RED_SIZE,         8 },
+            { EGL_GREEN_SIZE,       8 },
+            { EGL_BLUE_SIZE,        8 },
+            { EGL_ALPHA_SIZE,      (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ? 8 : 0 },
+            { EGL_DEPTH_SIZE,      24 },
     };
+
+
+    if (ext.egl.KHR_create_context) {
+        configAttribs[EGL_RECORDABLE_ANDROID] |= EGL_OPENGL_ES3_BIT_KHR;
+    }
+
+    if (ext.egl.ANDROID_recordable) {
+        configAttribs[EGL_RECORDABLE_ANDROID] = EGL_TRUE;
+    }
 
     if (UTILS_UNLIKELY(
             !eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount))) {
@@ -255,15 +297,21 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
     }
 
     if (UTILS_UNLIKELY(configsCount == 0)) {
-        // warn and retry without EGL_RECORDABLE_ANDROID
-        logEglError(
-                "eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
-        configAttribs[EGL_RECORDABLE_ANDROID] = EGL_DONT_CARE;
-        if (UTILS_UNLIKELY(
-                !eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount) ||
-                configsCount == 0)) {
-            logEglError("eglChooseConfig");
+        if (ext.egl.ANDROID_recordable) {
+            // warn and retry without EGL_RECORDABLE_ANDROID
+            logEglError(
+                    "eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
+            configAttribs[EGL_RECORDABLE_ANDROID] = EGL_DONT_CARE;
+            if (UTILS_UNLIKELY(
+                    !eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)
+                            || configsCount == 0)) {
+                logEglError("eglChooseConfig");
                 return EGL_NO_CONFIG_KHR;
+            }
+        } else {
+            // we found zero config matching our request!
+            logEglError("eglChooseConfig() didn't find any matching config!");
+            return EGL_NO_CONFIG_KHR;
         }
     }
     return config;
@@ -436,13 +484,10 @@ bool PlatformEGL::setExternalImage(void* externalImage,
 }
 
 void PlatformEGL::initializeGlExtensions() noexcept {
+    // We're guaranteed to be on an ES platform, since we're using EGL
     GLUtils::unordered_string_set glExtensions;
-    GLint n;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    for (GLint i = 0; i < n; ++i) {
-        const char * const extension = (const char*) glGetStringi(GL_EXTENSIONS, (GLuint)i);
-        glExtensions.insert(extension);
-    }
+    const char* const extensions = (const char*)glGetString(GL_EXTENSIONS);
+    glExtensions = GLUtils::split(extensions);
     ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }
 
