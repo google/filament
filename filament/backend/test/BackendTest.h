@@ -58,14 +58,14 @@ protected:
     void readPixelsAndAssertHash(const char* testName, size_t width, size_t height,
             filament::backend::Handle<filament::backend::HwRenderTarget> rt, uint32_t expectedHash);
 
-    filament::backend::DriverApi& getDriverApi() { return commandStream; }
+    filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
 
 private:
 
     filament::backend::Driver* driver = nullptr;
     filament::backend::CommandBufferQueue commandBufferQueue;
-    filament::backend::DriverApi commandStream;
+    std::unique_ptr<filament::backend::DriverApi> commandStream;
 
     filament::backend::Handle<filament::backend::HwBufferObject> uniform;
 };

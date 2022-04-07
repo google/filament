@@ -59,7 +59,7 @@ void BackendTest::initializeDriver() {
     DefaultPlatform* platform = DefaultPlatform::create(&backend);
     assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
     driver = platform->createDriver(nullptr);
-    commandStream = CommandStream(*driver, commandBufferQueue.getCircularBuffer());
+    commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }
 
 void BackendTest::executeCommands() {
@@ -67,7 +67,7 @@ void BackendTest::executeCommands() {
     auto buffers = commandBufferQueue.waitForCommands();
     for (auto& item : buffers) {
         if (UTILS_LIKELY(item.begin)) {
-            commandStream.execute(item.begin);
+            getDriverApi().execute(item.begin);
             commandBufferQueue.releaseBuffer(item);
         }
     }
@@ -84,7 +84,7 @@ void BackendTest::flushAndWait(uint64_t timeout) {
 
 Handle<HwSwapChain> BackendTest::createSwapChain() {
     const NativeView& view = getNativeView();
-    return commandStream.createSwapChain(view.ptr, 0);
+    return getDriverApi().createSwapChain(view.ptr, 0);
 }
 
 void BackendTest::fullViewport(RenderPassParams& params) {

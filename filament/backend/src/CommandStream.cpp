@@ -56,9 +56,9 @@ static UTILS_NOINLINE UTILS_UNUSED std::string extractMethodName(std::string& co
 // ------------------------------------------------------------------------------------------------
 
 CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
-        : mDispatcher(driver.getDispatcher()),
-          mDriver(&driver),
-          mCurrentBuffer(&buffer)
+        : mDriver(driver),
+          mCurrentBuffer(buffer),
+          mDispatcher(driver.getDispatcher())
 #ifndef NDEBUG
           , mThreadId(ThreadUtils::getThreadId())
 #endif
@@ -83,8 +83,8 @@ void CommandStream::execute(void* buffer) {
         }
     }
 
-    mDriver->execute([this, buffer]() {
-        Driver& UTILS_RESTRICT driver = *mDriver;
+    mDriver.execute([this, buffer]() {
+        Driver& UTILS_RESTRICT driver = mDriver;
         CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
         while (UTILS_LIKELY(base)) {
             base = base->execute(driver);
