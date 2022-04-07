@@ -13,7 +13,7 @@ Our CMakeLists differs from the one in basisu as follows.
 
 (1)
 
-Disable some warnings: "-Wno-unused-but-set-variable -Wno-unused-lambda-capture"
+Disable support for various texture formats that we don't need.
 
 (2)
 
