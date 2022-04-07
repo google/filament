@@ -22,14 +22,14 @@
 
 #include <backend/Platform.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 #include <backend/CallbackHandler.h>
 
-#include "private/backend/AcquiredImage.h"
+#include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 #include "private/backend/SamplerGroup.h"
 
-#include <array>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -41,7 +41,7 @@
 
 namespace filament::backend {
 
-class Dispatcher;
+struct AcquiredImage;
 
 /*
  * Hardware handles
@@ -72,7 +72,7 @@ struct HwBufferObject : public HwBase {
     uint32_t byteCount{};
 
     HwBufferObject() noexcept = default;
-    HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
+    explicit HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
 };
 
 struct HwIndexBuffer : public HwBase {
@@ -167,21 +167,16 @@ struct HwTimerQuery : public HwBase {
 
 class DriverBase : public Driver {
 public:
-    DriverBase() = delete;
-    explicit DriverBase(Dispatcher* dispatcher) noexcept;
+    DriverBase() noexcept;
     ~DriverBase() noexcept override;
 
     void purge() noexcept final;
-
-    Dispatcher& getDispatcher() noexcept final { return *mDispatcher; }
 
     // --------------------------------------------------------------------------------------------
     // Privates
     // --------------------------------------------------------------------------------------------
 
 protected:
-    Dispatcher* mDispatcher;
-
     class CallbackDataDetails;
 
     // Helpers...

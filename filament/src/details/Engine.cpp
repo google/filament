@@ -193,7 +193,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
 
 uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
     // 1 thread for the user, 1 thread for the backend
-    int threadCount = std::thread::hardware_concurrency() - 2;
+    int threadCount = (int)std::thread::hardware_concurrency() - 2;
     // make sure we have at least 1 thread though
     threadCount = std::max(1, threadCount);
     return threadCount;

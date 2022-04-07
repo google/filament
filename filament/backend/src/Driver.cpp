@@ -15,6 +15,8 @@
  */
 
 #include "private/backend/Driver.h"
+
+#include "private/backend/AcquiredImage.h"
 #include "private/backend/CommandStream.h"
 
 #include "DriverBase.h"
@@ -25,20 +27,15 @@
 #include <math/vec4.h>
 
 #include <backend/BufferDescriptor.h>
-#include <backend/PixelBufferDescriptor.h>
 
 #include <utils/Systrace.h>
 
 using namespace utils;
+using namespace filament::math;
 
-namespace filament {
+namespace filament::backend {
 
-using namespace math;
-
-namespace backend {
-
-DriverBase::DriverBase(Dispatcher* dispatcher) noexcept
-        : mDispatcher(dispatcher) {
+DriverBase::DriverBase() noexcept {
     if constexpr (UTILS_HAS_THREADING) {
         // This thread services user callbacks
         mServiceThread = std::thread([this]() {
@@ -75,7 +72,6 @@ DriverBase::~DriverBase() noexcept {
         lock.unlock();
         mServiceThread.join();
     }
-    delete mDispatcher;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -169,14 +165,6 @@ void DriverBase::debugCommandEnd(CommandStream* cmds, bool synchronous, const ch
     }
 }
 
-// ------------------------------------------------------------------------------------------------
-
-Driver::~Driver() noexcept = default;
-
-void Driver::execute(std::function<void(void)> fn) noexcept {
-    fn();
-}
-
 size_t Driver::getElementTypeSize(ElementType type) noexcept {
     switch (type) {
         case ElementType::BYTE:     return sizeof(int8_t);
@@ -208,5 +196,12 @@ size_t Driver::getElementTypeSize(ElementType type) noexcept {
     }
 }
 
-} // namespace backend
-} // namespace filament
+// ------------------------------------------------------------------------------------------------
+
+Driver::~Driver() noexcept = default;
+
+void Driver::execute(std::function<void(void)> const& fn) noexcept {
+    fn();
+}
+
+} // namespace filament::backend

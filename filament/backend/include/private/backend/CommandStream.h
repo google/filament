@@ -1,5 +1,3 @@
-#include <utility>
-
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -20,22 +18,18 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_COMMANDSTREAM_H
 
 #include "private/backend/CircularBuffer.h"
+#include "private/backend/Dispatcher.h"
+#include "private/backend/Program.h"
+#include "private/backend/SamplerGroup.h"
+#include "private/backend/Driver.h"
 
 #include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
 #include <backend/PresentCallable.h>
 #include <backend/TargetBufferInfo.h>
-
-#include "private/backend/Program.h"
-#include "private/backend/SamplerGroup.h"
-
-// FIXME: we'd like to not need this header here.
-#include "private/backend/Driver.h"
-
-#include <backend/DriverEnums.h>
-
 
 #include <utils/compiler.h>
 #include <utils/ThreadUtils.h>
@@ -45,40 +39,14 @@
 #include <thread>
 #include <utility>
 
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 
-// Set to true to print every commands out on log.d. This requires RTTI and DEBUG
+// Set to true to print every command out on log.d. This requires RTTI and DEBUG
 #define DEBUG_COMMAND_STREAM false
 
-namespace filament {
-namespace backend {
-
-class Driver;
-class CommandBase;
-
-/*
- * Dispatcher is a data structure containing only function pointers.
- * Each function pointer targets code that unpacks the arguments to the driver's method and
- * calls it.
- *
- * Dispatcher's function pointers are populated during initialization and no CommandStream calls
- * can be made before that.
- *
- * When a command is inserted into the stream, the corresponding function pointer is copied
- * directly into CommandBase from Dispatcher.
- */
-class Dispatcher {
-public:
-    using Execute = void (*)(Driver& driver, CommandBase* self, intptr_t* next);
-#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
-#define DECL_DRIVER_API(methodName, paramsDecl, params)                     Execute methodName##_;
-#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)     Execute methodName##_;
-#include "DriverAPI.inc"
-};
-
-// ------------------------------------------------------------------------------------------------
+namespace filament::backend {
 
 class CommandBase {
     static constexpr size_t FILAMENT_OBJECT_ALIGNMENT = alignof(std::max_align_t);
@@ -132,7 +100,7 @@ constexpr decltype(auto) apply(M&& m, D&& d, T&& t) {
 /*
  * CommandType<> is just a wrapper class to specialize on a pointer-to-member of Driver
  * (i.e. a method pointer to a method of Driver of a particular type -- but not the
- * method itself). We only do that so we can identify the parameters of that method.
+ * method itself). We only do that, so we can identify the parameters of that method.
  * We won't call through that pointer though.
  */
 template<typename... ARGS>
@@ -208,7 +176,7 @@ class NoopCommand : public CommandBase {
     }
 public:
     inline constexpr explicit NoopCommand(void* next) noexcept
-            : CommandBase(execute), mNext(size_t((char *)next - (char *)this)) { }
+            : CommandBase(execute), mNext(intptr_t((char *)next - (char *)this)) { }
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -224,25 +192,16 @@ public:
 #endif
 
 class CommandStream {
-    // Dispatcher could be a value (instead of pointer), which saves a load when writing commands
-    // at the expense of a larger CommandStream object (about ~400 bytes)
-    Dispatcher* mDispatcher = nullptr;
-    Driver* mDriver = nullptr;
-    CircularBuffer* UTILS_RESTRICT mCurrentBuffer = nullptr;
-
-#ifndef NDEBUG
-    // just for debugging...
-    std::thread::id mThreadId{};
-#endif
-
-    bool mUsePerformanceCounter = false;
-
     template<typename T>
     struct AutoExecute {
         T closure;
-        inline AutoExecute(T&& closure) : closure(std::forward<T>(closure)) {}
+        inline explicit AutoExecute(T&& closure) : closure(std::forward<T>(closure)) {}
         inline ~AutoExecute() { closure(); }
     };
+
+public:
+    CommandStream() noexcept = default;
+    CommandStream(Driver& driver, CircularBuffer& buffer) noexcept;
 
 public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
@@ -250,7 +209,7 @@ public:
         DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
         using Cmd = COMMAND_TYPE(methodName);                                                   \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
-        new(p) Cmd(mDispatcher->methodName##_, APPLY(std::move, params));                       \
+        new(p) Cmd(mDispatcher.methodName##_, APPLY(std::move, params));                        \
         DEBUG_COMMAND_END(methodName, false);                                                   \
     }
 
@@ -269,7 +228,7 @@ public:
         RetType result = mDriver->methodName##S();                                              \
         using Cmd = COMMAND_TYPE(methodName##R);                                                \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
-        new(p) Cmd(mDispatcher->methodName##_, RetType(result), APPLY(std::move, params));      \
+        new(p) Cmd(mDispatcher.methodName##_, RetType(result), APPLY(std::move, params));       \
         DEBUG_COMMAND_END(methodName, false);                                                   \
         return result;                                                                          \
     }
@@ -277,10 +236,7 @@ public:
 #include "DriverAPI.inc"
 
 public:
-    CommandStream() noexcept = default;
-    CommandStream(Driver& driver, CircularBuffer& buffer) noexcept;
-
-    // This is for debugging only. Currently CircularBuffer can only be written from a
+    // This is for debugging only. Currently, CircularBuffer can only be written from a
     // single thread. In debug builds we assert this condition.
     // Call this first in the render loop.
     inline void debugThreading() noexcept {
@@ -317,6 +273,19 @@ private:
         assert_invariant(utils::ThreadUtils::isThisThread(mThreadId));
         return mCurrentBuffer->allocate(size);
     }
+
+    // We use a copy of Dispatcher (instead of a pointer) because this removes one dereference
+    // when executing driver commands.
+    Dispatcher mDispatcher;
+    Driver* UTILS_RESTRICT mDriver = nullptr;
+    CircularBuffer* UTILS_RESTRICT mCurrentBuffer = nullptr;
+
+#ifndef NDEBUG
+    // just for debugging...
+    std::thread::id mThreadId{};
+#endif
+
+    bool mUsePerformanceCounter = false;
 };
 
 void* CommandStream::allocate(size_t size, size_t alignment) noexcept {
@@ -341,7 +310,6 @@ PodType* CommandStream::allocatePod(size_t count, size_t alignment) noexcept {
     return static_cast<PodType*>(allocate(count * sizeof(PodType), alignment));
 }
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_COMMANDSTREAM_H

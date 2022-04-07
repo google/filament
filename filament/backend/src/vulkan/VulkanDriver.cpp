@@ -92,9 +92,12 @@ Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
     return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount);
 }
 
+Dispatcher VulkanDriver::getDispatcher() const noexcept {
+    return ConcreteDispatcher<VulkanDriver>::make();
+}
+
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept :
-        DriverBase(new ConcreteDispatcher<VulkanDriver>()),
         mHandleAllocator("Handles", FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U),
         mContextManager(*platform),
         mStagePool(mContext),

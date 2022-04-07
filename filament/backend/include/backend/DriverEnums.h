@@ -33,7 +33,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace filament {
 /**
  * Types and enums used by filament's driver.
  *
@@ -41,7 +40,7 @@ namespace filament {
  * internal redeclaration of these types.
  * For e.g. Use Texture::Sampler instead of filament::SamplerType.
  */
-namespace backend {
+namespace filament::backend {
 
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
@@ -998,8 +997,7 @@ enum class Workaround : uint16_t {
     ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
         : public std::true_type {};
