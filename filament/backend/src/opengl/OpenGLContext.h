@@ -61,6 +61,8 @@ public:
         }
     } gl;
 
+    static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
+
     OpenGLContext() noexcept;
 
     constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
