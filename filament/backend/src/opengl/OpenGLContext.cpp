@@ -23,6 +23,20 @@ using namespace utils;
 
 namespace filament::backend {
 
+bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
+    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
+        char const* version = (char const*)glGetString(GL_VERSION);
+        // This works on all versions of GLES
+        int n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
+        return n == 2;
+    } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
+        // OpenGL version
+        glGetIntegerv(GL_MAJOR_VERSION, major);
+        glGetIntegerv(GL_MINOR_VERSION, minor);
+        return (glGetError() != GL_NO_ERROR);
+    }
+}
+
 OpenGLContext::OpenGLContext() noexcept {
     state.vao.p = &mDefaultVAO;
 
@@ -39,9 +53,10 @@ OpenGLContext::OpenGLContext() noexcept {
      * Figure out GL / GLES version and available features
      */
 
+    queryOpenGLVersion(&state.major, &state.minor);
+
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         // This works on all versions of GLES
-        sscanf(state.version, "OpenGL ES %d.%d", &state.major, &state.minor);
         if (state.major == 3 && state.minor >= 0) {
             mShaderModel = ShaderModel::GL_ES_30;
         }
@@ -51,8 +66,6 @@ OpenGLContext::OpenGLContext() noexcept {
         initExtensionsGLES();
     } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // OpenGL version
-        glGetIntegerv(GL_MAJOR_VERSION, &state.major);
-        glGetIntegerv(GL_MINOR_VERSION, &state.minor);
         if (state.major == 4 && state.minor >= 1) {
             mShaderModel = ShaderModel::GL_CORE_41;
         }
