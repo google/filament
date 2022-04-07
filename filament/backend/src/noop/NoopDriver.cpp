@@ -23,10 +23,13 @@ Driver* NoopDriver::create() {
     return new NoopDriver();
 }
 
-NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver>()) {
-}
+NoopDriver::NoopDriver() noexcept = default;
 
 NoopDriver::~NoopDriver() noexcept = default;
+
+Dispatcher NoopDriver::getDispatcher() const noexcept {
+    return ConcreteDispatcher<NoopDriver>::make();
+}
 
 ShaderModel NoopDriver::getShaderModel() const noexcept {
 #if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)

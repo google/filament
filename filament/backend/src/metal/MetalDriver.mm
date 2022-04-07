@@ -50,11 +50,14 @@ Driver* MetalDriver::create(MetalPlatform* const platform) {
     return new MetalDriver(platform);
 }
 
+Dispatcher MetalDriver::getDispatcher() const noexcept {
+    return ConcreteDispatcher<MetalDriver>::make();
+}
+
 MetalDriver::MetalDriver(MetalPlatform* platform) noexcept
-        : DriverBase(new ConcreteDispatcher<MetalDriver>()),
-        mPlatform(*platform),
-        mContext(new MetalContext),
-        mHandleAllocator("Handles", FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U) {
+        : mPlatform(*platform),
+          mContext(new MetalContext),
+          mHandleAllocator("Handles", FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U) {
     mContext->driver = this;
 
     mContext->device = mPlatform.createDevice();
@@ -158,7 +161,7 @@ void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
     swapChain->setFrameCompletedCallback(callback, user);
 }
 
-void MetalDriver::execute(std::function<void(void)> fn) noexcept {
+void MetalDriver::execute(std::function<void(void)> const& fn) noexcept {
     @autoreleasepool {
         fn();
     }

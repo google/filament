@@ -29,8 +29,7 @@
 
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // ------------------------------------------------------------------------------------------------
 // A few utility functions for debugging...
@@ -57,7 +56,7 @@ static UTILS_NOINLINE UTILS_UNUSED std::string extractMethodName(std::string& co
 // ------------------------------------------------------------------------------------------------
 
 CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
-        : mDispatcher(&driver.getDispatcher()),
+        : mDispatcher(driver.getDispatcher()),
           mDriver(&driver),
           mCurrentBuffer(&buffer)
 #ifndef NDEBUG
@@ -152,5 +151,4 @@ void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) noexcept
     static_cast<CustomCommand*>(base)->~CustomCommand();
 }
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

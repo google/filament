@@ -27,6 +27,7 @@ namespace filament::backend {
 class NoopDriver final : public DriverBase {
     NoopDriver() noexcept;
     ~NoopDriver() noexcept override;
+    Dispatcher getDispatcher() const noexcept final;
 
 public:
     static Driver* create();

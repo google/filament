@@ -42,6 +42,7 @@ set(PRIVATE_HDRS
         include/private/backend/CircularBuffer.h
         include/private/backend/CommandBufferQueue.h
         include/private/backend/CommandStream.h
+        include/private/backend/Dispatcher.h
         include/private/backend/Driver.h
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
