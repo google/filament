@@ -1,0 +1,14 @@
+setuptools==40.6.2
+wheel==0.37.1
+certifi==2021.10.8
+cffi==1.15.0
+charset-normalizer==2.0.12
+Deprecated==1.2.13
+idna==3.3
+pycparser==2.21
+PyGithub==1.55
+PyJWT==2.3.0
+PyNaCl==1.5.0
+requests==2.27.1
+urllib3==1.26.9
+wrapt==1.14.0
