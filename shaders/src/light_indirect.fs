@@ -55,8 +55,32 @@ float GetSmallestPositive(float a, float b) {
     return a >= 0.0 ? a : b;
 }
 
+
+//------------------------------------------------------------------------------
+// IBL tinting helpers
+//------------------------------------------------------------------------------
+
+float OverlayBlend(float a, float b) {
+    // Visually almost-luminance-preserving formulation. This uses an artist-provided constant below
+    // that they've found the visually most pleasing under _most_ (but not all) circumstances.
+    const float kT = 0.65;
+    const float kOneOverT = 1.0 / kT;
+    return (a < kT) ? a * kOneOverT * b : a - kT + b;
+}
+vec3 OverlayBlend(vec3 a, vec3 b) {
+    return vec3(OverlayBlend(a.x, b.x), OverlayBlend(a.y, b.y), OverlayBlend(a.z, b.z));
+}
+
+vec3 TintIbl(vec3 color) {
+    return mix(color, OverlayBlend(color, frameUniforms.iblTintAndIntensity.rgb), frameUniforms.iblTintAndIntensity.w);
+}
+
+//------------------------------------------------------------------------------
+// IBL fetch helpers
+//------------------------------------------------------------------------------
+
 vec3 decodeDataForIBL(const vec4 data) {
-    return data.rgb;
+    return TintIbl(data.rgb);
 }
 
 //------------------------------------------------------------------------------
@@ -82,7 +106,7 @@ vec3 prefilteredDFG(float perceptualRoughness, float NoV) {
 //------------------------------------------------------------------------------
 
 vec3 Irradiance_SphericalHarmonics(const vec3 n) {
-    return max(
+    vec3 rawResult = max(
           frameUniforms.iblSH[0]
 #if SPHERICAL_HARMONICS_BANDS >= 2
         + frameUniforms.iblSH[1] * (n.y)
@@ -97,6 +121,8 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
         + frameUniforms.iblSH[8] * (n.x * n.x - n.y * n.y)
 #endif
         , 0.0);
+
+    return TintIbl(rawResult);
 }
 
 vec3 Irradiance_RoughnessOne(const vec3 n) {

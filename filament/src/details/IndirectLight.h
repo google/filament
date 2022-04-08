@@ -72,6 +72,9 @@ public:
     void setIblHalfExtents(const math::float3& iblHalfExtents) noexcept;
     const math::float3& getIblHalfExtents() const noexcept;
 
+    void setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept;
+    const math::float4& getIblTintAndIntensity() const noexcept;
+
 private:
     FTexture const* mReflectionsTexture = nullptr;
     FTexture const* mIrradianceTexture = nullptr;
@@ -79,7 +82,7 @@ private:
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;
     uint8_t mLevelCount = 0;
-    IblOptions mIblOptions;
+    IblOptions mIblOptions = {};
 };
 
 FILAMENT_UPCAST(IndirectLight)

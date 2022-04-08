@@ -385,6 +385,18 @@ public:
      */
     const math::float3& getIblHalfExtents() const noexcept;
 
+    /**
+     * Sets the IBL tint (.rgb) and blend intensity (.a)
+     *
+     * @param iblTintAndIntensity The tint color (.rgb) and blend weight between shaded and tinted (.a)
+     */
+    void setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept;
+
+    /**
+     * Gets IBL tint (.rgb) and blend intensity (.a).
+     */    
+    const math::float4& getIblTintAndIntensity() const noexcept;
+
     /** @deprecated use static versions instead */
     UTILS_DEPRECATED
     math::float3 getDirectionEstimate() const noexcept;

@@ -219,6 +219,7 @@ void PerViewUniforms::prepareIblLight(const IblOptions& options) noexcept {
     s.iblTechnique = static_cast<uint32_t>(options.iblTechnique);
     s.iblCenter = options.iblCenter;
     s.iblHalfExtents = options.iblHalfExtents;
+    s.iblTintAndIntensity = options.iblTintAndIntensity;
 }
 
 void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
