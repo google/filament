@@ -80,7 +80,7 @@ public:
      *                    underlying platform is returned and \p backendHint is updated
      *                    accordingly. Can't be nullptr.
      *
-     * @return A pointer to the Plaform object.
+     * @return A pointer to the Platform object.
      *
      * @see destroy
      */
