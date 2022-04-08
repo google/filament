@@ -159,7 +159,7 @@ struct DepthRange {
  * @see Fence, Fence::wait()
  */
 enum class FenceStatus : int8_t {
-    ERROR = -1,                 //!< An error occured. The Fence condition is not satisfied.
+    ERROR = -1,                 //!< An error occurred. The Fence condition is not satisfied.
     CONDITION_SATISFIED = 0,    //!< The Fence condition is satisfied.
     TIMEOUT_EXPIRED = 1,        //!< wait()'s timeout expired. The Fence condition is not satisfied.
 };
@@ -168,7 +168,7 @@ enum class FenceStatus : int8_t {
  * Status codes for sync objects
  */
 enum class SyncStatus : int8_t {
-    ERROR = -1,          //!< An error occured. The Sync is not signaled.
+    ERROR = -1,          //!< An error occurred. The Sync is not signaled.
     SIGNALED = 0,        //!< The Sync is signaled.
     NOT_SIGNALED = 1,    //!< The Sync is not signaled yet
 };
