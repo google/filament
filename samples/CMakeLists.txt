@@ -151,9 +151,9 @@ add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 # Use a RGBA compression format for Metal and Vulkan support.
 set (COMPRESSION "--compression=s3tc_rgba_dxt5")
 add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc.ktx" "${COMPRESSION}")
-add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "${COMPRESSION};--grayscale")
-add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx" "${COMPRESSION};--grayscale")
-add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "${COMPRESSION};--grayscale")
+add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "${COMPRESSION};--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx" "${COMPRESSION};--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "${COMPRESSION};--grayscale;--linear")
 
 add_pngfile("assets/models/monkey/normal.png" "normal.png")
 
