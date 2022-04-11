@@ -32,7 +32,7 @@ public:
     Driver* createDriver(void* sharedContext) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
     
-    void* getMTLDevice() noexcept override;
+    void* getMTLDevice() noexcept override { return mDevice; }
 
     /**
      * Obtain the preferred Metal device object for the backend to use.
@@ -59,6 +59,7 @@ public:
 
 private:
     id<MTLCommandQueue> mCommandQueue = nil;
+    id<MTLDevice> mDevice = nil;
 
 };
 
