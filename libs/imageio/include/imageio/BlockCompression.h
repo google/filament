@@ -116,7 +116,7 @@ enum class AstcSemantic {
 struct AstcConfig {
     AstcPreset quality;
     AstcSemantic semantic;
-     filament::math::ushort2 blocksize;
+    filament::math::ushort2 blocksize;
     bool srgb;
 };
 
@@ -182,6 +182,37 @@ struct CompressionConfig {
     AstcConfig astc;
     S3tcConfig s3tc;
     EtcConfig etc;
+    bool isLinear() const {
+        if (type == ASTC) {
+            return !astc.srgb;
+        }
+        switch (type == S3TC ? s3tc.format : etc.format) {
+            case CompressedFormat::R11_EAC:
+            case CompressedFormat::SIGNED_R11_EAC:
+            case CompressedFormat::RG11_EAC:
+            case CompressedFormat::SIGNED_RG11_EAC:
+            case CompressedFormat::RGB8_ETC2:
+            case CompressedFormat::RGB8_ALPHA1_ETC2:
+            case CompressedFormat::RGBA8_ETC2_EAC:
+            case CompressedFormat::RGB_S3TC_DXT1:
+            case CompressedFormat::RGBA_S3TC_DXT1:
+            case CompressedFormat::RGBA_S3TC_DXT3:
+            case CompressedFormat::RGBA_S3TC_DXT5:
+                return true;
+            case CompressedFormat::SRGB8_ETC2:
+            case CompressedFormat::SRGB8_ALPHA1_ETC:
+            case CompressedFormat::SRGB8_ALPHA8_ETC2_EAC:
+            case CompressedFormat::SRGB_S3TC_DXT1:
+            case CompressedFormat::SRGB_ALPHA_S3TC_DXT1:
+            case CompressedFormat::SRGB_ALPHA_S3TC_DXT3:
+            case CompressedFormat::SRGB_ALPHA_S3TC_DXT5:
+                return false;
+            default:
+                // This should be unreachable.
+                assert(false && "ASTC formats are already handled");
+                return false;
+        }
+    }
 };
 
 bool parseOptionString(const std::string& options, CompressionConfig* config);

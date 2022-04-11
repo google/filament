@@ -48,7 +48,7 @@ static bool g_addAlpha = false;
 static bool g_stripAlpha = false;
 static bool g_grayscale = false;
 static bool g_ktxContainer = false;
-static bool g_linearized = false;
+static bool g_sourceIsLinear = false;
 static bool g_quietMode = false;
 static uint32_t g_mipLevelCount = 0;
 
@@ -71,13 +71,13 @@ Options:
    --license, -L
        print copyright and license information
    --linear, -l
-       assume that image pixels are already linearized
+       specifies that the source image is linear (converts to floats without transformation)
    --page, -p
        generate HTML page for review purposes (mipmap.html)
    --quiet, -q
        suppress console output from the mipgen tool
    --grayscale, -g
-       create a single-channel image and do not perform gamma correction
+       create a single-channel image
    --format=[exr|hdr|rgbm|psd|png|dds|ktx], -f [exr|hdr|rgbm|psd|png|dds|ktx]
        specify output file format, inferred from output pattern if omitted
    --kernel=[box|nearest|hermite|gaussian|normals|mitchell|lanczos|min], -k [filter]
@@ -190,7 +190,7 @@ static int handleArguments(int argc, char* argv[]) {
                 license();
                 exit(0);
             case 'l':
-                g_linearized = true;
+                g_sourceIsLinear = true;
                 break;
             case 'g':
                 g_grayscale = true;
@@ -273,7 +273,7 @@ int main(int argc, char* argv[]) {
         g_ktxContainer = true;
         g_formatSpecified = true;
     } else if (!g_formatSpecified) {
-        g_format = ImageEncoder::chooseFormat(outputPattern, g_linearized);
+        g_format = ImageEncoder::chooseFormat(outputPattern, g_sourceIsLinear);
     }
 
     if (!g_quietMode) {
@@ -282,7 +282,7 @@ int main(int argc, char* argv[]) {
 
     ifstream inputStream(inputPath.getPath(), ios::binary);
     LinearImage sourceImage = ImageDecoder::decode(inputStream, inputPath.getPath(),
-            g_linearized ? ImageDecoder::ColorSpace::LINEAR : ImageDecoder::ColorSpace::SRGB);
+            g_sourceIsLinear ? ImageDecoder::ColorSpace::LINEAR : ImageDecoder::ColorSpace::SRGB);
     if (!sourceImage.isValid()) {
         cerr << "Unable to open image: " << inputPath.getPath() << endl;
         return 1;
@@ -337,15 +337,25 @@ int main(int argc, char* argv[]) {
             .pixelDepth = 0,
         };
         size_t componentCount = sourceImage.getChannels();
+
+        // Try to choose an internal format that has the same transformation function as the
+        // source format. This varible may be adjusted later, after the destination format has
+        // been resolved.
+        bool destIsLinear = g_sourceIsLinear;
+
         if (componentCount == 1) {
             info.glFormat = info.glBaseInternalFormat = Ktx1Bundle::RED;
             info.glInternalFormat = Ktx1Bundle::R8;
+            destIsLinear = true;
         } else if (componentCount == 3) {
             info.glFormat = info.glBaseInternalFormat = Ktx1Bundle::RGB;
-            info.glInternalFormat = Ktx1Bundle::RGB8;
+            info.glInternalFormat = destIsLinear ? Ktx1Bundle::RGB8 : Ktx1Bundle::SRGB8;
         } else if (componentCount == 4) {
             info.glFormat = info.glBaseInternalFormat = Ktx1Bundle::RGBA;
-            info.glInternalFormat = Ktx1Bundle::RGBA8;
+            info.glInternalFormat = destIsLinear ? Ktx1Bundle::RGBA8 : Ktx1Bundle::SRGB8_ALPHA8;
+        } else {
+            cerr << "Bad component count." << endl;
+            return 1;
         }
 #ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
         CompressionConfig config {};
@@ -359,6 +369,7 @@ int main(int argc, char* argv[]) {
             // glFormat should be 0, and glBaseInternalFormat should be RED, RG, RGB, or RGBA.
             // The glInternalFormat field is the only field that specifies the actual format.
             info.glFormat = 0;
+            destIsLinear = config.isLinear();
         }
 #else
         if (!g_compression.empty()) {
@@ -387,11 +398,11 @@ int main(int argc, char* argv[]) {
                 return;
             }
 #endif
-            if (g_grayscale && g_linearized) {
+            if (g_grayscale && destIsLinear) {
                 data = fromLinearToGrayscale<uint8_t>(image);
             } else if (g_grayscale) {
                 data = fromLinearTosRGB<uint8_t, 1>(image);
-            } else if (g_linearized) {
+            } else if (destIsLinear) {
                 if (componentCount == 3) {
                     data = fromLinearToRGB<uint8_t, 3>(image);
                 } else {
