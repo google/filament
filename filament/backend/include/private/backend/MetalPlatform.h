@@ -31,6 +31,8 @@ public:
 
     Driver* createDriver(void* sharedContext) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
+    
+    void* getMTLDevice() noexcept override;
 
     /**
      * Obtain the preferred Metal device object for the backend to use.
