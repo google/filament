@@ -55,6 +55,8 @@ id<MTLDevice> MetalPlatform::createDevice() noexcept {
     {
         result = MTLCreateSystemDefaultDevice();
     }
+    
+    mDevice = result;
 
     utils::slog.i << "Selected physical device '"
                   << [result.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
