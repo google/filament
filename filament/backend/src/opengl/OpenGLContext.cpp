@@ -33,7 +33,7 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
         // OpenGL version
         glGetIntegerv(GL_MAJOR_VERSION, major);
         glGetIntegerv(GL_MINOR_VERSION, minor);
-        return (glGetError() != GL_NO_ERROR);
+        return (glGetError() == GL_NO_ERROR);
     }
 }
 
