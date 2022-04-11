@@ -66,6 +66,8 @@ public:
      * thread, or if the platform does not need to perform any special processing.
      */
     virtual bool pumpEvents() noexcept { return false; }
+    
+    virtual void* getMTLDevice() noexcept { return nullptr; }
 };
 
 
