@@ -3,7 +3,7 @@
 This directory contains sample apps that demonstrate how to use the Filament API in an iOS
 application.
 
-## Prequisites
+## Prerequisites
 
 Currently, both the OpenGL ES 3.0 and Metal backends are supported, but using the Metal backend is
 recommended.
