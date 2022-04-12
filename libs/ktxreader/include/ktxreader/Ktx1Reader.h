@@ -55,7 +55,7 @@ namespace Ktx1Reader {
      *
      * @param engine Used to create the Filament Texture
      * @param ktx In-memory representation of a KTX file
-     * @param srgb Forces the KTX-specified format into an SRGB format if possible
+     * @param srgb Requests an sRGB format from the KTX file
      * @param callback Gets called after all texture data has been uploaded to the GPU
      * @param userdata Passed into the callback
      */
@@ -68,7 +68,7 @@ namespace Ktx1Reader {
      *
      * @param engine Used to create the Filament Texture
      * @param ktx In-memory representation of a KTX file
-     * @param srgb Forces the KTX-specified format into an SRGB format if possible
+     * @param srgb Requests an sRGB format from the KTX file
      */
     Texture* createTexture(Engine* engine, Ktx1Bundle* ktx, bool srgb);
 
@@ -80,7 +80,7 @@ namespace Ktx1Reader {
 
     bool isCompressed(const KtxInfo& info);
 
-    TextureFormat toSrgbTextureFormat(TextureFormat format);
+    bool isSrgbTextureFormat(TextureFormat format);
 
     TextureFormat toTextureFormat(const KtxInfo& info);
 

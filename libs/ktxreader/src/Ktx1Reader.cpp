@@ -15,6 +15,7 @@
  */
 
 #include <ktxreader/Ktx1Reader.h>
+#include <utils/Log.h>
 
 namespace ktxreader {
 namespace Ktx1Reader {
@@ -78,8 +79,10 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
     const auto dataformat = toPixelDataFormat(ktxinfo);
 
     auto texformat = toTextureFormat(ktxinfo);
-    if (srgb) {
-        texformat = toSrgbTextureFormat(texformat);
+    if (srgb && !isSrgbTextureFormat(texformat)) {
+        utils::slog.w << "Requested sRGB format but KTX contains a linear format. ";
+    } else if (!srgb && isSrgbTextureFormat(texformat)) {
+        utils::slog.w << "Requested linear format but KTX contains a sRGB format. ";
     }
 
     Texture* texture = Texture::Builder()
@@ -187,64 +190,45 @@ bool isCompressed(const KtxInfo& info) {
     return info.glFormat == 0;
 }
 
-TextureFormat toSrgbTextureFormat(TextureFormat format) {
+bool isSrgbTextureFormat(TextureFormat format) {
     switch(format) {
         // Non-compressed
         case Texture::InternalFormat::RGB8:
-            return Texture::InternalFormat::SRGB8;
         case Texture::InternalFormat::RGBA8:
-            return Texture::InternalFormat::SRGB8_A8;
+            return false;
 
         // ASTC
         case Texture::InternalFormat::RGBA_ASTC_4x4:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_4x4;
         case Texture::InternalFormat::RGBA_ASTC_5x4:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_5x4;
         case Texture::InternalFormat::RGBA_ASTC_5x5:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_5x5;
         case Texture::InternalFormat::RGBA_ASTC_6x5:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_6x5;
         case Texture::InternalFormat::RGBA_ASTC_6x6:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_6x6;
         case Texture::InternalFormat::RGBA_ASTC_8x5:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x5;
         case Texture::InternalFormat::RGBA_ASTC_8x6:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x6;
         case Texture::InternalFormat::RGBA_ASTC_8x8:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x8;
         case Texture::InternalFormat::RGBA_ASTC_10x5:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x5;
         case Texture::InternalFormat::RGBA_ASTC_10x6:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x6;
         case Texture::InternalFormat::RGBA_ASTC_10x8:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x8;
         case Texture::InternalFormat::RGBA_ASTC_10x10:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x10;
         case Texture::InternalFormat::RGBA_ASTC_12x10:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x10;
         case Texture::InternalFormat::RGBA_ASTC_12x12:
-            return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x12;
+            return false;
 
         // ETC2
         case Texture::InternalFormat::ETC2_RGB8:
-            return Texture::InternalFormat::ETC2_SRGB8;
         case Texture::InternalFormat::ETC2_RGB8_A1:
-            return Texture::InternalFormat::ETC2_SRGB8_A1;
         case Texture::InternalFormat::ETC2_EAC_RGBA8:
-            return Texture::InternalFormat::ETC2_EAC_SRGBA8;
+            return false;
 
         // DXT
         case Texture::InternalFormat::DXT1_RGB:
-            return Texture::InternalFormat::DXT1_SRGB;
         case Texture::InternalFormat::DXT1_RGBA:
-            return Texture::InternalFormat::DXT1_SRGBA;
         case Texture::InternalFormat::DXT3_RGBA:
-            return Texture::InternalFormat::DXT3_SRGBA;
         case Texture::InternalFormat::DXT5_RGBA:
-            return Texture::InternalFormat::DXT5_SRGBA;
+            return false;
 
         default:
-            return format;
+            return true;
     }
 }
 
