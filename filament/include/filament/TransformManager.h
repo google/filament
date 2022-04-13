@@ -70,13 +70,19 @@ class UTILS_PUBLIC TransformManager : public FilamentAPI {
 public:
     using Instance = utils::EntityInstance<TransformManager>;
 
-    class children_iterator : std::iterator<std::forward_iterator_tag, Instance> {
+    class children_iterator {
         friend class FTransformManager;
         TransformManager const& mManager;
         Instance mInstance;
         children_iterator(TransformManager const& mgr, Instance instance) noexcept
                 : mManager(mgr), mInstance(instance) { }
     public:
+        using value_type = Instance;
+        using difference_type = ptrdiff_t;
+        using pointer = value_type*;
+        using reference = value_type&;
+        using iterator_category = std::forward_iterator_tag;
+
         children_iterator& operator++();
 
         children_iterator operator++(int) { // NOLINT
