@@ -1853,7 +1853,6 @@ void OpenGLDriver::setTextureData(GLTexture* t,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
-    DEBUG_MARKER()
     auto& gl = mContext;
 
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
@@ -1943,7 +1942,6 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
-    DEBUG_MARKER()
     auto& gl = mContext;
 
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
@@ -2033,11 +2031,13 @@ void OpenGLDriver::cancelExternalImage(void* image) {
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
+    DEBUG_MARKER()
     mPlatform.setExternalImage(image, handle_cast<GLTexture*>(th));
     setExternalTexture(handle_cast<GLTexture*>(th), image);
 }
 
 void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
+    DEBUG_MARKER()
 }
 
 void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
@@ -2045,8 +2045,6 @@ void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
 
     // TODO: move this logic to PlatformEGL.
     if (gl.ext.OES_EGL_image_external_essl3) {
-        DEBUG_MARKER()
-
         assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
         assert_invariant(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
 
@@ -2169,6 +2167,7 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 }
 
 void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     // reset the state of the result availability
     tq->elapsed.store(0, std::memory_order_relaxed);
@@ -2176,6 +2175,7 @@ void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     mTimerQueryImpl->endTimeElapsedQuery(tq);
 
@@ -2468,7 +2468,6 @@ void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 
 // Sets up a scissor rectangle that automatically gets clipped against the viewport.
 void OpenGLDriver::setViewportScissor(Viewport const& viewportScissor) noexcept {
-    DEBUG_MARKER()
     auto& gl = mContext;
 
     // In OpenGL, all four scissor parameters are actually signed, so clamp to MAX_INT32.
@@ -2956,11 +2955,13 @@ void OpenGLDriver::executeRenderPassOps() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLDriver::tick(int) {
+    DEBUG_MARKER()
     executeGpuCommandsCompleteOps();
     executeEveryNowAndThenOps();
 }
 
 void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+    DEBUG_MARKER()
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
@@ -2980,20 +2981,21 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 
 void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
         FrameScheduledCallback callback, void* user) {
-
+    DEBUG_MARKER()
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
         FrameCompletedCallback callback, void* user) {
-
+    DEBUG_MARKER()
 }
 
 void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
+    DEBUG_MARKER()
     mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 
 void OpenGLDriver::endFrame(uint32_t frameId) {
-    //SYSTRACE_NAME("glFinish");
+    DEBUG_MARKER()
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
     // done with the frame. We do NOT officially support using Filament in this way, but we can
@@ -3007,6 +3009,7 @@ void OpenGLDriver::endFrame(uint32_t frameId) {
     gl.depthFunc(GL_LESS);
     gl.disable(GL_SCISSOR_TEST);
 #endif
+    //SYSTRACE_NAME("glFinish");
     //glFinish();
     insertEventMarker("endFrame");
 }
@@ -3038,7 +3041,6 @@ void OpenGLDriver::finish(int) {
 UTILS_NOINLINE
 void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
         math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept {
-    DEBUG_MARKER()
     RasterState rs(mRasterState);
 
     if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
