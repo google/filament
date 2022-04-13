@@ -3,11 +3,17 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.21.2 (currently main branch)
+## v1.21.3 (currently main branch)
+
+## v1.21.2
 
 ## v1.21.1
 
-- engine: allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].
+- engine: Allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].
+- engine: Optimizations for screen-space reflections.
+- engine: Remove `Viewport::scale()` [⚠️ **API Change**].
+- engine: Fix 12x overallocation of memory in `MorphTargetBuffer`.
+- Metal: Fix validation error when reading from default `SwapChain`.
 
 ## v1.21.0
 
