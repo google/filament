@@ -44,11 +44,8 @@ void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char*
 #   define CHECK_GL_ERROR(out)
 #   define CHECK_GL_FRAMEBUFFER_STATUS(out, target)
 #else
-#   ifdef _MSC_VER
-#       define __PRETTY_FUNCTION__ __FUNCSIG__
-#   endif
-#   define CHECK_GL_ERROR(out) { GLUtils::assertGLError(out, __PRETTY_FUNCTION__, __LINE__); }
-#   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __PRETTY_FUNCTION__, __LINE__); }
+#   define CHECK_GL_ERROR(out) { GLUtils::assertGLError(out, __func__, __LINE__); }
+#   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __func__, __LINE__); }
 #endif
 
 constexpr inline GLuint getComponentCount(ElementType type) noexcept {

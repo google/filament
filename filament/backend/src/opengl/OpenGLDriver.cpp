@@ -53,7 +53,7 @@
 
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_OPENGL
 #   define DEBUG_MARKER() \
-        DebugMarker _debug_marker(*this, __PRETTY_FUNCTION__);
+        DebugMarker _debug_marker(*this, __func__);
 #else
 #   define DEBUG_MARKER()
 #endif
@@ -145,10 +145,7 @@ Driver* OpenGLDriver::create(
 
 OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string) noexcept
         : driver(driver) {
-    // FIXME: this is not safe nor portable
-    const char* const begin = string + sizeof("virtual void filament::backend::OpenGLDriver::") - 1;
-    const char* const end = strchr(begin, '(');
-    driver.pushGroupMarker(begin, end - begin);
+    driver.pushGroupMarker(string, strlen(string));
 }
 
 OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
