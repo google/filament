@@ -278,7 +278,7 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     GLUtils::unordered_string_set exts = GLUtils::split(extensions);
     if constexpr (DEBUG_PRINT_EXTENSIONS) {
         for (auto extension: exts) {
-            slog.d << "\"" << std::string(extension) << "\"\n";
+            slog.d << "\"" << std::string_view(extension) << "\"\n";
         }
         flush(slog.d);
     }
@@ -320,7 +320,7 @@ void OpenGLContext::initExtensionsGL() noexcept {
     }
     if constexpr (DEBUG_PRINT_EXTENSIONS) {
         for (auto extension: exts) {
-            slog.d << "\"" << std::string(extension) << "\"\n";
+            slog.d << "\"" << std::string_view(extension) << "\"\n";
         }
         flush(slog.d);
     }

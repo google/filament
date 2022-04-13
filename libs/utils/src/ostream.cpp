@@ -24,6 +24,9 @@
 #include <utils/PrivateImplementation-impl.h>
 
 #include <algorithm>
+#include <string>
+#include <string_view>
+
 #include <stdarg.h>
 
 template class utils::PrivateImplementation<utils::io::ostream_>;
@@ -167,6 +170,14 @@ ostream& ostream::operator<<(const unsigned char* string) noexcept {
 
 ostream& ostream::operator<<(const void* value) noexcept {
     return print("%p", value);
+}
+
+ostream& ostream::operator<<(std::string const& s) noexcept {
+    return print("%s", s.c_str());
+}
+
+ostream& ostream::operator<<(std::string_view const& s) noexcept {
+    return print("%.*s", s.length(), s.data());
 }
 
 ostream& ostream::hex() noexcept {
