@@ -134,12 +134,12 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
      * constructor parameters approximate an ACES tone mapping curve
      * and the maximum input value is set to 10.0.
      *
-     * @param contrast: controls the contrast of the curve, must be > 0.0, values
-     *                  in the range 0.5..2.0 are recommended.
-     * @param midGrayIn: sets the input middle gray, between 0.0 and 1.0.
-     * @param midGrayOut: sets the output middle gray, between 0.0 and 1.0.
-     * @param hdrMax: defines the maximum input value that will be mapped to
-     *                output white. Must be >= 1.0.
+     * @param contrast controls the contrast of the curve, must be > 0.0, values
+     *                 in the range 0.5..2.0 are recommended.
+     * @param midGrayIn sets the input middle gray, between 0.0 and 1.0.
+     * @param midGrayOut sets the output middle gray, between 0.0 and 1.0.
+     * @param hdrMax defines the maximum input value that will be mapped to
+     *               output white. Must be >= 1.0.
      */
     explicit GenericToneMapper(
             float contrast = 1.55f,
