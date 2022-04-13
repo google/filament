@@ -85,6 +85,18 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         length = __system_property_get("ro.build.version.sdk", scratch);
         mOSVersion = length >= 0 ? atoi(scratch) : 1;
     }
+
+    // This disables an ANGLE optimization on ARM, which turns out to be more costly for us
+    // see b/229017581
+    // We need to do this before we create the GL context.
+    // An alternative solution is use a system property:
+    //            __system_property_set(
+    //                    "debug.angle.feature_overrides_disabled",
+    //                    "preferSubmitAtFBOBoundary");
+    // but that would outlive this process, so the environment variable is better.
+    // We also make sure to not update the variable if it already exists.
+    // There is no harm setting this if we're not on ANGLE or ARM.
+    setenv("ANGLE_FEATURE_OVERRIDES_DISABLED", "preferSubmitAtFBOBoundary", false);
 }
 
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
