@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_TIMERQUERY_H
-#define TNT_FILAMENT_DRIVER_TIMERQUERY_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_TIMERQUERY_H
+#define TNT_FILAMENT_BACKEND_OPENGL_TIMERQUERY_H
 
 #include "OpenGLDriver.h"
 
@@ -24,7 +24,7 @@
 #include <thread>
 #include <vector>
 
-namespace filament {
+namespace filament::backend {
 
 /*
  * we need two implementation of timer queries (only elapsed time), because
@@ -34,13 +34,13 @@ namespace filament {
  * These classes implement the various strategies...
  */
 
-class TimerQueryInterface {
+class OpenGLTimerQueryInterface {
 protected:
     using GLTimerQuery = OpenGLDriver::GLTimerQuery;
     using clock = std::chrono::steady_clock;
 
 public:
-    virtual ~TimerQueryInterface();
+    virtual ~OpenGLTimerQueryInterface();
     virtual void flush() = 0;
     virtual void beginTimeElapsedQuery(GLTimerQuery* query) = 0;
     virtual void endTimeElapsedQuery(GLTimerQuery* query) = 0;
@@ -48,7 +48,7 @@ public:
     virtual uint64_t queryResult(GLTimerQuery* query) = 0;
 };
 
-class TimerQueryNative : public TimerQueryInterface {
+class TimerQueryNative : public OpenGLTimerQueryInterface {
 public:
     explicit TimerQueryNative(OpenGLContext& context);
     ~TimerQueryNative() override;
@@ -61,10 +61,10 @@ private:
     OpenGLContext& gl;
 };
 
-class TimerQueryFence : public TimerQueryInterface {
+class OpenGLTimerQueryFence : public OpenGLTimerQueryInterface {
 public:
-    explicit TimerQueryFence(backend::OpenGLPlatform& platform);
-    ~TimerQueryFence() override;
+    explicit OpenGLTimerQueryFence(OpenGLPlatform& platform);
+    ~OpenGLTimerQueryFence() override;
 private:
     using Job = std::function<void()>;
     void flush() override;
@@ -79,7 +79,7 @@ private:
         enqueue(Job(std::bind(std::forward<CALLABLE>(func), std::forward<ARGS>(args)...)));
     }
 
-    backend::OpenGLPlatform& mPlatform;
+    OpenGLPlatform& mPlatform;
     std::thread mThread;
     mutable utils::Mutex mLock;
     mutable utils::Condition mCondition;
@@ -88,7 +88,7 @@ private:
     GLTimerQuery* mActiveQuery = nullptr;
 };
 
-class TimerQueryFallback : public TimerQueryInterface {
+class TimerQueryFallback : public OpenGLTimerQueryInterface {
 public:
     explicit TimerQueryFallback();
     ~TimerQueryFallback() override;
@@ -100,6 +100,6 @@ private:
     uint64_t queryResult(GLTimerQuery* query) override;
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif //TNT_FILAMENT_DRIVER_TIMERQUERY_H
+#endif //TNT_FILAMENT_BACKEND_OPENGL_TIMERQUERY_H

@@ -24,8 +24,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 static void flipVertically(VkRect2D* rect, uint32_t framebufferHeight) {
     rect->offset.y = framebufferHeight - rect->offset.y - rect->extent.height;
@@ -230,23 +229,23 @@ VulkanBufferObject::VulkanBufferObject(VulkanContext& context, VulkanStagePool& 
           bindingType(bindingType) {
 }
 
-void VulkanRenderPrimitive::setPrimitiveType(backend::PrimitiveType pt) {
+void VulkanRenderPrimitive::setPrimitiveType(PrimitiveType pt) {
     this->type = pt;
     switch (pt) {
-        case backend::PrimitiveType::NONE:
-        case backend::PrimitiveType::POINTS:
+        case PrimitiveType::NONE:
+        case PrimitiveType::POINTS:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
             break;
-        case backend::PrimitiveType::LINES:
+        case PrimitiveType::LINES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
             break;
-        case backend::PrimitiveType::LINE_STRIP:
+        case PrimitiveType::LINE_STRIP:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
             break;
-        case backend::PrimitiveType::TRIANGLES:
+        case PrimitiveType::TRIANGLES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             break;
-        case backend::PrimitiveType::TRIANGLE_STRIP:
+        case PrimitiveType::TRIANGLE_STRIP:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
             break;
     }
@@ -281,5 +280,4 @@ VulkanTimerQuery::~VulkanTimerQuery() {
     mContext.timestamps.used.unset(startingQueryIndex / 2);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

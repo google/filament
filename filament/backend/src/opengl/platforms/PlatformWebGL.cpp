@@ -17,7 +17,7 @@
 #include "PlatformWebGL.h"
 #include "../OpenGLDriverFactory.h"
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 
@@ -58,8 +58,8 @@ void PlatformWebGL::destroyFence(Fence* fence) noexcept {
     delete fence;
 }
 
-backend::FenceStatus PlatformWebGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return backend::FenceStatus::CONDITION_SATISFIED;
+FenceStatus PlatformWebGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
+    return FenceStatus::CONDITION_SATISFIED;
 }
 
-} // namespace filament
+} // namespace filament::backend

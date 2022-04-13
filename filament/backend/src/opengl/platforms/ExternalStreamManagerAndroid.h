@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_ANDROID_EXTERNAL_STREAM_MANAGER_ANDROID_H
-#define TNT_FILAMENT_DRIVER_ANDROID_EXTERNAL_STREAM_MANAGER_ANDROID_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_ANDROID_EXTERNAL_STREAM_MANAGER_ANDROID_H
+#define TNT_FILAMENT_BACKEND_OPENGL_ANDROID_EXTERNAL_STREAM_MANAGER_ANDROID_H
 
 #include "private/backend/VirtualMachineEnv.h"
 
@@ -29,7 +29,7 @@ struct ASurfaceTexture;
 typedef struct ASurfaceTexture ASurfaceTexture;
 #endif
 
-namespace filament {
+namespace filament::backend {
 
 /*
  * ExternalStreamManagerAndroid::Stream is basically a wrapper for SurfaceTexture.
@@ -38,7 +38,7 @@ namespace filament {
  */
 class ExternalStreamManagerAndroid {
 public:
-    using Stream = backend::Platform::Stream;
+    using Stream = Platform::Stream;
 
     // must be called on GLES thread
     static ExternalStreamManagerAndroid& create() noexcept;
@@ -86,6 +86,6 @@ private:
     jmethodID mSurfaceTextureClass_detachFromGLContext{};
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif //TNT_FILAMENT_DRIVER_ANDROID_EXTERNAL_STREAM_MANAGER_ANDROID_H
+#endif //TNT_FILAMENT_BACKEND_OPENGL_ANDROID_EXTERNAL_STREAM_MANAGER_ANDROID_H

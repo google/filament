@@ -45,7 +45,7 @@
 
 using namespace utils;
 
-namespace filament {
+namespace filament::backend {
 using namespace backend;
 
 // The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
@@ -245,6 +245,6 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
     return { eglImage, patchedCallback, closure, source.handler };
 }
 
-} // namespace filament
+} // namespace filament::backend
 
 // ---------------------------------------------------------------------------------------------

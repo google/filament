@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_FRAMEGRAPHPASS_H
-#define TNT_FILAMENT_FG2_FRAMEGRAPHPASS_H
+#ifndef TNT_FILAMENT_FG_FRAMEGRAPHPASS_H
+#define TNT_FILAMENT_FG_FRAMEGRAPHPASS_H
 
 #include "private/backend/DriverApiForward.h"
 
-#include "fg2/FrameGraphResources.h"
+#include "fg/FrameGraphResources.h"
 
 #include <utils/Allocator.h>
 
@@ -50,10 +50,10 @@ class FrameGraphPassBase : protected FrameGraphPassExecutor {
 
 public:
     using FrameGraphPassExecutor::FrameGraphPassExecutor;
-    virtual ~FrameGraphPassBase() noexcept;
+    ~FrameGraphPassBase() noexcept override;
 };
 
-template<typename Data, typename Execute>
+template<typename Data>
 class FrameGraphPass : public FrameGraphPassBase {
     friend class FrameGraph;
 
@@ -61,22 +61,36 @@ class FrameGraphPass : public FrameGraphPassBase {
     template<typename, typename, typename, typename>
     friend class utils::Arena;
 
-    explicit FrameGraphPass(Execute&& execute) noexcept
-            : FrameGraphPassBase(), mExecute(std::move(execute)) {
-    }
+    void execute(FrameGraphResources const&, backend::DriverApi&) noexcept override {}
 
-    void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept final {
-        mExecute(resources, mData, driver);
-    }
-
-    Execute mExecute;
+protected:
+    FrameGraphPass() = default;
     Data mData;
 
 public:
     Data const& getData() const noexcept { return mData; }
-    Data const* operator->() const { return &getData(); }
+    Data const* operator->() const { return &mData; }
+};
+
+template<typename Data, typename Execute>
+class FrameGraphPassConcrete : public FrameGraphPass<Data> {
+    friend class FrameGraph;
+
+    // allow our allocators to instantiate us
+    template<typename, typename, typename, typename>
+    friend class utils::Arena;
+
+    explicit FrameGraphPassConcrete(Execute&& execute) noexcept
+            : mExecute(std::move(execute)) {
+    }
+
+    void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept final {
+        mExecute(resources, this->mData, driver);
+    }
+
+    Execute mExecute;
 };
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_FRAMEGRAPHPASS_H
+#endif //TNT_FILAMENT_FG_FRAMEGRAPHPASS_H

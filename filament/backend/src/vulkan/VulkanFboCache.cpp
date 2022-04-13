@@ -27,8 +27,7 @@ static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
@@ -358,5 +357,4 @@ void VulkanFboCache::gc() noexcept {
     }
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

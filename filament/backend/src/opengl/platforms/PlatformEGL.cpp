@@ -28,7 +28,7 @@
 
 using namespace utils;
 
-namespace filament {
+namespace filament::backend {
 using namespace backend;
 
 // The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
@@ -259,7 +259,7 @@ void PlatformEGL::terminate() noexcept {
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
     EGLSurface sur = eglCreateWindowSurface(mEGLDisplay,
-            (flags & backend::SWAP_CHAIN_CONFIG_TRANSPARENT) ?
+            (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ?
             mEGLTransparentConfig : mEGLConfig,
             (EGLNativeWindowType)nativeWindow, nullptr);
 
@@ -284,7 +284,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     };
 
     EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay,
-                (flags & backend::SWAP_CHAIN_CONFIG_TRANSPARENT) ?
+                (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ?
                 mEGLTransparentConfig : mEGLConfig, attribs);
 
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
@@ -335,7 +335,7 @@ void PlatformEGL::destroyFence(Platform::Fence* fence) noexcept {
 #endif
 }
 
-backend::FenceStatus PlatformEGL::waitFence(
+FenceStatus PlatformEGL::waitFence(
         Platform::Fence* fence, uint64_t timeout) noexcept {
 #ifdef EGL_KHR_reusable_sync
     EGLSyncKHR sync = (EGLSyncKHR) fence;
@@ -383,6 +383,6 @@ void PlatformEGL::initializeGlExtensions() noexcept {
     ext.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }
 
-} // namespace filament
+} // namespace filament::backend
 
 // ---------------------------------------------------------------------------------------------

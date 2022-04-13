@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "TimerQuery.h"
+#include "OpenGLTimerQuery.h"
 
 #include "private/backend/OpenGLPlatform.h"
 
@@ -23,14 +23,14 @@
 #include <utils/Systrace.h>
 #include <utils/debug.h>
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 using namespace GLUtils;
 
 // ------------------------------------------------------------------------------------------------
 
-TimerQueryInterface::~TimerQueryInterface() = default;
+OpenGLTimerQueryInterface::~OpenGLTimerQueryInterface() = default;
 
 // ------------------------------------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ uint64_t TimerQueryNative::queryResult(GLTimerQuery* query) {
 
 // ------------------------------------------------------------------------------------------------
 
-TimerQueryFence::TimerQueryFence(backend::OpenGLPlatform& platform)
+OpenGLTimerQueryFence::OpenGLTimerQueryFence(OpenGLPlatform& platform)
         : mPlatform(platform) {
     mQueue.reserve(2);
     mThread = std::thread([this]() {
@@ -94,7 +94,7 @@ TimerQueryFence::TimerQueryFence(backend::OpenGLPlatform& platform)
     });
 }
 
-TimerQueryFence::~TimerQueryFence() {
+OpenGLTimerQueryFence::~OpenGLTimerQueryFence() {
     if (mThread.joinable()) {
         std::unique_lock<utils::Mutex> lock(mLock);
         mExitRequested = true;
@@ -104,13 +104,13 @@ TimerQueryFence::~TimerQueryFence() {
     }
 }
 
-void TimerQueryFence::enqueue(TimerQueryFence::Job&& job) {
+void OpenGLTimerQueryFence::enqueue(OpenGLTimerQueryFence::Job&& job) {
     std::unique_lock<utils::Mutex> lock(mLock);
     mQueue.push_back(std::forward<Job>(job));
     mCondition.notify_one();
 }
 
-void TimerQueryFence::flush() {
+void OpenGLTimerQueryFence::flush() {
     // Use calls to flush() as a proxy for when the GPU work started.
     GLTimerQuery* query = mActiveQuery;
     if (query) {
@@ -124,7 +124,7 @@ void TimerQueryFence::flush() {
     }
 }
 
-void TimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
+void OpenGLTimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
     assert_invariant(!mActiveQuery);
     // We can't use a fence to figure out when a GPU operation starts (only when it finishes)
     // so instead, we use when glFlush() was issued as a proxy.
@@ -136,7 +136,7 @@ void TimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
     mActiveQuery = query;
 }
 
-void TimerQueryFence::endTimeElapsedQuery(GLTimerQuery* query) {
+void OpenGLTimerQueryFence::endTimeElapsedQuery(GLTimerQuery* query) {
     assert_invariant(mActiveQuery);
     Platform::Fence* fence = mPlatform.createFence();
     std::weak_ptr<GLTimerQuery::State> weak = query->gl.emulation;
@@ -157,11 +157,11 @@ void TimerQueryFence::endTimeElapsedQuery(GLTimerQuery* query) {
     });
 }
 
-bool TimerQueryFence::queryResultAvailable(GLTimerQuery* query) {
+bool OpenGLTimerQueryFence::queryResultAvailable(GLTimerQuery* query) {
     return query->gl.emulation->available.load();
 }
 
-uint64_t TimerQueryFence::queryResult(GLTimerQuery* query) {
+uint64_t OpenGLTimerQueryFence::queryResult(GLTimerQuery* query) {
     return query->gl.emulation->elapsed;
 }
 
@@ -174,7 +174,7 @@ TimerQueryFallback::~TimerQueryFallback() = default;
 void TimerQueryFallback::flush() {
 }
 
-void TimerQueryFallback::beginTimeElapsedQuery(TimerQueryInterface::GLTimerQuery* query) {
+void TimerQueryFallback::beginTimeElapsedQuery(OpenGLTimerQueryInterface::GLTimerQuery* query) {
     if (!query->gl.emulation) {
         query->gl.emulation = std::make_shared<GLTimerQuery::State>();
     }
@@ -183,18 +183,18 @@ void TimerQueryFallback::beginTimeElapsedQuery(TimerQueryInterface::GLTimerQuery
     query->gl.emulation->elapsed = clock::now().time_since_epoch().count();
 }
 
-void TimerQueryFallback::endTimeElapsedQuery(TimerQueryInterface::GLTimerQuery* query) {
+void TimerQueryFallback::endTimeElapsedQuery(OpenGLTimerQueryInterface::GLTimerQuery* query) {
     // this implementation clearly doesn't work at all, but we have no h/w support
     query->gl.emulation->elapsed = clock::now().time_since_epoch().count() - query->gl.emulation->elapsed;
     query->gl.emulation->available.store(true, std::memory_order_relaxed);
 }
 
-bool TimerQueryFallback::queryResultAvailable(TimerQueryInterface::GLTimerQuery* query) {
+bool TimerQueryFallback::queryResultAvailable(OpenGLTimerQueryInterface::GLTimerQuery* query) {
     return query->gl.emulation->available.load(std::memory_order_relaxed);
 }
 
-uint64_t TimerQueryFallback::queryResult(TimerQueryInterface::GLTimerQuery* query) {
+uint64_t TimerQueryFallback::queryResult(OpenGLTimerQueryInterface::GLTimerQuery* query) {
     return query->gl.emulation->elapsed;
 }
 
-} // namespace filament
+} // namespace filament::backend

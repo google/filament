@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "fg2/details/DependencyGraph.h"
+#include "fg/details/DependencyGraph.h"
 
 #include <utils/Systrace.h>
 

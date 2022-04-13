@@ -22,9 +22,9 @@
 
 #include "private/backend/CommandStream.h"
 
-#include "fg2/FrameGraph.h"
-#include "fg2/FrameGraphResources.h"
-#include "fg2/details/DependencyGraph.h"
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphResources.h"
+#include "fg/details/DependencyGraph.h"
 
 #include "details/Texture.h"
 

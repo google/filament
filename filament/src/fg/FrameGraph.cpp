@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "fg2/FrameGraph.h"
-#include "fg2/details/PassNode.h"
-#include "fg2/details/ResourceNode.h"
-#include "fg2/details/DependencyGraph.h"
+#include "fg/FrameGraph.h"
+#include "fg/details/PassNode.h"
+#include "fg/details/ResourceNode.h"
+#include "fg/details/DependencyGraph.h"
 
 #include "details/Engine.h"
 
@@ -220,7 +220,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
     driver.popGroupMarker();
 }
 
-void FrameGraph::addPresentPass(std::function<void(FrameGraph::Builder&)> setup) noexcept {
+void FrameGraph::addPresentPass(const std::function<void(FrameGraph::Builder&)>& setup) noexcept {
     PresentPassNode* node = mArena.make<PresentPassNode>(*this);
     mPassNodes.push_back(node);
     Builder builder(*this, node);
@@ -233,12 +233,16 @@ FrameGraph::Builder FrameGraph::addPassInternal(char const* name, FrameGraphPass
     PassNode* node = mArena.make<RenderPassNode>(*this, name, base);
     base->setNode(node);
     mPassNodes.push_back(node);
-    return Builder(*this, node);
+    return { *this, node };
 }
 
-FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle, FrameGraphHandle parent) noexcept {
+FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle) noexcept {
+    assert_invariant(handle);
+    ResourceNode* const node = getActiveResourceNode(handle);
+    assert_invariant(node);
+    FrameGraphHandle parent = node->getParentHandle();
     ResourceSlot& slot = getResourceSlot(handle);
-    slot.version = ++handle.version;   // increase the parent's version
+    slot.version = ++handle.version;    // increase the parent's version
     slot.nid = mResourceNodes.size();   // create the new parent node
     ResourceNode* newNode = mArena.make<ResourceNode>(*this, handle, parent);
     mResourceNodes.push_back(newNode);
@@ -252,7 +256,7 @@ ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* n
         // we keep the old ResourceNode index so we can direct all the reads to it.
         slot.sid = slot.nid; // record the current ResourceNode of the parent
         slot.nid = mResourceNodes.size();   // create the new parent node
-        node = mArena.make<ResourceNode>(*this, node->resourceHandle, FrameGraphHandle{});
+        node = mArena.make<ResourceNode>(*this, node->resourceHandle, node->getParentHandle());
         mResourceNodes.push_back(node);
     }
     return node;
@@ -313,7 +317,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
             node->setParentReadDependency(parentNode);
         } else {
             // we're reading from a top-level resource (i.e. not a subresource), but this
-            // resource is a parent of some subresource and it might exist as a version for
+            // resource is a parent of some subresource, and it might exist as a version for
             // writing, in this case we need to add a dependency from its "read" version to
             // itself.
             ResourceSlot& slot = getResourceSlot(handle);
@@ -350,6 +354,9 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
     // node to a new version of the parent's node, if we don't already have one.
     if (resource->isSubResource()) {
         assert_invariant(parentNode);
+        // this could be a subresource from a subresource, and in this case, we want the oldest
+        // ancestor, that is, the node that started it all.
+        parentNode = ResourceNode::getAncestorNode(parentNode);
         // FIXME: do we need the equivalent of hasWriterPass() test below
         parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
     }
@@ -361,8 +368,7 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
             // if we don't already have a writer or a reader, it just means the resource was just created
             // and was never written to, so we don't need a new node or increase the version number
         } else {
-            handle = createNewVersion(handle,
-                    parentNode ? parentNode->resourceHandle : FrameGraphHandle{});
+            handle = createNewVersion(handle);
             // refresh the node
             node = getActiveResourceNode(handle);
         }
@@ -412,7 +418,7 @@ FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle resourceHa
         // the write has already happened.
         // We create a new version of the parent node to ensure nobody writes into it beyond
         // this point (note: it's not completely clear to me if this is needed/correct).
-        ResourceNode* parentNode = resourceNode->getParentNode();
+        ResourceNode* parentNode = ResourceNode::getAncestorNode(resourceNode);
         parentNode = createNewVersionForSubresourceIfNeeded(parentNode);
         resourceNode->setParentWriteDependency(parentNode);
     }

@@ -29,7 +29,7 @@
 #include <utils/Panic.h>
 #include <utils/debug.h>
 
-namespace filament {
+namespace filament::backend {
 
 static const char* s_vertexES = R"SHADER(#version 300 es
 in vec4 pos;
@@ -317,4 +317,4 @@ void CocoaTouchExternalImage::State::restore() noexcept {
     }
 }
 
-} // namespace filament
+} // namespace filament::backend

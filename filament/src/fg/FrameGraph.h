@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_FRAMEGRAPH_H
-#define TNT_FILAMENT_FG2_FRAMEGRAPH_H
+#ifndef TNT_FILAMENT_FG_FRAMEGRAPH_H
+#define TNT_FILAMENT_FG_FRAMEGRAPH_H
 
 #include "Allocators.h"
 
-#include "fg2/Blackboard.h"
-#include "fg2/FrameGraphId.h"
-#include "fg2/FrameGraphPass.h"
-#include "fg2/FrameGraphRenderPass.h"
-#include "fg2/FrameGraphTexture.h"
+#include "fg/Blackboard.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphPass.h"
+#include "fg/FrameGraphRenderPass.h"
+#include "fg/FrameGraphTexture.h"
 
-#include "fg2/details/DependencyGraph.h"
-#include "fg2/details/Resource.h"
-#include "fg2/details/Utilities.h"
+#include "fg/details/DependencyGraph.h"
+#include "fg/details/Resource.h"
+#include "fg/details/Utilities.h"
 
 #include "private/backend/DriverApiForward.h"
 
@@ -35,7 +35,6 @@
 #include <backend/Handle.h>
 
 #include <functional>
-#include <vector>
 
 namespace filament {
 
@@ -262,7 +261,10 @@ public:
      * @return          A reference to a Pass object
      */
     template<typename Data, typename Setup, typename Execute>
-    FrameGraphPass<Data, Execute>& addPass(const char* name, Setup setup, Execute&& execute);
+    FrameGraphPass<Data>& addPass(const char* name, Setup setup, Execute&& execute);
+
+    template<typename Data, typename Setup>
+    FrameGraphPass<Data>& addPass(const char* name, Setup setup);
 
     /**
      * Adds a simple execute-only pass with side-effect. Use with caution as such a pass is never
@@ -302,6 +304,42 @@ public:
      */
     template<typename RESOURCE>
     FrameGraphId<RESOURCE> forwardResource(FrameGraphId<RESOURCE> resource,
+            FrameGraphId<RESOURCE> replacedResource);
+
+    /**
+     * Create a new resource from the descriptor and forwards it to a specified resource that
+     * gets replaced.
+     * The replaced resource's handle becomes forever invalid.
+     *
+     * @tparam RESOURCE             Type of the resources
+     * @param name                  A name for the new resource
+     * @param desc                  Descriptor to create the new resource
+     * @param replacedResource      Handle of the subresource being replaced
+     *                              This handle becomes invalid after this call
+     * @return                      Handle to a new version of the forwarded resource
+     */
+    template<typename RESOURCE>
+    FrameGraphId<RESOURCE> forwardResource(char const* name,
+            typename RESOURCE::Descriptor const& desc,
+            FrameGraphId<RESOURCE> replacedResource);
+
+    /**
+     * Create a new subresource from the descriptors and forwards it to a specified resource that
+     * gets replaced.
+     * The replaced resource's handle becomes forever invalid.
+     *
+     * @tparam RESOURCE             Type of the resources
+     * @param name                  A name for the new subresource
+     * @param desc                  Descriptor to create the new subresource
+     * @param subdesc               Descriptor to create the new subresource
+     * @param replacedResource      Handle of the subresource being replaced
+     *                              This handle becomes invalid after this call
+     * @return                      Handle to a new version of the forwarded resource
+     */
+    template<typename RESOURCE>
+    FrameGraphId<RESOURCE> forwardResource(char const* name,
+            typename RESOURCE::Descriptor const& desc,
+            typename RESOURCE::SubResourceDescriptor const& subdesc,
             FrameGraphId<RESOURCE> replacedResource);
 
     /**
@@ -409,9 +447,9 @@ private:
         Version version = 0;
     };
     void reset() noexcept;
-    void addPresentPass(std::function<void(Builder&)> setup) noexcept;
+    void addPresentPass(const std::function<void(Builder&)>& setup) noexcept;
     Builder addPassInternal(const char* name, FrameGraphPassBase* base) noexcept;
-    FrameGraphHandle createNewVersion(FrameGraphHandle handle, FrameGraphHandle parent = {}) noexcept;
+    FrameGraphHandle createNewVersion(FrameGraphHandle handle) noexcept;
     ResourceNode* createNewVersionForSubresourceIfNeeded(ResourceNode* node) noexcept;
     FrameGraphHandle addResourceInternal(VirtualResource* resource) noexcept;
     FrameGraphHandle addSubResourceInternal(FrameGraphHandle parent, VirtualResource* resource) noexcept;
@@ -432,7 +470,7 @@ private:
     FrameGraphId<RESOURCE> createSubresource(FrameGraphId<RESOURCE> parent,
             char const* name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept;
 
-        template<typename RESOURCE>
+    template<typename RESOURCE>
     FrameGraphId<RESOURCE> read(PassNode* passNode,
             FrameGraphId<RESOURCE> input, typename RESOURCE::Usage usage);
 
@@ -459,6 +497,7 @@ private:
     }
 
     ResourceNode* getActiveResourceNode(FrameGraphHandle handle) noexcept {
+        assert_invariant(handle);
         ResourceSlot const& slot = getResourceSlot(handle);
         assert_invariant((size_t)slot.nid < mResourceNodes.size());
         return mResourceNodes[slot.nid];
@@ -487,11 +526,23 @@ private:
 };
 
 template<typename Data, typename Setup, typename Execute>
-FrameGraphPass<Data, Execute>& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
+FrameGraphPass<Data>& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
     static_assert(sizeof(Execute) < 1024, "Execute() lambda is capturing too much data.");
 
     // create the FrameGraph pass
-    auto* const pass = mArena.make<FrameGraphPass<Data, Execute>>(std::forward<Execute>(execute));
+    auto* const pass = mArena.make<FrameGraphPassConcrete<Data, Execute>>(std::forward<Execute>(execute));
+
+    Builder builder(addPassInternal(name, pass));
+    setup(builder, const_cast<Data&>(pass->getData()));
+
+    // return a reference to the pass to the user
+    return *pass;
+}
+
+template<typename Data, typename Setup>
+FrameGraphPass<Data>& FrameGraph::addPass(char const* name, Setup setup) {
+    // create the FrameGraph pass without an execute stage
+    auto* const pass = mArena.make<FrameGraphPass<Data>>();
 
     Builder builder(addPassInternal(name, pass));
     setup(builder, const_cast<Data&>(pass->getData()));
@@ -566,6 +617,24 @@ FrameGraphId<RESOURCE> FrameGraph::forwardResource(FrameGraphId<RESOURCE> resour
     return FrameGraphId<RESOURCE>(forwardResourceInternal(resource, replacedResource));
 }
 
+template<typename RESOURCE>
+FrameGraphId<RESOURCE> FrameGraph::forwardResource(char const* name,
+        typename RESOURCE::Descriptor const& desc,
+        FrameGraphId<RESOURCE> replacedResource) {
+    FrameGraphId<RESOURCE> handle = create<RESOURCE>(name, desc);
+    return forwardResource(handle, replacedResource);
+}
+
+template<typename RESOURCE>
+FrameGraphId<RESOURCE> FrameGraph::forwardResource(char const* name,
+        typename RESOURCE::Descriptor const& desc,
+        typename RESOURCE::SubResourceDescriptor const& subdesc,
+        FrameGraphId<RESOURCE> replacedResource) {
+    FrameGraphId<RESOURCE> handle = create<RESOURCE>(name, desc);
+    handle = createSubresource<RESOURCE>(handle, name, subdesc);
+    return forwardResource(handle, replacedResource);
+}
+
 // ------------------------------------------------------------------------------------------------
 
 /*
@@ -595,4 +664,4 @@ extern template FrameGraphId<FrameGraphTexture> FrameGraph::forwardResource(
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_FRAMEGRAPH_H
+#endif //TNT_FILAMENT_FG_FRAMEGRAPH_H

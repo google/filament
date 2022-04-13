@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_GLUTILS_H
-#define TNT_FILAMENT_DRIVER_GLUTILS_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H
+#define TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -29,7 +29,7 @@
 
 #include "gl_headers.h"
 
-namespace filament {
+namespace filament::backend {
 namespace GLUtils {
 
 const char* getGLError(GLenum error) noexcept;
@@ -51,8 +51,8 @@ void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char*
 #   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __PRETTY_FUNCTION__, __LINE__); }
 #endif
 
-constexpr inline GLuint getComponentCount(backend::ElementType type) noexcept {
-    using ElementType = backend::ElementType;
+constexpr inline GLuint getComponentCount(ElementType type) noexcept {
+    using ElementType = ElementType;
     switch (type) {
         case ElementType::BYTE:
         case ElementType::UBYTE:
@@ -91,35 +91,35 @@ constexpr inline GLuint getComponentCount(backend::ElementType type) noexcept {
 // Our enums to GLenum conversions
 // ------------------------------------------------------------------------------------------------
 
-constexpr inline GLbitfield getAttachmentBitfield(backend::TargetBufferFlags flags) noexcept {
+constexpr inline GLbitfield getAttachmentBitfield(TargetBufferFlags flags) noexcept {
     GLbitfield mask = 0;
-    if (any(flags & backend::TargetBufferFlags::COLOR_ALL)) {
+    if (any(flags & TargetBufferFlags::COLOR_ALL)) {
         mask |= (GLbitfield)GL_COLOR_BUFFER_BIT;
     }
-    if (any(flags & backend::TargetBufferFlags::DEPTH)) {
+    if (any(flags & TargetBufferFlags::DEPTH)) {
         mask |= (GLbitfield)GL_DEPTH_BUFFER_BIT;
     }
-    if (any(flags & backend::TargetBufferFlags::STENCIL)) {
+    if (any(flags & TargetBufferFlags::STENCIL)) {
         mask |= (GLbitfield)GL_STENCIL_BUFFER_BIT;
     }
     return mask;
 }
 
-constexpr inline GLenum getBufferUsage(backend::BufferUsage usage) noexcept {
+constexpr inline GLenum getBufferUsage(BufferUsage usage) noexcept {
     switch (usage) {
-        case backend::BufferUsage::STATIC:
+        case BufferUsage::STATIC:
             return GL_STATIC_DRAW;
-        case backend::BufferUsage::DYNAMIC:
-        case backend::BufferUsage::STREAM:
+        case BufferUsage::DYNAMIC:
+        case BufferUsage::STREAM:
             return GL_DYNAMIC_DRAW;
     }
 }
 
-constexpr inline GLenum getBufferBindingType(backend::BufferObjectBinding bindingType) noexcept {
+constexpr inline GLenum getBufferBindingType(BufferObjectBinding bindingType) noexcept {
     switch (bindingType) {
-        case backend::BufferObjectBinding::VERTEX:
+        case BufferObjectBinding::VERTEX:
             return GL_ARRAY_BUFFER;
-        case backend::BufferObjectBinding::UNIFORM:
+        case BufferObjectBinding::UNIFORM:
             return GL_UNIFORM_BUFFER;
     }
 }
@@ -128,8 +128,8 @@ constexpr inline GLboolean getNormalization(bool normalized) noexcept {
     return GLboolean(normalized ? GL_TRUE : GL_FALSE);
 }
 
-constexpr inline GLenum getComponentType(backend::ElementType type) noexcept {
-    using ElementType = backend::ElementType;
+constexpr inline GLenum getComponentType(ElementType type) noexcept {
+    using ElementType = ElementType;
     switch (type) {
         case ElementType::BYTE:
         case ElementType::BYTE2:
@@ -173,8 +173,8 @@ constexpr inline GLenum getCubemapTarget(uint16_t layer) noexcept {
     return GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer;
 }
 
-constexpr inline GLenum getWrapMode(backend::SamplerWrapMode mode) noexcept {
-    using SamplerWrapMode = backend::SamplerWrapMode;
+constexpr inline GLenum getWrapMode(SamplerWrapMode mode) noexcept {
+    using SamplerWrapMode = SamplerWrapMode;
     switch (mode) {
         case SamplerWrapMode::REPEAT:
             return GL_REPEAT;
@@ -185,8 +185,8 @@ constexpr inline GLenum getWrapMode(backend::SamplerWrapMode mode) noexcept {
     }
 }
 
-constexpr inline GLenum getTextureFilter(backend::SamplerMinFilter filter) noexcept {
-    using SamplerMinFilter = backend::SamplerMinFilter;
+constexpr inline GLenum getTextureFilter(SamplerMinFilter filter) noexcept {
+    using SamplerMinFilter = SamplerMinFilter;
     switch (filter) {
         case SamplerMinFilter::NEAREST:
         case SamplerMinFilter::LINEAR:
@@ -200,13 +200,13 @@ constexpr inline GLenum getTextureFilter(backend::SamplerMinFilter filter) noexc
     }
 }
 
-constexpr inline GLenum getTextureFilter(backend::SamplerMagFilter filter) noexcept {
+constexpr inline GLenum getTextureFilter(SamplerMagFilter filter) noexcept {
     return GL_NEAREST + GLenum(filter);
 }
 
 
-constexpr inline GLenum getBlendEquationMode(backend::BlendEquation mode) noexcept {
-    using BlendEquation = backend::BlendEquation;
+constexpr inline GLenum getBlendEquationMode(BlendEquation mode) noexcept {
+    using BlendEquation = BlendEquation;
     switch (mode) {
         case BlendEquation::ADD:               return GL_FUNC_ADD;
         case BlendEquation::SUBTRACT:          return GL_FUNC_SUBTRACT;
@@ -216,8 +216,8 @@ constexpr inline GLenum getBlendEquationMode(backend::BlendEquation mode) noexce
     }
 }
 
-constexpr inline GLenum getBlendFunctionMode(backend::BlendFunction mode) noexcept {
-    using BlendFunction = backend::BlendFunction;
+constexpr inline GLenum getBlendFunctionMode(BlendFunction mode) noexcept {
+    using BlendFunction = BlendFunction;
     switch (mode) {
         case BlendFunction::ZERO:                  return GL_ZERO;
         case BlendFunction::ONE:                   return GL_ONE;
@@ -233,13 +233,13 @@ constexpr inline GLenum getBlendFunctionMode(backend::BlendFunction mode) noexce
     }
 }
 
-constexpr inline GLenum getTextureCompareMode(backend::SamplerCompareMode mode) noexcept {
-    return mode == backend::SamplerCompareMode::NONE ?
+constexpr inline GLenum getTextureCompareMode(SamplerCompareMode mode) noexcept {
+    return mode == SamplerCompareMode::NONE ?
            GL_NONE : GL_COMPARE_REF_TO_TEXTURE;
 }
 
-constexpr inline GLenum getTextureCompareFunc(backend::SamplerCompareFunc func) noexcept {
-    using SamplerCompareFunc = backend::SamplerCompareFunc;
+constexpr inline GLenum getTextureCompareFunc(SamplerCompareFunc func) noexcept {
+    using SamplerCompareFunc = SamplerCompareFunc;
     switch (func) {
         case SamplerCompareFunc::LE:    return GL_LEQUAL;
         case SamplerCompareFunc::GE:    return GL_GEQUAL;
@@ -252,12 +252,12 @@ constexpr inline GLenum getTextureCompareFunc(backend::SamplerCompareFunc func) 
     }
 }
 
-constexpr inline GLenum getDepthFunc(backend::SamplerCompareFunc func) noexcept {
+constexpr inline GLenum getDepthFunc(SamplerCompareFunc func) noexcept {
     return getTextureCompareFunc(func);
 }
 
-constexpr inline GLenum getFormat(backend::PixelDataFormat format) noexcept {
-    using PixelDataFormat = backend::PixelDataFormat;
+constexpr inline GLenum getFormat(PixelDataFormat format) noexcept {
+    using PixelDataFormat = PixelDataFormat;
     switch (format) {
         case PixelDataFormat::R:                return GL_RED;
         case PixelDataFormat::R_INTEGER:        return GL_RED_INTEGER;
@@ -274,8 +274,8 @@ constexpr inline GLenum getFormat(backend::PixelDataFormat format) noexcept {
     }
 }
 
-constexpr inline GLenum getType(backend::PixelDataType type) noexcept {
-    using PixelDataType = backend::PixelDataType;
+constexpr inline GLenum getType(PixelDataType type) noexcept {
+    using PixelDataType = PixelDataType;
     switch (type) {
         case PixelDataType::UBYTE:                return GL_UNSIGNED_BYTE;
         case PixelDataType::BYTE:                 return GL_BYTE;
@@ -292,8 +292,8 @@ constexpr inline GLenum getType(backend::PixelDataType type) noexcept {
     }
 }
 
-constexpr inline GLenum getSwizzleChannel(backend::TextureSwizzle c) noexcept {
-    using TextureSwizzle = backend::TextureSwizzle;
+constexpr inline GLenum getSwizzleChannel(TextureSwizzle c) noexcept {
+    using TextureSwizzle = TextureSwizzle;
     switch (c) {
         case TextureSwizzle::SUBSTITUTE_ZERO:
             return GL_ZERO;
@@ -313,8 +313,8 @@ constexpr inline GLenum getSwizzleChannel(backend::TextureSwizzle c) noexcept {
 // clang looses it on this one, and generates a huge jump table when
 // inlined. So we don't  mark it as inline (only constexpr) which solves the problem,
 // strangely, when not inlined, clang simply generates an array lookup.
-constexpr /* inline */ GLenum getInternalFormat(backend::TextureFormat format) noexcept {
-    using TextureFormat = backend::TextureFormat;
+constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
+    using TextureFormat = TextureFormat;
     switch (format) {
         // 8-bits per element
         case TextureFormat::R8:                return GL_R8;
@@ -530,6 +530,6 @@ inline unordered_string_set split(const char* spacedList) {
 }
 
 } // namespace GLUtils
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_GLUTILS_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "fg2/details/PassNode.h"
+#include "fg/details/PassNode.h"
 
-#include "fg2/FrameGraph.h"
-#include "fg2/details/ResourceNode.h"
+#include "fg/FrameGraph.h"
+#include "fg/details/ResourceNode.h"
 
 #include "ResourceAllocator.h"
 

@@ -205,7 +205,6 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
     int primIndex = 0;
     for (int cmdListIndex = 0; cmdListIndex < commands->CmdListsCount; cmdListIndex++) {
         const ImDrawList* cmds = commands->CmdLists[cmdListIndex];
-        size_t indexOffset = 0;
         populateVertexData(bufferIndex,
                 cmds->VtxBuffer.Size * sizeof(ImDrawVert), cmds->VtxBuffer.Data,
                 cmds->IdxBuffer.Size * sizeof(ImDrawIdx), cmds->IdxBuffer.Data);
@@ -226,12 +225,11 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                 rbuilder
                         .geometry(primIndex, RenderableManager::PrimitiveType::TRIANGLES,
                                 mVertexBuffers[bufferIndex], mIndexBuffers[bufferIndex],
-                                indexOffset, pcmd.ElemCount)
+                                pcmd.IdxOffset, pcmd.ElemCount)
                         .blendOrder(primIndex, primIndex)
                         .material(primIndex, materialInstance);
                 primIndex++;
             }
-            indexOffset += pcmd.ElemCount;
         }
         bufferIndex++;
     }

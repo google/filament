@@ -29,8 +29,8 @@
 
 #include "private/backend/DriverApiForward.h"
 
-#include <fg2/FrameGraphId.h>
-#include <fg2/FrameGraphTexture.h>
+#include <fg/FrameGraphId.h>
+#include <fg/FrameGraphTexture.h>
 
 #include <filament/Renderer.h>
 #include <filament/View.h>
@@ -161,8 +161,6 @@ private:
         float ssrLodOffset;
         // Contact shadow enabled?
         bool hasContactShadows;
-        // Screen-space reflections enabled?
-        bool hasScreenSpaceReflections;
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
@@ -173,6 +171,7 @@ private:
 
     FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
             ColorPassConfig config,
+            PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
@@ -197,8 +196,6 @@ private:
     duration getUserTime() const noexcept {
         return clock::now() - getUserEpoch();
     }
-
-    math::mat4f getClipSpaceToTextureSpaceMatrix() const noexcept;
 
     // keep a reference to our engine
     FEngine& mEngine;

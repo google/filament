@@ -25,8 +25,7 @@
 
 using namespace utils;
 
-namespace filament {
-using namespace backend;
+namespace filament::backend {
 
 template <typename T>
 static void loadSymbol(T*& pfn, const char *symbol) noexcept {
@@ -111,7 +110,7 @@ ExternalTextureManagerAndroid::~ExternalTextureManagerAndroid() noexcept {
 }
 
 // called on gl thread
-backend::Platform::ExternalTexture* ExternalTextureManagerAndroid::createExternalTexture() noexcept {
+Platform::ExternalTexture* ExternalTextureManagerAndroid::createExternalTexture() noexcept {
     if (__builtin_available(android 26, *)) {
     } else {
         // initialize java stuff on-demand
@@ -132,21 +131,21 @@ backend::Platform::ExternalTexture* ExternalTextureManagerAndroid::createExterna
 
 // called on app thread
 void ExternalTextureManagerAndroid::reallocate(
-        backend::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
-        backend::TextureFormat format, uint64_t usage) noexcept {
+        Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
+        TextureFormat format, uint64_t usage) noexcept {
     destroyStorage(ets);
     alloc(ets, w, h, format, usage);
 }
 
 // called on gl thread
-void ExternalTextureManagerAndroid::destroy(backend::Platform::ExternalTexture* ets) noexcept {
+void ExternalTextureManagerAndroid::destroy(Platform::ExternalTexture* ets) noexcept {
     destroyStorage(ets);
     delete static_cast<EGLExternalTexture*>(ets);
 }
 
 // called on app thread
 void ExternalTextureManagerAndroid::alloc(
-        backend::Platform::ExternalTexture* t,
+        Platform::ExternalTexture* t,
         uint32_t w, uint32_t h, TextureFormat format, uint64_t usage) noexcept {
 
     EGLExternalTexture* ets = static_cast<EGLExternalTexture*>(t);
@@ -200,7 +199,7 @@ void ExternalTextureManagerAndroid::alloc(
 }
 
 // called on gl thread
-void ExternalTextureManagerAndroid::destroyStorage(backend::Platform::ExternalTexture* t) noexcept {
+void ExternalTextureManagerAndroid::destroyStorage(Platform::ExternalTexture* t) noexcept {
         EGLExternalTexture* ets = static_cast<EGLExternalTexture*>(t);
     if (__builtin_available(android 26, *)) {
         // destroy the current storage if any
@@ -219,5 +218,5 @@ void ExternalTextureManagerAndroid::destroyStorage(backend::Platform::ExternalTe
     }
 }
 
-} // namespace filament
+} // namespace filament::backend
 

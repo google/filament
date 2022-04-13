@@ -21,8 +21,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         VkBufferUsageFlags usage, uint32_t numBytes) : mUsage(usage) {
@@ -114,5 +113,4 @@ void VulkanBuffer::loadFromCpu(VulkanContext& context, VulkanStagePool& stagePoo
     }
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_WAYLAND_H
-#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_WAYLAND_H
+#ifndef TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_LINUX_WAYLAND_H
+#define TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_LINUX_WAYLAND_H
 
 #include <stdint.h>
 
@@ -23,18 +23,18 @@
 #include <backend/DriverEnums.h>
 #include "VulkanPlatform.h"
 
-namespace filament {
+namespace filament::backend {
 
-class PlatformVkLinuxWayland final : public backend::VulkanPlatform {
+class PlatformVkLinuxWayland final : public VulkanPlatform {
 public:
 
-    backend::Driver* createDriver(void* const sharedContext) noexcept override;
+    Driver* createDriver(void* const sharedContext) noexcept override;
 
     void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept override;
 
     int getOSVersion() const noexcept override { return 0; }
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_WAYLAND_H
+#endif // TNT_FILAMENT_BACKEND_VULKAN_PLATFORM_VK_LINUX_WAYLAND_H

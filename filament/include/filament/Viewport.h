@@ -43,11 +43,6 @@ public:
      */
     Viewport() noexcept : backend::Viewport{} {}
 
-    Viewport(const Viewport& viewport) noexcept = default;
-    Viewport(Viewport&& viewport) noexcept = default;
-    Viewport& operator=(const Viewport& viewport) noexcept = default;
-    Viewport& operator=(Viewport&& viewport) noexcept = default;
-
     /**
      * Creates a Viewport from its left-bottom coordinates, width and height in pixels
      *
@@ -67,16 +62,7 @@ public:
      */
     bool empty() const noexcept { return !width || !height; }
 
-    /**
-     * Computes a new scaled Viewport
-     * @param s scaling factor on the x and y axes.
-     * @return A new scaled Viewport. The coordinates and dimensions of the new Viewport are
-     * rounded to the nearest integer value.
-     */
-    Viewport scale(math::float2 s) const noexcept;
-
 private:
-
     /**
      * Compares two Viewports for equality
      * @param lhs reference to the left hand side Viewport

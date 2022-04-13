@@ -28,7 +28,7 @@ namespace filament::backend {
 
 #ifndef NDEBUG
 
-static char const * const kOurNamespace = "filament::";
+static char const * const kOurNamespace = "filament::backend";
 
 // removes all occurrences of "what" from "str"
 UTILS_NOINLINE

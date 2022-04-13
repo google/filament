@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_FRAMEGRAPHTEXTURE_H
-#define TNT_FILAMENT_FG2_FRAMEGRAPHTEXTURE_H
+#ifndef TNT_FILAMENT_FG_FRAMEGRAPHTEXTURE_H
+#define TNT_FILAMENT_FG_FRAMEGRAPHTEXTURE_H
 
-#include "fg2/FrameGraphId.h"
+#include "fg/FrameGraphId.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -99,4 +99,4 @@ struct FrameGraphTexture {
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_FG2_FRAMEGRAPHTEXTURE_H
+#endif // TNT_FILAMENT_FG_FRAMEGRAPHTEXTURE_H

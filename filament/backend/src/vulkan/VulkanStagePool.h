@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
-#define TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
+#define TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 
 #include "VulkanContext.h"
 
 #include <map>
 #include <unordered_set>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // Immutable POD representing a shared CPU-GPU staging area.
 struct VulkanStage {
@@ -79,7 +78,6 @@ private:
     uint64_t mCurrentFrame = 0;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
+#endif // TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H

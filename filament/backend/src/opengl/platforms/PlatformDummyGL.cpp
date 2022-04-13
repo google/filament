@@ -16,12 +16,12 @@
 
 #include "PlatformDummyGL.h"
 
-namespace filament {
+namespace filament::backend {
 
 Driver* PlatformDummyGL::createDriver(void* const sharedGLContext) noexcept {
     return nullptr;
 }
 
-} // namespace filament
+} // namespace filament::backend
 
 // ---------------------------------------------------------------------------------------------

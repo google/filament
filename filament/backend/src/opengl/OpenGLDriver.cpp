@@ -23,7 +23,7 @@
 #include "OpenGLBlitter.h"
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
-#include "TimerQuery.h"
+#include "OpenGLTimerQuery.h"
 #include "OpenGLContext.h"
 
 #include <utils/compiler.h>
@@ -61,17 +61,13 @@
 using namespace filament::math;
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 Driver* OpenGLDriverFactory::create(
         OpenGLPlatform* const platform, void* const sharedGLContext) noexcept {
     return OpenGLDriver::create(platform, sharedGLContext);
 }
 
-} // namespace backend
-
-using namespace backend;
 using namespace GLUtils;
 
 // ------------------------------------------------------------------------------------------------
@@ -151,7 +147,8 @@ Driver* OpenGLDriver::create(
 
 OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string) noexcept
         : driver(driver) {
-    const char* const begin = string + sizeof("virtual void filament::OpenGLDriver::") - 1;
+    // FIXME: this is not safe nor portable
+    const char* const begin = string + sizeof("virtual void filament::backend::OpenGLDriver::") - 1;
     const char* const end = strchr(begin, '(');
     driver.pushGroupMarker(begin, end - begin);
 }
@@ -188,14 +185,14 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         // timer queries are available
         if (mContext.bugs.dont_use_timer_query && mPlatform.canCreateFence()) {
             // however, they don't work well, revert to using fences if we can.
-            mTimerQueryImpl = new TimerQueryFence(mPlatform);
+            mTimerQueryImpl = new OpenGLTimerQueryFence(mPlatform);
         } else {
             mTimerQueryImpl = new TimerQueryNative(mContext);
         }
         mFrameTimeSupported = true;
     } else if (mPlatform.canCreateFence()) {
         // no timer queries, but we can use fences
-        mTimerQueryImpl = new TimerQueryFence(mPlatform);
+        mTimerQueryImpl = new OpenGLTimerQueryFence(mPlatform);
         mFrameTimeSupported = true;
     } else {
         // no queries, no fences -- that's a problem
@@ -244,7 +241,7 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::bindSampler(GLuint unit, backend::SamplerParams params) noexcept {
+void OpenGLDriver::bindSampler(GLuint unit, SamplerParams params) noexcept {
     mContext.bindSampler(unit, getSampler(params));
 }
 
@@ -713,7 +710,7 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
     }
 }
 
-void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
+void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
         GLRenderTarget const* rt, GLenum attachment) noexcept {
 
 #if !defined(NDEBUG)
@@ -1009,7 +1006,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         uint32_t width,
         uint32_t height,
         uint8_t samples,
-        backend::MRT color,
+        MRT color,
         TargetBufferInfo depth,
         TargetBufferInfo stencil) {
     DEBUG_MARKER()
@@ -1360,7 +1357,7 @@ Handle<HwStream> OpenGLDriver::createStreamAcquired() {
 // called only once per frame. If the user pushes images to the same stream multiple times in a
 // single frame, we emit a warning and honor only the final image, but still invoke all callbacks.
 void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
-        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
     GLStream* glstream = handle_cast<GLStream*>(sh);
     if (glstream->user_thread.pending.image) {
         scheduleRelease(glstream->user_thread.pending);
@@ -1684,7 +1681,7 @@ void OpenGLDriver::updateBufferObject(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p,
+void OpenGLDriver::updateBuffer(GLBufferObject* buffer, BufferDescriptor const& p,
         uint32_t byteOffset, uint32_t alignment) noexcept {
     assert_invariant(buffer->byteCount >= p.size);
     assert_invariant(buffer->gl.id);
@@ -2348,7 +2345,7 @@ void OpenGLDriver::nextSubpass(int) {}
 
 
 void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
-        backend::TargetBufferFlags discardFlags) noexcept {
+        TargetBufferFlags discardFlags) noexcept {
     assert_invariant(rt->gl.fbo_read);
     auto& gl = mContext;
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
@@ -2978,12 +2975,12 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 }
 
 void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        backend::FrameScheduledCallback callback, void* user) {
+        FrameScheduledCallback callback, void* user) {
 
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        backend::FrameCompletedCallback callback, void* user) {
+        FrameCompletedCallback callback, void* user) {
 
 }
 
@@ -3227,6 +3224,6 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 }
 
 // explicit instantiation of the Dispatcher
-template class backend::ConcreteDispatcher<OpenGLDriver>;
+template class ConcreteDispatcher<OpenGLDriver>;
 
-} // namespace filament
+} // namespace filament::backend

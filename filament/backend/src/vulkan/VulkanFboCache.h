@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANFBOCACHE_H
-#define TNT_FILAMENT_DRIVER_VULKANFBOCACHE_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANFBOCACHE_H
+#define TNT_FILAMENT_BACKEND_VULKANFBOCACHE_H
 
 #include "VulkanContext.h"
 
@@ -25,8 +25,7 @@
 
 #include <tsl/robin_map.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // Avoid using VkImageLayout since it requires 4 bytes.
 enum class VulkanDepthLayout : uint8_t {
@@ -149,7 +148,6 @@ inline VkImageLayout toVkImageLayout(VulkanDepthLayout layout) {
     }
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANFBOCACHE_H
+#endif // TNT_FILAMENT_BACKEND_VULKANFBOCACHE_H

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
-#define TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
+#ifndef TNT_FILAMENT_BACKEND_NOOP_PLATFORM_NOOP_H
+#define TNT_FILAMENT_BACKEND_NOOP_PLATFORM_NOOP_H
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
-namespace filament {
+namespace filament::backend {
 
-class PlatformNoop final : public backend::DefaultPlatform {
+class PlatformNoop final : public DefaultPlatform {
 public:
 
     int getOSVersion() const noexcept final { return 0; }
@@ -31,9 +31,9 @@ public:
 
 protected:
 
-    backend::Driver* createDriver(void* sharedContext) noexcept override;
+    Driver* createDriver(void* sharedContext) noexcept override;
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
+#endif // TNT_FILAMENT_BACKEND_NOOP_PLATFORM_NOOP_H

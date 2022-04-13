@@ -126,7 +126,7 @@ static bool loadLibraries() {
     return true;
 }
 
-namespace filament {
+namespace filament::backend {
 
 using namespace backend;
 
@@ -242,14 +242,14 @@ void PlatformGLX::terminate() noexcept {
 
 Platform::SwapChain* PlatformGLX::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
     // Transparent swap chain is not supported
-    flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
     return (SwapChain*)nativeWindow;
 }
 
 Platform::SwapChain* PlatformGLX::createSwapChain(
         uint32_t width, uint32_t height, uint64_t& flags) noexcept {
     // Transparent swap chain is not supported
-    flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
     int pbufferAttribs[] = {
             GLX_PBUFFER_WIDTH, int(width),
             GLX_PBUFFER_HEIGHT, int(height),
@@ -290,8 +290,8 @@ void PlatformGLX::destroyFence(Fence* fence) noexcept {
     delete fence;
 }
 
-backend::FenceStatus PlatformGLX::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return backend::FenceStatus::CONDITION_SATISFIED;
+FenceStatus PlatformGLX::waitFence(Fence* fence, uint64_t timeout) noexcept {
+    return FenceStatus::CONDITION_SATISFIED;
 }
 
-} // namespace filament
+} // namespace filament::backend

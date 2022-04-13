@@ -32,7 +32,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     NSUInteger u = 0;
@@ -68,9 +67,8 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow
     }
 
     // Needed so we can use the SwapChain as a blit source.
-    if (flags & SwapChain::CONFIG_READABLE) {
-        nativeWindow.framebufferOnly = NO;
-    }
+    // Also needed for rendering directly into the SwapChain during refraction.
+    nativeWindow.framebufferOnly = NO;
 
     layer.device = context.device;
 }
@@ -81,7 +79,7 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t hei
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
         : context(context), externalImage(context), type(SwapChainType::CVPIXELBUFFERREF) {
-    assert_invariant(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
+    assert_invariant(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
     MetalExternalImage::assertWritableImage(pixelBuffer);
     externalImage.set(pixelBuffer);
     assert_invariant(externalImage.isValid());
@@ -224,7 +222,7 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
     }
 
     assert_invariant(drawable);
-    backend::FrameScheduledCallback callback = frameScheduledCallback;
+    FrameScheduledCallback callback = frameScheduledCallback;
     // This block strongly captures drawable to keep it alive until the handler executes.
     // We cannot simply reference this->drawable inside the block because the block would then only
     // capture the _this_ pointer (MetalSwapChain*) instead of the drawable.
@@ -245,12 +243,12 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
         return;
     }
 
-    backend::FrameCompletedCallback callback = frameCompletedCallback;
+    FrameCompletedCallback callback = frameCompletedCallback;
     void* userData = frameCompletedUserData;
     [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
         struct CallbackData {
             void* userData;
-            backend::FrameCompletedCallback callback;
+            FrameCompletedCallback callback;
         };
         CallbackData* data = new CallbackData();
         data->userData = userData;
@@ -1024,6 +1022,5 @@ FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     return FenceStatus::ERROR;
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

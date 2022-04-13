@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "fg2/FrameGraph.h"
-#include "fg2/details/PassNode.h"
-#include "fg2/details/ResourceNode.h"
+#include "fg/FrameGraph.h"
+#include "fg/details/PassNode.h"
+#include "fg/details/ResourceNode.h"
 
 namespace filament {
 
@@ -38,8 +38,19 @@ ResourceNode::~ResourceNode() noexcept {
 }
 
 ResourceNode* ResourceNode::getParentNode() noexcept {
-    return mParentHandle.isInitialized() ?
-           mFrameGraph.getActiveResourceNode(mParentHandle) : nullptr;
+    ResourceNode* const parentNode = mParentHandle ?
+            mFrameGraph.getActiveResourceNode(mParentHandle) : nullptr;
+    assert_invariant(mParentHandle == ResourceNode::getHandle(parentNode));
+    return parentNode;
+}
+
+ResourceNode* ResourceNode::getAncestorNode(ResourceNode* node) noexcept {
+    ResourceNode* ancestor = node;
+    do {
+        node = node->getParentNode();
+        ancestor = node ? node : ancestor;
+    } while (node);
+    return ancestor;
 }
 
 char const* ResourceNode::getName() const noexcept {

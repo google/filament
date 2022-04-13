@@ -30,8 +30,7 @@
 using namespace bluevk;
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) {
     VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -264,8 +263,7 @@ void VulkanCommands::updateFences() {
     }
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
 #if defined(_MSC_VER)
 #pragma warning( pop )

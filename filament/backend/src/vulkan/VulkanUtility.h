@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANUTILITY_H
-#define TNT_FILAMENT_DRIVER_VULKANUTILITY_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANUTILITY_H
+#define TNT_FILAMENT_BACKEND_VULKANUTILITY_H
 
 #include <backend/DriverEnums.h>
 
 #include <bluevk/BlueVK.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct VulkanLayoutTransition {
     VkImage image;
@@ -66,9 +65,8 @@ bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 bool isDepthFormat(VkFormat format);
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
 
-#endif // TNT_FILAMENT_DRIVER_VULKANUTILITY_H
+#endif // TNT_FILAMENT_BACKEND_VULKANUTILITY_H

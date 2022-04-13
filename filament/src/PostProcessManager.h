@@ -21,8 +21,8 @@
 
 #include "FrameHistory.h"
 
-#include <fg2/FrameGraphId.h>
-#include <fg2/FrameGraphResources.h>
+#include <fg/FrameGraphId.h>
+#include <fg/FrameGraphResources.h>
 
 #include <filament/Options.h>
 
@@ -102,15 +102,39 @@ public:
             FrameGraphId<FrameGraphTexture> input, size_t levels, bool reinhard,
             size_t kernelWidth, float sigma) noexcept;
 
-    // Helper to generate gaussian mipmaps for SSR (refraction and reflections).
-    // This performs the following tasks:
-    // - resolves input if needed
-    // - rescale input so it has a homogenous scale
-    // - generate a new texture with gaussian mips
-    static FrameGraphId<FrameGraphTexture> generateMipmapSSR(PostProcessManager& ppm,
-            FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, float verticalFieldOfView, math::float2 scale,
-            backend::TextureFormat format, float* pLodOffset) noexcept;
+    struct ScreenSpaceRefConfig {
+        // The SSR texture (i.e. the 2d Array)
+        FrameGraphId<FrameGraphTexture> ssr;
+        // handle to subresource to receive the refraction
+        FrameGraphId<FrameGraphTexture> refraction;
+        // handle to subresource to receive the reflections
+        FrameGraphId<FrameGraphTexture> reflection;
+        float lodOffset;            // LOD offset
+        uint8_t roughnessLodCount;  // LOD count
+        uint8_t kernelSize;         // Kernel size
+        float sigma0;               // sigma0
+    };
+
+    /*
+     * Create the 2D array that will receive the reflection and refraction buffers
+     */
+    static ScreenSpaceRefConfig prepareMipmapSSR(FrameGraph& fg,
+            uint32_t width, uint32_t height, backend::TextureFormat format,
+            float verticalFieldOfView, math::float2 scale) noexcept;
+
+    /*
+     * Helper to generate gaussian mipmaps for SSR (refraction and reflections).
+     * This performs the following tasks:
+     *  - resolves input if needed
+     *  - optionally duplicates the input
+     *  - rescale input, so it has a homogenous scale
+     *  - generate a new texture with gaussian mips
+     */
+    static FrameGraphId<FrameGraphTexture> generateMipmapSSR(
+            PostProcessManager& ppm, FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> output,
+            bool needInputDuplication, ScreenSpaceRefConfig const& config) noexcept;
 
     // Depth-of-field
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,

@@ -32,9 +32,9 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
-#include "fg2/FrameGraph.h"
-#include "fg2/FrameGraphId.h"
-#include "fg2/FrameGraphResources.h"
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphResources.h"
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
@@ -254,14 +254,24 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
 
+    // whether we're scaled at all
     const bool scaled = any(notEqual(scale, float2(1.0f)));
-    filament::Viewport svp = vp.scale(scale);
+
+    // The scale factor guarantees that the width and height are integers (multiple of 8, in fact),
+    // and all the code below ignores entirely svp's origin -- because we want to render the view
+    // at the origin of the buffer, so we set it to zero here to make that fact clear.
+    const filament::Viewport svp = {
+            0, 0, // this is ignored
+            uint32_t(float(vp.width ) * scale.x),
+            uint32_t(float(vp.height) * scale.y)
+    };
+
     if (svp.empty()) {
         return;
     }
 
     const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
-    // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
+    // If the swap-chain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
     const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
     view.prepare(engine, driver, arena, svp, getShaderUserTime(), needsAlphaChannel);
@@ -384,8 +394,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .clearFlags = clearFlags,
             .clearColor = clearColor,
             .ssrLodOffset = 0.0f,
-            .hasContactShadows = scene.hasContactShadows(),
-            .hasScreenSpaceReflections = ssReflectionsOptions.enabled
+            .hasContactShadows = scene.hasContactShadows()
     };
 
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
@@ -480,9 +489,19 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     // --------------------------------------------------------------------------------------------
+    // prepare screen-space reflection/refraction passes
+
+    PostProcessManager::ScreenSpaceRefConfig ssrConfig = PostProcessManager::prepareMipmapSSR(
+            fg, svp.width, svp.height,
+            ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
+            view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
+    config.ssrLodOffset = ssrConfig.lodOffset;
+    blackboard["ssr"] = ssrConfig.ssr;
+
+    // --------------------------------------------------------------------------------------------
     // screen-space reflections pass
 
-    if (config.hasScreenSpaceReflections) {
+    if (ssReflectionsOptions.enabled) {
         auto reflections = ppm.ssr(fg, pass,
                 view.getFrameHistory(), cameraInfo,
                 view.getPerViewUniforms(),
@@ -491,12 +510,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         // generate the mipchain
-        reflections = PostProcessManager::generateMipmapSSR(ppm, fg, reflections,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
-                TextureFormat::RGBA16F,
-                &config.ssrLodOffset);
-
-        blackboard["ssr"] = reflections;
+        reflections = PostProcessManager::generateMipmapSSR(ppm, fg,
+                reflections, ssrConfig.reflection, false, ssrConfig);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -567,7 +582,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
         // the color pass + refraction + color-grading as subpass if needed
-        colorPassOutput = refractionPass(fg, config, colorGradingConfigForColor, pass, view);
+        colorPassOutput = refractionPass(fg, config, ssrConfig, colorGradingConfigForColor, pass, view);
     }
 
     if (colorGradingConfig.customResolve) {
@@ -729,6 +744,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
 FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         ColorPassConfig config,
+        PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
         PostProcessManager::ColorGradingConfig colorGradingConfig,
         RenderPass const& pass,
         FView const& view) const noexcept {
@@ -749,7 +765,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
     // if there wasn't any refractive object, just skip everything below.
     if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
         PostProcessManager& ppm = mEngine.getPostProcessManager();
-        float refractionLodOffset = 0.0f;
 
         // clear the color/depth buffers, which will orphan (and cull) the color pass
         input.clear();
@@ -771,14 +786,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 view);
 
         // generate the mipmap chain
-        input = PostProcessManager::generateMipmapSSR(ppm, fg, input,
-                view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale,
-                TextureFormat::R11F_G11F_B10F,
-                &refractionLodOffset);
-
-        // and this becomes our SSR buffer
-        blackboard["ssr"] = input;
-
+        PostProcessManager::generateMipmapSSR(ppm, fg,
+                input, ssrConfig.refraction, true, ssrConfig);
 
         // Now we're doing the refraction pass proper.
         // This uses the same framebuffer (color and depth) used by the opaque pass. This happens
@@ -786,8 +795,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // pass). For this reason, `desc` below is only used in colorPass() for the width and
         // height.
         config.clearFlags = TargetBufferFlags::NONE;
-        config.hasScreenSpaceReflections = false; // FIXME: for now we can't have both
-        config.ssrLodOffset = refractionLodOffset;
         output = colorPass(fg, "Color Pass (transparent)",
                 {
                         .width = config.svp.width,
@@ -847,7 +854,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.ssr = builder.sample(data.ssr);
                 }
 
-                if (config.hasContactShadows || config.hasScreenSpaceReflections) {
+                if (config.hasContactShadows) {
                     data.structure = blackboard.get<FrameGraphTexture>("structure");
                     assert_invariant(data.structure);
                     data.structure = builder.sample(data.structure);
@@ -910,6 +917,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
+                /*
+                 * There is a bit of magic happening here regarding the viewport used.
+                 * We do not specify the viewport in declareRenderPass() below, so it will be
+                 * deduced automatically to be { 0, 0, w, h }, with w,h the min width/height of
+                 * all the attachments. This has the side effect of moving the viewport to the
+                 * origin and ignore the left/bottom of 'svp'. The attachment sizes are set from
+                 * svp's width/height, however.
+                 * But that's not all! When we're rendering directly into the swap-chain (by way
+                 * of calling forwardResource() later), the effective viewport comes from the
+                 * imported resource (i.e. the swap-chain) and is set to 'vp' which has its
+                 * left/bottom honored -- the view is therefore rendered directly where it should
+                 * be (the imported resource viewport is set to 'vp', see  how 'fgViewRenderTarget'
+                 * is initialized in this file).
+                 */
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output }, .depth = data.depth },
                         .samples = config.msaa,

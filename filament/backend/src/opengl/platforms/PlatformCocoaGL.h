@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_COCOA_GL_H
-#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_COCOA_GL_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_COCOA_GL_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_COCOA_GL_H
 
 #include <stdint.h>
 
@@ -23,16 +23,16 @@
 
 #include "private/backend/OpenGLPlatform.h"
 
-namespace filament {
+namespace filament::backend {
 
 struct PlatformCocoaGLImpl;
 
-class PlatformCocoaGL final : public backend::OpenGLPlatform {
+class PlatformCocoaGL final : public OpenGLPlatform {
 public:
     PlatformCocoaGL();
     ~PlatformCocoaGL() noexcept final;
 
-    backend::Driver* createDriver(void* sharedContext) noexcept override;
+    Driver* createDriver(void* sharedContext) noexcept override;
     void terminate() noexcept final;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
@@ -43,8 +43,8 @@ public:
 
     Fence* createFence() noexcept final { return nullptr; }
     void destroyFence(Fence* fence) noexcept final {}
-    backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final {
-        return backend::FenceStatus::ERROR;
+    FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final {
+        return FenceStatus::ERROR;
     }
 
     void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept final {}
@@ -57,7 +57,7 @@ public:
 
     ExternalTexture* createExternalTextureStorage() noexcept final { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final { }
+            uint32_t w, uint32_t h, TextureFormat format) noexcept final { }
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final { }
 
     int getOSVersion() const noexcept final { return 0; }
@@ -68,6 +68,6 @@ private:
     PlatformCocoaGLImpl* pImpl = nullptr;
 };
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_COCOA_GL_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_COCOA_GL_H

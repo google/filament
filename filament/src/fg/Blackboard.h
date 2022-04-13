@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_BLACKBOARD_H
-#define TNT_FILAMENT_FG2_BLACKBOARD_H
+#ifndef TNT_FILAMENT_FG_BLACKBOARD_H
+#define TNT_FILAMENT_FG_BLACKBOARD_H
 
-#include <fg2/FrameGraphId.h>
+#include <fg/FrameGraphId.h>
 
 #include <utils/CString.h>
 
@@ -51,4 +51,4 @@ private:
 } // namespace filament
 
 
-#endif //TNT_FILAMENT_FG2_BLACKBOARD_H
+#endif //TNT_FILAMENT_FG_BLACKBOARD_H

@@ -27,7 +27,7 @@
 using namespace filament::math;
 using namespace utils;
 
-namespace filament {
+namespace filament::backend {
 
 static const char s_vertexES[] = R"SHADER(#version 300 es
 in vec4 pos;
@@ -212,4 +212,4 @@ void OpenGLBlitter::State::restore() noexcept {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-} // namespace filament
+} // namespace filament::backend

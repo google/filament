@@ -24,7 +24,7 @@ class Driver;
 
 class MetalDriverFactory {
 public:
-    static Driver* create(backend::MetalPlatform* platform);
+    static Driver* create(MetalPlatform* platform);
 };
 
 } // namespace backend

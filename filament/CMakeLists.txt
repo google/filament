@@ -92,7 +92,6 @@ set(SRCS
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/View.cpp
-        src/Viewport.cpp
         src/components/CameraManager.cpp
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
@@ -118,14 +117,14 @@ set(SRCS
         src/details/Texture.cpp
         src/details/VertexBuffer.cpp
         src/details/View.cpp
-        src/fg2/Blackboard.cpp
-        src/fg2/DependencyGraph.cpp
-        src/fg2/FrameGraph.cpp
-        src/fg2/FrameGraphPass.cpp
-        src/fg2/FrameGraphResources.cpp
-        src/fg2/FrameGraphTexture.cpp
-        src/fg2/PassNode.cpp
-        src/fg2/ResourceNode.cpp
+        src/fg/Blackboard.cpp
+        src/fg/DependencyGraph.cpp
+        src/fg/FrameGraph.cpp
+        src/fg/FrameGraphPass.cpp
+        src/fg/FrameGraphResources.cpp
+        src/fg/FrameGraphTexture.cpp
+        src/fg/PassNode.cpp
+        src/fg/ResourceNode.cpp
         src/fsr.cpp
 )
 
@@ -177,19 +176,19 @@ set(PRIVATE_HDRS
         src/details/Texture.h
         src/details/VertexBuffer.h
         src/details/View.h
-        src/fg2/Blackboard.h
-        src/fg2/FrameGraph.h
-        src/fg2/FrameGraphId.h
-        src/fg2/FrameGraphPass.h
-        src/fg2/FrameGraphRenderPass.h
-        src/fg2/FrameGraphResources.h
-        src/fg2/FrameGraphTexture.h
-        src/fg2/Resource.cpp
-        src/fg2/details/DependencyGraph.h
-        src/fg2/details/PassNode.h
-        src/fg2/details/Resource.h
-        src/fg2/details/ResourceNode.h
-        src/fg2/details/Utilities.h
+        src/fg/Blackboard.h
+        src/fg/FrameGraph.h
+        src/fg/FrameGraphId.h
+        src/fg/FrameGraphPass.h
+        src/fg/FrameGraphRenderPass.h
+        src/fg/FrameGraphResources.h
+        src/fg/FrameGraphTexture.h
+        src/fg/Resource.cpp
+        src/fg/details/DependencyGraph.h
+        src/fg/details/PassNode.h
+        src/fg/details/Resource.h
+        src/fg/details/ResourceNode.h
+        src/fg/details/Utilities.h
         src/fsr.h
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h

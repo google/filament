@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,12 @@
  * limitations under the License.
  */
 
-#include <filament/Viewport.h>
-
-#include <cmath>
+#include "fg/FrameGraphPass.h"
 
 namespace filament {
 
-Viewport Viewport::scale(math::float2 s) const noexcept {
+FrameGraphPassExecutor::~FrameGraphPassExecutor() noexcept = default;
 
-    // round to nearest to avoid overlapping viewports
-    // this could result to empty viewport, though.
-    float l = std::floor(0.5f + s.x * float(left));
-    float b = std::floor(0.5f + s.y * float(bottom));
-    float r = std::floor(0.5f + s.x * float(left + width));
-    float t = std::floor(0.5f + s.y * float(bottom + height));
-
-    return { int32_t(l), int32_t(b), uint32_t(r - l), uint32_t(t - b) };
-}
+FrameGraphPassBase::~FrameGraphPassBase() noexcept = default;
 
 } // namespace filament

@@ -23,14 +23,13 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 struct MetalTimerQuery;
 struct MetalContext;
 
-class TimerQueryInterface {
+class MetalTimerQueryInterface {
 public:
-    virtual ~TimerQueryInterface();
+    virtual ~MetalTimerQueryInterface();
     virtual void beginTimeElapsedQuery(MetalTimerQuery* query) = 0;
     virtual void endTimeElapsedQuery(MetalTimerQuery* query) = 0;
     virtual bool getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) = 0;
@@ -41,9 +40,9 @@ protected:
 
 // Uses MTLSharedEvents to implement timer queries.
 // Only available on >= iOS 12.0.
-class API_AVAILABLE(ios(12.0)) TimerQueryFence : public TimerQueryInterface {
+class API_AVAILABLE(ios(12.0)) MetalTimerQueryFence : public MetalTimerQueryInterface {
 public:
-    explicit TimerQueryFence(MetalContext& context) : mContext(context) {}
+    explicit MetalTimerQueryFence(MetalContext& context) : mContext(context) {}
 
     void beginTimeElapsedQuery(MetalTimerQuery* query) override;
     void endTimeElapsedQuery(MetalTimerQuery* query) override;
@@ -53,14 +52,13 @@ private:
     MetalContext& mContext;
 };
 
-class TimerQueryNoop : public TimerQueryInterface {
+class TimerQueryNoop : public MetalTimerQueryInterface {
 public:
     void beginTimeElapsedQuery(MetalTimerQuery* query) override {}
     void endTimeElapsedQuery(MetalTimerQuery* query) override {}
     bool getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) override;
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

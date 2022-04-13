@@ -25,7 +25,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 struct MetalContext;
 
@@ -78,7 +77,6 @@ private:
     static constexpr uint32_t TIME_BEFORE_EVICTION = 10;
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 
