@@ -215,8 +215,6 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
 
         driver.popGroupMarker();
     }
-    // this is a good place to kick the GPU, since we've just done a bunch of work
-    driver.flush();
     driver.popGroupMarker();
 }
 
