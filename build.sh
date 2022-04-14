@@ -98,9 +98,9 @@ function print_matdbg_help {
     echo ""
     echo "FOR ANDROID BUILDS:"
     echo ""
-    echo "1) The most reliable way to enable matdbg is to bypass Gradle and"
-    echo "   directly modify the appropriate two lines in the following file:"
-    echo "       ./android/filament-android/CMakeLists.txt"
+    echo "1) For Android Studio builds, make sure to set:"
+    echo "       -Pcom.google.android.filament.matdbg"
+    echo "   option in Preferences > Build > Compiler > Command line options."
     echo ""
     echo "2) The port number is hardcoded to 8081 so you will need to do:"
     echo "       adb forward tcp:8081 tcp:8081"
@@ -156,6 +156,7 @@ VULKAN_ANDROID_GRADLE_OPTION=""
 SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=OFF"
 
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
+MATDBG_GRADLE_OPTION=""
 
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
@@ -456,6 +457,7 @@ function build_android {
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${MATDBG_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
             :filament-utils-android:assembleDebug
@@ -504,6 +506,7 @@ function build_android {
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${MATDBG_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
@@ -754,6 +757,7 @@ while getopts ":hacCfijmp:q:uvslwtdk:" opt; do
         d)
             PRINT_MATDBG_HELP=true
             MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_DISABLE_MATOPT=ON, -DFILAMENT_BUILD_FILAMAT=ON"
+            MATDBG_GRADLE_OPTION="-Pcom.google.android.filament.matdbg"
             ;;
         f)
             ISSUE_CMAKE_ALWAYS=true
