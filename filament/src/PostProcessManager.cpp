@@ -1953,6 +1953,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
         auto& bloomDownsamplePass = fg.addPass<BloomPassData>("Bloom Downsample",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.in = builder.sample(input);
+                    // note: the shader code assumes that the dimensions of each mip level are
+                    // even. This is not actually the case, but it hasn't caused too much problem
+                    // for bloom.
                     data.out = builder.createTexture("Bloom Texture", {
                             .width = width,
                             .height = height,
@@ -1977,7 +1980,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
                     auto hwIn = resources.getTexture(data.in);
                     auto hwOut = resources.getTexture(data.out);
-                    auto const& outDesc = resources.getDescriptor(data.out);
 
                     mi->use(driver);
                     mi->setParameter("source", hwIn, {
@@ -1993,9 +1995,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                     for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
                         auto hwOutRT = resources.getRenderPassInfo(i);
 
-                        auto w = FTexture::valueForLevel(i, outDesc.width);
-                        auto h = FTexture::valueForLevel(i, outDesc.height);
-                        mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
                         mi->commit(driver);
 
                         hwOutRT.params.flags.discardStart = TargetBufferFlags::COLOR;
