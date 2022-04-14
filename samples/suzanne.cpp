@@ -154,10 +154,13 @@ int main(int argc, char** argv) {
         reader.requestFormat(Texture::InternalFormat::SRGB8_A8);
         reader.requestFormat(Texture::InternalFormat::RGBA8);
 
-        app.albedo = reader.load(MONKEY_ALBEDO_DATA, MONKEY_ALBEDO_SIZE, Ktx2Reader::sRGB);
-        app.ao = reader.load(MONKEY_AO_DATA, MONKEY_AO_SIZE);
-        app.metallic = reader.load(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE);
-        app.roughness = reader.load(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE);
+        constexpr auto sRGB = Ktx2Reader::TransferFunction::sRGB;
+        constexpr auto LINEAR = Ktx2Reader::TransferFunction::LINEAR;
+
+        app.albedo = reader.load(MONKEY_ALBEDO_DATA, MONKEY_ALBEDO_SIZE, sRGB);
+        app.ao = reader.load(MONKEY_AO_DATA, MONKEY_AO_SIZE, LINEAR);
+        app.metallic = reader.load(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE, LINEAR);
+        app.roughness = reader.load(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE, LINEAR);
 
 #if !defined(NDEBUG)
         using namespace utils;

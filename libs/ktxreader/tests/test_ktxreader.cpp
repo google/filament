@@ -81,7 +81,8 @@ TEST_F(KtxReaderTest, Ktx2) {
     reader.requestFormat(Texture::InternalFormat::SRGB8_A8);
     reader.requestFormat(Texture::InternalFormat::RGBA8);
 
-    Texture* tex = reader.load(contents.data(), contents.size());
+    Texture* tex = reader.load(contents.data(), contents.size(),
+            ktxreader::Ktx2Reader::TransferFunction::LINEAR);
 
     ASSERT_TRUE(tex != nullptr);
     ASSERT_EQ(tex->getFormat(), Texture::InternalFormat::DXT3_RGBA);

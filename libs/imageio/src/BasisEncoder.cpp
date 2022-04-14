@@ -46,7 +46,6 @@ struct BasisEncoderImpl {
 };
 
 Builder::Builder(size_t mipCount, size_t layerCount) noexcept : mImpl(new BasisEncoderBuilderImpl) {
-    const size_t mipsPerImage = mipCount > 0 ? mipCount : 1;
     const bool multiple = mImpl->params.m_source_images.size() > 1;
     mImpl->params.m_tex_type = multiple ? basist::cBASISTexType2DArray : basist::cBASISTexType2D;
     mImpl->params.m_uastc = true;
@@ -200,7 +199,7 @@ BasisEncoder::~BasisEncoder() noexcept {
     basisu::basisu_encoder_deinit();
 }
 
-BasisEncoder::BasisEncoder(BasisEncoder&& that) noexcept {
+BasisEncoder::BasisEncoder(BasisEncoder&& that) noexcept  : mImpl(nullptr) {
     std::swap(mImpl, that.mImpl);
 }
 
