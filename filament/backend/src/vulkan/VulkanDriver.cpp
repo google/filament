@@ -1608,14 +1608,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
     srcPixels += subResourceLayout.offset;
 
-    // NOTE: the reasons for this are unclear, but issuing ReadPixels on a VkImage that has been
-    // extracted from a swap chain does not need a Y flip, but explicitly created VkImages do. (The
-    // former can be tested with "Export Screenshots" in gltf_viewer, the latter can be tested with
-    // test_ReadPixels.cpp). We've seen this behavior with both SwiftShader and MoltenVK.
-    const bool flipY = !srcTarget->isSwapChain();
-
     if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), srcPixels,
-            subResourceLayout.rowPitch, width, height, swizzle, flipY)) {
+            subResourceLayout.rowPitch, width, height, swizzle, false)) {
         utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
     }
 

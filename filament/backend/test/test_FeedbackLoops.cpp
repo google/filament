@@ -115,6 +115,9 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
     dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
 }
 
+// TODO: This test needs work to get Metal and OpenGL to agree on results.
+// The problems are caused by both uploading and rendering into the same texture, since the OpenGL
+// backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
     auto& api = getDriverApi();
 
