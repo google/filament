@@ -73,8 +73,8 @@ static FinalFormatInfo getFinalFormatInfo(Texture::InternalFormat fmt) {
     using tt = Texture::Type;
     using tf = Texture::Format;
     using ttf = transcoder_texture_format;
-    const auto sRGB = ktxreader::Ktx2Reader::sRGB;
-    const auto LINEAR = ktxreader::Ktx2Reader::LINEAR;
+    const auto sRGB = ktxreader::Ktx2Reader::TransferFunction::sRGB;
+    const auto LINEAR = ktxreader::Ktx2Reader::TransferFunction::LINEAR;
     switch (fmt) {
         case tif::ETC2_EAC_SRGBA8: return {true, true, sRGB, ttf::cTFETC2_RGBA, tct::ETC2_EAC_RGBA8};
         case tif::ETC2_EAC_RGBA8:  return {true, true, LINEAR, ttf::cTFETC2_RGBA, tct::ETC2_EAC_SRGBA8};
@@ -144,7 +144,8 @@ Texture* Ktx2Reader::load(const uint8_t* data, size_t size, TransferFunction tra
         return nullptr;
     }
 
-    if (mTranscoder->get_dfd_transfer_func() == KTX2_KHR_DF_TRANSFER_LINEAR && transfer == sRGB) {
+    if (mTranscoder->get_dfd_transfer_func() == KTX2_KHR_DF_TRANSFER_LINEAR &&
+            transfer == TransferFunction::sRGB) {
         if (!mQuiet) {
             utils::slog.e << "Source texture is marked linear, but client is requesting sRGB."
                     << utils::io::endl;
@@ -152,7 +153,8 @@ Texture* Ktx2Reader::load(const uint8_t* data, size_t size, TransferFunction tra
         return nullptr;
     }
 
-    if (mTranscoder->get_dfd_transfer_func() == KTX2_KHR_DF_TRANSFER_SRGB && transfer == LINEAR) {
+    if (mTranscoder->get_dfd_transfer_func() == KTX2_KHR_DF_TRANSFER_SRGB &&
+            transfer == TransferFunction::LINEAR) {
         if (!mQuiet) {
             utils::slog.e << "Source texture is marked sRGB, but client is requesting linear."
                     << utils::io::endl;

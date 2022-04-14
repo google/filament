@@ -62,7 +62,7 @@ target_compile_definitions(basisu PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_encoder PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_transcoder PRIVATE ${BASIS_CONFIG})
 
-if (NOT MSVC)
+if (NOT MSVC AND NOT ANDROID)
    target_link_libraries(basisu m pthread)
 endif()
 

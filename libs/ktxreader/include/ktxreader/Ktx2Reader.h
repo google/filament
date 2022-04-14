@@ -38,7 +38,7 @@ class Ktx2Reader {
     public:
         using Engine = filament::Engine;
         using Texture = filament::Texture;
-        enum TransferFunction { LINEAR, sRGB };
+        enum class TransferFunction { LINEAR, sRGB };
 
         Ktx2Reader(Engine& engine, bool quiet = false);
         ~Ktx2Reader();
@@ -72,7 +72,7 @@ class Ktx2Reader {
          * Attempts to create a Filament texture from the given KTX2 blob. If none of the requested
          * formats can be extracted from the data, this returns null.
          */
-        Texture* load(const uint8_t* data, size_t size, TransferFunction transfer = LINEAR);
+        Texture* load(const uint8_t* data, size_t size, TransferFunction transfer);
 
     private:
         Ktx2Reader(const Ktx2Reader&) = delete;
