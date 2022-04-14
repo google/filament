@@ -31,6 +31,8 @@ vertex {
 }
 
 fragment {
+    void dummy(){}
+
     void postProcess(inout PostProcessInputs postProcess) {
         float lod = materialParams.level;
         highp vec2 uv = variable_vertex.xy;
@@ -44,16 +46,21 @@ fragment {
         c += textureLod(materialParams_source, uv + d.zy, lod).rgb;
         postProcess.color.rgb = c * 0.25;
 #else
+        // see SIGGRAPH 2014: Advances in Real-Time Rendering
+        //     "Next Generation Post-Processing in Call of Duty Advanced Warfare"
+        //      Jorge Jimenez
+        const float radius = 1.0;
+        highp vec4 d = vec4(materialParams.resolution.zw, -materialParams.resolution.zw) * radius;
         vec3 c0, c1;
-        c0  = textureLodOffset(materialParams_source, uv, lod, ivec2(-1, -1)).rgb;
-        c0 += textureLodOffset(materialParams_source, uv, lod, ivec2( 1, -1)).rgb;
-        c0 += textureLodOffset(materialParams_source, uv, lod, ivec2( 1,  1)).rgb;
-        c0 += textureLodOffset(materialParams_source, uv, lod, ivec2(-1,  1)).rgb;
+        c0  = textureLod(materialParams_source, uv + d.zw, lod).rgb;
+        c0 += textureLod(materialParams_source, uv + d.xw, lod).rgb;
+        c0 += textureLod(materialParams_source, uv + d.xy, lod).rgb;
+        c0 += textureLod(materialParams_source, uv + d.zy, lod).rgb;
         c0 += 4.0 * textureLod(materialParams_source, uv, lod).rgb;
-        c1  = textureLodOffset(materialParams_source, uv, lod, ivec2(-1,  0)).rgb;
-        c1 += textureLodOffset(materialParams_source, uv, lod, ivec2( 0, -1)).rgb;
-        c1 += textureLodOffset(materialParams_source, uv, lod, ivec2( 1,  0)).rgb;
-        c1 += textureLodOffset(materialParams_source, uv, lod, ivec2( 0,  1)).rgb;
+        c1  = textureLod(materialParams_source, uv + vec2(d.z,  0.0), lod).rgb;
+        c1 += textureLod(materialParams_source, uv + vec2(0.0,  d.w), lod).rgb;
+        c1 += textureLod(materialParams_source, uv + vec2(d.x,  0.0), lod).rgb;
+        c1 += textureLod(materialParams_source, uv + vec2( 0.0, d.y), lod).rgb;
         postProcess.color.rgb = (c0 + 2.0 * c1) * (1.0 / 16.0);
 #endif
     }
