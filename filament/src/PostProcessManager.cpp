@@ -1906,10 +1906,10 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
     auto const& desc = fg.getDescriptor(input);
 
     // width and height after dynamic resolution upscaling
-    const float aspect = (desc.width * scale.y) / (desc.height * scale.x);
+    const float aspect = (float(desc.width) * scale.y) / (float(desc.height) * scale.x);
 
     // compute the desired bloom buffer size
-    float bloomHeight = inoutBloomOptions.resolution;
+    float bloomHeight = float(inoutBloomOptions.resolution);
     float bloomWidth  = bloomHeight * aspect;
 
     // Anamorphic bloom by always scaling down one of the dimension -- we do this (as opposed
@@ -1923,11 +1923,11 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
     }
 
     // convert back to integer width/height
-    const uint32_t width  = std::max(1.0f, std::floor(bloomWidth));
-    const uint32_t height = std::max(1.0f, std::floor(bloomHeight));
+    const uint32_t width  = std::max(1u, uint32_t(std::floor(bloomWidth)));
+    const uint32_t height = std::max(1u, uint32_t(std::floor(bloomHeight)));
 
     // we might need to adjust the max # of levels
-    const uint32_t major = std::max(bloomWidth,  bloomHeight);
+    const uint32_t major = uint32_t(std::max(bloomWidth,  bloomHeight));
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
     inoutBloomOptions.levels = std::min(inoutBloomOptions.levels, maxLevels);
     inoutBloomOptions.levels = std::min(inoutBloomOptions.levels, kMaxBloomLevels);
@@ -1973,42 +1973,45 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                 [=](FrameGraphResources const& resources,
                         auto const& data, DriverApi& driver) {
 
-                    auto const& material = getPostProcessMaterial("bloomDownsample");
-                    FMaterialInstance* mi = material.getMaterialInstance(mEngine);
-
-                    const PipelineState pipeline(material.getPipelineState(mEngine));
-
+                    // this is our source, e.g. the (maybe rescaled, TAA'ed, DoF'ed) color buffer
                     auto hwIn = resources.getTexture(data.in);
+                    // and our output temporary bloom mipchain
                     auto hwOut = resources.getTexture(data.out);
+
+                    auto const& material = getPostProcessMaterial("bloomDownsample");
+                    const PipelineState pipeline(material.getPipelineState(mEngine));
+                    FMaterialInstance* mi = material.getMaterialInstance(mEngine);
 
                     mi->use(driver);
                     mi->setParameter("source", hwIn, {
                             .filterMag = SamplerMagFilter::LINEAR,
-                            .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
+                            .filterMin = SamplerMinFilter::LINEAR // level is always 0
                     });
                     mi->setParameter("level", 0.0f);
                     mi->setParameter("threshold", inoutBloomOptions.threshold ? 1.0f : 0.0f);
                     mi->setParameter("invHighlight",
-                            std::isinf(inoutBloomOptions.highlight) ? 0.0f : 1.0f
-                                                                             / inoutBloomOptions.highlight);
+                            std::isinf(inoutBloomOptions.highlight) ?
+                                    0.0f : 1.0f / inoutBloomOptions.highlight);
 
+                    // Loop on oll output targets
                     for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
-                        auto hwOutRT = resources.getRenderPassInfo(i);
-
                         mi->commit(driver);
 
+                        // render level i
+                        auto hwOutRT = resources.getRenderPassInfo(i);
                         hwOutRT.params.flags.discardStart = TargetBufferFlags::COLOR;
                         hwOutRT.params.flags.discardEnd = TargetBufferFlags::NONE;
                         render(hwOutRT, pipeline, driver);
 
-                        // prepare the next level
+                        // prepare the next level:
+                        // the source texture becomes the output texture
                         mi->setParameter("source", hwOut, {
                                 .filterMag = SamplerMagFilter::LINEAR,
                                 .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                         });
+                        // we're reading from level i (and will be writing to level i+1)
                         mi->setParameter("level", float(i));
-                        driver.setMinMaxLevels(hwOut, i,
-                                i); // safe because we're using LINEAR_MIPMAP_NEAREST
+                        driver.setMinMaxLevels(hwOut, i, i); // safe because we're using LINEAR_MIPMAP_NEAREST
                     }
                     driver.setMinMaxLevels(hwOut, 0, inoutBloomOptions.levels - 1);
                 });
@@ -2045,9 +2048,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
                     for (size_t i = inoutBloomOptions.levels - 1; i >= 1; i--) {
                         auto hwDstRT = resources.getRenderPassInfo(i - 1);
-                        hwDstRT.params
-                               .flags
-                               .discardStart = TargetBufferFlags::NONE; // because we'll blend
+                        hwDstRT.params.flags.discardStart = TargetBufferFlags::NONE; // because we'll blend
                         hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
 
                         auto w = FTexture::valueForLevel(i - 1, outDesc.width);
