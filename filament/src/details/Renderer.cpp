@@ -186,13 +186,21 @@ void FRenderer::render(FView const* view) {
 
     assert_invariant(mSwapChain);
 
-    if (mBeginFrameInternal) {
+    if (UTILS_UNLIKELY(mBeginFrameInternal)) {
+        // this should not happen, the user should not call render() if we returned false from
+        // beginFrame(). But because this is allowed, we handle it gracefully.
         mBeginFrameInternal();
         mBeginFrameInternal = {};
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
+        if (mViewRenderedCount) {
+            // this is a good place to kick the GPU, since we've rendered a View before
+            // and we're about to render another one.
+            mEngine.getDriverApi().flush();
+        }
         renderInternal(view);
+        mViewRenderedCount++;
     }
 }
 
@@ -1058,6 +1066,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
+    mViewRenderedCount = 0;
 
     { // scope for frame id trace
         char buf[64];
