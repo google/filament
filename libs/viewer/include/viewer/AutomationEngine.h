@@ -40,7 +40,7 @@ namespace viewer {
  *
  * When executing a test, clients should call tick() after each frame is rendered, which gives
  * automation an opportunity to push settings to Filament, increment the current test index (if
- * enough time has elapsed), and request an asychronous screenshot.
+ * enough time has elapsed), and request an asynchronous screenshot.
  *
  * The time to sleep between tests is configurable and can be set to zero. Automation also waits a
  * specified minimum number of frames between tests.

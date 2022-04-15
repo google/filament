@@ -63,6 +63,7 @@ public:
     using Entity = utils::Entity;
 
     // Pops up to "count" ready-to-render entities off the queue.
+    //
     // If "result" is non-null, returns the number of written items.
     // If "result" is null, returns the number of available entities.
     size_t popRenderables(Entity* result, size_t count) noexcept;
@@ -70,18 +71,26 @@ public:
     // These are called during the initial asset loader phase.
     void addEdge(Entity entity, Material* material);
     void addEdge(Material* material, const char* parameter);
+    void addEdge(filament::Texture* texture, Material* material, const char* parameter);
 
-    // This is called at the end of the initial asset loading phase.
-    // Makes a guarantee that no new material nodes or parameter nodes will be added to the graph.
+    // Marks the end of synchronous asset loading.
+    //
+    // At this point, the graph enters a finalized state and all non-textured entities are
+    // immediately marked as "ready". However textures are not yet fully decoded.
+    //
+    // After finalization, the only nodes that can be added to the graph are entities.
     void finalize();
 
-    // This can be called after finalization to allow for dynamic addition of entities.
-    // It is slower than finalize() because it checks the readiness of existing materials.
-    void refinalize();
-
-    // These are called after textures have created and decoded.
-    void addEdge(filament::Texture* texture, Material* material, const char* parameter);
+    // Marks the given texture as being fully decoded, with all miplevels initialized.
+    //
+    // This can only be called on a finalized graph.
     void markAsReady(filament::Texture* texture);
+
+    // Re-checks the readiness of all entities after finalization.
+    //
+    // This exists only to support dynamic instancing.  It is slower than finalize() because it
+    // checks the readiness of existing materials.
+    void refinalize();
 
 private:
     struct TextureNode {

@@ -19,6 +19,7 @@
 #include <filament/Engine.h>
 
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <utils/Log.h>
 
@@ -113,4 +114,28 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncCancelLoad(JNIEnv*,
         jlong nativeLoader) {
     ResourceLoader* loader = (ResourceLoader*) nativeLoader;
     loader->asyncCancelLoad();
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nCreateTextureProvider(JNIEnv*, jclass,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jlong) createStbProvider(engine);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nDestroyTextureProvider(JNIEnv*, jclass,
+        jlong nativeProvider) {
+    TextureProvider* provider = (TextureProvider*) nativeProvider;
+    delete provider;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nAddTextureProvider(JNIEnv* env, jclass,
+        jlong nativeLoader, jstring url, jlong nativeProvider) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    TextureProvider* provider = (TextureProvider*) nativeProvider;
+    const char* cstring = env->GetStringUTFChars(url, nullptr);
+    loader->addTextureProvider(cstring, provider);
+    env->ReleaseStringUTFChars(url, cstring);
 }

@@ -33,7 +33,6 @@ set(SRCS
         src/FilamentApp.cpp
         src/IBL.cpp
         src/IcoSphere.cpp
-        src/Image.cpp
         src/MeshAssimp.cpp
         src/Sphere.cpp
 )

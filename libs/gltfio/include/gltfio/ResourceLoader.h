@@ -31,6 +31,7 @@ namespace gltfio {
 
 struct FFilamentAsset;
 class AssetPool;
+class TextureProvider;
 
 /**
  * \struct ResourceConfiguration ResourceLoader.h gltfio/ResourceLoader.h
@@ -93,6 +94,13 @@ public:
      * need to call this method.
      */
     void addResourceData(const char* uri, BufferDescriptor&& buffer);
+
+    /**
+     * Register a plugin that can consume PNG / JPEG content and produce filament::Texture objects.
+     *
+     * Destruction of the given provider is the client's responsibility.
+     */
+    void addTextureProvider(const char* mimeType, TextureProvider* provider);
 
     /**
      * Checks if the given resource has already been added to the URI cache.
