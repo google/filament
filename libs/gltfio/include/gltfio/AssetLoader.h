@@ -84,6 +84,7 @@ struct AssetConfiguration {
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * auto engine = Engine::create();
  * auto materials = createMaterialGenerator(engine);
+ * auto decoder = createStbProvider(engine);
  * auto loader = AssetLoader::create({engine, materials});
  *
  * // Parse the glTF content and create Filament entities.
@@ -92,7 +93,10 @@ struct AssetConfiguration {
  * content.clear();
  *
  * // Load buffers and textures from disk.
- * ResourceLoader({engine, ".", true}).loadResources(asset);
+ * ResourceLoader resourceLoader({engine, ".", true});
+ * resourceLoader.addTextureProvider("image/png", decoder)
+ * resourceLoader.addTextureProvider("image/jpeg", decoder)
+ * resourceLoader.loadResources(asset);
  *
  * // Free the glTF hierarchy as it is no longer needed.
  * asset->releaseSourceData();
@@ -114,6 +118,7 @@ struct AssetConfiguration {
  * loader->destroyAsset(asset);
  * materials->destroyMaterials();
  * delete materials;
+ * delete decoder;
  * AssetLoader::destroy(&loader);
  * Engine::destroy(&engine);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

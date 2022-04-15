@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - Removed KTX1 compression support from mipgen.  [⚠️ **API Change**].
 - Added support for KTX2 to mipgen.
 - gltfio: Added resetBoneMatrices() method.
+- gltfio: Introduced `TextureProvider` interface.  [⚠️ **API Change**].
 
 ## v1.21.2
 

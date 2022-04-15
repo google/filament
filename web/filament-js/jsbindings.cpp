@@ -64,9 +64,9 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
-#include <gltfio/Image.h>
 #include <gltfio/MaterialProvider.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <ktxreader/Ktx1Reader.h>
 #include <ktxreader/Ktx2Reader.h>
@@ -79,6 +79,8 @@
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Log.h>
+
+#include <stb_image.h>
 
 #include <emscripten.h>
 #include <emscripten/bind.h>
@@ -1886,10 +1888,15 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
     .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
     .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
 
-// This little wrapper exists to get around RTTI requirements in embind.
+// These little wrappers exist to get around RTTI requirements in embind.
+
 struct UbershaderLoader {
     MaterialProvider* provider;
     void destroyMaterials() { provider->destroyMaterials(); }
+};
+
+struct StbProvider {
+    TextureProvider* provider;
 };
 
 class_<UbershaderLoader>("gltfio$UbershaderLoader")
@@ -1897,6 +1904,11 @@ class_<UbershaderLoader>("gltfio$UbershaderLoader")
         return UbershaderLoader { createUbershaderLoader(engine) };
     }))
     .function("destroyMaterials", &UbershaderLoader::destroyMaterials);
+
+class_<StbProvider>("gltfio$StbProvider")
+    .constructor(EMBIND_LAMBDA(StbProvider, (Engine* engine), {
+        return StbProvider { createStbProvider(engine) };
+    }));
 
 class_<AssetLoader>("gltfio$AssetLoader")
 
@@ -1957,6 +1969,11 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     .function("addResourceData", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string url,
             BufferDescriptor buffer), {
         self->addResourceData(url.c_str(), std::move(*buffer.bd));
+    }), allow_raw_pointers())
+
+    .function("addTextureProvider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
+            StbProvider provider), {
+        self->addTextureProvider(mime.c_str(), provider.provider);
     }), allow_raw_pointers())
 
     .function("hasResourceData", EMBIND_LAMBDA(bool, (ResourceLoader* self, std::string url), {

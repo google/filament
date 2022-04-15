@@ -2,12 +2,15 @@ cmake_minimum_required(VERSION 3.19)
 project(stb)
 
 set(TARGET stb)
-set(OUR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
-set(PUBLIC_HDR_DIR ${OUR_DIR})
 
-add_library(${TARGET} INTERFACE)
+set(PUBLIC_HDR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-target_include_directories(${TARGET} INTERFACE ${PUBLIC_HDR_DIR})
+set(PUBLIC_HDRS ../stb_image.h)
 
-file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/*.h)
-target_sources(${TARGET} INTERFACE ${PUBLIC_HDRS})
+set(SRCS ../stb_image.cpp)
+
+add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
+
+target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+
+install(TARGETS stb ARCHIVE DESTINATION lib/${DIST_DIR})

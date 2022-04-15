@@ -11,6 +11,10 @@ add_library(dracodec STATIC IMPORTED)
 set_target_properties(dracodec PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libdracodec.a)
 
+add_library(stb STATIC IMPORTED)
+set_target_properties(stb PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libstb.a)
+
 add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
@@ -32,6 +36,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
         ${GLTFIO_DIR}/include/gltfio/FilamentAsset.h
         ${GLTFIO_DIR}/include/gltfio/FilamentInstance.h
+        ${GLTFIO_DIR}/include/gltfio/TextureProvider.h
         ${GLTFIO_DIR}/include/gltfio/math.h
 
         ${GLTFIO_DIR}/src/Animator.cpp
@@ -47,13 +52,13 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/GltfEnums.h
         ${GLTFIO_DIR}/src/MaterialProvider.cpp
         ${GLTFIO_DIR}/src/ResourceLoader.cpp
+        ${GLTFIO_DIR}/src/StbProvider.cpp
         ${GLTFIO_DIR}/src/TangentsJob.h
         ${GLTFIO_DIR}/src/TangentsJob.cpp
         ${GLTFIO_DIR}/src/UbershaderLoader.cpp
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
         ${GLTFIO_DIR}/src/upcast.h
-        ${GLTFIO_DIR}/src/Image.cpp
 
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp
@@ -90,9 +95,9 @@ set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_
 
 if(GLTFIO_LITE)
         target_compile_definitions(gltfio-jni PUBLIC GLTFIO_LITE=1)
-        target_link_libraries(gltfio-jni filament-jni utils log gltfio_resources_lite)
+        target_link_libraries(gltfio-jni filament-jni utils log stb gltfio_resources_lite)
 else()
-        target_link_libraries(gltfio-jni filament-jni utils log gltfio_resources)
+        target_link_libraries(gltfio-jni filament-jni utils log stb gltfio_resources)
 
         # Enable Draco in the non-lite variant of gltfio.
         target_link_libraries(gltfio-jni dracodec)
