@@ -217,11 +217,10 @@ struct CameraInfo {
     float A{};                      // f-number or f / aperture diameter [m]
     float d{};                      // focus distance [m]
     math::float3 worldOffset{};     // world offset, API-level camera position
+    math::mat4 worldOrigin;         // this is already applied to model and view
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
 
-    // for debugging:
-    math::mat4f worldOrigin; // this is already applied to model and view
 };
 
 FILAMENT_UPCAST(Camera)
