@@ -283,7 +283,8 @@ bool FView::isSkyboxVisible() const noexcept {
 }
 
 void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
-        FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept {
+        FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+        CameraInfo const& cameraInfo) noexcept {
     SYSTRACE_CALL();
 
     mHasShadowing = false;
@@ -338,7 +339,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         }
     }
 
-    auto shadowTechnique = mShadowMapManager.update(engine, *this,
+    auto shadowTechnique = mShadowMapManager.update(engine, *this, cameraInfo,
             mShadowUb, renderableData, lightData);
 
     mHasShadowing = any(shadowTechnique);
@@ -346,10 +347,9 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
 }
 
 void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
-        filament::Viewport const& viewport) noexcept {
+        filament::Viewport const& viewport, CameraInfo const& cameraInfo) noexcept {
     SYSTRACE_CALL();
 
-    const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
     auto const& lightData = scene->getLightData();
 
@@ -359,9 +359,10 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
     mHasDynamicLighting = scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
     if (mHasDynamicLighting) {
-        scene->prepareDynamicLights(camera, arena, mLightUbh);
+        scene->prepareDynamicLights(cameraInfo, arena, mLightUbh);
         Froxelizer& froxelizer = mFroxelizer;
-        if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
+        if (froxelizer.prepare(driver, arena, viewport,
+                cameraInfo.projection, cameraInfo.zn, cameraInfo.zf)) {
             // update our uniform buffer if needed
             mPerViewUniforms.prepareDynamicLights(mFroxelizer);
         }
@@ -374,9 +375,9 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
      * Exposure
      */
 
-    const float exposure = Exposure::exposure(camera.ev100);
+    const float exposure = Exposure::exposure(cameraInfo.ev100);
 
-    mPerViewUniforms.prepareExposure(camera.ev100);
+    mPerViewUniforms.prepareExposure(cameraInfo.ev100);
 
     /*
      * Indirect light (IBL)
@@ -406,15 +407,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     mHasDirectionalLight = directionalLight.isValid();
 }
 
-void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
-        filament::Viewport const& viewport, float4 const& userTime, bool needsAlphaChannel) noexcept {
-    JobSystem& js = engine.getJobSystem();
-
-    /*
-     * Prepare the scene -- this is where we gather all the objects added to the scene,
-     * and in particular their world-space AABB.
-     */
-
+CameraInfo FView::computeCameraInfo(FEngine& engine) noexcept {
     FScene* const scene = getScene();
 
     /*
@@ -444,20 +437,31 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         worldOriginScene[3].xyz -= camera->getPosition();
     }
 
-    // Note: for debugging (i.e. visualize what the camera / objects are doing, using
-    // the viewing camera), we can set worldOriginScene to identity when mViewingCamera
-    // is set
-    mViewingCameraInfo = CameraInfo(*camera, worldOriginScene);
+    return { *camera, worldOriginScene };
+}
+
+void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
+        filament::Viewport const& viewport, CameraInfo const& cameraInfo,
+        float4 const& userTime, bool needsAlphaChannel) noexcept {
+
+    JobSystem& js = engine.getJobSystem();
+
+    /*
+     * Prepare the scene -- this is where we gather all the objects added to the scene,
+     * and in particular their world-space AABB.
+     */
+
+    FScene* const scene = getScene();
 
     mCullingFrustum = Frustum(mat4f{
-                    mCullingCamera->getCullingProjectionMatrix() *
-                    inverse(worldOriginScene * mCullingCamera->getModelMatrix()) });
+            mCullingCamera->getCullingProjectionMatrix() *
+            inverse(cameraInfo.worldOrigin * mCullingCamera->getModelMatrix()) });
 
     /*
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(worldOriginScene, hasVSM());
+    scene->prepare(cameraInfo.worldOrigin, hasVSM());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -466,9 +470,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
     if (scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [this, &engine, &arena, scene](JobSystem&, JobSystem::Job*) {
+                [this, &engine, &arena, &cameraInfo, scene](JobSystem&, JobSystem::Job*) {
                     FView::prepareVisibleLights(engine.getLightManager(), arena,
-                            mViewingCameraInfo, mCullingFrustum, scene->getLightData());
+                            cameraInfo.view, mCullingFrustum, scene->getLightData());
                 }));
     }
 
@@ -497,7 +501,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         if (prepareVisibleLightsJob) {
             js.waitAndRelease(prepareVisibleLightsJob);
         }
-        prepareShadowing(engine, driver, renderableData, scene->getLightData());
+        prepareShadowing(engine, driver, renderableData, scene->getLightData(), cameraInfo);
 
         /*
          * Partition the SoA so that renderables are partitioned w.r.t their visibility into the
@@ -567,14 +571,14 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Relies on FScene::prepare() and prepareVisibleLights()
      */
 
-    prepareLighting(engine, driver, arena, viewport);
+    prepareLighting(engine, driver, arena, viewport, cameraInfo);
 
     /*
      * Update driver state
      */
 
     mPerViewUniforms.prepareTime(userTime);
-    mPerViewUniforms.prepareFog(mViewingCameraInfo, mFogOptions);
+    mPerViewUniforms.prepareFog(cameraInfo.getPosition(), mFogOptions);
     mPerViewUniforms.prepareTemporalNoise(mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
 
@@ -701,10 +705,10 @@ void FView::cleanupRenderPasses() const noexcept {
     mPerViewUniforms.unbindSamplers();
 }
 
-void FView::froxelize(FEngine& engine) const noexcept {
+void FView::froxelize(FEngine& engine, mat4f const& viewMatrix) const noexcept {
     SYSTRACE_CALL();
     assert_invariant(mHasDynamicLighting);
-    mFroxelizer.froxelizeLights(engine, mViewingCameraInfo, mScene->getLightData());
+    mFroxelizer.froxelizeLights(engine, viewMatrix, mScene->getLightData());
 }
 
 void FView::commitUniforms(DriverApi& driver) const noexcept {
@@ -759,7 +763,8 @@ void FView::cullRenderables(JobSystem& js,
 }
 
 void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena,
-        const CameraInfo& camera, Frustum const& frustum, FScene::LightSoa& lightData) noexcept {
+        mat4f const& viewMatrix, Frustum const& frustum,
+        FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
     assert_invariant(lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT);
 
@@ -837,7 +842,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
         float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
-        computeLightCameraDistances(distances, camera, spheres, size);
+        computeLightCameraDistances(distances, viewMatrix, spheres, size);
 
         // skip directional light
         Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
@@ -855,15 +860,15 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
 UTILS_ALWAYS_INLINE
 inline void FView::computeLightCameraDistances(
         float* UTILS_RESTRICT const distances,
-        CameraInfo const& UTILS_RESTRICT camera,
-        float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
+        mat4f const& UTILS_RESTRICT viewMatrix,
+        float4 const* UTILS_RESTRICT spheres, size_t count) noexcept {
 
     // without this, the vectorization is less efficient
     // we're guaranteed to have a multiple of 4 lights (at least)
     count = uint32_t(count + 3u) & ~3u;
     for (size_t i = 0 ; i < count; i++) {
         const float4 sphere = spheres[i];
-        const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
+        const float4 center = viewMatrix * sphere.xyz; // camera points towards the -z axis
         distances[i] = length(center);
     }
 }

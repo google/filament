@@ -531,22 +531,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     data.history = builder.sample(history);
                 }
             },
-            [=, &uniforms, renderPass = pass](FrameGraphResources const& resources,
-                    auto const& data, DriverApi& driver) mutable {
-
+            [this, projection = cameraInfo.projection, viewMatrix = cameraInfo.view,
+                    worldOrigin = cameraInfo.worldOrigin, uvFromClipMatrix, historyProjection,
+                    options, &uniforms, renderPass = pass]
+            (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
                 // set structure sampler
                 uniforms.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : getOneTexture());
 
                 // set screen-space reflections and screen-space refractions
-                mat4f uvFromViewMatrix = uvFromClipMatrix * cameraInfo.projection;
-                mat4f reprojection = uvFromClipMatrix * historyProjection
-                                     * inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                mat4f uvFromViewMatrix = uvFromClipMatrix * projection;
+                mat4f reprojection = mat4f{ uvFromClipMatrix * historyProjection
+                        * inverse(viewMatrix * worldOrigin) };
 
                 // the history sampler is a regular texture2D
                 TextureHandle history = data.history ?
                         resources.getTexture(data.history) : getZeroTexture();
-                uniforms.prepareHistorySSR(history, reprojection, uvFromViewMatrix,options);
+                uniforms.prepareHistorySSR(history, reprojection, uvFromViewMatrix, options);
 
                 uniforms.commit(driver);
 
@@ -806,7 +807,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 // light direction in view space
                 // (note: this is actually equivalent to using the camera view matrix -- before the
                 // world matrix is accounted for)
-                auto m = cameraInfo.view * cameraInfo.worldOrigin;
+                const mat4f m{ cameraInfo.view * cameraInfo.worldOrigin };
                 const float3 l = normalize(
                         mat3f::getTransformForNormals(m.upperLeft())
                                 * options.ssct.lightDirection);
@@ -2600,7 +2601,7 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     auto& current = frameHistory.getCurrent().*pTaa;
 
     // compute projection
-    current.projection = inoutCameraInfo->projection * (inoutCameraInfo->view * inoutCameraInfo->worldOrigin);
+    current.projection = mat4f{ inoutCameraInfo->projection * (inoutCameraInfo->view * inoutCameraInfo->worldOrigin) };
     current.frameId = previous.frameId + 1;
 
     // sample position within a pixel [-0.5, 0.5]

@@ -129,7 +129,7 @@ public:
 
     // Call once per frame to populate the SceneInfo struct, then pass to update().
     // This computes values constant across all shadow maps.
-    static void initSceneInfo(FScene const& scene, filament::CameraInfo const& camera,
+    static void initSceneInfo(FScene const& scene, math::mat4f const& viewMatrix,
             ShadowMap::SceneInfo& sceneInfo);
 
     // Update SceneInfo struct for a given light

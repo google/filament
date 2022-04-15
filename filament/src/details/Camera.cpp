@@ -293,7 +293,7 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamer
     A                  = f / camera.getAperture();
     d                  = std::max(zn, camera.getFocusDistance());
     worldOffset        = camera.getPosition();
-    worldOrigin        = mat4f{ worldOriginCamera };
+    worldOrigin        = worldOriginCamera;
 }
 
 } // namespace filament

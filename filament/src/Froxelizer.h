@@ -120,7 +120,7 @@ public:
     float getLightFar() const noexcept { return mZLightFar; }
 
     // update Records and Froxels texture with lights data. this is thread-safe.
-    void froxelizeLights(FEngine& engine, CameraInfo const& camera,
+    void froxelizeLights(FEngine& engine, math::mat4f const& viewMatrix,
             const FScene::LightSoa& lightData) noexcept;
 
     void updateUniforms(PerViewUib& s) {
@@ -194,7 +194,7 @@ private:
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine,
-            const CameraInfo& camera, const FScene::LightSoa& lightData) noexcept;
+            math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept;
 
     void froxelizeAssignRecordsCompress() noexcept;
 

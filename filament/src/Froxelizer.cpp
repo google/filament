@@ -513,10 +513,10 @@ void Froxelizer::commit(backend::DriverApi& driverApi) {
 }
 
 void Froxelizer::froxelizeLights(FEngine& engine,
-        CameraInfo const& UTILS_RESTRICT camera,
+        mat4f const& UTILS_RESTRICT viewMatrix,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
     // note: this is called asynchronously
-    froxelizeLoop(engine, camera, lightData);
+    froxelizeLoop(engine, viewMatrix, lightData);
     froxelizeAssignRecordsCompress();
 
 #ifndef NDEBUG
@@ -544,7 +544,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
 }
 
 void Froxelizer::froxelizeLoop(FEngine& engine,
-        const CameraInfo& UTILS_RESTRICT camera,
+        const mat4f& UTILS_RESTRICT viewMatrix,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
     SYSTRACE_CALL();
 
@@ -557,11 +557,11 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
 
     auto process = [ this, &froxelThreadData,
-                     spheres, directions, instances, &camera, &lcm ]
+                     spheres, directions, instances, &viewMatrix, &lcm ]
             (size_t count, size_t offset, size_t stride) {
 
         const mat4f& projection = mProjection;
-        const mat3f& vn = camera.view.upperLeft();
+        const mat3f& vn = viewMatrix.upperLeft();
 
         // We use minimum cone angle of 0.5 degrees because too small angles cause issues in the
         // sphere/cone intersection test, due to floating-point precision.
@@ -572,7 +572,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[j];
             LightParams light = {
-                    .position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
+                    .position = (viewMatrix * float4{ spheres[j].xyz, 1 }).xyz,     // to view-space
                     .cosSqr = std::min(maxCosSquared, lcm.getCosOuterSquared(li)),  // spot only
                     .axis = vn * directions[j],                                     // spot only
                     .invSin = lcm.getSinInverse(li),                                // spot only

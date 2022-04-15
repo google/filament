@@ -72,7 +72,7 @@ ShadowMap::~ShadowMap() {
 void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
         FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
         RenderPass* const pass) noexcept {
-    pass->setCamera(cameraInfo);
+//    pass->setCamera(cameraInfo);
     pass->setVisibilityMask(visibilityMask);
     pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
     pass->overridePolygonOffset(&mShadowMapInfo.polygonOffset);
@@ -1048,13 +1048,12 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
     }
 }
 
-void ShadowMap::initSceneInfo(FScene const& scene, filament::CameraInfo const& camera,
+void ShadowMap::initSceneInfo(FScene const& scene, mat4f const& viewMatrix,
         ShadowMap::SceneInfo& sceneInfo) {
     sceneInfo.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
 
     // We assume the light is at the origin to compute the SceneInfo. This is consumed later by
     // computeShadowCameraDirectional() which takes this into account.
-    const mat4f V = camera.view;
 
     // Compute scene bounds in world space, as well as the light-space and view-space near/far planes
     sceneInfo.wsShadowCastersVolume = {};
@@ -1071,7 +1070,7 @@ void ShadowMap::initSceneInfo(FScene const& scene, filament::CameraInfo const& c
                         min(sceneInfo.wsShadowReceiversVolume.min, receiver.min);
                 sceneInfo.wsShadowReceiversVolume.max =
                         max(sceneInfo.wsShadowReceiversVolume.max, receiver.max);
-                float2 nf = ShadowMap::computeNearFar(V, receiver);
+                float2 nf = ShadowMap::computeNearFar(viewMatrix, receiver);
                 sceneInfo.vsNearFar.x = std::max(sceneInfo.vsNearFar.x, nf.x);
                 sceneInfo.vsNearFar.y = std::min(sceneInfo.vsNearFar.y, nf.y);
             }
