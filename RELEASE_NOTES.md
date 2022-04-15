@@ -5,6 +5,12 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.21.3 (currently main branch)
 
+- Renamed the KTXLoader Kotlin class to KTX1Loader.  [⚠️ **API Change**].
+- Added Ktx2Reader and BasisEncoder to support Basis-encoded KTX2 files.
+- Desktop and Web Suzanne samples now use KTX2 instead of KTX1.
+- Removed KTX1 compression support from mipgen.  [⚠️ **API Change**].
+- Added support for KTX2 to mipgen.
+
 ## v1.21.2
 
 - remove deprecated `Stream` APIs, see `Texture::import()` for an alternative [⚠️ **API Change**].
