@@ -59,8 +59,7 @@ TEST_F(KtxReaderTest, Ktx1) {
     Texture* tex = ktxreader::Ktx1Reader::createTexture(engine, bundle, false,
             [](void* userdata) {  /* */ }, nullptr);
 
-    ASSERT_TRUE(tex != nullptr);
-
+    ASSERT_NE(tex, nullptr);
     ASSERT_EQ(tex->getWidth(), 64);
     ASSERT_EQ(tex->getHeight(), 64);
 
@@ -82,10 +81,10 @@ TEST_F(KtxReaderTest, Ktx2) {
     reader.requestFormat(Texture::InternalFormat::RGBA8);
 
     Texture* tex = reader.load(contents.data(), contents.size(),
-            ktxreader::Ktx2Reader::TransferFunction::LINEAR);
+            ktxreader::Ktx2Reader::TransferFunction::sRGB);
 
-    ASSERT_TRUE(tex != nullptr);
-    ASSERT_EQ(tex->getFormat(), Texture::InternalFormat::DXT3_RGBA);
+    ASSERT_NE(tex, nullptr);
+    ASSERT_EQ(tex->getFormat(), Texture::InternalFormat::DXT3_SRGBA);
     ASSERT_EQ(tex->getWidth(), 1024);
 
     engine->destroy(tex);
