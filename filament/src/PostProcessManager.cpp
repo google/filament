@@ -1465,7 +1465,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     };
 
     /*
-     * dofResolution is used (at compile time for now) to chose between full- or quarter-resolution
+     * dofResolution is used to chose between full- or quarter-resolution
      * for the DoF calculations. Set to [1] for full resolution or [2] for quarter-resolution.
      */
     const uint32_t dofResolution = dofOptions.nativeResolution ? 1u : 2u;
@@ -2119,7 +2119,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                     auto hwIn = resources.getTexture(data.in);
                     auto hwOut = resources.getTexture(data.out);
                     auto hwStage = resources.getTexture(data.stage);
-                    auto const& outDesc = resources.getDescriptor(data.out);
 
                     mi->use(driver);
                     mi->setParameter("source", hwIn, {
@@ -2137,9 +2136,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                         auto hwDstRT = resources.getRenderPassInfo(
                                 parity ? data.outRT[i] : data.stageRT[i]);
 
-                        auto w = FTexture::valueForLevel(i, outDesc.width);
-                        auto h = FTexture::valueForLevel(i, outDesc.height);
-                        mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
                         mi->commit(driver);
 
                         hwDstRT.params.flags.discardStart = TargetBufferFlags::COLOR;

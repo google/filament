@@ -63,7 +63,7 @@ void dummy(){}
 void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
 
-    // the source is guaranteed to be a multiple of two, so we now the bilinear weights are 0.25
+    // the source is guaranteed to be a multiple of two, so we know the bilinear weights are 0.25
 
     vec4 s01 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 1));
     vec4 s11 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 1));

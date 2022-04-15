@@ -59,7 +59,7 @@ void dummy(){}
 void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
 
-    // the source is guaranteed to be a multiple of two, so we now the bilinear weights are 0.25
+    // the source is guaranteed to be a multiple of two, so we know the bilinear weights are 0.25
 
     // the bilateral weights need to be scaled by to match the lower resolution
     float weightScale = materialParams.weightScale;
