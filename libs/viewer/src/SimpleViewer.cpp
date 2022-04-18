@@ -422,11 +422,11 @@ void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instan
 }
 
 void SimpleViewer::removeAsset() {
-    if (mAsset) {
+    if (!isRemoteMode()) {
         mScene->removeEntities(mAsset->getEntities(), mAsset->getEntityCount());
+        mAsset = nullptr;
+        mAnimator = nullptr;
     }
-    mAsset = nullptr;
-    mAnimator = nullptr;
 }
 
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
@@ -447,7 +447,7 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
 }
 
 void SimpleViewer::updateRootTransform() {
-    if (mAsset == nullptr) {
+    if (isRemoteMode()) {
         return;
     }
     auto& tcm = mEngine->getTransformManager();
@@ -468,6 +468,7 @@ void SimpleViewer::updateIndirectLight() {
 }
 
 void SimpleViewer::applyAnimation(double currentTime) {
+    assert_invariant(!isRemoteMode());
     static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
     if (mResetAnimation) {
@@ -480,7 +481,11 @@ void SimpleViewer::applyAnimation(double currentTime) {
     if (numAnimations > 0 && mCurrentAnimation > 0) {
         mAnimator->applyAnimation(mCurrentAnimation - 1, currentTime - startTime);
     }
-    mAnimator->updateBoneMatrices();
+    if (mShowingRestPose) {
+        mAnimator->resetBoneMatrices();
+    } else {
+        mAnimator->updateBoneMatrices();
+    }
 }
 
 void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio) {
@@ -848,8 +853,8 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 
-        // We do not yet support ground shadow in remote mode (i.e. when mAsset is null)
-        if (mAsset) {
+        // We do not yet support ground shadow in remote mode,
+        if (!isRemoteMode()) {
             ImGui::Checkbox("Ground shadow", &mSettings.viewer.groundPlaneEnabled);
             ImGui::Indent();
             ImGui::SliderFloat("Strength", &mSettings.viewer.groundShadowStrength, 0.0f, 1.0f);
@@ -901,7 +906,7 @@ void SimpleViewer::updateUserInterface() {
 
         // We do not yet support camera selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
-        if (mAsset != nullptr) {
+        if (isRemoteMode()) {
 
             const utils::Entity* cameras = mAsset->getCameraEntities();
             const size_t cameraCount = mAsset->getCameraEntityCount();
@@ -958,17 +963,16 @@ void SimpleViewer::updateUserInterface() {
         lm.setShadowCaster(ci, light.enableShadows);
     });
 
-    if (mAsset != nullptr) {
+    // TODO(prideout): add support for hierarchy, animation and variant selection in remote mode. To
+    // support these features, we will need to send a message (list of strings) from DebugServer to
+    // the WebSockets client.
+    if (!isRemoteMode()) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
             ImGui::Indent();
             ImGui::Checkbox("Show bounds", &mEnableWireframe);
             treeNode(mAsset->getRoot());
             ImGui::Unindent();
         }
-
-        // TODO(prideout): add support for animation and variant selection in the remote UI. To
-        // support these features, we will need to send a message (list of strings) from DebugServer
-        // to the WebSockets client.
 
         if (mAsset->getMaterialVariantCount() > 0 && ImGui::CollapsingHeader("Variants")) {
             ImGui::Indent();
@@ -999,6 +1003,7 @@ void SimpleViewer::updateUserInterface() {
                 mCurrentAnimation = selectedAnimation;
                 mResetAnimation = true;
             }
+            ImGui::Checkbox("Show rest pose", &mShowingRestPose);
             ImGui::Unindent();
         }
 

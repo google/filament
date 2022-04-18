@@ -286,6 +286,36 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
     }
 }
 
+void Animator::resetBoneMatrices() {
+    auto renderableManager = mImpl->renderableManager;
+
+    auto update = [=](const SkinVector& skins, BoneVector& boneVector) {
+        for (const auto& skin : skins) {
+            size_t njoints = skin.joints.size();
+            boneVector.resize(njoints);
+            for (const auto& entity : skin.targets) {
+                auto renderable = renderableManager->getInstance(entity);
+                if (renderable) {
+                    for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
+                        boneVector[boneIndex] = mat4f();
+                    }
+                    renderableManager->setBones(renderable, boneVector.data(), boneVector.size());
+                }
+            }
+        }
+    };
+
+    if (mImpl->instance) {
+        update(mImpl->instance->skins, mImpl->boneMatrices);
+    } else if (!mImpl->asset->isInstanced()) {
+        update(mImpl->asset->mSkins, mImpl->boneMatrices);
+    } else {
+        for (FFilamentInstance* instance : mImpl->asset->mInstances) {
+            update(instance->skins, mImpl->boneMatrices);
+        }
+    }
+}
+
 void Animator::updateBoneMatrices() {
     auto renderableManager = mImpl->renderableManager;
     auto transformManager = mImpl->transformManager;
