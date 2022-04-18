@@ -2905,6 +2905,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
                     mi->commit(driver);
+                    mi->use(driver);
                 }
 
                 { // just a scope to not leak local variables
@@ -2924,6 +2925,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
                     mi->commit(driver);
+                    mi->use(driver);
                 }
 
                 // --------------------------------------------------------------------------------
@@ -2931,37 +2933,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
 
                 auto out = resources.getRenderPassInfo();
 
-                if (twoPassesEASU) {
-                    auto* mi = splitEasuMaterial->getMaterialInstance(mEngine);
-                    mi->use(driver);
-                    PipelineState pipeline(splitEasuMaterial->getPipelineState(mEngine));
+                if (UTILS_UNLIKELY(twoPassesEASU)) {
+                    PipelineState pipeline0(splitEasuMaterial->getPipelineState(mEngine));
+                    PipelineState pipeline1(easuMaterial->getPipelineState(mEngine));
+                    pipeline1.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
                     if (translucent) {
-                        enableTranslucentBlending(pipeline);
+                        enableTranslucentBlending(pipeline0);
+                        enableTranslucentBlending(pipeline1);
                     }
-
                     driver.beginRenderPass(out.target, out.params);
-                    driver.draw(pipeline, fullScreenRenderPrimitive, 1);
-                }
-
-                { // scope to not leak local variables
-                    auto* mi = easuMaterial->getMaterialInstance(mEngine);
-                    mi->use(driver);
-
+                    driver.draw(pipeline0, fullScreenRenderPrimitive, 1);
+                    driver.draw(pipeline1, fullScreenRenderPrimitive, 1);
+                    driver.endRenderPass();
+                } else {
                     PipelineState pipeline(easuMaterial->getPipelineState(mEngine));
                     if (translucent) {
                         enableTranslucentBlending(pipeline);
                     }
-                    if (twoPassesEASU) {
-                        pipeline.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
-                    }
-
-                    if (!twoPassesEASU) {
-                        driver.beginRenderPass(out.target, out.params);
-                    }
+                    driver.beginRenderPass(out.target, out.params);
                     driver.draw(pipeline, fullScreenRenderPrimitive, 1);
+                    driver.endRenderPass();
                 }
-
-                driver.endRenderPass();
             });
 
     auto output = ppQuadBlit->output;
