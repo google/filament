@@ -69,8 +69,19 @@ class Ktx2Reader {
         void unrequestFormat(Texture::InternalFormat format);
 
         /**
-         * Attempts to create a Filament texture from the given KTX2 blob. If none of the requested
-         * formats can be extracted from the data, this returns null.
+         * Attempts to create and load a Filament texture from the given KTX2 blob.
+         *
+         * If none of the requested formats can be extracted from the data, this returns null.
+         *
+         * This method iterates through the requested format list, checking each one against the
+         * platform's capabilities and its availability from the transcoder. When a suitable format
+         * is determined, it then performs lossless decompression (zstd) before transcoding the data
+         * into the final format.
+         *
+         * The transfer function specified here is used in two ways:
+         *   1) It is checked against the transfer function that was specified as metadata
+         *      in the KTX2 blob. If they do not match, this method fails.
+         *   2) It is used as a filter when determining the final internal format.
          */
         Texture* load(const uint8_t* data, size_t size, TransferFunction transfer);
 

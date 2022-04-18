@@ -162,13 +162,6 @@ Texture* Ktx2Reader::load(const uint8_t* data, size_t size, TransferFunction tra
         return nullptr;
     }
 
-    if (!mTranscoder->start_transcoding()) {
-        if (!mQuiet) {
-            utils::slog.e << "BasisU start_transcoding failed." << utils::io::endl;
-        }
-        return nullptr;
-    }
-
     // TODO: support cubemaps. For now we use KTX1 for cubemaps because basisu does not support HDR.
     if (mTranscoder->get_faces() == 6) {
         if (!mQuiet) {
@@ -228,6 +221,21 @@ Texture* Ktx2Reader::load(const uint8_t* data, size_t size, TransferFunction tra
         .sampler(Texture::Sampler::SAMPLER_2D)
         .format(resolvedFormat)
         .build(mEngine);
+
+    if (texture == nullptr) {
+        if (!mQuiet) {
+            utils::slog.e << "Unable to construct texture using BasisU info." << utils::io::endl;
+        }
+        return nullptr;
+    }
+
+    if (!mTranscoder->start_transcoding()) {
+        mEngine.destroy(texture);
+        if (!mQuiet) {
+            utils::slog.e << "BasisU start_transcoding failed." << utils::io::endl;
+        }
+        return nullptr;
+    }
 
     // In theory we could pass "free" directly into the callback but that triggers ASAN warnings.
     Texture::PixelBufferDescriptor::Callback cb = [](void* buf, size_t, void* userdata) {
