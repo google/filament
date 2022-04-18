@@ -56,6 +56,13 @@ public:
      */
     void updateBoneMatrices();
 
+    /**
+     * Pass the identity matrix into all bone nodes, useful for returning to the T pose.
+     *
+     * NOTE: this operation is independent of \c animation.
+     */
+    void resetBoneMatrices();
+
     /** Returns the number of \c animation definitions in the glTF asset. */
     size_t getAnimationCount() const;
 

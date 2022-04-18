@@ -67,6 +67,15 @@ public class Animator {
     }
 
     /**
+     * Pass the identity matrix into all bone nodes, useful for returning to the T pose.
+     *
+     * <p>NOTE: this operation is independent of <code>animation</code>.</p>
+     */
+    public void resetBoneMatrices() {
+        nResetBoneMatrices(getNativeObject());
+    }
+
+    /**
      * Returns the number of <code>animation</code> definitions in the glTF asset.
      */
     public int getAnimationCount() {
@@ -109,6 +118,7 @@ public class Animator {
 
     private static native void nApplyAnimation(long nativeAnimator, int index, float time);
     private static native void nUpdateBoneMatrices(long nativeAnimator);
+    private static native void nResetBoneMatrices(long nativeAnimator);
     private static native int nGetAnimationCount(long nativeAnimator);
     private static native float nGetAnimationDuration(long nativeAnimator, int index);
     private static native String nGetAnimationName(long nativeAnimator, int index);

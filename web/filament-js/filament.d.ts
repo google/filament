@@ -653,6 +653,7 @@ export class gltfio$FilamentInstance {
 export class gltfio$Animator {
     public applyAnimation(index: number): void;
     public updateBoneMatrices(): void;
+    public resetBoneMatrices(): void;
     public getAnimationCount(): number;
     public getAnimationDuration(index: number): number;
     public getAnimationName(index: number): string;

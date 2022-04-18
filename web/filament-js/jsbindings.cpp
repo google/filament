@@ -1790,6 +1790,7 @@ class_<SurfaceOrientation>("SurfaceOrientation")
 class_<Animator>("gltfio$Animator")
     .function("applyAnimation", &Animator::applyAnimation)
     .function("updateBoneMatrices", &Animator::updateBoneMatrices)
+    .function("resetBoneMatrices", &Animator::resetBoneMatrices)
     .function("getAnimationCount", &Animator::getAnimationCount)
     .function("getAnimationDuration", &Animator::getAnimationDuration)
     .function("getAnimationName", EMBIND_LAMBDA(std::string, (Animator* self, size_t index), {
