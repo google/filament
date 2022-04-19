@@ -383,7 +383,6 @@ private:
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;
     void* mSharedGLContext = nullptr;
-    bool mTerminated = false;
     backend::Handle<backend::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;
     FIndexBuffer* mFullScreenTriangleIb = nullptr;

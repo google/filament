@@ -80,6 +80,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
         }
         if (platform == nullptr) {
             slog.e << "Selected backend not supported in this build." << io::endl;
+            delete instance;
             return nullptr;
         }
         instance->mDriver = platform->createDriver(sharedGLContext);
@@ -93,6 +94,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
         if (UTILS_UNLIKELY(!instance->mDriver)) {
             // something went horribly wrong during driver initialization
             instance->mDriverThread.join();
+            delete instance;
             return nullptr;
         }
     }
@@ -140,6 +142,7 @@ FEngine* FEngine::getEngine(void* token) {
         if (UTILS_UNLIKELY(!instance->mDriver)) {
             // something went horribly wrong during driver initialization
             instance->mDriverThread.join();
+            delete instance;
             return nullptr;
         }
 
@@ -336,14 +339,6 @@ void FEngine::init() {
 
 FEngine::~FEngine() noexcept {
     SYSTRACE_CALL();
-
-    ASSERT_DESTRUCTOR(mTerminated, "Engine destroyed but not terminated!");
-
-    // we use mResourceAllocator as a proxy for knowing if init() was called
-    if (mResourceAllocator) {
-        std::destroy_at(std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage)));
-    }
-
     delete mResourceAllocator;
     delete mDriver;
     if (mOwnPlatform) {
@@ -353,6 +348,9 @@ FEngine::~FEngine() noexcept {
 
 void FEngine::shutdown() {
     SYSTRACE_CALL();
+
+    // by construction this should never be nullptr
+    assert_invariant(mResourceAllocator);
 
     ASSERT_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId),
             "Engine::shutdown() called from the wrong thread!");
@@ -450,14 +448,15 @@ void FEngine::shutdown() {
     // These callbacks CANNOT call driver APIs.
     getDriver().purge();
 
+    // and destroy the CommandStream
+    std::destroy_at(std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage)));
+
     /*
      * Terminate the JobSystem...
      */
 
-    // detach this thread from the jobsystem
+    // detach this thread from the JobSystem
     mJobSystem.emancipate();
-
-    mTerminated = true;
 }
 
 void FEngine::prepare() {
