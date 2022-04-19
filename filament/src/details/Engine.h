@@ -20,6 +20,7 @@
 #include "upcast.h"
 
 #include "Allocators.h"
+#include "DFG.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
 
@@ -97,7 +98,6 @@ class FScene;
 class FSwapChain;
 class FView;
 
-class DFG;
 class ResourceAllocator;
 
 /*
@@ -153,7 +153,7 @@ public:
         return *std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage));
     }
 
-    DFG* getDFG() const noexcept { return mDFG.get(); }
+    DFG const& getDFG() const noexcept { return mDFG; }
 
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
@@ -424,7 +424,7 @@ private:
     // FMaterialInstance are handled directly by FMaterial
     std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>> mMaterialInstances;
 
-    std::unique_ptr<DFG> mDFG;
+    DFG mDFG;
 
     std::thread mDriverThread;
     backend::CommandBufferQueue mCommandBufferQueue;

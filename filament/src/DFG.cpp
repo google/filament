@@ -25,7 +25,7 @@ const uint16_t DFG::DFG_LUT[] = {
 #include "generated/data/dfg.inc"
 };
 
-DFG::DFG(FEngine& engine) noexcept : mEngine(engine) {
+void DFG::init(FEngine& engine) noexcept {
     constexpr size_t fp16Count = DFG_LUT_SIZE * DFG_LUT_SIZE * 3;
     constexpr size_t byteCount = fp16Count * sizeof(uint16_t);
 
@@ -35,19 +35,19 @@ DFG::DFG(FEngine& engine) noexcept : mEngine(engine) {
             .width(DFG_LUT_SIZE)
             .height(DFG_LUT_SIZE)
             .format(backend::TextureFormat::RGB16F)
-            .build(mEngine);
+            .build(engine);
 
     Texture::PixelBufferDescriptor buffer(DFG_LUT, byteCount,
             Texture::Format::RGB, Texture::Type::HALF);
 
-    lut->setImage(mEngine, 0, std::move(buffer));
+    lut->setImage(engine, 0, std::move(buffer));
 
     mLUT = upcast(lut);
 }
 
-void DFG::terminate() {
+void DFG::terminate(FEngine& engine) noexcept {
     if (mLUT) {
-        mEngine.destroy(mLUT);
+        engine.destroy(mLUT);
     }
 }
 

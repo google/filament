@@ -52,10 +52,10 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
     // with a clip-space of [0,  w] ==> z' = (w - z)/2
     mClipControl = driver.getClipSpaceParams();
 
-    if (engine.getDFG()->isValid()) {
+    if (engine.getDFG().isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mSamplers.setSampler(PerViewSib::IBL_DFG_LUT,
-                engine.getDFG()->getTexture(), sampler.getSamplerParams());
+                engine.getDFG().getTexture(), sampler.getSamplerParams());
     }
 }
 

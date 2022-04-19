@@ -18,8 +18,6 @@
 
 #include "MaterialParser.h"
 #include "ResourceAllocator.h"
-
-#include "DFG.h"
 #include "RenderPrimitive.h"
 
 #include "details/BufferObject.h"
@@ -333,7 +331,7 @@ void FEngine::init() {
 
     mPostProcessManager.init();
     mLightManager.init(*this);
-    mDFG = std::make_unique<DFG>(*this);
+    mDFG.init(*this);
 }
 
 FEngine::~FEngine() noexcept {
@@ -375,7 +373,7 @@ void FEngine::shutdown() {
 
     mPostProcessManager.terminate(driver);  // free-up post-process manager resources
     mResourceAllocator->terminate();
-    mDFG->terminate();                      // free-up the DFG
+    mDFG.terminate(*this);                  // free-up the DFG
     mRenderableManager.terminate();         // free-up all renderables
     mLightManager.terminate();              // free-up all lights
     mCameraManager.terminate();             // free-up all cameras
