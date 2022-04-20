@@ -422,7 +422,7 @@ public:
 
     // Clean-up the oldest frame and save the current frame information.
     // This is typically called after all operations for this View's rendering are complete.
-    // (e.g.: after the FrameFraph execution).
+    // (e.g.: after the FrameGraph execution).
     void commitFrameHistory(FEngine& engine) noexcept;
 
     // create the picking query
