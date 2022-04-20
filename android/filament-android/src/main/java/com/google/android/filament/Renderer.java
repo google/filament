@@ -531,6 +531,10 @@ public class Renderer {
      * Typically, this will happen after multiple calls to {@link #beginFrame},
      * {@link #render}, {@link #endFrame}.</p>
      * <br>
+     * <p>OpenGL only: if issuing a <code>readPixels</code> on a {@link RenderTarget} backed by a
+     * {@link Texture} that had data uploaded to it via {@link Texture#setImage}, the data returned
+     * from <code>readPixels</code> will be y-flipped with respect to the {@link Texture#setImage}
+     * call.</p>
      * <p><code>readPixels</code> is intended for debugging and testing.
      * It will impact performance significantly.</p>
      *

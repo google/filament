@@ -33,6 +33,10 @@ layout(location = 0) out uvec4 indices;
 
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    gl_Position.y = -gl_Position.y;
+#endif
 }
 )");
 
