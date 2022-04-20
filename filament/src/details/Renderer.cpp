@@ -231,7 +231,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     PostProcessManager& ppm = engine.getPostProcessManager();
 
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
-    engine.getDriverApi().debugThreading();
+    driver.debugThreading();
 
     filament::Viewport const& vp = view.getViewport();
     const bool hasPostProcess = view.hasPostProcessPass();
@@ -363,14 +363,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (currentRenderTarget) {
         // For custom RenderTarget, we look at each attachment flag and if they have their
         // SAMPLEABLE usage bit set, we assume they must not be discarded after the render pass.
-        // "+1" to the count for the DEPTH attachment (we don't have stencil for the public RenderTarget)
-        for (size_t i = 0; i < RenderTarget::MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT + 1; i++) {
-            auto attachment = currentRenderTarget->getAttachment((RenderTarget::AttachmentPoint)i);
-            if (attachment.texture && any(attachment.texture->getUsage() &
-                    (TextureUsage::SAMPLEABLE | Texture::Usage::SUBPASS_INPUT))) {
-                keepOverrideEndFlags |= backend::getTargetBufferFlagsAt(i);
-            }
-        }
+        keepOverrideEndFlags |= currentRenderTarget->getSampleableAttachmentsMask();
     }
 
     // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),

@@ -139,16 +139,31 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         }
     };
 
+    UTILS_NOUNROLL
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (mAttachments[i].texture) {
-            mAttachmentMask |= getTargetBufferFlagsAt(i);
+        Attachment const& attachment = mAttachments[i];
+        if (attachment.texture) {
+            TargetBufferFlags targetBufferBit = getTargetBufferFlagsAt(i);
+            mAttachmentMask |= targetBufferBit;
             setAttachment(mrt[i], (AttachmentPoint)i);
+            if (any(attachment.texture->getUsage() &
+                    (TextureUsage::SAMPLEABLE | Texture::Usage::SUBPASS_INPUT))) {
+                mSampleableAttachmentsMask |= targetBufferBit;
+            }
         }
     }
-    if (mAttachments[(size_t)AttachmentPoint::DEPTH].texture) {
+
+    Attachment const& depthAttachment = mAttachments[(size_t)AttachmentPoint::DEPTH];
+    if (depthAttachment.texture) {
         mAttachmentMask |= TargetBufferFlags::DEPTH;
         setAttachment(dinfo, AttachmentPoint::DEPTH);
+        if (any(depthAttachment.texture->getUsage() &
+                (TextureUsage::SAMPLEABLE | Texture::Usage::SUBPASS_INPUT))) {
+            mSampleableAttachmentsMask |= TargetBufferFlags::DEPTH;
+        }
     }
+
+    // TODO: add stencil here when we support it
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createRenderTarget(mAttachmentMask,
