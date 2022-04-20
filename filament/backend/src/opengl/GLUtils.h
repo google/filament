@@ -255,6 +255,23 @@ constexpr inline GLenum getDepthFunc(SamplerCompareFunc func) noexcept {
     return getTextureCompareFunc(func);
 }
 
+constexpr inline GLenum getStencilFunc(SamplerCompareFunc func) noexcept {
+    return getTextureCompareFunc(func);
+}
+
+constexpr inline GLenum getStencilOp(StencilOperation op) noexcept {
+    switch (op) {
+        case StencilOperation::KEEP:        return GL_KEEP;
+        case StencilOperation::ZERO:        return GL_ZERO;
+        case StencilOperation::REPLACE:     return GL_REPLACE;
+        case StencilOperation::INCR:        return GL_INCR;
+        case StencilOperation::INCR_WRAP:   return GL_INCR_WRAP;
+        case StencilOperation::DECR:        return GL_DECR;
+        case StencilOperation::DECR_WRAP:   return GL_DECR_WRAP;
+        case StencilOperation::INVERT:      return GL_INVERT;
+    }
+}
+
 constexpr inline GLenum getFormat(PixelDataFormat format) noexcept {
     using PixelDataFormat = PixelDataFormat;
     switch (format) {

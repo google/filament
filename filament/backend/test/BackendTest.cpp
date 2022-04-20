@@ -20,16 +20,25 @@
 
 #include <utils/Hash.h>
 
+#include <fstream>
+
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
 static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE = 1 * 1024 * 1024;
 static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND_BUFFERS_SIZE;
 
-namespace test {
-
 using namespace filament;
 using namespace filament::backend;
+
+#ifndef IOS
+#include <imageio/ImageEncoder.h>
+#include <image/ColorTransform.h>
+
+using namespace image;
+#endif
+
+namespace test {
 
 Backend BackendTest::sBackend = Backend::NOOP;
 bool BackendTest::sIsMobilePlatform = false;
@@ -131,20 +140,44 @@ void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
 }
 
 void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, size_t height,
-        Handle<HwRenderTarget> rt, uint32_t expectedHash) {
+        Handle<HwRenderTarget> rt, uint32_t expectedHash, bool exportScreenshot) {
     void* buffer = calloc(1, width * height * 4);
 
     struct Capture {
         uint32_t expectedHash;
         char* name;
+        bool exportScreenshot;
+        size_t width, height;
     };
     Capture* c = new Capture();
     c->expectedHash = expectedHash;
     c->name = strdup(testName);
+    c->exportScreenshot = exportScreenshot;
+    c->width = width;
+    c->height = height;
 
     PixelBufferDescriptor pbd(buffer, width * height * 4, PixelDataFormat::RGBA, PixelDataType::UBYTE,
             1, 0, 0, width, [](void* buffer, size_t size, void* user) {
                 Capture* c = (Capture*)user;
+
+                // Export a screenshot, if requested.
+                if (c->exportScreenshot) {
+#ifndef IOS
+                    LinearImage image(c->width, c->height, 4);
+                    // TODO:
+                    //if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
+                    image = toLinearWithAlpha<uint8_t>(c->width, c->height, c->width * 4,
+                            (uint8_t*) buffer);
+                    //}
+                    //if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
+                    //memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
+                    //}
+                    std::string png = std::string(c->name) + ".png";
+                    std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
+                    ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
+                            png.c_str());
+#endif
+                }
 
                 // Hash the contents of the buffer and check that they match.
                 uint32_t hash = utils::hash::murmur3((const uint32_t*) buffer, size / 4, 0);
