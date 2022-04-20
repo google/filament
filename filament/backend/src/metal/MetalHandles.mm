@@ -367,7 +367,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         *shaderFunctions[i] = [library newFunctionWithName:@"main0"];
     }
 
-    // All stages of the program have compiled successfuly, this is a valid program.
+    // All stages of the program have compiled successfully, this is a valid program.
     isValid = true;
 
     // This calculates Metal resource binding indices. Filament's sampler bindings range from 0-31
