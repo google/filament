@@ -77,7 +77,7 @@ public class ResourceLoader {
      */
     public void destroy() {
         nDestroyResourceLoader(mNativeObject);
-        nDestroyTextureProvider(mNativeObject);
+        nDestroyTextureProvider(mNativeProvider);
     }
 
     /**
