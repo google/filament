@@ -236,6 +236,7 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     void bindTexture(const TextureSlot& tb, filament::Texture* texture) {
+        assert_invariant(texture);
         tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
         mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
     }

@@ -86,6 +86,12 @@ public:
     // This can only be called on a finalized graph.
     void markAsReady(filament::Texture* texture);
 
+    // Marks the material as ready, but due to an error.
+    //
+    // This should be called when it known that at least one of the material's texture
+    // dependencies will never become available.
+    void markAsError(Material* material) { markAsReady(material); }
+
     // Re-checks the readiness of all entities after finalization.
     //
     // This exists only to support dynamic instancing.  It is slower than finalize() because it
