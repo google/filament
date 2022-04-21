@@ -4,11 +4,9 @@ void main() {
     initPostProcessMaterialVertex(inputs);
 
     inputs.normalizedUV = position.xy * 0.5 + 0.5;
-    inputs.texelCoords = inputs.normalizedUV * frameUniforms.resolution.xy;
 
 // In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    inputs.texelCoords.y = frameUniforms.resolution.y - inputs.texelCoords.y;
     inputs.normalizedUV.y = 1.0 - inputs.normalizedUV.y;
 #endif
 
@@ -24,8 +22,6 @@ void main() {
 
     // Invoke user code
     postProcessVertex(inputs);
-
-    vertex_uv = inputs.texelCoords;
 
     // Handle user-defined interpolated attributes
 #if defined(VARIABLE_CUSTOM0)

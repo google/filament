@@ -1,9 +1,3 @@
-LAYOUT_LOCATION(LOCATION_UVS) in highp vec2 vertex_uv;
-
-/** @public-api */
-highp vec2 getUV() {
-    return vertex_uv;
-}
 
 struct PostProcessInputs {
 #if defined(FRAG_OUTPUT0)
