@@ -143,8 +143,6 @@ private:
     void renderInternal(FView const* view);
 
     struct ColorPassConfig {
-        // User Viewport
-        Viewport vp;
         // Scaled (down) viewport from dynamic resolution
         Viewport svp;
         // dynamic resolution scale
