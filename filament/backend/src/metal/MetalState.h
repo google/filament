@@ -170,7 +170,7 @@ private:
 };
 
 // StateTracker keeps track of state changes made to a Metal command encoder.
-// Different kinds of state, like pipeline state, uniform buffer state, etc, are passed to the
+// Different kinds of state, like pipeline state, uniform buffer state, etc., are passed to the
 // current Metal command encoder and persist throughout the lifetime of the encoder (a frame).
 // StateTracker is used to prevent calling redundant state change methods.
 template<typename StateType>
