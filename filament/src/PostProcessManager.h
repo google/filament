@@ -168,8 +168,7 @@ public:
             const FColorGrading* colorGrading,
             ColorGradingConfig const& colorGradingConfig,
             BloomOptions const& bloomOptions,
-            VignetteOptions const& vignetteOptions,
-            math::float2 scale) noexcept;
+            VignetteOptions const& vignetteOptions) noexcept;
 
     void colorGradingPrepareSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
             ColorGradingConfig const& colorGradingConfig,

@@ -2271,8 +2271,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         FColorGrading const* colorGrading,
         ColorGradingConfig const& colorGradingConfig,
         BloomOptions const& bloomOptions,
-        VignetteOptions const& vignetteOptions,
-        float2 scale) noexcept
+        VignetteOptions const& vignetteOptions) noexcept
 {
     FrameGraphId<FrameGraphTexture> bloomDirt;
     FrameGraphId<FrameGraphTexture> starburst;

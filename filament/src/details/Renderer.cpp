@@ -398,7 +398,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     ColorPassConfig config{
-            .vp = vp,
             .svp = svp,
             .scale = scale,
             .hdrFormat = hdrFormat,
@@ -678,7 +677,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             if (!colorGradingConfig.asSubpass) {
                 input = ppm.colorGrading(fg, input, bloom, flare,
                         colorGrading, colorGradingConfig,
-                        bloomOptions, vignetteOptions, scale);
+                        bloomOptions, vignetteOptions);
             }
         }
         if (hasFXAA) {
