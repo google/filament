@@ -549,12 +549,12 @@ float ResourceLoader::asyncGetLoadProgress() const {
         return 0;
     }
     size_t pushedCount = 0;
-    size_t decodedCount = 0;
+    size_t poppedCount = 0;
     for (const auto& iter : pImpl->mTextureProviders) {
         pushedCount += iter.second->getPushedCount();
-        decodedCount += iter.second->getDecodedCount();
+        poppedCount += iter.second->getPoppedCount();
     }
-    return pushedCount == 0 ? 0 : (float(decodedCount) / pushedCount);
+    return pushedCount == 0 ? 1 : (float(poppedCount) / pushedCount);
 }
 
 void ResourceLoader::asyncUpdateLoad() {
@@ -593,6 +593,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     TextureProvider* provider = mTextureProviders[mime];
     if (!provider) {
         slog.e << "Missing texture provider for " << mime << io::endl;
+        asset->mDependencyGraph.markAsError(tb.materialInstance);
         return nullptr;
     }
 
@@ -643,6 +644,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
         Path fullpath = Path(mGltfPath).getParent() + uri;
         if (!fullpath.exists()) {
             slog.e << "Unable to open " << fullpath << io::endl;
+            asset->mDependencyGraph.markAsError(tb.materialInstance);
             return nullptr;
         }
         using namespace std;
@@ -659,14 +661,19 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     // If the platform does not have a filesystem, emit an error and move on.
     } else {
         slog.e << "Unable to load " << uri << io::endl;
+        asset->mDependencyGraph.markAsError(tb.materialInstance);
         return nullptr;
     }
 
     if (!texture) {
-        slog.e << "Unable to decode texture data: " << provider->getPushMessage() << io::endl;
+        const char* name = srcTexture->name ? srcTexture->name : uri;
+        slog.e << "Unable to create texture " << name << ": "
+                << provider->getPushMessage() << io::endl;
+        asset->mDependencyGraph.markAsError(tb.materialInstance);
+    } else {
+        asset->takeOwnership(texture);
     }
 
-    asset->takeOwnership(texture);
     return texture;
 }
 
