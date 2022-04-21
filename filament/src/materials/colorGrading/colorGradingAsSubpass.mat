@@ -86,11 +86,12 @@ vec4 resolveFragment() {
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+
     vec4 color = resolveFragment();
 
     // Vignette
     if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
-        highp vec2 uv = getUV() * frameUniforms.resolution.zw;
         color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
     }
 
