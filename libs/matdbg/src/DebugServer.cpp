@@ -161,7 +161,7 @@ public:
             mg_printf(conn, kSuccessHeader.c_str(), "application/json");
             mg_printf(conn, "{");
 
-            // If the backend has not been resolved to Vulkan, Metal, etc, then return an empty
+            // If the backend has not been resolved to Vulkan, Metal, etc., then return an empty
             // list. This can occur if the server is matinfo rather than an actual Filament session.
             if (mServer->mBackend == backend::Backend::DEFAULT) {
                 mg_printf(conn, "}");
