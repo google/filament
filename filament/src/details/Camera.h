@@ -63,9 +63,9 @@ public:
     void setCustomProjection(math::mat4 const& projection,
             math::mat4 const& projectionForCulling, double near, double far) noexcept;
 
-    void setScaling(math::double2 scaling) noexcept { mScaling = scaling; }
+    void setScaling(math::double2 scaling) noexcept { mScalingCS = scaling; }
 
-    math::double4 getScaling() const noexcept { return math::double4{ mScaling, 1.0, 1.0 }; }
+    math::double4 getScaling() const noexcept { return math::double4{ mScalingCS, 1.0, 1.0 }; }
 
     void setShift(math::double2 shift) noexcept { mShiftCS = shift * 2.0; }
 
@@ -189,8 +189,8 @@ private:
 
     math::mat4 mProjection;                // projection matrix (infinite far)
     math::mat4 mProjectionForCulling;      // projection matrix (with far plane)
-    math::double2 mScaling = { 1.0f };  // additional scaling applied to projection
-    math::double2 mShiftCS = { 0.0f };  // additional translation applied to projection
+    math::double2 mScalingCS = { 1.0 };    // additional scaling applied to projection
+    math::double2 mShiftCS = { 0.0 };      // additional translation applied to projection
 
     float mNear{};
     float mFar{};
