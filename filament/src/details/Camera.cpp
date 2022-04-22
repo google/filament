@@ -156,8 +156,8 @@ math::mat4 FCamera::getProjectionMatrix() const noexcept {
     // Note that this math ends up setting the projection matrix' p33 to 0, which is where we're
     // getting back a lot of precision in the depth buffer.
     const mat4 m{ mat4::row_major_init{
-            mScaling.x, 0.0, 0.0, mShiftCS.x,
-            0.0, mScaling.y, 0.0, mShiftCS.y,
+            mScalingCS.x, 0.0, 0.0, mShiftCS.x,
+            0.0, mScalingCS.y, 0.0, mShiftCS.y,
             0.0, 0.0, -0.5, 0.5,    // GL to inverted DX convention
             0.0, 0.0, 0.0, 1.0
     }};
@@ -167,8 +167,8 @@ math::mat4 FCamera::getProjectionMatrix() const noexcept {
 math::mat4 FCamera::getCullingProjectionMatrix() const noexcept {
     // The culling projection matrix stays in the GL convention
     const mat4 m{ mat4::row_major_init{
-            mScaling.x, 0.0, 0.0, mShiftCS.x,
-            0.0, mScaling.y, 0.0, mShiftCS.y,
+            mScalingCS.x, 0.0, 0.0, mShiftCS.x,
+            0.0, mScalingCS.y, 0.0, mShiftCS.y,
             0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0
     }};
