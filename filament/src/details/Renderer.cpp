@@ -608,8 +608,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             FrameGraphId<FrameGraphTexture> history;
         };
         // FIXME: should we use the TAA-modified cameraInfo here or not? (we are).
-        auto projection = mat4f{
-                cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin) };
+        auto projection = mat4f{ cameraInfo.projection * cameraInfo.getUserViewMatrix() };
         fg.addPass<ExportSSRHistoryData>("Export SSR history",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     // We need to use sideEffect here to ensure this pass won't be culled.

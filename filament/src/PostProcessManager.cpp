@@ -531,8 +531,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     data.history = builder.sample(history);
                 }
             },
-            [this, projection = cameraInfo.projection, viewMatrix = cameraInfo.view,
-                    worldOrigin = cameraInfo.worldOrigin, uvFromClipMatrix, historyProjection,
+            [this, projection = cameraInfo.projection,
+                    userViewMatrix = cameraInfo.getUserViewMatrix(), uvFromClipMatrix, historyProjection,
                     options, &uniforms, renderPass = pass]
             (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
                 // set structure sampler
@@ -542,7 +542,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // set screen-space reflections and screen-space refractions
                 mat4f uvFromViewMatrix = uvFromClipMatrix * projection;
                 mat4f reprojection = mat4f{ uvFromClipMatrix * historyProjection
-                        * inverse(viewMatrix * worldOrigin) };
+                        * inverse(userViewMatrix) };
 
                 // the history sampler is a regular texture2D
                 TextureHandle history = data.history ?
@@ -805,11 +805,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("ssctConeAngleTangeant", std::tan(options.ssct.lightConeRad * 0.5f));
                 mi->setParameter("ssctContactDistanceMaxInv", 1.0f / options.ssct.contactDistanceMax);
                 // light direction in view space
-                // (note: this is actually equivalent to using the camera view matrix -- before the
-                // world matrix is accounted for)
-                const mat4f m{ cameraInfo.view * cameraInfo.worldOrigin };
+                const mat4f view{ cameraInfo.getUserViewMatrix() };
                 const float3 l = normalize(
-                        mat3f::getTransformForNormals(m.upperLeft())
+                        mat3f::getTransformForNormals(view.upperLeft())
                                 * options.ssct.lightDirection);
                 mi->setParameter("ssctIntensity",
                         options.ssct.enabled ? options.ssct.intensity : 0.0f);
@@ -2464,7 +2462,7 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     auto& current = frameHistory.getCurrent().*pTaa;
 
     // compute projection
-    current.projection = mat4f{ inoutCameraInfo->projection * (inoutCameraInfo->view * inoutCameraInfo->worldOrigin) };
+    current.projection = mat4f{ inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix() };
     current.frameId = previous.frameId + 1;
 
     // sample position within a pixel [-0.5, 0.5]
@@ -2561,7 +2559,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                     float2 d = sampleOffsets[i] - current.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
                     // this is a gaussian fit of a 3.3 Blackman Harris window
-                    // see: "High Quality Temporal Supersampling" by Bruan Karis
+                    // see: "High Quality Temporal Supersampling" by Brian Karis
                     weights[i] = std::exp2(-3.3f * (d.x * d.x + d.y * d.y));
                     sum += weights[i];
                 }
