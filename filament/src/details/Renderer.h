@@ -143,8 +143,14 @@ private:
     void renderInternal(FView const* view);
 
     struct ColorPassConfig {
-        // Scaled (down) viewport from dynamic resolution
-        Viewport svp;
+        // Rendering viewport width (e.g. scaled down viewport from dynamic resolution)
+        uint32_t width;
+        // Rendering viewport height (e.g. scaled down viewport from dynamic resolution)
+        uint32_t height;
+        // Rendering offset within the viewport (e.g. non-zero when we have guard bands)
+        uint32_t xoffset;
+        // Rendering offset within the viewport (e.g. non-zero when we have guard bands)
+        uint32_t yoffset;
         // dynamic resolution scale
         math::float2 scale;
         // HDR format

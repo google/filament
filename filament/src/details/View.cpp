@@ -157,10 +157,6 @@ float2 FView::updateScale(FEngine& engine,
         Renderer::FrameRateOptions const& frameRateOptions,
         Renderer::DisplayInfo const& displayInfo) noexcept {
 
-    // scale factor returned to the caller is modified so the scaled viewport is rounded to
-    // 8 pixels. The internal scale factor, mScale, doesn't have this rounding.
-    float2 roundedScale = mScale;
-
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
         if (!UTILS_UNLIKELY(info.valid)) {
@@ -238,14 +234,8 @@ float2 FView::updateScale(FEngine& engine,
         // (i.e. we clamped). This help not to have to wait too long for the Integral term
         // to kick in after a clamping event.
         mPidController.setIntegralInhibitionEnabled(mScale != s);
-
-        // now tweak the scaling factor to get multiples of 8 (to help quad-shading)
-        // i.e. 8x8=64 fragments, to try to help with warp sizes.
-        roundedScale.x = mScale.x == 1.0f ? 1.0f : (std::floor(mScale.x * float{ w } / 8) * 8) / float{ w };
-        roundedScale.y = mScale.y == 1.0f ? 1.0f : (std::floor(mScale.y * float{ h } / 8) * 8) / float{ h };
     } else {
         mScale = 1.0f;
-        roundedScale = 1.0f;
     }
 
 #ifndef NDEBUG
@@ -267,7 +257,7 @@ float2 FView::updateScale(FEngine& engine,
     };
 #endif
 
-    return roundedScale;
+    return mScale;
 }
 
 void FView::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
