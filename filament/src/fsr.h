@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_FSR_H
 #define TNT_FILAMENT_FSR_H
 
+#include <filament/Viewport.h>
+
 #include <math/vec4.h>
 
 #include <stdint.h>
@@ -24,12 +26,11 @@
 namespace filament {
 
 struct FSRScalingConfig {
-    uint32_t viewportWidth;
-    uint32_t viewportHeight;
-    uint32_t inputWidth;
-    uint32_t inputHeight;
-    uint32_t outputWidth;
-    uint32_t outputHeight;
+    filament::Viewport input;   // region of source to be scaled
+    uint32_t inputWidth;        // width of source
+    uint32_t inputHeight;       // height of source
+    uint32_t outputWidth;       // width of destination
+    uint32_t outputHeight;      // height of destination
 };
 
 struct FSRSharpeningConfig {

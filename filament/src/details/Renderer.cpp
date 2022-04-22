@@ -233,7 +233,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
     driver.debugThreading();
 
-    filament::Viewport const& vp = view.getViewport();
     const bool hasPostProcess = view.hasPostProcessPass();
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
@@ -248,6 +247,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto vignetteOptions = view.getVignetteOptions();
     auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
+    const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         dofOptions.enabled = false;
@@ -260,30 +260,107 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         scale = 1.0f;
     }
 
-    const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
+    const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
+    // If the swap-chain is transparent or if we blend into it, we need to allocate our intermediate
+    // buffers with an alpha channel.
+    const bool needsAlphaChannel =
+            (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
+
+    // asSubpass is disabled with TAA (although it's supported) because performance was degraded
+    // on qualcomm hardware -- we might need a backend dependent toggle at some point
+    const PostProcessManager::ColorGradingConfig colorGradingConfig{
+            .asSubpass =
+                    hasColorGrading &&
+                    msaaSampleCount <= 1 &&
+                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
+                    driver.isFrameBufferFetchSupported(),
+            .customResolve =
+                    msaaOptions.customResolve &&
+                    msaaSampleCount > 1 &&
+                    hasColorGrading &&
+                    driver.isFrameBufferFetchMultiSampleSupported(),
+            .translucent = needsAlphaChannel,
+            .fxaa = hasFXAA,
+            .dithering = hasDithering,
+            .ldrFormat = (hasColorGrading && hasFXAA) ?
+                    TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
+    };
 
     // whether we're scaled at all
     const bool scaled = any(notEqual(scale, float2(1.0f)));
 
-    // The scale factor guarantees that the width and height are integers (multiple of 8, in fact),
-    // and all the code below ignores entirely svp's origin -- because we want to render the view
-    // at the origin of the buffer, so we set it to zero here to make that fact clear.
-    const filament::Viewport svp = {
+    // vp is the user defined viewport within the View
+    filament::Viewport const& vp = view.getViewport();
+
+    // svp is the "rendering" viewport. That is the viewport after dynamic-resolution is applied
+    // as well as other adjustment, such as the guard band.
+    filament::Viewport svp = {
             0, 0, // this is ignored
             uint32_t(float(vp.width ) * scale.x),
             uint32_t(float(vp.height) * scale.y)
     };
-
     if (svp.empty()) {
         return;
     }
 
-    const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
-    // If the swap-chain is transparent or if we blend into it, we need to allocate our intermediate
-    // buffers with an alpha channel.
-    const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
+    // xvp is the viewport relative to svp containing the "interesting" rendering
+    filament::Viewport xvp = svp;
 
     CameraInfo cameraInfo = view.computeCameraInfo(engine);
+
+    // when colorgrading-as-subpass is active, we know that many other effects are disabled
+    // such as dof, bloom. Moreover if fxaa and scaling are not enabled, we're essentially in
+    // a very fast rendering path -- in this case, we would need an extra blit to "resolve" the
+    // buffer padding (because there are no other pass that can do it as a side effect).
+    // In this case, it is better to skip the padding, which won't be helping much.
+    const bool noBufferPadding = colorGradingConfig.asSubpass && !hasFXAA && !scaled;
+
+    if (hasPostProcess && !noBufferPadding) {
+        // We always pad the rendering viewport to dimensions multiple of 16, this guarantees
+        // that up to 4 mipmap levels are possible with an exact 1:2 scale. This also helps
+        // with memory allocations and quad-shading when dynamic-resolution is enabled.
+        // There is a small performance cost for dimensions that are not already multiple of 16.
+        // But, this a no-op in common resolutions, in particular in 720p.
+        // The origin of rendering is not modified, the padding is added to the right/top.
+        //
+        // TODO: use this feature to implement guard-bands
+        //
+        // TODO: Should we enable when we don't have post-processing?
+        //       Without post-processing, we usually draw directly into
+        //       the SwapChain, and we might want to keep it this way.
+
+        // compute the new rendering width and height, multiple of 16.
+        constexpr uint32_t rounding = 16u;
+        const float width  = float( (svp.width  + (rounding - 1u)) & ~(rounding - 1u) );
+        const float height = float( (svp.height + (rounding - 1u)) & ~(rounding - 1u) );
+
+        // scale the field-of-view up, so it covers exactly the extra pixels
+        const float3 clipSpaceScaling{
+                float(svp.width)  / width,
+                float(svp.height) / height,
+                1.0f };
+
+        // add the extra-pixels on the right/top of the viewport
+        // the translation comes from (same for height): 2*((width - svp.width)/2) / width
+        // i.e. we offset by half the width/height delta and the 2* comes from the fact that
+        // clip-space has width/height of 2.
+        // note: this creates an asymmetric frustum -- but we eventually copy only the
+        // left/bottom part, which is a symmetric region.
+        const float2 clipSpaceTranslation{
+                1.0f - clipSpaceScaling.x,
+                1.0f - clipSpaceScaling.y
+        };
+
+        mat4f ts = mat4f::scaling(clipSpaceScaling);
+        ts[3].xy = -clipSpaceTranslation;
+
+        // update the camera projection
+        cameraInfo.projection = highPrecisionMultiply(ts, cameraInfo.projection);
+
+        // adjust svp to the new, larger, rendering dimensions
+        svp.width  = uint32_t(width);
+        svp.height = uint32_t(height);
+    }
 
     view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
@@ -391,7 +468,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     ColorPassConfig config{
-            .svp = svp,
+            .width = svp.width,
+            .height = svp.height,
+            .xoffset = (uint32_t)xvp.left,
+            .yoffset = (uint32_t)xvp.bottom,
             .scale = scale,
             .hdrFormat = hdrFormat,
             .msaa = msaaSampleCount,
@@ -399,25 +479,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .clearColor = clearColor,
             .ssrLodOffset = 0.0f,
             .hasContactShadows = scene.hasContactShadows()
-    };
-
-    // asSubpass is disabled with TAA (although it's supported) because performance was degraded
-    // on qualcomm hardware -- we might need a backend dependent toggle at some point
-    const PostProcessManager::ColorGradingConfig colorGradingConfig{
-            .asSubpass =
-                    hasColorGrading &&
-                    msaaSampleCount <= 1 &&
-                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
-                    driver.isFrameBufferFetchSupported(),
-            .customResolve =
-                    msaaOptions.customResolve &&
-                    msaaSampleCount > 1 &&
-                    hasColorGrading &&
-                    driver.isFrameBufferFetchMultiSampleSupported(),
-            .translucent = needsAlphaChannel,
-            .fxaa = hasFXAA,
-            .dithering = hasDithering,
-            .ldrFormat = (hasColorGrading && hasFXAA) ? TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
     };
 
     /*
@@ -436,7 +497,29 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     fg.addTrivialSideEffectPass("Prepare View Uniforms",
             [=, &uniforms = view.getPerViewUniforms()](DriverApi& driver) {
                 uniforms.prepareCamera(cameraInfo);
-                uniforms.prepareViewport(svp, 0, 0);
+
+                // The code here is a little fragile. In theory, we need to call prepareViewport()
+                // for each render pass, because the viewport parameters depend on the resolution.
+                // However, in practice, we only have two resolutions: the color pass resolution,
+                // and the structure pass which is governed by aoOptions.resolution (this could
+                // change in the future).
+                // So here we set the parameters for the structure pass and SSAO passes which
+                // are always done first. The SSR pass will also use these parameters which
+                // is wrong if it doesn't run at the same resolution as SSAO.
+                // preapreViewport() is called again during the color pass, which resets the
+                // values correctly for the Color pass, however, this will be again wrong
+                // for passes that come after the Color pass, such as DoF.
+                //
+                // The solution is to call prepareViewport() for each pass, really (so we should
+                // move it to its own UBO).
+                //
+                // The reason why this bug is acceptable is that the viewport parameters are
+                // currently only used for generating noise, so it's not too bad.
+
+                uniforms.prepareViewport(svp,
+                        xvp.left   * aoOptions.resolution,
+                        xvp.bottom * aoOptions.resolution);
+
                 uniforms.commit(driver);
             });
 
@@ -526,8 +609,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.sortCommands();
 
     FrameGraphTexture::Descriptor desc = {
-            .width = config.svp.width,
-            .height = config.svp.height,
+            .width = config.width,
+            .height = config.height,
             .format = config.hdrFormat
     };
 
@@ -538,7 +621,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
                             colorGrading, colorGradingConfig, vignetteOptions,
-                            config.svp.width, config.svp.height);
+                            config.width, config.height);
                 } else if (colorGradingConfig.customResolve) {
                     ppm.customResolvePrepareSubpass(driver,
                             PostProcessManager::CustomResolveOp::COMPRESS);
@@ -645,6 +728,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Post Processing...
 
+    auto const& inputDesc = fg.getDescriptor(input);
+    assert_invariant(inputDesc.width == svp.width);
+    assert_invariant(inputDesc.height == svp.height);
+
     bool mightNeedFinalBlit = true;
     if (hasPostProcess) {
         if (dofOptions.enabled) {
@@ -667,24 +754,30 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         if (hasColorGrading) {
             if (!colorGradingConfig.asSubpass) {
-                input = ppm.colorGrading(fg, input, bloom, flare,
+                input = ppm.colorGrading(fg, input, xvp,
+                        bloom, flare,
                         colorGrading, colorGradingConfig,
                         bloomOptions, vignetteOptions);
+                // the padded buffer is resolved now
+                xvp.left = xvp.bottom = 0;
             }
         }
+
         if (hasFXAA) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat,
+            input = ppm.fxaa(fg, input, xvp, colorGradingConfig.ldrFormat,
                     !hasColorGrading || needsAlphaChannel);
+            // the padded buffer is resolved now
+            xvp.left = xvp.bottom = 0;
         }
         if (scaled) {
             mightNeedFinalBlit = false;
-            auto viewport = DEBUG_DYNAMIC_SCALING ? svp : vp;
+            auto viewport = DEBUG_DYNAMIC_SCALING ? xvp : vp;
             if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
-                input = ppm.opaqueBlit(fg, input, {
+                input = ppm.opaqueBlit(fg, input, xvp, {
                         .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
             } else {
-                input = ppm.blendBlit(fg, blending, dsrOptions, input, {
+                input = ppm.blendBlit(fg, blending, dsrOptions, input, xvp, {
                         .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat });
             }
@@ -702,11 +795,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //   as a subpass)
     // * And we also can't use the default rendertarget if frame history is needed (e.g. with
     //   screen-space reflections)
+    // * We also need an extra blit if we haven't yet handled "xvp"
+    //   TODO: in that specific scenario it would be better to just not use xvp
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
 
     const bool outputIsSwapChain = (input == colorPassOutput) && (viewRenderTarget == mRenderTarget);
     if (mightNeedFinalBlit) {
         if (blending ||
+            xvp != svp ||
             (outputIsSwapChain &&
                     (msaaSampleCount > 1 ||
                     colorGradingConfig.asSubpass ||
@@ -714,11 +810,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         {
             assert_invariant(!scaled);
             if (UTILS_LIKELY(!blending)) {
-                input = ppm.opaqueBlit(fg, input, {
+                input = ppm.opaqueBlit(fg, input, xvp, {
                         .width = vp.width, .height = vp.height,
                         .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
             } else {
-                input = ppm.blendBlit(fg, blending, { .quality = QualityLevel::LOW }, input, {
+                input = ppm.blendBlit(fg, blending, { .quality = QualityLevel::LOW }, input, xvp, {
                         .width = vp.width, .height = vp.height,
                         .format = colorGradingConfig.ldrFormat});
             }
@@ -778,8 +874,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 {
                         // When rendering the opaques, we need to conserve the sample buffer,
                         // so create config that specifies the sample count.
-                        .width = config.svp.width,
-                        .height = config.svp.height,
+                        .width = config.width,
+                        .height = config.height,
                         .samples = config.msaa,
                         .format = config.hdrFormat
                 },
@@ -800,8 +896,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         config.clearFlags = TargetBufferFlags::NONE;
         output = colorPass(fg, "Color Pass (transparent)",
                 {
-                        .width = config.svp.width,
-                        .height = config.svp.height
+                        .width = config.width,
+                        .height = config.height
                 },
                 config,
                 colorGradingConfig,
@@ -976,7 +1072,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 assert_invariant(
                         out.params.viewport.height == resources.getDescriptor(data.color).height);
 
-                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport), 0u, 0u);
+                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
+                        config.xoffset, config.yoffset);
                 view.commitUniforms(driver);
 
                 out.params.clearColor = data.clearColor;

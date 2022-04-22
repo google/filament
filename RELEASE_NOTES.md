@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.22.0 (currently main branch)
 
 - engine: Changed UBOs layout [⚠️ **Material breakage**].
+- engine: Improve effects relying on mipmapping
 
 ## v1.21.3
 

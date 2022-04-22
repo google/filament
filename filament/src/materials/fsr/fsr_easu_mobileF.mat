@@ -35,6 +35,11 @@ material {
             type : float4,
             name : EasuCon3,
             precision: high
+        },
+        {
+            type : float4,
+            name : viewport,
+            precision: high
         }
     ],
     variables : [
