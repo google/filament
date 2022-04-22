@@ -580,6 +580,7 @@ int main(int argc, char** argv) {
                         debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                     *captureFrame = true;
                 }
+                ImGui::Checkbox("Camera at origin", debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 auto dataSource = debug.getDataSource("d.view.frame_info");
                 if (dataSource.data) {
                     ImGuiExt::PlotLinesSeries("FrameInfo", 6,

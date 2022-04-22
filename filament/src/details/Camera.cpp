@@ -275,7 +275,7 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
-    f                  = camera.getFocalLength();
+    f                  = (float)camera.getFocalLength();
     A                  = f / camera.getAperture();
     d                  = std::max(zn, camera.getFocusDistance());
 }
@@ -286,14 +286,13 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamer
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ modelMatrix };
     view               = mat4f{ inverse(modelMatrix) };
+    worldOrigin        = worldOriginCamera;
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
-    f                  = camera.getFocalLength();
+    f                  = (float)camera.getFocalLength();
     A                  = f / camera.getAperture();
     d                  = std::max(zn, camera.getFocusDistance());
-    worldOffset        = camera.getPosition();
-    worldOrigin        = worldOriginCamera;
 }
 
 } // namespace filament

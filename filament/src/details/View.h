@@ -119,7 +119,7 @@ public:
 
     void terminate(FEngine& engine);
 
-    CameraInfo computeCameraInfo(FEngine& engine) noexcept;
+    CameraInfo computeCameraInfo(FEngine& engine) const noexcept;
 
     void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
             filament::Viewport const& viewport, CameraInfo const& cameraInfo,
@@ -500,10 +500,10 @@ private:
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
 
     FScene* mScene = nullptr;
+    // The camera set by the user, used for culling and viewing
     FCamera* mCullingCamera = nullptr;
+    // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
-
-    Frustum mCullingFrustum{};
 
     mutable Froxelizer mFroxelizer;
 

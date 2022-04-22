@@ -209,18 +209,18 @@ struct CameraInfo {
     math::mat4f projection;         // projection matrix for drawing (infinite zfar)
     math::mat4f cullingProjection;  // projection matrix for culling
     math::mat4f model;              // camera model matrix
-    math::mat4f view;               // camera view matrix
+    math::mat4f view;               // camera view matrix (inverse(model))
+    math::mat4 worldOrigin;         // world origin transform (already applied to model and view)
     float zn{};                     // distance (positive) to the near plane
     float zf{};                     // distance (positive) to the far plane
     float ev100{};                  // exposure
     float f{};                      // focal length [m]
     float A{};                      // f-number or f / aperture diameter [m]
     float d{};                      // focus distance [m]
-    math::float3 worldOffset{};     // world offset, API-level camera position
-    math::mat4 worldOrigin;         // this is already applied to model and view
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
-
+    math::float3 getWorldOffset() const noexcept { return -worldOrigin[3].xyz; }
+    math::mat4 getUserViewMatrix() const noexcept { return view * worldOrigin; }
 };
 
 FILAMENT_UPCAST(Camera)

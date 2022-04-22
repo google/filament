@@ -407,8 +407,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     mHasDirectionalLight = directionalLight.isValid();
 }
 
-CameraInfo FView::computeCameraInfo(FEngine& engine) noexcept {
-    FScene* const scene = getScene();
+CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
+    FScene const* const scene = getScene();
 
     /*
      * We apply a "world origin" to "everything" in order to implement the IBL rotation.
@@ -451,11 +451,25 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * and in particular their world-space AABB.
      */
 
-    FScene* const scene = getScene();
+    auto getFrustum = [this, &cameraInfo]() -> Frustum {
+        if (UTILS_LIKELY(mViewingCamera == nullptr)) {
+            // In the common case when we don't have a viewing camera, cameraInfo.view is
+            // already the culling view matrix
+            return Frustum{ mat4f{ highPrecisionMultiply(cameraInfo.projection, cameraInfo.view) }};
+        } else {
+            // Otherwise, we need to recalculate it from the culling camera.
+            // Note: it is correct to always do the math from mCullingCamera, but it hides the
+            // intent of the code, which is that we should only depend on CameraInfo here.
+            // This is an extremely uncommon case.
+            const mat4 projection = mCullingCamera->getCullingProjectionMatrix();
+            const mat4 view = inverse(cameraInfo.worldOrigin * mCullingCamera->getModelMatrix());
+            return Frustum{ mat4f{ projection * view }};
+        }
+    };
 
-    mCullingFrustum = Frustum(mat4f{
-            mCullingCamera->getCullingProjectionMatrix() *
-            inverse(cameraInfo.worldOrigin * mCullingCamera->getModelMatrix()) });
+    const Frustum cullingFrustum = getFrustum();
+
+    FScene* const scene = getScene();
 
     /*
      * Gather all information needed to render this scene. Apply the world origin to all
@@ -470,9 +484,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
     if (scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [this, &engine, &arena, &cameraInfo, scene](JobSystem&, JobSystem::Job*) {
+                [&cullingFrustum, &engine, &arena, &cameraInfo, scene](JobSystem&, JobSystem::Job*) {
                     FView::prepareVisibleLights(engine.getLightManager(), arena,
-                            cameraInfo.view, mCullingFrustum, scene->getLightData());
+                            cameraInfo.view, cullingFrustum, scene->getLightData());
                 }));
     }
 
@@ -489,7 +503,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
          * (this will set the VISIBLE_RENDERABLE bit)
          */
 
-        prepareVisibleRenderables(js, mCullingFrustum, renderableData);
+        prepareVisibleRenderables(js, cullingFrustum, renderableData);
 
 
         /*
