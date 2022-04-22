@@ -643,6 +643,12 @@ Filament.loadClassExtensions = function() {
                 config.normalizeSkinningWeights,
                 config.recomputeBoundingBoxes,
                 config.ignoreBindTransform);
+
+        const stbProvider = new Filament.gltfio$StbProvider(engine);
+
+        resourceLoader.addTextureProvider("image/jpeg", stbProvider);
+        resourceLoader.addTextureProvider("image/png", stbProvider);
+
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);
 
@@ -657,6 +663,7 @@ Filament.loadClassExtensions = function() {
                 if (progress >= 1) {
                     clearInterval(timer);
                     resourceLoader.delete();
+                    stbProvider.delete();
                     onDone();
                 }
             }, interval);

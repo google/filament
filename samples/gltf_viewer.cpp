@@ -33,6 +33,7 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <viewer/AutomationEngine.h>
 #include <viewer/AutomationSpec.h>
@@ -84,6 +85,7 @@ struct App {
     MaterialSource materialSource = GENERATE_SHADERS;
 
     gltfio::ResourceLoader* resourceLoader = nullptr;
+    gltfio::TextureProvider* decoder = nullptr;
     bool recomputeAabb = false;
     bool ignoreBindTransform = false;
 
@@ -423,6 +425,9 @@ int main(int argc, char** argv) {
         configuration.normalizeSkinningWeights = true;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
+            app.decoder = createStbProvider(app.engine);
+            app.resourceLoader->addTextureProvider("image/png", app.decoder);
+            app.resourceLoader->addTextureProvider("image/jpeg", app.decoder);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
         app.asset->releaseSourceData();
@@ -644,6 +649,7 @@ int main(int argc, char** argv) {
         delete app.viewer;
         delete app.materials;
         delete app.names;
+        delete app.decoder;
 
         AssetLoader::destroy(&app.assetLoader);
     };

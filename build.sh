@@ -304,7 +304,7 @@ function build_webgl_with_target {
 }
 
 function build_webgl {
-    # For the host tools, supress install and always use Release.
+    # For the host tools, suppress install and always use Release.
     local old_install_command=${INSTALL_COMMAND}; INSTALL_COMMAND=
     local old_issue_debug_build=${ISSUE_DEBUG_BUILD}; ISSUE_DEBUG_BUILD=false
     local old_issue_release_build=${ISSUE_RELEASE_BUILD}; ISSUE_RELEASE_BUILD=true
@@ -403,7 +403,7 @@ function ensure_android_build {
 function build_android {
     ensure_android_build
 
-    # Supress intermediate desktop tools install
+    # Suppress intermediate desktop tools install
     local old_install_command=${INSTALL_COMMAND}
     INSTALL_COMMAND=
 
@@ -601,7 +601,7 @@ function archive_ios {
 }
 
 function build_ios {
-    # Supress intermediate desktop tools install
+    # Suppress intermediate desktop tools install
     local old_install_command=${INSTALL_COMMAND}
     INSTALL_COMMAND=
 
