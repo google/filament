@@ -267,7 +267,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
 
                     // generate and sort the commands for rendering the shadow map
                     RenderPass entryPass(pass);
-                    shadowMap.render(*scene, entry.range, entry.visibilityMask, cameraInfo, &entryPass);
+                    shadowMap.render(*scene, entry.range, entry.visibilityMask, &entryPass);
 
                     const auto& executor = entryPass.getExecutor();
                     const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
