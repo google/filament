@@ -70,9 +70,7 @@ ShadowMap::~ShadowMap() {
 }
 
 void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
-        FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
-        RenderPass* const pass) noexcept {
-//    pass->setCamera(cameraInfo);
+        FScene::VisibleMaskType visibilityMask, RenderPass* const pass) noexcept {
     pass->setVisibilityMask(visibilityMask);
     pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
     pass->overridePolygonOffset(&mShadowMapInfo.polygonOffset);
