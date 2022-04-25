@@ -161,12 +161,12 @@ public:
 
     // returns the view's name. The pointer is owned by View.
     const char* getName() const noexcept {
-        return mName.c_str();
+        return mName.c_str_safe();
     }
 
     void prepareUpscaler(math::float2 scale) const noexcept;
     void prepareCamera(const CameraInfo& camera) const noexcept;
-    void prepareViewport(const Viewport& viewport) const noexcept;
+    void prepareViewport(const Viewport& viewport, uint32_t xoffset, uint32_t yoffset) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
             CameraInfo const& cameraInfo) noexcept;

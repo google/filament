@@ -40,6 +40,7 @@ namespace filament {
 
 struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "FrameUniforms" };
+
     math::mat4f viewFromWorldMatrix;
     math::mat4f worldFromViewMatrix;
     math::mat4f clipFromViewMatrix;
@@ -48,61 +49,67 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f worldFromClipMatrix;
     std::array<math::mat4f, CONFIG_MAX_SHADOW_CASCADES> lightFromWorldMatrix;
 
-    // position of cascade splits, in world space (not including the near plane)
-    // -Inf stored in unused components
-    math::float4 cascadeSplits;
+    math::float2 origin;            // viewport left, bottom (in pixels)
+    math::float2 offset;            // rendering offset left, bottom (in pixels)
+    math::float4 resolution;        // viewport width, height, 1/width, 1/height
 
-    math::float4 resolution; // viewport width, height, 1/width, 1/height
+    math::float2 clipControl;
+    math::float2 padding2;
+
+    math::float4 userTime;          // time(s), (double)time - (float)time, 0, 0
+    float time;                     // time in seconds, with a 1 second period
+    float temporalNoise;            // noise [0,1] when TAA is used, 0 otherwise
+    float lodBias;                  // load bias to apply to user materials
+    float refractionLodOffset;
 
     // camera position in view space (when camera_at_origin is enabled), i.e. it's (0,0,0).
     // Always add worldOffset in the shader to get the true world-space position of the camera.
     math::float3 cameraPosition;
-
-    float time; // time in seconds, with a 1 second period
-
-    math::float4 lightColorIntensity; // directional light
-
-    math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
-
-    math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
-    float needsAlphaChannel;
-    uint32_t lightChannels;
-
-    math::float3 lightDirection;
-    uint32_t fParamsX; // stride-x
-
-    float shadowBulbRadiusLs;       // light radius in light-space
-    float shadowBias;               // normal bias
-    float shadowPenumbraRatioScale; // For DPCF or PCSS, scale penumbra ratio for artistic use
-    float heightOverFroxelDimensionY;
-
-    math::float4 zParams; // froxel Z parameters
-
-    math::uint2 fParams; // stride-y, stride-z
-    math::float2 origin; // viewport left, viewport bottom
-
-    float widthOverFroxelDimensionX;
-    float iblLuminance;
+    float oneOverFarMinusNear;      // 1 / (f-n), always positive
+    math::float3 worldOffset;       // this is (0,0,0) when camera_at_origin is disabled
+    float nearOverFarMinusNear;     // n / (f-n), always positive
+    float cameraFar;                // camera *culling* far-plane distance, always positive (projection far is at +inf)
     float exposure;
     float ev100;
+    float needsAlphaChannel;
 
-    alignas(16) math::float4 iblSH[9]; // actually float3 entries (std140 requires float4 alignment)
+    // Froxels
+    math::float4 zParams;                       // froxel Z parameters
+    math::uint3 fParams;                        // stride-x, stride-y, stride-z
+    float padding0;
+    math::float2 froxelCountXY;
 
-    math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
+    // IBL
+    float iblLuminance;
+    float iblRoughnessOneLevel;                 // level for roughness == 1
+    math::float4 iblSH[9];                      // actually float3 entries (std140 requires float4 alignment)
 
-    float iblRoughnessOneLevel;       // level for roughness == 1
-    float cameraFar;                  // camera *culling* far-plane distance, always positive (projection far is at +inf)
-    float refractionLodOffset;
+    // Direct lighting
+    math::float3 lightDirection;                // directional light direction
+    uint32_t lightChannels;                     // light channel bits
+    math::float4 lightColorIntensity;           // directional light
+    math::float4 sun;                           // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
+    math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
 
+    // Shadows
     // bit 0: directional (sun) shadow enabled
     // bit 1: directional (sun) screen-space contact shadow enabled
     // bit 8-15: screen-space contact shadows ray casting steps
     uint32_t directionalShadows;
-
-    math::float3 worldOffset; // this is (0,0,0) when camera_at_origin is disabled
     float ssContactShadowDistance;
 
-    // fog
+    // position of cascade splits, in world space (not including the near plane)
+    // -Inf stored in unused components
+    math::float4 cascadeSplits;
+    // bit 0-3: cascade count
+    // bit 4: visualize cascades
+    // bit 8-11: cascade has visible shadows
+    uint32_t cascades;
+    float shadowBulbRadiusLs;           // light radius in light-space
+    float shadowBias;                   // normal bias
+    float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
+
+    // Fog
     float fogStart;
     float fogMaxOpacity;
     float fogHeight;
@@ -112,29 +119,19 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogInscatteringStart;
     float fogInscatteringSize;
     float fogColorFromIbl;
+    float fogReserved0;
 
-    // bit 0-3: cascade count
-    // bit 4: visualize cascades
-    // bit 8-11: cascade has visible shadows
-    uint32_t cascades;
-
+    // AO
     float aoSamplingQualityAndEdgeDistance;     // 0: bilinear, !0: bilateral edge distance
     float aoBentNormals;                        // 0: no AO bent normal, >0.0 AO bent normals
-    float aoReserved2;
-    float aoReserved3;
+    float aoReserved0;
+    float aoReserved1;
 
-    math::float2 clipControl;
-    math::float2 padding1;
-
+    // VSM
     float vsmExponent;
     float vsmDepthScale;
     float vsmLightBleedReduction;
     uint32_t shadowSamplingType;                // 0: vsm, 1: dpcf
-
-    float lodBias;
-    float oneOverFarMinusNear;          // 1 / (f-n), always positive
-    float nearOverFarMinusNear;         // n / (f-n), always positive
-    float temporalNoise;                // noise [0,1] when TAA is used, 0 otherwise
 
     // Screen-space reflections
     math::mat4f ssrReprojection;
@@ -145,7 +142,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrStride;                    // ssr texel stride, >= 1.0
 
     // bring PerViewUib to 2 KiB
-    math::float4 padding3[49];
+    math::float4 reserved[48];
 };
 
 // 2 KiB == 128 float4s

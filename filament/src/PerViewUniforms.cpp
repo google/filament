@@ -105,12 +105,14 @@ void PerViewUniforms::prepareExposure(float ev100) noexcept {
     s.ev100 = ev100;
 }
 
-void PerViewUniforms::prepareViewport(const filament::Viewport &viewport) noexcept {
+void PerViewUniforms::prepareViewport(const filament::Viewport& viewport,
+        uint32_t xoffset, uint32_t yoffset) noexcept {
     const float w = float(viewport.width);
     const float h = float(viewport.height);
     auto& s = mUniforms.edit();
     s.resolution = float4{ w, h, 1.0f / w, 1.0f / h };
     s.origin = float2{ viewport.left, viewport.bottom };
+    s.offset = float2{ xoffset, yoffset };
 }
 
 void PerViewUniforms::prepareTime(math::float4 const& userTime) noexcept {

@@ -31,7 +31,7 @@ void main() {
 
 #if defined(MATERIAL_HAS_TRANSPARENT_SHADOW)
     // Interleaved gradient noise, see dithering.fs
-    float noise = fract(52.982919 * fract(dot(vec2(0.06711, 0.00584), gl_FragCoord.xy)));
+    float noise = interleavedGradientNoise(gl_FragCoord.xy);
     if (noise >= alpha) {
         discard;
     }

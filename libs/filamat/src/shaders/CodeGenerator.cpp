@@ -522,8 +522,8 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
 }
 
 io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) {
-    out << SHADERS_COMMON_MATH_FS_DATA;
-    out << SHADERS_COMMON_SHADOWING_FS_DATA;
+    out << SHADERS_COMMON_MATH_GLSL_DATA;
+    out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_COMMON_SHADING_FS_DATA;

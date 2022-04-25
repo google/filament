@@ -18,9 +18,9 @@ set(SHADERS
         src/common_graphics.fs
         src/common_lighting.fs
         src/common_material.fs
-        src/common_math.fs
+        src/common_math.glsl
         src/common_shading.fs
-        src/common_shadowing.fs
+        src/common_shadowing.glsl
         src/common_types.fs
         src/depth_main.fs
         src/fog.fs
