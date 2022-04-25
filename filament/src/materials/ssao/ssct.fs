@@ -143,8 +143,8 @@ float ssctDominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal,
 
     float occlusion = 0.0;
     for (float i = 1.0; i <= rayCount.x; i += 1.0) {
-        cone.jitterOffset.x = random(fragCoord * i) * 2.0 - 1.0;      // direction
-        cone.jitterOffset.y = random(fragCoord * i * vec2(3, 11));    // step
+        cone.jitterOffset.x = interleavedGradientNoise(fragCoord * i) * 2.0 - 1.0;      // direction
+        cone.jitterOffset.y = interleavedGradientNoise(fragCoord * i * vec2(3, 11));    // step
         occlusion += coneTraceOcclusion(cone, depthTexture);
     }
     return occlusion * rayCount.y;

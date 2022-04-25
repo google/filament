@@ -599,8 +599,8 @@ void postProcess(inout PostProcessInputs postProcess) {
 #if KERNEL_USE_NOISE
     // A good random generator is essential, this one is okay.
     highp vec2 fragCoords = gl_FragCoord.xy;
-    float randomAngle = random(fragCoords) * (2.0 * PI);
-    float random01 = random(fragCoords * vec2(5099.0, 3499.0)); // large primes seem to work ok
+    float randomAngle = interleavedGradientNoise(fragCoords) * (2.0 * PI);
+    float random01 = interleavedGradientNoise(fragCoords * vec2(5099.0, 3499.0)); // large primes seem to work ok
     noiseState.randomUniformDiskRadius = 0.5 * sqrt(random01);
     noiseState.randomDisk = vec2(cos(randomAngle), sin(randomAngle));
 #endif

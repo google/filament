@@ -19,12 +19,6 @@
 
 #include "depthUtils.fs"
 
-// random number between 0 and 1, using interleaved gradient noise
-float random(const highp vec2 w) {
-    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
-    return fract(m.z * fract(dot(w, m.xy)));
-}
-
 // returns the frag coord in the GL convention with (0, 0) at the bottom-left
 // resolution : width, height
 highp vec2 getFragCoord(const highp vec2 resolution) {
