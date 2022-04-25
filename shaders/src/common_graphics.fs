@@ -89,6 +89,20 @@ vec3 decodeRGBM(vec4 c) {
 }
 
 //------------------------------------------------------------------------------
+// Common screen-space operations
+//------------------------------------------------------------------------------
+
+// returns the frag coord in the GL convention with (0, 0) at the bottom-left
+// resolution : width, height
+highp vec2 getFragCoord(const highp vec2 resolution) {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    return vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
+#else
+    return gl_FragCoord.xy;
+#endif
+}
+
+//------------------------------------------------------------------------------
 // Common debug
 //------------------------------------------------------------------------------
 

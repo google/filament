@@ -436,7 +436,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     fg.addTrivialSideEffectPass("Prepare View Uniforms",
             [=, &uniforms = view.getPerViewUniforms()](DriverApi& driver) {
                 uniforms.prepareCamera(cameraInfo);
-                uniforms.prepareViewport(svp);
+                uniforms.prepareViewport(svp, 0, 0);
                 uniforms.commit(driver);
             });
 
@@ -968,7 +968,15 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.prepareSSR(ssr, config.ssrLodOffset,
                         view.getScreenSpaceReflectionsOptions());
 
-                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
+                // Note: here we can't use data.color's descriptor for the viewport because
+                // the actual viewport might be offset when the target is the swapchain.
+                // However, the width/height should be the same.
+                assert_invariant(
+                        out.params.viewport.width == resources.getDescriptor(data.color).width);
+                assert_invariant(
+                        out.params.viewport.height == resources.getDescriptor(data.color).height);
+
+                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport), 0u, 0u);
                 view.commitUniforms(driver);
 
                 out.params.clearColor = data.clearColor;

@@ -286,7 +286,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
                     // than clearing.
                     const uint32_t dim = options->mapSize;
                     filament::Viewport viewport{ 1, 1, dim - 2, dim - 2 };
-                    view.prepareViewport(viewport);
+                    view.prepareViewport(viewport, 0, 0);
 
                     // set uniforms needed to render this ShadowMap
                     // Currently these uniforms are owned by View and are global, but eventually

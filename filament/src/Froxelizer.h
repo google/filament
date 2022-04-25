@@ -125,10 +125,8 @@ public:
 
     void updateUniforms(PerViewUib& s) {
         s.zParams = mParamsZ;
-        s.fParams = mParamsF.yz;
-        s.fParamsX = mParamsF.x;
-        s.widthOverFroxelDimensionX  = float(mViewport.width ) * mOneOverDimension.x;
-        s.heightOverFroxelDimensionY = float(mViewport.height) * mOneOverDimension.y;
+        s.fParams = mParamsF;
+        s.froxelCountXY = math::float2{ mViewport.width, mViewport.width } / mFroxelDimension;
     }
 
     // send froxel data to GPU
@@ -242,7 +240,6 @@ private:
     float mLinearizer = 0.0f;
     float mClipToFroxelX = 0.0f;
     float mClipToFroxelY = 0.0f;
-    math::float2 mOneOverDimension = {};
     backend::BufferObjectHandle mRecordsBuffer;
     backend::Handle<backend::HwTexture> mFroxelTexture;
 

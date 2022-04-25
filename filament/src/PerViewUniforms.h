@@ -65,7 +65,16 @@ public:
 
     void prepareCamera(const CameraInfo& camera) noexcept;
     void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) noexcept;
-    void prepareViewport(const filament::Viewport& viewport) noexcept;
+
+    /*
+     * @param viewport  viewport (should be same as RenderPassParams::viewport)
+     * @param xoffset   horizontal rendering offset *within* the viewport.
+     *                  Non-zero when we have guard bands.
+     * @param yoffset   vertical rendering offset *within* the viewport.
+     *                  Non-zero when we have guard bands.
+     */
+    void prepareViewport(const filament::Viewport& viewport, uint32_t xoffset, uint32_t yoffset) noexcept;
+
     void prepareTime(math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept;
     void prepareExposure(float ev100) noexcept;
