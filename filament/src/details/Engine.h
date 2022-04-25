@@ -76,6 +76,7 @@ using MaterialKey = uint32_t;
 
 #include <chrono>
 #include <memory>
+#include <new>
 #include <random>
 #include <unordered_map>
 
@@ -147,7 +148,11 @@ public:
     ~FEngine() noexcept;
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }
-    DriverApi& getDriverApi() noexcept { return mCommandStream; }
+
+    DriverApi& getDriverApi() noexcept {
+        return *std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage));
+    }
+
     DFG* getDFG() const noexcept { return mDFG.get(); }
 
     // the per-frame Area is used by all Renderer, so they must run in sequence and
@@ -423,7 +428,9 @@ private:
 
     std::thread mDriverThread;
     backend::CommandBufferQueue mCommandBufferQueue;
-    DriverApi mCommandStream;
+    std::aligned_storage<sizeof(DriverApi), alignof(DriverApi)>::type mDriverApiStorage;
+    static_assert( sizeof(mDriverApiStorage) >= sizeof(DriverApi) );
+
     uint32_t mFlushCounter = 0;
 
     LinearAllocatorArena mPerRenderPassAllocator;

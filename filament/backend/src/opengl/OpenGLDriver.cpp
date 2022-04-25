@@ -53,7 +53,7 @@
 
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_OPENGL
 #   define DEBUG_MARKER() \
-        DebugMarker _debug_marker(*this, __PRETTY_FUNCTION__);
+        DebugMarker _debug_marker(*this, __func__);
 #else
 #   define DEBUG_MARKER()
 #endif
@@ -115,23 +115,21 @@ Driver* OpenGLDriver::create(
 
     // here we check we're on a supported version of GL before initializing the driver
     GLint major = 0, minor = 0;
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    bool success = OpenGLContext::queryOpenGLVersion(&major, &minor);
 
-    if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
+    if (UTILS_UNLIKELY(!success)) {
         PANIC_LOG("Can't get OpenGL version");
         cleanup:
         ec->terminate();
         return {};
     }
 
-    if (GLES30_HEADERS) {
-        // we require GLES 3.1 headers, but we support GLES 3.0
+    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
             PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
             goto cleanup;
         }
-    } else if (GL41_HEADERS) {
+    } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // we require GL 4.1 headers and minimum version
         if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
             PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
@@ -147,10 +145,7 @@ Driver* OpenGLDriver::create(
 
 OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string) noexcept
         : driver(driver) {
-    // FIXME: this is not safe nor portable
-    const char* const begin = string + sizeof("virtual void filament::backend::OpenGLDriver::") - 1;
-    const char* const end = strchr(begin, '(');
-    driver.pushGroupMarker(begin, end - begin);
+    driver.pushGroupMarker(string, strlen(string));
 }
 
 OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
@@ -160,8 +155,7 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
-        : DriverBase(new ConcreteDispatcher<OpenGLDriver>()),
-          mHandleAllocator("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
+        : mHandleAllocator("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
           mSamplerMap(32),
           mPlatform(*platform) {
   
@@ -181,7 +175,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         mContext.resetProgram();
     }
 
-    if (mContext.ext.EXT_disjoint_timer_query || GL41_HEADERS) {
+    if (mContext.ext.EXT_disjoint_timer_query ||
+            BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // timer queries are available
         if (mContext.bugs.dont_use_timer_query && mPlatform.canCreateFence()) {
             // however, they don't work well, revert to using fences if we can.
@@ -203,6 +198,10 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
 
 OpenGLDriver::~OpenGLDriver() noexcept {
     delete mOpenGLBlitter;
+}
+
+Dispatcher OpenGLDriver::getDispatcher() const noexcept {
+    return ConcreteDispatcher<OpenGLDriver>::make();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -478,14 +477,14 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             break;
         }
         case GL_TEXTURE_2D_MULTISAMPLE:
-            if (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
+            if constexpr (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
                 // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
                 // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
-#if GLES31_HEADERS
-                // only supported from GL 4.3 and GLES 3.1
+#if BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES31
+                // only supported from GL 4.3 and GLES 3.1 headers
                 glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
-#elif GL41_HEADERS
+#elif defined(GL_VERSION_4_1)
                 // only supported in GL (GL4.1 doesn't support glTexStorage2DMultisample)
                 glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
                         GLsizei(width), GLsizei(height), GL_TRUE);
@@ -1512,7 +1511,7 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
 
         // Three-component SRGB is a color-renderable texture format in core OpenGL on desktop.
         case TextureFormat::SRGB8:
-            return GL41_HEADERS;
+            return BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL;
 
         // Half-float formats, requires extension.
         case TextureFormat::R16F:
@@ -1851,7 +1850,6 @@ void OpenGLDriver::setTextureData(GLTexture* t,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
-    DEBUG_MARKER()
     auto& gl = mContext;
 
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
@@ -1941,7 +1939,6 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
-    DEBUG_MARKER()
     auto& gl = mContext;
 
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
@@ -2031,11 +2028,13 @@ void OpenGLDriver::cancelExternalImage(void* image) {
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
+    DEBUG_MARKER()
     mPlatform.setExternalImage(image, handle_cast<GLTexture*>(th));
     setExternalTexture(handle_cast<GLTexture*>(th), image);
 }
 
 void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
+    DEBUG_MARKER()
 }
 
 void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
@@ -2043,8 +2042,6 @@ void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
 
     // TODO: move this logic to PlatformEGL.
     if (gl.ext.OES_EGL_image_external_essl3) {
-        DEBUG_MARKER()
-
         assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
         assert_invariant(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
 
@@ -2167,6 +2164,7 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 }
 
 void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     // reset the state of the result availability
     tq->elapsed.store(0, std::memory_order_relaxed);
@@ -2174,6 +2172,7 @@ void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     mTimerQueryImpl->endTimeElapsedQuery(tq);
 
@@ -2238,7 +2237,8 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES30_HEADERS) {
+    if (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES &&
+            BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             AttachmentArray attachments; // NOLINT
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
@@ -2312,7 +2312,8 @@ void OpenGLDriver::endRenderPass(int) {
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES30_HEADERS) {
+    if (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES &&
+            BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
         auto effectiveDiscardFlags = discardFlags;
         if (gl.bugs.invalidate_end_only_if_invalidate_start) {
             effectiveDiscardFlags &= mRenderPassParams.flags.discardStart;
@@ -2436,7 +2437,7 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         gl.bindVertexArray(&rp->gl);
         CHECK_GL_ERROR(utils::slog.e)
 
-        rp->gl.indicesType = ib->elementSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+        rp->gl.indicesSize = (ib->elementSize == 4u) ? 4u : 2u;
         rp->gl.vertexBufferWithObjects = vbh;
 
         // update the VBO bindings in the VAO
@@ -2456,7 +2457,7 @@ void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 
     GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
     rp->type = pt;
-    rp->offset = offset * ((rp->gl.indicesType == GL_UNSIGNED_INT) ? 4 : 2);
+    rp->offset = offset * rp->gl.indicesSize;
     rp->count = count;
     rp->minIndex = minIndex;
     rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
@@ -2464,7 +2465,6 @@ void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 
 // Sets up a scissor rectangle that automatically gets clipped against the viewport.
 void OpenGLDriver::setViewportScissor(Viewport const& viewportScissor) noexcept {
-    DEBUG_MARKER()
     auto& gl = mContext;
 
     // In OpenGL, all four scissor parameters are actually signed, so clamp to MAX_INT32.
@@ -2952,11 +2952,13 @@ void OpenGLDriver::executeRenderPassOps() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLDriver::tick(int) {
+    DEBUG_MARKER()
     executeGpuCommandsCompleteOps();
     executeEveryNowAndThenOps();
 }
 
 void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+    DEBUG_MARKER()
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
@@ -2976,20 +2978,21 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 
 void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
         FrameScheduledCallback callback, void* user) {
-
+    DEBUG_MARKER()
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
         FrameCompletedCallback callback, void* user) {
-
+    DEBUG_MARKER()
 }
 
 void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
+    DEBUG_MARKER()
     mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 
 void OpenGLDriver::endFrame(uint32_t frameId) {
-    //SYSTRACE_NAME("glFinish");
+    DEBUG_MARKER()
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
     // done with the frame. We do NOT officially support using Filament in this way, but we can
@@ -3003,6 +3006,7 @@ void OpenGLDriver::endFrame(uint32_t frameId) {
     gl.depthFunc(GL_LESS);
     gl.disable(GL_SCISSOR_TEST);
 #endif
+    //SYSTRACE_NAME("glFinish");
     //glFinish();
     insertEventMarker("endFrame");
 }
@@ -3034,7 +3038,6 @@ void OpenGLDriver::finish(int) {
 UTILS_NOINLINE
 void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
         math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept {
-    DEBUG_MARKER()
     RasterState rs(mRasterState);
 
     if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
@@ -3213,10 +3216,10 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 
     if (UTILS_LIKELY(instanceCount <= 1)) {
         glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
-                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
+                rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset));
     } else {
         glDrawElementsInstanced(GLenum(rp->type), rp->count,
-                rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset),
+                rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset),
                 instanceCount);
     }
 

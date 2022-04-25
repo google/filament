@@ -193,7 +193,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
 
 uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
     // 1 thread for the user, 1 thread for the backend
-    int threadCount = std::thread::hardware_concurrency() - 2;
+    int threadCount = (int)std::thread::hardware_concurrency() - 2;
     // make sure we have at least 1 thread though
     threadCount = std::max(1, threadCount);
     return threadCount;
@@ -208,7 +208,9 @@ void FEngine::init() {
     SYSTRACE_CALL();
 
     // this must be first.
-    mCommandStream = CommandStream(*mDriver, mCommandBufferQueue.getCircularBuffer());
+    assert_invariant( intptr_t(&mDriverApiStorage) % alignof(DriverApi) == 0 );
+    ::new(&mDriverApiStorage) DriverApi(*mDriver, mCommandBufferQueue.getCircularBuffer());
+
     DriverApi& driverApi = getDriverApi();
 
     mResourceAllocator = new ResourceAllocator(driverApi);
@@ -338,6 +340,12 @@ FEngine::~FEngine() noexcept {
     SYSTRACE_CALL();
 
     ASSERT_DESTRUCTOR(mTerminated, "Engine destroyed but not terminated!");
+
+    // we use mResourceAllocator as a proxy for knowing if init() was called
+    if (mResourceAllocator) {
+        std::destroy_at(std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage)));
+    }
+
     delete mResourceAllocator;
     delete mDriver;
     if (mOwnPlatform) {
@@ -1000,7 +1008,7 @@ bool FEngine::execute() {
     // execute all command buffers
     for (auto& item : buffers) {
         if (UTILS_LIKELY(item.begin)) {
-            mCommandStream.execute(item.begin);
+            getDriverApi().execute(item.begin);
             mCommandBufferQueue.releaseBuffer(item);
         }
     }

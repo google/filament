@@ -217,6 +217,38 @@ public class FilamentAsset {
     }
 
     /**
+     * Gets the skin count of this asset.
+     */
+    public int getSkinCount() {
+        return nGetSkinCount(getNativeObject());
+    }
+
+    /**
+     * Gets the skin name at skin index in this asset.
+     */
+    public @NonNull String[] getSkinNames() {
+        String[] result = new String[getSkinCount()];
+        nGetSkinNames(getNativeObject(), result);
+        return result;
+    }
+
+    /**
+     * Gets the joint count at skin index in this asset.
+     */
+    public int getJointCountAt(int skinIndex) {
+        return nGetJointCountAt(getNativeObject(), skinIndex);
+    }
+
+    /**
+     * Gets joints at skin index in this asset.
+     */
+    public @NonNull @Entity int[] getJointsAt(int skinIndex) {
+        int[] result = new int[getJointCountAt(skinIndex)];
+        nGetJointsAt(getNativeObject(), skinIndex, result);
+        return result;
+    }
+
+    /**
      * Gets the names of all morph targets in the given entity.
      */
     public @NonNull String[] getMorphTargetNames(@Entity int entity) {
@@ -306,6 +338,10 @@ public class FilamentAsset {
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
     private static native void nApplyMaterialVariant(long nativeAsset, int variantIndex);
+    private static native int nGetSkinCount(long nativeAsset);
+    private static native void nGetSkinNames(long nativeAsset, String[] result);
+    private static native int nGetJointCountAt(long nativeAsset, int skinIndex);
+    private static native void nGetJointsAt(long nativeAsset, int skinIndex, int[] result);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
     private static native void nReleaseSourceData(long nativeAsset);

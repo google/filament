@@ -14,6 +14,10 @@ add_library(image STATIC IMPORTED)
 set_target_properties(image PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimage.a)
 
+add_library(ktxreader STATIC IMPORTED)
+set_target_properties(ktxreader PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libktxreader.a)
+
 add_library(viewer STATIC IMPORTED)
 set_target_properties(viewer PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libviewer.a)
@@ -64,5 +68,6 @@ target_link_libraries(filament-utils-jni
         camutils
         iblprefilter
         image
+        ktxreader
         viewer
 )

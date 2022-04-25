@@ -15,7 +15,7 @@
  */
 
 #include <image/ColorTransform.h>
-#include <image/KtxBundle.h>
+#include <image/Ktx1Bundle.h>
 #include <image/ImageOps.h>
 #include <image/ImageSampler.h>
 #include <image/LinearImage.h>
@@ -366,7 +366,7 @@ TEST_F(ImageTest, Ktx) { // NOLINT
     uint8_t foo[] = {1, 2, 3};
     uint8_t* data;
     uint32_t size;
-    KtxBundle nascent(2, 1, true);
+    Ktx1Bundle nascent(2, 1, true);
     ASSERT_EQ(nascent.getNumMipLevels(), 2);
     ASSERT_EQ(nascent.getArrayLength(), 1);
     ASSERT_TRUE(nascent.isCubemap());
@@ -390,7 +390,7 @@ TEST_F(ImageTest, Ktx) { // NOLINT
         vector<uint8_t> buffer(fileSize);
         std::ifstream in(path, std::ifstream::in | std::ifstream::binary);
         ASSERT_TRUE(in.read((char*) buffer.data(), fileSize));
-        KtxBundle deserialized(buffer.data(), buffer.size());
+        Ktx1Bundle deserialized(buffer.data(), buffer.size());
 
         ASSERT_EQ(deserialized.getNumMipLevels(), 1);
         ASSERT_EQ(deserialized.getArrayLength(), 1);
@@ -421,14 +421,14 @@ TEST_F(ImageTest, Ktx) { // NOLINT
         reserialized.resize(serializedSize);
         ASSERT_TRUE(deserialized.serialize(reserialized.data(), serializedSize));
 
-        KtxBundle bundleWithMetadata(reserialized.data(), reserialized.size());
+        Ktx1Bundle bundleWithMetadata(reserialized.data(), reserialized.size());
         val = string(bundleWithMetadata.getMetadata("foo"));
         ASSERT_EQ(val, "bar");
     }
 }
 
 TEST_F(ImageTest, getSphericalHarmonics) {
-    KtxBundle ktx(2, 1, true);
+    Ktx1Bundle ktx(2, 1, true);
 
     const char* sphereHarmonics = R"(0.199599 0.197587 0.208682
     0.0894955 0.126985 0.187462

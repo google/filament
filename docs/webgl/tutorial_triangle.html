@@ -16,22 +16,22 @@ subsequent code blocks.</p>
 <h2>Start your project</h2>
 <p>First, create a text file called <code>triangle.html</code> and fill it with the following HTML. This creates
 a mobile-friendly page with a full-screen canvas.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #BC7A00">&lt;!DOCTYPE html&gt;</span>
-&lt;<span style="color: #008000; font-weight: bold">html</span> <span style="color: #7D9029">lang</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;en&quot;</span>&gt;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #9C6500">&lt;!DOCTYPE html&gt;</span>
+&lt;<span style="color: #008000; font-weight: bold">html</span> <span style="color: #687822">lang</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;en&quot;</span>&gt;
 &lt;<span style="color: #008000; font-weight: bold">head</span>&gt;
     &lt;<span style="color: #008000; font-weight: bold">title</span>&gt;Filament Tutorial&lt;/<span style="color: #008000; font-weight: bold">title</span>&gt;
-    &lt;<span style="color: #008000; font-weight: bold">meta</span> <span style="color: #7D9029">charset</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;utf-8&quot;</span>&gt;
-    &lt;<span style="color: #008000; font-weight: bold">meta</span> <span style="color: #7D9029">name</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;viewport&quot;</span> <span style="color: #7D9029">content</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;width=device-width,user-scalable=no,initial-scale=1&quot;</span>&gt;
-    &lt;<span style="color: #008000; font-weight: bold">style</span>&gt;
-        <span style="color: #008000; font-weight: bold">body</span> { <span style="color: #008000; font-weight: bold">margin</span>: <span style="color: #666666">0</span>; <span style="color: #008000; font-weight: bold">overflow</span>: <span style="color: #008000; font-weight: bold">hidden</span>; }
-        <span style="color: #008000; font-weight: bold">canvas</span> { touch-action: <span style="color: #008000; font-weight: bold">none</span>; <span style="color: #008000; font-weight: bold">width</span>: <span style="color: #666666">100</span><span style="color: #B00040">%</span>; <span style="color: #008000; font-weight: bold">height</span>: <span style="color: #666666">100</span><span style="color: #B00040">%</span>; }
-    &lt;/<span style="color: #008000; font-weight: bold">style</span>&gt;
+    &lt;<span style="color: #008000; font-weight: bold">meta</span> <span style="color: #687822">charset</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;utf-8&quot;</span>&gt;
+    &lt;<span style="color: #008000; font-weight: bold">meta</span> <span style="color: #687822">name</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;viewport&quot;</span> <span style="color: #687822">content</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;width=device-width,user-scalable=no,initial-scale=1&quot;</span>&gt;
+    &lt;<span style="color: #008000; font-weight: bold">style</span>&gt;<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">        </span><span style="color: #008000; font-weight: bold">body</span><span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">margin</span>:<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>;<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">overflow</span>:<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">hidden</span>;<span style="color: #bbbbbb"> </span>}<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">        </span><span style="color: #008000; font-weight: bold">canvas</span><span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"> </span>touch-action:<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">none</span>;<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">width</span>:<span style="color: #bbbbbb"> </span><span style="color: #666666">100</span><span style="color: #B00040">%</span>;<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">height</span>:<span style="color: #bbbbbb"> </span><span style="color: #666666">100</span><span style="color: #B00040">%</span>;<span style="color: #bbbbbb"> </span>}<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">    </span>&lt;/<span style="color: #008000; font-weight: bold">style</span>&gt;
 &lt;/<span style="color: #008000; font-weight: bold">head</span>&gt;
 &lt;<span style="color: #008000; font-weight: bold">body</span>&gt;
     &lt;<span style="color: #008000; font-weight: bold">canvas</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">canvas</span>&gt;
-    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/filament@1.15.0/filament.js&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
-    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/gl-matrix@2.8.1&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
-    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;triangle.js&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
+    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #687822">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;filament.js&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
+    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #687822">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/gl-matrix@2.8.1&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
+    &lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #687822">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;triangle.js&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
 &lt;/<span style="color: #008000; font-weight: bold">body</span>&gt;
 &lt;/<span style="color: #008000; font-weight: bold">html</span>&gt;
 </pre></div>
@@ -50,18 +50,18 @@ a mobile-friendly page with a full-screen canvas.</p>
 <p>Go ahead and create <code>triangle.js</code> with the following content.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">class</span> App {
   <span style="color: #008000; font-weight: bold">constructor</span>() {
-    <span style="color: #408080; font-style: italic">// TODO: create entities</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: create entities</span>
     <span style="color: #008000; font-weight: bold">this</span>.render <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.render.bind(<span style="color: #008000; font-weight: bold">this</span>);
     <span style="color: #008000; font-weight: bold">this</span>.resize <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.resize.bind(<span style="color: #008000; font-weight: bold">this</span>);
     <span style="color: #008000">window</span>.addEventListener(<span style="color: #BA2121">&#39;resize&#39;</span>, <span style="color: #008000; font-weight: bold">this</span>.resize);
     <span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
   }
   render() {
-    <span style="color: #408080; font-style: italic">// TODO: render scene</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: render scene</span>
     <span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
   }
   resize() {
-    <span style="color: #408080; font-style: italic">// TODO: adjust viewport and canvas</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: adjust viewport and canvas</span>
   }
 }
 
@@ -81,9 +81,9 @@ that define a PBR material. We'll learn more about material packages in the next
 <h2>Spawn a local server</h2>
 <p>Because of CORS restrictions, your web app cannot fetch the material package directly from the
 file system. One way around this is to create a temporary server using Python or node:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>python3 -m http.server     <span style="color: #408080; font-style: italic"># Python 3</span>
-python -m SimpleHTTPServer <span style="color: #408080; font-style: italic"># Python 2.7</span>
-npx http-server -p <span style="color: #666666">8000</span>    <span style="color: #408080; font-style: italic"># nodejs</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>python3 -m http.server     <span style="color: #3D7B7B; font-style: italic"># Python 3</span>
+python -m SimpleHTTPServer <span style="color: #3D7B7B; font-style: italic"># Python 2.7</span>
+npx http-server -p <span style="color: #666666">8000</span>    <span style="color: #3D7B7B; font-style: italic"># nodejs</span>
 </pre></div>
 
 <p>To see if this works, navigate to <a href="http://localhost:8000">http://localhost:8000</a> and check if you
@@ -185,10 +185,10 @@ view.</p>
 <span style="color: #008000; font-weight: bold">this</span>.view.setCamera(<span style="color: #008000; font-weight: bold">this</span>.camera);
 <span style="color: #008000; font-weight: bold">this</span>.view.setScene(<span style="color: #008000; font-weight: bold">this</span>.scene);
 
-<span style="color: #408080; font-style: italic">// Set up a blue-green background:</span>
+<span style="color: #3D7B7B; font-style: italic">// Set up a blue-green background:</span>
 <span style="color: #008000; font-weight: bold">this</span>.renderer.setClearOptions({clearColor<span style="color: #666666">:</span> [<span style="color: #666666">0.0</span>, <span style="color: #666666">0.1</span>, <span style="color: #666666">0.2</span>, <span style="color: #666666">1.0</span>], clear<span style="color: #666666">:</span> <span style="color: #008000; font-weight: bold">true</span>});
 
-<span style="color: #408080; font-style: italic">// Adjust the initial viewport:</span>
+<span style="color: #3D7B7B; font-style: italic">// Adjust the initial viewport:</span>
 <span style="color: #008000; font-weight: bold">this</span>.resize();
 </pre></div>
 
@@ -198,14 +198,14 @@ However the canvas is still blank!</p>
 <p>Recall that our App class has a skeletal render method, which the browser calls every time it needs
 to repaint. Often this is 60 times a second.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>render() {
-    <span style="color: #408080; font-style: italic">// TODO: render scene</span>
+    <span style="color: #3D7B7B; font-style: italic">// TODO: render scene</span>
     <span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
 }
 </pre></div>
 
 <p>Let's flesh this out by rotating the triangle and invoking the Filament renderer. Add the following
 code to the top of the render method.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #408080; font-style: italic">// Rotate the triangle.</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #3D7B7B; font-style: italic">// Rotate the triangle.</span>
 <span style="color: #008000; font-weight: bold">const</span> radians <span style="color: #666666">=</span> <span style="color: #008000">Date</span>.now() <span style="color: #666666">/</span> <span style="color: #666666">1000</span>;
 <span style="color: #008000; font-weight: bold">const</span> transform <span style="color: #666666">=</span> mat4.fromRotation(mat4.create(), radians, [<span style="color: #666666">0</span>, <span style="color: #666666">0</span>, <span style="color: #666666">1</span>]);
 <span style="color: #008000; font-weight: bold">const</span> tcm <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.getTransformManager();
@@ -213,7 +213,7 @@ code to the top of the render method.</p>
 tcm.setTransform(inst, transform);
 inst.<span style="color: #AA22FF; font-weight: bold">delete</span>();
 
-<span style="color: #408080; font-style: italic">// Render the frame.</span>
+<span style="color: #3D7B7B; font-style: italic">// Render the frame.</span>
 <span style="color: #008000; font-weight: bold">this</span>.renderer.render(<span style="color: #008000; font-weight: bold">this</span>.swapChain, <span style="color: #008000; font-weight: bold">this</span>.view);
 </pre></div>
 

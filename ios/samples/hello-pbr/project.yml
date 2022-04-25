@@ -8,7 +8,7 @@ targets:
             - FilamentApp
         settings:
             base:
-                OTHER_LDFLAGS: ["-lfilameshio", "-lmeshoptimizer", "-limage"]
+                OTHER_LDFLAGS: ["-lfilameshio", "-lmeshoptimizer", "-limage", "-lktxreader"]
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources

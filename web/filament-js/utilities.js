@@ -242,14 +242,14 @@ Filament.loadMathExtensions = function() {
 
 Filament._createTextureFromKtx = function(ktxdata, engine, options) {
     options = options || {};
-    const ktx = options['ktx'] || new Filament.KtxBundle(ktxdata);
+    const ktx = options['ktx'] || new Filament.Ktx1Bundle(ktxdata);
     const srgb = !!options['srgb'];
     return Filament.ktx$createTexture(engine, ktx, srgb);
 };
 
 Filament._createIblFromKtx = function(ktxdata, engine, options) {
     options = options || {};
-    const iblktx = options['ktx'] = new Filament.KtxBundle(ktxdata);
+    const iblktx = options['ktx'] = new Filament.Ktx1Bundle(ktxdata);
 
     const format = iblktx.info().glInternalFormat;
     //if (format != this.ctx.R11F_G11F_B10F && format != this.ctx.RGB16F && format != this.ctx.RGB32F) {

@@ -61,7 +61,7 @@ public:
      */
     template<typename D, typename ... ARGS>
     Handle<D> allocateAndConstruct(ARGS&& ... args) noexcept {
-        Handle<D> h{ allocateHandle(sizeof(D)) };
+        Handle<D> h{ allocateHandle<sizeof(D)>() };
         D* addr = handle_cast<D*>(h);
         new(addr) D(std::forward<ARGS>(args)...);
 #if HANDLE_TYPE_SAFETY
@@ -84,7 +84,7 @@ public:
      */
     template<typename D>
     Handle<D> allocate() noexcept {
-        Handle<D> h{ allocateHandle(sizeof(D)) };
+        Handle<D> h{ allocateHandle<sizeof(D)>() };
 #if HANDLE_TYPE_SAFETY
         D* addr = handle_cast<D*>(h);
         mLock.lock();
@@ -167,7 +167,7 @@ public:
             }
 #endif
             p->~D();
-            deallocateHandle(handle.getId(), sizeof(D));
+            deallocateHandle<sizeof(D)>(handle.getId());
         }
     }
 
@@ -249,23 +249,49 @@ private:
             utils::LockingPolicy::SpinLock>;
 #endif
 
-    // this is inlined because we're always called with a constexpr size
-    HandleBase::HandleId allocateHandle(size_t size) noexcept {
-        void* p = mHandleArena.alloc(size);
-        if (UTILS_LIKELY(p)) {
-            return pointerToHandle(p);
+    // allocateHandle()/deallocateHandle() selects the pool to use at compile-time based on the
+    // allocation size this is always inlined, because all these do is to call
+    // allocateHandleInPool()/deallocateHandleFromPool() with the right pool size.
+    template<size_t SIZE>
+    HandleBase::HandleId allocateHandle() noexcept {
+        if constexpr (SIZE <= P0) { return allocateHandleInPool<P0>(); }
+        if constexpr (SIZE <= P1) { return allocateHandleInPool<P1>(); }
+        return allocateHandleInPool<P2>();
+    }
+
+    template<size_t SIZE>
+    void deallocateHandle(HandleBase::HandleId id) noexcept {
+        if constexpr (SIZE <= P0) {
+            deallocateHandleFromPool<P0>(id);
+        } else if constexpr (SIZE <= P1) {
+            deallocateHandleFromPool<P1>(id);
         } else {
-            return allocateHandleSlow(size);
+            deallocateHandleFromPool<P2>(id);
         }
     }
 
-    // this is inlined because we're always called with a constexpr size
-    void deallocateHandle(HandleBase::HandleId id, size_t size) noexcept {
+    // allocateHandleInPool()/deallocateHandleFromPool() is NOT inlined, which will cause three
+    // versions to be generated, one for each pool. Because the arena is synchronized,
+    // the code generated is not trivial (even if it's not insane either).
+    template<size_t SIZE>
+    UTILS_NOINLINE
+    HandleBase::HandleId allocateHandleInPool() noexcept {
+        void* p = mHandleArena.alloc(SIZE);
+        if (UTILS_LIKELY(p)) {
+            return pointerToHandle(p);
+        } else {
+            return allocateHandleSlow(SIZE);
+        }
+    }
+
+    template<size_t SIZE>
+    UTILS_NOINLINE
+    void deallocateHandleFromPool(HandleBase::HandleId id) noexcept {
         if (UTILS_LIKELY(isPoolHandle(id))) {
             void* p = handleToPointer(id);
-            mHandleArena.free(p, size);
+            mHandleArena.free(p, SIZE);
         } else {
-            deallocateHandleSlow(id, size);
+            deallocateHandleSlow(id, SIZE);
         }
     }
 

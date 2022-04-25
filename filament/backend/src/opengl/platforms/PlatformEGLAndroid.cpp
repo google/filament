@@ -100,7 +100,8 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext) noexcept {
     Driver* driver = PlatformEGL::createDriver(sharedContext);
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
-    eglGetNativeClientBufferANDROID = (PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) eglGetProcAddress("eglGetNativeClientBufferANDROID");
+    eglGetNativeClientBufferANDROID = (PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) eglGetProcAddress(
+            "eglGetNativeClientBufferANDROID");
 
     if (extensions.has("EGL_ANDROID_presentation_time")) {
         eglPresentationTimeANDROID = (PFNEGLPRESENTATIONTIMEANDROIDPROC)eglGetProcAddress(

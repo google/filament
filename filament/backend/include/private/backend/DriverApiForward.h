@@ -17,15 +17,12 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPIFORWARD_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPIFORWARD_H
 
-
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 class CommandStream;
 
 using DriverApi = CommandStream;
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPIFORWARD_H

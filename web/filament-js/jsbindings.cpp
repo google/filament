@@ -68,8 +68,7 @@
 #include <gltfio/MaterialProvider.h>
 #include <gltfio/ResourceLoader.h>
 
-#include <image/KtxBundle.h>
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -93,6 +92,7 @@ using namespace filamesh;
 using namespace geometry;
 using namespace gltfio;
 using namespace image;
+using namespace ktxreader;
 
 using namespace filament::viewer;
 
@@ -1525,29 +1525,29 @@ class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
 // HELPER TYPES
 // ------------
 
-/// KtxBundle ::class:: In-memory representation of a KTX file.
+/// Ktx1Bundle ::class:: In-memory representation of a KTX file.
 /// Most clients should use one of the `create*FromKtx` utility methods in the JavaScript [Engine]
-/// wrapper rather than interacting with `KtxBundle` directly.
-class_<KtxBundle>("KtxBundle")
-    .constructor(EMBIND_LAMBDA(KtxBundle*, (BufferDescriptor kbd), {
-        return new KtxBundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);
+/// wrapper rather than interacting with `Ktx1Bundle` directly.
+class_<Ktx1Bundle>("Ktx1Bundle")
+    .constructor(EMBIND_LAMBDA(Ktx1Bundle*, (BufferDescriptor kbd), {
+        return new Ktx1Bundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);
     }))
 
     /// info ::method:: Obtains properties of the KTX header.
     /// ::retval:: The [KtxInfo] property accessor object.
-    .function("getNumMipLevels", &KtxBundle::getNumMipLevels)
+    .function("getNumMipLevels", &Ktx1Bundle::getNumMipLevels)
 
     /// getArrayLength ::method:: Obtains length of the texture array.
     /// ::retval:: The number of elements in the texture array
-    .function("getArrayLength", &KtxBundle::getArrayLength)
+    .function("getArrayLength", &Ktx1Bundle::getArrayLength)
 
     /// getInternalFormat ::method::
     /// srgb ::argument:: boolean that forces the resulting format to SRGB if possible.
     /// ::retval:: [Texture$InternalFormat]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getInternalFormat",
-            EMBIND_LAMBDA(Texture::InternalFormat, (KtxBundle* self, bool srgb), {
-        auto result = ktx::toTextureFormat(self->info());
+            EMBIND_LAMBDA(Texture::InternalFormat, (Ktx1Bundle* self, bool srgb), {
+        auto result = Ktx1Reader::toTextureFormat(self->info());
         if (srgb) {
             if (result == Texture::InternalFormat::RGB8) {
                 result = Texture::InternalFormat::SRGB8;
@@ -1563,42 +1563,42 @@ class_<KtxBundle>("KtxBundle")
     /// ::retval:: [PixelDataFormat]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
-            EMBIND_LAMBDA(backend::PixelDataFormat, (KtxBundle* self), {
-        return ktx::toPixelDataFormat(self->getInfo());
+            EMBIND_LAMBDA(backend::PixelDataFormat, (Ktx1Bundle* self), {
+        return Ktx1Reader::toPixelDataFormat(self->getInfo());
     }), allow_raw_pointers())
 
     /// getPixelDataType ::method::
     /// ::retval:: [PixelDataType]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataType",
-            EMBIND_LAMBDA(backend::PixelDataType, (KtxBundle* self), {
-        return ktx::toPixelDataType(self->getInfo());
+            EMBIND_LAMBDA(backend::PixelDataType, (Ktx1Bundle* self), {
+        return Ktx1Reader::toPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// getCompressedPixelDataType ::method::
     /// ::retval:: [CompressedPixelDataType]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getCompressedPixelDataType",
-            EMBIND_LAMBDA(backend::CompressedPixelDataType, (KtxBundle* self), {
-        return ktx::toCompressedPixelDataType(self->getInfo());
+            EMBIND_LAMBDA(backend::CompressedPixelDataType, (Ktx1Bundle* self), {
+        return Ktx1Reader::toCompressedPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// isCompressed ::method::
     /// Per spec, compressed textures in KTX always have their glFormat field set to 0.
     /// ::retval:: boolean
-    .function("isCompressed", EMBIND_LAMBDA(bool, (KtxBundle* self), {
-        return ktx::isCompressed(self->getInfo());
+    .function("isCompressed", EMBIND_LAMBDA(bool, (Ktx1Bundle* self), {
+        return Ktx1Reader::isCompressed(self->getInfo());
     }), allow_raw_pointers())
 
-    .function("isCubemap", &KtxBundle::isCubemap)
-    .function("_getBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, KtxBlobIndex index), {
+    .function("isCubemap", &Ktx1Bundle::isCubemap)
+    .function("_getBlob", EMBIND_LAMBDA(BufferDescriptor, (Ktx1Bundle* self, KtxBlobIndex index), {
         uint8_t* data;
         uint32_t size;
         self->getBlob(index, &data, &size);
         return BufferDescriptor(data, size);
     }), allow_raw_pointers())
     .function("_getCubeBlob", EMBIND_LAMBDA(BufferDescriptor,
-            (KtxBundle* self, uint32_t miplevel), {
+            (Ktx1Bundle* self, uint32_t miplevel), {
         uint8_t* data;
         uint32_t size;
         self->getBlob({miplevel}, &data, &size);
@@ -1607,22 +1607,22 @@ class_<KtxBundle>("KtxBundle")
 
     /// info ::method:: Obtains properties of the KTX header.
     /// ::retval:: The [KtxInfo] property accessor object.
-    .function("info", &KtxBundle::info)
+    .function("info", &Ktx1Bundle::info)
 
     /// getMetadata ::method:: Obtains arbitrary metadata from the KTX file.
     /// key ::argument:: string
     /// ::retval:: string
-    .function("getMetadata", EMBIND_LAMBDA(std::string, (KtxBundle* self, std::string key), {
+    .function("getMetadata", EMBIND_LAMBDA(std::string, (Ktx1Bundle* self, std::string key), {
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
 
 function("ktx$createTexture", EMBIND_LAMBDA(Texture*,
-        (Engine* engine, const KtxBundle& ktx, bool srgb), {
-    return ktx::createTexture(engine, ktx, srgb, nullptr, nullptr);
+        (Engine* engine, const Ktx1Bundle& ktx, bool srgb), {
+    return Ktx1Reader::createTexture(engine, ktx, srgb, nullptr, nullptr);
 }), allow_raw_pointers());
 
 /// KtxInfo ::class:: Property accessor for KTX header.
-/// For example, `ktxbundle.info().pixelWidth`. See the
+/// For example, `Ktx1Bundle.info().pixelWidth`. See the
 /// [KTX spec](https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/) for the list of
 /// properties.
 class_<KtxInfo>("KtxInfo")

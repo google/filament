@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <image/KtxBundle.h>
+#include <image/Ktx1Bundle.h>
 
 #include <utils/Panic.h>
 #include <utils/string.h>
@@ -37,7 +37,7 @@ struct SerializationHeader {
 static_assert(sizeof(SerializationHeader) == 16 * 4, "Unexpected header size.");
 
 // We flatten the three-dimensional blob index using the ordering defined by the KTX spec.
-inline size_t flatten(const image::KtxBundle* bundle, image::KtxBlobIndex index) {
+inline size_t flatten(const image::Ktx1Bundle* bundle, image::KtxBlobIndex index) {
     const uint32_t nfaces = bundle->isCubemap() ? 6 : 1;
     const uint32_t nlayers = bundle->getArrayLength();
     return index.cubeFace + index.arrayIndex * nfaces + index.mipLevel * nfaces * nlayers;
@@ -97,9 +97,9 @@ struct KtxBlobList {
     }
 };
 
-KtxBundle::~KtxBundle() = default;
+Ktx1Bundle::~Ktx1Bundle() = default;
 
-KtxBundle::KtxBundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap) :
+Ktx1Bundle::Ktx1Bundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap) :
         mBlobs(new KtxBlobList), mMetadata(new KtxMetadata) {
     mNumMipLevels = numMipLevels;
     mArrayLength = arrayLength;
@@ -107,7 +107,7 @@ KtxBundle::KtxBundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap
     mBlobs->sizes.resize(numMipLevels * arrayLength * mNumCubeFaces);
 }
 
-KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) :
+Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
         mBlobs(new KtxBlobList), mMetadata(new KtxMetadata) {
     ASSERT_PRECONDITION(sizeof(SerializationHeader) <= nbytes, "KTX buffer is too small");
 
@@ -170,7 +170,7 @@ KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) :
     }
 }
 
-bool KtxBundle::serialize(uint8_t* destination, uint32_t numBytes) const {
+bool Ktx1Bundle::serialize(uint8_t* destination, uint32_t numBytes) const {
     uint32_t requiredLength = getSerializedLength();
     if (numBytes < requiredLength) {
         return false;
@@ -184,7 +184,7 @@ bool KtxBundle::serialize(uint8_t* destination, uint32_t numBytes) const {
     header.numberOfArrayElements = mArrayLength;
     header.numberOfFaces = mNumCubeFaces;
 
-    // For simplicity, KtxBundle does not allow non-zero array length, but to be conformant we
+    // For simplicity, Ktx1Bundle does not allow non-zero array length, but to be conformant we
     // should set this field to zero for non-array textures.
     if (mArrayLength == 1) {
         header.numberOfArrayElements = 0;
@@ -247,7 +247,7 @@ bool KtxBundle::serialize(uint8_t* destination, uint32_t numBytes) const {
     return true;
 }
 
-uint32_t KtxBundle::getSerializedLength() const {
+uint32_t Ktx1Bundle::getSerializedLength() const {
     uint32_t total = sizeof(SerializationHeader);
     for (const auto& iter : mMetadata->keyvals) {
         const uint32_t kvsize = iter.first.size() + 1 + iter.second.size();
@@ -271,7 +271,7 @@ uint32_t KtxBundle::getSerializedLength() const {
     return total;
 }
 
-const char* KtxBundle::getMetadata(const char* key, size_t* valueSize) const {
+const char* Ktx1Bundle::getMetadata(const char* key, size_t* valueSize) const {
     auto iter = mMetadata->keyvals.find(key);
     if (iter == mMetadata->keyvals.end()) {
         return nullptr;
@@ -283,11 +283,11 @@ const char* KtxBundle::getMetadata(const char* key, size_t* valueSize) const {
     return iter->second.data();
 }
 
-void KtxBundle::setMetadata(const char* key, const char* value) {
+void Ktx1Bundle::setMetadata(const char* key, const char* value) {
     mMetadata->keyvals.insert({key, value});
 }
 
-bool KtxBundle::getSphericalHarmonics(filament::math::float3* result) {
+bool Ktx1Bundle::getSphericalHarmonics(filament::math::float3* result) {
     char const* src = getMetadata("sh");
     if (!src) {
         return false;
@@ -305,7 +305,7 @@ bool KtxBundle::getSphericalHarmonics(filament::math::float3* result) {
     return true;
 }
 
-bool KtxBundle::getBlob(KtxBlobIndex index, uint8_t** data, uint32_t* size) const {
+bool Ktx1Bundle::getBlob(KtxBlobIndex index, uint8_t** data, uint32_t* size) const {
     if (index.mipLevel >= mNumMipLevels || index.arrayIndex >= mArrayLength ||
             index.cubeFace >= mNumCubeFaces) {
         return false;
@@ -320,7 +320,7 @@ bool KtxBundle::getBlob(KtxBlobIndex index, uint8_t** data, uint32_t* size) cons
     return true;
 }
 
-bool KtxBundle::setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size) {
+bool Ktx1Bundle::setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size) {
     if (index.mipLevel >= mNumMipLevels || index.arrayIndex >= mArrayLength ||
             index.cubeFace >= mNumCubeFaces) {
         return false;
@@ -334,7 +334,7 @@ bool KtxBundle::setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size) 
     return true;
 }
 
-bool KtxBundle::allocateBlob(KtxBlobIndex index, uint32_t size) {
+bool Ktx1Bundle::allocateBlob(KtxBlobIndex index, uint32_t size) {
     if (index.mipLevel >= mNumMipLevels || index.arrayIndex >= mArrayLength ||
             index.cubeFace >= mNumCubeFaces) {
         return false;

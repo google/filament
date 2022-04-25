@@ -437,14 +437,14 @@ Filament.loadClassExtensions = function() {
             return result;
         };
 
-    Filament.KtxBundle.prototype.getBlob = function(index) {
+    Filament.Ktx1Bundle.prototype.getBlob = function(index) {
         const blob = this._getBlob(index);
         const result = blob.getBytes();
         blob.delete();
         return result;
     }
 
-    Filament.KtxBundle.prototype.getCubeBlob = function(miplevel) {
+    Filament.Ktx1Bundle.prototype.getCubeBlob = function(miplevel) {
         const blob = this._getCubeBlob(miplevel);
         const result = blob.getBytes();
         blob.delete();

@@ -17,12 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVER_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVER_H
 
-#include "private/backend/Driver.h"
 #include "DriverBase.h"
 #include "GLUtils.h"
 #include "OpenGLContext.h"
 
+#include "private/backend/AcquiredImage.h"
+#include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
+#include "private/backend/Program.h"
 
 #include "backend/TargetBufferInfo.h"
 
@@ -52,6 +54,7 @@ class OpenGLTimerQueryInterface;
 class OpenGLDriver final : public DriverBase {
     inline explicit OpenGLDriver(OpenGLPlatform* platform) noexcept;
     ~OpenGLDriver() noexcept final;
+    Dispatcher getDispatcher() const noexcept final;
 
 public:
     static Driver* create(OpenGLPlatform* platform, void* sharedGLContext) noexcept;

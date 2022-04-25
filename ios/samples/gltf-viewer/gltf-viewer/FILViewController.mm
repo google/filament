@@ -25,13 +25,14 @@
 
 #include <gltfio/Animator.h>
 
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include <viewer/AutomationEngine.h>
 #include <viewer/RemoteServer.h>
 
 using namespace filament;
 using namespace utils;
+using namespace ktxreader;
 
 @interface FILViewController ()
 
@@ -169,10 +170,10 @@ using namespace utils;
     assert(skyboxPath.length > 0);
     NSData* skyboxBuffer = [NSData dataWithContentsOfFile:skyboxPath];
 
-    image::KtxBundle* skyboxBundle =
-            new image::KtxBundle(static_cast<const uint8_t*>(skyboxBuffer.bytes),
+    image::Ktx1Bundle* skyboxBundle =
+            new image::Ktx1Bundle(static_cast<const uint8_t*>(skyboxBuffer.bytes),
                     static_cast<uint32_t>(skyboxBuffer.length));
-    _skyboxTexture = image::ktx::createTexture(self.modelView.engine, skyboxBundle, false);
+    _skyboxTexture = Ktx1Reader::createTexture(self.modelView.engine, skyboxBundle, false);
     _skybox = filament::Skybox::Builder().environment(_skyboxTexture).build(*self.modelView.engine);
     self.modelView.scene->setSkybox(_skybox);
 
@@ -181,11 +182,11 @@ using namespace utils;
     assert(iblPath.length > 0);
     NSData* iblBuffer = [NSData dataWithContentsOfFile:iblPath];
 
-    image::KtxBundle* iblBundle = new image::KtxBundle(
+    image::Ktx1Bundle* iblBundle = new image::Ktx1Bundle(
             static_cast<const uint8_t*>(iblBuffer.bytes), static_cast<uint32_t>(iblBuffer.length));
     math::float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
-    _iblTexture = image::ktx::createTexture(self.modelView.engine, iblBundle, false);
+    _iblTexture = Ktx1Reader::createTexture(self.modelView.engine, iblBundle, false);
     _indirectLight = IndirectLight::Builder()
                              .reflections(_iblTexture)
                              .irradiance(3, harmonics)

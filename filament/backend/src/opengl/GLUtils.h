@@ -22,7 +22,7 @@
 
 #include <backend/DriverEnums.h>
 
-#include <string>
+#include <string_view>
 #include <unordered_set>
 
 #include <string.h>
@@ -44,11 +44,8 @@ void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char*
 #   define CHECK_GL_ERROR(out)
 #   define CHECK_GL_FRAMEBUFFER_STATUS(out, target)
 #else
-#   ifdef _MSC_VER
-#       define __PRETTY_FUNCTION__ __FUNCSIG__
-#   endif
-#   define CHECK_GL_ERROR(out) { GLUtils::assertGLError(out, __PRETTY_FUNCTION__, __LINE__); }
-#   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __PRETTY_FUNCTION__, __LINE__); }
+#   define CHECK_GL_ERROR(out) { GLUtils::assertGLError(out, __func__, __LINE__); }
+#   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __func__, __LINE__); }
 #endif
 
 constexpr inline GLuint getComponentCount(ElementType type) noexcept {
@@ -507,27 +504,12 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
     }
 }
 
-class unordered_string_set : public std::unordered_set<std::string> {
+class unordered_string_set : public std::unordered_set<std::string_view> {
 public:
-    bool has(const char* str) {
-        return find(std::string(str)) != end();
-    }
+    bool has(std::string_view str) const noexcept;
 };
 
-inline unordered_string_set split(const char* spacedList) {
-    unordered_string_set set;
-    const char* current = spacedList;
-    const char* head = current;
-    do {
-        head = strchr(current, ' ');
-        std::string s(current, head ? head - current : strlen(current));
-        if (s.length()) {
-            set.insert(std::move(s));
-        }
-        current = head + 1;
-    } while (head);
-    return set;
-}
+unordered_string_set split(const char* extensions) noexcept;
 
 } // namespace GLUtils
 } // namespace filament::backend

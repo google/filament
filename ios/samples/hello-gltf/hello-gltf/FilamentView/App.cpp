@@ -20,7 +20,7 @@
 #include <filament/TransformManager.h>
 #include <filament/Viewport.h>
 
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
 
@@ -31,6 +31,8 @@
 // This file is generated via the "Run Script" build phase and contains the IBL and skybox
 // textures this app uses.
 #include "resources.h"
+
+using namespace ktxreader;
 
 App::App(void* nativeLayer, uint32_t width, uint32_t height, const utils::Path& resourcePath)
         : nativeLayer(nativeLayer), width(width), height(height), resourcePath(resourcePath) {
@@ -89,15 +91,15 @@ void App::setupFilament() {
 }
 
 void App::setupIbl() {
-    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
+    image::Ktx1Bundle* iblBundle = new image::Ktx1Bundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
                                                        RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
-    app.iblTexture = image::ktx::createTexture(engine, iblBundle, false);
+    app.iblTexture = Ktx1Reader::createTexture(engine, iblBundle, false);
 
-    image::KtxBundle* skyboxBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
+    image::Ktx1Bundle* skyboxBundle = new image::Ktx1Bundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
                                                           RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_SIZE);
-    app.skyboxTexture = image::ktx::createTexture(engine, skyboxBundle, false);
+    app.skyboxTexture = Ktx1Reader::createTexture(engine, skyboxBundle, false);
 
     app.skybox = Skybox::Builder()
         .environment(app.skyboxTexture)

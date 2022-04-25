@@ -121,5 +121,21 @@ void assertFramebufferStatus(io::ostream& out, GLenum target, const char* functi
     }
 }
 
+bool unordered_string_set::has(std::string_view str) const noexcept {
+    return find(str) != end();
+}
+
+unordered_string_set split(const char* extensions) noexcept {
+    unordered_string_set set;
+    std::string_view string(extensions);
+    do {
+        auto p = string.find(' ');
+        p = (p == std::string_view::npos ? string.length() : p);
+        set.emplace(string.data(), p);
+        string.remove_prefix(p == string.length() ? p : p + 1);
+    } while(!string.empty());
+    return set;
+}
+
 } // namespace GLUtils
 } // namespace filament::backend

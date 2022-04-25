@@ -25,7 +25,7 @@
 #include <image/ColorTransform.h>
 #include <image/ImageOps.h>
 #include <image/ImageSampler.h>
-#include <image/KtxBundle.h>
+#include <image/Ktx1Bundle.h>
 
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
@@ -364,15 +364,15 @@ int main(int argc, char* argv[]) {
     js.adopt();
 
     // For thread safety, we allocate each KTX blob now, before invoking the job system.
-    image::KtxBundle bundle(mipLevels, 1, false);
+    image::Ktx1Bundle bundle(mipLevels, 1, false);
     if (g_ktxContainer) {
         bundle.info() = {
-            .endianness = KtxBundle::ENDIAN_DEFAULT,
-            .glType = KtxBundle::UNSIGNED_BYTE,
+            .endianness = Ktx1Bundle::ENDIAN_DEFAULT,
+            .glType = Ktx1Bundle::UNSIGNED_BYTE,
             .glTypeSize = 1,
-            .glFormat = KtxBundle::LUMINANCE,
-            .glInternalFormat = KtxBundle::LUMINANCE,
-            .glBaseInternalFormat = KtxBundle::LUMINANCE,
+            .glFormat = Ktx1Bundle::LUMINANCE,
+            .glInternalFormat = Ktx1Bundle::LUMINANCE,
+            .glBaseInternalFormat = Ktx1Bundle::LUMINANCE,
             .pixelWidth = (uint32_t) width,
             .pixelHeight = (uint32_t) height,
             .pixelDepth = 0,

@@ -236,7 +236,7 @@ const datatype = Filament.PixelDataType.UINT_10F_11F_11F_REV;
 
 // Create a Texture object for the mipmapped cubemap.
 const ibl_package = Filament.Buffer(Filament.assets[ibl_url]);
-const iblktx = new Filament.KtxBundle(ibl_package);
+const iblktx = new Filament.Ktx1Bundle(ibl_package);
 
 const ibltex = Filament.Texture.Builder()
   .width(iblktx.info().pixelWidth)
@@ -283,7 +283,7 @@ Here's one way to create a texture for the skybox:
 
 ```js
 const sky_package = Filament.Buffer(Filament.assets[sky_url]);
-const skyktx = new Filament.KtxBundle(sky_package);
+const skyktx = new Filament.Ktx1Bundle(sky_package);
 const skytex = Filament.Texture.Builder()
   .width(skyktx.info().pixelWidth)
   .height(skyktx.info().pixelHeight)

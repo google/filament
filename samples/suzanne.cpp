@@ -28,8 +28,7 @@
 
 #include <filameshio/MeshReader.h>
 
-#include <image/KtxBundle.h>
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
@@ -47,7 +46,7 @@
 #include "generated/resources/monkey.h"
 
 using namespace filament;
-using namespace image;
+using namespace ktxreader;
 using namespace filament::math;
 
 struct App {
@@ -146,14 +145,14 @@ int main(int argc, char** argv) {
         auto& em = utils::EntityManager::get();
 
         // Create textures. The KTX bundles are freed by KtxUtility.
-        auto albedo = new image::KtxBundle(MONKEY_ALBEDO_S3TC_DATA, MONKEY_ALBEDO_S3TC_SIZE);
-        auto ao = new image::KtxBundle(MONKEY_AO_DATA, MONKEY_AO_SIZE);
-        auto metallic = new image::KtxBundle(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE);
-        auto roughness = new image::KtxBundle(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE);
-        app.albedo = ktx::createTexture(engine, albedo, true);
-        app.ao = ktx::createTexture(engine, ao, false);
-        app.metallic = ktx::createTexture(engine, metallic, false);
-        app.roughness = ktx::createTexture(engine, roughness, false);
+        auto albedo = new image::Ktx1Bundle(MONKEY_ALBEDO_S3TC_DATA, MONKEY_ALBEDO_S3TC_SIZE);
+        auto ao = new image::Ktx1Bundle(MONKEY_AO_DATA, MONKEY_AO_SIZE);
+        auto metallic = new image::Ktx1Bundle(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE);
+        auto roughness = new image::Ktx1Bundle(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE);
+        app.albedo = Ktx1Reader::createTexture(engine, albedo, true);
+        app.ao = Ktx1Reader::createTexture(engine, ao, false);
+        app.metallic = Ktx1Reader::createTexture(engine, metallic, false);
+        app.roughness = Ktx1Reader::createTexture(engine, roughness, false);
         app.normal = loadNormalMap(engine, MONKEY_NORMAL_DATA, MONKEY_NORMAL_SIZE);
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                 TextureSampler::MagFilter::LINEAR);

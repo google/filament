@@ -381,7 +381,7 @@ static void extract4x4RGBA(uint8_t* dst, const LinearImage& source, uint32_t x0,
 //  - DXT1 with no alpha (16 input pixels in 64 bits of output, 6:1)
 //  - DXT5 with alpha (16 input pixels into 128 bits of output, 4:1)
 //
-// TODO: investigate using something more capable than STB (eg AMD Compressenator, bimg, libsquish)
+// TODO: remove this in favor of basisu
 CompressedTexture s3tcCompress(const LinearImage& original, S3tcConfig config) {
     const bool dxt5 = config.format == CompressedFormat::RGBA_S3TC_DXT5;
     LinearImage source = extendToFourChannels(original);

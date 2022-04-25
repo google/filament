@@ -33,7 +33,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace filament {
 /**
  * Types and enums used by filament's driver.
  *
@@ -41,7 +40,7 @@ namespace filament {
  * internal redeclaration of these types.
  * For e.g. Use Texture::Sampler instead of filament::SamplerType.
  */
-namespace backend {
+namespace filament::backend {
 
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
@@ -160,7 +159,7 @@ struct DepthRange {
  * @see Fence, Fence::wait()
  */
 enum class FenceStatus : int8_t {
-    ERROR = -1,                 //!< An error occured. The Fence condition is not satisfied.
+    ERROR = -1,                 //!< An error occurred. The Fence condition is not satisfied.
     CONDITION_SATISFIED = 0,    //!< The Fence condition is satisfied.
     TIMEOUT_EXPIRED = 1,        //!< wait()'s timeout expired. The Fence condition is not satisfied.
 };
@@ -169,7 +168,7 @@ enum class FenceStatus : int8_t {
  * Status codes for sync objects
  */
 enum class SyncStatus : int8_t {
-    ERROR = -1,          //!< An error occured. The Sync is not signaled.
+    ERROR = -1,          //!< An error occurred. The Sync is not signaled.
     SIGNALED = 0,        //!< The Sync is signaled.
     NOT_SIGNALED = 1,    //!< The Sync is not signaled yet
 };
@@ -998,8 +997,7 @@ enum class Workaround : uint16_t {
     ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
         : public std::true_type {};

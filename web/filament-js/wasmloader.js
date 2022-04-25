@@ -67,7 +67,11 @@ Filament.init = (assets, onready) => {
     // resolves to a module. Here we replace the function with the module. Note that our
     // TypeScript bindings assume that Filament is a namespace, not a function.
     Filament().then(module => {
-        Filament = Object.assign(Filament, module);
+
+        // Merge our extension functions into the emscripten module, not the other
+        // way around, because Emscripten potentially replaces the HEAPU8 views in
+        // the original module object (e.g. if it needs to grow the heap).
+        Filament = Object.assign(module, Filament);
 
         // At this point, emscripten has finished compiling and instancing the WebAssembly module.
         // The JS classes that correspond to core Filament classes (e.g., Engine) are not guaranteed

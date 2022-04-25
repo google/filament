@@ -44,6 +44,7 @@ struct UniformBufferState;
 class MetalDriver final : public DriverBase {
     explicit MetalDriver(MetalPlatform* platform) noexcept;
     ~MetalDriver() noexcept override;
+    Dispatcher getDispatcher() const noexcept final;
 
 public:
     static Driver* create(MetalPlatform* platform);
@@ -59,7 +60,7 @@ private:
     ShaderModel getShaderModel() const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
-    void execute(std::function<void(void)> fn) noexcept final;
+    void execute(std::function<void(void)> const& fn) noexcept final;
 
     /*
      * Driver interface

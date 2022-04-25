@@ -3,7 +3,14 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.21.2 (currently main branch)
+## v1.21.3 (currently main branch)
+
+## v1.21.2
+
+- Java: Add Java binding to get skins in `FilamentAsset`.
+- libs: Add libs/ktxreader [⚠️ **API Change**].
+- mipgen: fixups / clarification regarding sRGB.
+- WebGL: fix intermittent 'detached ArrayBuffer' errors.
 
 ## v1.21.1
 

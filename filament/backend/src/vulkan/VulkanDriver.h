@@ -53,6 +53,8 @@ private:
 
     ~VulkanDriver() noexcept override;
 
+    Dispatcher getDispatcher() const noexcept final;
+
     ShaderModel getShaderModel() const noexcept final;
 
     template<typename T>
