@@ -912,7 +912,7 @@ struct ShaderStageFlags {
                (fragment && type == ShaderType::FRAGMENT);
     }
 };
-static constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { .vertex = true, .fragment = true };
+static constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { true, true };
 
 /**
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
