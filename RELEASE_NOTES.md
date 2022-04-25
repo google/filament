@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.21.2
 
+- Java: Add Java binding to get skins in `FilamentAsset`.
+- libs: Add libs/ktxreader [⚠️ **API Change**].
+- mipgen: fixups / clarification regarding sRGB.
+- WebGL: fix intermittent 'detached ArrayBuffer' errors.
+
 ## v1.21.1
 
 - engine: Allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].
