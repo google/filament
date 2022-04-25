@@ -458,7 +458,7 @@ devices.
 - engine: Fix RenderTarget NPE when depth is not present.
 - engine: Improvements to Camera APIs. Move focus distance from DofOptions to Camera.
 - engine: VSM shadows now support `shadowMultiplier`.
-- java: Expose severla MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
+- java: Expose several MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
   should have been public.
 - java: fix bug with Texture::setImage buffer size calculation.
 
