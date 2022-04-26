@@ -74,14 +74,14 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float shadowBulbRadiusLs;       // light radius in light-space
     float shadowBias;               // normal bias
     float shadowPenumbraRatioScale; // For DPCF or PCSS, scale penumbra ratio for artistic use
-    float oneOverFroxelDimensionY;
+    float heightOverFroxelDimensionY;
 
     math::float4 zParams; // froxel Z parameters
 
     math::uint2 fParams; // stride-y, stride-z
     math::float2 origin; // viewport left, viewport bottom
 
-    float oneOverFroxelDimensionX;
+    float widthOverFroxelDimensionX;
     float iblLuminance;
     float exposure;
     float ev100;

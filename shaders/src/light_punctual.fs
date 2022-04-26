@@ -27,8 +27,8 @@ struct FroxelParams {
 uvec3 getFroxelCoords(const highp vec3 fragCoords) {
     uvec3 froxelCoord;
 
-    froxelCoord.xy = uvec2(fragCoords.xy * frameUniforms.resolution.xy *
-            vec2(frameUniforms.oneOverFroxelDimension, frameUniforms.oneOverFroxelDimensionY));
+    froxelCoord.xy = uvec2(fragCoords.xy *
+            vec2(frameUniforms.widthOverFroxelDimension, frameUniforms.heightOverFroxelDimensionY));
 
     // go from screen-space to reciprocal of normalized view-space Z (i.e. scaled by 1/zLightFar)
     // we get away with the reciprocal because 1/z is handled by the log2() below.

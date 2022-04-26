@@ -127,8 +127,8 @@ public:
         s.zParams = mParamsZ;
         s.fParams = mParamsF.yz;
         s.fParamsX = mParamsF.x;
-        s.oneOverFroxelDimensionX = mOneOverDimension.x;
-        s.oneOverFroxelDimensionY = mOneOverDimension.y;
+        s.widthOverFroxelDimensionX  = float(mViewport.width ) * mOneOverDimension.x;
+        s.heightOverFroxelDimensionY = float(mViewport.height) * mOneOverDimension.y;
     }
 
     // send froxel data to GPU

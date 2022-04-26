@@ -60,13 +60,13 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("shadowBulbRadiusLs",      1, UniformInterfaceBlock::Type::FLOAT)
             .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT)
             .add("shadowPenumbraRatioScale",1, UniformInterfaceBlock::Type::FLOAT)
-            .add("oneOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("heightOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
             // froxels
             .add("zParams",                 1, UniformInterfaceBlock::Type::FLOAT4)
             .add("fParams",                 1, UniformInterfaceBlock::Type::UINT2)
             .add("origin",                  1, UniformInterfaceBlock::Type::FLOAT2)
             // froxels (again, for alignment purposes)
-            .add("oneOverFroxelDimension",  1, UniformInterfaceBlock::Type::FLOAT)
+            .add("widthOverFroxelDimension",  1, UniformInterfaceBlock::Type::FLOAT)
             // ibl
             .add("iblLuminance",            1, UniformInterfaceBlock::Type::FLOAT)
             // camera
