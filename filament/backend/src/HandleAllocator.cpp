@@ -29,9 +29,9 @@ UTILS_NOINLINE
 HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& area)
         : mArea(area) {
     // TODO: we probably need a better way to set the size of these pools
-    const size_t unit = area.size() / 32;
-    const size_t offsetPool1 =      unit;
-    const size_t offsetPool2 = 16 * unit;
+    const size_t unit = area.size() / 256;
+    const size_t offsetPool1 = unit;
+    const size_t offsetPool2 = 2 * unit;
     char* const p = (char*)area.begin();
     mPool0 = PoolAllocator< P0, 16>(p, p + offsetPool1);
     mPool1 = PoolAllocator< P1, 16>(p + offsetPool1, p + offsetPool2);
