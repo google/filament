@@ -289,18 +289,17 @@ private:
 
     // Represents all the Vulkan state that comprises a bound descriptor set.
     struct DescriptorKey {
-        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             // 0
-        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        // 64
-        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; // 832
-        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       // 1024
-        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         // 1056
+        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             //   96     0
+        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        //  768    96
+        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; //  192   864
+        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       //   48  1056
+        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         //   48  1104
     };
-
-    static_assert(offsetof(DescriptorKey, samplers)              == 64);
-    static_assert(offsetof(DescriptorKey, inputAttachments)      == 832);
-    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1024);
-    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1056);
-    static_assert(sizeof(DescriptorKey) == 1088, "DescriptorKey must not have implicit padding.");
+    static_assert(offsetof(DescriptorKey, samplers)              == 96);
+    static_assert(offsetof(DescriptorKey, inputAttachments)      == 864);
+    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1056);
+    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1104);
+    static_assert(sizeof(DescriptorKey) == 1152, "DescriptorKey must not have implicit padding.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 
