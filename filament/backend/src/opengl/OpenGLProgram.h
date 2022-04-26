@@ -60,7 +60,7 @@ public:
 
             // turns out the former might be relatively cheap to check, the later requires
             // a bit less. Compared to what updateSamplers() actually does, which is
-            // pretty little, I'm not sure we'll get ahead.
+            // pretty little, I'm not sure if we'll get ahead.
 
             updateSamplers(gld);
         }
