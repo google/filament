@@ -794,7 +794,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 },
                 config,
                 { .asSubpass = false },
-                { pass.getExecutor(pass.begin(), refraction) },
+                pass.getExecutor(pass.begin(), refraction),
                 view);
 
         // generate the mipmap chain
@@ -814,7 +814,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
                 },
                 config,
                 colorGradingConfig,
-                { pass.getExecutor(refraction, pass.end()) },
+                pass.getExecutor(refraction, pass.end()),
                 view);
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
