@@ -345,7 +345,7 @@ private:
     void setViewportScissor(Viewport const& viewportScissor) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<HwSamplerGroup*, Program::BINDING_COUNT> mSamplerBindings = {};   // 8 pointers
+    std::array<HwSamplerGroup*, Program::BINDING_COUNT> mSamplerBindings = {};   // 12 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;

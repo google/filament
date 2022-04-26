@@ -42,22 +42,22 @@
  */
 namespace filament::backend {
 
-static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
-static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
-static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB = 0x4;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT         = 0x1;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE            = 0x2;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB          = 0x4;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
-static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT = 16; // This is guaranteed by OpenGL ES.
-static constexpr size_t MAX_VERTEX_SAMPLER_COUNT = 16;   // This is guaranteed by OpenGL ES.
-static constexpr size_t MAX_FRAGMENT_SAMPLER_COUNT = 16; // This is guaranteed by OpenGL ES.
-static constexpr size_t MAX_SAMPLER_COUNT = 32;          // This is guaranteed by OpenGL ES.
-static constexpr size_t MAX_VERTEX_BUFFER_COUNT = 16;    // Max number of bound buffer objects.
+static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
+static constexpr size_t MAX_VERTEX_SAMPLER_COUNT    = 16;   // This is guaranteed by OpenGL ES.
+static constexpr size_t MAX_FRAGMENT_SAMPLER_COUNT  = 16;   // This is guaranteed by OpenGL ES.
+static constexpr size_t MAX_SAMPLER_COUNT           = 32;   // This is guaranteed by OpenGL ES.
+static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
 
 static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
         "The number of buffer objects that can be attached to a VertexBuffer must be "
         "less than or equal to the maximum number of vertex attributes.");
 
-static constexpr size_t CONFIG_BINDING_COUNT = 8;
+static constexpr size_t CONFIG_BINDING_COUNT = 12;  // This is guaranteed by OpenGL ES.
 
 /**
  * Selects which driver a particular Engine should use.
