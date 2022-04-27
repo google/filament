@@ -555,7 +555,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
-    CodeGenerator::generateCommon(vs, ShaderType::VERTEX);
+    CodeGenerator::generatePostProcessCommon(vs, ShaderType::VERTEX);
     CodeGenerator::generatePostProcessGetters(vs, ShaderType::VERTEX);
 
     appendShader(vs, mMaterialVertexCode, mMaterialVertexLineOffset);
@@ -596,7 +596,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
     // subpass
     CodeGenerator::generateSubpass(fs, material.subpass);
 
-    CodeGenerator::generateCommon(fs, ShaderType::FRAGMENT);
+    CodeGenerator::generatePostProcessCommon(fs, ShaderType::FRAGMENT);
     CodeGenerator::generatePostProcessGetters(fs, ShaderType::FRAGMENT);
 
     // Generate post-process outputs.
