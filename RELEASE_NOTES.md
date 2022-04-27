@@ -3,7 +3,11 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.21.3 (currently main branch)
+## v1.22.0 (currently main branch)
+
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
+
+## v1.21.3
 
 - Renamed the KTXLoader Kotlin class to KTX1Loader.  [⚠️ **API Change**].
 - Added Ktx2Reader and BasisEncoder to support Basis-encoded KTX2 files.
