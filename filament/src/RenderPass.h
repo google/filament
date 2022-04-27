@@ -215,6 +215,7 @@ public:
 
     struct PrimitiveInfo { // 40 bytes
         FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
+        uint8_t reserved0[8 - sizeof(void*)] = {};                      // 0 bytes (4)
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
@@ -222,7 +223,7 @@ public:
         uint16_t instanceCount;                                         // 2 bytes
         backend::RasterState rasterState;                               // 8 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[15 - sizeof(void*)] = {};                      // 7 bytes (11)
+        uint8_t reserved1[7] = {};                                      // 7 bytes
     };
     static_assert(sizeof(PrimitiveInfo) == 40);
 
