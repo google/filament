@@ -40,6 +40,12 @@ fragment {
 
 void dummy() {}
 
+#if defined(TARGET_MOBILE)
+#   define MIN_ROUGHNESS            0.007921
+#else
+#   define MIN_ROUGHNESS            0.002025
+#endif
+
 // we default to highp in this shader
 precision highp float;
 precision highp int;

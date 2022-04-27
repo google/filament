@@ -391,8 +391,7 @@ io::sstream& CodeGenerator::generateSamplers(
     return out;
 }
 
-io::sstream& CodeGenerator::generateSubpass(io::sstream& out,
-        SubpassInfo subpass) {
+io::sstream& CodeGenerator::generateSubpass(io::sstream& out, SubpassInfo subpass) {
     if (!subpass.isValid) {
         return out;
     }
@@ -529,6 +528,16 @@ io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) {
         out << SHADERS_COMMON_SHADING_FS_DATA;
         out << SHADERS_COMMON_GRAPHICS_FS_DATA;
         out << SHADERS_COMMON_MATERIAL_FS_DATA;
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generatePostProcessCommon(io::sstream& out, ShaderType type) {
+    out << SHADERS_COMMON_MATH_GLSL_DATA;
+    if (type == ShaderType::VERTEX) {
+    } else if (type == ShaderType::FRAGMENT) {
+        out << SHADERS_COMMON_SHADING_FS_DATA;
+        out << SHADERS_COMMON_GRAPHICS_FS_DATA;
     }
     return out;
 }
