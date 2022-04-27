@@ -102,7 +102,7 @@ public:
     inline void depthMask(GLboolean flag) noexcept;
     inline void depthFunc(GLenum func) noexcept;
     inline void stencilFunc(GLenum func, GLint ref, GLuint mask) noexcept;
-    inline void stencilOp(GLenum op) noexcept;
+    inline void stencilOp(GLenum sfail, GLenum dpfail, GLenum dppass) noexcept;
     inline void stencilMask(GLuint mask) noexcept;
     inline void polygonOffset(GLfloat factor, GLfloat units) noexcept;
     inline void beginQuery(GLenum target, GLuint query) noexcept;
@@ -300,7 +300,14 @@ private:
                     return func != rhs.func || ref != rhs.ref || mask != rhs.mask;
                 }
             } stencilFunc;
-            GLenum stencilOp            = GL_KEEP;
+            struct StencilOp {
+                GLenum sfail            = GL_KEEP;
+                GLenum dpfail           = GL_KEEP;
+                GLenum dppass           = GL_KEEP;
+                bool operator != (StencilOp const& rhs) const noexcept {
+                    return sfail != rhs.sfail || dpfail != rhs.dpfail || dppass != rhs.dppass;
+                }
+            } stencilOp;
             GLuint stencilMask          = ~GLuint(0);
         } raster;
 
@@ -654,10 +661,10 @@ void OpenGLContext::stencilFunc(GLenum func, GLint ref, GLuint mask) noexcept {
     });
 }
 
-void OpenGLContext::stencilOp(GLenum op) noexcept {
+void OpenGLContext::stencilOp(GLenum sfail, GLenum dpfail, GLenum dppass) noexcept {
     // WARNING: don't call this without updating mRasterState
-    update_state(state.raster.stencilOp, op, [&]() {
-        glStencilOp(GL_KEEP, GL_KEEP, op);
+    update_state(state.raster.stencilOp, {sfail, dpfail, dppass}, [&]() {
+        glStencilOp(sfail, dpfail, dppass);
     });
 }
 

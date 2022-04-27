@@ -300,7 +300,8 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
     } else {
         gl.enable(GL_STENCIL_TEST);
         gl.stencilFunc(getStencilFunc(rs.stencilFunc), rs.stencilRef, ~GLuint(0));
-        gl.stencilOp(getStencilOp(rs.stencilOp));
+        gl.stencilOp(getStencilOp(rs.stencilOpSFail), getStencilOp(rs.stencilOpDpFail),
+                getStencilOp(rs.stencilOpDpPass));
         GLuint stencilMask = rs.stencilWrite ? ~GLuint(0) : 0x00;
         gl.stencilMask(stencilMask);
     }

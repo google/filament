@@ -109,7 +109,7 @@ TEST_F(BackendTest, StencilBuffer) {
         ps.rasterState.colorWrite = false;
         ps.rasterState.depthWrite = false;
         ps.rasterState.stencilWrite = true;
-        ps.rasterState.stencilOp = StencilOperation::INCR;
+        ps.rasterState.stencilOpDpPass = StencilOperation::INCR;
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0);
@@ -123,7 +123,7 @@ TEST_F(BackendTest, StencilBuffer) {
         params.flags.discardStart = TargetBufferFlags::NONE;
         ps.rasterState.colorWrite = true;
         ps.rasterState.stencilWrite = false;
-        ps.rasterState.stencilOp = StencilOperation::KEEP;
+        ps.rasterState.stencilOpDpPass = StencilOperation::KEEP;
         ps.rasterState.stencilFunc = RasterState::StencilFunction::E;
         ps.rasterState.stencilRef = 0u;
 

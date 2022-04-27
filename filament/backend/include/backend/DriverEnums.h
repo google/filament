@@ -843,7 +843,9 @@ struct RasterState {
         blendFunctionDstRGB = BlendFunction::ZERO;
         blendFunctionDstAlpha = BlendFunction::ZERO;
         stencilFunc = StencilFunction::A;
-        stencilOp = StencilOperation::KEEP;
+        stencilOpSFail = StencilOperation::KEEP;
+        stencilOpDpFail = StencilOperation::KEEP;
+        stencilOpDpPass = StencilOperation::KEEP;
     }
 
     bool operator == (RasterState rhs) const noexcept { return u == rhs.u; }
@@ -908,10 +910,18 @@ struct RasterState {
             uint8_t stencilRef                  : 8;        // 40
             //! Stencil test function
             StencilFunction stencilFunc         : 3;        // 43
-            //! Stencil operation (when stencil and depth pass)
-            StencilOperation stencilOp          : 3;        // 46
+            //! Stencil operation when stencil test fails
+            StencilOperation stencilOpSFail     : 3;        // 46
             //! padding, must be 0
-            uint32_t padding                    : 18;       // 64
+            uint8_t padding0                    : 2;        // 48
+            //! Stencil operation when stencil test passes but depth test fails
+            StencilOperation stencilOpDpFail    : 3;        // 51
+            //! Stencil operation when both stencil and depth test pass
+            StencilOperation stencilOpDpPass    : 3;        // 54
+            //! padding, must be 0
+            uint8_t padding1                    : 2;        // 56
+            //! padding, must be 0
+            uint8_t padding2                    : 8;        // 64
         };
         uint64_t u = 0;
     };
