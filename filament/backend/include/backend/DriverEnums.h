@@ -843,9 +843,9 @@ struct RasterState {
         blendFunctionDstRGB = BlendFunction::ZERO;
         blendFunctionDstAlpha = BlendFunction::ZERO;
         stencilFunc = StencilFunction::A;
-        stencilOpSFail = StencilOperation::KEEP;
-        stencilOpDpFail = StencilOperation::KEEP;
-        stencilOpDpPass = StencilOperation::KEEP;
+        stencilOpStencilFail = StencilOperation::KEEP;
+        stencilOpDepthFail = StencilOperation::KEEP;
+        stencilOpDepthStencilPass = StencilOperation::KEEP;
     }
 
     bool operator == (RasterState rhs) const noexcept { return u == rhs.u; }
@@ -874,54 +874,54 @@ struct RasterState {
     union {
         struct {
             //! culling mode
-            CullingMode culling                 : 2;        //  2
+            CullingMode culling                         : 2;        //  2
 
             //! blend equation for the red, green and blue components
-            BlendEquation blendEquationRGB      : 3;        //  5
+            BlendEquation blendEquationRGB              : 3;        //  5
             //! blend equation for the alpha component
-            BlendEquation blendEquationAlpha    : 3;        //  8
+            BlendEquation blendEquationAlpha            : 3;        //  8
 
             //! blending function for the source color
-            BlendFunction blendFunctionSrcRGB   : 4;        // 12
+            BlendFunction blendFunctionSrcRGB           : 4;        // 12
             //! blending function for the source alpha
-            BlendFunction blendFunctionSrcAlpha : 4;        // 16
+            BlendFunction blendFunctionSrcAlpha         : 4;        // 16
             //! blending function for the destination color
-            BlendFunction blendFunctionDstRGB   : 4;        // 20
+            BlendFunction blendFunctionDstRGB           : 4;        // 20
             //! blending function for the destination alpha
-            BlendFunction blendFunctionDstAlpha : 4;        // 24
+            BlendFunction blendFunctionDstAlpha         : 4;        // 24
 
             //! Whether depth-buffer writes are enabled
-            bool depthWrite                     : 1;        // 25
+            bool depthWrite                             : 1;        // 25
             //! Depth test function
-            DepthFunc depthFunc                 : 3;        // 28
+            DepthFunc depthFunc                         : 3;        // 28
 
             //! Whether color-buffer writes are enabled
-            bool colorWrite                     : 1;        // 29
+            bool colorWrite                             : 1;        // 29
 
             //! use alpha-channel as coverage mask for anti-aliasing
-            bool alphaToCoverage                : 1;        // 30
+            bool alphaToCoverage                        : 1;        // 30
 
             //! whether front face winding direction must be inverted
-            bool inverseFrontFaces              : 1;        // 31
+            bool inverseFrontFaces                      : 1;        // 31
 
             //! Whether stencil-buffer writes are enabled
-            bool stencilWrite                   : 1;        // 32
+            bool stencilWrite                           : 1;        // 32
             //! Stencil reference value
-            uint8_t stencilRef                  : 8;        // 40
+            uint8_t stencilRef                          : 8;        // 40
             //! Stencil test function
-            StencilFunction stencilFunc         : 3;        // 43
+            StencilFunction stencilFunc                 : 3;        // 43
             //! Stencil operation when stencil test fails
-            StencilOperation stencilOpSFail     : 3;        // 46
+            StencilOperation stencilOpStencilFail       : 3;        // 46
             //! padding, must be 0
-            uint8_t padding0                    : 2;        // 48
+            uint8_t padding0                            : 2;        // 48
             //! Stencil operation when stencil test passes but depth test fails
-            StencilOperation stencilOpDpFail    : 3;        // 51
+            StencilOperation stencilOpDepthFail         : 3;        // 51
             //! Stencil operation when both stencil and depth test pass
-            StencilOperation stencilOpDpPass    : 3;        // 54
+            StencilOperation stencilOpDepthStencilPass  : 3;        // 54
             //! padding, must be 0
-            uint8_t padding1                    : 2;        // 56
+            uint8_t padding1                            : 2;        // 56
             //! padding, must be 0
-            uint8_t padding2                    : 8;        // 64
+            uint8_t padding2                            : 8;        // 64
         };
         uint64_t u = 0;
     };
