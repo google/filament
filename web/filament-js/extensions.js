@@ -146,8 +146,8 @@ Filament.loadClassExtensions = function() {
             reader.requestFormat(format);
         }
 
-        result = reader.load(buffer, options.srgb ? Filament.TransferFunction.sRGB :
-            Filament.TransferFunction.LINEAR);
+        result = reader.load(buffer, options.srgb ? Filament.Ktx2Reader$TransferFunction.sRGB :
+            Filament.Ktx2Reader$TransferFunction.LINEAR);
 
         reader.delete();
         buffer.delete();

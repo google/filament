@@ -67,3 +67,4 @@ if (NOT MSVC AND NOT ANDROID)
 endif()
 
 install(TARGETS basisu DESTINATION bin)
+install(TARGETS basis_transcoder ARCHIVE DESTINATION lib/${DIST_DIR})
