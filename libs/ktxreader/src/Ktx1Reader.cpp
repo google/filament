@@ -33,11 +33,16 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
     const auto dataformat = toPixelDataFormat(ktxinfo);
 
     auto texformat = toTextureFormat(ktxinfo);
+
+#ifndef NDEBUG
     if (srgb && !isSrgbTextureFormat(texformat)) {
-        utils::slog.w << "Requested sRGB format but KTX contains a linear format. ";
+        utils::slog.w << "Requested sRGB format but KTX contains a linear format. "
+            << utils::io::endl;
     } else if (!srgb && isSrgbTextureFormat(texformat)) {
-        utils::slog.w << "Requested linear format but KTX contains a sRGB format. ";
+        utils::slog.w << "Requested linear format but KTX contains a sRGB format. "
+            << utils::io::endl;
     }
+#endif
 
     Texture* texture = Texture::Builder()
         .width(ktxinfo.pixelWidth)

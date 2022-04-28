@@ -1326,7 +1326,7 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         dstSampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
         dstSampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
 
-        // These defaults are up the implementation but since we generate mipmaps unconditionally,
+        // These defaults are up the implementation but since we try to provide mipmaps,
         // we might as well use them. In practice the conformance models look awful without
         // using mipmapping by default.
         dstSampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
