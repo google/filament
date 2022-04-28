@@ -165,7 +165,7 @@ public:
     }
 
     void prepareUpscaler(math::float2 scale) const noexcept;
-    void prepareCamera(const CameraInfo& camera) const noexcept;
+    void prepareCamera(const CameraInfo& cameraInfo) const noexcept;
     void prepareViewport(const Viewport& viewport, uint32_t xoffset, uint32_t yoffset) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
@@ -410,8 +410,6 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    auto& getShadowUniforms() const { return mShadowUb; }
-
     PerViewUniforms const& getPerViewUniforms() const noexcept { return mPerViewUniforms; }
     PerViewUniforms& getPerViewUniforms() noexcept { return mPerViewUniforms; }
 
@@ -479,7 +477,7 @@ private:
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         mPerViewUniforms.bind(driver);
         driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
-        driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowUbh);
+        driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowMapManager.getShadowUniformsHandle());
         driver.bindUniformBuffer(BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
     }
 
@@ -496,7 +494,6 @@ private:
 
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwBufferObject> mLightUbh;
-    backend::Handle<backend::HwBufferObject> mShadowUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
 
     FScene* mScene = nullptr;
@@ -542,7 +539,6 @@ private:
     RenderQuality mRenderQuality;
 
     mutable PerViewUniforms mPerViewUniforms;
-    mutable TypedUniformBuffer<ShadowUib> mShadowUb;
 
     mutable FrameHistory mFrameHistory{};
 

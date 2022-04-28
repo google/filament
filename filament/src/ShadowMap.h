@@ -43,6 +43,8 @@ public:
 
     ~ShadowMap();
 
+    void terminate(FEngine& engine);
+
     struct ShadowMapInfo {
         // the dimension of the encompassing texture atlas
         uint16_t atlasDimension = 0;

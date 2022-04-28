@@ -92,9 +92,6 @@ FView::FView(FEngine& engine)
     mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
-    mShadowUbh = driver.createBufferObject(mShadowUb.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
     mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
@@ -114,9 +111,9 @@ void FView::terminate(FEngine& engine) {
 
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mLightUbh);
-    driver.destroyBufferObject(mShadowUbh);
     driver.destroyBufferObject(mRenderableUbh);
     drainFrameHistory(engine);
+    mShadowMapManager.terminate(engine);
     mPerViewUniforms.terminate(driver);
     mFroxelizer.terminate(driver);
 }
@@ -340,7 +337,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     }
 
     auto shadowTechnique = mShadowMapManager.update(engine, *this, cameraInfo,
-            mShadowUb, renderableData, lightData);
+            renderableData, lightData);
 
     mHasShadowing = any(shadowTechnique);
     mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
@@ -662,9 +659,9 @@ void FView::prepareUpscaler(float2 scale) const noexcept {
     mPerViewUniforms.prepareUpscaler(scale, mDynamicResolution);
 }
 
-void FView::prepareCamera(const CameraInfo& camera) const noexcept {
+void FView::prepareCamera(const CameraInfo& cameraInfo) const noexcept {
     SYSTRACE_CALL();
-    mPerViewUniforms.prepareCamera(camera);
+    mPerViewUniforms.prepareCamera(cameraInfo);
 }
 
 void FView::prepareViewport(const filament::Viewport& viewport,
@@ -730,9 +727,6 @@ void FView::froxelize(FEngine& engine, mat4f const& viewMatrix) const noexcept {
 
 void FView::commitUniforms(DriverApi& driver) const noexcept {
     mPerViewUniforms.commit(driver);
-    if (mShadowUb.isDirty()) {
-        driver.updateBufferObject(mShadowUbh, mShadowUb.toBufferDescriptor(driver), 0);
-    }
 }
 
 void FView::commitFroxels(DriverApi& driverApi) const noexcept {
