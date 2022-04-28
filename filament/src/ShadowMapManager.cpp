@@ -185,8 +185,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
                         .format = view.hasVSM() ? vsmTextureFormat : mTextureFormat
                 });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) { });
-
+            [&view](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                // set uniforms needed to render this ShadowMap
+                view.prepareShadowMap();
+            });
 
     // -------------------------------------------------------------------------------------------
 
@@ -306,11 +308,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
                     const uint32_t dim = options->mapSize;
                     filament::Viewport viewport{ 1, 1, dim - 2, dim - 2 };
                     view.prepareViewport(viewport, 0, 0);
-
-                    // set uniforms needed to render this ShadowMap
-                    // Currently these uniforms are owned by View and are global, but eventually
-                    // this will set a separate per shadowmap UBO
-                    view.prepareShadowMap();
 
                     view.commitUniforms(driver);
 

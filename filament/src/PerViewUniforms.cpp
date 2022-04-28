@@ -285,23 +285,24 @@ void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
-void PerViewUniforms::prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
-        VsmShadowOptions const& options) noexcept {
+void PerViewUniforms::prepareShadowMapping() noexcept {
     auto& s = mUniforms.edit();
     s.vsmExponent = 5.54f;  // fp16: max 5.54f, fp32: max 42.0
-    s.vsmDepthScale = options.minVarianceScale * 0.01f * s.vsmExponent;
-    s.vsmLightBleedReduction = options.lightBleedReduction;
+}
 
-    s.lightFromWorldMatrix = shadowMappingUniforms.lightFromWorldMatrix;
-    s.cascadeSplits = shadowMappingUniforms.cascadeSplits;
-    s.shadowBulbRadiusLs = shadowMappingUniforms.shadowBulbRadiusLs;
-    s.shadowBias = shadowMappingUniforms.shadowBias;
-    s.ssContactShadowDistance = shadowMappingUniforms.ssContactShadowDistance;
-    s.directionalShadows = shadowMappingUniforms.directionalShadows;
-    s.cascades = shadowMappingUniforms.cascades;
+void PerViewUniforms::prepareShadowSampling(PerViewUib& uniforms,
+        ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
+    uniforms.lightFromWorldMatrix       = shadowMappingUniforms.lightFromWorldMatrix;
+    uniforms.cascadeSplits              = shadowMappingUniforms.cascadeSplits;
+    uniforms.shadowBulbRadiusLs         = shadowMappingUniforms.shadowBulbRadiusLs;
+    uniforms.shadowBias                 = shadowMappingUniforms.shadowBias;
+    uniforms.ssContactShadowDistance    = shadowMappingUniforms.ssContactShadowDistance;
+    uniforms.directionalShadows         = shadowMappingUniforms.directionalShadows;
+    uniforms.cascades                   = shadowMappingUniforms.cascades;
 }
 
 void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
+        ShadowMappingUniforms const& shadowMappingUniforms,
         VsmShadowOptions const& options) noexcept {
     SamplerMinFilter filterMin = SamplerMinFilter::LINEAR;
     if (options.anisotropy > 0 || options.mipmapping) {
@@ -315,9 +316,14 @@ void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
             }});
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_VSM;
+    s.vsmExponent = 5.54f;  // fp16: max 5.54f, fp32: max 42.0
+    s.vsmDepthScale = options.minVarianceScale * 0.01f * s.vsmExponent;
+    s.vsmLightBleedReduction = options.lightBleedReduction;
+    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
+void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture,
+        ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
     mSamplers.setSampler(PerViewSib::SHADOW_MAP, {
             texture, {
                     .filterMag = SamplerMagFilter::LINEAR,
@@ -327,22 +333,27 @@ void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
             }});
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
+    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::prepareShadowDPCF(Handle <HwTexture> texture,
+void PerViewUniforms::prepareShadowDPCF(Handle<HwTexture> texture,
+        ShadowMappingUniforms const& shadowMappingUniforms,
         SoftShadowOptions const& options) noexcept {
     mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {}});
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
+    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::prepareShadowPCSS(Handle <HwTexture> texture,
+void PerViewUniforms::prepareShadowPCSS(Handle<HwTexture> texture,
+        ShadowMappingUniforms const& shadowMappingUniforms,
         SoftShadowOptions const& options) noexcept {
     mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {}});
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
+    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
 void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {

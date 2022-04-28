@@ -694,25 +694,25 @@ void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
+    const auto& uniforms = mShadowMapManager.getShadowMappingUniforms();
     switch (mShadowType) {
         case filament::ShadowType::PCF:
-            mPerViewUniforms.prepareShadowPCF(texture);
+            mPerViewUniforms.prepareShadowPCF(texture, uniforms);
             break;
         case filament::ShadowType::VSM:
-            mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
+            mPerViewUniforms.prepareShadowVSM(texture, uniforms, mVsmShadowOptions);
             break;
         case filament::ShadowType::DPCF:
-            mPerViewUniforms.prepareShadowDPCF(texture, mSoftShadowOptions);
+            mPerViewUniforms.prepareShadowDPCF(texture, uniforms, mSoftShadowOptions);
             break;
         case filament::ShadowType::PCSS:
-            mPerViewUniforms.prepareShadowPCSS(texture, mSoftShadowOptions);
+            mPerViewUniforms.prepareShadowPCSS(texture, uniforms, mSoftShadowOptions);
             break;
     }
 }
 
 void FView::prepareShadowMap() const noexcept {
-    mPerViewUniforms.prepareShadowMapping(
-            mShadowMapManager.getShadowMappingUniforms(), mVsmShadowOptions);
+    mPerViewUniforms.prepareShadowMapping();
 }
 
 void FView::cleanupRenderPasses() const noexcept {
