@@ -2,10 +2,6 @@
 // Uniforms access
 //------------------------------------------------------------------------------
 
-#define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x1u
-#define FILAMENT_OBJECT_MORPHING_ENABLED_BIT   0x2u
-#define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x4u
-
 /** @public-api */
 highp mat4 getViewFromWorldMatrix() {
     return frameUniforms.viewFromWorldMatrix;
@@ -37,21 +33,6 @@ highp mat4 getWorldFromClipMatrix() {
 }
 
 /** @public-api */
-highp vec4 getResolution() {
-    return frameUniforms.resolution;
-}
-
-/** @public-api */
-highp vec3 getWorldCameraPosition() {
-    return frameUniforms.cameraPosition;
-}
-
-/** @public-api */
-highp vec3 getWorldOffset() {
-    return frameUniforms.worldOffset;
-}
-
-/** @public-api */
 float getTime() {
     return frameUniforms.time;
 }
@@ -64,6 +45,27 @@ highp vec4 getUserTime() {
 /** @public-api **/
 highp float getUserTimeMod(float m) {
     return mod(mod(frameUniforms.userTime.x, m) + mod(frameUniforms.userTime.y, m), m);
+}
+
+// TODO: below shouldn't be accessible from post-process materials
+
+#define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x1u
+#define FILAMENT_OBJECT_MORPHING_ENABLED_BIT   0x2u
+#define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x4u
+
+/** @public-api */
+highp vec4 getResolution() {
+    return frameUniforms.resolution;
+}
+
+/** @public-api */
+highp vec3 getWorldCameraPosition() {
+    return frameUniforms.cameraPosition;
+}
+
+/** @public-api */
+highp vec3 getWorldOffset() {
+    return frameUniforms.worldOffset;
 }
 
 /** @public-api */
