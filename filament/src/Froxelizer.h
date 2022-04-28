@@ -126,7 +126,7 @@ public:
     void updateUniforms(PerViewUib& s) {
         s.zParams = mParamsZ;
         s.fParams = mParamsF;
-        s.froxelCountXY = math::float2{ mViewport.width, mViewport.width } / mFroxelDimension;
+        s.froxelCountXY = math::float2{ mViewport.width, mViewport.height } / mFroxelDimension;
     }
 
     // send froxel data to GPU
