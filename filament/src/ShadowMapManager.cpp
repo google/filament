@@ -177,11 +177,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
 
     struct ShadowPassData {
         FrameGraphId<FrameGraphTexture> tempBlurSrc{};  // temporary shadowmap when blurring
+        FrameGraphId<FrameGraphTexture> output;
         uint32_t blurRt{};
         uint32_t shadowRt{};
     };
-
-    auto shadows = prepareShadowPass.getData().shadows;
 
     auto& ppm = engine.getPostProcessManager();
 
@@ -195,7 +194,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
 
                     FrameGraphRenderPass::Descriptor renderTargetDesc{};
 
-                    auto attachment = builder.createSubresource(prepareShadowPass->shadows,
+                    data.output = builder.createSubresource(prepareShadowPass->shadows,
                             "Shadowmap Layer", { .layer = layer });
 
                     if (view.hasVSM()) {
@@ -220,10 +219,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
                         depth = builder.write(depth,
                                 FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
-                        attachment = builder.write(attachment,
+                        data.output = builder.write(data.output,
                                 FrameGraphTexture::Usage::COLOR_ATTACHMENT);
 
-                        renderTargetDesc.attachments.color[0] = attachment;
+                        renderTargetDesc.attachments.color[0] = data.output;
                         renderTargetDesc.attachments.depth = depth;
                         renderTargetDesc.clearFlags =
                                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
@@ -247,9 +246,9 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
                         }
                     } else {
                         // the shadowmap layer
-                        attachment = builder.write(attachment,
+                        data.output = builder.write(data.output,
                                 FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                        renderTargetDesc.attachments.depth = attachment;
+                        renderTargetDesc.attachments.depth = data.output;
                         renderTargetDesc.clearFlags = TargetBufferFlags::DEPTH;
                     }
 
@@ -314,7 +313,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
                 const float ratio = float(kernelWidth + 1) / sigma;
                 ppm.gaussianBlurPass(fg,
                         shadowPass->tempBlurSrc,
-                        shadows,
+                        shadowPass->output,
                         false, kernelWidth, ratio);
             }
 
@@ -324,14 +323,14 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
             if (textureRequirements.levels > 1) {
                 for (size_t level = 0; level < textureRequirements.levels - 1; level++) {
                     const bool finalize = level == textureRequirements.levels - 2;
-                    shadows = ppm.vsmMipmapPass(fg, shadows, layer, level,
+                    ppm.vsmMipmapPass(fg, prepareShadowPass->shadows, layer, level,
                             vsmClearColor, finalize);
                 }
             }
         }
     }
 
-    return shadows;
+    return prepareShadowPass->shadows;
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
