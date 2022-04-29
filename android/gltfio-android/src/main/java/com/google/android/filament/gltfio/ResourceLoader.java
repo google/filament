@@ -35,7 +35,8 @@ import java.nio.Buffer;
  */
 public class ResourceLoader {
     private final long mNativeObject;
-    private final long mNativeProvider;
+    private final long mNativeStbProvider;
+    private final long mNativeKtx2Provider;
 
     /**
      * Constructs a resource loader tied to the given Filament engine.
@@ -47,9 +48,11 @@ public class ResourceLoader {
     public ResourceLoader(@NonNull Engine engine) {
         long nativeEngine = engine.getNativeObject();
         mNativeObject = nCreateResourceLoader(nativeEngine, false, false, false);
-        mNativeProvider = nCreateTextureProvider(nativeEngine);
-        nAddTextureProvider(mNativeObject, "image/jpeg", mNativeProvider);
-        nAddTextureProvider(mNativeObject, "image/png", mNativeProvider);
+        mNativeStbProvider = nCreateStbProvider(nativeEngine);
+        mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
+        nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
+        nAddTextureProvider(mNativeObject, "image/png", mNativeStbProvider);
+        nAddTextureProvider(mNativeObject, "image/ktx2", mNativeKtx2Provider);
     }
 
     /**
@@ -67,9 +70,11 @@ public class ResourceLoader {
         long nativeEngine = engine.getNativeObject();
         mNativeObject = nCreateResourceLoader(nativeEngine, normalizeSkinningWeights,
                 recomputeBoundingBoxes, ignoreBindTransform);
-        mNativeProvider = nCreateTextureProvider(nativeEngine);
-        nAddTextureProvider(mNativeObject, "image/jpeg", mNativeProvider);
-        nAddTextureProvider(mNativeObject, "image/png", mNativeProvider);
+        mNativeStbProvider = nCreateStbProvider(nativeEngine);
+        mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
+        nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
+        nAddTextureProvider(mNativeObject, "image/png", mNativeStbProvider);
+        nAddTextureProvider(mNativeObject, "image/ktx2", mNativeKtx2Provider);
     }
 
     /**
@@ -77,7 +82,8 @@ public class ResourceLoader {
      */
     public void destroy() {
         nDestroyResourceLoader(mNativeObject);
-        nDestroyTextureProvider(mNativeProvider);
+        nDestroyTextureProvider(mNativeStbProvider);
+        nDestroyTextureProvider(mNativeKtx2Provider);
     }
 
     /**
@@ -187,7 +193,8 @@ public class ResourceLoader {
     private static native void nAsyncUpdateLoad(long nativeLoader);
     private static native void nAsyncCancelLoad(long nativeLoader);
 
-    private static native long nCreateTextureProvider(long nativeEngine);
+    private static native long nCreateStbProvider(long nativeEngine);
+    private static native long nCreateKtx2Provider(long nativeEngine);
     private static native void nAddTextureProvider(long nativeLoader, String url, long nativeProvider);
     private static native void nDestroyTextureProvider(long nativeProvider);
 }

@@ -309,7 +309,7 @@ class FilamentViewer extends LitElement {
                 asyncInterval: 30
             };
 
-            const doneAddingResources = (resourceLoader, stbProvider) => {
+            const doneAddingResources = (resourceLoader, stbProvider, ktx2Provider) => {
                 this.srcBlobResources = {};
                 resourceLoader.asyncBeginLoad(this.asset);
                 const timer = setInterval(() => {
@@ -319,6 +319,7 @@ class FilamentViewer extends LitElement {
                         clearInterval(timer);
                         resourceLoader.delete();
                         stbProvider.delete();
+                        ktx2Provider.delete();
                         this.animator = this.asset.getAnimator();
                         this.animationStartTime = Date.now();
                     }
@@ -337,9 +338,11 @@ class FilamentViewer extends LitElement {
                     config.ignoreBindTransform);
 
                 const stbProvider = new Filament.gltfio$StbProvider(this.engine);
+                const ktx2Provider = new Filament.gltfio$Ktx2Provider(this.engine);
 
-                resourceLoader.addTextureProvider("image/jpeg", stbProvider);
-                resourceLoader.addTextureProvider("image/png", stbProvider);
+                resourceLoader.addStbProvider("image/jpeg", stbProvider);
+                resourceLoader.addStbProvider("image/png", stbProvider);
+                resourceLoader.addKtx2Provider("image/ktx2", ktx2Provider);
 
                 let remaining = Object.keys(this.srcBlobResources).length;
                 for (const name in this.srcBlobResources) {
@@ -347,7 +350,7 @@ class FilamentViewer extends LitElement {
                         const desc = getBufferDescriptor(new Uint8Array(buffer));
                         resourceLoader.addResourceData(name, getBufferDescriptor(desc));
                         if (--remaining === 0) {
-                            doneAddingResources(resourceLoader, stbProvider);
+                            doneAddingResources(resourceLoader, stbProvider, ktx2Provider);
                         }
                     });
                 }
