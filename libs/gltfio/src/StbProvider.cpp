@@ -35,7 +35,7 @@ using std::unique_ptr;
 
 namespace gltfio {
 
-class StbProvider : public TextureProvider {
+class StbProvider final : public TextureProvider {
 public:
     StbProvider(Engine* engine);
     ~StbProvider();

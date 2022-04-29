@@ -58,6 +58,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/FFilamentInstance.h
         ${GLTFIO_DIR}/src/FilamentInstance.cpp
         ${GLTFIO_DIR}/src/GltfEnums.h
+        ${GLTFIO_DIR}/src/Ktx2Provider.cpp
         ${GLTFIO_DIR}/src/MaterialProvider.cpp
         ${GLTFIO_DIR}/src/ResourceLoader.cpp
         ${GLTFIO_DIR}/src/StbProvider.cpp

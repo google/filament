@@ -1305,13 +1305,10 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
 void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
         const cgltf_texture* srcTexture, bool srgb) {
-    if (!srcTexture->image) {
-        if (srcTexture->basisu_image) {
-            const char* name = srcTexture->name ? srcTexture->name : srcTexture->basisu_image->uri;
-            slog.w << "BasisU is not yet supported (" << name << ")." << io::endl;
-        } else {
-            slog.w << "Texture is missing image (" << srcTexture->name << ")." << io::endl;
-        }
+    if (!srcTexture->image && !srcTexture->basisu_image) {
+#ifndef NDEBUG
+        slog.w << "Texture is missing image (" << srcTexture->name << ")." << io::endl;
+#endif
         return;
     }
     TextureSampler dstSampler;

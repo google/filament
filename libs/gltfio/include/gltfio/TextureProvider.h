@@ -169,6 +169,12 @@ public:
  */
 TextureProvider* createStbProvider(filament::Engine* engine);
 
+/**
+ * Creates a decoder that can handle certain types of "image/ktx2" content as specified in
+ * the KHR_texture_basisu specification.
+ */
+TextureProvider* createKtx2Provider(filament::Engine* engine);
+
 } // namespace gltfio
 
 #endif // GLTFIO_TEXTUREPROVIDER_H
