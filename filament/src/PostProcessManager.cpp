@@ -971,8 +971,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
     auto from = input;
     for (size_t i = 0; i < levels - 1; i++) {
         auto output = mipmapPass->out[i];
-        gaussianBlurPass(fg, from, output, reinhard, kernelWidth, sigma);
-        from = output;
+        from = gaussianBlurPass(fg, from, output, reinhard, kernelWidth, sigma);
         reinhard = false; // only do the reinhard filtering on the first level
     }
 
@@ -1033,7 +1032,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     // and because it's a separable filter, the effective 2D filter kernel size is 17*17
     // The total number of samples needed over the two passes is 18.
 
-    fg.addPass<BlurPassData>("Gaussian Blur Pass (separable)",
+    auto& blurPass = fg.addPass<BlurPassData>("Gaussian Blur Pass (separable)",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto inDesc = builder.getDescriptor(input);
 
@@ -1141,7 +1140,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 render(hwOutRT, separableGaussianBlur.getPipelineState(mEngine), driver);
             });
 
-    return output;
+    return blurPass->out;
 }
 
 PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(FrameGraph& fg,
