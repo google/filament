@@ -86,8 +86,8 @@ static FinalFormatInfo getFinalFormatInfo(Texture::InternalFormat fmt) {
         case tif::ETC2_EAC_RGBA8:  return {"ETC2_EAC_RGBA8", true, true, LINEAR, ttf::cTFETC2_RGBA, tct::ETC2_EAC_SRGBA8};
         case tif::DXT1_SRGB: return {"DXT1_SRGB", true, true, sRGB, ttf::cTFBC1_RGB, tct::DXT1_RGB};
         case tif::DXT1_RGB: return {"DXT1_RGB", true, true, LINEAR, ttf::cTFBC1_RGB, tct::DXT1_SRGB};
-        case tif::DXT3_SRGBA: return {"DXT3_SRGBA", true, true, sRGB, ttf::cTFBC3_RGBA, tct::DXT3_RGBA};
-        case tif::DXT3_RGBA: return {"DXT3_RGBA", true, true, LINEAR, ttf::cTFBC3_RGBA, tct::DXT3_SRGBA};
+        case tif::DXT5_SRGBA: return {"DXT5_SRGBA", true, true, sRGB, ttf::cTFBC3_RGBA, tct::DXT5_RGBA};
+        case tif::DXT5_RGBA: return {"DXT5_RGBA", true, true, LINEAR, ttf::cTFBC3_RGBA, tct::DXT5_SRGBA};
         case tif::SRGB8_ALPHA8_ASTC_4x4: return {"SRGB8_ALPHA8_ASTC_4x4", true, true, sRGB, ttf::cTFASTC_4x4_RGBA, tct::RGBA_ASTC_4x4};
         case tif::RGBA_ASTC_4x4: return {"RGBA_ASTC_4x4", true, true, LINEAR, ttf::cTFASTC_4x4_RGBA, tct::SRGB8_ALPHA8_ASTC_4x4};
         case tif::EAC_R11: return {"EAC_R11", true, true, LINEAR, ttf::cTFETC2_EAC_R11, tct::EAC_R11};
