@@ -23,55 +23,6 @@
 namespace ktxreader {
 namespace Ktx1Reader {
 
-template<typename T>
-T toCompressedFilamentEnum(uint32_t format) {
-    switch (format) {
-        case Ktx1Bundle::RGB_S3TC_DXT1: return T::DXT1_RGB;
-        case Ktx1Bundle::RGBA_S3TC_DXT1: return T::DXT1_RGBA;
-        case Ktx1Bundle::RGBA_S3TC_DXT3: return T::DXT3_RGBA;
-        case Ktx1Bundle::RGBA_S3TC_DXT5: return T::DXT5_RGBA;
-        case Ktx1Bundle::RGBA_ASTC_4x4: return T::RGBA_ASTC_4x4;
-        case Ktx1Bundle::RGBA_ASTC_5x4: return T::RGBA_ASTC_5x4;
-        case Ktx1Bundle::RGBA_ASTC_5x5: return T::RGBA_ASTC_5x5;
-        case Ktx1Bundle::RGBA_ASTC_6x5: return T::RGBA_ASTC_6x5;
-        case Ktx1Bundle::RGBA_ASTC_6x6: return T::RGBA_ASTC_6x6;
-        case Ktx1Bundle::RGBA_ASTC_8x5: return T::RGBA_ASTC_8x5;
-        case Ktx1Bundle::RGBA_ASTC_8x6: return T::RGBA_ASTC_8x6;
-        case Ktx1Bundle::RGBA_ASTC_8x8: return T::RGBA_ASTC_8x8;
-        case Ktx1Bundle::RGBA_ASTC_10x5: return T::RGBA_ASTC_10x5;
-        case Ktx1Bundle::RGBA_ASTC_10x6: return T::RGBA_ASTC_10x6;
-        case Ktx1Bundle::RGBA_ASTC_10x8: return T::RGBA_ASTC_10x8;
-        case Ktx1Bundle::RGBA_ASTC_10x10: return T::RGBA_ASTC_10x10;
-        case Ktx1Bundle::RGBA_ASTC_12x10: return T::RGBA_ASTC_12x10;
-        case Ktx1Bundle::RGBA_ASTC_12x12: return T::RGBA_ASTC_12x12;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_4x4: return T::SRGB8_ALPHA8_ASTC_4x4;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_5x4: return T::SRGB8_ALPHA8_ASTC_5x4;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_5x5: return T::SRGB8_ALPHA8_ASTC_5x5;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_6x5: return T::SRGB8_ALPHA8_ASTC_6x5;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_6x6: return T::SRGB8_ALPHA8_ASTC_6x6;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_8x5: return T::SRGB8_ALPHA8_ASTC_8x5;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_8x6: return T::SRGB8_ALPHA8_ASTC_8x6;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_8x8: return T::SRGB8_ALPHA8_ASTC_8x8;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_10x5: return T::SRGB8_ALPHA8_ASTC_10x5;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_10x6: return T::SRGB8_ALPHA8_ASTC_10x6;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_10x8: return T::SRGB8_ALPHA8_ASTC_10x8;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_10x10: return T::SRGB8_ALPHA8_ASTC_10x10;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_12x10: return T::SRGB8_ALPHA8_ASTC_12x10;
-        case Ktx1Bundle::SRGB8_ALPHA8_ASTC_12x12: return T::SRGB8_ALPHA8_ASTC_12x12;
-        case Ktx1Bundle::R11_EAC: return T::EAC_R11;
-        case Ktx1Bundle::SIGNED_R11_EAC: return T::EAC_R11_SIGNED;
-        case Ktx1Bundle::RG11_EAC: return T::EAC_RG11;
-        case Ktx1Bundle::SIGNED_RG11_EAC: return T::EAC_RG11_SIGNED;
-        case Ktx1Bundle::RGB8_ETC2: return T::ETC2_RGB8;
-        case Ktx1Bundle::SRGB8_ETC2: return T::ETC2_SRGB8;
-        case Ktx1Bundle::RGB8_ALPHA1_ETC2: return T::ETC2_RGB8_A1;
-        case Ktx1Bundle::SRGB8_ALPHA1_ETC: return T::ETC2_SRGB8_A1;
-        case Ktx1Bundle::RGBA8_ETC2_EAC: return T::ETC2_EAC_RGBA8;
-        case Ktx1Bundle::SRGB8_ALPHA8_ETC2_EAC: return T::ETC2_EAC_SRGBA8;
-    }
-    return (T) 0xffff;
-}
-
 Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
         Callback callback, void* userdata) {
     using Sampler = Texture::Sampler;
