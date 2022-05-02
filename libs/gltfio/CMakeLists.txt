@@ -30,6 +30,7 @@ set(SRCS
         src/FFilamentInstance.h
         src/FilamentInstance.cpp
         src/GltfEnums.h
+        src/Ktx2Provider.cpp
         src/MaterialProvider.cpp
         src/ResourceLoader.cpp
         src/StbProvider.cpp
