@@ -34,6 +34,10 @@ using namespace ktxreader;
 using namespace filament;
 using namespace filamesh;
 
+const double kFov = 60.0;
+const double kNearPlane = 0.1;
+const double kFarPlane = 10.0;
+
 void FilamentApp::initialize() {
 #if FILAMENT_APP_USE_OPENGL
     engine = Engine::create(filament::Engine::Backend::OPENGL);
@@ -94,15 +98,9 @@ void FilamentApp::initialize() {
 
     filaView->setScene(scene);
     filaView->setCamera(camera);
-    filaView->setViewport(Viewport(0, 0, width, height));
 
-    const uint32_t w = filaView->getViewport().width;
-    const uint32_t h = filaView->getViewport().height;
-    const float aspect = (float) w / h;
     cameraManipulator.setCamera(camera);
-    cameraManipulator.setViewport(w, h);
     cameraManipulator.lookAt(filament::math::double3(0, 0, 3), filament::math::double3(0, 0, 0));
-    camera->setProjection(60, aspect, 0.1, 10);
 }
 
 void FilamentApp::render() {
@@ -114,6 +112,22 @@ void FilamentApp::render() {
 
 void FilamentApp::pan(float deltaX, float deltaY) {
     cameraManipulator.rotate(filament::math::double2(deltaX, -deltaY), 10);
+}
+
+void FilamentApp::updateViewportAndCameraProjection(uint32_t width, uint32_t height,
+        float scaleFactor) {
+    if (!filaView || !camera) {
+        return;
+    }
+
+    cameraManipulator.setViewport(width, height);
+
+    const uint32_t scaledWidth = width * scaleFactor;
+    const uint32_t scaledHeight = height * scaleFactor;
+    filaView->setViewport({0, 0, scaledWidth, scaledHeight});
+
+    const double aspect = (double)width / height;
+    camera->setProjection(kFov, aspect, kNearPlane, kFarPlane);
 }
 
 FilamentApp::~FilamentApp() {
