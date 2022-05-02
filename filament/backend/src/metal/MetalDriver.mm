@@ -40,24 +40,30 @@
 namespace filament {
 namespace backend {
 
-Driver* MetalDriverFactory::create(MetalPlatform* const platform) {
-    return MetalDriver::create(platform);
+Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+    return MetalDriver::create(platform, driverConfig);
 }
 
 UTILS_NOINLINE
-Driver* MetalDriver::create(MetalPlatform* const platform) {
+Driver* MetalDriver::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
     assert_invariant(platform);
-    return new MetalDriver(platform);
+    return new MetalDriver(platform, driverConfig);
+}
+
+size_t MetalDriver::getHandleArenaSize(const Platform::DriverConfig& driverConfig) noexcept {
+    size_t configSize = driverConfig.getHandleArenaSize();
+    size_t defaultSize = FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    return configSize > defaultSize ? configSize : defaultSize;
 }
 
 Dispatcher MetalDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<MetalDriver>::make();
 }
 
-MetalDriver::MetalDriver(MetalPlatform* platform) noexcept
+MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
           mContext(new MetalContext),
-          mHandleAllocator("Handles", FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U) {
+          mHandleAllocator("Handles", getHandleArenaSize(driverConfig)) {
     mContext->driver = this;
 
     mContext->device = mPlatform.createDevice();

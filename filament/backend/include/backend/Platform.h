@@ -37,6 +37,20 @@ public:
         uintptr_t image = 0;
     };
 
+    class DriverConfig {
+    private:
+        size_t mHandleArenaSize;    // size of handle arena in bytes
+
+    public:
+        DriverConfig(const DriverConfig* srcConfig);
+        DriverConfig(uint32_t handleArenaSizeInMB = 0);
+
+        const size_t getHandleArenaSize() const noexcept { return mHandleArenaSize; }
+
+    private:
+        void init(uint32_t handleArenaSizeInMB);
+    };
+
     virtual ~Platform() noexcept;
 
     /**
@@ -56,7 +70,7 @@ public:
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual backend::Driver* createDriver(void* sharedContext) noexcept = 0;
+    virtual backend::Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept = 0;
 
     /**
      * Processes the platform's event queue when called from its primary event-handling thread.

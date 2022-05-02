@@ -54,6 +54,22 @@ class LightManager;
 class RenderableManager;
 class TransformManager;
 
+#ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
+// Froxelization needs about 1 MiB. Command buffer needs about 1 MiB.
+#    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 3
+#endif
+
+#ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
+// size of the high-level draw commands buffer (comes from the per-render pass allocator)
+#    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 2
+#endif
+
+#ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
+// size of a command-stream buffer (comes from mmap -- not the per-engine arena)
+#    define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
+#endif
+
+
 /**
  * Engine is filament's main entry-point.
  *
@@ -151,6 +167,70 @@ class UTILS_PUBLIC Engine {
 public:
     using Platform = backend::Platform;
     using Backend = backend::Backend;
+    using DriverConfig = backend::Platform::DriverConfig;
+
+    /**
+    * ConfigParams are used to define the memory footprint used by the engine, such as the
+    * command buffer size. ConfigParams can be used to customize engine requirements based 
+    * on the applications needs.
+    */
+    class ConfigParams {
+    private:
+        static constexpr uint32_t DEFAULT_COMMAND_BUFFER_SIZE_IN_MB = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3;
+
+        size_t mMinCommandBufferSize;           // minimum size of command buffer
+        size_t mCommandBufferSize;              // size of command buffer
+        size_t mPerFrameCommandsSize;           // size of the high-level draw commands buffer
+        size_t mPerRenderPassArenaSize;         // size of the per-pass arena buffer
+        DriverConfig mDriverConfig;             // parameters for driver initialization
+
+    public:
+        /**
+        * ConfigParams constructor
+        * 
+        * @param srcConfig      A pointer to a ConfigParams object containing values to be duplicated.
+        */
+        ConfigParams(const ConfigParams* srcConfig);
+
+        /**
+        * ConfigParams constructor. Parameters may be ignored and default values used if
+        * they are deemed too small or invalid by the engine.
+        *
+        * @param commandBufferMB            Memory size (in MB) to allocate for Engine command buffer.
+        * 
+        *                                   Should always be 3 * perFrameCommandsMB so up to 3 frames can
+        *                                   be overlapping at once.
+        * 
+        *                                   Defaults to FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB.
+        * 
+        * @param perFrameCommandsMB         Memory size (in MB) to allocate for per-frame commands.
+        * 
+        *                                   This size dictates the maximum number of visible objects in
+        *                                   the scene.
+        * 
+        * @param perRenderPassArenaMB       Memory size (in MB) to allocate for per-render-pass arena.
+        * 
+        *                                   Rule of thumb: perRenderPassArenaMB must be roughly 
+        *                                   1 MB larger than perFrameCommandsMB
+        * 
+        * @param driverHandleArenaSizeMB    Memory size (in MB) to allocate to the driver handle arena.
+        * 
+        *                                   If 0, then the default value for the given platform is used.
+        */
+        ConfigParams(uint32_t commandBufferMB = DEFAULT_COMMAND_BUFFER_SIZE_IN_MB,
+            uint32_t perFrameCommandsMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB,
+            uint32_t perRenderPassArenaMB = FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB,
+            uint32_t driverHandleArenaSizeMB = 0);      
+
+        const size_t CommandBufferSize() const noexcept { return mCommandBufferSize; }
+        const size_t MinCommandBufferSize() const noexcept { return mMinCommandBufferSize; }
+        const size_t PerFrameCommandsSize() const noexcept { return mPerFrameCommandsSize; }
+        const size_t PerRenderPassArenaSize() const noexcept { return mPerRenderPassArenaSize; }
+        const DriverConfig& DriverParams() const noexcept { return mDriverConfig; }
+
+    private:
+        void init(uint32_t commandBufferMB, uint32_t perFrameCommandsMB, uint32_t perRenderPassArenaMB);
+    };
 
     /**
      * Creates an instance of Engine
@@ -175,6 +255,8 @@ public:
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
      *
+     * @param configParams      A pointer to optional parameters to specify memory size
+     *                          configuration options.  If nullptr, then defaults used.
      *
      * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
      *
@@ -189,7 +271,8 @@ public:
      * This method is thread-safe.
      */
     static Engine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const ConfigParams* configParams = nullptr);
 
 #if UTILS_HAS_THREADING
     /**
@@ -231,10 +314,14 @@ public:
      *                          when creating filament's internal context.
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
+     * 
+     * @param configParams      A pointer to optional parameters to specify memory size
+     *                          configuration options
      */
     static void createAsync(CreateCallback callback, void* user,
             Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const ConfigParams* configParams = nullptr);
 
     /**
      * Retrieve an Engine* from createAsync(). This must be called from the same thread than

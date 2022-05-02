@@ -61,11 +61,12 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
-FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext) {
+FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams *configParams) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext);
+    ConfigParams config(configParams);
+    FEngine* instance = new FEngine(backend, platform, sharedGLContext, config);
 
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
@@ -83,7 +84,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
             delete instance;
             return nullptr;
         }
-        instance->mDriver = platform->createDriver(sharedGLContext);
+        instance->mDriver = platform->createDriver(sharedGLContext, config.DriverParams());
     } else {
         // start the driver thread
         instance->mDriverThread = std::thread(&FEngine::loop, instance);
@@ -112,10 +113,11 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
 #if UTILS_HAS_THREADING
 
 void FEngine::createAsync(CreateCallback callback, void* user,
-        Backend backend, Platform* platform, void* sharedGLContext) {
+        Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams* configParams) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext);
+    ConfigParams params(configParams);
+    FEngine* instance = new FEngine(backend, platform, sharedGLContext, params);
 
     // start the driver thread
     instance->mDriverThread = std::thread(&FEngine::loop, instance);
@@ -167,9 +169,10 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
+FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams& configParams) :
         mBackend(backend),
         mPlatform(platform),
+        mConfigParams(&configParams),
         mSharedGLContext(sharedGLContext),
         mPostProcessManager(*this),
         mEntityManager(EntityManager::get()),
@@ -177,8 +180,8 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mTransformManager(),
         mLightManager(*this),
         mCameraManager(*this),
-        mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
-        mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
+        mCommandBufferQueue(configParams.MinCommandBufferSize(), configParams.CommandBufferSize()),
+        mPerRenderPassAllocator("per-renderpass allocator", configParams.PerRenderPassArenaSize()),
         mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
@@ -358,7 +361,7 @@ void FEngine::shutdown() {
 #ifndef NDEBUG
     // print out some statistics about this run
     size_t wm = mCommandBufferQueue.getHighWatermark();
-    size_t wmpct = wm / (CONFIG_COMMAND_BUFFERS_SIZE / 100);
+    size_t wmpct = wm / (mConfigParams.CommandBufferSize() / 100);
     slog.d << "CircularBuffer: High watermark "
            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
 #endif
@@ -583,7 +586,7 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    mDriver = mPlatform->createDriver(mSharedGLContext);
+    mDriver = mPlatform->createDriver(mSharedGLContext, mConfigParams.DriverParams());
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
         // if we get here, it's because the driver couldn't be initialized and the problem has

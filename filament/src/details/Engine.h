@@ -126,19 +126,16 @@ public:
     static constexpr size_t CONFIG_FROXEL_SLICE_COUNT      = 16;
     static constexpr bool   CONFIG_IBL_USE_IRRADIANCE_MAP  = false;
 
-    static constexpr size_t CONFIG_PER_RENDER_PASS_ARENA_SIZE   = filament::CONFIG_PER_RENDER_PASS_ARENA_SIZE;
-    static constexpr size_t CONFIG_PER_FRAME_COMMANDS_SIZE      = filament::CONFIG_PER_FRAME_COMMANDS_SIZE;
-    static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE     = filament::CONFIG_MIN_COMMAND_BUFFERS_SIZE;
-    static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE         = filament::CONFIG_COMMAND_BUFFERS_SIZE;
-
 public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const ConfigParams* configParams = nullptr);
 
 #if UTILS_HAS_THREADING
     static void createAsync(CreateCallback callback, void* user,
             Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const ConfigParams* configParams = nullptr);
 
     static FEngine* getEngine(void* token);
 #endif
@@ -146,6 +143,8 @@ public:
     static void destroy(FEngine* engine);
 
     ~FEngine() noexcept;
+
+    const ConfigParams& GetConfig() const noexcept { return mConfigParams; }
 
     backend::Driver& getDriver() const noexcept { return *mDriver; }
 
@@ -357,7 +356,7 @@ public:
     backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
 
 private:
-    FEngine(Backend backend, Platform* platform, void* sharedGLContext);
+    FEngine(Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams& configParams);
     void init();
     void shutdown();
 
@@ -379,6 +378,7 @@ private:
     backend::Driver* mDriver = nullptr;
     backend::Handle<backend::HwRenderTarget> mDefaultRenderTarget;
 
+    ConfigParams mConfigParams;
     Backend mBackend;
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;

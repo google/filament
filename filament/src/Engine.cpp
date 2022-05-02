@@ -44,8 +44,8 @@ namespace filament {
 using namespace math;
 using namespace backend;
 
-Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContext) {
-    return FEngine::create(backend, platform, sharedGLContext);
+Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams* configParams) {
+    return FEngine::create(backend, platform, sharedGLContext, configParams);
 }
 
 void Engine::destroy(Engine* engine) {
@@ -54,8 +54,8 @@ void Engine::destroy(Engine* engine) {
 
 #if UTILS_HAS_THREADING
 void Engine::createAsync(Engine::CreateCallback callback, void* user, Backend backend,
-        Platform* platform, void* sharedGLContext) {
-    FEngine::createAsync(callback, user, backend, platform, sharedGLContext);
+        Platform* platform, void* sharedGLContext, const ConfigParams* configParams) {
+    FEngine::createAsync(callback, user, backend, platform, sharedGLContext, configParams);
 }
 
 Engine* Engine::getEngine(void* token) {
@@ -250,5 +250,41 @@ DebugRegistry& Engine::getDebugRegistry() noexcept {
 void Engine::pumpMessageQueues() {
     upcast(this)->pumpMessageQueues();
 }
+
+Engine::ConfigParams::ConfigParams(const ConfigParams* srcConfig) :
+    mDriverConfig(srcConfig == nullptr ? nullptr : &srcConfig->DriverParams())
+{
+    if (srcConfig != nullptr) {
+        *this = *srcConfig;
+    }
+    else {
+        init(DEFAULT_COMMAND_BUFFER_SIZE_IN_MB, FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB);
+    }
+}
+
+Engine::ConfigParams::ConfigParams(uint32_t commandBufferMB, uint32_t perFrameCommandsMB, uint32_t perRenderPassArenaMB, uint32_t driverHandleArenaSizeMB) :
+    mDriverConfig(driverHandleArenaSizeMB) 
+{
+    init(commandBufferMB, perFrameCommandsMB, perRenderPassArenaMB);
+}
+
+void Engine::ConfigParams::init(uint32_t commandBufferMB, uint32_t perFrameCommandsMB, uint32_t perRenderPassArenaMB) {
+    constexpr size_t MB = 1024 * 1024;
+    constexpr uint32_t ARENA_COMMANDS_DELTA = 1;    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
+    constexpr uint32_t NUM_FRAMES_OVERLAP = 3;      // Number of potential concurrent frames in flight
+
+    uint32_t minCommandBuffersSizeMB = max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, perFrameCommandsMB);  // As a rule of thumb use the same value as perFrameCommandsMB
+    commandBufferMB = max(commandBufferMB, minCommandBuffersSizeMB * NUM_FRAMES_OVERLAP);
+    perFrameCommandsMB = max((uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, minCommandBuffersSizeMB);
+    perRenderPassArenaMB = max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, perRenderPassArenaMB);
+    perRenderPassArenaMB = max(perRenderPassArenaMB, perFrameCommandsMB + ARENA_COMMANDS_DELTA);        // Enforce pre-render-pass arena rule-of-thumb
+
+    mMinCommandBufferSize = minCommandBuffersSizeMB * MB;
+    mCommandBufferSize = commandBufferMB * MB;
+    mPerFrameCommandsSize = perFrameCommandsMB * MB;
+    mPerRenderPassArenaSize = perRenderPassArenaMB * MB;
+}
+
+
 
 } // namespace filament
