@@ -76,7 +76,7 @@ struct WGLSwapChain {
     bool isHeadless = false;
 };
 
-Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformWGL::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     int result = 0;
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
     int pixelFormat = 0;
@@ -147,7 +147,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
 
     result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-    return OpenGLDriverFactory::create(this, sharedGLContext);
+    return OpenGLDriverFactory::create(this, sharedGLContext, driverConfig);
 
 error:
     if (tempContext) {

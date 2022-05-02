@@ -88,8 +88,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 namespace filament::backend {
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
-        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept {
-    return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount);
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount, const Platform::DriverConfig& driverConfig) noexcept {
+    return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount, driverConfig);
 }
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
@@ -97,8 +97,9 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 }
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
-        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept :
-        mHandleAllocator("Handles", FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U),
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount,
+        const Platform::DriverConfig& driverConfig) noexcept :
+        mHandleAllocator("Handles", getHandleArenaSize(driverConfig)),
         mContextManager(*platform),
         mStagePool(mContext),
         mFramebufferCache(mContext),
@@ -305,9 +306,16 @@ VulkanDriver::~VulkanDriver() noexcept = default;
 
 UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* const platform,
-        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
+        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
+        const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
-    return new VulkanDriver(platform, ppEnabledExtensions, enabledExtensionCount);
+    return new VulkanDriver(platform, ppEnabledExtensions, enabledExtensionCount, driverConfig);
+}
+
+size_t VulkanDriver::getHandleArenaSize(const Platform::DriverConfig& driverConfig) noexcept {
+    size_t configSize = driverConfig.getHandleArenaSize();
+    size_t defaultSize = FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    return configSize > defaultSize ? configSize : defaultSize;
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {

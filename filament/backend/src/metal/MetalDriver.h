@@ -42,12 +42,13 @@ struct UniformBufferState;
 #endif
 
 class MetalDriver final : public DriverBase {
-    explicit MetalDriver(MetalPlatform* platform) noexcept;
+    explicit MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept;
     ~MetalDriver() noexcept override;
     Dispatcher getDispatcher() const noexcept final;
 
 public:
-    static Driver* create(MetalPlatform* platform);
+    static Driver* create(MetalPlatform* platform, const Platform::DriverConfig& driverConfig);
+    static size_t getHandleArenaSize(const Platform::DriverConfig& driverConfig) noexcept;
 
 private:
 
