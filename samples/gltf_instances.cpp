@@ -28,7 +28,7 @@
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <camutils/Manipulator.h>
 
@@ -58,7 +58,7 @@ enum MaterialSource {
 
 struct App {
     Engine* engine;
-    SimpleViewer* viewer;
+    ViewerGui* viewer;
     Config config;
     AssetLoader* loader;
     FilamentAsset* asset = nullptr;
@@ -242,7 +242,7 @@ int main(int argc, char** argv) {
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new SimpleViewer(engine, scene, view, app.instanceToAnimate);
+        app.viewer = new ViewerGui(engine, scene, view, app.instanceToAnimate);
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
