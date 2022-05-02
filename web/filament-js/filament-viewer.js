@@ -309,7 +309,7 @@ class FilamentViewer extends LitElement {
                 asyncInterval: 30
             };
 
-            const doneAddingResources = resourceLoader => {
+            const doneAddingResources = (resourceLoader, stbProvider) => {
                 this.srcBlobResources = {};
                 resourceLoader.asyncBeginLoad(this.asset);
                 const timer = setInterval(() => {
@@ -318,6 +318,7 @@ class FilamentViewer extends LitElement {
                     if (progress >= 1) {
                         clearInterval(timer);
                         resourceLoader.delete();
+                        stbProvider.delete();
                         this.animator = this.asset.getAnimator();
                         this.animationStartTime = Date.now();
                     }
@@ -335,13 +336,18 @@ class FilamentViewer extends LitElement {
                     config.recomputeBoundingBoxes,
                     config.ignoreBindTransform);
 
+                const stbProvider = new Filament.gltfio$StbProvider(this.engine);
+
+                resourceLoader.addTextureProvider("image/jpeg", stbProvider);
+                resourceLoader.addTextureProvider("image/png", stbProvider);
+
                 let remaining = Object.keys(this.srcBlobResources).length;
                 for (const name in this.srcBlobResources) {
                     this.srcBlobResources[name].arrayBuffer().then(buffer => {
                         const desc = getBufferDescriptor(new Uint8Array(buffer));
                         resourceLoader.addResourceData(name, getBufferDescriptor(desc));
                         if (--remaining === 0) {
-                            doneAddingResources(resourceLoader);
+                            doneAddingResources(resourceLoader, stbProvider);
                         }
                     });
                 }
