@@ -24,12 +24,12 @@ import com.google.android.filament.Texture
 import java.nio.Buffer
 
 /**
- * Utilities for consuming KTX files and producing Filament textures, IBLs, and sky boxes.
+ * Utilities for consuming KTX1 files and producing Filament textures, IBLs, and sky boxes.
  *
  * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
  * into a single file.
  */
-object KTXLoader {
+object KTX1Loader {
     class Options {
         var srgb = false
     }

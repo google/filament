@@ -52,10 +52,10 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
     // with a clip-space of [0,  w] ==> z' = (w - z)/2
     mClipControl = driver.getClipSpaceParams();
 
-    if (engine.getDFG()->isValid()) {
+    if (engine.getDFG().isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mSamplers.setSampler(PerViewSib::IBL_DFG_LUT,
-                engine.getDFG()->getTexture(), sampler.getSamplerParams());
+                engine.getDFG().getTexture(), sampler.getSamplerParams());
     }
 }
 
@@ -127,7 +127,7 @@ void PerViewUniforms::prepareTemporalNoise(TemporalAntiAliasingOptions const& op
     s.temporalNoise = options.enabled ? temporalNoise : 0.0f;
 }
 
-void PerViewUniforms::prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept {
+void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const& options) noexcept {
     // this can't be too high because we need density / heightFalloff to produce something
     // close to fogOptions.density in the fragment shader which use 16-bits floats.
     constexpr float epsilon = 0.001f;
@@ -135,7 +135,7 @@ void PerViewUniforms::prepareFog(const CameraInfo& camera, FogOptions const& opt
 
     // precalculate the constant part of density  integral and correct for exp2() in the shader
     const float density = ((options.density / heightFalloff) *
-            std::exp(-heightFalloff * (camera.getPosition().y - options.height)))
+            std::exp(-heightFalloff * (cameraPosition.y - options.height)))
                     * float(1.0f / F_LN2);
 
     auto& s = mUniforms.edit();

@@ -82,8 +82,8 @@ public:
 
     // Updates all of the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    ShadowTechnique update(FEngine& engine, FView& view,
-            TypedUniformBuffer<ShadowUib>& shadowUb,
+    ShadowMapManager::ShadowTechnique update(FEngine& engine, FView& view,
+            CameraInfo const& cameraInfo, TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all the shadow maps.
@@ -101,7 +101,8 @@ public:
 
     ShadowMap* getSpotShadowMap(size_t spot) noexcept {
         assert_invariant(spot < CONFIG_MAX_SHADOW_CASTING_SPOTS);
-        return std::launder(reinterpret_cast<ShadowMap*>(&mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + spot]));
+        return std::launder(reinterpret_cast<ShadowMap*>(
+                &mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + spot]));
     }
 
     ShadowMap const* getSpotShadowMap(size_t spot) const noexcept {
@@ -114,13 +115,14 @@ public:
     }
 
 private:
-    ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
-            FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
-            ShadowMap::SceneInfo& sceneInfo) noexcept;
+    ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
+            FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
+            FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept;
 
-    ShadowTechnique updateSpotShadowMaps(FEngine& engine,
-            FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
-            ShadowMap::SceneInfo& sceneInfo, TypedUniformBuffer<ShadowUib>& shadowUb) noexcept;
+    ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
+            FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
+            FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo,
+            TypedUniformBuffer<ShadowUib>& shadowUb) noexcept;
 
     void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
 

@@ -36,6 +36,12 @@ Java_com_google_android_filament_gltfio_Animator_nUpdateBoneMatrices(JNIEnv*, jc
     animator->updateBoneMatrices();
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_Animator_nResetBoneMatrices(JNIEnv*, jclass, jlong nativeAnimator) {
+    Animator* animator = (Animator*) nativeAnimator;
+    animator->resetBoneMatrices();
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_gltfio_Animator_nGetAnimationCount(JNIEnv*, jclass, jlong nativeAnimator) {
     Animator* animator = (Animator*) nativeAnimator;

@@ -35,10 +35,9 @@ class Engine;
 /**
  * Stream is used to attach a video stream to a Filament `Texture`.
  *
- * Note that the `Stream` class is fairly Android centric. It supports three different
+ * Note that the `Stream` class is fairly Android centric. It supports two different
  * configurations:
  *
- *   - TEXTURE_ID...takes an OpenGL texture ID and incurs a copy
  *   - ACQUIRED.....connects to an Android AHardwareBuffer
  *   - NATIVE.......connects to an Android SurfaceTexture
  *
@@ -67,10 +66,6 @@ class Engine;
  * - Filament invokes low-level graphics commands on the \em{driver thread}.
  * - The thread that calls `beginFrame` is called the \em{main thread}.
  *
- * The TEXTURE_ID configuration achieves synchronization automatically. In this mode, Filament
- * performs a copy on the main thread during `beginFrame` by blitting the external image into
- * an internal round-robin queue of images. This copy has a run-time cost.
- *
  * For ACQUIRED streams, there is no need to perform the copy because Filament explictly acquires
  * the stream, then releases it later via a callback function. This configuration is especially
  * useful when the Vulkan backend is enabled.
@@ -97,7 +92,7 @@ public:
      * By default, Stream objects are ACQUIRED and must have external images pushed to them via
      * <pre>Stream::setAcquiredImage</pre>.
      *
-     * To create a NATIVE or TEXTURE_ID stream, call one of the <pre>stream</pre> methods
+     * To create a NATIVE stream, call one of the <pre>stream</pre> methods
      * on the builder.
      */
     class Builder : public BuilderBase<BuilderDetails> {
@@ -121,23 +116,6 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& stream(void* stream) noexcept;
-
-        /**
-         * Creates a TEXTURE_ID stream. This will sample data from the supplied
-         * external texture and copy it into an internal private texture.
-         *
-         * @param externalTextureId An opaque texture id (typically a GLuint created with glGenTextures)
-         *                          In a context shared with filament. In that case this texture's
-         *                          target must be GL_TEXTURE_EXTERNAL_OES and the wrap mode must
-         *                          be CLAMP_TO_EDGE.
-         *
-         * @return This Builder, for chaining calls.
-         *
-         * @see Texture::setExternalStream()
-         * @deprecated this method existed only for ARCore which doesn't need this anymore, use Texture::import() instead.
-         */
-        UTILS_DEPRECATED
-        Builder& stream(intptr_t externalTextureId) noexcept;
 
         /**
          *
@@ -173,7 +151,7 @@ public:
     };
 
     /**
-     * Indicates whether this stream is a NATIVE stream, TEXTURE_ID stream, or ACQUIRED stream.
+     * Indicates whether this stream is a NATIVE stream or ACQUIRED stream.
      */
     StreamType getStreamType() const noexcept;
 
@@ -190,7 +168,7 @@ public:
      * also where the callback is invoked. This method can only be used for streams that were
      * constructed without calling the `stream` method on the builder.
      *
-     * @see Stream for more information about NATIVE, TEXTURE_ID, and ACQUIRED configurations.
+     * @see Stream for more information about NATIVE and ACQUIRED configurations.
      *
      * @param image      Pointer to AHardwareBuffer, casted to void* since this is a public header.
      * @param callback   This is triggered by Filament when it wishes to release the image.
@@ -221,63 +199,6 @@ public:
      * @param height    new height of the incoming stream
      */
     void setDimensions(uint32_t width, uint32_t height) noexcept;
-
-    /**
-     * Read-back the content of the last frame of a Stream since the last call to
-     * Renderer.beginFrame().
-     *
-     * The Stream must be of type externalTextureId. This function is a no-op otherwise.
-     *
-     * @param xoffset   Left offset of the sub-region to read back.
-     * @param yoffset   Bottom offset of the sub-region to read back.
-     * @param width     Width of the sub-region to read back.
-     * @param height    Height of the sub-region to read back.
-     * @param buffer    Client-side buffer where the read-back will be written.
-     *
-     *                  The following format are always supported:
-     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA
-     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA_INTEGER
-     *
-     *                  The following types are always supported:
-     *                      - PixelBufferDescriptor::PixelDataType::UBYTE
-     *                      - PixelBufferDescriptor::PixelDataType::UINT
-     *                      - PixelBufferDescriptor::PixelDataType::INT
-     *                      - PixelBufferDescriptor::PixelDataType::FLOAT
-     *
-     *                  Other combination of format/type may be supported. If a combination is
-     *                  not supported, this operation may fail silently. Use a DEBUG build
-     *                  to get some logs about the failure.
-     *
-     *  Stream buffer                  User buffer (PixelBufferDescriptor&)
-     *  +--------------------+
-     *  |                    |                .stride         .alignment
-     *  |                    |         ----------------------->-->
-     *  |                    |         O----------------------+--+   low addresses
-     *  |                    |         |          |           |  |
-     *  |             w      |         |          | .top      |  |
-     *  |       <--------->  |         |          V           |  |
-     *  |       +---------+  |         |     +---------+      |  |
-     *  |       |     ^   |  | ======> |     |         |      |  |
-     *  |   x   |    h|   |  |         |.left|         |      |  |
-     *  +------>|     v   |  |         +---->|         |      |  |
-     *  |       +.........+  |         |     +.........+      |  |
-     *  |            ^       |         |                      |  |
-     *  |          y |       |         +----------------------+--+  high addresses
-     *  O------------+-------+
-     *
-     * Typically readPixels() will be called after Renderer.beginFrame().
-     *
-     * After issuing this method, the callback associated with `buffer` will be invoked on the
-     * main thread, indicating that the read-back has completed. Typically, this will happen
-     * after multiple calls to beginFrame(), render(), endFrame().
-     *
-     * It is also possible to use a Fence to wait for the read-back.
-     *
-     * @remark
-     * readPixels() is intended for debugging and testing. It will impact performance significantly.
-     */
-    void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer) noexcept;
 
     /**
      * Returns the presentation time of the currently displayed frame in nanosecond.

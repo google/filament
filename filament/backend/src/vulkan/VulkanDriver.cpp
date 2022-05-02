@@ -608,10 +608,6 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     construct<VulkanSwapChain>(sch, mContext, mStagePool, width, height);
 }
 
-void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
-        uint32_t width, uint32_t height) {
-}
-
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
@@ -676,10 +672,6 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
     return allocHandle<VulkanSwapChain>();
-}
-
-Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
-    return {};
 }
 
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
@@ -1608,14 +1600,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
     srcPixels += subResourceLayout.offset;
 
-    // NOTE: the reasons for this are unclear, but issuing ReadPixels on a VkImage that has been
-    // extracted from a swap chain does not need a Y flip, but explicitly created VkImages do. (The
-    // former can be tested with "Export Screenshots" in gltf_viewer, the latter can be tested with
-    // test_ReadPixels.cpp). We've seen this behavior with both SwiftShader and MoltenVK.
-    const bool flipY = !srcTarget->isSwapChain();
-
     if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), srcPixels,
-            subResourceLayout.rowPitch, width, height, swizzle, flipY)) {
+            subResourceLayout.rowPitch, width, height, swizzle, false)) {
         utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
     }
 
@@ -1627,11 +1613,6 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     });
 
     scheduleDestroy(std::move(pbd));
-}
-
-void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, PixelBufferDescriptor&& p) {
-    scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,

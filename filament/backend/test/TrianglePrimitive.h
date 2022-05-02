@@ -26,6 +26,14 @@ namespace test {
 /**
  * A wrapper class that manages the necessary resources for a simple triangle renderable used for
  * test cases.
+ *
+ * The default vertices orient the triangle as such:
+ * o
+ * . .
+ * .   .
+ * .     .
+ * .       .
+ * o . . . . o
  */
 class TrianglePrimitive {
 public:

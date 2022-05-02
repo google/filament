@@ -38,6 +38,7 @@
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
@@ -78,6 +79,7 @@ const float kSensitivity = 100.0f;
     ResourceLoader* _resourceLoader;
 
     Manipulator<float>* _manipulator;
+    TextureProvider* _decoder;
 
     FilamentAsset* _asset;
 
@@ -129,6 +131,9 @@ const float kSensitivity = 100.0f;
     _assetLoader = AssetLoader::create({_engine, _materialProvider, ncm, &em});
     _resourceLoader = new ResourceLoader(
             {.engine = _engine, .normalizeSkinningWeights = true, .recomputeBoundingBoxes = false});
+    _decoder = createStbProvider(_engine);
+    _resourceLoader->addTextureProvider("image/png", _decoder);
+    _resourceLoader->addTextureProvider("image/jpeg", _decoder);
 
     _manipulator =
             Manipulator<float>::Builder().orbitHomePosition(0.0f, 0.0f, 4.0f).build(Mode::ORBIT);
@@ -247,6 +252,7 @@ const float kSensitivity = 100.0f;
     [self destroyModel];
 
     delete _manipulator;
+    delete _decoder;
 
     _materialProvider->destroyMaterials();
     delete _materialProvider;

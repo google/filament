@@ -51,6 +51,7 @@
 #include <utils/Slice.h>
 
 #include <math/scalar.h>
+#include <math/mat4.h>
 
 namespace utils {
 class JobSystem;
@@ -118,8 +119,11 @@ public:
 
     void terminate(FEngine& engine);
 
+    CameraInfo computeCameraInfo(FEngine& engine) noexcept;
+
     void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
-            Viewport const& viewport, math::float4 const& userTime, bool needsAlphaChannel) noexcept;
+            filament::Viewport const& viewport, CameraInfo const& cameraInfo,
+            math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }
@@ -127,8 +131,6 @@ public:
 
     void setCullingCamera(FCamera* camera) noexcept { mCullingCamera = camera; }
     void setViewingCamera(FCamera* camera) noexcept { mViewingCamera = camera; }
-
-    CameraInfo const& getCameraInfo() const noexcept { return mViewingCameraInfo; }
 
     void setViewport(Viewport const& viewport) noexcept;
     Viewport const& getViewport() const noexcept {
@@ -166,9 +168,10 @@ public:
     void prepareCamera(const CameraInfo& camera) const noexcept;
     void prepareViewport(const Viewport& viewport) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
-    void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,
-            ArenaScope& arena, Viewport const& viewport) noexcept;
+            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+            CameraInfo const& cameraInfo) noexcept;
+    void prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
+            filament::Viewport const& viewport, CameraInfo const &cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
@@ -181,7 +184,7 @@ public:
     void prepareShadowMap() const noexcept;
 
     void cleanupRenderPasses() const noexcept;
-    void froxelize(FEngine& engine) const noexcept;
+    void froxelize(FEngine& engine, math::mat4f const& viewMatrix) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
 
@@ -419,7 +422,7 @@ public:
 
     // Clean-up the oldest frame and save the current frame information.
     // This is typically called after all operations for this View's rendering are complete.
-    // (e.g.: after the FrameFraph execution).
+    // (e.g.: after the FrameGraph execution).
     void commitFrameHistory(FEngine& engine) noexcept;
 
     // create the picking query
@@ -461,11 +464,11 @@ private:
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
     static void prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena,
-            const CameraInfo& camera, Frustum const& frustum,
+            math::mat4f const& viewMatrix, Frustum const& frustum,
             FScene::LightSoa& lightData) noexcept;
 
     static inline void computeLightCameraDistances(float* distances,
-            const CameraInfo& camera, const math::float4* spheres, size_t count) noexcept;
+            math::mat4f const& viewMatrix, const math::float4* spheres, size_t count) noexcept;
 
     static void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
@@ -500,7 +503,6 @@ private:
     FCamera* mCullingCamera = nullptr;
     FCamera* mViewingCamera = nullptr;
 
-    CameraInfo mViewingCameraInfo;
     Frustum mCullingFrustum{};
 
     mutable Froxelizer mFroxelizer;

@@ -43,7 +43,7 @@ class App {
         const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
-        const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
+        const indirectLight = this.ibl = engine.createIblFromKtx1(ibl_url);
         this.scene.setIndirectLight(indirectLight);
 
         const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
@@ -58,7 +58,7 @@ class App {
         mat3.fromRotation(mat, radians, [0, 1, 0]);
         indirectLight.setRotation(mat);
 
-        const skybox = engine.createSkyFromKtx(sky_url);
+        const skybox = engine.createSkyFromKtx1(sky_url);
         this.scene.setSkybox(skybox);
 
         const sunlight = Filament.EntityManager.get().create();

@@ -41,6 +41,10 @@ layout(location = 0) in vec4 mesh_position;
 uniform Params { highp vec4 color; highp vec4 scale; } params;
 void main() {
     gl_Position = vec4((mesh_position.xy + 0.5) * params.scale.xy, params.scale.z, 1.0);
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    gl_Position.y = -gl_Position.y;
+#endif
 })";
 
 static const char* const triangleFs = R"(#version 450 core
@@ -106,7 +110,7 @@ static uint32_t toUintColor(float4 color) {
 }
 
 static void createBitmap(DriverApi& dapi, Handle<HwTexture> texture, int baseWidth, int baseHeight,
-        int level, int layer, float3 color) {
+        int level, int layer, float3 color, bool flipY) {
     auto cb = [](void* buffer, size_t size, void* user) { free(buffer); };
     const int width = baseWidth >> level;
     const int height = baseHeight >> level;
@@ -116,17 +120,35 @@ static void createBitmap(DriverApi& dapi, Handle<HwTexture> texture, int baseWid
 
     const float3 foreground = color;
     const float3 background = float3(1, 1, 0);
-    const float radius = 0.25f;
 
-    // Draw a circle on a yellow background.
+    // Draw a triangle on a yellow background.
+    //
+    // The triangle is oriented as such:
+    // low addresses
+    // |      .
+    // |     ...
+    // |    .....
+    // v   ........
+    // high addresses
+    //
+    // If flipY is specified (e.g., for OpenGL) we flip the image:
+    // high addresses
+    // ^      .
+    // |     ...
+    // |    .....
+    // |   ........
+    // low addresses
+    // This is because OpenGL automatically flips image data when uploading into the texture.
     uint32_t* texels = (uint32_t*) buffer0;
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
             float2 uv = { (col - width / 2.0f) / width, (row - height / 2.0f) / height };
-            const float d = distance(uv, float2(0));
-            const float t = d < radius ? 1.0 : 0.0;
+            const float d = abs(uv.x);
+            const float triangleWidth = uv.y >= -.3 && uv.y <= .3 ? (.4f / .6f * uv.y + .2f) : 0;
+            const float t = d < triangleWidth ? 1.0 : 0.0;
             const float3 color = mix(foreground, background, t);
-            texels[row * width + col] = toUintColor(float4(color, 1.0f));
+            int rowFlipped = flipY ? (height - 1) - row : row;
+            texels[rowFlipped * width + col] = toUintColor(float4(color, 1.0f));
         }
     }
 
@@ -135,8 +157,8 @@ static void createBitmap(DriverApi& dapi, Handle<HwTexture> texture, int baseWid
 }
 
 static void createBitmap(DriverApi& dapi, Handle<HwTexture> texture, int baseWidth, int baseHeight,
-        int level, float3 color) {
-    createBitmap(dapi, texture, baseWidth, baseHeight, level, 0u, color);
+        int level, float3 color, bool flipY) {
+    createBitmap(dapi, texture, baseWidth, baseHeight, level, 0u, color, flipY);
 }
 
 static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidth, int baseHeight,
@@ -246,8 +268,9 @@ TEST_F(BackendTest, ColorMagnify) {
     Handle<HwTexture> srcTexture = api.createTexture(
         SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
-    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0));
-    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5));
+    const bool flipY = sBackend == Backend::OPENGL;
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
 
     // Create a destination texture.
     Handle<HwTexture> dstTexture = api.createTexture(
@@ -288,7 +311,7 @@ TEST_F(BackendTest, ColorMagnify) {
     getDriver().purge();
 
     // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0xb830a36a;
+    const uint32_t expected = 0x410bdd31;
     printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
     EXPECT_TRUE(params.pixelHashResult == expected);
 
@@ -320,8 +343,9 @@ TEST_F(BackendTest, ColorMinify) {
     Handle<HwTexture> srcTexture = api.createTexture(
         SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
-    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0));
-    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5));
+    const bool flipY = sBackend == Backend::OPENGL;
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
 
     // Create a destination texture.
     Handle<HwTexture> dstTexture = api.createTexture(
@@ -362,7 +386,7 @@ TEST_F(BackendTest, ColorMinify) {
     getDriver().purge();
 
     // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0xe2353ca6;
+    const uint32_t expected = 0x7739bef5;
     printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
     EXPECT_TRUE(params.pixelHashResult == expected);
 
@@ -788,7 +812,8 @@ TEST_F(BackendTest, Blit2DTextureArray) {
     Handle<HwTexture> srcTexture = api.createTexture(
             SamplerType::SAMPLER_2D_ARRAY, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, kSrcTexDepth,
             TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
-    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, kSrcTexLayer, float3(0.5, 0, 0));
+    const bool flipY = sBackend == Backend::OPENGL;
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, kSrcTexLayer, float3(0.5, 0, 0), flipY);
 
     // Create a destination texture.
     Handle<HwTexture> dstTexture = api.createTexture(
@@ -826,7 +851,7 @@ TEST_F(BackendTest, Blit2DTextureArray) {
     getDriver().purge();
 
     // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0xe734bc44;
+    const uint32_t expected = 0x8de7d55b;
     printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
     EXPECT_TRUE(params.pixelHashResult == expected);
 

@@ -260,7 +260,7 @@ public:
      * range can be adjusted with this method.
      *
      * @param intensity  Scale factor applied to the environment and irradiance such that
-     *                   the result is in lux, or <i>lumen/m^2(default = 30000)
+     *                   the result is in lux, or <i>lumen/m^2</i> (default = 30000)
      */
     void setIntensity(float intensity) noexcept;
 

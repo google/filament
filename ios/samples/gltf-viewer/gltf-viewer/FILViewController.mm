@@ -18,6 +18,7 @@
 
 #import "FILModelView.h"
 
+#include <filament/Engine.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 

@@ -41,9 +41,6 @@ public:
 
     void setDimensions(uint32_t width, uint32_t height) noexcept;
 
-    void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer) noexcept;
-
     StreamType getStreamType() const noexcept { return mStreamType; }
 
     uint32_t getWidth() const noexcept { return mWidth; }
@@ -57,7 +54,6 @@ private:
     const StreamType mStreamType;
     backend::Handle<backend::HwStream> mStreamHandle;
     void* mNativeStream = nullptr;
-    intptr_t mExternalTextureId;
     uint32_t mWidth;
     uint32_t mHeight;
 };

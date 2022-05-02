@@ -64,11 +64,12 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
-#include <gltfio/Image.h>
 #include <gltfio/MaterialProvider.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <ktxreader/Ktx1Reader.h>
+#include <ktxreader/Ktx2Reader.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -78,6 +79,8 @@
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Log.h>
+
+#include <stb_image.h>
 
 #include <emscripten.h>
 #include <emscripten/bind.h>
@@ -1616,12 +1619,21 @@ class_<Ktx1Bundle>("Ktx1Bundle")
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
 
-function("ktx$createTexture", EMBIND_LAMBDA(Texture*,
+function("ktx1reader$createTexture", EMBIND_LAMBDA(Texture*,
         (Engine* engine, const Ktx1Bundle& ktx, bool srgb), {
     return Ktx1Reader::createTexture(engine, ktx, srgb, nullptr, nullptr);
 }), allow_raw_pointers());
 
-/// KtxInfo ::class:: Property accessor for KTX header.
+class_<Ktx2Reader>("Ktx2Reader")
+    .constructor<Engine&, bool>()
+    .function("requestFormat", &Ktx2Reader::requestFormat)
+    .function("unrequestFormat", &Ktx2Reader::unrequestFormat)
+    .function("load", EMBIND_LAMBDA(Texture*, (Ktx2Reader* self, BufferDescriptor bd,
+            Ktx2Reader::TransferFunction transfer), {
+        return self->load((uint8_t*) bd.bd->buffer, (uint32_t) bd.bd->size, transfer);
+    }), allow_raw_pointers());
+
+/// KtxInfo ::class:: Property accessor for KTX1 header.
 /// For example, `Ktx1Bundle.info().pixelWidth`. See the
 /// [KTX spec](https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/) for the list of
 /// properties.
@@ -1780,6 +1792,7 @@ class_<SurfaceOrientation>("SurfaceOrientation")
 class_<Animator>("gltfio$Animator")
     .function("applyAnimation", &Animator::applyAnimation)
     .function("updateBoneMatrices", &Animator::updateBoneMatrices)
+    .function("resetBoneMatrices", &Animator::resetBoneMatrices)
     .function("getAnimationCount", &Animator::getAnimationCount)
     .function("getAnimationDuration", &Animator::getAnimationDuration)
     .function("getAnimationName", EMBIND_LAMBDA(std::string, (Animator* self, size_t index), {
@@ -1875,10 +1888,15 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
     .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
     .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
 
-// This little wrapper exists to get around RTTI requirements in embind.
+// These little wrappers exist to get around RTTI requirements in embind.
+
 struct UbershaderLoader {
     MaterialProvider* provider;
     void destroyMaterials() { provider->destroyMaterials(); }
+};
+
+struct StbProvider {
+    TextureProvider* provider;
 };
 
 class_<UbershaderLoader>("gltfio$UbershaderLoader")
@@ -1886,6 +1904,11 @@ class_<UbershaderLoader>("gltfio$UbershaderLoader")
         return UbershaderLoader { createUbershaderLoader(engine) };
     }))
     .function("destroyMaterials", &UbershaderLoader::destroyMaterials);
+
+class_<StbProvider>("gltfio$StbProvider")
+    .constructor(EMBIND_LAMBDA(StbProvider, (Engine* engine), {
+        return StbProvider { createStbProvider(engine) };
+    }));
 
 class_<AssetLoader>("gltfio$AssetLoader")
 
@@ -1946,6 +1969,11 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     .function("addResourceData", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string url,
             BufferDescriptor buffer), {
         self->addResourceData(url.c_str(), std::move(*buffer.bd));
+    }), allow_raw_pointers())
+
+    .function("addTextureProvider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
+            StbProvider provider), {
+        self->addTextureProvider(mime.c_str(), provider.provider);
     }), allow_raw_pointers())
 
     .function("hasResourceData", EMBIND_LAMBDA(bool, (ResourceLoader* self, std::string url), {

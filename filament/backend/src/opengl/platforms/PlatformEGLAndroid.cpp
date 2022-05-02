@@ -19,7 +19,6 @@
 #include "opengl/OpenGLDriver.h"
 #include "opengl/OpenGLContext.h"
 
-#include "android/ExternalTextureManagerAndroid.h"
 #include "ExternalStreamManagerAndroid.h"
 #include "private/backend/VirtualMachineEnv.h"
 
@@ -73,8 +72,7 @@ using EGLStream = Platform::Stream;
 
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         : PlatformEGL(),
-          mExternalStreamManager(ExternalStreamManagerAndroid::create()),
-          mExternalTextureManager(ExternalTextureManagerAndroid::create()) {
+          mExternalStreamManager(ExternalStreamManagerAndroid::create()) {
 
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("ro.build.version.release", scratch);
@@ -85,6 +83,18 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         length = __system_property_get("ro.build.version.sdk", scratch);
         mOSVersion = length >= 0 ? atoi(scratch) : 1;
     }
+
+    // This disables an ANGLE optimization on ARM, which turns out to be more costly for us
+    // see b/229017581
+    // We need to do this before we create the GL context.
+    // An alternative solution is use a system property:
+    //            __system_property_set(
+    //                    "debug.angle.feature_overrides_disabled",
+    //                    "preferSubmitAtFBOBoundary");
+    // but that would outlive this process, so the environment variable is better.
+    // We also make sure to not update the variable if it already exists.
+    // There is no harm setting this if we're not on ANGLE or ARM.
+    setenv("ANGLE_FEATURE_OVERRIDES_DISABLED", "preferSubmitAtFBOBoundary", false);
 }
 
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
@@ -92,7 +102,6 @@ PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
 
 void PlatformEGLAndroid::terminate() noexcept {
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
-    ExternalTextureManagerAndroid::destroy(&mExternalTextureManager);
     PlatformEGL::terminate();
 }
 
@@ -153,58 +162,6 @@ void PlatformEGLAndroid::detach(Stream* stream) noexcept {
 
 void PlatformEGLAndroid::updateTexImage(Stream* stream, int64_t* timestamp) noexcept {
     mExternalStreamManager.updateTexImage(stream, timestamp);
-}
-
-Platform::ExternalTexture* PlatformEGLAndroid::createExternalTextureStorage() noexcept {
-    return mExternalTextureManager.createExternalTexture();
-}
-
-void PlatformEGLAndroid::reallocateExternalStorage(
-        Platform::ExternalTexture* externalTexture,
-        uint32_t w, uint32_t h, TextureFormat format) noexcept {
-    if (externalTexture) {
-        if ((EGLImageKHR)externalTexture->image != EGL_NO_IMAGE_KHR) {
-            eglDestroyImageKHR(mEGLDisplay, (EGLImageKHR)externalTexture->image);
-            externalTexture->image = (uintptr_t)EGL_NO_IMAGE_KHR;
-        }
-
-        mExternalTextureManager.reallocate(externalTexture, w, h, format,
-                AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT | AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE);
-
-        auto ets = (ExternalTextureManagerAndroid::ExternalTexture*)externalTexture;
-        EGLClientBuffer clientBuffer;
-        if (ets->hardwareBuffer) {
-            clientBuffer = eglGetNativeClientBufferANDROID(ets->hardwareBuffer);
-            if (UTILS_UNLIKELY(!clientBuffer)) {
-                logEglError("eglGetNativeClientBufferANDROID");
-                return;
-            }
-        } else if (ets->clientBuffer) {
-            clientBuffer = (EGLClientBuffer)ets->clientBuffer;
-        } else {
-            // woops, reallocate failed.
-            return;
-        }
-
-        const EGLint attr[] = { EGL_NONE };
-        EGLImageKHR image = eglCreateImageKHR(mEGLDisplay,
-                EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attr);
-        if (UTILS_UNLIKELY(!image)) {
-            logEglError("eglCreateImageKHR");
-        }
-        ets->image = (uintptr_t)image;
-    }
-}
-
-void PlatformEGLAndroid::destroyExternalTextureStorage(
-        Platform::ExternalTexture* externalTexture) noexcept {
-    if (externalTexture) {
-        mExternalTextureManager.destroy(externalTexture);
-        if ((EGLImageKHR)externalTexture->image != EGL_NO_IMAGE_KHR) {
-            eglDestroyImageKHR(mEGLDisplay, (EGLImageKHR)externalTexture->image);
-            externalTexture->image = (uintptr_t)EGL_NO_IMAGE_KHR;
-        }
-    }
 }
 
 int PlatformEGLAndroid::getOSVersion() const noexcept {

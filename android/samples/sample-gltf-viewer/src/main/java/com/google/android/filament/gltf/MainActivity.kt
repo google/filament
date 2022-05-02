@@ -150,12 +150,12 @@ class MainActivity : Activity() {
         val scene = modelViewer.scene
         val ibl = "default_env"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
-            scene.indirectLight = KTXLoader.createIndirectLight(engine, it)
+            scene.indirectLight = KTX1Loader.createIndirectLight(engine, it)
             scene.indirectLight!!.intensity = 30_000.0f
             viewerContent.indirectLight = modelViewer.scene.indirectLight
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
-            scene.skybox = KTXLoader.createSkybox(engine, it)
+            scene.skybox = KTX1Loader.createSkybox(engine, it)
         }
     }
 
@@ -297,9 +297,10 @@ class MainActivity : Activity() {
 
         val gltfBuffer = pathToBufferMapping[gltfPath]!!
 
-        // The gltf is often not at the root level (e.g. if a folder is zipped) so
-        // we need to extract its path in order to resolve the embedded uri strings.
-        var prefix = URI(gltfPath!!).resolve("..")
+        // In a zip file, the gltf file might be in the same folder as resources, or in a different
+        // folder. It is crucial to test against both of these cases. In any case, the resource
+        // paths are all specified relative to the location of the gltf file.
+        var prefix = URI(gltfPath!!).resolve(".")
 
         withContext(Dispatchers.Main) {
             if (gltfPath!!.endsWith(".glb")) {
@@ -308,7 +309,7 @@ class MainActivity : Activity() {
                 modelViewer.loadModelGltf(gltfBuffer) { uri ->
                     val path = prefix.resolve(uri).toString()
                     if (!pathToBufferMapping.contains(path)) {
-                        Log.e(TAG, "Could not find '$uri' in zip using prefix '$prefix'")
+                        Log.e(TAG, "Could not find '$uri' in zip using prefix '$prefix' and base path '${gltfPath!!}'")
                         setStatusText("Zip is missing $path")
                     }
                     pathToBufferMapping[path]

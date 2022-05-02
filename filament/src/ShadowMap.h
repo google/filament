@@ -105,8 +105,7 @@ public:
             SceneInfo& sceneInfo) noexcept;
 
     void render(FScene const& scene, utils::Range<uint32_t> range,
-            FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
-            RenderPass* pass) noexcept;
+            FScene::VisibleMaskType visibilityMask, RenderPass* const pass) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
@@ -129,7 +128,7 @@ public:
 
     // Call once per frame to populate the SceneInfo struct, then pass to update().
     // This computes values constant across all shadow maps.
-    static void initSceneInfo(FScene const& scene, filament::CameraInfo const& camera,
+    static void initSceneInfo(FScene const& scene, math::mat4f const& viewMatrix,
             ShadowMap::SceneInfo& sceneInfo);
 
     // Update SceneInfo struct for a given light

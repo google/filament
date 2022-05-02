@@ -45,6 +45,10 @@ layout(location = 0) in vec4 mesh_position;
 
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    gl_Position.y = -gl_Position.y;
+#endif
 }
 )");
 
@@ -122,6 +126,9 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         // The offset and stride set on the pixel buffer.
         size_t left = 0, top = 0, alignment = 1;
+
+        // If true, use the default RT to render into the SwapChain as opposed to a texture.
+        bool useDefaultRT = false;
 
         size_t getPixelBufferStride() const {
             return bufferDimension;
@@ -219,7 +226,13 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     t7.textureFormat = TextureFormat::RG16F;
     t7.hash = 3726805703;
 
-    TestCase testCases[] = { t, t2, t3, t4, t5, t6, t7 };
+    // Check that readPixels works when rendering into the SwapChain.
+    // This requires that the test runner's native window size is 512x512.
+    TestCase t8;
+    t8.testName = "readPixels_swapchain";
+    t8.useDefaultRT = true;
+
+    TestCase testCases[] = { t, t2, t3, t4, t5, t6, t7, t8 };
 
     // Create programs.
     Handle<HwProgram> programFloat, programUint;
@@ -234,11 +247,18 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         programUint = getDriverApi().createProgram(std::move(p));
     }
 
+
     for (const auto& t : testCases)
     {
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = getDriverApi().createSwapChainHeadless(t.getRenderTargetSize(),
-                t.getRenderTargetSize(), 0);
+        Handle<HwSwapChain> swapChain;
+        if (t.useDefaultRT) {
+            swapChain = createSwapChain();
+        } else {
+            swapChain = getDriverApi().createSwapChainHeadless(t.getRenderTargetSize(),
+                    t.getRenderTargetSize(), 0);
+        }
+
         getDriverApi().makeCurrent(swapChain, swapChain);
 
         // Create a Texture and RenderTarget to render into.
@@ -247,12 +267,19 @@ TEST_F(ReadPixelsTest, ReadPixels) {
                 t.mipLevels, t.textureFormat, 1, renderTargetBaseSize, renderTargetBaseSize, 1,
                 usage);
 
-        // The width and height must match the width and height of the respective mip
-        // level (at least for OpenGL).
-        Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
-                TargetBufferFlags::COLOR, t.getRenderTargetSize(),
-                t.getRenderTargetSize(), t.samples, {{ texture, uint8_t(t.mipLevel) }}, {},
-                {});
+        Handle<HwRenderTarget> renderTarget;
+        if (t.useDefaultRT) {
+            // The width and height must match the width and height of the respective mip
+            // level (at least for OpenGL).
+            renderTarget = getDriverApi().createDefaultRenderTarget();
+        } else {
+            // The width and height must match the width and height of the respective mip
+            // level (at least for OpenGL).
+            renderTarget = getDriverApi().createRenderTarget(
+                    TargetBufferFlags::COLOR, t.getRenderTargetSize(),
+                    t.getRenderTargetSize(), t.samples, {{ texture, uint8_t(t.mipLevel) }}, {},
+                    {});
+        }
 
         TrianglePrimitive triangle(getDriverApi());
 

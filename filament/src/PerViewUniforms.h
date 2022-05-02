@@ -69,7 +69,7 @@ public:
     void prepareTime(math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept;
     void prepareExposure(float ev100) noexcept;
-    void prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept;
+    void prepareFog(math::float3 const& cameraPosition, FogOptions const& options) noexcept;
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareBlending(bool needsAlphaChannel) noexcept;

@@ -75,7 +75,7 @@ void DependencyGraph::refinalize() {
 }
 
 void DependencyGraph::addEdge(Texture* texture, MaterialInstance* material, const char* parameter) {
-    assert(mFinalized);
+    assert(texture && !mFinalized);
     mTextureToMaterial[texture].insert(material);
     mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
 }
@@ -86,6 +86,7 @@ void DependencyGraph::checkReadiness(Material* material) {
     // Check this material's texture parameters, there are 5 in the worst case.
     bool materialIsReady = true;
     for (auto pair : status.params) {
+        assert(pair.second && "Parameter-to-Texture edge is missing.");
         if (!pair.second->ready) {
             materialIsReady = false;
             break;
@@ -125,6 +126,7 @@ void DependencyGraph::markAsReady(MaterialInstance* material) {
 }
 
 DependencyGraph::TextureNode* DependencyGraph::getStatus(Texture* texture) {
+    assert(texture);
     auto iter = mTextureNodes.find(texture);
     if (iter == mTextureNodes.end()) {
         TextureNode* status = (mTextureNodes[texture] = std::make_unique<TextureNode>()).get();

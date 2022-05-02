@@ -81,75 +81,87 @@ OpenGLContext::OpenGLContext() noexcept {
      * Figure out which driver bugs we need to workaround
      */
 
-    if (strstr(state.renderer, "Adreno")) {
-        // Qualcomm GPU
-        bugs.invalidate_end_only_if_invalidate_start = true;
+    const bool isAngle = strstr(state.renderer, "ANGLE");
+    if (!isAngle) {
+        if (strstr(state.renderer, "Adreno")) {
+            // Qualcomm GPU
+            bugs.invalidate_end_only_if_invalidate_start = true;
 
-        // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
-        bugs.dont_use_timer_query = true;
-
-        // Blits to texture arrays are failing
-        //   This bug continues to reproduce, though at times we've seen it appear to "go away". The
-        //   standalone sample app that was written to show this problem still reproduces.
-        //   The working hypthesis is that some other state affects this behavior.
-        bugs.disable_sidecar_blit_into_texture_array = true;
-
-        // early exit condition is flattened in EASU code
-        bugs.split_easu = true;
-
-        int maj, min, driverMajor, driverMinor;
-        int c = sscanf(state.version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
-                &maj, &min, &driverMajor, &driverMinor);
-        if (c == 4) {
-            // workarounds based on version here.
-            // notes:
-            //  bugs.invalidate_end_only_if_invalidate_start
-            //  - appeared at least in
-            //      "OpenGL ES 3.2 V@0490.0 (GIT@85da404, I46ff5fc46f, 1606794520) (Date:11/30/20)"
-            //  - wasn't present in
-            //      "OpenGL ES 3.2 V@0490.0 (GIT@0905e9f, Ia11ce2d146, 1599072951) (Date:09/02/20)"
-            //  - has been confirmed fixed in V@570.1 by Qualcomm
-            if (driverMajor < 490 || driverMajor > 570 ||
-                (driverMajor == 570 && driverMinor >= 1)) {
-                bugs.invalidate_end_only_if_invalidate_start = false;
-            }
-        }
-
-        // qualcomm seems to have no problem with this (which is good for us)
-        bugs.allow_read_only_ancillary_feedback_loop = true;
-    } else if (strstr(state.renderer, "Mali")) {
-        // ARM GPU
-        bugs.vao_doesnt_store_element_array_buffer_binding = true;
-        if (strstr(state.renderer, "Mali-T")) {
-            bugs.disable_glFlush = true;
-            bugs.disable_shared_context_draws = true;
-            bugs.texture_external_needs_rebind = true;
-            // We have not verified that timer queries work on Mali-T, so we disable to be safe.
+            // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
             bugs.dont_use_timer_query = true;
+
+            // Blits to texture arrays are failing
+            //   This bug continues to reproduce, though at times we've seen it appear to "go away".
+            //   The standalone sample app that was written to show this problem still reproduces.
+            //   The working hypthesis is that some other state affects this behavior.
+            bugs.disable_sidecar_blit_into_texture_array = true;
+
+            // early exit condition is flattened in EASU code
+            bugs.split_easu = true;
+
+            int maj, min, driverMajor, driverMinor;
+            int c = sscanf(state.version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
+                    &maj, &min, &driverMajor, &driverMinor);
+            if (c == 4) {
+                // workarounds based on version here.
+                // notes:
+                //  bugs.invalidate_end_only_if_invalidate_start
+                //  - appeared at least in
+                //      "OpenGL ES 3.2 V@0490.0 (GIT@85da404, I46ff5fc46f, 1606794520) (Date:11/30/20)"
+                //  - wasn't present in
+                //      "OpenGL ES 3.2 V@0490.0 (GIT@0905e9f, Ia11ce2d146, 1599072951) (Date:09/02/20)"
+                //  - has been confirmed fixed in V@570.1 by Qualcomm
+                if (driverMajor < 490 || driverMajor > 570 ||
+                    (driverMajor == 570 && driverMinor >= 1)) {
+                    bugs.invalidate_end_only_if_invalidate_start = false;
+                }
+            }
+
+            // qualcomm seems to have no problem with this (which is good for us)
+            bugs.allow_read_only_ancillary_feedback_loop = true;
+        } else if (strstr(state.renderer, "Mali")) {
+            // ARM GPU
+            bugs.vao_doesnt_store_element_array_buffer_binding = true;
+            if (strstr(state.renderer, "Mali-T")) {
+                bugs.disable_glFlush = true;
+                bugs.disable_shared_context_draws = true;
+                bugs.texture_external_needs_rebind = true;
+                // We have not verified that timer queries work on Mali-T, so we disable to be safe.
+                bugs.dont_use_timer_query = true;
+            }
+            if (strstr(state.renderer, "Mali-G")) {
+                // note: We have verified that timer queries work well at least on some Mali-G.
+            }
+            // Mali seems to have no problem with this (which is good for us)
+            bugs.allow_read_only_ancillary_feedback_loop = true;
+        } else if (strstr(state.renderer, "Intel")) {
+            // Intel GPU
+            bugs.vao_doesnt_store_element_array_buffer_binding = true;
+        } else if (strstr(state.renderer, "PowerVR")) {
+            // PowerVR GPU
+        } else if (strstr(state.renderer, "Apple")) {
+            // Apple GPU
+        } else if (strstr(state.renderer, "Tegra") ||
+                   strstr(state.renderer, "GeForce") ||
+                   strstr(state.renderer, "NV")) {
+            // NVIDIA GPU
+        } else if (strstr(state.renderer, "Vivante")) {
+            // Vivante GPU
+        } else if (strstr(state.renderer, "AMD") ||
+                   strstr(state.renderer, "ATI")) {
+            // AMD/ATI GPU
+        } else if (strstr(state.renderer, "Mozilla")) {
+            bugs.disable_invalidate_framebuffer = true;
         }
-        if (strstr(state.renderer, "Mali-G")) {
-            // note: We have verified that timer queries work well at least on some Mali-G.
+    } else {
+        // When running under ANGLE, it's a different set of workaround that we need.
+        if (strstr(state.renderer, "Adreno")) {
+            // Qualcomm GPU
+            // early exit condition is flattened in EASU code
+            // (that should be regardless of ANGLE, but we should double check)
+            bugs.split_easu = true;
         }
-        // Mali seems to have no problem with this (which is good for us)
-        bugs.allow_read_only_ancillary_feedback_loop = true;
-    } else if (strstr(state.renderer, "Intel")) {
-        // Intel GPU
-        bugs.vao_doesnt_store_element_array_buffer_binding = true;
-    } else if (strstr(state.renderer, "PowerVR")) {
-        // PowerVR GPU
-    } else if (strstr(state.renderer, "Apple")) {
-        // Apple GPU
-    } else if (strstr(state.renderer, "Tegra") ||
-               strstr(state.renderer, "GeForce") ||
-               strstr(state.renderer, "NV")) {
-        // NVIDIA GPU
-    } else if (strstr(state.renderer, "Vivante")) {
-        // Vivante GPU
-    } else if (strstr(state.renderer, "AMD") ||
-               strstr(state.renderer, "ATI")) {
-        // AMD/ATI GPU
-    } else if (strstr(state.renderer, "Mozilla")) {
-        bugs.disable_invalidate_framebuffer = true;
+        // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
     }
 
     slog.v << "Active workarounds: " << '\n';

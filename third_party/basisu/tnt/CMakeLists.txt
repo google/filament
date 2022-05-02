@@ -40,6 +40,10 @@ set (BASIS_CONFIG
     BASISD_SUPPORT_FXT1=0
 )
 
+# The following BasisU setting is useful when diagnosing issues, but we're leaving it turned off
+# even for debug builds, since it is quite verbose.
+# set (BASIS_CONFIG ${BASIS_CONFIG} $<$<CONFIG:Debug>:BASISU_FORCE_DEVEL_MESSAGES=1>)
+
 # DXT5A and DXT1 are both required for cTFBC3_RGBA aka DXT3_RGBA.
 if (NOT IS_MOBILE_TARGET)
     set (BASIS_CONFIG ${BASIS_CONFIG} BASISD_SUPPORT_DXT5A=1 BASISD_SUPPORT_DXT1=1)
@@ -58,7 +62,7 @@ target_compile_definitions(basisu PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_encoder PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_transcoder PRIVATE ${BASIS_CONFIG})
 
-if (NOT MSVC)
+if (NOT MSVC AND NOT ANDROID)
    target_link_libraries(basisu m pthread)
 endif()
 

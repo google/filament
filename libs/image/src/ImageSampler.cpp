@@ -335,6 +335,7 @@ void computeSingleSample(const LinearImage& source, float x, float y, SingleSamp
     }
 }
 
+// Generates the given number of mipmaps (not including the base level) using the given filter.
 // Unlike traditional mipmap generation, our implementation generates all levels from the original
 // image, under the premise that this produces a higher quality result.
 void generateMipmaps(const LinearImage& source, Filter filter, LinearImage* result, uint32_t mips) {

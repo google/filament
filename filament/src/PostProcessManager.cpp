@@ -531,22 +531,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     data.history = builder.sample(history);
                 }
             },
-            [=, &uniforms, renderPass = pass](FrameGraphResources const& resources,
-                    auto const& data, DriverApi& driver) mutable {
-
+            [this, projection = cameraInfo.projection, viewMatrix = cameraInfo.view,
+                    worldOrigin = cameraInfo.worldOrigin, uvFromClipMatrix, historyProjection,
+                    options, &uniforms, renderPass = pass]
+            (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
                 // set structure sampler
                 uniforms.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : getOneTexture());
 
                 // set screen-space reflections and screen-space refractions
-                mat4f uvFromViewMatrix = uvFromClipMatrix * cameraInfo.projection;
-                mat4f reprojection = uvFromClipMatrix * historyProjection
-                                     * inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                mat4f uvFromViewMatrix = uvFromClipMatrix * projection;
+                mat4f reprojection = mat4f{ uvFromClipMatrix * historyProjection
+                        * inverse(viewMatrix * worldOrigin) };
 
                 // the history sampler is a regular texture2D
                 TextureHandle history = data.history ?
                         resources.getTexture(data.history) : getZeroTexture();
-                uniforms.prepareHistorySSR(history, reprojection, uvFromViewMatrix,options);
+                uniforms.prepareHistorySSR(history, reprojection, uvFromViewMatrix, options);
 
                 uniforms.commit(driver);
 
@@ -806,7 +807,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 // light direction in view space
                 // (note: this is actually equivalent to using the camera view matrix -- before the
                 // world matrix is accounted for)
-                auto m = cameraInfo.view * cameraInfo.worldOrigin;
+                const mat4f m{ cameraInfo.view * cameraInfo.worldOrigin };
                 const float3 l = normalize(
                         mat3f::getTransformForNormals(m.upperLeft())
                                 * options.ssct.lightDirection);
@@ -1465,7 +1466,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     };
 
     /*
-     * dofResolution is used (at compile time for now) to chose between full- or quarter-resolution
+     * dofResolution is used to chose between full- or quarter-resolution
      * for the DoF calculations. Set to [1] for full resolution or [2] for quarter-resolution.
      */
     const uint32_t dofResolution = dofOptions.nativeResolution ? 1u : 2u;
@@ -1894,22 +1895,14 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
 PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
         BloomOptions& inoutBloomOptions, float2 scale) noexcept {
-    // Chrome does not support feedback loops in WebGL 2.0. See also:
-    // https://bugs.chromium.org/p/chromium/issues/detail?id=1066201
-#if defined(__EMSCRIPTEN__)
-    constexpr bool isWebGL = true;
-#else
-    constexpr bool isWebGL = false;
-#endif
-
     // Figure out a good size for the bloom buffer.
     auto const& desc = fg.getDescriptor(input);
 
     // width and height after dynamic resolution upscaling
-    const float aspect = (desc.width * scale.y) / (desc.height * scale.x);
+    const float aspect = (float(desc.width) * scale.y) / (float(desc.height) * scale.x);
 
     // compute the desired bloom buffer size
-    float bloomHeight = inoutBloomOptions.resolution;
+    float bloomHeight = float(inoutBloomOptions.resolution);
     float bloomWidth  = bloomHeight * aspect;
 
     // Anamorphic bloom by always scaling down one of the dimension -- we do this (as opposed
@@ -1923,11 +1916,11 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
     }
 
     // convert back to integer width/height
-    const uint32_t width  = std::max(1.0f, std::floor(bloomWidth));
-    const uint32_t height = std::max(1.0f, std::floor(bloomHeight));
+    const uint32_t width  = std::max(1u, uint32_t(std::floor(bloomWidth)));
+    const uint32_t height = std::max(1u, uint32_t(std::floor(bloomHeight)));
 
     // we might need to adjust the max # of levels
-    const uint32_t major = std::max(bloomWidth,  bloomHeight);
+    const uint32_t major = uint32_t(std::max(bloomWidth,  bloomHeight));
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
     inoutBloomOptions.levels = std::min(inoutBloomOptions.levels, maxLevels);
     inoutBloomOptions.levels = std::min(inoutBloomOptions.levels, kMaxBloomLevels);
@@ -1942,288 +1935,154 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
         });
     }
 
-    if constexpr(!isWebGL) {
+    struct BloomPassData {
+        FrameGraphId<FrameGraphTexture> in;
+        FrameGraphId<FrameGraphTexture> out;
+        FrameGraphId<FrameGraphTexture> stage;
+        uint32_t outRT[kMaxBloomLevels];
+        uint32_t stageRT[kMaxBloomLevels];
+    };
 
-        struct BloomPassData {
-            FrameGraphId<FrameGraphTexture> in;
-            FrameGraphId<FrameGraphTexture> out;
-        };
+    // downsample phase
+    auto& bloomDownsamplePass = fg.addPass<BloomPassData>("Bloom Downsample",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.in = builder.sample(input);
+                data.out = builder.createTexture("Bloom Out Texture", {
+                        .width = width,
+                        .height = height,
+                        .levels = inoutBloomOptions.levels,
+                        .format = outFormat
+                });
+                data.out = builder.sample(data.out);
 
-        // downsample phase
-        auto& bloomDownsamplePass = fg.addPass<BloomPassData>("Bloom Downsample",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.in = builder.sample(input);
-                    data.out = builder.createTexture("Bloom Texture", {
-                            .width = width,
-                            .height = height,
-                            .levels = inoutBloomOptions.levels,
-                            .format = outFormat
-                    });
+                data.stage = builder.createTexture("Bloom Stage Texture", {
+                        .width = width,
+                        .height = height,
+                        .levels = inoutBloomOptions.levels,
+                        .format = outFormat
+                });
+                data.stage = builder.sample(data.stage);
 
-                    data.out = builder.sample(data.out);
-                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
-                        auto out = builder.createSubresource(data.out, "Bloom Texture mip",
-                                { .level = uint8_t(i) });
-                        builder.declareRenderPass(out);
-                    }
-                },
-                [=](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) {
+                for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
+                    auto out = builder.createSubresource(data.out, "Bloom Out Texture mip",
+                            { .level = uint8_t(i) });
+                    auto stage = builder.createSubresource(data.stage,
+                            "Bloom Stage Texture mip", { .level = uint8_t(i) });
+                    builder.declareRenderPass(out, &data.outRT[i]);
+                    builder.declareRenderPass(stage, &data.stageRT[i]);
+                }
+            },
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
 
-                    auto const& material = getPostProcessMaterial("bloomDownsample");
-                    FMaterialInstance* mi = material.getMaterialInstance(mEngine);
+                auto const& material = getPostProcessMaterial("bloomDownsample");
+                FMaterialInstance* mi = material.getMaterialInstance(mEngine);
 
-                    const PipelineState pipeline(material.getPipelineState(mEngine));
+                const PipelineState pipeline(material.getPipelineState(mEngine));
 
-                    auto hwIn = resources.getTexture(data.in);
-                    auto hwOut = resources.getTexture(data.out);
-                    auto const& outDesc = resources.getDescriptor(data.out);
+                auto hwIn = resources.getTexture(data.in);
+                auto hwOut = resources.getTexture(data.out);
+                auto hwStage = resources.getTexture(data.stage);
 
-                    mi->use(driver);
-                    mi->setParameter("source", hwIn, {
+                mi->use(driver);
+                mi->setParameter("source", hwIn, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
+                });
+                mi->setParameter("level", 0.0f);
+                mi->setParameter("threshold", inoutBloomOptions.threshold ? 1.0f : 0.0f);
+                mi->setParameter("invHighlight",
+                        std::isinf(inoutBloomOptions.highlight) ? 0.0f : 1.0f
+                                                                            / inoutBloomOptions.highlight);
+
+                for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
+                    const bool parity = (i % 2) == 0;
+                    auto hwDstRT = resources.getRenderPassInfo(
+                            parity ? data.outRT[i] : data.stageRT[i]);
+
+                    mi->commit(driver);
+
+                    hwDstRT.params.flags.discardStart = TargetBufferFlags::COLOR;
+                    hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
+                    render(hwDstRT, pipeline, driver);
+
+                    // prepare the next level
+                    mi->setParameter("source", parity ? hwOut : hwStage, {
                             .filterMag = SamplerMagFilter::LINEAR,
-                            .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                     });
-                    mi->setParameter("level", 0.0f);
-                    mi->setParameter("threshold", inoutBloomOptions.threshold ? 1.0f : 0.0f);
-                    mi->setParameter("invHighlight",
-                            std::isinf(inoutBloomOptions.highlight) ? 0.0f : 1.0f
-                                                                             / inoutBloomOptions.highlight);
+                    mi->setParameter("level", float(i));
+                }
+            });
 
-                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
-                        auto hwOutRT = resources.getRenderPassInfo(i);
+    FrameGraphId<FrameGraphTexture> output = bloomDownsamplePass->out;
+    FrameGraphId<FrameGraphTexture> stage = bloomDownsamplePass->stage;
 
-                        auto w = FTexture::valueForLevel(i, outDesc.width);
-                        auto h = FTexture::valueForLevel(i, outDesc.height);
-                        mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
-                        mi->commit(driver);
+    // flare pass
+    auto flare = flarePass(fg, bloomDownsamplePass->out, width, height, outFormat, inoutBloomOptions);
 
-                        hwOutRT.params.flags.discardStart = TargetBufferFlags::COLOR;
-                        hwOutRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-                        render(hwOutRT, pipeline, driver);
+    // upsample phase
+    auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.out = builder.sample(output);
+                data.stage = builder.sample(stage);
+                for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
+                    auto out = builder.createSubresource(data.out, "Bloom Out Texture mip",
+                            { .level = uint8_t(i) });
+                    auto stage = builder.createSubresource(data.stage,
+                            "Bloom Stage Texture mip", { .level = uint8_t(i) });
+                    builder.declareRenderPass(out, &data.outRT[i]);
+                    builder.declareRenderPass(stage, &data.stageRT[i]);
+                }
+            },
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
 
-                        // prepare the next level
-                        mi->setParameter("source", hwOut, {
-                                .filterMag = SamplerMagFilter::LINEAR,
-                                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                        });
-                        mi->setParameter("level", float(i));
-                        driver.setMinMaxLevels(hwOut, i,
-                                i); // safe because we're using LINEAR_MIPMAP_NEAREST
-                    }
-                    driver.setMinMaxLevels(hwOut, 0, inoutBloomOptions.levels - 1);
-                });
+                auto hwOut = resources.getTexture(data.out);
+                auto hwStage = resources.getTexture(data.stage);
+                auto const& outDesc = resources.getDescriptor(data.out);
 
-        input = bloomDownsamplePass->out;
+                auto const& material = getPostProcessMaterial("bloomUpsample");
+                FMaterialInstance* mi = material.getMaterialInstance(mEngine);
+                PipelineState pipeline(material.getPipelineState(mEngine));
+                pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
 
-        // flare pass
-        auto flare = flarePass(fg, input, width, height, outFormat, inoutBloomOptions);
+                mi->use(driver);
 
-        // upsample phase
-        auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.in = builder.sample(input);
-                    data.out = input;
-                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
-                        auto out = builder.createSubresource(data.out, "Bloom Texture mip",
-                                { .level = uint8_t(i) });
-                        builder.declareRenderPass(out);
-                    }
-                },
-                [=](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) {
+                for (size_t j = inoutBloomOptions.levels, i = j - 1; i >= 1; i--, j++) {
+                    const bool parity = (j % 2) == 0;
 
-                    auto hwIn = resources.getTexture(data.in);
-                    auto const& outDesc = resources.getDescriptor(data.out);
+                    auto hwDstRT = resources.getRenderPassInfo(
+                            parity ? data.outRT[i - 1] : data.stageRT[i - 1]);
+                    hwDstRT.params
+                            .flags
+                            .discardStart = TargetBufferFlags::NONE; // because we'll blend
+                    hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
 
-                    auto const& material = getPostProcessMaterial("bloomUpsample");
-                    FMaterialInstance* mi = material.getMaterialInstance(mEngine);
-                    PipelineState pipeline(material.getPipelineState(mEngine));
-                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
-
-                    mi->use(driver);
-
-                    for (size_t i = inoutBloomOptions.levels - 1; i >= 1; i--) {
-                        auto hwDstRT = resources.getRenderPassInfo(i - 1);
-                        hwDstRT.params
-                               .flags
-                               .discardStart = TargetBufferFlags::NONE; // because we'll blend
-                        hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-
-                        auto w = FTexture::valueForLevel(i - 1, outDesc.width);
-                        auto h = FTexture::valueForLevel(i - 1, outDesc.height);
-                        mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
-                        mi->setParameter("source", hwIn, {
-                                .filterMag = SamplerMagFilter::LINEAR,
-                                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                        });
-                        mi->setParameter("level", float(i));
-                        driver.setMinMaxLevels(hwIn, i, i);
-                        mi->commit(driver);
-                        render(hwDstRT, pipeline, driver);
-                    }
-
-                    driver.setMinMaxLevels(hwIn, 0, inoutBloomOptions.levels - 1);
-                });
-
-        return { bloomUpsamplePass->out, flare };
-
-    } else { // !isWebGL
-
-        struct BloomPassData {
-            FrameGraphId<FrameGraphTexture> in;
-            FrameGraphId<FrameGraphTexture> out;
-            FrameGraphId<FrameGraphTexture> stage;
-            uint32_t outRT[kMaxBloomLevels];
-            uint32_t stageRT[kMaxBloomLevels];
-        };
-
-        // downsample phase
-        auto& bloomDownsamplePass = fg.addPass<BloomPassData>("Bloom Downsample",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.in = builder.sample(input);
-                    data.out = builder.createTexture("Bloom Out Texture", {
-                            .width = width,
-                            .height = height,
-                            .levels = inoutBloomOptions.levels,
-                            .format = outFormat
-                    });
-                    data.out = builder.sample(data.out);
-
-                    data.stage = builder.createTexture("Bloom Stage Texture", {
-                            .width = width,
-                            .height = height,
-                            .levels = inoutBloomOptions.levels,
-                            .format = outFormat
-                    });
-                    data.stage = builder.sample(data.stage);
-
-                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
-                        auto out = builder.createSubresource(data.out, "Bloom Out Texture mip",
-                                { .level = uint8_t(i) });
-                        auto stage = builder.createSubresource(data.stage,
-                                "Bloom Stage Texture mip", { .level = uint8_t(i) });
-                        builder.declareRenderPass(out, &data.outRT[i]);
-                        builder.declareRenderPass(stage, &data.stageRT[i]);
-                    }
-                },
-                [=](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) {
-
-                    auto const& material = getPostProcessMaterial("bloomDownsample");
-                    FMaterialInstance* mi = material.getMaterialInstance(mEngine);
-
-                    const PipelineState pipeline(material.getPipelineState(mEngine));
-
-                    auto hwIn = resources.getTexture(data.in);
-                    auto hwOut = resources.getTexture(data.out);
-                    auto hwStage = resources.getTexture(data.stage);
-                    auto const& outDesc = resources.getDescriptor(data.out);
-
-                    mi->use(driver);
-                    mi->setParameter("source", hwIn, {
+                    auto w = FTexture::valueForLevel(i - 1, outDesc.width);
+                    auto h = FTexture::valueForLevel(i - 1, outDesc.height);
+                    mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
+                    mi->setParameter("source", parity ? hwStage : hwOut, {
                             .filterMag = SamplerMagFilter::LINEAR,
-                            .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                     });
-                    mi->setParameter("level", 0.0f);
-                    mi->setParameter("threshold", inoutBloomOptions.threshold ? 1.0f : 0.0f);
-                    mi->setParameter("invHighlight",
-                            std::isinf(inoutBloomOptions.highlight) ? 0.0f : 1.0f
-                                                                             / inoutBloomOptions.highlight);
+                    mi->setParameter("level", float(i));
+                    mi->commit(driver);
+                    render(hwDstRT, pipeline, driver);
+                }
 
-                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
-                        const bool parity = (i % 2) == 0;
-                        auto hwDstRT = resources.getRenderPassInfo(
-                                parity ? data.outRT[i] : data.stageRT[i]);
+                // Every other level is missing from the out texture, so we need to do
+                // blits to complete the chain.
+                const SamplerMagFilter filter = SamplerMagFilter::NEAREST;
+                for (size_t i = 1; i < inoutBloomOptions.levels; i += 2) {
+                    auto in = resources.getRenderPassInfo(data.stageRT[i]);
+                    auto out = resources.getRenderPassInfo(data.outRT[i]);
+                    driver.blit(TargetBufferFlags::COLOR, out.target, out.params.viewport,
+                            in.target, in.params.viewport, filter);
+                }
+            });
 
-                        auto w = FTexture::valueForLevel(i, outDesc.width);
-                        auto h = FTexture::valueForLevel(i, outDesc.height);
-                        mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
-                        mi->commit(driver);
-
-                        hwDstRT.params.flags.discardStart = TargetBufferFlags::COLOR;
-                        hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-                        render(hwDstRT, pipeline, driver);
-
-                        // prepare the next level
-                        mi->setParameter("source", parity ? hwOut : hwStage, {
-                                .filterMag = SamplerMagFilter::LINEAR,
-                                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                        });
-                        mi->setParameter("level", float(i));
-                    }
-                });
-
-        FrameGraphId<FrameGraphTexture> output = bloomDownsamplePass->out;
-        FrameGraphId<FrameGraphTexture> stage = bloomDownsamplePass->stage;
-
-        // flare pass
-        auto flare = flarePass(fg, bloomDownsamplePass->out, width, height, outFormat, inoutBloomOptions);
-
-        // upsample phase
-        auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.out = builder.sample(output);
-                    data.stage = builder.sample(stage);
-                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
-                        auto out = builder.createSubresource(data.out, "Bloom Out Texture mip",
-                                { .level = uint8_t(i) });
-                        auto stage = builder.createSubresource(data.stage,
-                                "Bloom Stage Texture mip", { .level = uint8_t(i) });
-                        builder.declareRenderPass(out, &data.outRT[i]);
-                        builder.declareRenderPass(stage, &data.stageRT[i]);
-                    }
-                },
-                [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-
-                    auto hwOut = resources.getTexture(data.out);
-                    auto hwStage = resources.getTexture(data.stage);
-                    auto const& outDesc = resources.getDescriptor(data.out);
-
-                    auto const& material = getPostProcessMaterial("bloomUpsample");
-                    FMaterialInstance* mi = material.getMaterialInstance(mEngine);
-                    PipelineState pipeline(material.getPipelineState(mEngine));
-                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
-
-                    mi->use(driver);
-
-                    for (size_t j = inoutBloomOptions.levels, i = j - 1; i >= 1; i--, j++) {
-                        const bool parity = (j % 2) == 0;
-
-                        auto hwDstRT = resources.getRenderPassInfo(
-                                parity ? data.outRT[i - 1] : data.stageRT[i - 1]);
-                        hwDstRT.params
-                               .flags
-                               .discardStart = TargetBufferFlags::NONE; // because we'll blend
-                        hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-
-                        auto w = FTexture::valueForLevel(i - 1, outDesc.width);
-                        auto h = FTexture::valueForLevel(i - 1, outDesc.height);
-                        mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
-                        mi->setParameter("source", parity ? hwStage : hwOut, {
-                                .filterMag = SamplerMagFilter::LINEAR,
-                                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                        });
-                        mi->setParameter("level", float(i));
-                        mi->commit(driver);
-                        render(hwDstRT, pipeline, driver);
-                    }
-
-                    // Every other level is missing from the out texture, so we need to do
-                    // blits to complete the chain.
-                    const SamplerMagFilter filter = SamplerMagFilter::NEAREST;
-                    for (size_t i = 1; i < inoutBloomOptions.levels; i += 2) {
-                        auto in = resources.getRenderPassInfo(data.stageRT[i]);
-                        auto out = resources.getRenderPassInfo(data.outRT[i]);
-                        driver.blit(TargetBufferFlags::COLOR, out.target, out.params.viewport,
-                                in.target, in.params.viewport, filter);
-                    }
-                });
-
-        return { bloomUpsamplePass->out, flare };
-    }
+    return { bloomUpsamplePass->out, flare };
 }
 
 UTILS_NOINLINE
@@ -2604,7 +2463,7 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     auto& current = frameHistory.getCurrent().*pTaa;
 
     // compute projection
-    current.projection = inoutCameraInfo->projection * (inoutCameraInfo->view * inoutCameraInfo->worldOrigin);
+    current.projection = mat4f{ inoutCameraInfo->projection * (inoutCameraInfo->view * inoutCameraInfo->worldOrigin) };
     current.frameId = previous.frameId + 1;
 
     // sample position within a pixel [-0.5, 0.5]
@@ -2908,6 +2767,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
                     mi->commit(driver);
+                    mi->use(driver);
                 }
 
                 { // just a scope to not leak local variables
@@ -2927,6 +2787,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
                     mi->commit(driver);
+                    mi->use(driver);
                 }
 
                 // --------------------------------------------------------------------------------
@@ -2934,37 +2795,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
 
                 auto out = resources.getRenderPassInfo();
 
-                if (twoPassesEASU) {
-                    auto* mi = splitEasuMaterial->getMaterialInstance(mEngine);
-                    mi->use(driver);
-                    PipelineState pipeline(splitEasuMaterial->getPipelineState(mEngine));
+                if (UTILS_UNLIKELY(twoPassesEASU)) {
+                    PipelineState pipeline0(splitEasuMaterial->getPipelineState(mEngine));
+                    PipelineState pipeline1(easuMaterial->getPipelineState(mEngine));
+                    pipeline1.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
                     if (translucent) {
-                        enableTranslucentBlending(pipeline);
+                        enableTranslucentBlending(pipeline0);
+                        enableTranslucentBlending(pipeline1);
                     }
-
                     driver.beginRenderPass(out.target, out.params);
-                    driver.draw(pipeline, fullScreenRenderPrimitive, 1);
-                }
-
-                { // scope to not leak local variables
-                    auto* mi = easuMaterial->getMaterialInstance(mEngine);
-                    mi->use(driver);
-
+                    driver.draw(pipeline0, fullScreenRenderPrimitive, 1);
+                    driver.draw(pipeline1, fullScreenRenderPrimitive, 1);
+                    driver.endRenderPass();
+                } else {
                     PipelineState pipeline(easuMaterial->getPipelineState(mEngine));
                     if (translucent) {
                         enableTranslucentBlending(pipeline);
                     }
-                    if (twoPassesEASU) {
-                        pipeline.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
-                    }
-
-                    if (!twoPassesEASU) {
-                        driver.beginRenderPass(out.target, out.params);
-                    }
+                    driver.beginRenderPass(out.target, out.params);
                     driver.draw(pipeline, fullScreenRenderPrimitive, 1);
+                    driver.endRenderPass();
                 }
-
-                driver.endRenderPass();
             });
 
     auto output = ppQuadBlit->output;

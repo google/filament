@@ -186,13 +186,21 @@ void FRenderer::render(FView const* view) {
 
     assert_invariant(mSwapChain);
 
-    if (mBeginFrameInternal) {
+    if (UTILS_UNLIKELY(mBeginFrameInternal)) {
+        // this should not happen, the user should not call render() if we returned false from
+        // beginFrame(). But because this is allowed, we handle it gracefully.
         mBeginFrameInternal();
         mBeginFrameInternal = {};
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
+        if (mViewRenderedCount) {
+            // this is a good place to kick the GPU, since we've rendered a View before
+            // and we're about to render another one.
+            mEngine.getDriverApi().flush();
+        }
         renderInternal(view);
+        mViewRenderedCount++;
     }
 }
 
@@ -274,7 +282,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // If the swap-chain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
     const bool needsAlphaChannel = (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
-    view.prepare(engine, driver, arena, svp, getShaderUserTime(), needsAlphaChannel);
+
+    CameraInfo cameraInfo = view.computeCameraInfo(engine);
+
+    view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
     view.prepareUpscaler(scale);
 
@@ -282,7 +293,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     JobSystem::Job* jobFroxelize = nullptr;
     if (view.hasDynamicLighting()) {
         jobFroxelize = js.runAndRetain(js.createJob(nullptr,
-                [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
+                [&engine, &view, &viewMatrix = cameraInfo.view](JobSystem&, JobSystem::Job*) {
+                    view.froxelize(engine, viewMatrix); }));
     }
 
     /*
@@ -419,8 +431,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     /*
      * Depth + Color passes
      */
-
-    CameraInfo cameraInfo = view.getCameraInfo();
 
     // updatePrimitivesLod must be run before appendCommands and once for each set
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
@@ -598,6 +608,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         struct ExportSSRHistoryData {
             FrameGraphId<FrameGraphTexture> history;
         };
+        // FIXME: should we use the TAA-modified cameraInfo here or not? (we are).
+        auto projection = mat4f{
+                cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin) };
         fg.addPass<ExportSSRHistoryData>("Export SSR history",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     // We need to use sideEffect here to ensure this pass won't be culled.
@@ -605,12 +618,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     // an "import".
                     builder.sideEffect();
                     data.history = builder.sample(colorPassOutput); // FIXME: an access must be declared for detach(), why?
-                }, [&view](FrameGraphResources const& resources, auto const& data,
+                }, [&view, projection](FrameGraphResources const& resources, auto const& data,
                         backend::DriverApi&) {
-                    const auto& cameraInfo = view.getCameraInfo();
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
-                    current.ssr.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+                    current.ssr.projection = projection;
                     resources.detach(data.history,
                             &current.ssr.color, &current.ssr.desc);
                 });
@@ -1058,6 +1070,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
+    mViewRenderedCount = 0;
 
     { // scope for frame id trace
         char buf[64];

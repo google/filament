@@ -15,6 +15,7 @@
  */
 
 #include <ktxreader/Ktx1Reader.h>
+#include <ktxreader/Ktx2Reader.h>
 
 #include <filament/Engine.h>
 #include <filament/Texture.h>
@@ -58,8 +59,7 @@ TEST_F(KtxReaderTest, Ktx1) {
     Texture* tex = ktxreader::Ktx1Reader::createTexture(engine, bundle, false,
             [](void* userdata) {  /* */ }, nullptr);
 
-    ASSERT_TRUE(tex != nullptr);
-
+    ASSERT_NE(tex, nullptr);
     ASSERT_EQ(tex->getWidth(), 64);
     ASSERT_EQ(tex->getHeight(), 64);
 
@@ -71,7 +71,23 @@ TEST_F(KtxReaderTest, Ktx2) {
     const auto contents = readFile(parent + "color_grid_uastc_zstd.ktx2");
     ASSERT_EQ(contents.size(), 170512);
 
-    // TODO: create Filament texture from the KTX2 file.
+    ktxreader::Ktx2Reader reader(*engine);
+
+    reader.requestFormat(Texture::InternalFormat::DXT3_SRGBA);
+    reader.requestFormat(Texture::InternalFormat::DXT3_RGBA);
+
+    // Uncompressed formats are lower priority, so they get added last.
+    reader.requestFormat(Texture::InternalFormat::SRGB8_A8);
+    reader.requestFormat(Texture::InternalFormat::RGBA8);
+
+    Texture* tex = reader.load(contents.data(), contents.size(),
+            ktxreader::Ktx2Reader::TransferFunction::sRGB);
+
+    ASSERT_NE(tex, nullptr);
+    ASSERT_EQ(tex->getFormat(), Texture::InternalFormat::DXT3_SRGBA);
+    ASSERT_EQ(tex->getWidth(), 1024);
+
+    engine->destroy(tex);
 }
 
 int main(int argc, char** argv) {

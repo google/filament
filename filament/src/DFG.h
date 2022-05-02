@@ -33,7 +33,14 @@ class FEngine;
 
 class DFG {
 public:
-    explicit DFG(FEngine& engine) noexcept;
+    explicit DFG() noexcept = default;
+
+    DFG(DFG const& rhs) = delete;
+    DFG(DFG&& rhs) = delete;
+    DFG& operator=(DFG const& rhs) = delete;
+    DFG& operator=(DFG&& rhs) = delete;
+
+    void init(FEngine& engine) noexcept;
 
     size_t getLutSize() const noexcept {
         return DFG_LUT_SIZE;
@@ -47,15 +54,9 @@ public:
         return mLUT->getHwHandle();
     }
 
-    void terminate();
-
-    DFG(DFG const& rhs) = delete;
-    DFG(DFG&& rhs) = delete;
-    DFG& operator=(DFG const& rhs) = delete;
-    DFG& operator=(DFG&& rhs) = delete;
+    void terminate(FEngine& engine) noexcept;
 
 private:
-    FEngine& mEngine;
     FTexture* mLUT = nullptr;
 
     // make sure to use the right size here

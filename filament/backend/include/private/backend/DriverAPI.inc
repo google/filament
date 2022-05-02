@@ -246,11 +246,6 @@ DECL_DRIVER_API_R_N(backend::SwapChainHandle, createSwapChainHeadless,
         uint32_t, height,
         uint64_t, flags)
 
-DECL_DRIVER_API_R_N(backend::StreamHandle, createStreamFromTextureId,
-        intptr_t, externalTextureId,
-        uint32_t, width,
-        uint32_t, height)
-
 DECL_DRIVER_API_R_0(backend::TimerQueryHandle, createTimerQuery)
 
 
@@ -455,14 +450,6 @@ DECL_DRIVER_API_0(stopCapture)
 
 DECL_DRIVER_API_N(readPixels,
         backend::RenderTargetHandle, src,
-        uint32_t, x,
-        uint32_t, y,
-        uint32_t, width,
-        uint32_t, height,
-        backend::PixelBufferDescriptor&&, data)
-
-DECL_DRIVER_API_N(readStreamPixels,
-        backend::StreamHandle, sh,
         uint32_t, x,
         uint32_t, y,
         uint32_t, width,

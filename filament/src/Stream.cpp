@@ -36,11 +36,6 @@ void Stream::setDimensions(uint32_t width, uint32_t height) noexcept {
     upcast(this)->setDimensions(width, height);
 }
 
-void Stream::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) noexcept {
-    upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer));
-}
-
 int64_t Stream::getTimestamp() const noexcept {
     return upcast(this)->getTimestamp();
 }

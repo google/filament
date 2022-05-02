@@ -124,7 +124,7 @@ public:
          *
          * Ignored if an environment is set.
          *
-         * @param color
+         * @param color the constant color
          *
          * @return This Builder, for chaining calls.
          */
