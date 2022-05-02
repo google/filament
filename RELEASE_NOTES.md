@@ -5,14 +5,16 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.21.3 (currently main branch)
 
-- Renamed the KTXLoader Kotlin class to KTX1Loader.  [⚠️ **API Change**].
-- Added Ktx2Reader and BasisEncoder to support Basis-encoded KTX2 files.
-- Desktop and Web Suzanne samples now use KTX2 instead of KTX1.
-- Removed KTX1 compression support from mipgen.  [⚠️ **API Change**].
-- Added support for KTX2 to mipgen.
-- gltfio: Added resetBoneMatrices() method.
+- Java: Renamed the `KTXLoader` Kotlin class to `KTX1Loader`.  [⚠️ **API Change**].
+- libs: Added `Ktx2Reader` and `BasisEncoder` to support Basis-encoded KTX2 files.
+- engine: Remove deprecated `Stream` APIs, see `Texture::import()` for an alternative [⚠️ **API Change**].
+- tools: Removed KTX1 compression support from mipgen.  [⚠️ **API Change**].
+- tools: Added support for KTX2 to mipgen.
+- gltfio: Added `resetBoneMatrices()` method.
 - gltfio: Introduced `TextureProvider` interface.  [⚠️ **API Change**].
-- engine: remove deprecated `Stream` APIs, see `Texture::import()` for an alternative [⚠️ **API Change**].
+- gltfio: Fix progress indicator when error occurs.
+- samples: Desktop and Web Suzanne samples now use KTX2 instead of KTX1.
+- samples: Fix regression with sample-gltf-viewer and zip files.
 
 ## v1.21.2
 
