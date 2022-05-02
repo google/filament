@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
@@ -359,7 +359,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
     }
 }
 
-SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
+ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament::View* view,
         int sidebarWidth) :
         mEngine(engine), mScene(scene), mView(view),
         mSunlight(utils::EntityManager::get().create()),
@@ -389,12 +389,12 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
     view->setAmbientOcclusionOptions({ .upsampling = View::QualityLevel::HIGH });
 }
 
-SimpleViewer::~SimpleViewer() {
+ViewerGui::~ViewerGui() {
     mEngine->destroy(mSunlight);
     delete mImGuiHelper;
 }
 
-void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
+void ViewerGui::populateScene(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
     if (mAsset != asset) {
         removeAsset();
         mAsset = asset;
@@ -421,7 +421,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instan
     }
 }
 
-void SimpleViewer::removeAsset() {
+void ViewerGui::removeAsset() {
     if (!isRemoteMode()) {
         mScene->removeEntities(mAsset->getEntities(), mAsset->getEntityCount());
         mAsset = nullptr;
@@ -429,7 +429,7 @@ void SimpleViewer::removeAsset() {
     }
 }
 
-void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
+void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
     mSettings.view.fog.color = sh3[0];
@@ -446,7 +446,7 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
     }
 }
 
-void SimpleViewer::updateRootTransform() {
+void ViewerGui::updateRootTransform() {
     if (isRemoteMode()) {
         return;
     }
@@ -459,7 +459,7 @@ void SimpleViewer::updateRootTransform() {
     tcm.setTransform(root, transform);
 }
 
-void SimpleViewer::updateIndirectLight() {
+void ViewerGui::updateIndirectLight() {
     using namespace filament::math;
     if (mIndirectLight) {
         mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
@@ -467,7 +467,7 @@ void SimpleViewer::updateIndirectLight() {
     }
 }
 
-void SimpleViewer::applyAnimation(double currentTime) {
+void ViewerGui::applyAnimation(double currentTime) {
     assert_invariant(!isRemoteMode());
     static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
@@ -488,7 +488,7 @@ void SimpleViewer::applyAnimation(double currentTime) {
     }
 }
 
-void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio) {
+void ViewerGui::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio) {
     if (mImGuiHelper == nullptr) {
         mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
 
@@ -529,7 +529,7 @@ void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, f
     });
 }
 
-void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY,
+void ViewerGui::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY,
         bool control) {
     if (mImGuiHelper) {
         ImGuiIO& io = ImGui::GetIO();
@@ -543,25 +543,25 @@ void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, floa
     }
 }
 
-void SimpleViewer::keyDownEvent(int keyCode) {
+void ViewerGui::keyDownEvent(int keyCode) {
     if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
         ImGui::GetIO().KeysDown[keyCode] = true;
     }
 }
 
-void SimpleViewer::keyUpEvent(int keyCode) {
+void ViewerGui::keyUpEvent(int keyCode) {
     if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
         ImGui::GetIO().KeysDown[keyCode] = false;
     }
 }
 
-void SimpleViewer::keyPressEvent(int charCode) {
+void ViewerGui::keyPressEvent(int charCode) {
     if (mImGuiHelper) {
         ImGui::GetIO().AddInputCharacter(charCode);
     }
 }
 
-void SimpleViewer::updateUserInterface() {
+void ViewerGui::updateUserInterface() {
     using namespace filament;
 
     auto& tm = mEngine->getTransformManager();
