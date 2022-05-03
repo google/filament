@@ -906,7 +906,7 @@ void ViewerGui::updateUserInterface() {
 
         // We do not yet support camera selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
-        if (isRemoteMode()) {
+        if (!isRemoteMode()) {
 
             const utils::Entity* cameras = mAsset->getCameraEntities();
             const size_t cameraCount = mAsset->getCameraEntityCount();
