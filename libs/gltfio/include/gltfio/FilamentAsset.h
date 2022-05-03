@@ -20,6 +20,8 @@
 #include <filament/Box.h>
 #include <filament/TextureSampler.h>
 
+#include <gltfio/NodeManager.h>
+
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 
@@ -27,6 +29,7 @@ namespace filament {
     class Camera;
     class Engine;
     class MaterialInstance;
+    class Scene;
 }
 
 namespace gltfio {
@@ -55,12 +58,14 @@ class FilamentInstance;
  */
 class UTILS_PUBLIC FilamentAsset {
 public:
+    using Entity = utils::Entity;
+    using SceneMask = NodeManager::SceneMask;
 
     /**
      * Gets the list of entities, one for each glTF node. All of these have a Transform component.
      * Some of the returned entities may also have a Renderable component and/or a Light component.
      */
-    const utils::Entity* getEntities() const noexcept;
+    const Entity* getEntities() const noexcept;
 
     /**
      * Gets the number of entities returned by getEntities().
@@ -70,7 +75,7 @@ public:
     /**
      * Gets the list of entities in the scene representing lights. All of these have a Light component.
      */
-    const utils::Entity* getLightEntities() const noexcept;
+    const Entity* getLightEntities() const noexcept;
 
     /**
      * Gets the number of entities returned by getLightEntities().
@@ -105,7 +110,7 @@ public:
      *
      * @see filament::Camera::setScaling
      */
-    const utils::Entity* getCameraEntities() const noexcept;
+    const Entity* getCameraEntities() const noexcept;
 
     /**
      * Gets the number of entities returned by getCameraEntities().
@@ -119,7 +124,7 @@ public:
      * assets, this is a "super root" where each of its children is a root in a particular instance.
      * This allows users to transform all instances en masse if they wish to do so.
      */
-    utils::Entity getRoot() const noexcept;
+    Entity getRoot() const noexcept;
 
     /**
      * Pops a ready renderable off the queue, or returns 0 if no renderables have become ready.
@@ -132,12 +137,12 @@ public:
      * textures gradually become ready through asynchronous loading. For example, on every frame
      * progressive applications can do something like this:
      *
-     *    while (utils::Entity e = popRenderable()) { scene.addEntity(e); }
+     *    while (Entity e = popRenderable()) { scene.addEntity(e); }
      *
      * \see ResourceLoader#asyncBeginLoad
      * \see popRenderables()
      */
-    utils::Entity popRenderable() noexcept;
+    Entity popRenderable() noexcept;
 
     /**
      * Pops up to "count" ready renderables off the queue, or returns the available number.
@@ -148,7 +153,7 @@ public:
      *
      * \see ResourceLoader#asyncBeginLoad
      */
-    size_t popRenderables(utils::Entity* entities, size_t count) noexcept;
+    size_t popRenderables(Entity* entities, size_t count) noexcept;
 
     /** Gets all material instances. These are already bound to renderables. */
     const filament::MaterialInstance* const* getMaterialInstances() const noexcept;
@@ -169,10 +174,10 @@ public:
     filament::Aabb getBoundingBox() const noexcept;
 
     /** Gets the NameComponentManager label for the given entity, if it exists. */
-    const char* getName(utils::Entity) const noexcept;
+    const char* getName(Entity) const noexcept;
 
     /** Returns the first entity with the given name, or 0 if none exist. */
-    utils::Entity getFirstEntityByName(const char* name) noexcept;
+    Entity getFirstEntityByName(const char* name) noexcept;
 
     /**
      * Gets a list of entities with the given name.
@@ -184,7 +189,7 @@ public:
      * @return If entities is non-null, the number of entities written to the entity pointer.
      * Otherwise this returns the number of entities with the given name.
      */
-    size_t getEntitiesByName(const char* name, utils::Entity* entities,
+    size_t getEntitiesByName(const char* name, Entity* entities,
             size_t maxCount) const noexcept;
 
     /**
@@ -197,11 +202,11 @@ public:
      * @return If entities is non-null, the number of entities written to the entity pointer.
      * Otherwise this returns the number of entities with the given prefix.
      */
-    size_t getEntitiesByPrefix(const char* prefix, utils::Entity* entities,
+    size_t getEntitiesByPrefix(const char* prefix, Entity* entities,
             size_t maxCount) const noexcept;
 
     /** Gets the glTF extras string for a specific node, or for the asset, if it exists. */
-    const char* getExtras(utils::Entity entity = {}) const noexcept;
+    const char* getExtras(Entity entity = {}) const noexcept;
 
     /**
      * Returns the animation engine.
@@ -231,17 +236,17 @@ public:
     /**
      * Gets joints at skin index.
      */
-    const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
+    const Entity* getJointsAt(size_t skinIndex) const noexcept;
 
     /**
      * Gets the morph target name at the given index in the given entity.
      */
-    const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
+    const char* getMorphTargetNameAt(Entity entity, size_t targetIndex) const noexcept;
 
     /**
      * Returns the number of morph targets in the given entity.
      */
-    size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
+    size_t getMorphTargetCountAt(Entity entity) const noexcept;
 
     /**
      * Returns the number of material variants in the asset.
@@ -271,7 +276,7 @@ public:
      * Lazily creates a single LINES renderable that draws the transformed bounding-box hierarchy
      * for diagnostic purposes. The wireframe is owned by the asset so clients should not delete it.
      */
-    utils::Entity getWireframe() noexcept;
+    Entity getWireframe() noexcept;
 
     /**
      * Returns the Filament engine associated with the AssetLoader that created this asset.
@@ -291,6 +296,28 @@ public:
      * calling releaseSourceData().
      */
     const void* getSourceAsset() noexcept;
+
+    /**
+     * Returns the number of scenes in the asset.
+     */
+    size_t getSceneCount() const noexcept;
+
+    /**
+     * Returns the name of the given scene.
+     *
+     * Returns null if the given scene does not have a name or is out of bounds.
+     */
+    const char* getSceneName(size_t sceneIndex) const noexcept;
+
+    /**
+     * Adds entities to a Filament scene only if they belong to at least one of the given glTF
+     * scenes.
+     *
+     * This is just a helper that provides an alternative to directly calling scene->addEntities()
+     * and provides filtering functionality.
+     */
+    void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
+            SceneMask sceneFilter);
 
     /*! \cond PRIVATE */
 

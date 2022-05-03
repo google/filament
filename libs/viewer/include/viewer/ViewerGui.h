@@ -26,6 +26,7 @@
 
 #include <gltfio/Animator.h>
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/NodeManager.h>
 
 #include <viewer/Settings.h>
 
@@ -228,9 +229,13 @@ public:
     int getCurrentCamera() const { return mCurrentCamera; }
 
 private:
+    using SceneMask = gltfio::NodeManager::SceneMask;
+
     void updateIndirectLight();
 
     bool isRemoteMode() const { return mAsset == nullptr; }
+
+    void sceneSelectionUI();
 
     // Immutable properties set from the constructor.
     filament::Engine* const mEngine;
@@ -258,6 +263,7 @@ private:
     uint32_t mFlags;
     utils::Entity mCurrentMorphingEntity;
     std::vector<float> mMorphWeights;
+    SceneMask mVisibleScenes;
     bool mShowingRestPose = false;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).

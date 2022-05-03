@@ -242,6 +242,17 @@ struct FFilamentAsset : public FilamentAsset {
         return mInstances.size();
     }
 
+    size_t getSceneCount() const noexcept { return mScenes.size(); }
+
+    const char* getSceneName(size_t sceneIndex) const noexcept {
+        return mScenes[sceneIndex].c_str();
+    }
+
+    void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
+            SceneMask sceneFilter);
+
+    // end public API
+
     void takeOwnership(filament::Texture* texture) {
         mTextures.push_back(texture);
     }
@@ -273,6 +284,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<filament::MorphTargetBuffer*> mMorphTargetBuffers;
     std::vector<filament::Texture*> mTextures;
     utils::FixedCapacityVector<Variant> mVariants;
+    utils::FixedCapacityVector<utils::CString> mScenes;
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;

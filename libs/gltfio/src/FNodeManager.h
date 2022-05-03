@@ -83,11 +83,11 @@ public:
         return mManager[ci].extras;
     }
 
-    void setSceneMembership(Instance ci, utils::bitset32 scenes) noexcept {
+    void setSceneMembership(Instance ci, SceneMask scenes) noexcept {
         mManager[ci].scenes = scenes;
     }
 
-    utils::bitset32 getSceneMembership(Instance ci) const noexcept {
+    SceneMask getSceneMembership(Instance ci) const noexcept {
         return mManager[ci].scenes;
     }
 
@@ -98,10 +98,10 @@ private:
         SCENE_MEMBERSHIP,
     };
 
-    using Base = utils::SingleInstanceComponentManager<  // 24 bytes
+    using Base = utils::SingleInstanceComponentManager<  // 28 bytes
             utils::FixedCapacityVector<CString>,  // 16
             CString,                              // 8
-            utils::bitset32>;                     // 4
+            SceneMask>;                           // 4
 
     struct Sim : public Base {
         using Base::gc;

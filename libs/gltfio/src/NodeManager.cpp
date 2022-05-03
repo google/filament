@@ -72,7 +72,7 @@ const CString& NodeManager::getExtras(Instance ci) const noexcept {
     return upcast(this)->getExtras(ci);
 }
 
-void NodeManager::setSceneMembership(Instance ci, bitset32 scenes) noexcept {
+void NodeManager::setSceneMembership(Instance ci, SceneMask scenes) noexcept {
     upcast(this)->setSceneMembership(ci, scenes);
 }
 

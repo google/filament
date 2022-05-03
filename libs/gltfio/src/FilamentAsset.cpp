@@ -19,6 +19,7 @@
 #include <gltfio/Animator.h>
 
 #include <filament/RenderableManager.h>
+#include <filament/Scene.h>
 
 #include <utils/EntityManager.h>
 #include <utils/Log.h>
@@ -256,6 +257,18 @@ size_t FFilamentAsset::getEntitiesByPrefix(const char* prefix, Entity* entities,
     return count;
 }
 
+void FFilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities,
+        size_t count, SceneMask sceneFilter) {
+    auto& nm = *mNodeManager;
+    for (size_t ei = 0; ei < count; ++ei) {
+        const Entity entity = entities[ei];
+        NodeManager::SceneMask mask = nm.getSceneMembership(nm.getInstance(entity));
+        if ((mask & sceneFilter).any()) {
+            targetScene.addEntity(entity);
+        }
+    }
+}
+
 size_t FilamentAsset::getEntityCount() const noexcept {
     return upcast(this)->getEntityCount();
 }
@@ -411,6 +424,19 @@ FilamentInstance** FilamentAsset::getAssetInstances() noexcept {
 
 size_t FilamentAsset::getAssetInstanceCount() const noexcept {
     return upcast(this)->getAssetInstanceCount();
+}
+
+size_t FilamentAsset::getSceneCount() const noexcept {
+    return upcast(this)->getSceneCount();
+}
+
+const char* FilamentAsset::getSceneName(size_t sceneIndex) const noexcept {
+    return upcast(this)->getSceneName(sceneIndex);
+}
+
+void FilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
+        SceneMask sceneFilter) {
+    upcast(this)->addEntitiesToScene(targetScene, entities, count, sceneFilter);
 }
 
 } // namespace gltfio
