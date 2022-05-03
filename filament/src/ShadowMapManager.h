@@ -29,7 +29,6 @@
 
 #include <private/backend/DriverApi.h>
 #include <private/backend/DriverApiForward.h>
-#include <private/backend/SamplerGroup.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -40,13 +39,11 @@
 
 #include <array>
 #include <memory>
-#include <vector>
 
 namespace filament {
 
 class FView;
 class FrameGraph;
-class ShadowMap;
 class RenderPass;
 
 struct ShadowMappingUniforms {
@@ -89,7 +86,7 @@ public:
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all the shadow maps.
-    FrameGraphId<FrameGraphTexture> render(FrameGraph& fg, FEngine& engine, backend::DriverApi& driver,
+    FrameGraphId<FrameGraphTexture> render(FrameGraph& fg, FEngine& engine,
             RenderPass const& pass, FView& view) noexcept;
 
     ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {

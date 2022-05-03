@@ -17,7 +17,6 @@
 #include "details/View.h"
 
 #include "Culler.h"
-#include "DFG.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
 #include "ResourceAllocator.h"
@@ -887,7 +886,7 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
 FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FrameGraph& fg, FEngine& engine,
         FEngine::DriverApi& driver,
         RenderPass const& pass) noexcept {
-    return mShadowMapManager.render(fg, engine, driver, pass, *this);
+    return mShadowMapManager.render(fg, engine, pass, *this);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {
