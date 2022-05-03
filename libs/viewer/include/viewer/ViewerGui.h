@@ -76,15 +76,25 @@ public:
     ~ViewerGui();
 
     /**
-     * Adds the asset's ready-to-render entities into the scene.
+     * Sets the viewer's current asset.
      *
      * The viewer does not claim ownership over the asset or its entities. Clients should use
      * AssetLoader and ResourceLoader to load an asset before passing it in.
      *
+     * This method does not add renderables to the scene; see populateScene().
+     *
      * @param asset The asset to view.
      * @param instanceToAnimate Optional instance from which to get the animator.
      */
-    void populateScene(FilamentAsset* asset, FilamentInstance* instanceToAnimate = nullptr);
+    void setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnimate = nullptr);
+
+    /**
+     * Adds the asset's ready-to-render entities into the scene.
+     *
+     * This is used for asychronous loading. It can be called once per frame to gradually add
+     * entities into the scene as their textures are loaded.
+     */
+    void populateScene();
 
     /**
      * Removes the current asset from the viewer.

@@ -254,6 +254,10 @@ int main(int argc, char** argv) {
             loadAsset(filename);
         }
 
+        FilamentInstance* const instance = app.instanceToAnimate > -1 ?
+                app.instances[app.instanceToAnimate] : nullptr;
+        app.viewer->setAsset(app.asset, instance);
+
         arrangeIntoCircle();
         loadResources(filename);
     };
@@ -271,12 +275,8 @@ int main(int argc, char** argv) {
 
     auto animate = [&app, arrangeIntoCircle](Engine* engine, View* view, double now) {
         app.resourceLoader->asyncUpdateLoad();
-        FilamentInstance* instance = nullptr;
-        if (app.instanceToAnimate > -1) {
-            instance = app.instances[app.instanceToAnimate];
-        }
         app.viewer->updateRootTransform();
-        app.viewer->populateScene(app.asset, instance);
+        app.viewer->populateScene();
         app.viewer->applyAnimation(now);
 
         // Add a new instance every second until reaching 100 instances.

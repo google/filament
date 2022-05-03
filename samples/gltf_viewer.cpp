@@ -505,6 +505,7 @@ int main(int argc, char** argv) {
         } else {
             loadAsset(filename);
         }
+        app.viewer->setAsset(app.asset);
 
         loadResources(filename);
 
@@ -665,8 +666,8 @@ int main(int argc, char** argv) {
         // Optionally fit the model into a unit cube at the origin.
         app.viewer->updateRootTransform();
 
-        // Add renderables to the scene as they become ready.
-        app.viewer->populateScene(app.asset);
+        // Gradually add renderables to the scene as their textures become ready.
+        app.viewer->populateScene();
 
         app.viewer->applyAnimation(now);
     };
