@@ -30,6 +30,7 @@ set(SRCS
         src/FFilamentInstance.h
         src/FilamentInstance.cpp
         src/GltfEnums.h
+        src/Ktx2Provider.cpp
         src/MaterialProvider.cpp
         src/ResourceLoader.cpp
         src/StbProvider.cpp
@@ -165,7 +166,7 @@ add_library(gltfio_resources_lite ${DUMMY_SRC} ${RESGEN_SOURCE})
 # ==================================================================================================
 
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
-link_libraries(math utils filament cgltf stb geometry gltfio_resources tsl trie)
+link_libraries(math utils filament cgltf stb ktxreader geometry gltfio_resources tsl trie)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 

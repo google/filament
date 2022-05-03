@@ -60,6 +60,9 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
     }
 }
 
+void ShadowMap::terminate(FEngine& engine) {
+}
+
 ShadowMap::~ShadowMap() {
     FEngine& engine = mEngine;
     Entity entities[] = { mCamera->getEntity(), mDebugCamera->getEntity() };

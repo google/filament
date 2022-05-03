@@ -22,9 +22,4 @@
 
 @implementation ViewController
 
-- (BOOL)shouldAutorotate
-{
-    return NO;
-}
-
 @end

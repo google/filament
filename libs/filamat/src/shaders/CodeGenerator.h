@@ -65,6 +65,7 @@ public:
 
     // generate common functions for the given shader
     static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type) ;
+    static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderType type) ;
     static utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type) ;
 
     static utils::io::sstream& generateFog(utils::io::sstream& out, ShaderType type) ;

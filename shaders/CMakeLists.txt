@@ -14,7 +14,7 @@ set(SHADERS
         src/ambient_occlusion.fs
         src/attributes.vs
         src/brdf.fs
-        src/common_getters.fs
+        src/common_getters.glsl
         src/common_graphics.fs
         src/common_lighting.fs
         src/common_material.fs

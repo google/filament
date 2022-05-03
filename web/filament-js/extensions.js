@@ -146,8 +146,8 @@ Filament.loadClassExtensions = function() {
             reader.requestFormat(format);
         }
 
-        result = reader.load(buffer, options.srgb ? Filament.TransferFunction.sRGB :
-            Filament.TransferFunction.LINEAR);
+        result = reader.load(buffer, options.srgb ? Filament.Ktx2Reader$TransferFunction.sRGB :
+            Filament.Ktx2Reader$TransferFunction.LINEAR);
 
         reader.delete();
         buffer.delete();
@@ -645,9 +645,11 @@ Filament.loadClassExtensions = function() {
                 config.ignoreBindTransform);
 
         const stbProvider = new Filament.gltfio$StbProvider(engine);
+        const ktx2Provider = new Filament.gltfio$Ktx2Provider(engine);
 
-        resourceLoader.addTextureProvider("image/jpeg", stbProvider);
-        resourceLoader.addTextureProvider("image/png", stbProvider);
+        resourceLoader.addStbProvider("image/jpeg", stbProvider);
+        resourceLoader.addStbProvider("image/png", stbProvider);
+        resourceLoader.addKtx2Provider("image/ktx2", ktx2Provider);
 
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);

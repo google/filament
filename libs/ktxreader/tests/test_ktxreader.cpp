@@ -73,8 +73,8 @@ TEST_F(KtxReaderTest, Ktx2) {
 
     ktxreader::Ktx2Reader reader(*engine);
 
-    reader.requestFormat(Texture::InternalFormat::DXT3_SRGBA);
-    reader.requestFormat(Texture::InternalFormat::DXT3_RGBA);
+    reader.requestFormat(Texture::InternalFormat::DXT5_SRGBA);
+    reader.requestFormat(Texture::InternalFormat::DXT5_RGBA);
 
     // Uncompressed formats are lower priority, so they get added last.
     reader.requestFormat(Texture::InternalFormat::SRGB8_A8);
@@ -84,7 +84,7 @@ TEST_F(KtxReaderTest, Ktx2) {
             ktxreader::Ktx2Reader::TransferFunction::sRGB);
 
     ASSERT_NE(tex, nullptr);
-    ASSERT_EQ(tex->getFormat(), Texture::InternalFormat::DXT3_SRGBA);
+    ASSERT_EQ(tex->getFormat(), Texture::InternalFormat::DXT5_SRGBA);
     ASSERT_EQ(tex->getWidth(), 1024);
 
     engine->destroy(tex);

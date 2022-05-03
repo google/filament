@@ -1097,6 +1097,19 @@ export enum WrapMode {
     MIRRORED_REPEAT,
 }
 
+export enum Ktx2Reader$TransferFunction {
+    LINEAR,
+    sRGB,
+}
+
+export enum Ktx2Reader$Result {
+    SUCCESS,
+    COMPRESSED_TRANSCODE_FAILURE,
+    UNCOMPRESSED_TRANSCODE_FAILURE,
+    FORMAT_UNSUPPORTED,
+    FORMAT_ALREADY_REQUESTED,
+}
+
 export function _malloc(size: number): number;
 export function _free(size: number): void;
 

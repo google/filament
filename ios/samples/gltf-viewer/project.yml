@@ -19,7 +19,7 @@ targets:
             - FilamentApp
         settings:
             base:
-                OTHER_LDFLAGS: ["-lgltfio_core", "-lgltfio_resources", "-limage", "-lgeometry",  "-lstb",
+                OTHER_LDFLAGS: ["-lgltfio_core", "-lgltfio_resources", "-limage", "-lgeometry", "-lstb", "-lbasis_transcoder",
                                 "-lcamutils", "-ldracodec", "-lviewer", "-lcivetweb", "-lktxreader"]
         preBuildScripts:
             - path: build-resources.sh
