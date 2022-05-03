@@ -78,6 +78,16 @@ public:
     size_t getLightEntityCount() const noexcept;
 
     /**
+     * Gets the list of entities in the asset that have renderable components.
+     */
+    const utils::Entity* getRenderableEntities() const noexcept;
+
+    /**
+     * Gets the number of entities returned by getRenderableEntities().
+     */
+    size_t getRenderableEntityCount() const noexcept;
+
+    /**
      * Gets the list of entities in the scene representing cameras. All of these have a \c Camera
      * component.
      *

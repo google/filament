@@ -1826,6 +1826,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return EntityVector(ptr, ptr + self->getLightEntityCount());
     }), allow_raw_pointers())
 
+    .function("_getRenderableEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
+        const utils::Entity* ptr = self->getRenderableEntities();
+        return EntityVector(ptr, ptr + self->getRenderableEntityCount());
+    }), allow_raw_pointers())
+
     .function("_getCameraEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
         const utils::Entity* ptr = self->getCameraEntities();
         return EntityVector(ptr, ptr + self->getCameraEntityCount());

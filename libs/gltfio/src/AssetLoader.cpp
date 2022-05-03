@@ -299,6 +299,8 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         }
     }
 
+    mResult->mRenderableCount = 0;
+
     if (numInstances == 0) {
         // For each scene root, recursively create all entities.
         for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
@@ -316,6 +318,14 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
             }
         }
     }
+
+    // Sort the entities so that the renderable ones come first. This allows us to expose
+    // a "renderables only" pointer without storing a separate list.
+    const auto& rm = mEngine->getRenderableManager();
+    std::sort(mResult->mEntities.begin(), mResult->mEntities.end(),
+            [&rm](const Entity& a, const Entity& b) {
+        return rm.hasComponent(a);
+    });
 
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
     // that match the URI. These strings get freed during releaseSourceData().
@@ -564,6 +574,8 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         }
         mRenderableManager.setMorphWeights(renderable, weights.data(), size);
     }
+
+    ++mResult->mRenderableCount;
 }
 
 void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh,

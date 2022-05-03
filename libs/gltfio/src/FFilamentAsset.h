@@ -139,6 +139,14 @@ struct FFilamentAsset : public FilamentAsset {
         return mLightEntities.size();
     }
 
+    const utils::Entity* getRenderableEntities() const noexcept {
+        return (mRenderableCount == 0) ? nullptr : mEntities.data();
+    }
+
+    size_t getRenderableEntityCount() const noexcept {
+        return mRenderableCount;
+    }
+
     const utils::Entity* getCameraEntities() const noexcept {
         return mCameraEntities.empty() ? nullptr : mCameraEntities.data();
     }
@@ -250,9 +258,10 @@ struct FFilamentAsset : public FilamentAsset {
     filament::Engine* mEngine;
     utils::NameComponentManager* mNameManager;
     utils::EntityManager* mEntityManager;
-    std::vector<utils::Entity> mEntities;
+    std::vector<utils::Entity> mEntities; // sorted such that renderables come first
     std::vector<utils::Entity> mLightEntities;
     std::vector<utils::Entity> mCameraEntities;
+    size_t mRenderableCount = 0;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
     std::vector<filament::BufferObject*> mBufferObjects;

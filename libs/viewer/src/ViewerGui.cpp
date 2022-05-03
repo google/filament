@@ -394,7 +394,7 @@ ViewerGui::~ViewerGui() {
     delete mImGuiHelper;
 }
 
-void ViewerGui::populateScene(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
+void ViewerGui::setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
     if (mAsset != asset) {
         removeAsset();
         mAsset = asset;
@@ -407,7 +407,9 @@ void ViewerGui::populateScene(FilamentAsset* asset,  FilamentInstance* instanceT
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
     }
+}
 
+void ViewerGui::populateScene() {
     auto& tcm = mEngine->getRenderableManager();
 
     static constexpr int kNumAvailable = 128;
@@ -847,8 +849,9 @@ void ViewerGui::updateUserInterface() {
     if (ImGui::CollapsingHeader("Scene")) {
         ImGui::Indent();
 
-        ImGui::Checkbox("Scale to unit cube", &mSettings.viewer.autoScaleEnabled);
-        updateRootTransform();
+        if (ImGui::Checkbox("Scale to unit cube", &mSettings.viewer.autoScaleEnabled)) {
+            updateRootTransform();
+        }
 
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);

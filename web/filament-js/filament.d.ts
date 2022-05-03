@@ -629,6 +629,7 @@ export class gltfio$FilamentAsset {
     public getEntityByName(name: string): Entity;
     public getEntitiesByPrefix(name: string): Entity[];
     public getLightEntities(): Entity[];
+    public getRenderableEntities(): Entity[];
     public getCameraEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;

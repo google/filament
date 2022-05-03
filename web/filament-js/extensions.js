@@ -702,6 +702,10 @@ Filament.loadClassExtensions = function() {
         return Filament.vectorToArray(this._getLightEntities());
     };
 
+    Filament.gltfio$FilamentAsset.prototype.getRenderableEntities = function() {
+        return Filament.vectorToArray(this._getRenderableEntities());
+    };
+
     Filament.gltfio$FilamentAsset.prototype.getCameraEntities = function() {
         return Filament.vectorToArray(this._getCameraEntities());
     };

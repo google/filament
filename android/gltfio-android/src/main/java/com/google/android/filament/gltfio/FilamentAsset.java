@@ -114,6 +114,15 @@ public class FilamentAsset {
     }
 
     /**
+     * Gets only the entities that have renderable components.
+     */
+    public @NonNull @Entity int[] getRenderableEntities() {
+        int[] result = new int[nGetRenderableEntityCount(mNativeObject)];
+        nGetRenderableEntities(mNativeObject, result);
+        return result;
+    }
+
+    /**
      * Gets only the entities that have camera components.
      *
      * <p>
@@ -320,6 +329,9 @@ public class FilamentAsset {
 
     private static native int nGetLightEntityCount(long nativeAsset);
     private static native void nGetLightEntities(long nativeAsset, int[] result);
+
+    private static native int nGetRenderableEntityCount(long nativeAsset);
+    private static native void nGetRenderableEntities(long nativeAsset, int[] result);
 
     private static native int nGetCameraEntityCount(long nativeAsset);
     private static native void nGetCameraEntities(long nativeAsset, int[] result);

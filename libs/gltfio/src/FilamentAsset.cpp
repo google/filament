@@ -280,6 +280,14 @@ size_t FilamentAsset::getLightEntityCount() const noexcept {
     return upcast(this)->getLightEntityCount();
 }
 
+const Entity* FilamentAsset::getRenderableEntities() const noexcept {
+    return upcast(this)->getRenderableEntities();
+}
+
+size_t FilamentAsset::getRenderableEntityCount() const noexcept {
+    return upcast(this)->getRenderableEntityCount();
+}
+
 const utils::Entity* FilamentAsset::getCameraEntities() const noexcept {
     return upcast(this)->getCameraEntities();
 }
