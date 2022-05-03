@@ -498,6 +498,7 @@ struct HighWatermark {
     void onFree(void* p, size_t size) noexcept;
     void onReset() noexcept;
     void onRewind(void const* addr) noexcept;
+    uint32_t getHighWatermark() const noexcept { return mHighWaterMark; }
 protected:
     const char* mName = nullptr;
     void* mBase = nullptr;

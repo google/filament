@@ -17,6 +17,7 @@
 #include "details/Renderer.h"
 
 #include "PostProcessManager.h"
+#include "RendererUtils.h"
 #include "RenderPass.h"
 #include "ResourceAllocator.h"
 
@@ -27,7 +28,6 @@
 #include "details/Texture.h"
 #include "details/View.h"
 
-#include <filament/Scene.h>
 #include <filament/Renderer.h>
 
 #include <backend/PixelBufferDescriptor.h>
@@ -37,6 +37,7 @@
 #include "fg/FrameGraphResources.h"
 
 #include <utils/compiler.h>
+#include <utils/JobSystem.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/vector.h>
@@ -55,32 +56,32 @@ using namespace backend;
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(1u),
+        mRenderTargetHandle(engine.getDefaultRenderTarget()),
         mFrameInfoManager(engine.getDriverApi()),
+        mHdrTranslucent(TextureFormat::RGBA16F),
+        mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
+        mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
+        mUserEpoch(engine.getEngineEpoch()),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
-    debugRegistry.registerProperty("d.ssao.enabled", &engine.debug.ssao.enabled);
-
+    debugRegistry.registerProperty("d.ssao.enabled",
+            &engine.debug.ssao.enabled);
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
             &engine.debug.renderer.doFrameCapture);
-}
 
-void FRenderer::init() noexcept {
-    DriverApi& driver = mEngine.getDriverApi();
-    mUserEpoch = mEngine.getEngineEpoch();
-    mRenderTarget = mEngine.getDefaultRenderTarget();
+    DriverApi& driver = engine.getDriverApi();
+
     mIsRGB8Supported = driver.isRenderTargetFormatSupported(TextureFormat::RGB8);
 
     // our default HDR translucent format, fallback to LDR if not supported by the backend
-    mHdrTranslucent = TextureFormat::RGBA16F;
     if (!driver.isRenderTargetFormatSupported(TextureFormat::RGBA16F)) {
         // this will clip all HDR data, but we don't have a choice
         mHdrTranslucent = TextureFormat::RGBA8;
     }
 
     // our default opaque low/medium quality HDR format, fallback to LDR if not supported
-    mHdrQualityMedium = TextureFormat::R11F_G11F_B10F;
     if (!driver.isRenderTargetFormatSupported(mHdrQualityMedium)) {
         // this will clip all HDR data, but we don't have a choice
         mHdrQualityMedium = TextureFormat::RGB8;
@@ -88,7 +89,6 @@ void FRenderer::init() noexcept {
 
     // our default opaque high quality HDR format, fallback to RGBA, then medium, then LDR
     // if not supported
-    mHdrQualityHigh = TextureFormat::RGB16F;
     if (!driver.isRenderTargetFormatSupported(mHdrQualityHigh)) {
         mHdrQualityHigh = TextureFormat::RGBA16F;
     }
@@ -137,7 +137,7 @@ void FRenderer::resetUserTime() {
     mUserEpoch = std::chrono::steady_clock::now();
 }
 
-TextureFormat FRenderer::getHdrFormat(const View& view, bool translucent) const noexcept {
+TextureFormat FRenderer::getHdrFormat(const FView& view, bool translucent) const noexcept {
     if (translucent) {
         return mHdrTranslucent;
     }
@@ -156,6 +156,263 @@ TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
     return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
+void FRenderer::getRenderTarget(FView const& view,
+        TargetBufferFlags& outAttachementMask, Handle<HwRenderTarget>& outTarget) const noexcept {
+    outTarget = view.getRenderTargetHandle();
+    outAttachementMask = view.getRenderTargetAttachmentMask();
+    if (!outTarget) {
+        outTarget = mRenderTargetHandle;
+        outAttachementMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+    }
+}
+
+void FRenderer::initializeClearFlags() {
+    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
+    // across views (clear implies discard)
+    mDiscardStartFlags = ((mClearOptions.discard || mClearOptions.clear) ?
+                          TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                         | TargetBufferFlags::DEPTH_AND_STENCIL;
+
+    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                  | TargetBufferFlags::DEPTH_AND_STENCIL;
+}
+
+
+bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
+    assert_invariant(swapChain);
+
+    SYSTRACE_CALL();
+
+    // get the timestamp as soon as possible
+    using namespace std::chrono;
+    const steady_clock::time_point now{ steady_clock::now() };
+    const steady_clock::time_point userVsync{ steady_clock::duration(vsyncSteadyClockTimeNano) };
+    const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
+
+    mFrameId++;
+    mViewRenderedCount = 0;
+
+    { // scope for frame id trace
+        char buf[64];
+        snprintf(buf, 64, "frame %u", mFrameId);
+        SYSTRACE_NAME(buf);
+    }
+
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    // start a frame capture, if requested.
+    if (UTILS_UNLIKELY(engine.debug.renderer.doFrameCapture)) {
+        driver.startCapture();
+    }
+
+    // latch the frame time
+    std::chrono::duration<double> time(appVsync - mUserEpoch);
+    float h = float(time.count());
+    float l = float(time.count() - h);
+    mShaderUserTime = { h, l, 0, 0 };
+
+    mPreviousRenderTargets.clear();
+
+    mBeginFrameInternal = {};
+
+    mSwapChain = swapChain;
+    swapChain->makeCurrent(driver);
+
+    // NOTE: this makes synchronous calls to the driver
+    driver.updateStreams(&driver);
+
+    // gives the backend a chance to execute periodic tasks
+    driver.tick();
+
+    /*
+    * From this point, we can't do any more work in beginFrame() because the user could choose
+    * to ignore the return value and render the frame anyways -- which is perfectly fine.
+    * The remaining work will be done when the first render() call is made.
+    */
+    auto beginFrameInternal = [this, appVsync, vsyncSteadyClockTimeNano]() {
+        FEngine& engine = mEngine;
+        FEngine::DriverApi& driver = engine.getDriverApi();
+
+        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
+
+        // This need to occur after the backend beginFrame() because some backends need to start
+        // a command buffer before creating a fence.
+
+        mFrameInfoManager.beginFrame(driver, {
+                .historySize = mFrameRateOptions.history
+        }, mFrameId);
+
+        if (false && vsyncSteadyClockTimeNano) { // work in progress
+            const size_t interval = mFrameRateOptions.interval; // user requested swap-interval;
+            const steady_clock::duration refreshPeriod(uint64_t(1e9 / mDisplayInfo.refreshRate));
+            const steady_clock::duration presentationDeadline(mDisplayInfo.presentationDeadlineNanos);
+            const steady_clock::duration vsyncOffset(mDisplayInfo.vsyncOffsetNanos);
+
+            // hardware vsync timestamp
+            steady_clock::time_point hwVsync = appVsync - vsyncOffset;
+
+            // compute our desired presentation time. We can't pick a desired presentation time
+            // that's too far, or we won't be able to dequeue buffers.
+            steady_clock::time_point desiredPresentationTime = hwVsync + 2 * interval * refreshPeriod;
+
+            // Compute the deadline. This deadline is when the GPU must be finished.
+            // The deadline has 1ms backed in it on Android.
+            UTILS_UNUSED_IN_RELEASE
+            steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
+
+            // one important thing is to make sure that the deadline is comfortably later than
+            // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
+
+            // TODO: evaluate if we can make it in time, and if not why.
+            //   If the problem is cpu+gpu latency we can try to push the desired presentation time
+            //   further away, but this has limits, as only 2 buffers are dequeuable.
+            //   If the problem is the gpu is overwhelmed, then we need to
+            //    - see if there is more headroom in dynamic resolution
+            //    - or start skipping frames. Ideally lower the framerate to
+            // presentation time is set to the middle of the period we're interested in
+            steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
+            driver.setPresentationTime(presentationTime.time_since_epoch().count());
+        }
+
+        // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
+        engine.prepare();
+    };
+
+    if (mFrameSkipper.beginFrame(driver)) {
+        // if beginFrame() returns true, we are expecting a call to endFrame(),
+        // so do the beginFrame work right now, instead of requiring a call to render()
+        beginFrameInternal();
+        return true;
+    }
+
+    // however, if we return false, the user is allowed to ignore us and render a frame anyways,
+    // so we need to delay this work until that happens.
+    mBeginFrameInternal = beginFrameInternal;
+
+    // we need to flush in this case, to make sure the tick() call is executed at some point
+    engine.flush();
+
+    return false;
+}
+
+void FRenderer::endFrame() {
+    SYSTRACE_CALL();
+
+    if (UTILS_UNLIKELY(mBeginFrameInternal)) {
+        mBeginFrameInternal();
+        mBeginFrameInternal = {};
+    }
+
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    if (UTILS_HAS_THREADING) {
+        // on debug builds this helps catching cases where we're writing to
+        // the buffer form another thread, which is currently not allowed.
+        driver.debugThreading();
+    }
+
+    mFrameInfoManager.endFrame(driver);
+    mFrameSkipper.endFrame(driver);
+
+    if (mSwapChain) {
+        mSwapChain->commit(driver);
+        mSwapChain = nullptr;
+    }
+
+    driver.endFrame(mFrameId);
+
+    // gives the backend a chance to execute periodic tasks
+    driver.tick();
+
+    // stop the frame capture, if one was requested
+    if (UTILS_UNLIKELY(engine.debug.renderer.doFrameCapture)) {
+        driver.stopCapture();
+        engine.debug.renderer.doFrameCapture = false;
+    }
+
+    // do this before engine.flush()
+    engine.getResourceAllocator().gc();
+
+    // Run the component managers' GC in parallel
+    // WARNING: while doing this we can't access any component manager
+    auto& js = engine.getJobSystem();
+
+    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+
+    engine.flush();     // flush command stream
+
+    // make sure we're done with the gcs
+    js.waitAndRelease(job);
+}
+
+void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        PixelBufferDescriptor&& buffer) {
+#ifndef NDEBUG
+    const bool withinFrame = mSwapChain != nullptr;
+    ASSERT_PRECONDITION(withinFrame, "readPixels() on a SwapChain must be called after"
+                                     " beginFrame() and before endFrame().");
+#endif
+    RendererUtils::readPixels(mEngine.getDriverApi(), mRenderTargetHandle,
+            xoffset, yoffset, width, height, std::move(buffer));
+}
+
+void FRenderer::readPixels(FRenderTarget* renderTarget,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        backend::PixelBufferDescriptor&& buffer) {
+    RendererUtils::readPixels(mEngine.getDriverApi(), renderTarget->getHwHandle(),
+            xoffset, yoffset, width, height, std::move(buffer));
+}
+
+void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
+        filament::Viewport const& srcViewport, CopyFrameFlag flags) {
+    SYSTRACE_CALL();
+
+    assert_invariant(mSwapChain);
+    assert_invariant(dstSwapChain);
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    // Set the current swap chain as the read surface, and the destination
+    // swap chain as the draw surface so that blitting between default render
+    // targets results in a frame copy from the current frame to the
+    // destination.
+    driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
+
+    RenderPassParams params = {};
+    // Clear color to black if the CLEAR flag is set.
+    if (flags & CLEAR) {
+        params.clearColor = {0.f, 0.f, 0.f, 1.f};
+        params.flags.clear = TargetBufferFlags::COLOR;
+        params.flags.discardStart = TargetBufferFlags::ALL;
+        params.flags.discardEnd = TargetBufferFlags::NONE;
+        params.viewport.left = 0;
+        params.viewport.bottom = 0;
+        params.viewport.width = std::numeric_limits<uint32_t>::max();
+        params.viewport.height = std::numeric_limits<uint32_t>::max();
+    }
+    driver.beginRenderPass(mRenderTargetHandle, params);
+
+    // Verify that the source swap chain is readable.
+    assert_invariant(mSwapChain->isReadable());
+    driver.blit(TargetBufferFlags::COLOR,
+            mRenderTargetHandle, dstViewport, mRenderTargetHandle, srcViewport, SamplerMagFilter::LINEAR);
+    if (flags & SET_PRESENTATION_TIME) {
+        // TODO: Implement this properly, see https://github.com/google/filament/issues/633
+    }
+
+    driver.endRenderPass();
+
+    if (flags & COMMIT) {
+        dstSwapChain->commit(driver);
+    }
+
+    // Reset the context and read/draw surface to the current surface so that
+    // frame rendering can continue or complete.
+    mSwapChain->makeCurrent(driver);
+}
+
 void FRenderer::renderStandaloneView(FView const* view) {
     SYSTRACE_CALL();
 
@@ -169,7 +426,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
         mFrameId++;
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
-        FEngine& engine = getEngine();
+        FEngine& engine = mEngine;
         engine.prepare();
 
         FEngine::DriverApi& driver = engine.getDriverApi();
@@ -225,7 +482,7 @@ void FRenderer::renderInternal(FView const* view) {
 }
 
 void FRenderer::renderJob(ArenaScope& arena, FView& view) {
-    FEngine& engine = getEngine();
+    FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
     PostProcessManager& ppm = engine.getPostProcessManager();
@@ -467,7 +724,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool blending = blendModeTranslucent;
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
-    ColorPassConfig config{
+    RendererUtils::ColorPassConfig config{
             .width = svp.width,
             .height = svp.height,
             .xoffset = (uint32_t)xvp.left,
@@ -660,14 +917,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     // the color pass itself + color-grading as subpass if needed
-    FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, "Color Pass",
-            desc, config, colorGradingConfigForColor,
-            pass.getExecutor(), view);
+    auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view,
+            desc, config, colorGradingConfigForColor, pass.getExecutor());
 
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
         // the color pass + refraction + color-grading as subpass if needed
-        colorPassOutput = refractionPass(fg, config, ssrConfig, colorGradingConfigForColor, pass, view);
+        colorPassOutput = RendererUtils::refractionPass(fg, mEngine, view,
+                config, ssrConfig, colorGradingConfigForColor, pass);
     }
 
     if (colorGradingConfig.customResolve) {
@@ -799,7 +1056,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //   TODO: in that specific scenario it would be better to just not use xvp
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
 
-    const bool outputIsSwapChain = (input == colorPassOutput) && (viewRenderTarget == mRenderTarget);
+    const bool outputIsSwapChain = (input == colorPassOutput) && (viewRenderTarget == mRenderTargetHandle);
     if (mightNeedFinalBlit) {
         if (blending ||
             xvp != svp ||
@@ -838,565 +1095,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);
 
-    //recordHighWatermark(pass.getCommandsHighWatermark());
-}
-
-FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
-        ColorPassConfig config,
-        PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
-        PostProcessManager::ColorGradingConfig colorGradingConfig,
-        RenderPass const& pass,
-        FView const& view) const noexcept {
-
-    auto& blackboard = fg.getBlackboard();
-    auto input = blackboard.get<FrameGraphTexture>("color");
-    FrameGraphId<FrameGraphTexture> output;
-
-    // find the first refractive object
-    Command const* const refraction = std::partition_point(pass.begin(), pass.end(),
-            [](auto const& command) {
-                return (command.key & RenderPass::PASS_MASK) < uint64_t(RenderPass::Pass::REFRACT);
-            });
-
-    const bool hasScreenSpaceRefraction =
-            (refraction->key & RenderPass::PASS_MASK) == uint64_t(RenderPass::Pass::REFRACT);
-
-    // if there wasn't any refractive object, just skip everything below.
-    if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
-        PostProcessManager& ppm = mEngine.getPostProcessManager();
-
-        // clear the color/depth buffers, which will orphan (and cull) the color pass
-        input.clear();
-        blackboard.remove("color");
-        blackboard.remove("depth");
-
-        input = colorPass(fg, "Color Pass (opaque)",
-                {
-                        // When rendering the opaques, we need to conserve the sample buffer,
-                        // so create config that specifies the sample count.
-                        .width = config.width,
-                        .height = config.height,
-                        .samples = config.msaa,
-                        .format = config.hdrFormat
-                },
-                config,
-                { .asSubpass = false },
-                pass.getExecutor(pass.begin(), refraction),
-                view);
-
-        // generate the mipmap chain
-        PostProcessManager::generateMipmapSSR(ppm, fg,
-                input, ssrConfig.refraction, true, ssrConfig);
-
-        // Now we're doing the refraction pass proper.
-        // This uses the same framebuffer (color and depth) used by the opaque pass. This happens
-        // automatically because these are set in the Blackboard (they were set by the opaque
-        // pass). For this reason, `desc` below is only used in colorPass() for the width and
-        // height.
-        config.clearFlags = TargetBufferFlags::NONE;
-        output = colorPass(fg, "Color Pass (transparent)",
-                {
-                        .width = config.width,
-                        .height = config.height
-                },
-                config,
-                colorGradingConfig,
-                pass.getExecutor(refraction, pass.end()),
-                view);
-
-        if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
-            // We need to do a resolve here because later passes (such as color grading or DoF) will need
-            // to sample from 'output'. However, because we have MSAA, we know we're not sampleable.
-            // And this is because in the SSR case, we had to use a renderbuffer to conserve the
-            // multi-sample buffer.
-            output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", output);
-        }
-    } else {
-        output = input;
-    }
-    return output;
-}
-
-FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char* name,
-        FrameGraphTexture::Descriptor const& colorBufferDesc,
-        ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
-        RenderPass::Executor const& passExecutor, FView const& view) const noexcept {
-
-    struct ColorPassData {
-        FrameGraphId<FrameGraphTexture> shadows;
-        FrameGraphId<FrameGraphTexture> color;
-        FrameGraphId<FrameGraphTexture> output;
-        FrameGraphId<FrameGraphTexture> depth;
-        FrameGraphId<FrameGraphTexture> ssao;
-        FrameGraphId<FrameGraphTexture> ssr;    // either screen-space reflections or refractions
-        FrameGraphId<FrameGraphTexture> structure;
-        float4 clearColor{};
-        TargetBufferFlags clearFlags{};
-    };
-
-    Blackboard& blackboard = fg.getBlackboard();
-
-    auto& colorPass = fg.addPass<ColorPassData>(name,
-            [&](FrameGraph::Builder& builder, ColorPassData& data) {
-
-                TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
-                TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
-
-                data.shadows = blackboard.get<FrameGraphTexture>("shadows");
-                data.ssao = blackboard.get<FrameGraphTexture>("ssao");
-                data.color = blackboard.get<FrameGraphTexture>("color");
-                data.depth = blackboard.get<FrameGraphTexture>("depth");
-
-                // Screen-space reflection or refractions
-                data.ssr = blackboard.get<FrameGraphTexture>("ssr");
-                if (data.ssr) {
-                    data.ssr = builder.sample(data.ssr);
-                }
-
-                if (config.hasContactShadows) {
-                    data.structure = blackboard.get<FrameGraphTexture>("structure");
-                    assert_invariant(data.structure);
-                    data.structure = builder.sample(data.structure);
-                }
-
-                if (data.shadows) {
-                    data.shadows = builder.sample(data.shadows);
-                }
-
-                if (data.ssao) {
-                    data.ssao = builder.sample(data.ssao);
-                }
-
-                if (!data.color) {
-                    // FIXME: this works only when the viewport is full
-                    //  if (view.isSkyboxVisible()) {
-                    //      // if the skybox is visible, then we don't need to clear at all
-                    //      clearColorFlags &= ~TargetBufferFlags::COLOR;
-                    //  }
-                    data.color = builder.createTexture("Color Buffer", colorBufferDesc);
-                }
-
-                DriverApi& driver = mEngine.getDriverApi();
-                const bool canResolveDepth = driver.isAutoDepthResolveSupported();
-
-                if (!data.depth) {
-                    // clear newly allocated depth buffers, regardless of given clear flags
-                    clearDepthFlags = TargetBufferFlags::DEPTH;
-                    data.depth = builder.createTexture("Depth Buffer", {
-                            .width = colorBufferDesc.width,
-                            .height = colorBufferDesc.height,
-                            // If the color attachment requested MS, we assume this means the MS buffer
-                            // must be kept, and for that reason we allocate the depth buffer with MS
-                            // as well. On the other hand, if the color attachment was allocated without
-                            // MS, no need to allocate the depth buffer with MS, if the RT is MS,
-                            // the tile depth buffer will be MS, but it'll be resolved to single
-                            // sample automatically -- which is what we want.
-                            .samples = canResolveDepth ? colorBufferDesc.samples : uint8_t(config.msaa),
-                            .format = TextureFormat::DEPTH32F,
-                    });
-                }
-
-                if (colorGradingConfig.asSubpass) {
-                    data.output = builder.createTexture("Tonemapped Buffer", {
-                            .width = colorBufferDesc.width,
-                            .height = colorBufferDesc.height,
-                            .format = colorGradingConfig.ldrFormat
-                    });
-                    data.color = builder.read(data.color, FrameGraphTexture::Usage::SUBPASS_INPUT);
-                    data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                } else if (colorGradingConfig.customResolve) {
-                    data.color = builder.read(data.color, FrameGraphTexture::Usage::SUBPASS_INPUT);
-                }
-
-                // We set a "read" constraint on these attachments here because we need to preserve them
-                // when the color pass happens in several passes (e.g. with SSR)
-                data.color = builder.read(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-
-                data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-
-                /*
-                 * There is a bit of magic happening here regarding the viewport used.
-                 * We do not specify the viewport in declareRenderPass() below, so it will be
-                 * deduced automatically to be { 0, 0, w, h }, with w,h the min width/height of
-                 * all the attachments. This has the side effect of moving the viewport to the
-                 * origin and ignore the left/bottom of 'svp'. The attachment sizes are set from
-                 * svp's width/height, however.
-                 * But that's not all! When we're rendering directly into the swap-chain (by way
-                 * of calling forwardResource() later), the effective viewport comes from the
-                 * imported resource (i.e. the swap-chain) and is set to 'vp' which has its
-                 * left/bottom honored -- the view is therefore rendered directly where it should
-                 * be (the imported resource viewport is set to 'vp', see  how 'fgViewRenderTarget'
-                 * is initialized in this file).
-                 */
-                builder.declareRenderPass("Color Pass Target", {
-                        .attachments = { .color = { data.color, data.output }, .depth = data.depth },
-                        .samples = config.msaa,
-                        .clearFlags = clearColorFlags | clearDepthFlags });
-
-                data.clearColor = config.clearColor;
-                data.clearFlags = clearColorFlags | clearDepthFlags;
-
-                blackboard["depth"] = data.depth;
-            },
-            [=, &view](FrameGraphResources const& resources,
-                            ColorPassData const& data, DriverApi& driver) {
-                auto out = resources.getRenderPassInfo();
-
-                // set samplers and uniforms
-                PostProcessManager& ppm = getEngine().getPostProcessManager();
-                view.prepareSSAO(data.ssao ?
-                        resources.getTexture(data.ssao) : ppm.getOneTextureArray());
-
-                view.prepareShadowMap();
-
-                // set shadow sampler
-                view.prepareShadow(data.shadows ?
-                        resources.getTexture(data.shadows) : ppm.getOneTextureArray());
-
-                // set structure sampler
-                view.prepareStructure(data.structure ?
-                        resources.getTexture(data.structure) : ppm.getOneTexture());
-
-                // set screen-space reflections and screen-space refractions
-                TextureHandle ssr = data.ssr ?
-                        resources.getTexture(data.ssr) : ppm.getOneTextureArray();
-
-                view.prepareSSR(ssr, config.ssrLodOffset,
-                        view.getScreenSpaceReflectionsOptions());
-
-                // Note: here we can't use data.color's descriptor for the viewport because
-                // the actual viewport might be offset when the target is the swapchain.
-                // However, the width/height should be the same.
-                assert_invariant(
-                        out.params.viewport.width == resources.getDescriptor(data.color).width);
-                assert_invariant(
-                        out.params.viewport.height == resources.getDescriptor(data.color).height);
-
-                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
-                        config.xoffset, config.yoffset);
-                view.commitUniforms(driver);
-
-                out.params.clearColor = data.clearColor;
-                out.params.flags.clear = data.clearFlags;
-                if (view.getBlendMode() == BlendMode::TRANSLUCENT) {
-                    if (any(out.params.flags.discardStart & TargetBufferFlags::COLOR0)) {
-                        // if the buffer is discarded (e.g. it's new) and we're blending,
-                        // then clear it to transparent
-                        out.params.flags.clear |= TargetBufferFlags::COLOR;
-                        out.params.clearColor = {};
-                    }
-                }
-
-                if (colorGradingConfig.asSubpass || colorGradingConfig.customResolve) {
-                    out.params.subpassMask = 1;
-                }
-                passExecutor.execute(resources.getPassName(), out.target, out.params);
-
-                // color pass is typically heavy, and we don't have much CPU work left after
-                // this point, so flushing now allows us to start the GPU earlier and reduce
-                // latency, without creating bubbles.
-                driver.flush();
-            }
-    );
-
-    // when color grading is done as a subpass, the output of the color-pass is the ldr buffer
-    auto output = colorGradingConfig.asSubpass ? colorPass->output : colorPass->color;
-
-    fg.getBlackboard()["color"] = output;
-    return output;
-}
-
-void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
-        filament::Viewport const& srcViewport, CopyFrameFlag flags) {
-    SYSTRACE_CALL();
-
-    assert_invariant(mSwapChain);
-    assert_invariant(dstSwapChain);
-    FEngine& engine = getEngine();
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    // Set the current swap chain as the read surface, and the destination
-    // swap chain as the draw surface so that blitting between default render
-    // targets results in a frame copy from the current frame to the
-    // destination.
-    driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
-
-    RenderPassParams params = {};
-    // Clear color to black if the CLEAR flag is set.
-    if (flags & CLEAR) {
-        params.clearColor = {0.f, 0.f, 0.f, 1.f};
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
-        params.viewport.left = 0;
-        params.viewport.bottom = 0;
-        params.viewport.width = std::numeric_limits<uint32_t>::max();
-        params.viewport.height = std::numeric_limits<uint32_t>::max();
-    }
-    driver.beginRenderPass(mRenderTarget, params);
-
-    // Verify that the source swap chain is readable.
-    assert_invariant(mSwapChain->isReadable());
-    driver.blit(TargetBufferFlags::COLOR,
-            mRenderTarget, dstViewport, mRenderTarget, srcViewport, SamplerMagFilter::LINEAR);
-    if (flags & SET_PRESENTATION_TIME) {
-        // TODO: Implement this properly, see https://github.com/google/filament/issues/633
-    }
-
-    driver.endRenderPass();
-
-    if (flags & COMMIT) {
-        dstSwapChain->commit(driver);
-    }
-
-    // Reset the context and read/draw surface to the current surface so that
-    // frame rendering can continue or complete.
-    mSwapChain->makeCurrent(driver);
-}
-
-bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
-    assert_invariant(swapChain);
-
-    SYSTRACE_CALL();
-
-    // get the timestamp as soon as possible
-    using namespace std::chrono;
-    const steady_clock::time_point now{ steady_clock::now() };
-    const steady_clock::time_point userVsync{ steady_clock::duration(vsyncSteadyClockTimeNano) };
-    const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
-
-    mFrameId++;
-    mViewRenderedCount = 0;
-
-    { // scope for frame id trace
-        char buf[64];
-        snprintf(buf, 64, "frame %u", mFrameId);
-        SYSTRACE_NAME(buf);
-    }
-
-    FEngine& engine = getEngine();
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    // start a frame capture, if requested.
-    if (UTILS_UNLIKELY(engine.debug.renderer.doFrameCapture)) {
-        driver.startCapture();
-    }
-
-    // latch the frame time
-    std::chrono::duration<double> time(appVsync - mUserEpoch);
-    float h = float(time.count());
-    float l = float(time.count() - h);
-    mShaderUserTime = { h, l, 0, 0 };
-
-    mPreviousRenderTargets.clear();
-
-    mBeginFrameInternal = {};
-
-    mSwapChain = swapChain;
-    swapChain->makeCurrent(driver);
-
-    // NOTE: this makes synchronous calls to the driver
-    driver.updateStreams(&driver);
-
-    // gives the backend a chance to execute periodic tasks
-    driver.tick();
-
-    /*
-    * From this point, we can't do any more work in beginFrame() because the user could choose
-    * to ignore the return value and render the frame anyways -- which is perfectly fine.
-    * The remaining work will be done when the first render() call is made.
-    */
-    auto beginFrameInternal = [=]() {
-        FEngine& engine = getEngine();
-        FEngine::DriverApi& driver = engine.getDriverApi();
-
-        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
-
-        // This need to occur after the backend beginFrame() because some backends need to start
-        // a command buffer before creating a fence.
-
-        mFrameInfoManager.beginFrame(driver, {
-                .historySize = mFrameRateOptions.history
-        }, mFrameId);
-
-        if (false && vsyncSteadyClockTimeNano) { // work in progress
-            const size_t interval = mFrameRateOptions.interval; // user requested swap-interval;
-            const steady_clock::duration refreshPeriod(uint64_t(1e9 / mDisplayInfo.refreshRate));
-            const steady_clock::duration presentationDeadline(mDisplayInfo.presentationDeadlineNanos);
-            const steady_clock::duration vsyncOffset(mDisplayInfo.vsyncOffsetNanos);
-
-            // hardware vsync timestamp
-            steady_clock::time_point hwVsync = appVsync - vsyncOffset;
-
-            // compute our desired presentation time. We can't pick a desired presentation time
-            // that's too far, or we won't be able to dequeue buffers.
-            steady_clock::time_point desiredPresentationTime = hwVsync + 2 * interval * refreshPeriod;
-
-            // Compute the deadline. This deadline is when the GPU must be finished.
-            // The deadline has 1ms backed in it on Android.
-            UTILS_UNUSED_IN_RELEASE
-            steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
-
-            // one important thing is to make sure that the deadline is comfortably later than
-            // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
-
-            // TODO: evaluate if we can make it in time, and if not why.
-            //   If the problem is cpu+gpu latency we can try to push the desired presentation time
-            //   further away, but this has limits, as only 2 buffers are dequeuable.
-            //   If the problem is the gpu is overwhelmed, then we need to
-            //    - see if there is more headroom in dynamic resolution
-            //    - or start skipping frames. Ideally lower the framerate to
-            // presentation time is set to the middle of the period we're interested in
-            steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
-            driver.setPresentationTime(presentationTime.time_since_epoch().count());
-        }
-
-        // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
-        engine.prepare();
-    };
-
-    if (mFrameSkipper.beginFrame(driver)) {
-        // if beginFrame() returns true, we are expecting a call to endFrame(),
-        // so do the beginFrame work right now, instead of requiring a call to render()
-        beginFrameInternal();
-        return true;
-    }
-
-    // however, if we return false, the user is allowed to ignore us and render a frame anyways,
-    // so we need to delay this work until that happens.
-    mBeginFrameInternal = beginFrameInternal;
-
-    // we need to flush in this case, to make sure the tick() call is executed at some point
-    engine.flush();
-
-    return false;
-}
-
-void FRenderer::endFrame() {
-    SYSTRACE_CALL();
-
-    if (UTILS_UNLIKELY(mBeginFrameInternal)) {
-        mBeginFrameInternal();
-        mBeginFrameInternal = {};
-    }
-
-    FEngine& engine = getEngine();
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    if (UTILS_HAS_THREADING) {
-        // on debug builds this helps catching cases where we're writing to
-        // the buffer form another thread, which is currently not allowed.
-        driver.debugThreading();
-    }
-
-    mFrameInfoManager.endFrame(driver);
-    mFrameSkipper.endFrame(driver);
-
-    if (mSwapChain) {
-        mSwapChain->commit(driver);
-        mSwapChain = nullptr;
-    }
-
-    driver.endFrame(mFrameId);
-
-    // gives the backend a chance to execute periodic tasks
-    driver.tick();
-
-    // stop the frame capture, if one was requested
-    if (UTILS_UNLIKELY(engine.debug.renderer.doFrameCapture)) {
-        driver.stopCapture();
-        engine.debug.renderer.doFrameCapture = false;
-    }
-
-    // do this before engine.flush()
-    engine.getResourceAllocator().gc();
-
-    // Run the component managers' GC in parallel
-    // WARNING: while doing this we can't access any component manager
-    auto& js = engine.getJobSystem();
-
-    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
-
-    engine.flush();     // flush command stream
-
-    // make sure we're done with the gcs
-    js.waitAndRelease(job);
-}
-
-void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& buffer) {
-#ifndef NDEBUG
-    const bool withinFrame = mSwapChain != nullptr;
-    ASSERT_PRECONDITION(withinFrame, "readPixels() on a SwapChain must be called after"
-            " beginFrame() and before endFrame().");
-#endif
-    readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
-}
-
-void FRenderer::readPixels(FRenderTarget* renderTarget,
-        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
-    readPixels(renderTarget->getHwHandle(), xoffset, yoffset, width, height, std::move(buffer));
-}
-
-void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
-        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
-    if (!ASSERT_POSTCONDITION_NON_FATAL(
-            buffer.type != PixelDataType::COMPRESSED,
-            "buffer.format cannot be COMPRESSED")) {
-        return;
-    }
-
-    if (!ASSERT_POSTCONDITION_NON_FATAL(
-            buffer.alignment > 0 && buffer.alignment <= 8 &&
-            !(buffer.alignment & (buffer.alignment - 1u)),
-            "buffer.alignment must be 1, 2, 4 or 8")) {
-        return;
-    }
-
-    // It's not really possible to know here which formats will be supported because
-    // it can vary depending on the RenderTarget, in GL the following are ALWAYS supported though:
-    // format: RGBA, RGBA_INTEGER
-    // type: UBYTE, UINT, INT, FLOAT
-
-    const size_t sizeNeeded = PixelBufferDescriptor::computeDataSize(
-            buffer.format, buffer.type,
-            buffer.stride ? buffer.stride : width,
-            buffer.top + height,
-            buffer.alignment);
-
-    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.size >= sizeNeeded,
-            "Pixel buffer too small: has %u bytes, needs %u bytes", buffer.size, sizeNeeded)) {
-        return;
-    }
-
-    FEngine& engine = getEngine();
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer));
-}
-
-void FRenderer::getRenderTarget(FView const& view,
-        TargetBufferFlags& outAttachementMask, Handle<HwRenderTarget>& outTarget) const noexcept {
-    outTarget = view.getRenderTargetHandle();
-    outAttachementMask = view.getRenderTargetAttachmentMask();
-    if (!outTarget) {
-        outTarget = mRenderTarget;
-        outAttachementMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
-    }
-}
-
-void FRenderer::initializeClearFlags() {
-    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
-    // across views (clear implies discard)
-    mDiscardStartFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-                          TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-                         | TargetBufferFlags::DEPTH_AND_STENCIL;
-
-    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
+    recordHighWatermark(commandArena.getListener().getHighWatermark());
 }
 
 } // namespace filament
