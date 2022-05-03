@@ -110,10 +110,15 @@ Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, u
 Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
     CAEAGLLayer* glLayer = [CAEAGLLayer layer];
     glLayer.frame = CGRectMake(0, 0, width, height);
-    return (__bridge SwapChain*) glLayer;
+    return (SwapChain*) CFBridgingRetain(glLayer);
 }
 
 void PlatformCocoaTouchGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    CAEAGLLayer* glLayer = (CAEAGLLayer*) CFBridgingRelease(swapChain);
+
+    if (pImpl->mCurrentGlLayer == glLayer) {
+        pImpl->mCurrentGlLayer = nullptr;
+    }
 }
 
 void PlatformCocoaTouchGL::createDefaultRenderTarget(uint32_t& framebuffer, uint32_t& colorbuffer,
