@@ -2918,8 +2918,8 @@ std::vector<CapabilityExtensionVersionCase> CapVersionCases1_5() {
            "StorageTexelBufferArrayNonUniformIndexing",
            "SPV_EXT_descriptor_indexing"),
       // SPV_EXT_physical_storage_buffer
-      IN15("PhysicalStorageBufferAddressesEXT",
-           "PhysicalStorageBufferAddresses", "SPV_EXT_physical_storage_buffer"),
+      IN15("PhysicalStorageBufferAddresses", "PhysicalStorageBufferAddresses",
+           "SPV_EXT_physical_storage_buffer"),
       // SPV_KHR_vulkan_memory_model
       IN15("VulkanMemoryModelKHR", "VulkanMemoryModel",
            "SPV_KHR_vulkan_memory_model"),

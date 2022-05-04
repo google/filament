@@ -72,9 +72,8 @@ bool RemoveDuplicatesPass::RemoveDuplicatesExtInstImports() const {
 
   std::unordered_map<std::string, SpvId> ext_inst_imports;
   for (auto* i = &*context()->ext_inst_import_begin(); i;) {
-    auto res = ext_inst_imports.emplace(
-        reinterpret_cast<const char*>(i->GetInOperand(0u).words.data()),
-        i->result_id());
+    auto res = ext_inst_imports.emplace(i->GetInOperand(0u).AsString(),
+                                        i->result_id());
     if (res.second) {
       // Never seen before, keep it.
       i = i->NextNode();

@@ -135,7 +135,8 @@ TEST_F(UniqueIds, UniquelyMerged) {
   LinkerOptions options;
   options.SetVerifyIds(true);
   spv_result_t res = AssembleAndLink(bodies, &linked_binary, options);
-  EXPECT_EQ(SPV_SUCCESS, res);
+  ASSERT_EQ(SPV_SUCCESS, res) << GetErrorMessage();
+  EXPECT_THAT(GetErrorMessage(), std::string());
 }
 
 }  // namespace

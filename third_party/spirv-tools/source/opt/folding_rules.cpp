@@ -2368,7 +2368,7 @@ FoldingRule VectorShuffleFeedingShuffle() {
             // fold.
             return false;
           }
-        } else {
+        } else if (component_index != undef_literal) {
           if (new_feeder_id == 0) {
             // First time through, save the id of the operand the element comes
             // from.
@@ -2382,7 +2382,7 @@ FoldingRule VectorShuffleFeedingShuffle() {
           component_index -= feeder_op0_length;
         }
 
-        if (!feeder_is_op0) {
+        if (!feeder_is_op0 && component_index != undef_literal) {
           component_index += op0_length;
         }
       }

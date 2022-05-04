@@ -87,18 +87,21 @@ spvtools_fuzzer("spvtools_dis_fuzzer_src") {
 spvtools_fuzzer("spvtools_opt_performance_fuzzer_src") {
   sources = [
     "spvtools_opt_performance_fuzzer.cpp",
+    "spvtools_opt_fuzzer_common.cpp",
   ]
 }
 
 spvtools_fuzzer("spvtools_opt_legalization_fuzzer_src") {
   sources = [
     "spvtools_opt_legalization_fuzzer.cpp",
+    "spvtools_opt_fuzzer_common.cpp",
   ]
 }
 
 spvtools_fuzzer("spvtools_opt_size_fuzzer_src") {
   sources = [
     "spvtools_opt_size_fuzzer.cpp",
+    "spvtools_opt_fuzzer_common.cpp",
   ]
 }
 

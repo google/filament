@@ -4,9 +4,9 @@ vars = {
   'github': 'https://github.com',
 
   'effcee_revision': 'ddf5e2bb92957dc8a12c5392f8495333d6844133',
-  'googletest_revision': 'bf0701daa9f5b30e5882e2f8f9a5280bcba87e77',
-  're2_revision': '4244cd1cb492fa1d10986ec67f862964c073f844',
-  'spirv_headers_revision': '814e728b30ddd0f4509233099a3ad96fd4318c07',
+  'googletest_revision': '25dcdc7e8bfac8967f20fb2c0a628f5cf442188d',
+  're2_revision': '0c5616df9c0aaa44c9440d87422012423d91c7d1',
+  'spirv_headers_revision': '4995a2f2723c401eb0ea3e10c81298906bf1422b',
 }
 
 deps = {

@@ -32,22 +32,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     return 0;
   }
 
-  std::vector<uint32_t> input;
-  input.resize(size >> 2);
-  size_t count = 0;
-  for (size_t i = 0; (i + 3) < size; i += 4) {
-    input[count++] = data[i] | (data[i + 1] << 8) | (data[i + 2] << 16) |
-                     (data[i + 3]) << 24;
-  }
-
-  std::vector<char> input_str;
-  size_t char_count = input.size() * sizeof(uint32_t) / sizeof(char);
-  input_str.resize(char_count);
-  memcpy(input_str.data(), input.data(), input.size() * sizeof(uint32_t));
+  std::vector<char> contents;
+  contents.resize(size);
+  memcpy(contents.data(), data, size);
 
   spv_binary binary = nullptr;
   spv_diagnostic diagnostic = nullptr;
-  spvTextToBinaryWithOptions(context, input_str.data(), input_str.size(),
+  spvTextToBinaryWithOptions(context, contents.data(), contents.size(),
                              SPV_TEXT_TO_BINARY_OPTION_NONE, &binary,
                              &diagnostic);
   if (diagnostic) {
@@ -61,7 +52,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     binary = nullptr;
   }
 
-  spvTextToBinaryWithOptions(context, input_str.data(), input_str.size(),
+  spvTextToBinaryWithOptions(context, contents.data(), contents.size(),
                              SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS,
                              &binary, &diagnostic);
   if (diagnostic) {

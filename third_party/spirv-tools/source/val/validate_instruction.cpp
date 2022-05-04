@@ -297,7 +297,7 @@ spv_result_t VersionCheck(ValidationState_t& _, const Instruction* inst) {
   }
 
   // OpTerminateInvocation is special because it is enabled by Shader
-  // capability, but also requries a extension and/or version check.
+  // capability, but also requires an extension and/or version check.
   const bool capability_check_is_sufficient =
       inst->opcode() != SpvOpTerminateInvocation;
 
@@ -406,7 +406,7 @@ spv_result_t LimitCheckSwitch(ValidationState_t& _, const Instruction* inst) {
     // The instruction syntax is as follows:
     // OpSwitch <selector ID> <Default ID> literal label literal label ...
     // literal,label pairs come after the first 2 operands.
-    // It is guaranteed at this point that num_operands is an even numner.
+    // It is guaranteed at this point that num_operands is an even number.
     size_t num_pairs = (inst->operands().size() - 2) / 2;
     const unsigned int num_pairs_limit =
         _.options()->universal_limits_.max_switch_branches;

@@ -115,7 +115,7 @@ bool FoldSpecConstantOpAndCompositePass::ProcessOpSpecConstantOp(
   Instruction* folded_inst = nullptr;
   assert(inst->GetInOperand(0).type ==
              SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER &&
-         "The first in-operand of OpSpecContantOp instruction must be of "
+         "The first in-operand of OpSpecConstantOp instruction must be of "
          "SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER type");
 
   switch (static_cast<SpvOp>(inst->GetSingleWordInOperand(0))) {

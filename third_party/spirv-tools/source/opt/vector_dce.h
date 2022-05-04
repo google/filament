@@ -73,7 +73,7 @@ class VectorDCE : public MemPass {
   bool RewriteInstructions(Function* function,
                            const LiveComponentMap& live_components);
 
-  // Makrs all DebugValue instructions that use |composite| for their values as
+  // Makes all DebugValue instructions that use |composite| for their values as
   // dead instructions by putting them into |dead_dbg_value|.
   void MarkDebugValueUsesAsDead(Instruction* composite,
                                 std::vector<Instruction*>* dead_dbg_value);

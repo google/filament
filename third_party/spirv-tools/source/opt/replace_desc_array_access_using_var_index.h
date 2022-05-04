@@ -47,7 +47,7 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
   }
 
  private:
-  // Replaces all acceses to |var| using variable indices with constant
+  // Replaces all accesses to |var| using variable indices with constant
   // elements of the array |var|. Creates switch-case statements to determine
   // the value of the variable index for all the possible cases. Returns
   // whether replacement is done or not.
@@ -170,7 +170,7 @@ class ReplaceDescArrayAccessUsingVarIndex : public Pass {
   // Creates and adds an OpSwitch used for the selection of OpAccessChain whose
   // first Indexes operand is |access_chain_index_var_id|. The OpSwitch will be
   // added at the end of |parent_block|. It will jump to |default_id| for the
-  // default case and jumps to one of case blocks whoes ids are |case_block_ids|
+  // default case and jumps to one of case blocks whose ids are |case_block_ids|
   // if |access_chain_index_var_id| matches the case number. |merge_id| is the
   // merge block id.
   void AddSwitchForAccessChain(

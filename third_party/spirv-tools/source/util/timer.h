@@ -206,16 +206,16 @@ class Timer {
 
   // Variable to save the result of clock_gettime(CLOCK_PROCESS_CPUTIME_ID) when
   // Timer::Stop() is called. It is used as the last status of CPU time. The
-  // resouce usage is measured by subtracting |cpu_before_| from it.
+  // resource usage is measured by subtracting |cpu_before_| from it.
   timespec cpu_after_;
 
   // Variable to save the result of clock_gettime(CLOCK_MONOTONIC) when
   // Timer::Stop() is called. It is used as the last status of WALL time. The
-  // resouce usage is measured by subtracting |wall_before_| from it.
+  // resource usage is measured by subtracting |wall_before_| from it.
   timespec wall_after_;
 
   // Variable to save the result of getrusage() when Timer::Stop() is called. It
-  // is used as the last status of USR time, SYS time, and RSS. Those resouce
+  // is used as the last status of USR time, SYS time, and RSS. Those resource
   // usages are measured by subtracting |usage_before_| from it.
   rusage usage_after_;
 

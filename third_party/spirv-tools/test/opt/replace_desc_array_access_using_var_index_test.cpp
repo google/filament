@@ -406,6 +406,94 @@ TEST_F(ReplaceDescArrayAccessUsingVarIndexTest,
   SinglePassRunAndMatch<ReplaceDescArrayAccessUsingVarIndex>(text, true);
 }
 
+TEST_F(ReplaceDescArrayAccessUsingVarIndexTest,
+       ReplaceAccessChainToTextureArrayWithNonUniformIndex) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpCapability ShaderNonUniform
+               OpCapability SampledImageArrayNonUniformIndexing
+               OpExtension "SPV_EXT_descriptor_indexing"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %PSMain "PSMain" %in_var_TEXCOORD0 %in_var_MATERIAL_ID %out_var_SV_TARGET
+               OpExecutionMode %PSMain OriginUpperLeft
+               OpSource HLSL 610
+               OpName %type_sampler "type.sampler"
+               OpName %sampler_ "sampler_"
+               OpName %type_2d_image "type.2d.image"
+               OpName %texture_2d "texture_2d"
+               OpName %in_var_TEXCOORD0 "in.var.TEXCOORD0"
+               OpName %in_var_MATERIAL_ID "in.var.MATERIAL_ID"
+               OpName %out_var_SV_TARGET "out.var.SV_TARGET"
+               OpName %PSMain "PSMain"
+               OpName %type_sampled_image "type.sampled.image"
+               OpDecorate %in_var_MATERIAL_ID Flat
+               OpDecorate %in_var_TEXCOORD0 Location 0
+               OpDecorate %in_var_MATERIAL_ID Location 1
+               OpDecorate %out_var_SV_TARGET Location 0
+               OpDecorate %sampler_ DescriptorSet 1
+               OpDecorate %sampler_ Binding 1
+               OpDecorate %texture_2d DescriptorSet 0
+               OpDecorate %texture_2d Binding 0
+
+; CHECK: OpDecorate [[v0:%\w+]] NonUniform
+; CHECK: OpDecorate [[v1:%\w+]] NonUniform
+; CHECK: OpDecorate [[v2:%\w+]] NonUniform
+; CHECK: OpDecorate [[v3:%\w+]] NonUniform
+
+               OpDecorate %10 NonUniform
+               OpDecorate %11 NonUniform
+               OpDecorate %12 NonUniform
+               OpDecorate %13 NonUniform
+%type_sampler = OpTypeSampler
+%_ptr_UniformConstant_type_sampler = OpTypePointer UniformConstant %type_sampler
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+      %float = OpTypeFloat 32
+%type_2d_image = OpTypeImage %float 2D 2 0 0 1 Unknown
+%_arr_type_2d_image_uint_4 = OpTypeArray %type_2d_image %uint_4
+%_ptr_UniformConstant__arr_type_2d_image_uint_4 = OpTypePointer UniformConstant %_arr_type_2d_image_uint_4
+    %v2float = OpTypeVector %float 2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+%_ptr_Input_uint = OpTypePointer Input %uint
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+         %26 = OpTypeFunction %void
+%_ptr_UniformConstant_type_2d_image = OpTypePointer UniformConstant %type_2d_image
+%type_sampled_image = OpTypeSampledImage %type_2d_image
+   %sampler_ = OpVariable %_ptr_UniformConstant_type_sampler UniformConstant
+ %texture_2d = OpVariable %_ptr_UniformConstant__arr_type_2d_image_uint_4 UniformConstant
+%in_var_TEXCOORD0 = OpVariable %_ptr_Input_v2float Input
+%in_var_MATERIAL_ID = OpVariable %_ptr_Input_uint Input
+%out_var_SV_TARGET = OpVariable %_ptr_Output_v4float Output
+
+; CHECK: %uint_0 = OpConstant %uint 0
+; CHECK: %uint_1 = OpConstant %uint 1
+; CHECK: %uint_2 = OpConstant %uint 2
+; CHECK: %uint_3 = OpConstant %uint 3
+
+     %PSMain = OpFunction %void None %26
+         %28 = OpLabel
+         %29 = OpLoad %v2float %in_var_TEXCOORD0
+         %30 = OpLoad %uint %in_var_MATERIAL_ID
+; CHECK: [[v0]] = OpCopyObject %uint {{%\w+}}
+         %10 = OpCopyObject %uint %30
+; CHECK: [[v1]] = OpAccessChain %_ptr_UniformConstant_type_2d_image %texture_2d [[v0]]
+         %11 = OpAccessChain %_ptr_UniformConstant_type_2d_image %texture_2d %10
+; CHECK: [[v2]] = OpLoad %type_2d_image [[v1]]
+         %12 = OpLoad %type_2d_image %11
+         %31 = OpLoad %type_sampler %sampler_
+; CHECK: [[v3]] = OpSampledImage %type_sampled_image [[v2]] {{%\w+}}
+         %13 = OpSampledImage %type_sampled_image %12 %31
+         %32 = OpImageSampleImplicitLod %v4float %13 %29 None
+               OpStore %out_var_SV_TARGET %32
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<ReplaceDescArrayAccessUsingVarIndex>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

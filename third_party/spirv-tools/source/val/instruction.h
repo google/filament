@@ -133,6 +133,9 @@ bool operator<(const Instruction& lhs, uint32_t rhs);
 bool operator==(const Instruction& lhs, const Instruction& rhs);
 bool operator==(const Instruction& lhs, uint32_t rhs);
 
+template <>
+std::string Instruction::GetOperandAs<std::string>(size_t index) const;
+
 }  // namespace val
 }  // namespace spvtools
 

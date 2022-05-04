@@ -41,6 +41,8 @@ namespace spvtools {
 namespace opt {
 
 void IRContext::BuildInvalidAnalyses(IRContext::Analysis set) {
+  set = Analysis(set & ~valid_analyses_);
+
   if (set & kAnalysisDefUse) {
     BuildDefUseManager();
   }
@@ -106,7 +108,7 @@ void IRContext::InvalidateAnalyses(IRContext::Analysis analyses_to_invalidate) {
     analyses_to_invalidate |= kAnalysisDebugInfo;
   }
 
-  // The dominator analysis hold the psuedo entry and exit nodes from the CFG.
+  // The dominator analysis hold the pseudo entry and exit nodes from the CFG.
   // Also if the CFG change the dominators many changed as well, so the
   // dominator analysis should be invalidated as well.
   if (analyses_to_invalidate & kAnalysisCFG) {
@@ -317,7 +319,7 @@ bool IRContext::IsConsistent() {
 #else
   if (AreAnalysesValid(kAnalysisDefUse)) {
     analysis::DefUseManager new_def_use(module());
-    if (*get_def_use_mgr() != new_def_use) {
+    if (!CompareAndPrintDifferences(*get_def_use_mgr(), new_def_use)) {
       return false;
     }
   }
@@ -623,9 +625,8 @@ void IRContext::AddCombinatorsForCapability(uint32_t capability) {
 void IRContext::AddCombinatorsForExtension(Instruction* extension) {
   assert(extension->opcode() == SpvOpExtInstImport &&
          "Expecting an import of an extension's instruction set.");
-  const char* extension_name =
-      reinterpret_cast<const char*>(&extension->GetInOperand(0).words[0]);
-  if (!strcmp(extension_name, "GLSL.std.450")) {
+  const std::string extension_name = extension->GetInOperand(0).AsString();
+  if (extension_name == "GLSL.std.450") {
     combinator_ops_[extension->result_id()] = {GLSLstd450Round,
                                                GLSLstd450RoundEven,
                                                GLSLstd450Trunc,
@@ -944,11 +945,11 @@ void IRContext::EmitErrorMessage(std::string message, Instruction* inst) {
 
   uint32_t line_number = 0;
   uint32_t col_number = 0;
-  char* source = nullptr;
+  std::string source;
   if (line_inst != nullptr) {
     Instruction* file_name =
         get_def_use_mgr()->GetDef(line_inst->GetSingleWordInOperand(0));
-    source = reinterpret_cast<char*>(&file_name->GetInOperand(0).words[0]);
+    source = file_name->GetInOperand(0).AsString();
 
     // Get the line number and column number.
     line_number = line_inst->GetSingleWordInOperand(1);
@@ -957,7 +958,7 @@ void IRContext::EmitErrorMessage(std::string message, Instruction* inst) {
 
   message +=
       "\n  " + inst->PrettyPrint(SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
-  consumer()(SPV_MSG_ERROR, source, {line_number, col_number, 0},
+  consumer()(SPV_MSG_ERROR, source.c_str(), {line_number, col_number, 0},
              message.c_str());
 }
 

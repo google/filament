@@ -4238,7 +4238,7 @@ TEST_F(InlineTest, CreateConstantForInlinedAt) {
   // This shader causes CreateDebugInlinedAt to generate a constant.
   // Using the Constant manager would attempt to build the invalidated
   // DefUse manager during inlining which could cause an assert because
-  // the function is in an inconsistant state. This test verifies that
+  // the function is in an inconsistent state. This test verifies that
   // CreateDebugInlinedAt detects that the DefUse manager is disabled
   // and creates a duplicate constant safely without the Constant manager.
   //

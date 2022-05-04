@@ -39,7 +39,7 @@ bool IsStorageClassAllowedByUniversalRules(uint32_t storage_class) {
     case SpvStorageClassAtomicCounter:
     case SpvStorageClassImage:
     case SpvStorageClassFunction:
-    case SpvStorageClassPhysicalStorageBufferEXT:
+    case SpvStorageClassPhysicalStorageBuffer:
       return true;
       break;
     default:

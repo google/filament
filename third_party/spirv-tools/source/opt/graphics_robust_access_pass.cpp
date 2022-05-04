@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // This pass injects code in a graphics shader to implement guarantees
-// satisfying Vulkan's robustBufferAcces rules.  Robust access rules permit
+// satisfying Vulkan's robustBufferAccess rules.  Robust access rules permit
 // an out-of-bounds access to be redirected to an access of the same type
 // (load, store, etc.) but within the same root object.
 //
@@ -74,7 +74,7 @@
 //    Pointers are always (correctly) typed and so the address and number of
 //    consecutive locations are fully determined by the pointer.
 //
-//  - A pointer value orginates as one of few cases:
+//  - A pointer value originates as one of few cases:
 //
 //    - OpVariable for an interface object or an array of them: image,
 //      buffer (UBO or SSBO), sampler, sampled-image, push-constant, input
@@ -559,21 +559,17 @@ uint32_t GraphicsRobustAccessPass::GetGlslInsts() {
   if (module_status_.glsl_insts_id == 0) {
     // This string serves double-duty as raw data for a string and for a vector
     // of 32-bit words
-    const char glsl[] = "GLSL.std.450\0\0\0\0";
-    const size_t glsl_str_byte_len = 16;
+    const char glsl[] = "GLSL.std.450";
     // Use an existing import if we can.
     for (auto& inst : context()->module()->ext_inst_imports()) {
-      const auto& name_words = inst.GetInOperand(0).words;
-      if (0 == std::strncmp(reinterpret_cast<const char*>(name_words.data()),
-                            glsl, glsl_str_byte_len)) {
+      if (inst.GetInOperand(0).AsString() == glsl) {
         module_status_.glsl_insts_id = inst.result_id();
       }
     }
     if (module_status_.glsl_insts_id == 0) {
       // Make a new import instruction.
       module_status_.glsl_insts_id = TakeNextId();
-      std::vector<uint32_t> words(glsl_str_byte_len / sizeof(uint32_t));
-      std::memcpy(words.data(), glsl, glsl_str_byte_len);
+      std::vector<uint32_t> words = spvtools::utils::MakeVector(glsl);
       auto import_inst = MakeUnique<Instruction>(
           context(), SpvOpExtInstImport, 0, module_status_.glsl_insts_id,
           std::initializer_list<Operand>{
@@ -962,7 +958,7 @@ spv_result_t GraphicsRobustAccessPass::ClampCoordinateForImageTexelPointer(
       constant_mgr->GetDefiningInstruction(component_0)->result_id();
 
   // If the image is a cube array, then the last component of the queried
-  // size is the layer count.  In the query, we have to accomodate folding
+  // size is the layer count.  In the query, we have to accommodate folding
   // in the face index ranging from 0 through 5. The inclusive upper bound
   // on the third coordinate therefore is multiplied by 6.
   auto* query_size_including_faces = query_size;

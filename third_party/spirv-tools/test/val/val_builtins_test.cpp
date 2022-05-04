@@ -93,7 +93,8 @@ CodeGenerator GetInMainCodeGenerator(const char* const built_in,
     generator.extensions_ += extensions;
   }
 
-  generator.before_types_ = "OpMemberDecorate %built_in_type 0 BuiltIn ";
+  generator.before_types_ = R"(OpDecorate %built_in_type Block
+                               OpMemberDecorate %built_in_type 0 BuiltIn )";
   generator.before_types_ += built_in;
   generator.before_types_ += "\n";
 
@@ -251,7 +252,8 @@ CodeGenerator GetInFunctionCodeGenerator(const char* const built_in,
     generator.extensions_ += extensions;
   }
 
-  generator.before_types_ = "OpMemberDecorate %built_in_type 0 BuiltIn ";
+  generator.before_types_ = R"(OpDecorate %built_in_type Block
+                              OpMemberDecorate %built_in_type 0 BuiltIn )";
   generator.before_types_ += built_in;
   generator.before_types_ += "\n";
 
@@ -3098,6 +3100,8 @@ TEST_F(ValidateBuiltIns, TwoBuiltInsFirstFails) {
   CodeGenerator generator = CodeGenerator::GetDefaultShaderCodeGenerator();
 
   generator.before_types_ = R"(
+OpDecorate %input_type Block
+OpDecorate %output_type Block
 OpMemberDecorate %input_type 0 BuiltIn FragCoord
 OpMemberDecorate %output_type 0 BuiltIn Position
 )";
@@ -3138,6 +3142,8 @@ TEST_F(ValidateBuiltIns, TwoBuiltInsSecondFails) {
   CodeGenerator generator = CodeGenerator::GetDefaultShaderCodeGenerator();
 
   generator.before_types_ = R"(
+OpDecorate %input_type Block
+OpDecorate %output_type Block
 OpMemberDecorate %input_type 0 BuiltIn Position
 OpMemberDecorate %output_type 0 BuiltIn FragCoord
 )";
@@ -3201,6 +3207,7 @@ OpStore %position %f32vec4_0123
 TEST_F(ValidateBuiltIns, FragmentPositionTwoEntryPoints) {
   CodeGenerator generator = CodeGenerator::GetDefaultShaderCodeGenerator();
   generator.before_types_ = R"(
+OpDecorate %output_type Block
 OpMemberDecorate %output_type 0 BuiltIn Position
 )";
 
@@ -3252,6 +3259,7 @@ CodeGenerator GetNoDepthReplacingGenerator() {
   CodeGenerator generator = CodeGenerator::GetDefaultShaderCodeGenerator();
 
   generator.before_types_ = R"(
+OpDecorate %output_type Block
 OpMemberDecorate %output_type 0 BuiltIn FragDepth
 )";
 
@@ -3303,6 +3311,7 @@ CodeGenerator GetOneMainHasDepthReplacingOtherHasntGenerator() {
   CodeGenerator generator = CodeGenerator::GetDefaultShaderCodeGenerator();
 
   generator.before_types_ = R"(
+OpDecorate %output_type Block
 OpMemberDecorate %output_type 0 BuiltIn FragDepth
 )";
 
@@ -3374,6 +3383,7 @@ OpExtension "SPV_NV_ray_tracing"
 )";
 
   generator.before_types_ = R"(
+OpDecorate %input_type Block
 OpMemberDecorate %input_type 0 BuiltIn InstanceId
 )";
 
@@ -3609,6 +3619,7 @@ OpCapability GroupNonUniformBallot
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
+OpDecorate %struct Block
 OpMemberDecorate %struct 0 BuiltIn SubgroupEqMask
 %void = OpTypeVoid
 %int = OpTypeInt 32 0
@@ -3663,6 +3674,7 @@ OpCapability GroupNonUniform
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
+OpDecorate %struct Block
 OpMemberDecorate %struct 0 BuiltIn SubgroupSize
 %void = OpTypeVoid
 %int = OpTypeInt 32 0
@@ -3723,6 +3735,7 @@ OpCapability GroupNonUniform
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
+OpDecorate %struct Block
 OpMemberDecorate %struct 0 BuiltIn SubgroupId
 %void = OpTypeVoid
 %int = OpTypeInt 32 0

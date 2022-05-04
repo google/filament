@@ -32,7 +32,7 @@ class TransformationReplaceIdWithSynonym : public Transformation {
       protobufs::IdUseDescriptor id_use_descriptor, uint32_t synonymous_id);
 
   // - The fact manager must know that the id identified by
-  //   |message_.id_use_descriptor| is synonomous with |message_.synonymous_id|.
+  //   |message_.id_use_descriptor| is synonymous with |message_.synonymous_id|.
   // - Replacing the id in |message_.id_use_descriptor| by
   //   |message_.synonymous_id| must respect SPIR-V's rules about uses being
   //   dominated by their definitions.

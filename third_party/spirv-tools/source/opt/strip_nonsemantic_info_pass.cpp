@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "source/opt/strip_reflect_info_pass.h"
+#include "source/opt/strip_nonsemantic_info_pass.h"
 
 #include <cstring>
 #include <vector>
 
 #include "source/opt/instruction.h"
 #include "source/opt/ir_context.h"
+#include "source/util/string_utils.h"
 
 namespace spvtools {
 namespace opt {
 
-Pass::Status StripReflectInfoPass::Process() {
+Pass::Status StripNonSemanticInfoPass::Process() {
   bool modified = false;
 
   std::vector<Instruction*> to_remove;
@@ -32,7 +33,8 @@ Pass::Status StripReflectInfoPass::Process() {
   for (auto& inst : context()->module()->annotations()) {
     switch (inst.opcode()) {
       case SpvOpDecorateStringGOOGLE:
-        if (inst.GetSingleWordInOperand(1) == SpvDecorationHlslSemanticGOOGLE) {
+        if (inst.GetSingleWordInOperand(1) == SpvDecorationHlslSemanticGOOGLE ||
+            inst.GetSingleWordInOperand(1) == SpvDecorationUserTypeGOOGLE) {
           to_remove.push_back(&inst);
         } else {
           other_uses_for_decorate_string = true;
@@ -40,7 +42,8 @@ Pass::Status StripReflectInfoPass::Process() {
         break;
 
       case SpvOpMemberDecorateStringGOOGLE:
-        if (inst.GetSingleWordInOperand(2) == SpvDecorationHlslSemanticGOOGLE) {
+        if (inst.GetSingleWordInOperand(2) == SpvDecorationHlslSemanticGOOGLE ||
+            inst.GetSingleWordInOperand(2) == SpvDecorationUserTypeGOOGLE) {
           to_remove.push_back(&inst);
         } else {
           other_uses_for_decorate_string = true;
@@ -60,33 +63,26 @@ Pass::Status StripReflectInfoPass::Process() {
   }
 
   for (auto& inst : context()->module()->extensions()) {
-    const char* ext_name =
-        reinterpret_cast<const char*>(&inst.GetInOperand(0).words[0]);
-    if (0 == std::strcmp(ext_name, "SPV_GOOGLE_hlsl_functionality1")) {
+    const std::string ext_name = inst.GetInOperand(0).AsString();
+    if (ext_name == "SPV_GOOGLE_hlsl_functionality1") {
+      to_remove.push_back(&inst);
+    } else if (ext_name == "SPV_GOOGLE_user_type") {
       to_remove.push_back(&inst);
     } else if (!other_uses_for_decorate_string &&
-               0 == std::strcmp(ext_name, "SPV_GOOGLE_decorate_string")) {
+               ext_name == "SPV_GOOGLE_decorate_string") {
       to_remove.push_back(&inst);
-    } else if (0 == std::strcmp(ext_name, "SPV_KHR_non_semantic_info")) {
+    } else if (ext_name == "SPV_KHR_non_semantic_info") {
       to_remove.push_back(&inst);
     }
   }
-
-  // clear all debug data now if it hasn't been cleared already, to remove any
-  // remaining OpString that may have been referenced by non-semantic extinsts
-  for (auto& dbg : context()->debugs1()) to_remove.push_back(&dbg);
-  for (auto& dbg : context()->debugs2()) to_remove.push_back(&dbg);
-  for (auto& dbg : context()->debugs3()) to_remove.push_back(&dbg);
-  for (auto& dbg : context()->ext_inst_debuginfo()) to_remove.push_back(&dbg);
 
   // remove any extended inst imports that are non semantic
   std::unordered_set<uint32_t> non_semantic_sets;
   for (auto& inst : context()->module()->ext_inst_imports()) {
     assert(inst.opcode() == SpvOpExtInstImport &&
            "Expecting an import of an extension's instruction set.");
-    const char* extension_name =
-        reinterpret_cast<const char*>(&inst.GetInOperand(0).words[0]);
-    if (0 == std::strncmp(extension_name, "NonSemantic.", 12)) {
+    const std::string extension_name = inst.GetInOperand(0).AsString();
+    if (spvtools::utils::starts_with(extension_name, "NonSemantic.")) {
       non_semantic_sets.insert(inst.result_id());
       to_remove.push_back(&inst);
     }
@@ -103,18 +99,9 @@ Pass::Status StripReflectInfoPass::Process() {
               to_remove.push_back(inst);
             }
           }
-        });
+        },
+        true);
   }
-
-  // OpName must come first, since they may refer to other debug instructions.
-  // If they are after the instructions that refer to, then they will be killed
-  // when that instruction is killed, which will lead to a double kill.
-  std::sort(to_remove.begin(), to_remove.end(),
-            [](Instruction* lhs, Instruction* rhs) -> bool {
-              if (lhs->opcode() == SpvOpName && rhs->opcode() != SpvOpName)
-                return true;
-              return false;
-            });
 
   for (auto* inst : to_remove) {
     modified = true;

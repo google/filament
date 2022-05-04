@@ -81,7 +81,7 @@ class LocalAccessChainConvertPass : public MemPass {
                               std::vector<Operand>* in_opnds);
 
   // Create a load/insert/store equivalent to a store of
-  // |valId| through (constant index) access chaing |ptrInst|.
+  // |valId| through (constant index) access chain |ptrInst|.
   // Append to |newInsts|.  Returns true if successful.
   bool GenAccessChainStoreReplacement(
       const Instruction* ptrInst, uint32_t valId,

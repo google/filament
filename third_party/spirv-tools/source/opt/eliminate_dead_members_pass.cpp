@@ -38,7 +38,7 @@ Pass::Status EliminateDeadMembersPass::Process() {
 }
 
 void EliminateDeadMembersPass::FindLiveMembers() {
-  // Until we have implemented the rewritting of OpSpecConsantOp instructions,
+  // Until we have implemented the rewriting of OpSpecConsantOp instructions,
   // we have to mark them as fully used just to be safe.
   for (auto& inst : get_module()->types_values()) {
     if (inst.opcode() == SpvOpSpecConstantOp) {
@@ -570,7 +570,7 @@ bool EliminateDeadMembersPass::UpdateCompsiteExtract(Instruction* inst) {
     Instruction* type_inst = get_def_use_mgr()->GetDef(type_id);
     switch (type_inst->opcode()) {
       case SpvOpTypeStruct:
-        // The type will have already been rewriten, so use the new member
+        // The type will have already been rewritten, so use the new member
         // index.
         type_id = type_inst->GetSingleWordInOperand(new_member_idx);
         break;

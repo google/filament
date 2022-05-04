@@ -19,6 +19,17 @@ if (build_with_chromium) {
   import("//third_party/protobuf/proto_library.gni")
 }
 
+# SPIRV-Tools may be part of multiple projects in the Chromium tree.
+# Only enable building executables if this is the main copy.
+abspath = get_path_info(".", "abspath")
+spvtools_chromium_third_party = (abspath == "//third_party/vulkan-deps/spirv-tools/src/")
+spvtools_build_executables = build_with_chromium && spvtools_chromium_third_party
+# Fuchsia also requires building the executables.
+# TODO(b/158002593): Avoid the use of dependent-specific variables.
+if (defined(is_fuchsia_tree) && is_fuchsia_tree) {
+  spvtools_build_executables = true
+}
+
 spirv_headers = spirv_tools_spirv_headers_dir
 spirv_is_winuwp = is_win && target_os == "winuwp"
 
@@ -245,12 +256,12 @@ action("spvtools_generators_inc") {
 action("spvtools_build_version") {
   script = "utils/update_build_version.py"
 
-  src_dir = "."
+  changes_file = "CHANGES"
   inc_file = "${target_gen_dir}/build-version.inc"
 
   outputs = [ inc_file ]
   args = [
-    rebase_path(src_dir, root_build_dir),
+    rebase_path(changes_file, root_build_dir),
     rebase_path(inc_file, root_build_dir),
   ]
 }
@@ -448,12 +459,14 @@ static_library("spvtools") {
     "source/util/bit_vector.cpp",
     "source/util/bit_vector.h",
     "source/util/bitutils.h",
+    "source/util/hash_combine.h",
     "source/util/hex_float.h",
     "source/util/ilist.h",
     "source/util/ilist_node.h",
     "source/util/make_unique.h",
     "source/util/parse_number.cpp",
     "source/util/parse_number.h",
+    "source/util/pooled_linked_list.h",
     "source/util/small_vector.h",
     "source/util/string_utils.cpp",
     "source/util/string_utils.h",
@@ -609,6 +622,8 @@ static_library("spvtools_opt") {
     "source/opt/eliminate_dead_functions_pass.h",
     "source/opt/eliminate_dead_functions_util.cpp",
     "source/opt/eliminate_dead_functions_util.h",
+    "source/opt/eliminate_dead_input_components_pass.cpp",
+    "source/opt/eliminate_dead_input_components_pass.h",
     "source/opt/eliminate_dead_members_pass.cpp",
     "source/opt/eliminate_dead_members_pass.h",
     "source/opt/empty_pass.h",
@@ -714,6 +729,8 @@ static_library("spvtools_opt") {
     "source/opt/register_pressure.h",
     "source/opt/relax_float_ops_pass.cpp",
     "source/opt/relax_float_ops_pass.h",
+    "source/opt/remove_dontinline_pass.cpp",
+    "source/opt/remove_dontinline_pass.h",
     "source/opt/remove_duplicates_pass.cpp",
     "source/opt/remove_duplicates_pass.h",
     "source/opt/remove_unused_interface_variables_pass.cpp",
@@ -732,14 +749,16 @@ static_library("spvtools_opt") {
     "source/opt/set_spec_constant_default_value_pass.h",
     "source/opt/simplification_pass.cpp",
     "source/opt/simplification_pass.h",
+    "source/opt/spread_volatile_semantics.cpp",
+    "source/opt/spread_volatile_semantics.h",
     "source/opt/ssa_rewrite_pass.cpp",
     "source/opt/ssa_rewrite_pass.h",
     "source/opt/strength_reduction_pass.cpp",
     "source/opt/strength_reduction_pass.h",
     "source/opt/strip_debug_info_pass.cpp",
     "source/opt/strip_debug_info_pass.h",
-    "source/opt/strip_reflect_info_pass.cpp",
-    "source/opt/strip_reflect_info_pass.h",
+    "source/opt/strip_nonsemantic_info_pass.cpp",
+    "source/opt/strip_nonsemantic_info_pass.h",
     "source/opt/struct_cfg_analysis.cpp",
     "source/opt/struct_cfg_analysis.h",
     "source/opt/tree_iterator.h",
@@ -869,7 +888,7 @@ static_library("spvtools_reduce") {
   configs += [ ":spvtools_internal_config" ]
 }
 
-if (build_with_chromium) {
+if (build_with_chromium && spvtools_build_executables) {
   # The spirv-fuzz library is only built when in a Chromium checkout
   # due to its dependency on protobuf.
 
@@ -1298,7 +1317,7 @@ group("SPIRV-Tools") {
 
 # The tests are scoped to Chromium to avoid needing to write gtest integration.
 # See Chromium's third_party/googletest/BUILD.gn for a complete integration.
-if (build_with_chromium) {
+if (build_with_chromium && spvtools_build_executables) {
   test("spvtools_test") {
     sources = [
       "test/assembly_context_test.cpp",
@@ -1407,73 +1426,75 @@ source_set("spvtools_software_version") {
   configs += [ ":spvtools_internal_config" ]
 }
 
-executable("spirv-as") {
-  sources = [ "tools/as/as.cpp" ]
-  deps = [
-    ":spvtools",
-    ":spvtools_software_version",
-  ]
-  configs += [ ":spvtools_internal_config" ]
+if (spvtools_build_executables) {
+  executable("spirv-as") {
+    sources = [ "tools/as/as.cpp" ]
+    deps = [
+      ":spvtools",
+      ":spvtools_software_version",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
+
+  executable("spirv-dis") {
+    sources = [ "tools/dis/dis.cpp" ]
+    deps = [
+      ":spvtools",
+      ":spvtools_software_version",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
+
+  executable("spirv-val") {
+    sources = [ "tools/val/val.cpp" ]
+    deps = [
+      ":spvtools",
+      ":spvtools_software_version",
+      ":spvtools_util_cli_consumer",
+      ":spvtools_val",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
+
+  executable("spirv-cfg") {
+    sources = [
+      "tools/cfg/bin_to_dot.cpp",
+      "tools/cfg/bin_to_dot.h",
+      "tools/cfg/cfg.cpp",
+    ]
+    deps = [
+      ":spvtools",
+      ":spvtools_software_version",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
+
+  executable("spirv-opt") {
+    sources = [ "tools/opt/opt.cpp" ]
+    deps = [
+      ":spvtools",
+      ":spvtools_opt",
+      ":spvtools_software_version",
+      ":spvtools_util_cli_consumer",
+      ":spvtools_val",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
+
+  executable("spirv-link") {
+    sources = [ "tools/link/linker.cpp" ]
+    deps = [
+      ":spvtools",
+      ":spvtools_link",
+      ":spvtools_opt",
+      ":spvtools_software_version",
+      ":spvtools_val",
+    ]
+    configs += [ ":spvtools_internal_config" ]
+  }
 }
 
-executable("spirv-dis") {
-  sources = [ "tools/dis/dis.cpp" ]
-  deps = [
-    ":spvtools",
-    ":spvtools_software_version",
-  ]
-  configs += [ ":spvtools_internal_config" ]
-}
-
-executable("spirv-val") {
-  sources = [ "tools/val/val.cpp" ]
-  deps = [
-    ":spvtools",
-    ":spvtools_software_version",
-    ":spvtools_util_cli_consumer",
-    ":spvtools_val",
-  ]
-  configs += [ ":spvtools_internal_config" ]
-}
-
-executable("spirv-cfg") {
-  sources = [
-    "tools/cfg/bin_to_dot.cpp",
-    "tools/cfg/bin_to_dot.h",
-    "tools/cfg/cfg.cpp",
-  ]
-  deps = [
-    ":spvtools",
-    ":spvtools_software_version",
-  ]
-  configs += [ ":spvtools_internal_config" ]
-}
-
-executable("spirv-opt") {
-  sources = [ "tools/opt/opt.cpp" ]
-  deps = [
-    ":spvtools",
-    ":spvtools_opt",
-    ":spvtools_software_version",
-    ":spvtools_util_cli_consumer",
-    ":spvtools_val",
-  ]
-  configs += [ ":spvtools_internal_config" ]
-}
-
-executable("spirv-link") {
-  sources = [ "tools/link/linker.cpp" ]
-  deps = [
-    ":spvtools",
-    ":spvtools_link",
-    ":spvtools_opt",
-    ":spvtools_software_version",
-    ":spvtools_val",
-  ]
-  configs += [ ":spvtools_internal_config" ]
-}
-
-if (!is_ios && !spirv_is_winuwp && build_with_chromium) {
+if (!is_ios && !spirv_is_winuwp && build_with_chromium && spvtools_build_executables) {
   # iOS and UWP do not allow std::system calls which spirv-fuzz
   # requires. Additionally, spirv-fuzz is only built when in a
   # Chromium checkout due to its dependency on protobuf.
@@ -1494,7 +1515,7 @@ if (!is_ios && !spirv_is_winuwp && build_with_chromium) {
   }
 }
 
-if (!is_ios && !spirv_is_winuwp) {
+if (!is_ios && !spirv_is_winuwp && spvtools_build_executables) {
   # iOS and UWP do not allow std::system calls which spirv-reduce
   # requires.
 
@@ -1512,19 +1533,21 @@ if (!is_ios && !spirv_is_winuwp) {
   }
 }
 
-group("all_spirv_tools") {
-  deps = [
-    ":spirv-as",
-    ":spirv-cfg",
-    ":spirv-dis",
-    ":spirv-link",
-    ":spirv-opt",
-    ":spirv-val",
-  ]
-  if (!is_ios && !spirv_is_winuwp && build_with_chromium) {
-    deps += [ ":spirv-fuzz" ]
-  }
-  if (!is_ios && !spirv_is_winuwp) {
-    deps += [ ":spirv-reduce" ]
+if (spvtools_build_executables){
+  group("all_spirv_tools") {
+    deps = [
+      ":spirv-as",
+      ":spirv-cfg",
+      ":spirv-dis",
+      ":spirv-link",
+      ":spirv-opt",
+      ":spirv-val",
+    ]
+    if (!is_ios && !spirv_is_winuwp && build_with_chromium) {
+      deps += [ ":spirv-fuzz" ]
+    }
+    if (!is_ios && !spirv_is_winuwp) {
+      deps += [ ":spirv-reduce" ]
+    }
   }
 }

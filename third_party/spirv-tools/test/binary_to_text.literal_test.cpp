@@ -27,8 +27,15 @@ using ::testing::Eq;
 using RoundTripLiteralsTest =
     spvtest::TextToBinaryTestBase<::testing::TestWithParam<std::string>>;
 
+static const bool kSwapEndians[] = {false, true};
+
 TEST_P(RoundTripLiteralsTest, Sample) {
-  EXPECT_THAT(EncodeAndDecodeSuccessfully(GetParam()), Eq(GetParam()));
+  for (bool endian_swap : kSwapEndians) {
+    EXPECT_THAT(
+        EncodeAndDecodeSuccessfully(GetParam(), SPV_BINARY_TO_TEXT_OPTION_NONE,
+                                    SPV_ENV_UNIVERSAL_1_0, endian_swap),
+        Eq(GetParam()));
+  }
 }
 
 // clang-format off
@@ -58,8 +65,12 @@ using RoundTripSpecialCaseLiteralsTest = spvtest::TextToBinaryTestBase<
 // Test case where the generated disassembly is not the same as the
 // assembly passed in.
 TEST_P(RoundTripSpecialCaseLiteralsTest, Sample) {
-  EXPECT_THAT(EncodeAndDecodeSuccessfully(std::get<0>(GetParam())),
-              Eq(std::get<1>(GetParam())));
+  for (bool endian_swap : kSwapEndians) {
+    EXPECT_THAT(EncodeAndDecodeSuccessfully(std::get<0>(GetParam()),
+                                            SPV_BINARY_TO_TEXT_OPTION_NONE,
+                                            SPV_ENV_UNIVERSAL_1_0, endian_swap),
+                Eq(std::get<1>(GetParam())));
+  }
 }
 
 // clang-format off

@@ -767,6 +767,8 @@ TEST_F(ValidateData, vulkan_RTA_not_at_end_of_struct) {
   CompileSuccessfully(str.c_str(), SPV_ENV_VULKAN_1_1);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
   EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpTypeRuntimeArray-04680"));
+  EXPECT_THAT(getDiagnosticString(),
               HasSubstr("In Vulkan, OpTypeRuntimeArray must only be used for "
                         "the last member of an OpTypeStruct\n  %_struct_3 = "
                         "OpTypeStruct %_runtimearr_uint %uint\n"));

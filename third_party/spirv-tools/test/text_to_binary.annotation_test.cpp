@@ -398,7 +398,8 @@ TEST_F(TextToBinaryTest, GroupMemberDecorateGoodTwoTargets) {
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateMissingGroupId) {
   EXPECT_THAT(CompileFailure("OpGroupMemberDecorate"),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpGroupMemberDecorate instruction, but "
+                 "found the end of the stream."));
 }
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateInvalidGroupId) {
@@ -413,7 +414,8 @@ TEST_F(TextToBinaryTest, GroupMemberDecorateInvalidTargetId) {
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateMissingTargetMemberNumber) {
   EXPECT_THAT(CompileFailure("OpGroupMemberDecorate %group %id0"),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpGroupMemberDecorate instruction, but "
+                 "found the end of the stream."));
 }
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateInvalidTargetMemberNumber) {
@@ -428,7 +430,8 @@ TEST_F(TextToBinaryTest, GroupMemberDecorateInvalidSecondTargetId) {
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateMissingSecondTargetMemberNumber) {
   EXPECT_THAT(CompileFailure("OpGroupMemberDecorate %group %id0 42 %id1"),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpGroupMemberDecorate instruction, but "
+                 "found the end of the stream."));
 }
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateInvalidSecondTargetMemberNumber) {

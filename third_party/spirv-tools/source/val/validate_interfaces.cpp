@@ -154,7 +154,7 @@ spv_result_t NumConsumedLocations(ValidationState_t& _, const Instruction* type,
       // Members cannot have location decorations at this point.
       if (_.HasDecoration(type->id(), SpvDecorationLocation)) {
         return _.diag(SPV_ERROR_INVALID_DATA, type)
-               << "Members cannot be assigned a location";
+               << _.VkErrorID(4918) << "Members cannot be assigned a location";
       }
 
       // Structs consume locations equal to the sum of the locations consumed
@@ -326,8 +326,9 @@ spv_result_t GetLocationsForVariable(
   // Only block-decorated structs don't need a location on the variable.
   const bool is_block = _.HasDecoration(type_id, SpvDecorationBlock);
   if (!has_location && !is_block) {
+    const auto vuid = (type->opcode() == SpvOpTypeStruct) ? 4917 : 4916;
     return _.diag(SPV_ERROR_INVALID_DATA, variable)
-           << "Variable must be decorated with a location";
+           << _.VkErrorID(vuid) << "Variable must be decorated with a location";
   }
 
   const std::string storage_class = is_output ? "output" : "input";
@@ -411,7 +412,7 @@ spv_result_t GetLocationsForVariable(
       auto where = member_locations.find(i - 1);
       if (where == member_locations.end()) {
         return _.diag(SPV_ERROR_INVALID_DATA, type)
-               << "Member index " << i - 1
+               << _.VkErrorID(4919) << "Member index " << i - 1
                << " is missing a location assignment";
       }
 
@@ -476,6 +477,9 @@ spv_result_t ValidateLocations(ValidationState_t& _,
                                const Instruction* entry_point) {
   // According to Vulkan 14.1 only the following execution models have
   // locations assigned.
+  // TODO(dneto): SPV_NV_ray_tracing also uses locations on interface variables,
+  // in other shader stages. Similarly, the *provisional* version of
+  // SPV_KHR_ray_tracing did as well, but not the final version.
   switch (entry_point->GetOperandAs<SpvExecutionModel>(0)) {
     case SpvExecutionModelVertex:
     case SpvExecutionModelTessellationControl:

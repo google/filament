@@ -75,7 +75,7 @@ bool TransformationAddConstantComposite::IsApplicable(
       // We do not create constants of structs decorated with Block nor
       // BufferBlock.  The SPIR-V spec does not explicitly disallow this, but it
       // seems like a strange thing to do, so we disallow it to avoid triggering
-      // low priorty edge case issues related to it.
+      // low priority edge case issues related to it.
       if (fuzzerutil::HasBlockOrBufferBlockDecoration(
               ir_context, composite_type_instruction->result_id())) {
         return false;

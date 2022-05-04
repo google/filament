@@ -45,10 +45,8 @@ if (IS_DIRECTORY ${SPIRV_HEADER_DIR})
   # Do this so enclosing projects can use SPIRV-Headers_SOURCE_DIR to find
   # headers to include.
   if (NOT DEFINED SPIRV-Headers_SOURCE_DIR)
-# Filament specific changes
-    #set(SPIRV_HEADERS_SKIP_INSTALL ON)
-    #set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
-# End Filament specific changes
+    set(SPIRV_HEADERS_SKIP_INSTALL ON)
+    set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
     add_subdirectory(${SPIRV_HEADER_DIR})
   endif()
 else()

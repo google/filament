@@ -33,7 +33,7 @@ class LoopFusionPass : public Pass {
 
   // Processes the given |module|. Returns Status::Failure if errors occur when
   // processing. Returns the corresponding Status::Success if processing is
-  // succesful to indicate whether changes have been made to the modue.
+  // successful to indicate whether changes have been made to the module.
   Status Process() override;
 
  private:

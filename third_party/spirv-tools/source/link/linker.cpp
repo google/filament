@@ -19,6 +19,7 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -37,6 +38,7 @@
 #include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
 #include "source/util/make_unique.h"
+#include "source/util/string_utils.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
@@ -86,10 +88,6 @@ spv_result_t ShiftIdsInModules(const MessageConsumer& consumer,
 //
 // |header| should not be null, |modules| should not be empty and pointers
 // should be non-null. |max_id_bound| should be strictly greater than 0.
-//
-// TODO(pierremoreau): What to do when binaries use different versions of
-//                     SPIR-V? For now, use the max of all versions found in
-//                     the input modules.
 spv_result_t GenerateHeader(const MessageConsumer& consumer,
                             const std::vector<opt::Module*>& modules,
                             uint32_t max_id_bound, opt::ModuleHeader* header);
@@ -130,7 +128,7 @@ spv_result_t CheckImportExportCompatibility(const MessageConsumer& consumer,
 
 // Remove linkage specific instructions, such as prototypes of imported
 // functions, declarations of imported variables, import (and export if
-// necessary) linkage attribtes.
+// necessary) linkage attributes.
 //
 // |linked_context| and |decoration_manager| should not be null, and the
 // 'RemoveDuplicatePass' should be run first.
@@ -148,6 +146,15 @@ spv_result_t RemoveLinkageSpecificInstructions(
 spv_result_t VerifyIds(const MessageConsumer& consumer,
                        opt::IRContext* linked_context);
 
+// Verify that the universal limits are not crossed, and warn the user
+// otherwise.
+//
+// TODO(pierremoreau):
+// - Verify against the limits of the environment (e.g. Vulkan limits if
+//   consuming vulkan1.x)
+spv_result_t VerifyLimits(const MessageConsumer& consumer,
+                          const opt::IRContext& linked_context);
+
 spv_result_t ShiftIdsInModules(const MessageConsumer& consumer,
                                std::vector<opt::Module*>* modules,
                                uint32_t* max_id_bound) {
@@ -163,29 +170,31 @@ spv_result_t ShiftIdsInModules(const MessageConsumer& consumer,
     return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_DATA)
            << "|max_id_bound| of ShiftIdsInModules should not be null.";
 
-  uint32_t id_bound = modules->front()->IdBound() - 1u;
+  const size_t id_bound =
+      std::accumulate(modules->begin(), modules->end(), static_cast<size_t>(1),
+                      [](const size_t& accumulation, opt::Module* module) {
+                        return accumulation + module->IdBound() - 1u;
+                      });
+  if (id_bound > std::numeric_limits<uint32_t>::max())
+    return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_DATA)
+           << "Too many IDs (" << id_bound
+           << "): combining all modules would overflow the 32-bit word of the "
+              "SPIR-V header.";
+
+  *max_id_bound = static_cast<uint32_t>(id_bound);
+
+  uint32_t id_offset = modules->front()->IdBound() - 1u;
   for (auto module_iter = modules->begin() + 1; module_iter != modules->end();
        ++module_iter) {
     Module* module = *module_iter;
-    module->ForEachInst([&id_bound](Instruction* insn) {
-      insn->ForEachId([&id_bound](uint32_t* id) { *id += id_bound; });
+    module->ForEachInst([&id_offset](Instruction* insn) {
+      insn->ForEachId([&id_offset](uint32_t* id) { *id += id_offset; });
     });
-    id_bound += module->IdBound() - 1u;
-    if (id_bound > 0x3FFFFF)
-      return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_ID)
-             << "The limit of IDs, 4194303, was exceeded:"
-             << " " << id_bound << " is the current ID bound.";
+    id_offset += module->IdBound() - 1u;
 
     // Invalidate the DefUseManager
     module->context()->InvalidateAnalyses(opt::IRContext::kAnalysisDefUse);
   }
-  ++id_bound;
-  if (id_bound > 0x3FFFFF)
-    return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_ID)
-           << "The limit of IDs, 4194303, was exceeded:"
-           << " " << id_bound << " is the current ID bound.";
-
-  *max_id_bound = id_bound;
 
   return SPV_SUCCESS;
 }
@@ -202,15 +211,25 @@ spv_result_t GenerateHeader(const MessageConsumer& consumer,
     return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_DATA)
            << "|max_id_bound| of GenerateHeader should not be null.";
 
-  uint32_t version = 0u;
-  for (const auto& module : modules)
-    version = std::max(version, module->version());
+  const uint32_t linked_version = modules.front()->version();
+  for (std::size_t i = 1; i < modules.size(); ++i) {
+    const uint32_t module_version = modules[i]->version();
+    if (module_version != linked_version)
+      return DiagnosticStream({0, 0, 1}, consumer, "", SPV_ERROR_INTERNAL)
+             << "Conflicting SPIR-V versions: "
+             << SPV_SPIRV_VERSION_MAJOR_PART(linked_version) << "."
+             << SPV_SPIRV_VERSION_MINOR_PART(linked_version)
+             << " (input modules 1 through " << i << ") vs "
+             << SPV_SPIRV_VERSION_MAJOR_PART(module_version) << "."
+             << SPV_SPIRV_VERSION_MINOR_PART(module_version)
+             << " (input module " << (i + 1) << ").";
+  }
 
   header->magic_number = SpvMagicNumber;
-  header->version = version;
+  header->version = linked_version;
   header->generator = SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS_LINKER, 0);
   header->bound = max_id_bound;
-  header->reserved = 0u;
+  header->schema = 0u;
 
   return SPV_SUCCESS;
 }
@@ -243,55 +262,65 @@ spv_result_t MergeModules(const MessageConsumer& consumer,
       linked_module->AddExtInstImport(
           std::unique_ptr<Instruction>(inst.Clone(linked_context)));
 
-  do {
-    const Instruction* memory_model_inst = input_modules[0]->GetMemoryModel();
-    if (memory_model_inst == nullptr) break;
+  const Instruction* linked_memory_model_inst =
+      input_modules.front()->GetMemoryModel();
+  if (linked_memory_model_inst == nullptr) {
+    return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_BINARY)
+           << "Input module 1 is lacking an OpMemoryModel instruction.";
+  }
+  const uint32_t linked_addressing_model =
+      linked_memory_model_inst->GetSingleWordOperand(0u);
+  const uint32_t linked_memory_model =
+      linked_memory_model_inst->GetSingleWordOperand(1u);
 
-    uint32_t addressing_model = memory_model_inst->GetSingleWordOperand(0u);
-    uint32_t memory_model = memory_model_inst->GetSingleWordOperand(1u);
-    for (const auto& module : input_modules) {
-      memory_model_inst = module->GetMemoryModel();
-      if (memory_model_inst == nullptr) continue;
+  for (std::size_t i = 1; i < input_modules.size(); ++i) {
+    const Module* module = input_modules[i];
+    const Instruction* memory_model_inst = module->GetMemoryModel();
+    if (memory_model_inst == nullptr)
+      return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_BINARY)
+             << "Input module " << (i + 1)
+             << " is lacking an OpMemoryModel instruction.";
 
-      if (addressing_model != memory_model_inst->GetSingleWordOperand(0u)) {
-        spv_operand_desc initial_desc = nullptr, current_desc = nullptr;
-        grammar.lookupOperand(SPV_OPERAND_TYPE_ADDRESSING_MODEL,
-                              addressing_model, &initial_desc);
-        grammar.lookupOperand(SPV_OPERAND_TYPE_ADDRESSING_MODEL,
-                              memory_model_inst->GetSingleWordOperand(0u),
-                              &current_desc);
-        return DiagnosticStream(position, consumer, "", SPV_ERROR_INTERNAL)
-               << "Conflicting addressing models: " << initial_desc->name
-               << " vs " << current_desc->name << ".";
-      }
-      if (memory_model != memory_model_inst->GetSingleWordOperand(1u)) {
-        spv_operand_desc initial_desc = nullptr, current_desc = nullptr;
-        grammar.lookupOperand(SPV_OPERAND_TYPE_MEMORY_MODEL, memory_model,
-                              &initial_desc);
-        grammar.lookupOperand(SPV_OPERAND_TYPE_MEMORY_MODEL,
-                              memory_model_inst->GetSingleWordOperand(1u),
-                              &current_desc);
-        return DiagnosticStream(position, consumer, "", SPV_ERROR_INTERNAL)
-               << "Conflicting memory models: " << initial_desc->name << " vs "
-               << current_desc->name << ".";
-      }
+    const uint32_t module_addressing_model =
+        memory_model_inst->GetSingleWordOperand(0u);
+    if (module_addressing_model != linked_addressing_model) {
+      spv_operand_desc linked_desc = nullptr, module_desc = nullptr;
+      grammar.lookupOperand(SPV_OPERAND_TYPE_ADDRESSING_MODEL,
+                            linked_addressing_model, &linked_desc);
+      grammar.lookupOperand(SPV_OPERAND_TYPE_ADDRESSING_MODEL,
+                            module_addressing_model, &module_desc);
+      return DiagnosticStream(position, consumer, "", SPV_ERROR_INTERNAL)
+             << "Conflicting addressing models: " << linked_desc->name
+             << " (input modules 1 through " << i << ") vs "
+             << module_desc->name << " (input module " << (i + 1) << ").";
     }
 
-    if (memory_model_inst != nullptr)
-      linked_module->SetMemoryModel(std::unique_ptr<Instruction>(
-          memory_model_inst->Clone(linked_context)));
-  } while (false);
+    const uint32_t module_memory_model =
+        memory_model_inst->GetSingleWordOperand(1u);
+    if (module_memory_model != linked_memory_model) {
+      spv_operand_desc linked_desc = nullptr, module_desc = nullptr;
+      grammar.lookupOperand(SPV_OPERAND_TYPE_MEMORY_MODEL, linked_memory_model,
+                            &linked_desc);
+      grammar.lookupOperand(SPV_OPERAND_TYPE_MEMORY_MODEL, module_memory_model,
+                            &module_desc);
+      return DiagnosticStream(position, consumer, "", SPV_ERROR_INTERNAL)
+             << "Conflicting memory models: " << linked_desc->name
+             << " (input modules 1 through " << i << ") vs "
+             << module_desc->name << " (input module " << (i + 1) << ").";
+    }
+  }
+  linked_module->SetMemoryModel(std::unique_ptr<Instruction>(
+      linked_memory_model_inst->Clone(linked_context)));
 
-  std::vector<std::pair<uint32_t, const char*>> entry_points;
+  std::vector<std::pair<uint32_t, std::string>> entry_points;
   for (const auto& module : input_modules)
     for (const auto& inst : module->entry_points()) {
       const uint32_t model = inst.GetSingleWordInOperand(0);
-      const char* const name =
-          reinterpret_cast<const char*>(inst.GetInOperand(2).words.data());
+      const std::string name = inst.GetInOperand(2).AsString();
       const auto i = std::find_if(
           entry_points.begin(), entry_points.end(),
-          [model, name](const std::pair<uint32_t, const char*>& v) {
-            return v.first == model && strcmp(name, v.second) == 0;
+          [model, name](const std::pair<uint32_t, std::string>& v) {
+            return v.first == model && v.second == name;
           });
       if (i != entry_points.end()) {
         spv_operand_desc desc = nullptr;
@@ -332,13 +361,10 @@ spv_result_t MergeModules(const MessageConsumer& consumer,
 
   // If the generated module uses SPIR-V 1.1 or higher, add an
   // OpModuleProcessed instruction about the linking step.
-  if (linked_module->version() >= 0x10100) {
+  if (linked_module->version() >= SPV_SPIRV_VERSION_WORD(1, 1)) {
     const std::string processed_string("Linked by SPIR-V Tools Linker");
-    const auto num_chars = processed_string.size();
-    // Compute num words, accommodate the terminating null character.
-    const auto num_words = (num_chars + 1 + 3) / 4;
-    std::vector<uint32_t> processed_words(num_words, 0u);
-    std::memcpy(processed_words.data(), processed_string.data(), num_chars);
+    std::vector<uint32_t> processed_words =
+        spvtools::utils::MakeVector(processed_string);
     linked_module->AddDebug3Inst(std::unique_ptr<Instruction>(
         new Instruction(linked_context, SpvOpModuleProcessed, 0u, 0u,
                         {{SPV_OPERAND_TYPE_LITERAL_STRING, processed_words}})));
@@ -352,18 +378,12 @@ spv_result_t MergeModules(const MessageConsumer& consumer,
   // TODO(pierremoreau): Since the modules have not been validate, should we
   //                     expect SpvStorageClassFunction variables outside
   //                     functions?
-  uint32_t num_global_values = 0u;
   for (const auto& module : input_modules) {
     for (const auto& inst : module->types_values()) {
       linked_module->AddType(
           std::unique_ptr<Instruction>(inst.Clone(linked_context)));
-      num_global_values += inst.opcode() == SpvOpVariable;
     }
   }
-  if (num_global_values > 0xFFFF)
-    return DiagnosticStream(position, consumer, "", SPV_ERROR_INTERNAL)
-           << "The limit of global values, 65535, was exceeded;"
-           << " " << num_global_values << " global values were found.";
 
   // Process functions and their basic blocks
   for (const auto& module : input_modules) {
@@ -414,8 +434,7 @@ spv_result_t GetImportExportPairs(const MessageConsumer& consumer,
     const uint32_t type = decoration.GetSingleWordInOperand(3u);
 
     LinkageSymbolInfo symbol_info;
-    symbol_info.name =
-        reinterpret_cast<const char*>(decoration.GetInOperand(2u).words.data());
+    symbol_info.name = decoration.GetInOperand(2u).AsString();
     symbol_info.id = id;
     symbol_info.type_id = 0u;
 
@@ -636,6 +655,34 @@ spv_result_t VerifyIds(const MessageConsumer& consumer,
   return SPV_SUCCESS;
 }
 
+spv_result_t VerifyLimits(const MessageConsumer& consumer,
+                          const opt::IRContext& linked_context) {
+  spv_position_t position = {};
+
+  const uint32_t max_id_bound = linked_context.module()->id_bound();
+  if (max_id_bound >= SPV_LIMIT_RESULT_ID_BOUND)
+    DiagnosticStream({0u, 0u, 4u}, consumer, "", SPV_WARNING)
+        << "The minimum limit of IDs, " << (SPV_LIMIT_RESULT_ID_BOUND - 1)
+        << ", was exceeded:"
+        << " " << max_id_bound << " is the current ID bound.\n"
+        << "The resulting module might not be supported by all "
+           "implementations.";
+
+  size_t num_global_values = 0u;
+  for (const auto& inst : linked_context.module()->types_values()) {
+    num_global_values += inst.opcode() == SpvOpVariable;
+  }
+  if (num_global_values >= SPV_LIMIT_GLOBAL_VARIABLES_MAX)
+    DiagnosticStream(position, consumer, "", SPV_WARNING)
+        << "The minimum limit of global values, "
+        << (SPV_LIMIT_GLOBAL_VARIABLES_MAX - 1) << ", was exceeded;"
+        << " " << num_global_values << " global values were found.\n"
+        << "The resulting module might not be supported by all "
+           "implementations.";
+
+  return SPV_SUCCESS;
+}
+
 }  // namespace
 
 spv_result_t Link(const Context& context,
@@ -760,7 +807,11 @@ spv_result_t Link(const Context& context, const uint32_t* const* binaries,
   pass_res = manager.Run(&linked_context);
   if (pass_res == opt::Pass::Status::Failure) return SPV_ERROR_INVALID_DATA;
 
-  // Phase 11: Output the module
+  // Phase 11: Warn if SPIR-V limits were exceeded
+  res = VerifyLimits(consumer, linked_context);
+  if (res != SPV_SUCCESS) return res;
+
+  // Phase 12: Output the module
   linked_context.module()->ToBinary(linked_binary, true);
 
   return SPV_SUCCESS;

@@ -55,7 +55,7 @@
         <id value="2"   vendor="Valve"      comment="Contact TBD"/>
         <id value="3"   vendor="Codeplay"   comment="Contact Victor Lomuller, victor@codeplay.com"/>
         <id value="4"   vendor="NVIDIA"     comment="Contact Kerch Holt, kholt@nvidia.com"/>
-        <id value="5"   vendor="ARM"        comment="Contact Alexander Galazin, alexander.galazin@arm.com"/>
+        <id value="5"   vendor="ARM"        comment="Contact Kevin Petit, kevin.petit@arm.com"/>
         <id value="6"   vendor="Khronos" tool="LLVM/SPIR-V Translator" comment="Contact Yaxun (Sam) Liu, yaxun.liu@amd.com"/>
         <id value="7"   vendor="Khronos" tool="SPIR-V Tools Assembler" comment="Contact David Neto, dneto@google.com"/>
         <id value="8"   vendor="Khronos" tool="Glslang Reference Front End" comment="Contact John Kessenich, johnkessenich@google.com"/>
@@ -82,7 +82,10 @@
         <id value="29"  vendor="Mikkosoft Productions" tool="MSP Shader Compiler" comment="Contact Mikko Rasa, tdb@tdb.fi"/>
         <id value="30"  vendor="SpvGenTwo community" tool="SpvGenTwo SPIR-V IR Tools" comment="https://github.com/rAzoR8/SpvGenTwo"/>
         <id value="31"  vendor="Google" tool="Skia SkSL" comment="Contact Ethan Nicholas, ethannicholas@google.com"/>
-        <unused start="32" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
+        <id value="32"  vendor="TornadoVM" tool="SPIRV Beehive Toolkit" comment="https://github.com/beehive-lab/spirv-beehive-toolkit"/>
+        <id value="33"  vendor="DragonJoker" tool="ShaderWriter" comment="Contact Sylvain Doremus, https://github.com/DragonJoker/ShaderWriter"/>
+        <id value="34"  vendor="Rayan Hatout" tool="SPIRVSmith" comment="Contact Rayan Hatout rayan.hatout@gmail.com, Repo https://github.com/rayanht/SPIRVSmith"/>
+        <unused start="35" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
     </ids>
 
     <!-- SECTION: SPIR-V Opcodes and Enumerants -->
@@ -119,7 +122,7 @@
     <!-- Begin reservations of opcode enumerants -->
     <ids type="opcode" start="0" end="4095" vendor="Khronos" comment="Reserved opcodes, not available to vendors - see the SPIR-V Specification"/>
     <ids type="opcode" start="4096" end="4159" vendor="Mesa" comment="Contact TBD"/>
-    <ids type="opcode" start="4160" end="4415" vendor="ARM"/>
+    <ids type="opcode" start="4160" end="4415" vendor="ARM" comment="Contact kevin.petit@arm.com"/>
     <ids type="opcode" start="4416" end="4479" vendor="Khronos" comment="SPV_ARB_shader_ballot - contact Neil Henning, neil.henning@amd.com"/>
     <ids type="opcode" start="4480" end="4991" vendor="Qualcomm" comment="Contact weifengz@qti.qualcomm.com"/>
     <ids type="opcode" start="4992" end="5247" vendor="AMD"/>
@@ -148,7 +151,7 @@
     <!-- Begin reservations of non-opcode enumerants -->
     <ids type="enumerant" start="0" end="4095" vendor="Khronos" comment="Reserved enumerants, not available to vendors - see the SPIR-V Specification"/>
     <ids type="enumerant" start="4096" end="4159" vendor="Mesa" comment="Contact TBD"/>
-    <ids type="enumerant" start="4160" end="4415" vendor="ARM"/>
+    <ids type="enumerant" start="4160" end="4415" vendor="ARM" comment="Contact kevin.petit@arm.com"/>
     <ids type="enumerant" start="4416" end="4479" vendor="Khronos" comment="SPV_ARB_shader_ballot - contact Neil Henning, neil.henning@amd.com"/>
     <ids type="enumerant" start="4480" end="4991" vendor="Qualcomm" comment="Contact weifengz@qti.qualcomm.com"/>
     <ids type="enumerant" start="4992" end="5247" vendor="AMD"/>
@@ -164,13 +167,14 @@
     <ids type="enumerant" start="6144" end="6271" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
     <ids type="enumerant" start="6272" end="6399" vendor="Huawei" comment="Contact wanghuilong2@xunweitech.com"/>
     <ids type="enumerant" start="6400" end="6463" vendor="Intel" comment="Contact ben.ashbaugh@intel.com"/>
+    <ids type="enumerant" start="6464" end="6527" vendor="Mikkosoft Productions" comment="Contact Mikko Rasa, tdb@tdb.fi"/>
     <!-- Enumerants to reserve for future use. To get a block, allocate
          multiples of 64 starting at the lowest available point in this
          block and add a corresponding <ids> tag immediately above. Make
          sure to fill in the vendor attribute, and preferably add a contact
          person/address in a comment attribute. -->
     <!-- Example new block: <ids type="enumerant" start="XXXX" end="XXXX+64n-1" vendor="Add vendor" comment="Contact TBD"/> -->
-    <ids type="enumerant" start="6464" end="4294967295" comment="Enumerant range reservable for future use by vendors"/>
+    <ids type="enumerant" start="6528" end="4294967295" comment="Enumerant range reservable for future use by vendors"/>
     <!-- End reservations of enumerants -->
 
 
@@ -190,8 +194,8 @@
 
     <!-- Reserved loop control bits -->
     <ids type="LoopControl" start="0" end="15" vendor="Khronos" comment="Reserved LoopControl bits, not available to vendors - see the SPIR-V Specification"/>
-    <ids type="LoopControl" start="16" end="24" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
-    <ids type="LoopControl" start="25" end="30" comment="Unreserved bits reservable for use by vendors"/>
+    <ids type="LoopControl" start="16" end="25" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
+    <ids type="LoopControl" start="26" end="30" comment="Unreserved bits reservable for use by vendors"/>
     <ids type="LoopControl" start="31" end="31" vendor="Khronos" comment="Reserved LoopControl bit, not available to vendors"/>
 
 

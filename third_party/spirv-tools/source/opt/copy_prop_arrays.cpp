@@ -745,11 +745,11 @@ void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
           context()->AnalyzeUses(use);
         }
         break;
+      case SpvOpDecorate:
+      // We treat an OpImageTexelPointer as a load.  The result type should
+      // always have the Image storage class, and should not need to be
+      // updated.
       case SpvOpImageTexelPointer:
-        // We treat an OpImageTexelPointer as a load.  The result type should
-        // always have the Image storage class, and should not need to be
-        // updated.
-
         // Replace the actual use.
         context()->ForgetUses(use);
         use->SetOperand(index, {new_ptr_inst->result_id()});

@@ -21,7 +21,7 @@ namespace fuzz {
 
 namespace {
 
-// An offset between the the module's id bound and the minimum fresh id.
+// An offset between the module's id bound and the minimum fresh id.
 //
 // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/2541): consider
 //  the case where the maximum id bound is reached.

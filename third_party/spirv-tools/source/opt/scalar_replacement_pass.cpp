@@ -24,6 +24,7 @@
 #include "source/opt/reflect.h"
 #include "source/opt/types.h"
 #include "source/util/make_unique.h"
+#include "types.h"
 
 static const uint32_t kDebugValueOperandValueIndex = 5;
 static const uint32_t kDebugValueOperandExpressionIndex = 6;
@@ -395,7 +396,7 @@ bool ScalarReplacementPass::CreateReplacementVariables(
             if (!components_used || components_used->count(elem)) {
               CreateVariable(*id, inst, elem, replacements);
             } else {
-              replacements->push_back(CreateNullConstant(*id));
+              replacements->push_back(GetUndef(*id));
             }
             elem++;
           });
@@ -406,8 +407,8 @@ bool ScalarReplacementPass::CreateReplacementVariables(
           CreateVariable(type->GetSingleWordInOperand(0u), inst, i,
                          replacements);
         } else {
-          replacements->push_back(
-              CreateNullConstant(type->GetSingleWordInOperand(0u)));
+          uint32_t element_type_id = type->GetSingleWordInOperand(0);
+          replacements->push_back(GetUndef(element_type_id));
         }
       }
       break;
@@ -427,6 +428,10 @@ bool ScalarReplacementPass::CreateReplacementVariables(
   TransferAnnotations(inst, replacements);
   return std::find(replacements->begin(), replacements->end(), nullptr) ==
          replacements->end();
+}
+
+Instruction* ScalarReplacementPass::GetUndef(uint32_t type_id) {
+  return get_def_use_mgr()->GetDef(Type2Undef(type_id));
 }
 
 void ScalarReplacementPass::TransferAnnotations(
@@ -979,20 +984,6 @@ ScalarReplacementPass::GetUsedComponents(Instruction* inst) {
   });
 
   return result;
-}
-
-Instruction* ScalarReplacementPass::CreateNullConstant(uint32_t type_id) {
-  analysis::TypeManager* type_mgr = context()->get_type_mgr();
-  analysis::ConstantManager* const_mgr = context()->get_constant_mgr();
-
-  const analysis::Type* type = type_mgr->GetType(type_id);
-  const analysis::Constant* null_const = const_mgr->GetConstant(type, {});
-  Instruction* null_inst =
-      const_mgr->GetDefiningInstruction(null_const, type_id);
-  if (null_inst != nullptr) {
-    context()->UpdateDefUse(null_inst);
-  }
-  return null_inst;
 }
 
 uint64_t ScalarReplacementPass::GetMaxLegalIndex(

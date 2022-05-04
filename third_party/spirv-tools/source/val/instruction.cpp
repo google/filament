@@ -16,6 +16,9 @@
 
 #include <utility>
 
+#include "source/binary.h"
+#include "source/util/string_utils.h"
+
 namespace spvtools {
 namespace val {
 
@@ -39,6 +42,13 @@ bool operator==(const Instruction& lhs, const Instruction& rhs) {
 }
 bool operator==(const Instruction& lhs, uint32_t rhs) {
   return lhs.id() == rhs;
+}
+
+template <>
+std::string Instruction::GetOperandAs<std::string>(size_t index) const {
+  const spv_parsed_operand_t& o = operands_.at(index);
+  assert(o.offset + o.num_words <= inst_.num_words);
+  return spvtools::utils::MakeString(words_.data() + o.offset, o.num_words);
 }
 
 }  // namespace val
