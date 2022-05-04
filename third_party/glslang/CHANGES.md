@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 11.9.0 2022-04-06
+
+### Other changes
+* Add GLSL version override functionality
+* Add eliminate-dead-input-components to -Os
+* Add enhanced-msgs option
+* Explicitly use Python 3 for builds
+
+## 11.8.0 2022-01-27
+
+### Other changes
+* Add support for SPIR-V 1.6
+* Add support for Vulkan 1.3
+* Add --hlsl-dx-position-w option
+
+## 11.7.0 2021-11-11
+
+### Other changes
+* Add support for targeting Vulkan 1.2 in the C API
+
 ## 11.6.0 2021-08-25
 
 ### Other changes

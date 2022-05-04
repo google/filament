@@ -46,35 +46,6 @@ namespace {
 
 using namespace glslang;
 
-typedef union {
-    double d;
-    int i[2];
-} DoubleIntUnion;
-
-// Some helper functions
-
-bool isNan(double x)
-{
-    DoubleIntUnion u;
-    // tough to find a platform independent library function, do it directly
-    u.d = x;
-    int bitPatternL = u.i[0];
-    int bitPatternH = u.i[1];
-    return (bitPatternH & 0x7ff80000) == 0x7ff80000 &&
-           ((bitPatternH & 0xFFFFF) != 0 || bitPatternL != 0);
-}
-
-bool isInf(double x)
-{
-    DoubleIntUnion u;
-    // tough to find a platform independent library function, do it directly
-    u.d = x;
-    int bitPatternL = u.i[0];
-    int bitPatternH = u.i[1];
-    return (bitPatternH & 0x7ff00000) == 0x7ff00000 &&
-           (bitPatternH & 0xFFFFF) == 0 && bitPatternL == 0;
-}
-
 const double pi = 3.1415926535897932384626433832795;
 
 } // end anonymous namespace
@@ -663,12 +634,12 @@ TIntermTyped* TIntermConstantUnion::fold(TOperator op, const TType& returnType) 
 
         case EOpIsNan:
         {
-            newConstArray[i].setBConst(isNan(unionArray[i].getDConst()));
+            newConstArray[i].setBConst(IsNan(unionArray[i].getDConst()));
             break;
         }
         case EOpIsInf:
         {
-            newConstArray[i].setBConst(isInf(unionArray[i].getDConst()));
+            newConstArray[i].setBConst(IsInfinity(unionArray[i].getDConst()));
             break;
         }
 

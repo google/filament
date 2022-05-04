@@ -36,19 +36,3 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#extension GL_EXT_spirv_intrinsics : enable
-#extension GL_ARB_gpu_shader_int64 : enable
-
-uvec2 clockRealtime2x32EXT(void) {
-    spirv_instruction (extensions = ["SPV_KHR_shader_clock"], capabilities = [5055], id = 5056)
-    uvec2 clockRealtime2x32EXT_internal(uint scope);
-    
-    return clockRealtime2x32EXT_internal(1 /*Device scope*/);
-}
-
-uint64_t clockRealtimeEXT(void) {
-    spirv_instruction (extensions = ["SPV_KHR_shader_clock"], capabilities = [5055], id = 5056)
-    uint64_t clockRealtimeEXT_internal(uint scope);
-    
-    return clockRealtimeEXT_internal(1 /*Device scope*/);
-}

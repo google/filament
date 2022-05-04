@@ -18,3 +18,7 @@ out/
 third_party/
 buildtools/
 tools/
+
+# Random OS stuff
+.DS_Store
+._*

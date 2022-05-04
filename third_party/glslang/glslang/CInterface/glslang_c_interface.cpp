@@ -244,6 +244,8 @@ c_shader_target_language_version(glslang_target_language_version_t target_langua
         return glslang::EShTargetSpv_1_4;
     case GLSLANG_TARGET_SPV_1_5:
         return glslang::EShTargetSpv_1_5;
+    case GLSLANG_TARGET_SPV_1_6:
+        return glslang::EShTargetSpv_1_6;
     default:
         break;
     }
@@ -269,6 +271,10 @@ static glslang::EShTargetClientVersion c_shader_client_version(glslang_target_cl
     switch (client_version) {
     case GLSLANG_TARGET_VULKAN_1_1:
         return glslang::EShTargetVulkan_1_1;
+    case GLSLANG_TARGET_VULKAN_1_2:
+        return glslang::EShTargetVulkan_1_2;
+    case GLSLANG_TARGET_VULKAN_1_3:
+        return glslang::EShTargetVulkan_1_3;
     case GLSLANG_TARGET_OPENGL_450:
         return glslang::EShTargetOpenGL_450;
     default:
@@ -344,6 +350,38 @@ GLSLANG_EXPORT glslang_shader_t* glslang_shader_create(const glslang_input_t* in
     return shader;
 }
 
+GLSLANG_EXPORT void glslang_shader_shift_binding(glslang_shader_t* shader, glslang_resource_type_t res, unsigned int base)
+{
+    const glslang::TResourceType res_type = glslang::TResourceType(res);
+    shader->shader->setShiftBinding(res_type, base);
+}
+
+GLSLANG_EXPORT void glslang_shader_shift_binding_for_set(glslang_shader_t* shader, glslang_resource_type_t res, unsigned int base, unsigned int set)
+{
+    const glslang::TResourceType res_type = glslang::TResourceType(res);
+    shader->shader->setShiftBindingForSet(res_type, base, set);
+}
+
+GLSLANG_EXPORT void glslang_shader_set_options(glslang_shader_t* shader, int options)
+{
+    if (options & GLSLANG_SHADER_AUTO_MAP_BINDINGS) {
+        shader->shader->setAutoMapBindings(true);
+    }
+
+    if (options & GLSLANG_SHADER_AUTO_MAP_LOCATIONS) {
+        shader->shader->setAutoMapLocations(true);
+    }
+
+    if (options & GLSLANG_SHADER_VULKAN_RULES_RELAXED) {
+        shader->shader->setEnvInputVulkanRulesRelaxed();
+    }
+}
+
+GLSLANG_EXPORT void glslang_shader_set_glsl_version(glslang_shader_t* shader, int version)
+{
+    shader->shader->setOverrideVersion(version);
+}
+
 GLSLANG_EXPORT const char* glslang_shader_get_preprocessed_code(glslang_shader_t* shader)
 {
     return shader->preprocessedGLSL.c_str();
@@ -415,6 +453,11 @@ GLSLANG_EXPORT void glslang_program_add_shader(glslang_program_t* program, glsla
 GLSLANG_EXPORT int glslang_program_link(glslang_program_t* program, int messages)
 {
     return (int)program->program->link((EShMessages)messages);
+}
+
+GLSLANG_EXPORT int glslang_program_map_io(glslang_program_t* program)
+{
+    return (int)program->program->mapIO();
 }
 
 GLSLANG_EXPORT const char* glslang_program_get_info_log(glslang_program_t* program)

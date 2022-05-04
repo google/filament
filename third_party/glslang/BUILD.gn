@@ -74,6 +74,15 @@ action("glslang_extension_headers") {
 
   out_file = "${target_gen_dir}/include/glslang/glsl_intrinsic_header.h"
 
+  # Fuchsia GN build rules require all GN actions to be hermetic and they
+  # should correctly and fully state their inputs and outpus (see
+  # https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
+  # for details). All input files of the script should be added to the
+  # |sources| list.
+  sources = [
+    "glslang/ExtensionHeaders/GL_EXT_shader_realtime_clock.glsl",
+  ]
+
   inputs = [
     script
   ]

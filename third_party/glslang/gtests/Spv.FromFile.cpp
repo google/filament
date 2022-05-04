@@ -69,6 +69,7 @@ using CompileVulkanToSpirvDeadCodeElimTest = GlslangTest<::testing::TestWithPara
 using CompileVulkanToDebugSpirvTest = GlslangTest<::testing::TestWithParam<std::string>>;
 using CompileVulkan1_1ToSpirvTest = GlslangTest<::testing::TestWithParam<std::string>>;
 using CompileToSpirv14Test = GlslangTest<::testing::TestWithParam<std::string>>;
+using CompileToSpirv16Test = GlslangTest<::testing::TestWithParam<std::string>>;
 using CompileOpenGLToSpirvTest = GlslangTest<::testing::TestWithParam<std::string>>;
 using VulkanSemantics = GlslangTest<::testing::TestWithParam<std::string>>;
 using OpenGLSemantics = GlslangTest<::testing::TestWithParam<std::string>>;
@@ -119,6 +120,13 @@ TEST_P(CompileToSpirv14Test, FromFile)
 {
     loadFileCompileAndCheck(GlobalTestSettings.testRoot, GetParam(),
                             Source::GLSL, Semantics::Vulkan, glslang::EShTargetVulkan_1_1, glslang::EShTargetSpv_1_4,
+                            Target::Spv);
+}
+
+TEST_P(CompileToSpirv16Test, FromFile)
+{
+    loadFileCompileAndCheck(GlobalTestSettings.testRoot, GetParam(),
+                            Source::GLSL, Semantics::Vulkan, glslang::EShTargetVulkan_1_3, glslang::EShTargetSpv_1_6,
                             Target::Spv);
 }
 
@@ -365,7 +373,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.int64.frag",
         "spv.intcoopmat.comp",
         "spv.intOps.vert",
-        "spv.intrinsicsSpecConst.vert",
         "spv.intrinsicsSpirvByReference.vert",
         "spv.intrinsicsSpirvDecorate.frag",
         "spv.intrinsicsSpirvExecutionMode.frag",
@@ -373,6 +380,7 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.intrinsicsSpirvLiteral.vert",
         "spv.intrinsicsSpirvStorageClass.rchit",
         "spv.intrinsicsSpirvType.rgen",
+        "spv.intrinsicsSpirvTypeLocalVar.vert",
         "spv.invariantAll.vert",
         "spv.layer.tese",
         "spv.layoutNested.vert",
@@ -520,6 +528,7 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.vulkan110.int16.frag",
         "spv.int32.frag",
         "spv.explicittypes.frag",
+        "spv.float16NoRelaxed.vert",
         "spv.float32.frag",
         "spv.float64.frag",
         "spv.memoryScopeSemantics.comp",
@@ -620,6 +629,18 @@ INSTANTIATE_TEST_SUITE_P(
     })),
     FileNameAsCustomTestSuffix
 );
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    Glsl, CompileToSpirv16Test,
+    ::testing::ValuesIn(std::vector<std::string>({
+        "spv.1.6.conditionalDiscard.frag",
+        "spv.1.6.helperInvocation.frag",
+        "spv.1.6.specConstant.comp",
+    })),
+    FileNameAsCustomTestSuffix
+);
+
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(

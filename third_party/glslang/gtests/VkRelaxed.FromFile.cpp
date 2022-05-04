@@ -107,8 +107,8 @@ bool verifyIOMapping(std::string& linkingError, glslang::TProgram& program) {
                 auto inQualifier = in.getType()->getQualifier();
                 auto outQualifier = out->second->getType()->getQualifier();
                 success &= outQualifier.layoutLocation == inQualifier.layoutLocation;
-            }
-            else {
+            // These are not part of a matched interface. Other cases still need to be added.
+            } else if (name != "gl_FrontFacing" && name != "gl_FragCoord") {
                 success &= false;
             }
         }
@@ -293,6 +293,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(std::vector<vkRelaxedData>({
         {{"vk.relaxed.frag"}},
         {{"vk.relaxed.link1.frag", "vk.relaxed.link2.frag"}},
+        {{"vk.relaxed.stagelink.0.0.vert", "vk.relaxed.stagelink.0.1.vert", "vk.relaxed.stagelink.0.2.vert", "vk.relaxed.stagelink.0.0.frag", "vk.relaxed.stagelink.0.1.frag", "vk.relaxed.stagelink.0.2.frag"}},
         {{"vk.relaxed.stagelink.vert", "vk.relaxed.stagelink.frag"}},
         {{"vk.relaxed.errorcheck.vert", "vk.relaxed.errorcheck.frag"}},
         {{"vk.relaxed.changeSet.vert", "vk.relaxed.changeSet.frag" }, { {"0"}, {"1"} } },

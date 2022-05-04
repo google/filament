@@ -2167,8 +2167,21 @@ TIntermNode* HlslParseContext::transformEntryPoint(const TSourceLoc& loc, TFunct
         TIntermSymbol* arg = intermediate.addSymbol(*argVars.back());
         handleFunctionArgument(&callee, callingArgs, arg);
         if (param.type->getQualifier().isParamInput()) {
-            intermediate.growAggregate(synthBody, handleAssign(loc, EOpAssign, arg,
-                                                               intermediate.addSymbol(**inputIt)));
+            TIntermTyped* input = intermediate.addSymbol(**inputIt);
+            if (input->getType().getQualifier().builtIn == EbvFragCoord && intermediate.getDxPositionW()) {
+                // Replace FragCoord W with reciprocal
+                auto pos_xyz = handleDotDereference(loc, input, "xyz");
+                auto pos_w   = handleDotDereference(loc, input, "w");
+                auto one     = intermediate.addConstantUnion(1.0, EbtFloat, loc);
+                auto recip_w = intermediate.addBinaryMath(EOpDiv, one, pos_w, loc);
+                TIntermAggregate* dst = new TIntermAggregate(EOpConstructVec4);
+                dst->getSequence().push_back(pos_xyz);
+                dst->getSequence().push_back(recip_w);
+                dst->setType(TType(EbtFloat, EvqTemporary, 4));
+                dst->setLoc(loc);
+                input = dst;
+            }
+            intermediate.growAggregate(synthBody, handleAssign(loc, EOpAssign, arg, input));
             inputIt++;
         }
         if (param.type->getQualifier().storage == EvqUniform) {
@@ -2450,6 +2463,62 @@ void HlslParseContext::handleFunctionArgument(TFunction* function,
         arguments = intermediate.growAggregate(arguments, newArg);
     else
         arguments = newArg;
+}
+
+// FragCoord may require special loading: we can optionally reciprocate W.
+TIntermTyped* HlslParseContext::assignFromFragCoord(const TSourceLoc& loc, TOperator op,
+                                                    TIntermTyped* left, TIntermTyped* right)
+{
+    // If we are not asked for reciprocal W, use a plain old assign.
+    if (!intermediate.getDxPositionW())
+        return intermediate.addAssign(op, left, right, loc);
+
+    // If we get here, we should reciprocate W.
+    TIntermAggregate* assignList = nullptr;
+
+    // If this is a complex rvalue, we don't want to dereference it many times.  Create a temporary.
+    TVariable* rhsTempVar = nullptr;
+    rhsTempVar = makeInternalVariable("@fragcoord", right->getType());
+    rhsTempVar->getWritableType().getQualifier().makeTemporary();
+
+    {
+        TIntermTyped* rhsTempSym = intermediate.addSymbol(*rhsTempVar, loc);
+        assignList = intermediate.growAggregate(assignList,
+            intermediate.addAssign(EOpAssign, rhsTempSym, right, loc), loc);
+    }
+
+    // tmp.w = 1.0 / tmp.w
+    {
+        const int W = 3;
+
+        TIntermTyped* tempSymL = intermediate.addSymbol(*rhsTempVar, loc);
+        TIntermTyped* tempSymR = intermediate.addSymbol(*rhsTempVar, loc);
+        TIntermTyped* index = intermediate.addConstantUnion(W, loc);
+
+        TIntermTyped* lhsElement = intermediate.addIndex(EOpIndexDirect, tempSymL, index, loc);
+        TIntermTyped* rhsElement = intermediate.addIndex(EOpIndexDirect, tempSymR, index, loc);
+
+        const TType derefType(right->getType(), 0);
+
+        lhsElement->setType(derefType);
+        rhsElement->setType(derefType);
+
+        auto one     = intermediate.addConstantUnion(1.0, EbtFloat, loc);
+        auto recip_w = intermediate.addBinaryMath(EOpDiv, one, rhsElement, loc);
+
+        assignList = intermediate.growAggregate(assignList, intermediate.addAssign(EOpAssign, lhsElement, recip_w, loc));
+    }
+
+    // Assign the rhs temp (now with W reciprocal) to the final output
+    {
+        TIntermTyped* rhsTempSym = intermediate.addSymbol(*rhsTempVar, loc);
+        assignList = intermediate.growAggregate(assignList, intermediate.addAssign(op, left, rhsTempSym, loc));
+    }
+
+    assert(assignList != nullptr);
+    assignList->setOperator(EOpSequence);
+
+    return assignList;
 }
 
 // Position may require special handling: we can optionally invert Y.
@@ -3071,6 +3140,10 @@ TIntermTyped* HlslParseContext::handleAssign(const TSourceLoc& loc, TOperator op
                                                                               subSplitLeft, subSplitRight);
 
                     assignList = intermediate.growAggregate(assignList, clipCullAssign, loc);
+                } else if (subSplitRight->getType().getQualifier().builtIn == EbvFragCoord) {
+                    // FragCoord can require special handling: see comment above assignFromFragCoord
+                    TIntermTyped* fragCoordAssign = assignFromFragCoord(loc, op, subSplitLeft, subSplitRight);
+                    assignList = intermediate.growAggregate(assignList, fragCoordAssign, loc);
                 } else if (assignsClipPos(subSplitLeft)) {
                     // Position can require special handling: see comment above assignPosition
                     TIntermTyped* positionAssign = assignPosition(loc, op, subSplitLeft, subSplitRight);
@@ -5357,7 +5430,7 @@ void HlslParseContext::decomposeIntrinsic(const TSourceLoc& loc, TIntermTyped*& 
         }
     case EOpWavePrefixCountBits:
         {
-            // Mapped to subgroupBallotInclusiveBitCount(subgroupBallot())
+            // Mapped to subgroupBallotExclusiveBitCount(subgroupBallot())
             // builtin
 
             // uvec4 type.
@@ -5371,7 +5444,7 @@ void HlslParseContext::decomposeIntrinsic(const TSourceLoc& loc, TIntermTyped*& 
             TType uintType(EbtUint, EvqTemporary);
 
             node = intermediate.addBuiltInFunctionCall(loc,
-                EOpSubgroupBallotInclusiveBitCount, true, res, uintType);
+                EOpSubgroupBallotExclusiveBitCount, true, res, uintType);
 
             break;
         }
@@ -6933,6 +7006,9 @@ void HlslParseContext::shareStructBufferType(TType& type)
             return false;
 
         if (lhs.isStruct() != rhs.isStruct())
+            return false;
+
+        if (lhs.getQualifier().builtIn != rhs.getQualifier().builtIn)
             return false;
 
         if (lhs.isStruct() && rhs.isStruct()) {
