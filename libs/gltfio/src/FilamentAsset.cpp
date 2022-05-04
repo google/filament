@@ -54,6 +54,8 @@ FFilamentAsset::~FFilamentAsset() {
         if (mNameManager) {
             mNameManager->removeComponent(entity);
         }
+        // Destroy the node component.
+        mNodeManager->destroy(entity);
         // Destroy the actual entity.
         mEntityManager->destroy(entity);
     }
@@ -81,8 +83,7 @@ const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
     if (entity.isNull()) {
         return mAssetExtras.c_str();
     }
-    const auto iter = mNodeExtras.find(entity);
-    return iter == mNodeExtras.cend() ? nullptr : iter->second.c_str();
+    return mNodeManager->getExtras(mNodeManager->getInstance(entity)).c_str();
 }
 
 void FFilamentAsset::createAnimators() {
@@ -124,17 +125,12 @@ const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         return nullptr;
     }
 
-    const auto iter = mMorphTargetNames.find(entity);
-    if (iter == mMorphTargetNames.end()) {
+    const auto& names =  mNodeManager->getMorphTargetNames(mNodeManager->getInstance(entity));
+    if (targetIndex >= names.size()) {
         return nullptr;
     }
 
-    const auto& morphTargetNames = iter->second;
-    if (targetIndex >= morphTargetNames.size()) {
-        return nullptr;
-    }
-
-    return morphTargetNames[targetIndex].c_str();
+    return names[targetIndex].c_str();
 }
 
 size_t FFilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcept {
@@ -142,12 +138,8 @@ size_t FFilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcep
         return 0;
     }
 
-    const auto iter = mMorphTargetNames.find(entity);
-    if (iter == mMorphTargetNames.end()) {
-        return 0;
-    }
-
-    return iter->second.size();
+    const auto& names = mNodeManager->getMorphTargetNames(mNodeManager->getInstance(entity));
+    return names.size();
 }
 
 size_t FFilamentAsset::getMaterialVariantCount() const noexcept {

@@ -20,6 +20,7 @@
 #include <gltfio/math.h>
 
 #include "FFilamentAsset.h"
+#include "FNodeManager.h"
 #include "GltfEnums.h"
 
 #include <filament/Box.h>
@@ -95,7 +96,12 @@ struct FAssetLoader : public AssetLoader {
             mTransformManager(config.engine->getTransformManager()),
             mMaterials(config.materials),
             mEngine(config.engine),
+            mNodeManager(new FNodeManager()),
             mDefaultNodeName(config.defaultNodeName) {}
+
+    ~FAssetLoader() {
+        delete mNodeManager;
+    }
 
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
@@ -118,6 +124,10 @@ struct FAssetLoader : public AssetLoader {
 
     NameComponentManager* getNames() const noexcept {
         return mNameManager;
+    }
+
+    NodeManager* getNodeManager() const noexcept {
+        return mNodeManager;
     }
 
     const Material* const* getMaterials() const noexcept {
@@ -147,10 +157,11 @@ struct FAssetLoader : public AssetLoader {
 
     EntityManager& mEntityManager;
     RenderableManager& mRenderableManager;
-    NameComponentManager* mNameManager;
+    NameComponentManager* const mNameManager;
     TransformManager& mTransformManager;
-    MaterialProvider* mMaterials;
-    Engine* mEngine;
+    MaterialProvider* const mMaterials;
+    Engine* const mEngine;
+    FNodeManager* const mNodeManager;
 
     // Transient state used only for the asset currently being loaded:
     FFilamentAsset* mResult;
@@ -270,7 +281,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
     #endif
 
-    mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager, srcAsset);
+    mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager, mNodeManager, srcAsset);
     mDummyBufferObject = nullptr;
 
     // If there is no default scene specified, then the default is the first one.
@@ -383,6 +394,7 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
 void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* node, Entity parent,
         bool enableLight, FFilamentInstance* instance) {
     Entity entity = mEntityManager.create();
+    mNodeManager->create(entity);
 
     // Always create a transform component to reflect the original hierarchy.
     mat4f localTransform;
@@ -402,8 +414,8 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
     const cgltf_size extras_size = node->extras.end_offset - node->extras.start_offset;
     if (extras_size > 0) {
         const cgltf_data* srcAsset = mResult->mSourceAsset->hierarchy;
-        mResult->mNodeExtras[entity] = CString(
-                srcAsset->json + node->extras.start_offset, extras_size);
+        CString extras(srcAsset->json + node->extras.start_offset, extras_size);
+        mNodeManager->setExtras(mNodeManager->getInstance(entity), std::move(extras));
     }
 
     // Update the asset's entity list and private node mapping.
@@ -525,12 +537,12 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         }
     }
 
-    auto& morphTargetNames = mResult->mMorphTargetNames[entity];
-    assert_invariant(morphTargetNames.empty());
-    morphTargetNames = FixedCapacityVector<CString>(numMorphTargets);
+    FixedCapacityVector<CString> morphTargetNames(numMorphTargets);
     for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
-        morphTargetNames[i] = StaticString::make(mesh->target_names[i]);
+        morphTargetNames[i] = CString(mesh->target_names[i]);
     }
+    mNodeManager->setMorphTargetNames(mNodeManager->getInstance(entity),
+            std::move(morphTargetNames));
 
     const Aabb transformed = aabb.transform(worldTransform);
 
