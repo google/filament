@@ -50,14 +50,20 @@ vertex {
 }
 
 fragment {
-    void tap(inout highp vec3 sum, const float weight, const highp vec2 position) {
-        vec3 s = textureLod(materialParams_source, position, materialParams.level).rgb;
+    
+    float max4(const vec4 f) {
+        vec2 t = max(f.xy, f.zw);
+        return max(t.x, t.y);
+    }
+    
+    void tap(inout highp vec4 sum, const float weight, const highp vec2 position) {
+        vec4 s = textureLod(materialParams_source, position, materialParams.level);
         sum += s * weight;
     }
 
-    void tapReinhard(inout highp vec3 sum, inout float totalWeight, const float weight, const highp vec2 position) {
-        vec3 s = textureLod(materialParams_source, position, materialParams.level).rgb;
-        float w = weight / (1.0 + max3(s));
+    void tapReinhard(inout highp vec4 sum, inout float totalWeight, const float weight, const highp vec2 position) {
+        vec4 s = textureLod(materialParams_source, position, materialParams.level);
+        float w = weight / (1.0 + max4(s));
         totalWeight += w;
         sum += s * w;
     }
@@ -66,7 +72,7 @@ fragment {
         highp vec2 uv = variable_vertex.xy;
 
         // we handle the center pixel separately
-        highp vec3 sum = vec3(0);
+        highp vec4 sum = vec4(0);
 
         if (materialParams.reinhard != 0) {
             float totalWeight = 0.0;
@@ -90,6 +96,6 @@ fragment {
             }
         }
 
-        postProcess.color.rgb = sum;
+        postProcess.color = sum;
     }
 }
