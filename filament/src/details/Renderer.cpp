@@ -177,6 +177,10 @@ void FRenderer::initializeClearFlags() {
                   | TargetBufferFlags::DEPTH_AND_STENCIL;
 }
 
+void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
+    FEngine::DriverApi& driver = mEngine.getDriverApi();
+    driver.setPresentationTime(monotonic_clock_ns);
+}
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
@@ -230,7 +234,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     * to ignore the return value and render the frame anyways -- which is perfectly fine.
     * The remaining work will be done when the first render() call is made.
     */
-    auto beginFrameInternal = [this, appVsync, vsyncSteadyClockTimeNano]() {
+    auto beginFrameInternal = [this, appVsync]() {
         FEngine& engine = mEngine;
         FEngine::DriverApi& driver = engine.getDriverApi();
 
@@ -242,38 +246,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         mFrameInfoManager.beginFrame(driver, {
                 .historySize = mFrameRateOptions.history
         }, mFrameId);
-
-        if (false && vsyncSteadyClockTimeNano) { // work in progress
-            const size_t interval = mFrameRateOptions.interval; // user requested swap-interval;
-            const steady_clock::duration refreshPeriod(uint64_t(1e9 / mDisplayInfo.refreshRate));
-            const steady_clock::duration presentationDeadline(mDisplayInfo.presentationDeadlineNanos);
-            const steady_clock::duration vsyncOffset(mDisplayInfo.vsyncOffsetNanos);
-
-            // hardware vsync timestamp
-            steady_clock::time_point hwVsync = appVsync - vsyncOffset;
-
-            // compute our desired presentation time. We can't pick a desired presentation time
-            // that's too far, or we won't be able to dequeue buffers.
-            steady_clock::time_point desiredPresentationTime = hwVsync + 2 * interval * refreshPeriod;
-
-            // Compute the deadline. This deadline is when the GPU must be finished.
-            // The deadline has 1ms backed in it on Android.
-            UTILS_UNUSED_IN_RELEASE
-            steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
-
-            // one important thing is to make sure that the deadline is comfortably later than
-            // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
-
-            // TODO: evaluate if we can make it in time, and if not why.
-            //   If the problem is cpu+gpu latency we can try to push the desired presentation time
-            //   further away, but this has limits, as only 2 buffers are dequeuable.
-            //   If the problem is the gpu is overwhelmed, then we need to
-            //    - see if there is more headroom in dynamic resolution
-            //    - or start skipping frames. Ideally lower the framerate to
-            // presentation time is set to the middle of the period we're interested in
-            steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
-            driver.setPresentationTime(presentationTime.time_since_epoch().count());
-        }
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
         engine.prepare();
@@ -985,7 +957,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Post Processing...
 
-    auto const& inputDesc = fg.getDescriptor(input);
+    UTILS_UNUSED_IN_RELEASE auto const& inputDesc = fg.getDescriptor(input);
     assert_invariant(inputDesc.width == svp.width);
     assert_invariant(inputDesc.height == svp.height);
 

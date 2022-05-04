@@ -156,12 +156,9 @@ Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv*, jclass, jlong 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetDisplayInfo(JNIEnv*, jclass, jlong nativeRenderer,
-        jfloat refreshRate, jlong presentationDeadlineNanos, jlong vsyncOffsetNanos) {
+Java_com_google_android_filament_Renderer_nSetDisplayInfo(JNIEnv*, jclass, jlong nativeRenderer, jfloat refreshRate) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setDisplayInfo({ .refreshRate = refreshRate,
-                               .presentationDeadlineNanos = (uint64_t)presentationDeadlineNanos,
-                               .vsyncOffsetNanos = (uint64_t)vsyncOffsetNanos });
+    renderer->setDisplayInfo({ .refreshRate = refreshRate });
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -182,4 +179,11 @@ Java_com_google_android_filament_Renderer_nSetClearOptions(JNIEnv *, jclass ,
     renderer->setClearOptions({ .clearColor = {r, g, b, a},
                                 .clear = (bool) clear,
                                 .discard = (bool) discard});
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetPresentationTime(JNIEnv *, jclass ,
+    jlong nativeRenderer, jlong monotonicClockNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->setPresentationTime(monotonicClockNanos);
 }

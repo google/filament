@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.22.1 (currently main branch)
 
 - Metal: Shaders now use `half` floating-point arithmetic when possible for improved performance. [⚠️ **Recompile Materials**]
+- engine: add support for presentation time in `Renderer`
 
 ## v1.22.0
 
