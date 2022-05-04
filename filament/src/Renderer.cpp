@@ -32,6 +32,10 @@ void Renderer::render(View const* view) {
     upcast(this)->render(upcast(view));
 }
 
+void Renderer::setPresentationTime(int64_t monotonic_clock_ns) {
+    upcast(this)->setPresentationTime(monotonic_clock_ns);
+}
+
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano);
 }
