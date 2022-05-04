@@ -14,7 +14,11 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {
-    vec2 _95 = (vTex + (vec2(1.0) / vec2(textureSize(sampler2D(uTexture[1], uSampler), 0)))) + (vec2(1.0) / vec2(textureSize(sampler2D(uTexture[2], uSampler), 1)));
+    highp vec2 _76 = vec2(1.0) / vec2(textureSize(sampler2D(uTexture[1], uSampler), 0));
+    vec2 mp_copy_76 = _76;
+    highp vec2 _86 = vec2(1.0) / vec2(textureSize(sampler2D(uTexture[2], uSampler), 1));
+    vec2 mp_copy_86 = _86;
+    vec2 _95 = (vTex + mp_copy_76) + mp_copy_86;
     FragColor = ((((texture(sampler2D(uTexture[2], uSampler), _95) + texture(sampler2D(uTexture[1], uSampler), _95)) + texture(sampler2D(uTexture[1], uSampler), _95)) + texture(sampler2DArray(uTextureArray[3], uSampler), vTex3)) + texture(samplerCube(uTextureCube[1], uSampler), vTex3)) + texture(sampler3D(uTexture3D[2], uSampler), vTex3);
 }
 

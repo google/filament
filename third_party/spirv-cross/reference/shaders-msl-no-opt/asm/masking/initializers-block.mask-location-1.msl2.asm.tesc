@@ -56,7 +56,7 @@ struct P
 
 struct main0_out
 {
-    float4 C_v;
+    float4 c_v;
     float4 gl_Position;
     float gl_PointSize;
 };
@@ -70,10 +70,10 @@ kernel void main0(uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_
     
     threadgroup P p;
     device main0_out* gl_out = &spvOut[gl_PrimitiveID * 4];
-    gl_out[gl_InvocationID].C_v = _18[gl_InvocationID].v;
+    gl_out[gl_InvocationID].c_v = _18[gl_InvocationID].v;
     device main0_patchOut& patchOut = spvPatchOut[gl_PrimitiveID];
     p = P{ float4(0.0) };
-    gl_out[gl_InvocationID].C_v = float4(1.0);
+    gl_out[gl_InvocationID].c_v = float4(1.0);
     p.v = float4(2.0);
     gl_out[gl_InvocationID].gl_Position = float4(3.0);
     gl_out[gl_InvocationID].gl_PointSize = 4.0;

@@ -16,7 +16,7 @@ struct main0_out
 fragment main0_out main0(constant push_cb& _19 [[buffer(0)]], texture2d<float> t0 [[texture(0)]], sampler dummy_sampler [[sampler(0)]])
 {
     main0_out out = {};
-    out.o0 = t0.read(uint2(as_type<int2>(_19.cb0[0u].zw)) + uint2(int2(-1, -2)), as_type<int>(0.0));
+    out.o0 = t0.read(uint2(as_type<int2>(_19.cb0[0u].zw)) + uint2(int2(-1, -2)), 0);
     return out;
 }
 

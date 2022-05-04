@@ -1,5 +1,6 @@
 /*
  * Copyright 2019-2021 Hans-Kristian Arntzen
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@
  * At your option, you may choose to accept this material under either:
  *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
  *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
- * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #include "spirv_cross_c.h"
@@ -251,7 +251,7 @@ spvc_result spvc_context_parse_spirv(spvc_context context, const SpvId *spirv, s
 		pir->context = context;
 		Parser parser(spirv, word_count);
 		parser.parse();
-		pir->parsed = move(parser.get_parsed_ir());
+		pir->parsed = std::move(parser.get_parsed_ir());
 		*parsed_ir = pir.get();
 		context->allocations.push_back(std::move(pir));
 	}
@@ -283,7 +283,7 @@ spvc_result spvc_context_create_compiler(spvc_context context, spvc_backend back
 		{
 		case SPVC_BACKEND_NONE:
 			if (mode == SPVC_CAPTURE_MODE_TAKE_OWNERSHIP)
-				comp->compiler.reset(new Compiler(move(parsed_ir->parsed)));
+				comp->compiler.reset(new Compiler(std::move(parsed_ir->parsed)));
 			else if (mode == SPVC_CAPTURE_MODE_COPY)
 				comp->compiler.reset(new Compiler(parsed_ir->parsed));
 			break;
@@ -291,7 +291,7 @@ spvc_result spvc_context_create_compiler(spvc_context context, spvc_backend back
 #if SPIRV_CROSS_C_API_GLSL
 		case SPVC_BACKEND_GLSL:
 			if (mode == SPVC_CAPTURE_MODE_TAKE_OWNERSHIP)
-				comp->compiler.reset(new CompilerGLSL(move(parsed_ir->parsed)));
+				comp->compiler.reset(new CompilerGLSL(std::move(parsed_ir->parsed)));
 			else if (mode == SPVC_CAPTURE_MODE_COPY)
 				comp->compiler.reset(new CompilerGLSL(parsed_ir->parsed));
 			break;
@@ -300,7 +300,7 @@ spvc_result spvc_context_create_compiler(spvc_context context, spvc_backend back
 #if SPIRV_CROSS_C_API_HLSL
 		case SPVC_BACKEND_HLSL:
 			if (mode == SPVC_CAPTURE_MODE_TAKE_OWNERSHIP)
-				comp->compiler.reset(new CompilerHLSL(move(parsed_ir->parsed)));
+				comp->compiler.reset(new CompilerHLSL(std::move(parsed_ir->parsed)));
 			else if (mode == SPVC_CAPTURE_MODE_COPY)
 				comp->compiler.reset(new CompilerHLSL(parsed_ir->parsed));
 			break;
@@ -309,7 +309,7 @@ spvc_result spvc_context_create_compiler(spvc_context context, spvc_backend back
 #if SPIRV_CROSS_C_API_MSL
 		case SPVC_BACKEND_MSL:
 			if (mode == SPVC_CAPTURE_MODE_TAKE_OWNERSHIP)
-				comp->compiler.reset(new CompilerMSL(move(parsed_ir->parsed)));
+				comp->compiler.reset(new CompilerMSL(std::move(parsed_ir->parsed)));
 			else if (mode == SPVC_CAPTURE_MODE_COPY)
 				comp->compiler.reset(new CompilerMSL(parsed_ir->parsed));
 			break;
@@ -318,7 +318,7 @@ spvc_result spvc_context_create_compiler(spvc_context context, spvc_backend back
 #if SPIRV_CROSS_C_API_CPP
 		case SPVC_BACKEND_CPP:
 			if (mode == SPVC_CAPTURE_MODE_TAKE_OWNERSHIP)
-				comp->compiler.reset(new CompilerCPP(move(parsed_ir->parsed)));
+				comp->compiler.reset(new CompilerCPP(std::move(parsed_ir->parsed)));
 			else if (mode == SPVC_CAPTURE_MODE_COPY)
 				comp->compiler.reset(new CompilerCPP(parsed_ir->parsed));
 			break;
@@ -327,7 +327,7 @@ spvc_result spvc_context_create_compiler(spvc_context context, spvc_backend back
 #if SPIRV_CROSS_C_API_REFLECT
 		case SPVC_BACKEND_JSON:
 			if (mode == SPVC_CAPTURE_MODE_TAKE_OWNERSHIP)
-				comp->compiler.reset(new CompilerReflection(move(parsed_ir->parsed)));
+				comp->compiler.reset(new CompilerReflection(std::move(parsed_ir->parsed)));
 			else if (mode == SPVC_CAPTURE_MODE_COPY)
 				comp->compiler.reset(new CompilerReflection(parsed_ir->parsed));
 			break;
@@ -471,6 +471,12 @@ spvc_result spvc_compiler_options_set_uint(spvc_compiler_options options, spvc_c
 		break;
 	case SPVC_COMPILER_OPTION_GLSL_FORCE_FLATTENED_IO_BLOCKS:
 		options->glsl.force_flattened_io_blocks = value != 0;
+		break;
+	case SPVC_COMPILER_OPTION_GLSL_OVR_MULTIVIEW_VIEW_COUNT:
+		options->glsl.ovr_multiview_view_count = value;
+		break;
+	case SPVC_COMPILER_OPTION_RELAX_NAN_CHECKS:
+		options->glsl.relax_nan_checks = value != 0;
 		break;
 #endif
 

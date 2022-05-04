@@ -16,25 +16,25 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float Samp(thread const float3& uv, thread depth2d<float> uTex, thread sampler uSamp)
+float Samp(thread const float3& uv, depth2d<float> uTex, sampler uSamp)
 {
     return uTex.sample_compare(uSamp, uv.xy, uv.z);
 }
 
 static inline __attribute__((always_inline))
-float Samp2(thread const float3& uv, thread depth2d<float> uSampler, thread const sampler uSamplerSmplr, thread float3& vUV)
+float Samp2(thread const float3& uv, depth2d<float> uSampler, sampler uSamplerSmplr, thread float3& vUV)
 {
     return uSampler.sample_compare(uSamplerSmplr, vUV.xy, vUV.z);
 }
 
 static inline __attribute__((always_inline))
-float Samp3(thread const depth2d<float> uT, thread const sampler uS, thread const float3& uv, thread float3& vUV)
+float Samp3(depth2d<float> uT, sampler uS, thread const float3& uv, thread float3& vUV)
 {
     return uT.sample_compare(uS, vUV.xy, vUV.z);
 }
 
 static inline __attribute__((always_inline))
-float Samp4(thread const depth2d<float> uS, thread const sampler uSSmplr, thread const float3& uv, thread float3& vUV)
+float Samp4(depth2d<float> uS, sampler uSSmplr, thread const float3& uv, thread float3& vUV)
 {
     return uS.sample_compare(uSSmplr, vUV.xy, vUV.z);
 }

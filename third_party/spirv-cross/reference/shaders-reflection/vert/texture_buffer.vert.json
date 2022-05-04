@@ -32,6 +32,7 @@
         {
             "type" : "imageBuffer",
             "name" : "uSampo",
+            "readonly" : true,
             "set" : 0,
             "binding" : 5,
             "format" : "rgba32f"

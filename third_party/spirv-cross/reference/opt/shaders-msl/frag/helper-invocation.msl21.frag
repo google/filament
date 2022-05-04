@@ -16,9 +16,8 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> uSampler [[texture(0)]], sampler uSamplerSmplr [[sampler(0)]])
 {
     main0_out out = {};
-    bool gl_HelperInvocation = simd_is_helper_thread();
     float4 _52;
-    if (!gl_HelperInvocation)
+    if (!simd_is_helper_thread())
     {
         _52 = uSampler.sample(uSamplerSmplr, in.vUV, level(0.0));
     }

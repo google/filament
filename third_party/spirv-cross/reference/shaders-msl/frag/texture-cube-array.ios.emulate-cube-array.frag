@@ -5,16 +5,6 @@
 
 using namespace metal;
 
-struct main0_out
-{
-    float4 FragColor [[color(0)]];
-};
-
-struct main0_in
-{
-    float4 vUV [[user(locn0)]];
-};
-
 static inline __attribute__((always_inline))
 float3 spvCubemapTo2DArrayFace(float3 P)
 {
@@ -48,6 +38,16 @@ float3 spvCubemapTo2DArrayFace(float3 P)
     v = 0.5 * (v/ProjectionAxis + 1);
     return float3(u, v, CubeFace);
 }
+
+struct main0_out
+{
+    float4 FragColor [[color(0)]];
+};
+
+struct main0_in
+{
+    float4 vUV [[user(locn0)]];
+};
 
 fragment main0_out main0(main0_in in [[stage_in]], texturecube<float> cubeSampler [[texture(0)]], texture2d_array<float> cubeArraySampler [[texture(1)]], texture2d_array<float> texArraySampler [[texture(2)]], sampler cubeSamplerSmplr [[sampler(0)]], sampler cubeArraySamplerSmplr [[sampler(1)]], sampler texArraySamplerSmplr [[sampler(2)]])
 {

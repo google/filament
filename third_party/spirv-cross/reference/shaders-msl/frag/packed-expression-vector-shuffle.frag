@@ -18,7 +18,9 @@ fragment main0_out main0(constant UBO& _15 [[buffer(0)]])
 {
     main0_out out = {};
     float4 f = float4(1.0);
-    f = float4(_15.color[0], _15.color[1], _15.color[2], f.w);
+    f.x = _15.color[0];
+    f.y = _15.color[1];
+    f.z = _15.color[2];
     out.FragColor = f;
     return out;
 }

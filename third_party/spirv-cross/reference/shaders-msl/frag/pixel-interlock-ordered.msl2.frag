@@ -7,6 +7,12 @@
 
 using namespace metal;
 
+// The required alignment of a linear texture of R32Uint format.
+constant uint spvLinearTextureAlignmentOverride [[function_constant(65535)]];
+constant uint spvLinearTextureAlignment = is_function_constant_defined(spvLinearTextureAlignmentOverride) ? spvLinearTextureAlignmentOverride : 4;
+// Returns buffer coords corresponding to 2D texture coords for emulating 2D texture atomics
+#define spvImage2DAtomicCoord(tc, tex) (((((tex).get_width() +  spvLinearTextureAlignment / 4 - 1) & ~( spvLinearTextureAlignment / 4 - 1)) * (tc).y) + (tc).x)
+
 struct Buffer3
 {
     int baz;
@@ -22,12 +28,6 @@ struct Buffer2
 {
     uint quux;
 };
-
-// The required alignment of a linear texture of R32Uint format.
-constant uint spvLinearTextureAlignmentOverride [[function_constant(65535)]];
-constant uint spvLinearTextureAlignment = is_function_constant_defined(spvLinearTextureAlignmentOverride) ? spvLinearTextureAlignmentOverride : 4;
-// Returns buffer coords corresponding to 2D texture coords for emulating 2D texture atomics
-#define spvImage2DAtomicCoord(tc, tex) (((((tex).get_width() +  spvLinearTextureAlignment / 4 - 1) & ~( spvLinearTextureAlignment / 4 - 1)) * (tc).y) + (tc).x)
 
 fragment void main0(device Buffer3& _9 [[buffer(0)]], volatile device Buffer& _42 [[buffer(2), raster_order_group(0)]], device Buffer2& _52 [[buffer(3), raster_order_group(0)]], texture2d<float, access::write> img4 [[texture(0)]], texture2d<float, access::write> img [[texture(1), raster_order_group(0)]], texture2d<float> img3 [[texture(2), raster_order_group(0)]], texture2d<uint> img2 [[texture(3), raster_order_group(0)]], device atomic_uint* img2_atomic [[buffer(1), raster_order_group(0)]])
 {

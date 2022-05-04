@@ -16,13 +16,13 @@ struct Output
 
 struct main0_out
 {
-    float2 Output_v0 [[user(locn0)]];
-    float2 Output_v1 [[user(locn1)]];
-    float3 Output_v2 [[user(locn2)]];
-    float4 Output_v3 [[user(locn3)]];
-    float Output_v4 [[user(locn4)]];
-    float Output_v5 [[user(locn5)]];
-    float Output_v6 [[user(locn6)]];
+    float2 outp_v0 [[user(locn0)]];
+    float2 outp_v1 [[user(locn1)]];
+    float3 outp_v2 [[user(locn2)]];
+    float4 outp_v3 [[user(locn3)]];
+    float outp_v4 [[user(locn4)]];
+    float outp_v5 [[user(locn5)]];
+    float outp_v6 [[user(locn6)]];
     float4 gl_Position [[position]];
 };
 
@@ -43,13 +43,13 @@ vertex main0_out main0(main0_in in [[stage_in]])
     outp.v5 = in.Position.y;
     outp.v6 = in.Position.x * in.Position.w;
     out.gl_Position = in.Position;
-    out.Output_v0 = outp.v0;
-    out.Output_v1 = outp.v1;
-    out.Output_v2 = outp.v2;
-    out.Output_v3 = outp.v3;
-    out.Output_v4 = outp.v4;
-    out.Output_v5 = outp.v5;
-    out.Output_v6 = outp.v6;
+    out.outp_v0 = outp.v0;
+    out.outp_v1 = outp.v1;
+    out.outp_v2 = outp.v2;
+    out.outp_v3 = outp.v3;
+    out.outp_v4 = outp.v4;
+    out.outp_v5 = outp.v5;
+    out.outp_v6 = outp.v6;
     return out;
 }
 

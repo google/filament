@@ -246,7 +246,7 @@ fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_G
     float _218 = sqrt(mix(1.0, _213 * _213, _Globals.ShadowFadeFraction));
     float4 _219 = _453;
     _219.z = _218;
-    float3 _236 = normalize((SceneTexturesStruct_GBufferATexture.sample(SceneTexturesStruct_GBufferATextureSampler, _114, level(0.0)).xyz * float3(2.0)) - float3(1.0));
+    float3 _236 = fast::normalize((SceneTexturesStruct_GBufferATexture.sample(SceneTexturesStruct_GBufferATextureSampler, _114, level(0.0)).xyz * float3(2.0)) - float3(1.0));
     uint _240 = uint(round(SceneTexturesStruct_GBufferBTexture.sample(SceneTexturesStruct_GBufferBTextureSampler, _114, level(0.0)).w * 255.0));
     bool _248 = (_240 & 15u) == 5u;
     float _448;
@@ -254,12 +254,13 @@ fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_G
     {
         float4 _260 = SSProfilesTexture.read(uint2(int3(1, int(uint((select(float4(0.0), SceneTexturesStruct_GBufferDTexture.sample(SceneTexturesStruct_GBufferDTextureSampler, _114, level(0.0)), bool4(!(((_240 & 4294967280u) & 16u) != 0u))).x * 255.0) + 0.5)), 0).xy), 0);
         float _263 = _260.y * 0.5;
+        float3 _266 = _148 - (_236 * float3(_263));
         float _274 = pow(fast::clamp(dot(-(_152 * float3(rsqrt(dot(_152, _152)))), _236), 0.0, 1.0), 1.0);
         float _445;
         if (_160)
         {
             float3 _278 = _152 / float3(_158);
-            float3 _280 = normalize(cross(_278, float3(0.0, 0.0, 1.0)));
+            float3 _280 = fast::normalize(cross(_278, float3(0.0, 0.0, 1.0)));
             float3 _284 = float3(_Globals.InvShadowmapResolution);
             float3 _285 = _280 * _284;
             float3 _286 = cross(_280, _278) * _284;
@@ -286,7 +287,7 @@ fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_G
                 }
                 _311 = _307;
             }
-            float4 _318 = _Globals.ShadowViewProjectionMatrices[_311] * float4(_148 - (_236 * float3(_263)), 1.0);
+            float4 _318 = _Globals.ShadowViewProjectionMatrices[_311] * float4(_266, 1.0);
             float _323 = _260.x * (10.0 / _Globals.LightPositionAndInvRadius.w);
             float _329 = (1.0 / (((_318.z / _318.w) * _Globals.PointLightDepthBiasAndProjParameters.z) - _Globals.PointLightDepthBiasAndProjParameters.w)) * _Globals.LightPositionAndInvRadius.w;
             float _342 = (_329 - ((1.0 / ((float4(ShadowDepthCubeTexture.sample(ShadowDepthTextureSampler, (_278 + (_286 * float3(2.5))), level(0.0))).x * _Globals.PointLightDepthBiasAndProjParameters.z) - _Globals.PointLightDepthBiasAndProjParameters.w)) * _Globals.LightPositionAndInvRadius.w)) * _323;

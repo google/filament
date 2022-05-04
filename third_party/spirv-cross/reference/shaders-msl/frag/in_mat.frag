@@ -27,8 +27,8 @@ fragment main0_out main0(main0_in in [[stage_in]], texturecube<float> samplerCol
     inInvModelView[1] = in.inInvModelView_1;
     inInvModelView[2] = in.inInvModelView_2;
     inInvModelView[3] = in.inInvModelView_3;
-    float3 cI = normalize(in.inPos);
-    float3 cR = reflect(cI, normalize(in.inNormal));
+    float3 cI = fast::normalize(in.inPos);
+    float3 cR = reflect(cI, fast::normalize(in.inNormal));
     cR = float3((inInvModelView * float4(cR, 0.0)).xyz);
     cR.x *= (-1.0);
     out.outFragColor = samplerColor.sample(samplerColorSmplr, cR, bias(in.inLodBias));

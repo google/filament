@@ -6,9 +6,9 @@ layout(set = 0, binding = 0) uniform texture2D uSamplers[];
 layout(set = 1, binding = 0) uniform texture2DMS uSamplersMS[];
 layout(set = 2, binding = 4) uniform sampler2D uCombinedSamplers[];
 layout(set = 3, binding = 1) uniform sampler uSamps[];
-layout(set = 4, location = 0) flat in int vIndex;
-layout(set = 5, location = 1) in vec2 vUV;
-layout(set = 6, location = 0) out vec4 FragColor;
+layout(location = 0) flat in int vIndex;
+layout(location = 1) in vec2 vUV;
+layout(location = 0) out vec4 FragColor;
 
 layout(r32f, set = 7, binding = 5) uniform image2D uImages[];
 layout(r32ui, set = 8, binding = 5) uniform uimage2D uImagesU32[];

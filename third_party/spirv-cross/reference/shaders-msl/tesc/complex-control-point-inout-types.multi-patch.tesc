@@ -75,11 +75,11 @@ struct main0_out
     float2x2 m;
     Meep meep;
     spvUnsafeArray<Meep, 2> meeps;
-    spvUnsafeArray<float, 2> Block_a;
-    float Block_b;
-    float2x2 Block_m;
-    Meep Block_meep;
-    spvUnsafeArray<Meep, 2> Block_meeps;
+    spvUnsafeArray<float, 2> B_a;
+    float B_b;
+    float2x2 B_m;
+    Meep B_meep;
+    spvUnsafeArray<Meep, 2> B_meeps;
     float4 gl_Position;
 };
 
@@ -90,11 +90,11 @@ struct main0_in
     float2x2 in_m;
     Meep in_meep;
     spvUnsafeArray<Meep, 2> in_meeps;
-    spvUnsafeArray<float, 2> Block_a;
-    float Block_b;
-    float2x2 Block_m;
-    Meep Block_meep;
-    spvUnsafeArray<Meep, 2> Block_meeps;
+    spvUnsafeArray<float, 2> in_B_a;
+    float in_B_b;
+    float2x2 in_B_m;
+    Meep in_B_meep;
+    spvUnsafeArray<Meep, 2> in_B_meeps;
 };
 
 static inline __attribute__((always_inline))
@@ -111,16 +111,16 @@ void write_in_func(device main0_out* thread & gl_out, thread uint& gl_Invocation
     gl_out[gl_InvocationID].meeps[0].b = gl_in[gl_InvocationID].in_meeps[0].b;
     gl_out[gl_InvocationID].meeps[1].a = gl_in[gl_InvocationID].in_meeps[1].a;
     gl_out[gl_InvocationID].meeps[1].b = gl_in[gl_InvocationID].in_meeps[1].b;
-    gl_out[gl_InvocationID].Block_a[0] = gl_in[gl_InvocationID].Block_a[0];
-    gl_out[gl_InvocationID].Block_a[1] = gl_in[gl_InvocationID].Block_a[1];
-    gl_out[gl_InvocationID].Block_b = gl_in[gl_InvocationID].Block_b;
-    gl_out[gl_InvocationID].Block_m = gl_in[gl_InvocationID].Block_m;
-    gl_out[gl_InvocationID].Block_meep.a = gl_in[gl_InvocationID].Block_meep.a;
-    gl_out[gl_InvocationID].Block_meep.b = gl_in[gl_InvocationID].Block_meep.b;
-    gl_out[gl_InvocationID].Block_meeps[0].a = gl_in[gl_InvocationID].Block_meeps[0].a;
-    gl_out[gl_InvocationID].Block_meeps[0].b = gl_in[gl_InvocationID].Block_meeps[0].b;
-    gl_out[gl_InvocationID].Block_meeps[1].a = gl_in[gl_InvocationID].Block_meeps[1].a;
-    gl_out[gl_InvocationID].Block_meeps[1].b = gl_in[gl_InvocationID].Block_meeps[1].b;
+    gl_out[gl_InvocationID].B_a[0] = gl_in[gl_InvocationID].in_B_a[0];
+    gl_out[gl_InvocationID].B_a[1] = gl_in[gl_InvocationID].in_B_a[1];
+    gl_out[gl_InvocationID].B_b = gl_in[gl_InvocationID].in_B_b;
+    gl_out[gl_InvocationID].B_m = gl_in[gl_InvocationID].in_B_m;
+    gl_out[gl_InvocationID].B_meep.a = gl_in[gl_InvocationID].in_B_meep.a;
+    gl_out[gl_InvocationID].B_meep.b = gl_in[gl_InvocationID].in_B_meep.b;
+    gl_out[gl_InvocationID].B_meeps[0].a = gl_in[gl_InvocationID].in_B_meeps[0].a;
+    gl_out[gl_InvocationID].B_meeps[0].b = gl_in[gl_InvocationID].in_B_meeps[0].b;
+    gl_out[gl_InvocationID].B_meeps[1].a = gl_in[gl_InvocationID].in_B_meeps[1].a;
+    gl_out[gl_InvocationID].B_meeps[1].b = gl_in[gl_InvocationID].in_B_meeps[1].b;
 }
 
 kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]], device main0_in* spvIn [[buffer(22)]])

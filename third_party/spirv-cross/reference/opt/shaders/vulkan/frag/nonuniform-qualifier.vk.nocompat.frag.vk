@@ -43,16 +43,22 @@ void main()
     FragColor = texelFetch(uSamplers[nonuniformEXT(_49)], _111, 0);
     int _116 = vIndex + 100;
     uint _122 = atomicAdd(ssbos[_116].counter, 100u);
-    vec2 _149 = FragColor.xy + (textureQueryLod(nonuniformEXT(sampler2D(uSamplers[_22], uSamps[_32])), vUV) + textureQueryLod(uCombinedSamplers[nonuniformEXT(_49)], vUV));
-    FragColor = vec4(_149.x, _149.y, FragColor.z, FragColor.w);
+    vec4 _147 = FragColor;
+    vec2 _149 = _147.xy + (textureQueryLod(nonuniformEXT(sampler2D(uSamplers[_22], uSamps[_32])), vUV) + textureQueryLod(uCombinedSamplers[nonuniformEXT(_49)], vUV));
+    FragColor.x = _149.x;
+    FragColor.y = _149.y;
     FragColor.x += float(textureQueryLevels(uSamplers[nonuniformEXT(_65)]));
     FragColor.y += float(textureSamples(uSamplersMS[nonuniformEXT(_65)]));
-    vec2 _189 = FragColor.xy + vec2(textureSize(uSamplers[nonuniformEXT(_65)], 0));
-    FragColor = vec4(_189.x, _189.y, FragColor.z, FragColor.w);
+    vec4 _189 = FragColor;
+    vec2 _191 = _189.xy + vec2(textureSize(uSamplers[nonuniformEXT(_65)], 0));
+    FragColor.x = _191.x;
+    FragColor.y = _191.y;
     FragColor += imageLoad(uImages[nonuniformEXT(_83)], _111);
-    vec2 _216 = FragColor.xy + vec2(imageSize(uImages[nonuniformEXT(_65)]));
-    FragColor = vec4(_216.x, _216.y, FragColor.z, FragColor.w);
+    vec4 _218 = FragColor;
+    vec2 _220 = _218.xy + vec2(imageSize(uImages[nonuniformEXT(_65)]));
+    FragColor.x = _220.x;
+    FragColor.y = _220.y;
     imageStore(uImages[nonuniformEXT(_88)], _111, vec4(50.0));
-    uint _242 = imageAtomicAdd(uImagesU32[nonuniformEXT(_100)], _111, 40u);
+    uint _248 = imageAtomicAdd(uImagesU32[nonuniformEXT(_100)], _111, 40u);
 }
 

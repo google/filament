@@ -36,7 +36,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant UBO& _21 [[buffer(0)]]
     for (int i = 0; i < 4; i++)
     {
         float3 L = in.aVertex.xyz - float3(_21.lights[i].Position);
-        out.vColor += ((_21.lights[i].Color * fast::clamp(1.0 - (length(L) / _21.lights[i].Radius), 0.0, 1.0)) * dot(in.aNormal, normalize(L)));
+        out.vColor += ((_21.lights[i].Color * fast::clamp(1.0 - (length(L) / _21.lights[i].Radius), 0.0, 1.0)) * dot(in.aNormal, fast::normalize(L)));
     }
     return out;
 }

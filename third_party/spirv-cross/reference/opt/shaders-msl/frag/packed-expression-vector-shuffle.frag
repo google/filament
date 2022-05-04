@@ -17,7 +17,13 @@ struct main0_out
 fragment main0_out main0(constant UBO& _15 [[buffer(0)]])
 {
     main0_out out = {};
-    out.FragColor = float4(_15.color[0], _15.color[1], _15.color[2], float4(1.0).w);
+    float4 _36 = float4(1.0);
+    _36.x = _15.color[0];
+    float4 _38 = _36;
+    _38.y = _15.color[1];
+    float4 _40 = _38;
+    _40.z = _15.color[2];
+    out.FragColor = _40;
     return out;
 }
 

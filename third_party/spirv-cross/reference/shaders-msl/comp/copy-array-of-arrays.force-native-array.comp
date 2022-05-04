@@ -5,20 +5,6 @@
 
 using namespace metal;
 
-struct BUF
-{
-    int a;
-    float b;
-    float c;
-};
-
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
-
-constant float _16[2] = { 1.0, 2.0 };
-constant float _19[2] = { 3.0, 4.0 };
-constant float _20[2][2] = { { 1.0, 2.0 }, { 3.0, 4.0 } };
-constant float _21[2][2][2] = { { { 1.0, 2.0 }, { 3.0, 4.0 } }, { { 1.0, 2.0 }, { 3.0, 4.0 } } };
-
 template<typename T, uint A>
 inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
 {
@@ -342,6 +328,20 @@ inline void spvArrayCopyFromDeviceToThreadGroup3(threadgroup T (&dst)[A][B][C], 
         spvArrayCopyFromDeviceToThreadGroup2(dst[i], src[i]);
     }
 }
+
+struct BUF
+{
+    int a;
+    float b;
+    float c;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+constant float _16[2] = { 1.0, 2.0 };
+constant float _19[2] = { 3.0, 4.0 };
+constant float _20[2][2] = { { 1.0, 2.0 }, { 3.0, 4.0 } };
+constant float _21[2][2][2] = { { { 1.0, 2.0 }, { 3.0, 4.0 } }, { { 1.0, 2.0 }, { 3.0, 4.0 } } };
 
 kernel void main0(device BUF& o [[buffer(0)]])
 {

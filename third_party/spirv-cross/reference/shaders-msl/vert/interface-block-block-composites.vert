@@ -56,13 +56,13 @@ struct main0_out
     float3 vMatrix_0 [[user(locn0)]];
     float3 vMatrix_1 [[user(locn1)]];
     float3 vMatrix_2 [[user(locn2)]];
-    float Vert_arr_0 [[user(locn4)]];
-    float Vert_arr_1 [[user(locn5)]];
-    float Vert_arr_2 [[user(locn6)]];
-    float3 Vert_wMatrix_0 [[user(locn7)]];
-    float3 Vert_wMatrix_1 [[user(locn8)]];
-    float3 Vert_wMatrix_2 [[user(locn9)]];
-    float4 Vert_wTmp [[user(locn10)]];
+    float m_20_arr_0 [[user(locn4)]];
+    float m_20_arr_1 [[user(locn5)]];
+    float m_20_arr_2 [[user(locn6)]];
+    float3 m_20_wMatrix_0 [[user(locn7)]];
+    float3 m_20_wMatrix_1 [[user(locn8)]];
+    float3 m_20_wMatrix_2 [[user(locn9)]];
+    float4 m_20_wTmp [[user(locn10)]];
     float4 gl_Position [[position]];
 };
 
@@ -93,13 +93,13 @@ vertex main0_out main0(main0_in in [[stage_in]])
     out.vMatrix_0 = vMatrix[0];
     out.vMatrix_1 = vMatrix[1];
     out.vMatrix_2 = vMatrix[2];
-    out.Vert_arr_0 = _20.arr[0];
-    out.Vert_arr_1 = _20.arr[1];
-    out.Vert_arr_2 = _20.arr[2];
-    out.Vert_wMatrix_0 = _20.wMatrix[0];
-    out.Vert_wMatrix_1 = _20.wMatrix[1];
-    out.Vert_wMatrix_2 = _20.wMatrix[2];
-    out.Vert_wTmp = _20.wTmp;
+    out.m_20_arr_0 = _20.arr[0];
+    out.m_20_arr_1 = _20.arr[1];
+    out.m_20_arr_2 = _20.arr[2];
+    out.m_20_wMatrix_0 = _20.wMatrix[0];
+    out.m_20_wMatrix_1 = _20.wMatrix[1];
+    out.m_20_wMatrix_2 = _20.wMatrix[2];
+    out.m_20_wTmp = _20.wTmp;
     return out;
 }
 

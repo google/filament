@@ -38,13 +38,13 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float4 samp_array(thread const array<texture2d<float>, 10000> uSamplers, thread const array<sampler, 10000> uSamplersSmplr, thread float2& vUV, constant UBO* const device (&vs)[10000])
+float4 samp_array(const device array<texture2d<float>, 10000>& uSamplers, const device array<sampler, 10000>& uSamplersSmplr, thread float2& vUV, constant UBO* const device (&vs)[10000])
 {
     return uSamplers[9999].sample(uSamplersSmplr[9999], vUV) + vs[5000]->v;
 }
 
 static inline __attribute__((always_inline))
-float4 samp_single(thread float2& vUV, thread texture2d<float> uSampler, thread const sampler uSamplerSmplr)
+float4 samp_single(thread float2& vUV, texture2d<float> uSampler, sampler uSamplerSmplr)
 {
     return uSampler.sample(uSamplerSmplr, vUV);
 }

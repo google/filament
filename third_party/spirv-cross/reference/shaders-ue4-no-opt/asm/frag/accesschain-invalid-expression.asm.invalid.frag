@@ -217,10 +217,10 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_View& View [[bu
     main0_out out = {};
     float4 _177 = float4((((gl_FragCoord.xy - View.View_ViewRectMin.xy) * View.View_ViewSizeAndInvSize.zw) - float2(0.5)) * float2(2.0, -2.0), _138, 1.0) * float4(gl_FragCoord.w);
     float3 _179 = in.in_var_TEXCOORD8.xyz - float3(View.View_PreViewTranslation);
-    float3 _181 = normalize(-in.in_var_TEXCOORD8.xyz);
+    float3 _181 = fast::normalize(-in.in_var_TEXCOORD8.xyz);
     float4 _187 = Material_Texture2D_0.sample(Material_Texture2D_0Sampler, (in.in_var_TEXCOORD0 * float2(10.0)));
     float2 _190 = (_187.xy * float2(2.0)) - float2(1.0);
-    float3 _206 = normalize(float3x3(float3(1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, 0.0, 1.0)) * (((float4(_190, sqrt(fast::clamp(1.0 - dot(_190, _190), 0.0, 1.0)), 1.0).xyz * float3(0.300000011920928955078125, 0.300000011920928955078125, 1.0)) * float3(View.View_NormalOverrideParameter.w)) + View.View_NormalOverrideParameter.xyz));
+    float3 _206 = fast::normalize(float3x3(float3(1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, 0.0, 1.0)) * (((float4(_190, sqrt(fast::clamp(1.0 - dot(_190, _190), 0.0, 1.0)), 1.0).xyz * float3(0.300000011920928955078125, 0.300000011920928955078125, 1.0)) * float3(View.View_NormalOverrideParameter.w)) + View.View_NormalOverrideParameter.xyz));
     float _208 = dot(_206, _181);
     float4 _217 = Material_Texture2D_1.sample(Material_Texture2D_1Sampler, (in.in_var_TEXCOORD0 * float2(20.0)));
     float _219 = mix(0.4000000059604644775390625, 1.0, _217.x);
@@ -301,7 +301,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_View& View [[bu
     {
         _423 = 1.0;
     }
-    float3 _429 = normalize(_181 + MobileDirectionalLight.MobileDirectionalLight_DirectionalLightDirectionAndShadowTransition.xyz);
+    float3 _429 = fast::normalize(_181 + MobileDirectionalLight.MobileDirectionalLight_DirectionalLightDirectionAndShadowTransition.xyz);
     float _439 = (_253 * 0.25) + 0.25;
     float3 _440 = cross(_206, _429);
     float _442 = _253 * _253;
@@ -334,7 +334,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_View& View [[bu
             float3 _501 = _Globals.LightPositionAndInvRadius[_491].xyz - _179;
             float _502 = dot(_501, _501);
             float3 _505 = _501 * float3(rsqrt(_502));
-            _507 = normalize(_181 + _505);
+            _507 = fast::normalize(_181 + _505);
             _509 = fast::max(0.0, dot(_206, _505));
             _511 = fast::max(0.0, dot(_206, _507));
             if (_Globals.LightColorAndFalloffExponent[_491].w == 0.0)

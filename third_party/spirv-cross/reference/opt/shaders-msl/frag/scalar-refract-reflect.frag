@@ -5,18 +5,8 @@
 
 using namespace metal;
 
-struct main0_out
-{
-    float FragColor [[color(0)]];
-};
-
-struct main0_in
-{
-    float3 vRefract [[user(locn0)]];
-};
-
 template<typename T>
-inline T spvReflect(T i, T n)
+[[clang::optnone]] T spvReflect(T i, T n)
 {
     return i - T(2) * i * n * n;
 }
@@ -36,6 +26,16 @@ inline T spvRefract(T i, T n, T eta)
         return eta * i - (eta * NoI + sqrt(k)) * n;
     }
 }
+
+struct main0_out
+{
+    float FragColor [[color(0)]];
+};
+
+struct main0_in
+{
+    float3 vRefract [[user(locn0)]];
+};
 
 fragment main0_out main0(main0_in in [[stage_in]])
 {

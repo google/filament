@@ -1,4 +1,16 @@
 #version 450
+#if defined(GL_EXT_control_flow_attributes)
+#extension GL_EXT_control_flow_attributes : require
+#define SPIRV_CROSS_FLATTEN [[flatten]]
+#define SPIRV_CROSS_BRANCH [[dont_flatten]]
+#define SPIRV_CROSS_UNROLL [[unroll]]
+#define SPIRV_CROSS_LOOP [[dont_unroll]]
+#else
+#define SPIRV_CROSS_FLATTEN
+#define SPIRV_CROSS_BRANCH
+#define SPIRV_CROSS_UNROLL
+#define SPIRV_CROSS_LOOP
+#endif
 
 struct _28
 {
@@ -102,6 +114,7 @@ void main()
     vec3 _109 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _97, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _113 = textureLod(SPIRV_Cross_Combined_1, _97, 0.0);
     vec3 _129;
+    SPIRV_CROSS_BRANCH
     if (_113.y > 0.0)
     {
         _129 = _109 + (textureLod(SPIRV_Cross_Combined_2, _97, 0.0).xyz * clamp(_113.y * _113.z, 0.0, 1.0));
@@ -118,6 +131,7 @@ void main()
     vec3 _156 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _144, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _160 = textureLod(SPIRV_Cross_Combined_1, _144, 0.0);
     vec3 _176;
+    SPIRV_CROSS_BRANCH
     if (_160.y > 0.0)
     {
         _176 = _156 + (textureLod(SPIRV_Cross_Combined_2, _144, 0.0).xyz * clamp(_160.y * _160.z, 0.0, 1.0));
@@ -134,6 +148,7 @@ void main()
     vec3 _203 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _191, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _207 = textureLod(SPIRV_Cross_Combined_1, _191, 0.0);
     vec3 _223;
+    SPIRV_CROSS_BRANCH
     if (_207.y > 0.0)
     {
         _223 = _203 + (textureLod(SPIRV_Cross_Combined_2, _191, 0.0).xyz * clamp(_207.y * _207.z, 0.0, 1.0));
@@ -150,6 +165,7 @@ void main()
     vec3 _250 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _238, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _254 = textureLod(SPIRV_Cross_Combined_1, _238, 0.0);
     vec3 _270;
+    SPIRV_CROSS_BRANCH
     if (_254.y > 0.0)
     {
         _270 = _250 + (textureLod(SPIRV_Cross_Combined_2, _238, 0.0).xyz * clamp(_254.y * _254.z, 0.0, 1.0));
@@ -166,6 +182,7 @@ void main()
     vec3 _297 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _285, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _301 = textureLod(SPIRV_Cross_Combined_1, _285, 0.0);
     vec3 _317;
+    SPIRV_CROSS_BRANCH
     if (_301.y > 0.0)
     {
         _317 = _297 + (textureLod(SPIRV_Cross_Combined_2, _285, 0.0).xyz * clamp(_301.y * _301.z, 0.0, 1.0));
@@ -182,6 +199,7 @@ void main()
     vec3 _344 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _332, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _348 = textureLod(SPIRV_Cross_Combined_1, _332, 0.0);
     vec3 _364;
+    SPIRV_CROSS_BRANCH
     if (_348.y > 0.0)
     {
         _364 = _344 + (textureLod(SPIRV_Cross_Combined_2, _332, 0.0).xyz * clamp(_348.y * _348.z, 0.0, 1.0));
@@ -198,6 +216,7 @@ void main()
     vec3 _391 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _379, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _395 = textureLod(SPIRV_Cross_Combined_1, _379, 0.0);
     vec3 _411;
+    SPIRV_CROSS_BRANCH
     if (_395.y > 0.0)
     {
         _411 = _391 + (textureLod(SPIRV_Cross_Combined_2, _379, 0.0).xyz * clamp(_395.y * _395.z, 0.0, 1.0));
@@ -214,6 +233,7 @@ void main()
     vec3 _438 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _426, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _442 = textureLod(SPIRV_Cross_Combined_1, _426, 0.0);
     vec3 _458;
+    SPIRV_CROSS_BRANCH
     if (_442.y > 0.0)
     {
         _458 = _438 + (textureLod(SPIRV_Cross_Combined_2, _426, 0.0).xyz * clamp(_442.y * _442.z, 0.0, 1.0));
@@ -230,6 +250,7 @@ void main()
     vec3 _485 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _473, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _489 = textureLod(SPIRV_Cross_Combined_1, _473, 0.0);
     vec3 _505;
+    SPIRV_CROSS_BRANCH
     if (_489.y > 0.0)
     {
         _505 = _485 + (textureLod(SPIRV_Cross_Combined_2, _473, 0.0).xyz * clamp(_489.y * _489.z, 0.0, 1.0));
@@ -246,6 +267,7 @@ void main()
     vec3 _532 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _520, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _536 = textureLod(SPIRV_Cross_Combined_1, _520, 0.0);
     vec3 _552;
+    SPIRV_CROSS_BRANCH
     if (_536.y > 0.0)
     {
         _552 = _532 + (textureLod(SPIRV_Cross_Combined_2, _520, 0.0).xyz * clamp(_536.y * _536.z, 0.0, 1.0));
@@ -262,6 +284,7 @@ void main()
     vec3 _579 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _567, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _583 = textureLod(SPIRV_Cross_Combined_1, _567, 0.0);
     vec3 _599;
+    SPIRV_CROSS_BRANCH
     if (_583.y > 0.0)
     {
         _599 = _579 + (textureLod(SPIRV_Cross_Combined_2, _567, 0.0).xyz * clamp(_583.y * _583.z, 0.0, 1.0));
@@ -278,6 +301,7 @@ void main()
     vec3 _626 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _614, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _630 = textureLod(SPIRV_Cross_Combined_1, _614, 0.0);
     vec3 _646;
+    SPIRV_CROSS_BRANCH
     if (_630.y > 0.0)
     {
         _646 = _626 + (textureLod(SPIRV_Cross_Combined_2, _614, 0.0).xyz * clamp(_630.y * _630.z, 0.0, 1.0));
@@ -294,6 +318,7 @@ void main()
     vec3 _673 = _11._m5 * clamp(textureLod(SPIRV_Cross_Combined, _661, 0.0).w * _7._m1, 0.0, 1.0);
     vec4 _677 = textureLod(SPIRV_Cross_Combined_1, _661, 0.0);
     vec3 _693;
+    SPIRV_CROSS_BRANCH
     if (_677.y > 0.0)
     {
         _693 = _673 + (textureLod(SPIRV_Cross_Combined_2, _661, 0.0).xyz * clamp(_677.y * _677.z, 0.0, 1.0));

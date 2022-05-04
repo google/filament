@@ -62,7 +62,7 @@ struct main0_out
 
 struct main0_patchOut
 {
-    float4 P_v;
+    float4 p_v;
 };
 
 kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
@@ -74,11 +74,11 @@ kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], devic
     threadgroup C (&c)[4] = spvStoragec[(gl_GlobalInvocationID.x / 4) % 8];
     c[gl_GlobalInvocationID.x % 4] = _18[gl_GlobalInvocationID.x % 4];
     device main0_patchOut& patchOut = spvPatchOut[gl_GlobalInvocationID.x / 4];
-    patchOut.P_v = float4(0.0);
+    patchOut.p_v = float4(0.0);
     uint gl_InvocationID = gl_GlobalInvocationID.x % 4;
     uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 4, spvIndirectParams[1] - 1);
     c[gl_InvocationID].v = float4(1.0);
-    patchOut.P_v = float4(2.0);
+    patchOut.p_v = float4(2.0);
     gl_out[gl_InvocationID].gl_Position = float4(3.0);
     gl_out[gl_InvocationID].gl_PointSize = 4.0;
 }

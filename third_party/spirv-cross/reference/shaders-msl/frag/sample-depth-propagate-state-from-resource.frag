@@ -16,19 +16,19 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float sample_normal2(thread const depth2d<float> tex, thread sampler uSampler, thread float3& vUV)
+float sample_normal2(depth2d<float> tex, sampler uSampler, thread float3& vUV)
 {
     return float4(tex.sample(uSampler, vUV.xy)).x;
 }
 
 static inline __attribute__((always_inline))
-float sample_normal(thread const depth2d<float> tex, thread sampler uSampler, thread float3& vUV)
+float sample_normal(depth2d<float> tex, sampler uSampler, thread float3& vUV)
 {
     return sample_normal2(tex, uSampler, vUV);
 }
 
 static inline __attribute__((always_inline))
-float sample_comp(thread const depth2d<float> tex, thread float3& vUV, thread sampler uSamplerShadow)
+float sample_comp(depth2d<float> tex, thread float3& vUV, sampler uSamplerShadow)
 {
     return tex.sample_compare(uSamplerShadow, vUV.xy, vUV.z);
 }

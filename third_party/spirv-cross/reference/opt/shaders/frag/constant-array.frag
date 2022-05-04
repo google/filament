@@ -17,6 +17,10 @@ layout(location = 0) flat in mediump int index;
 
 void main()
 {
-    FragColor = ((_37[index] + _55[index][index + 1]) + vec4(30.0)) + vec4(_75[index].a + _75[index].b);
+    highp float _106 = _75[index].a;
+    float mp_copy_106 = _106;
+    highp float _107 = _75[index].b;
+    float mp_copy_107 = _107;
+    FragColor = ((_37[index] + _55[index][index + 1]) + vec4(30.0)) + vec4(mp_copy_106 + mp_copy_107);
 }
 

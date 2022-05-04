@@ -2,7 +2,7 @@
 #extension GL_EXT_buffer_reference : require
 layout(local_size_x = 1) in;
 
-layout(buffer_reference) buffer Block
+layout(buffer_reference, buffer_reference_align = 4) buffer Block
 {
 	float v;
 };

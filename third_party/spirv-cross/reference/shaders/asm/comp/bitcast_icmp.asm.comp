@@ -15,13 +15,13 @@ layout(binding = 1, std430) restrict buffer _4_6
 
 void main()
 {
-    _6._m0 = mix(uvec4(0u), uvec4(1u), lessThan(ivec4(_5._m1), _5._m0));
-    _6._m0 = mix(uvec4(0u), uvec4(1u), lessThanEqual(ivec4(_5._m1), _5._m0));
-    _6._m0 = mix(uvec4(0u), uvec4(1u), lessThan(_5._m1, uvec4(_5._m0)));
-    _6._m0 = mix(uvec4(0u), uvec4(1u), lessThanEqual(_5._m1, uvec4(_5._m0)));
-    _6._m0 = mix(uvec4(0u), uvec4(1u), greaterThan(ivec4(_5._m1), _5._m0));
-    _6._m0 = mix(uvec4(0u), uvec4(1u), greaterThanEqual(ivec4(_5._m1), _5._m0));
-    _6._m0 = mix(uvec4(0u), uvec4(1u), greaterThan(_5._m1, uvec4(_5._m0)));
-    _6._m0 = mix(uvec4(0u), uvec4(1u), greaterThanEqual(_5._m1, uvec4(_5._m0)));
+    _6._m0 = uvec4(lessThan(ivec4(_5._m1), _5._m0));
+    _6._m0 = uvec4(lessThanEqual(ivec4(_5._m1), _5._m0));
+    _6._m0 = uvec4(lessThan(_5._m1, uvec4(_5._m0)));
+    _6._m0 = uvec4(lessThanEqual(_5._m1, uvec4(_5._m0)));
+    _6._m0 = uvec4(greaterThan(ivec4(_5._m1), _5._m0));
+    _6._m0 = uvec4(greaterThanEqual(ivec4(_5._m1), _5._m0));
+    _6._m0 = uvec4(greaterThan(_5._m1, uvec4(_5._m0)));
+    _6._m0 = uvec4(greaterThanEqual(_5._m1, uvec4(_5._m0)));
 }
 

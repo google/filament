@@ -55,7 +55,7 @@ struct main0_patchIn
     float2 gl_TessLevelInner [[attribute(1)]];
 };
 
-[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], float2 gl_TessCoord [[position_in_patch]])
+[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], float2 gl_TessCoordIn [[position_in_patch]])
 {
     main0_out out = {};
     spvUnsafeArray<float, 2> gl_TessLevelInner = {};
@@ -66,6 +66,7 @@ struct main0_patchIn
     gl_TessLevelOuter[1] = patchIn.gl_TessLevelOuter.y;
     gl_TessLevelOuter[2] = patchIn.gl_TessLevelOuter.z;
     gl_TessLevelOuter[3] = patchIn.gl_TessLevelOuter.w;
+    float3 gl_TessCoord = float3(gl_TessCoordIn.x, gl_TessCoordIn.y, 0.0);
     out.gl_Position = float4(((gl_TessCoord.x * gl_TessLevelInner[0]) * gl_TessLevelOuter[0]) + (((1.0 - gl_TessCoord.x) * gl_TessLevelInner[0]) * gl_TessLevelOuter[2]), ((gl_TessCoord.y * gl_TessLevelInner[1]) * gl_TessLevelOuter[1]) + (((1.0 - gl_TessCoord.y) * gl_TessLevelInner[1]) * gl_TessLevelOuter[3]), 0.0, 1.0);
     return out;
 }

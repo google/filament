@@ -5,18 +5,18 @@
 
 using namespace metal;
 
-struct myBlock
-{
-    int a;
-    float b[1];
-};
-
 // Implementation of the GLSL mod() function, which is slightly different than Metal fmod()
 template<typename Tx, typename Ty>
 inline Tx mod(Tx x, Ty y)
 {
     return x - y * floor(x / y);
 }
+
+struct myBlock
+{
+    int a;
+    float b[1];
+};
 
 kernel void main0(device myBlock& myStorage [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
 {

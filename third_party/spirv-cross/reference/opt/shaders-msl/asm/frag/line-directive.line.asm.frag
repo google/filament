@@ -73,8 +73,6 @@ fragment main0_out main0(main0_in in [[stage_in]])
 #line 42 "test.frag"
         out.FragColor += (10.0 + in.vColor);
 #line 43 "test.frag"
-#line 42 "test.frag"
-#line 43 "test.frag"
         if (out.FragColor < 100.0)
         {
         }

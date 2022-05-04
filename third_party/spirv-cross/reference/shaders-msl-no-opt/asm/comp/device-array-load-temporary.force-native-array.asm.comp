@@ -5,17 +5,6 @@
 
 using namespace metal;
 
-struct Block
-{
-    uint2 _m0[2];
-    uint2 _m1[2];
-};
-
-struct SSBO
-{
-    Block _m0[3];
-};
-
 template<typename T, uint A>
 inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
 {
@@ -123,6 +112,17 @@ inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device
         dst[i] = src[i];
     }
 }
+
+struct Block
+{
+    uint2 _m0[2];
+    uint2 _m1[2];
+};
+
+struct SSBO
+{
+    Block _m0[3];
+};
 
 kernel void main0(device SSBO& ssbo [[buffer(0)]])
 {

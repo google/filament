@@ -1,17 +1,16 @@
+struct Block
+{
+    float vFlat;
+    float vCentroid;
+    float vSample;
+    float vNoperspective;
+};
+
 static float4 gl_Position;
 static float vFlat;
 static float vCentroid;
 static float vSample;
 static float vNoperspective;
-
-struct Block
-{
-    nointerpolation float vFlat : TEXCOORD4;
-    centroid float vCentroid : TEXCOORD5;
-    sample float vSample : TEXCOORD6;
-    noperspective float vNoperspective : TEXCOORD7;
-};
-
 static Block vout;
 
 struct SPIRV_Cross_Output
@@ -20,6 +19,10 @@ struct SPIRV_Cross_Output
     centroid float vCentroid : TEXCOORD1;
     sample float vSample : TEXCOORD2;
     noperspective float vNoperspective : TEXCOORD3;
+    nointerpolation float Block_vFlat : TEXCOORD4;
+    centroid float Block_vCentroid : TEXCOORD5;
+    sample float Block_vSample : TEXCOORD6;
+    noperspective float Block_vNoperspective : TEXCOORD7;
     float4 gl_Position : SV_Position;
 };
 
@@ -36,15 +39,18 @@ void vert_main()
     vout.vNoperspective = 3.0f;
 }
 
-SPIRV_Cross_Output main(out Block stage_outputvout)
+SPIRV_Cross_Output main()
 {
     vert_main();
-    stage_outputvout = vout;
     SPIRV_Cross_Output stage_output;
     stage_output.gl_Position = gl_Position;
     stage_output.vFlat = vFlat;
     stage_output.vCentroid = vCentroid;
     stage_output.vSample = vSample;
     stage_output.vNoperspective = vNoperspective;
+    stage_output.Block_vFlat = vout.vFlat;
+    stage_output.Block_vCentroid = vout.vCentroid;
+    stage_output.Block_vSample = vout.vSample;
+    stage_output.Block_vNoperspective = vout.vNoperspective;
     return stage_output;
 }

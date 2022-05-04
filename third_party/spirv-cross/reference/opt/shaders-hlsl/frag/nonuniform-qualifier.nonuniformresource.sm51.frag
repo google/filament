@@ -74,24 +74,30 @@ void frag_main()
     float2 _136 = _136_tmp.xx;
     float _143_tmp = uCombinedSamplers[NonUniformResourceIndex(_49)].CalculateLevelOfDetail(_uCombinedSamplers_sampler[NonUniformResourceIndex(_49)], vUV);
     float2 _143 = _143_tmp.xx;
-    float2 _149 = FragColor.xy + (_136 + _143);
-    FragColor = float4(_149.x, _149.y, FragColor.z, FragColor.w);
-    int _157;
-    spvTextureSize(uSamplers[NonUniformResourceIndex(_65)], 0u, _157);
-    FragColor.x += float(int(_157));
-    int _174;
-    spvTextureSize(uSamplersMS[NonUniformResourceIndex(_65)], 0u, _174);
-    FragColor.y += float(int(_174));
-    uint _185_dummy_parameter;
-    float2 _189 = FragColor.xy + float2(int2(spvTextureSize(uSamplers[NonUniformResourceIndex(_65)], uint(0), _185_dummy_parameter)));
-    FragColor = float4(_189.x, _189.y, FragColor.z, FragColor.w);
+    float4 _147 = FragColor;
+    float2 _149 = _147.xy + (_136 + _143);
+    FragColor.x = _149.x;
+    FragColor.y = _149.y;
+    int _160;
+    spvTextureSize(uSamplers[NonUniformResourceIndex(_65)], 0u, _160);
+    FragColor.x += float(int(_160));
+    int _176;
+    spvTextureSize(uSamplersMS[NonUniformResourceIndex(_65)], 0u, _176);
+    FragColor.y += float(int(_176));
+    uint _187_dummy_parameter;
+    float4 _189 = FragColor;
+    float2 _191 = _189.xy + float2(int2(spvTextureSize(uSamplers[NonUniformResourceIndex(_65)], uint(0), _187_dummy_parameter)));
+    FragColor.x = _191.x;
+    FragColor.y = _191.y;
     FragColor += uImages[NonUniformResourceIndex(_83)][_111].xxxx;
-    uint _212_dummy_parameter;
-    float2 _216 = FragColor.xy + float2(int2(spvImageSize(uImages[NonUniformResourceIndex(_65)], _212_dummy_parameter)));
-    FragColor = float4(_216.x, _216.y, FragColor.z, FragColor.w);
+    uint _216_dummy_parameter;
+    float4 _218 = FragColor;
+    float2 _220 = _218.xy + float2(int2(spvImageSize(uImages[NonUniformResourceIndex(_65)], _216_dummy_parameter)));
+    FragColor.x = _220.x;
+    FragColor.y = _220.y;
     uImages[NonUniformResourceIndex(_88)][_111] = 50.0f.x;
-    uint _242;
-    InterlockedAdd(uImagesU32[NonUniformResourceIndex(_100)][_111], 40u, _242);
+    uint _248;
+    InterlockedAdd(uImagesU32[NonUniformResourceIndex(_100)][_111], 40u, _248);
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

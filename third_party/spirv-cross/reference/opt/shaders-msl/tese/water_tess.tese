@@ -26,12 +26,13 @@ struct main0_patchIn
     float4 vPatchLods [[attribute(1)]];
 };
 
-[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], constant UBO& _31 [[buffer(0)]], texture2d<float> uHeightmapDisplacement [[texture(0)]], sampler uHeightmapDisplacementSmplr [[sampler(0)]], float2 gl_TessCoord [[position_in_patch]])
+[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], constant UBO& _31 [[buffer(0)]], texture2d<float> uHeightmapDisplacement [[texture(0)]], sampler uHeightmapDisplacementSmplr [[sampler(0)]], float2 gl_TessCoordIn [[position_in_patch]])
 {
     main0_out out = {};
-    float2 _202 = patchIn.vOutPatchPosBase + (float3(gl_TessCoord, 0).xy * _31.uPatchSize);
-    float2 _216 = mix(patchIn.vPatchLods.yx, patchIn.vPatchLods.zw, float2(float3(gl_TessCoord, 0).x));
-    float _223 = mix(_216.x, _216.y, float3(gl_TessCoord, 0).y);
+    float3 gl_TessCoord = float3(gl_TessCoordIn.x, gl_TessCoordIn.y, 0.0);
+    float2 _202 = patchIn.vOutPatchPosBase + (gl_TessCoord.xy * _31.uPatchSize);
+    float2 _216 = mix(patchIn.vPatchLods.yx, patchIn.vPatchLods.zw, float2(gl_TessCoord.x));
+    float _223 = mix(_216.x, _216.y, gl_TessCoord.y);
     float _225 = floor(_223);
     float2 _125 = _202 * _31.uInvHeightmapSize;
     float2 _141 = _31.uInvHeightmapSize * exp2(_225);

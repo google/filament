@@ -15,14 +15,14 @@ struct main0_out
 
 struct main0_in
 {
-    float4 VOUT_a [[user(locn0)]];
+    float4 Clip_a [[user(locn0)]];
 };
 
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
     VOUT Clip = {};
-    Clip.a = in.VOUT_a;
+    Clip.a = in.Clip_a;
     VOUT tmp = Clip;
     tmp.a += float4(1.0);
     out.FragColor = tmp.a;

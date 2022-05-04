@@ -452,7 +452,8 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
     }
     bool _468 = (MobileBasePass.MobileBasePass_Fog_ExponentialFogParameters3.w > 0.0) && (_347 > MobileBasePass.MobileBasePass_Fog_ExponentialFogParameters3.w);
     float _471 = _468 ? 1.0 : fast::max(fast::clamp(exp2(-(_428 * _393)), 0.0, 1.0), MobileBasePass.MobileBasePass_Fog_ExponentialFogColorParameter.w);
-    _97[0] = float4((MobileBasePass.MobileBasePass_Fog_ExponentialFogColorParameter.xyz * float3(1.0 - _471)) + select(_459, float3(0.0), bool3(_468)), _471);
+    float3 _475 = (MobileBasePass.MobileBasePass_Fog_ExponentialFogColorParameter.xyz * float3(1.0 - _471)) + select(_459, float3(0.0), bool3(_468));
+    _97[0] = float4(_475, _471);
     float4 _482 = _338;
     _482.w = _339.w;
     out.out_var_TEXCOORD0 = ((_323 + LandscapeParameters.LandscapeParameters_SubsectionSizeVertsLayerUVPan.zw) + _292).xy;

@@ -13,9 +13,9 @@ struct V
 
 struct main0_out
 {
-    float4 V_b;
-    float4 V_c;
-    float4 V_d;
+    float4 m_22_b;
+    float4 m_22_c;
+    float4 m_22_d;
     float4 gl_Position;
 };
 
@@ -28,8 +28,8 @@ kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3
     out.gl_Position = float4(1.0);
     _22.a = float4(2.0);
     _22.b = float4(3.0);
-    out.V_b = _22.b;
-    out.V_c = _22.c;
-    out.V_d = _22.d;
+    out.m_22_b = _22.b;
+    out.m_22_c = _22.c;
+    out.m_22_d = _22.d;
 }
 

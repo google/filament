@@ -116,7 +116,8 @@ void main()
     vec2 _197 = ((_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _180.InvOceanSize_PatchScale.zw) + mix(_416.xy, _416.zw, vec2(_351 - _353))) * _180.InvOceanSize_PatchScale.xy;
     vec2 _204 = _197 * _180.NormalTexCoordScale.zw;
     mediump float _433 = textureLod(TexLOD, _197, 0.0).x * 7.96875;
-    float _435 = floor(_433);
+    float hp_copy_433 = _433;
+    float _435 = floor(hp_copy_433);
     vec2 _220 = (_180.InvOceanSize_PatchScale.xy * exp2(_435)) * _180.NormalTexCoordScale.zw;
     vec3 _267 = ((vec3(_197.x, 0.0, _197.y) + mix(textureLod(TexDisplacement, _204 + (_220 * 0.5), _435).yxz, textureLod(TexDisplacement, _204 + (_220 * 1.0), _435 + 1.0).yxz, vec3(_433 - _435))) * _180.OceanScale.xyz) + _180.OceanPosition.xyz;
     EyeVec = _267 - _273.g_CamPos.xyz;

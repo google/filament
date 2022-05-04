@@ -13,6 +13,6 @@ layout(binding = 0, std430) buffer SSBO0
 
 void main()
 {
-    _21.outputs[gl_GlobalInvocationID.x] = mix(ivec4(0), ivec4(1), notEqual((_27.inputs[gl_GlobalInvocationID.x] & ivec4(3)), ivec4(uvec4(0u))));
+    _21.outputs[gl_GlobalInvocationID.x] = ivec4(notEqual((_27.inputs[gl_GlobalInvocationID.x] & ivec4(3)), ivec4(uvec4(0u))));
 }
 

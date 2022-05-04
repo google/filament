@@ -5,16 +5,6 @@
 
 using namespace metal;
 
-struct main0_out
-{
-    float4 FragColor [[color(0)]];
-};
-
-struct main0_in
-{
-    float2 vUV [[user(locn0)]];
-};
-
 template<typename T> struct spvRemoveReference { typedef T type; };
 template<typename T> struct spvRemoveReference<thread T&> { typedef T type; };
 template<typename T> struct spvRemoveReference<thread T&&> { typedef T type; };
@@ -75,14 +65,24 @@ inline T spvTextureSwizzle(T x, uint s)
     return spvTextureSwizzle(vec<T, 4>(x, 0, 0, 1), s).x;
 }
 
+struct main0_out
+{
+    float4 FragColor [[color(0)]];
+};
+
+struct main0_in
+{
+    float2 vUV [[user(locn0)]];
+};
+
 static inline __attribute__((always_inline))
-float4 sample_in_func(thread const array<texture2d<float>, 4> uSampler, thread const array<sampler, 4> uSamplerSmplr, constant uint* uSamplerSwzl, thread float2& vUV)
+float4 sample_in_func(thread const array<texture2d<float>, 4>& uSampler, thread const array<sampler, 4>& uSamplerSmplr, constant uint* uSamplerSwzl, thread float2& vUV)
 {
     return spvTextureSwizzle(uSampler[2].sample(uSamplerSmplr[2], vUV), uSamplerSwzl[2]);
 }
 
 static inline __attribute__((always_inline))
-float4 sample_single_in_func(thread const texture2d<float> s, thread const sampler sSmplr, constant uint& sSwzl, thread float2& vUV)
+float4 sample_single_in_func(texture2d<float> s, sampler sSmplr, constant uint& sSwzl, thread float2& vUV)
 {
     return spvTextureSwizzle(s.sample(sSmplr, vUV), sSwzl);
 }

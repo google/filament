@@ -11,7 +11,7 @@ struct main0_out
 };
 
 static inline __attribute__((always_inline))
-float4 load_subpasses(thread const texture2d_array<float> uInput, thread float4& gl_FragCoord, thread uint& gl_Layer)
+float4 load_subpasses(texture2d_array<float> uInput, thread float4& gl_FragCoord, thread uint& gl_Layer)
 {
     return uInput.read(uint2(gl_FragCoord.xy), gl_Layer);
 }

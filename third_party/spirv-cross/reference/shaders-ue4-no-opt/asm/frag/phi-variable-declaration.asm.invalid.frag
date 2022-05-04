@@ -271,7 +271,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_View& View [[bu
     float4 _144 = View.View_SVPositionToTranslatedWorld * float4(gl_FragCoord.xyz, 1.0);
     float3 _148 = _144.xyz / float3(_144.w);
     float3 _149 = _148 - float3(View.View_PreViewTranslation);
-    float3 _151 = normalize(-_148);
+    float3 _151 = fast::normalize(-_148);
     float3 _152 = _151 * float3x3(in.in_var_TEXCOORD10_centroid.xyz, cross(in.in_var_TEXCOORD11_centroid.xyz, in.in_var_TEXCOORD10_centroid.xyz) * float3(in.in_var_TEXCOORD11_centroid.w), in.in_var_TEXCOORD11_centroid.xyz);
     float _170 = mix(Material.Material_ScalarExpressions[0].y, Material.Material_ScalarExpressions[0].z, fast::min(fast::max(abs(dot(_151, in.in_var_TEXCOORD11_centroid.xyz)), 0.0), 1.0));
     float _171 = floor(_170);

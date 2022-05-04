@@ -11,7 +11,7 @@ struct main0_out
 fragment main0_out main0()
 {
     main0_out out = {};
-    out.FragColor = float3(as_type<float>(0x7f800000u), as_type<float>(0xff800000u), as_type<float>(0x7fc00000u));
+    out.FragColor = float3(as_type<float>(0x7f800000u /* inf */), as_type<float>(0xff800000u /* -inf */), as_type<float>(0x7fc00000u /* nan */));
     return out;
 }
 

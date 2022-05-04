@@ -1,0 +1,34 @@
+#version 450
+#if defined(GL_AMD_gpu_shader_int16)
+#extension GL_AMD_gpu_shader_int16 : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for Int16.
+#endif
+#if defined(GL_AMD_gpu_shader_half_float)
+#extension GL_AMD_gpu_shader_half_float : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for FP16.
+#endif
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std140) uniform UBO
+{
+    float16_t b;
+} _12;
+
+layout(binding = 1, std430) buffer SSBO
+{
+    float16_t a;
+} _24;
+
+void main()
+{
+    int16_t v = float16BitsToInt16(_12.b);
+    v ^= (-32768s);
+    _24.a = int16BitsToFloat16(v);
+}
+

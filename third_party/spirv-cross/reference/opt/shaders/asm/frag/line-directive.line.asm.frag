@@ -63,8 +63,6 @@ void main()
 #line 42 "test.frag"
         FragColor += (10.0 + vColor);
 #line 43 "test.frag"
-#line 42 "test.frag"
-#line 43 "test.frag"
         if (FragColor < 100.0)
         {
         }

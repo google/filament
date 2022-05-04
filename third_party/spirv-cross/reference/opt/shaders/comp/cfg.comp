@@ -10,7 +10,7 @@ float _188;
 
 void main()
 {
-    if (!(_11.data == 0.0))
+    if (_11.data != 0.0)
     {
         _11.data = 10.0;
     }

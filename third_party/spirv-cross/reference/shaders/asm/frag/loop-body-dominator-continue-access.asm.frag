@@ -1,4 +1,16 @@
 #version 450
+#if defined(GL_EXT_control_flow_attributes)
+#extension GL_EXT_control_flow_attributes : require
+#define SPIRV_CROSS_FLATTEN [[flatten]]
+#define SPIRV_CROSS_BRANCH [[dont_flatten]]
+#define SPIRV_CROSS_UNROLL [[unroll]]
+#define SPIRV_CROSS_LOOP [[dont_unroll]]
+#else
+#define SPIRV_CROSS_FLATTEN
+#define SPIRV_CROSS_BRANCH
+#define SPIRV_CROSS_UNROLL
+#define SPIRV_CROSS_LOOP
+#endif
 
 layout(binding = 0, std140) uniform Foo
 {
@@ -23,6 +35,7 @@ mat4 GetClip2TexMatrix()
 
 int GetCascade(vec3 fragWorldPosition)
 {
+    SPIRV_CROSS_UNROLL
     for (uint cascadeIndex = 0u; cascadeIndex < _11.shadowCascadesNum; cascadeIndex++)
     {
         mat4 worldToShadowMap = GetClip2TexMatrix() * spvWorkaroundRowMajor(_11.lightVP[cascadeIndex]);

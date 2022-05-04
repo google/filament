@@ -1,0 +1,11 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: SPIRV-Cross
+Source: https://github.com/KhronosGroup/SPIRV-Cross
+
+Files: shaders*/* reference/* tests-other/*
+Copyright: 2016-2021 The Khronos Group, Inc.
+License: Apache-2.0
+
+Files: spirv.h spirv.hpp GLSL.std.450.h
+Copyright: 2016-2021 The Khronos Group, Inc.
+License: MIT

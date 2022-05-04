@@ -22,12 +22,14 @@ void main()
 {
     ResType _22;
     _22._m0 = frexp(v0 + 1.0, _22._m1);
+    highp float _24 = _22._m0;
+    float mp_copy_24 = _24;
     ResType_1 _35;
     _35._m0 = frexp(v1, _35._m1);
     float r0;
     float _41 = modf(v0, r0);
     vec2 r1;
     vec2 _45 = modf(v1, r1);
-    FragColor = ((((_22._m0 + _35._m0.x) + _35._m0.y) + _41) + _45.x) + _45.y;
+    FragColor = ((((mp_copy_24 + _35._m0.x) + _35._m0.y) + _41) + _45.x) + _45.y;
 }
 

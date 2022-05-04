@@ -1,0 +1,24 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct UBO
+{
+    half b;
+};
+
+struct SSBO
+{
+    half a;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(constant UBO& _12 [[buffer(0)]], device SSBO& _24 [[buffer(1)]])
+{
+    short v = as_type<short>(_12.b);
+    v ^= short(-32768);
+    _24.a = as_type<half>(v);
+}
+

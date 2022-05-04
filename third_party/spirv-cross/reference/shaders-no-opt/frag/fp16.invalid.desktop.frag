@@ -50,7 +50,7 @@ void test_conversions()
     float16_t one = test_result();
     int a = int(one);
     uint b = uint(one);
-    bool c = !(one == float16_t(0.0));
+    bool c = one != float16_t(0.0);
     float d = float(one);
     double e = double(one);
     float16_t a2 = float16_t(a);
@@ -126,7 +126,7 @@ void test_builtins()
     btmp = greaterThan(v4, v4);
     btmp = greaterThanEqual(v4, v4);
     btmp = equal(v4, v4);
-    btmp = not(equal(v4, v4));
+    btmp = notEqual(v4, v4);
     res = dFdx(v4);
     res = dFdy(v4);
     res = dFdxFine(v4);

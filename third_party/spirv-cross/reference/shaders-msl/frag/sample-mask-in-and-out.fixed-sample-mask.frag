@@ -13,8 +13,8 @@ fragment main0_out main0(uint gl_SampleMaskIn [[sample_mask]])
 {
     main0_out out = {};
     out.FragColor = float4(1.0);
-    out.gl_SampleMask = gl_SampleMaskIn;
-    out.gl_SampleMask &= 34;
+    out.gl_SampleMask = (gl_SampleMaskIn & 0x22);
+    out.gl_SampleMask &= 0x22;
     return out;
 }
 

@@ -5,13 +5,6 @@
 
 using namespace metal;
 
-struct SSBO
-{
-    float FragColor;
-};
-
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
-
 template<typename T>
 inline T spvSubgroupBroadcast(T value, ushort lane)
 {
@@ -220,6 +213,13 @@ inline vec<bool, N> spvQuadSwap(vec<bool, N> value, uint dir)
 {
     return (vec<bool, N>)quad_shuffle_xor((vec<ushort, N>)value, dir + 1);
 }
+
+struct SSBO
+{
+    float FragColor;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
 kernel void main0(device SSBO& _9 [[buffer(0)]], uint gl_NumSubgroups [[quadgroups_per_threadgroup]], uint gl_SubgroupID [[quadgroup_index_in_threadgroup]], uint gl_SubgroupSize [[thread_execution_width]], uint gl_SubgroupInvocationID [[thread_index_in_quadgroup]])
 {

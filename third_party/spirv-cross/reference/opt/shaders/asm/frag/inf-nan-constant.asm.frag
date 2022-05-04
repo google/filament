@@ -6,6 +6,6 @@ layout(location = 0) out highp vec3 FragColor;
 
 void main()
 {
-    FragColor = vec3(uintBitsToFloat(0x7f800000u), uintBitsToFloat(0xff800000u), uintBitsToFloat(0x7fc00000u));
+    FragColor = vec3(uintBitsToFloat(0x7f800000u /* inf */), uintBitsToFloat(0xff800000u /* -inf */), uintBitsToFloat(0x7fc00000u /* nan */));
 }
 

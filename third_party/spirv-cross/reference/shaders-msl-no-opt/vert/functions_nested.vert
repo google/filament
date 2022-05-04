@@ -5,6 +5,13 @@
 
 using namespace metal;
 
+// Returns 2D texture coords corresponding to 1D texel buffer coords
+static inline __attribute__((always_inline))
+uint2 spvTexelBufferCoord(uint tc)
+{
+    return uint2(tc % 4096, tc / 4096);
+}
+
 struct attr_desc
 {
     int type;
@@ -34,13 +41,6 @@ struct main0_out
     float4 gl_Position [[position]];
 };
 
-// Returns 2D texture coords corresponding to 1D texel buffer coords
-static inline __attribute__((always_inline))
-uint2 spvTexelBufferCoord(uint tc)
-{
-    return uint2(tc % 4096, tc / 4096);
-}
-
 static inline __attribute__((always_inline))
 attr_desc fetch_desc(thread const int& location, constant VertexBuffer& v_227)
 {
@@ -66,7 +66,7 @@ uint get_bits(thread const uint4& v, thread const int& swap)
 }
 
 static inline __attribute__((always_inline))
-float4 fetch_attr(thread const attr_desc& desc, thread const int& vertex_id, thread const texture2d<uint> input_stream)
+float4 fetch_attr(thread const attr_desc& desc, thread const int& vertex_id, texture2d<uint> input_stream)
 {
     float4 result = float4(0.0, 0.0, 0.0, 1.0);
     bool reverse_order = false;
@@ -135,7 +135,7 @@ float4 fetch_attr(thread const attr_desc& desc, thread const int& vertex_id, thr
 }
 
 static inline __attribute__((always_inline))
-float4 read_location(thread const int& location, constant VertexBuffer& v_227, thread uint& gl_VertexIndex, thread texture2d<uint> buff_in_2, thread texture2d<uint> buff_in_1)
+float4 read_location(thread const int& location, constant VertexBuffer& v_227, thread uint& gl_VertexIndex, texture2d<uint> buff_in_2, texture2d<uint> buff_in_1)
 {
     int param = location;
     attr_desc desc = fetch_desc(param, v_227);
@@ -155,7 +155,7 @@ float4 read_location(thread const int& location, constant VertexBuffer& v_227, t
 }
 
 static inline __attribute__((always_inline))
-void vs_adjust(thread float4& dst_reg0, thread float4& dst_reg1, thread float4& dst_reg7, constant VertexBuffer& v_227, thread uint& gl_VertexIndex, thread texture2d<uint> buff_in_2, thread texture2d<uint> buff_in_1, constant VertexConstantsBuffer& v_309)
+void vs_adjust(thread float4& dst_reg0, thread float4& dst_reg1, thread float4& dst_reg7, constant VertexBuffer& v_227, thread uint& gl_VertexIndex, texture2d<uint> buff_in_2, texture2d<uint> buff_in_1, constant VertexConstantsBuffer& v_309)
 {
     int param = 3;
     float4 in_diff_color = read_location(param, v_227, gl_VertexIndex, buff_in_2, buff_in_1);
@@ -169,7 +169,8 @@ void vs_adjust(thread float4& dst_reg0, thread float4& dst_reg1, thread float4& 
     tmp0.y = float4(dot(float4(in_pos.xyz, 1.0), v_309.vc[5])).y;
     tmp0.z = float4(dot(float4(in_pos.xyz, 1.0), v_309.vc[6])).z;
     float4 tmp1;
-    tmp1 = float4(in_tc0.xy.x, in_tc0.xy.y, tmp1.z, tmp1.w);
+    tmp1.x = in_tc0.xy.x;
+    tmp1.y = in_tc0.xy.y;
     tmp1.z = v_309.vc[15].x;
     dst_reg7.y = float4(dot(float4(tmp1.xyz, 1.0), v_309.vc[8])).y;
     dst_reg7.x = float4(dot(float4(tmp1.xyz, 1.0), v_309.vc[7])).x;

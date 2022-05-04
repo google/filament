@@ -58,8 +58,8 @@ struct Verts
 
 struct main0_out
 {
-    float Verts_a;
-    float2 Verts_b;
+    float verts_a;
+    float2 verts_b;
     float4 gl_Position;
     float gl_PointSize;
 };
@@ -72,9 +72,9 @@ kernel void main0(uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_
     device main0_out* gl_out = &spvOut[gl_PrimitiveID * 4];
     gl_out[gl_InvocationID].gl_Position = _17[gl_InvocationID]._RESERVED_IDENTIFIER_FIXUP_gl_Position;
     gl_out[gl_InvocationID].gl_PointSize = _17[gl_InvocationID]._RESERVED_IDENTIFIER_FIXUP_gl_PointSize;
-    gl_out[gl_InvocationID].Verts_a = _27[gl_InvocationID].a;
-    gl_out[gl_InvocationID].Verts_b = _27[gl_InvocationID].b;
+    gl_out[gl_InvocationID].verts_a = _27[gl_InvocationID].a;
+    gl_out[gl_InvocationID].verts_b = _27[gl_InvocationID].b;
     gl_out[gl_InvocationID].gl_Position = float4(1.0);
-    gl_out[gl_InvocationID].Verts_a = float(gl_InvocationID);
+    gl_out[gl_InvocationID].verts_a = float(gl_InvocationID);
 }
 

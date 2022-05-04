@@ -1,5 +1,6 @@
 /*
  * Copyright 2015-2021 Arm Limited
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +19,14 @@
  * At your option, you may choose to accept this material under either:
  *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
  *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
- * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #ifndef SPIRV_CROSS_HPP
 #define SPIRV_CROSS_HPP
 
+#ifndef SPV_ENABLE_UTILITY_CODE
+#define SPV_ENABLE_UTILITY_CODE
+#endif
 #include "spirv.hpp"
 #include "spirv_cfg.hpp"
 #include "spirv_cross_parsed_ir.hpp"
@@ -357,8 +360,11 @@ public:
 	void set_execution_mode(spv::ExecutionMode mode, uint32_t arg0 = 0, uint32_t arg1 = 0, uint32_t arg2 = 0);
 
 	// Gets argument for an execution mode (LocalSize, Invocations, OutputVertices).
-	// For LocalSize, the index argument is used to select the dimension (X = 0, Y = 1, Z = 2).
+	// For LocalSize or LocalSizeId, the index argument is used to select the dimension (X = 0, Y = 1, Z = 2).
 	// For execution modes which do not have arguments, 0 is returned.
+	// LocalSizeId query returns an ID. If LocalSizeId execution mode is not used, it returns 0.
+	// LocalSize always returns a literal. If execution mode is LocalSizeId,
+	// the literal (spec constant or not) is still returned.
 	uint32_t get_execution_mode_argument(spv::ExecutionMode mode, uint32_t index = 0) const;
 	spv::ExecutionModel get_execution_model() const;
 
@@ -380,6 +386,8 @@ public:
 	// If the component is not a specialization constant, a zeroed out struct will be written.
 	// The return value is the constant ID of the builtin WorkGroupSize, but this is not expected to be useful
 	// for most use cases.
+	// If LocalSizeId is used, there is no uvec3 value representing the workgroup size, so the return value is 0,
+	// but x, y and z are written as normal if the components are specialization constants.
 	uint32_t get_work_group_size_specialization_constants(SpecializationConstant &x, SpecializationConstant &y,
 	                                                      SpecializationConstant &z) const;
 
@@ -549,6 +557,11 @@ protected:
 				SPIRV_CROSS_THROW("Compiler::stream() out of range.");
 			return &ir.spirv[instr.offset];
 		}
+	}
+
+	uint32_t *stream_mutable(const Instruction &instr) const
+	{
+		return const_cast<uint32_t *>(stream(instr));
 	}
 
 	ParsedIR ir;
@@ -730,9 +743,11 @@ protected:
 	SPIRBlock::ContinueBlockType continue_block_type(const SPIRBlock &continue_block) const;
 
 	void force_recompile();
+	void force_recompile_guarantee_forward_progress();
 	void clear_force_recompile();
 	bool is_forcing_recompilation() const;
 	bool is_force_recompile = false;
+	bool is_force_recompile_forward_progress = false;
 
 	bool block_is_loop_candidate(const SPIRBlock &block, SPIRBlock::Method method) const;
 
@@ -765,6 +780,10 @@ protected:
 		// Return true if traversal should continue.
 		// If false, traversal will end immediately.
 		virtual bool handle(spv::Op opcode, const uint32_t *args, uint32_t length) = 0;
+		virtual bool handle_terminator(const SPIRBlock &)
+		{
+			return true;
+		}
 
 		virtual bool follow_function_call(const SPIRFunction &)
 		{
@@ -979,6 +998,7 @@ protected:
 		bool id_is_phi_variable(uint32_t id) const;
 		bool id_is_potential_temporary(uint32_t id) const;
 		bool handle(spv::Op op, const uint32_t *args, uint32_t length) override;
+		bool handle_terminator(const SPIRBlock &block) override;
 
 		Compiler &compiler;
 		SPIRFunction &entry;
@@ -1005,15 +1025,32 @@ protected:
 		uint32_t write_count = 0;
 	};
 
+	struct PhysicalBlockMeta
+	{
+		uint32_t alignment = 0;
+	};
+
 	struct PhysicalStorageBufferPointerHandler : OpcodeHandler
 	{
 		explicit PhysicalStorageBufferPointerHandler(Compiler &compiler_);
 		bool handle(spv::Op op, const uint32_t *args, uint32_t length) override;
 		Compiler &compiler;
-		std::unordered_set<uint32_t> types;
+
+		std::unordered_set<uint32_t> non_block_types;
+		std::unordered_map<uint32_t, PhysicalBlockMeta> physical_block_type_meta;
+		std::unordered_map<uint32_t, PhysicalBlockMeta *> access_chain_to_physical_block;
+
+		void mark_aligned_access(uint32_t id, const uint32_t *args, uint32_t length);
+		PhysicalBlockMeta *find_block_meta(uint32_t id) const;
+		bool type_is_bda_block_entry(uint32_t type_id) const;
+		void setup_meta_chain(uint32_t type_id, uint32_t var_id);
+		uint32_t get_minimum_scalar_alignment(const SPIRType &type) const;
+		void analyze_non_block_types_from_block(const SPIRType &type);
+		uint32_t get_base_non_block_type_id(uint32_t type_id) const;
 	};
 	void analyze_non_block_pointer_types();
 	SmallVector<uint32_t> physical_storage_non_block_pointer_types;
+	std::unordered_map<uint32_t, PhysicalBlockMeta> physical_storage_type_to_alignment;
 
 	void analyze_variable_scope(SPIRFunction &function, AnalyzeVariableScopeAccessHandler &handler);
 	void find_function_local_luts(SPIRFunction &function, const AnalyzeVariableScopeAccessHandler &handler,
@@ -1085,7 +1122,7 @@ protected:
 	Bitset combined_decoration_for_member(const SPIRType &type, uint32_t index) const;
 	static bool is_desktop_only_format(spv::ImageFormat format);
 
-	bool image_is_comparison(const SPIRType &type, uint32_t id) const;
+	bool is_depth_image(const SPIRType &type, uint32_t id) const;
 
 	void set_extended_decoration(uint32_t id, ExtendedDecorations decoration, uint32_t value = 0);
 	uint32_t get_extended_decoration(uint32_t id, ExtendedDecorations decoration) const;
@@ -1112,6 +1149,11 @@ protected:
 	uint32_t evaluate_constant_u32(uint32_t id) const;
 
 	bool is_vertex_like_shader() const;
+
+	// Get the correct case list for the OpSwitch, since it can be either a
+	// 32 bit wide condition or a 64 bit, but the type is not embedded in the
+	// instruction itself.
+	const SmallVector<SPIRBlock::Case> &get_case_list(const SPIRBlock &block) const;
 
 private:
 	// Used only to implement the old deprecated get_entry_point() interface.

@@ -1,3 +1,8 @@
+<!--
+    Copyright 2020-2021 The Khronos Group, Inc.
+    SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # SPIRV-Cross
 
 SPIRV-Cross is a tool designed for parsing and converting SPIR-V to other shader languages.
@@ -10,8 +15,8 @@ SPIRV-Cross is a tool designed for parsing and converting SPIR-V to other shader
   - Convert SPIR-V to readable, usable and efficient GLSL
   - Convert SPIR-V to readable, usable and efficient Metal Shading Language (MSL)
   - Convert SPIR-V to readable, usable and efficient HLSL
+  - Convert SPIR-V to a JSON reflection format
   - Convert SPIR-V to debuggable C++ [DEPRECATED]
-  - Convert SPIR-V to a JSON reflection format [EXPERIMENTAL]
   - Reflection API to simplify the creation of Vulkan pipeline layouts
   - Reflection API to modify and tweak OpDecorations
   - Supports "all" of vertex, fragment, tessellation, geometry and compute shaders.
@@ -376,10 +381,28 @@ for (auto &remap : compiler->get_combined_image_samplers())
 If your target is Vulkan GLSL, `--vulkan-semantics` will emit separate image samplers as you'd expect.
 The command line client calls `Compiler::build_combined_image_samplers` automatically, but if you're calling the library, you'll need to do this yourself.
 
-#### Descriptor sets (Vulkan GLSL) for backends which do not support them (HLSL/GLSL/Metal)
+#### Descriptor sets (Vulkan GLSL) for backends which do not support them (pre HLSL 5.1 / GLSL)
 
 Descriptor sets are unique to Vulkan, so make sure that descriptor set + binding is remapped to a flat binding scheme (set always 0), so that other APIs can make sense of the bindings.
-This can be done with `Compiler::set_decoration(id, spv::DecorationDescriptorSet)`.
+This can be done with `Compiler::set_decoration(id, spv::DecorationDescriptorSet)`. For other backends like MSL and HLSL, descriptor sets
+can be used, with some minor caveats, see below.
+
+##### MSL 2.0+
+
+Metal supports indirect argument buffers (--msl-argument-buffers). In this case, descriptor sets become argument buffers,
+and bindings are mapped to [[id(N)]] within the argument buffer. One quirk is that arrays of resources consume multiple ids,
+where Vulkan does not. This can be worked around either from shader authoring stage
+or remapping bindings as needed to avoid the overlap.
+There is also a rich API to declare remapping schemes which is intended to work like
+the pipeline layout in Vulkan. See `CompilerMSL::add_msl_resource_binding`. Remapping combined image samplers for example
+must be split into two bindings in MSL, so it's possible to declare an id for the texture and sampler binding separately.
+
+##### HLSL - SM 5.1+
+
+In SM 5.1+, descriptor set bindings are interpreted as register spaces directly. In HLSL however, arrays of resources consume
+multiple binding slots where Vulkan does not, so there might be overlap if the SPIR-V was not authored with this in mind.
+This can be worked around either from shader authoring stage (don't assign overlapping bindings)
+or remap bindings in SPIRV-Cross as needed to avoid the overlap.
 
 #### Linking by name for targets which do not support explicit locations (legacy GLSL/ESSL)
 
@@ -439,9 +462,6 @@ All pull requests should ensure that test output does not change unexpectedly. T
 
 ```
 ./checkout_glslang_spirv_tools.sh # Checks out glslang and SPIRV-Tools at a fixed revision which matches the reference output.
-                                  # NOTE: Some users have reported problems cloning from git:// paths. To use https:// instead pass in
-                                  # $ PROTOCOL=https ./checkout_glslang_spirv_tools.sh
-                                  # instead.
 ./build_glslang_spirv_tools.sh    # Builds glslang and SPIRV-Tools.
 ./test_shaders.sh                 # Runs over all changes and makes sure that there are no deltas compared to reference files.
 ```

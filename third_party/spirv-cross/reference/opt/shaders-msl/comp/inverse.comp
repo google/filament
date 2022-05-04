@@ -5,22 +5,6 @@
 
 using namespace metal;
 
-struct MatrixOut
-{
-    float2x2 m2out;
-    float3x3 m3out;
-    float4x4 m4out;
-};
-
-struct MatrixIn
-{
-    float2x2 m2in;
-    float3x3 m3in;
-    float4x4 m4in;
-};
-
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
-
 // Returns the determinant of a 2x2 matrix.
 static inline __attribute__((always_inline))
 float spvDet2x2(float a1, float a2, float b1, float b2)
@@ -120,6 +104,22 @@ float2x2 spvInverse2x2(float2x2 m)
     // If determinant is zero, matrix is not invertable, so leave it unchanged.
     return (det != 0.0f) ? (adj * (1.0f / det)) : m;
 }
+
+struct MatrixOut
+{
+    float2x2 m2out;
+    float3x3 m3out;
+    float4x4 m4out;
+};
+
+struct MatrixIn
+{
+    float2x2 m2in;
+    float3x3 m3in;
+    float4x4 m4in;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
 kernel void main0(device MatrixOut& _15 [[buffer(0)]], const device MatrixIn& _20 [[buffer(1)]])
 {

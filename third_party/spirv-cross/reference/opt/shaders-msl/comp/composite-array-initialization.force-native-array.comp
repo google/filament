@@ -5,28 +5,6 @@
 
 using namespace metal;
 
-struct Data
-{
-    float a;
-    float b;
-};
-
-constant float X_tmp [[function_constant(0)]];
-constant float X = is_function_constant_defined(X_tmp) ? X_tmp : 4.0;
-
-struct Data_1
-{
-    float a;
-    float b;
-};
-
-struct SSBO
-{
-    Data_1 outdata[1];
-};
-
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(2u, 1u, 1u);
-
 template<typename T, uint A>
 inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
 {
@@ -134,6 +112,28 @@ inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device
         dst[i] = src[i];
     }
 }
+
+struct Data
+{
+    float a;
+    float b;
+};
+
+constant float X_tmp [[function_constant(0)]];
+constant float X = is_function_constant_defined(X_tmp) ? X_tmp : 4.0;
+
+struct Data_1
+{
+    float a;
+    float b;
+};
+
+struct SSBO
+{
+    Data_1 outdata[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(2u, 1u, 1u);
 
 kernel void main0(device SSBO& _53 [[buffer(0)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
 {

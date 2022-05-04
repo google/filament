@@ -8,7 +8,7 @@ layout(binding = 0, std430) buffer SSBO
 
 void test()
 {
-    if (!(_11.data == 0.0))
+    if (_11.data != 0.0)
     {
         float tmp = 10.0;
         _11.data = tmp;
@@ -18,12 +18,12 @@ void test()
         float tmp_1 = 15.0;
         _11.data = tmp_1;
     }
-    if (!(_11.data == 0.0))
+    if (_11.data != 0.0)
     {
         float e;
-        if (!(_11.data == 5.0))
+        if (_11.data != 5.0)
         {
-            if (!(_11.data == 6.0))
+            if (_11.data != 6.0)
             {
                 e = 10.0;
             }
@@ -70,7 +70,7 @@ void test()
     float m;
     do
     {
-    } while (!(m == 20.0));
+    } while (m != 20.0);
     _11.data = m;
 }
 

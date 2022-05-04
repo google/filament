@@ -33,9 +33,13 @@ layout(binding = 2, std140) uniform UBO
 void main()
 {
     uint ident = gl_GlobalInvocationID.x;
-    i16vec2 _47 = unpackInt2x16(_29.inputs[ident].x) + float16BitsToInt16(_40.const0.xy);
-    _21.outputs[ident] = i16vec4(_47.x, _47.y, _21.outputs[ident].z, _21.outputs[ident].w);
-    i16vec2 _66 = i16vec2(unpackUint2x16(uint(_29.inputs[ident].y)) - float16BitsToUint16(_40.const0.zw));
-    _21.outputs[ident] = i16vec4(_21.outputs[ident].x, _21.outputs[ident].y, _66.x, _66.y);
+    int _33 = _29.inputs[ident].x;
+    i16vec2 _47 = unpackInt2x16(_33) + float16BitsToInt16(_40.const0.xy);
+    _21.outputs[ident].x = _47.x;
+    _21.outputs[ident].y = _47.y;
+    int _57 = _29.inputs[ident].y;
+    i16vec2 _67 = i16vec2(unpackUint2x16(uint(_57)) - float16BitsToUint16(_40.const0.zw));
+    _21.outputs[ident].z = _67.x;
+    _21.outputs[ident].w = _67.y;
 }
 

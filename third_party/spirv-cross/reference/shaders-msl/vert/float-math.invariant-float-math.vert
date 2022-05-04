@@ -44,6 +44,55 @@ struct spvUnsafeArray
     }
 };
 
+template<typename T>
+[[clang::optnone]] T spvFMul(T l, T r)
+{
+    return fma(l, r, T(0));
+}
+
+template<typename T, int Cols, int Rows>
+[[clang::optnone]] vec<T, Cols> spvFMulVectorMatrix(vec<T, Rows> v, matrix<T, Cols, Rows> m)
+{
+    vec<T, Cols> res = vec<T, Cols>(0);
+    for (uint i = Rows; i > 0; --i)
+    {
+        vec<T, Cols> tmp(0);
+        for (uint j = 0; j < Cols; ++j)
+        {
+            tmp[j] = m[j][i - 1];
+        }
+        res = fma(tmp, vec<T, Cols>(v[i - 1]), res);
+    }
+    return res;
+}
+
+template<typename T, int Cols, int Rows>
+[[clang::optnone]] vec<T, Rows> spvFMulMatrixVector(matrix<T, Cols, Rows> m, vec<T, Cols> v)
+{
+    vec<T, Rows> res = vec<T, Rows>(0);
+    for (uint i = Cols; i > 0; --i)
+    {
+        res = fma(m[i - 1], vec<T, Rows>(v[i - 1]), res);
+    }
+    return res;
+}
+
+template<typename T, int LCols, int LRows, int RCols, int RRows>
+[[clang::optnone]] matrix<T, RCols, LRows> spvFMulMatrixMatrix(matrix<T, LCols, LRows> l, matrix<T, RCols, RRows> r)
+{
+    matrix<T, RCols, LRows> res;
+    for (uint i = 0; i < RCols; i++)
+    {
+        vec<T, RCols> tmp(0);
+        for (uint j = 0; j < LCols; j++)
+        {
+            tmp = fma(vec<T, RCols>(r[i][j]), l[j], tmp);
+        }
+        res[i] = tmp;
+    }
+    return res;
+}
+
 struct Matrices
 {
     float4x4 vpMatrix;
@@ -67,55 +116,6 @@ struct main0_in
     float3 InPos [[attribute(0)]];
     float3 InNormal [[attribute(1)]];
 };
-
-template<typename T>
-T spvFMul(T l, T r)
-{
-    return fma(l, r, T(0));
-}
-
-template<typename T, int Cols, int Rows>
-vec<T, Cols> spvFMulVectorMatrix(vec<T, Rows> v, matrix<T, Cols, Rows> m)
-{
-    vec<T, Cols> res = vec<T, Cols>(0);
-    for (uint i = Rows; i > 0; --i)
-    {
-        vec<T, Cols> tmp(0);
-        for (uint j = 0; j < Cols; ++j)
-        {
-            tmp[j] = m[j][i - 1];
-        }
-        res = fma(tmp, vec<T, Cols>(v[i - 1]), res);
-    }
-    return res;
-}
-
-template<typename T, int Cols, int Rows>
-vec<T, Rows> spvFMulMatrixVector(matrix<T, Cols, Rows> m, vec<T, Cols> v)
-{
-    vec<T, Rows> res = vec<T, Rows>(0);
-    for (uint i = Cols; i > 0; --i)
-    {
-        res = fma(m[i - 1], vec<T, Rows>(v[i - 1]), res);
-    }
-    return res;
-}
-
-template<typename T, int LCols, int LRows, int RCols, int RRows>
-matrix<T, RCols, LRows> spvFMulMatrixMatrix(matrix<T, LCols, LRows> l, matrix<T, RCols, RRows> r)
-{
-    matrix<T, RCols, LRows> res;
-    for (uint i = 0; i < RCols; i++)
-    {
-        vec<T, RCols> tmp(0);
-        for (uint j = 0; j < LCols; j++)
-        {
-            tmp = fma(vec<T, RCols>(r[i][j]), l[j], tmp);
-        }
-        res[i] = tmp;
-    }
-    return res;
-}
 
 vertex main0_out main0(main0_in in [[stage_in]], constant Matrices& _22 [[buffer(0)]])
 {

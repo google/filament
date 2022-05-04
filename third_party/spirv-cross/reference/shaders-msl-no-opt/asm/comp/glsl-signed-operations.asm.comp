@@ -5,12 +5,6 @@
 
 using namespace metal;
 
-struct SSBO
-{
-    int4 ints;
-    uint4 uints;
-};
-
 // Implementation of the signed GLSL findMSB() function
 template<typename T>
 inline T spvFindSMSB(T x)
@@ -32,6 +26,12 @@ inline T sign(T x)
 {
     return select(select(select(x, T(0), x == T(0)), T(1), x > T(0)), T(-1), x < T(0));
 }
+
+struct SSBO
+{
+    int4 ints;
+    uint4 uints;
+};
 
 kernel void main0(device SSBO& _4 [[buffer(0)]])
 {

@@ -5,6 +5,13 @@
 
 using namespace metal;
 
+// Returns 2D texture coords corresponding to 1D texel buffer coords
+static inline __attribute__((always_inline))
+uint2 spvTexelBufferCoord(uint tc)
+{
+    return uint2(tc % 4096, tc / 4096);
+}
+
 struct type_View
 {
     float4x4 View_TranslatedWorldToClip;
@@ -281,13 +288,6 @@ struct main0_in
     float2 in_var_ATTRIBUTE0 [[attribute(0)]];
 };
 
-// Returns 2D texture coords corresponding to 1D texel buffer coords
-static inline __attribute__((always_inline))
-uint2 spvTexelBufferCoord(uint tc)
-{
-    return uint2(tc % 4096, tc / 4096);
-}
-
 vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buffer(0)]], constant type_Primitive& Primitive [[buffer(1)]], constant type_MobileShadowDepthPass& MobileShadowDepthPass [[buffer(2)]], constant type_EmitterDynamicUniforms& EmitterDynamicUniforms [[buffer(3)]], constant type_EmitterUniforms& EmitterUniforms [[buffer(4)]], constant type_Globals& _Globals [[buffer(5)]], texture2d<float> ParticleIndices [[texture(0)]], texture2d<float> PositionTexture [[texture(1)]], texture2d<float> VelocityTexture [[texture(2)]], texture2d<float> AttributesTexture [[texture(3)]], texture2d<float> CurveTexture [[texture(4)]], sampler PositionTextureSampler [[sampler(0)]], sampler VelocityTextureSampler [[sampler(1)]], sampler AttributesTextureSampler [[sampler(2)]], sampler CurveTextureSampler [[sampler(3)]], uint gl_VertexIndex [[vertex_id]], uint gl_InstanceIndex [[instance_id]])
 {
     main0_out out = {};
@@ -296,7 +296,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
     float4 _145 = AttributesTexture.sample(AttributesTextureSampler, _133, level(0.0));
     float _146 = _137.w;
     float3 _158 = float3x3(Primitive.Primitive_LocalToWorld[0].xyz, Primitive.Primitive_LocalToWorld[1].xyz, Primitive.Primitive_LocalToWorld[2].xyz) * VelocityTexture.sample(VelocityTextureSampler, _133, level(0.0)).xyz;
-    float3 _160 = normalize(_158 + float3(0.0, 0.0, 9.9999997473787516355514526367188e-05));
+    float3 _160 = fast::normalize(_158 + float3(0.0, 0.0, 9.9999997473787516355514526367188e-05));
     float2 _204 = ((((_145.xy + float2((_145.x < 0.5) ? 0.0 : (-0.5), (_145.y < 0.5) ? 0.0 : (-0.5))) * float2(2.0)) * (((CurveTexture.sample(CurveTextureSampler, (EmitterUniforms.EmitterUniforms_MiscCurve.xy + (EmitterUniforms.EmitterUniforms_MiscCurve.zw * float2(_146))), level(0.0)) * EmitterUniforms.EmitterUniforms_MiscScale) + EmitterUniforms.EmitterUniforms_MiscBias).xy * EmitterDynamicUniforms.EmitterDynamicUniforms_LocalToWorldScale)) * fast::min(fast::max(EmitterUniforms.EmitterUniforms_SizeBySpeed.xy * float2(length(_158)), float2(1.0)), EmitterUniforms.EmitterUniforms_SizeBySpeed.zw)) * float2(step(_146, 1.0));
     float3 _239 = float4((((Primitive.Primitive_LocalToWorld[0u].xyz * _137.xxx) + (Primitive.Primitive_LocalToWorld[1u].xyz * _137.yyy)) + (Primitive.Primitive_LocalToWorld[2u].xyz * _137.zzz)) + (Primitive.Primitive_LocalToWorld[3u].xyz + float3(View.View_PreViewTranslation)), 1.0).xyz;
     float3 _242 = float3(EmitterUniforms.EmitterUniforms_RemoveHMDRoll);
@@ -312,8 +312,8 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
         float3 _279 = cross(_265, float3(0.0, 0.0, 1.0));
         float3 _284 = _279 / float3(sqrt(fast::max(dot(_279, _279), 0.00999999977648258209228515625)));
         float3 _286 = float3(fast::clamp((_261 * EmitterUniforms.EmitterUniforms_CameraFacingBlend[1]) - EmitterUniforms.EmitterUniforms_CameraFacingBlend[2], 0.0, 1.0));
-        _335 = normalize(mix(_251, _284, _286));
-        _336 = normalize(mix(_259, cross(_265, _284), _286));
+        _335 = fast::normalize(mix(_251, _284, _286));
+        _336 = fast::normalize(mix(_259, cross(_265, _284), _286));
     }
     else
     {
@@ -363,7 +363,8 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
     float _339 = ((_145.z + ((_145.w * EmitterUniforms.EmitterUniforms_RotationRateScale) * _146)) * 6.283185482025146484375) + EmitterUniforms.EmitterUniforms_RotationBias;
     float3 _342 = float3(sin(_339));
     float3 _344 = float3(cos(_339));
-    float4 _371 = float4(_239 + ((float3(_204.x * (in.in_var_ATTRIBUTE0.x + EmitterUniforms.EmitterUniforms_PivotOffset.x)) * ((_342 * _336) + (_344 * _335))) + (float3(_204.y * (in.in_var_ATTRIBUTE0.y + EmitterUniforms.EmitterUniforms_PivotOffset.y)) * ((_344 * _336) - (_342 * _335)))), 1.0);
+    float3 _367 = _239 + ((float3(_204.x * (in.in_var_ATTRIBUTE0.x + EmitterUniforms.EmitterUniforms_PivotOffset.x)) * ((_342 * _336) + (_344 * _335))) + (float3(_204.y * (in.in_var_ATTRIBUTE0.y + EmitterUniforms.EmitterUniforms_PivotOffset.y)) * ((_344 * _336) - (_342 * _335))));
+    float4 _371 = float4(_367, 1.0);
     float4 _375 = MobileShadowDepthPass.MobileShadowDepthPass_ProjectionMatrix * float4(_371.x, _371.y, _371.z, _371.w);
     float4 _386;
     if ((MobileShadowDepthPass.MobileShadowDepthPass_bClampToNearPlane > 0.0) && (_375.z < 0.0))

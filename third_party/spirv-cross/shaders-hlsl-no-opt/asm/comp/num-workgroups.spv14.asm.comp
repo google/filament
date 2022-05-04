@@ -1,0 +1,57 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %_ %gl_NumWorkGroups %__0
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "v"
+               OpName %_ ""
+               OpName %gl_NumWorkGroups "gl_NumWorkGroups"
+               OpName %UBO "UBO"
+               OpMemberName %UBO 0 "w"
+               OpName %__0 ""
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpDecorate %SSBO Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 1
+               OpDecorate %gl_NumWorkGroups BuiltIn NumWorkgroups
+               OpMemberDecorate %UBO 0 Offset 0
+               OpDecorate %UBO Block
+               OpDecorate %__0 DescriptorSet 0
+               OpDecorate %__0 Binding 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+       %SSBO = OpTypeStruct %v3uint
+%_ptr_StorageBuffer_SSBO = OpTypePointer StorageBuffer %SSBO
+          %_ = OpVariable %_ptr_StorageBuffer_SSBO StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_NumWorkGroups = OpVariable %_ptr_Input_v3uint Input
+        %UBO = OpTypeStruct %v3uint
+%_ptr_Uniform_UBO = OpTypePointer Uniform %UBO
+        %__0 = OpVariable %_ptr_Uniform_UBO Uniform
+%_ptr_Uniform_v3uint = OpTypePointer Uniform %v3uint
+%_ptr_StorageBuffer_v3uint = OpTypePointer StorageBuffer %v3uint
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %15 = OpLoad %v3uint %gl_NumWorkGroups
+         %20 = OpAccessChain %_ptr_Uniform_v3uint %__0 %int_0
+         %21 = OpLoad %v3uint %20
+         %22 = OpIAdd %v3uint %15 %21
+         %24 = OpAccessChain %_ptr_StorageBuffer_v3uint %_ %int_0
+               OpStore %24 %22
+               OpReturn
+               OpFunctionEnd

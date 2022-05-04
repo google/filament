@@ -26,10 +26,15 @@ struct SPIRV_Cross_Output
 void vert_main()
 {
     gl_Position = mul(v, m4);
-    float3 _37 = gl_Position.xyz + mul(v.xyz, m3);
-    gl_Position = float4(_37.x, _37.y, _37.z, gl_Position.w);
-    float2 _52 = gl_Position.xy + mul(v.xy, m2);
-    gl_Position = float4(_52.x, _52.y, gl_Position.z, gl_Position.w);
+    float4 _35 = gl_Position;
+    float3 _37 = _35.xyz + mul(v.xyz, m3);
+    gl_Position.x = _37.x;
+    gl_Position.y = _37.y;
+    gl_Position.z = _37.z;
+    float4 _56 = gl_Position;
+    float2 _58 = _56.xy + mul(v.xy, m2);
+    gl_Position.x = _58.x;
+    gl_Position.y = _58.y;
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

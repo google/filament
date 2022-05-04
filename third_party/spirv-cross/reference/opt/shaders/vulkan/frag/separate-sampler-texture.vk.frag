@@ -13,7 +13,11 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {
-    vec2 _73 = (vTex + (vec2(1.0) / vec2(textureSize(SPIRV_Cross_CombineduTextureuSampler, 0)))) + (vec2(1.0) / vec2(textureSize(SPIRV_Cross_CombineduTextureuSampler, 1)));
+    highp vec2 _54 = vec2(1.0) / vec2(textureSize(SPIRV_Cross_CombineduTextureuSampler, 0));
+    vec2 mp_copy_54 = _54;
+    highp vec2 _64 = vec2(1.0) / vec2(textureSize(SPIRV_Cross_CombineduTextureuSampler, 1));
+    vec2 mp_copy_64 = _64;
+    vec2 _73 = (vTex + mp_copy_54) + mp_copy_64;
     FragColor = (((texture(SPIRV_Cross_CombineduTextureuSampler, _73) + texture(SPIRV_Cross_CombineduTextureuSampler, _73)) + texture(SPIRV_Cross_CombineduTextureArrayuSampler, vTex3)) + texture(SPIRV_Cross_CombineduTextureCubeuSampler, vTex3)) + texture(SPIRV_Cross_CombineduTexture3DuSampler, vTex3);
 }
 

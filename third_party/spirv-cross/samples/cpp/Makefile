@@ -1,3 +1,6 @@
+# Copyright 2016-2021 The Khronos Group Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 SOURCES := $(wildcard *.comp)
 SPIRV := $(SOURCES:.comp=.spv)
 CPP_INTERFACE := $(SOURCES:.comp=.spv.cpp)

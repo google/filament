@@ -44,6 +44,13 @@ struct spvUnsafeArray
     }
 };
 
+// Implementation of the GLSL mod() function, which is slightly different than Metal fmod()
+template<typename Tx, typename Ty>
+inline Tx mod(Tx x, Ty y)
+{
+    return x - y * floor(x / y);
+}
+
 struct myType
 {
     float data;
@@ -53,13 +60,6 @@ struct main0_out
 {
     float4 o_color [[color(0)]];
 };
-
-// Implementation of the GLSL mod() function, which is slightly different than Metal fmod()
-template<typename Tx, typename Ty>
-inline Tx mod(Tx x, Ty y)
-{
-    return x - y * floor(x / y);
-}
 
 fragment main0_out main0(float4 gl_FragCoord [[position]])
 {

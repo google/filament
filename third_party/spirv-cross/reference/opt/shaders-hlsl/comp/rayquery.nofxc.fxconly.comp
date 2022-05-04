@@ -1,0 +1,242 @@
+RWByteAddressBuffer _17 : register(u0);
+uniform RaytracingAccelerationStructure rtas : register(t1);
+
+static RayQuery<RAY_FLAG_NONE> rayQuery;
+
+static float3x4 _362;
+static float4x3 _364;
+
+void comp_main()
+{
+    RayDesc _1ident = {0.0f.xxx, 0.0f, float3(1.0f, 0.0f, 0.0f), 9999.0f};
+    rayQuery.TraceRayInline(rtas, 0u, 255u, _1ident);
+    float3x4 _361;
+    float4x3 _363;
+    _363 = _364;
+    _361 = _362;
+    float3x4 _387;
+    float4x3 _398;
+    for (;;)
+    {
+        bool _67 = rayQuery.Proceed();
+        if (_67)
+        {
+            uint _71 = rayQuery.CandidateType();
+            switch (_71)
+            {
+                case 0u:
+                {
+                    rayQuery.Abort();
+                    float4x3 _79 = rayQuery.CandidateObjectToWorld4x3();
+                    rayQuery.CommitNonOpaqueTriangleHit();
+                    bool _87 = rayQuery.CommittedTriangleFrontFace();
+                    if (_87)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    float2 _92 = rayQuery.CommittedTriangleBarycentrics();
+                    if (_92.x == 0.0f)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    int _98 = rayQuery.CommittedInstanceID();
+                    if (_98 > 0)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    int _103 = rayQuery.CommittedInstanceIndex();
+                    if (_103 > 0)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    float3 _108 = rayQuery.CommittedObjectRayDirection();
+                    if (_108.x > 0.0f)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    float3 _114 = rayQuery.CommittedObjectRayOrigin();
+                    if (_114.x > 0.0f)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    int _120 = rayQuery.CommittedPrimitiveIndex();
+                    if (_120 > 0)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    float _125 = rayQuery.CommittedRayT();
+                    if (_125 > 0.0f)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    uint _130 = rayQuery.CommittedInstanceContributionToHitGroupIndex();
+                    if (_130 > 0u)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    _398 = _79;
+                    _387 = transpose(_79);
+                    break;
+                }
+                case 1u:
+                {
+                    float4x3 _136 = rayQuery.CandidateObjectToWorld4x3();
+                    bool _139 = rayQuery.CandidateProceduralPrimitiveNonOpaque();
+                    if (_139)
+                    {
+                        _17.Store(0, 0u);
+                        _17.Store(4, 0u);
+                    }
+                    rayQuery.CommitProceduralPrimitiveHit(144);
+                    rayQuery.Abort();
+                    _398 = _136;
+                    _387 = transpose(_136);
+                    break;
+                }
+                default:
+                {
+                    _398 = _363;
+                    _387 = _361;
+                    break;
+                }
+            }
+            _363 = _398;
+            _361 = _387;
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
+    if (_361[0].x == _363[0].x)
+    {
+        _17.Store(0, 0u);
+        _17.Store(4, 0u);
+    }
+    uint _157 = rayQuery.CommittedStatus();
+    float3x4 _365;
+    float4x3 _376;
+    switch (_157)
+    {
+        case 0u:
+        {
+            float4x3 _163 = rayQuery.CandidateWorldToObject4x3();
+            _376 = _163;
+            _365 = transpose(_163);
+            break;
+        }
+        case 1u:
+        {
+            float4x3 _167 = rayQuery.CommittedWorldToObject4x3();
+            bool _170 = rayQuery.CommittedTriangleFrontFace();
+            if (_170)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            float2 _174 = rayQuery.CommittedTriangleBarycentrics();
+            if (_174.y == 0.0f)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            _376 = _167;
+            _365 = transpose(_167);
+            break;
+        }
+        case 2u:
+        {
+            int _182 = rayQuery.CommittedGeometryIndex();
+            if (_182 > 0)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            int _187 = rayQuery.CommittedInstanceIndex();
+            if (_187 > 0)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            int _192 = rayQuery.CommittedInstanceID();
+            if (_192 > 0)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            float3 _197 = rayQuery.CommittedObjectRayDirection();
+            if (_197.z > 0.0f)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            float3 _204 = rayQuery.CommittedObjectRayOrigin();
+            if (_204.x > 0.0f)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            int _210 = rayQuery.CommittedPrimitiveIndex();
+            if (_210 > 0)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            float _215 = rayQuery.CommittedRayT();
+            if (_215 > 0.0f)
+            {
+                _17.Store(0, 0u);
+                _17.Store(4, 0u);
+            }
+            _376 = _363;
+            _365 = _361;
+            break;
+        }
+        default:
+        {
+            _376 = _363;
+            _365 = _361;
+            break;
+        }
+    }
+    if (_365[0].x == _376[0].x)
+    {
+        _17.Store(0, 0u);
+        _17.Store(4, 0u);
+    }
+    uint _230 = rayQuery.RayFlags();
+    if (_230 > 256u)
+    {
+        _17.Store(0, 0u);
+        _17.Store(4, 0u);
+    }
+    float _236 = rayQuery.RayTMin();
+    if (_236 > 0.0f)
+    {
+        _17.Store(0, 0u);
+        _17.Store(4, 0u);
+    }
+    float3 _242 = rayQuery.WorldRayOrigin();
+    float3 _244 = rayQuery.WorldRayDirection();
+    if (_242.x == _244.z)
+    {
+        _17.Store(0, 0u);
+        _17.Store(4, 0u);
+    }
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

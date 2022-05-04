@@ -216,10 +216,9 @@ void main()
     vec2 _376 = texture(SPIRV_Cross_CombinedShadowMapTextureShadowMapSampler, IN_PosLightSpace_Reflectance.xyz.xy).xy;
     float _392 = (1.0 - (((step(_376.x, IN_PosLightSpace_Reflectance.xyz.z) * clamp(9.0 - (20.0 * abs(IN_PosLightSpace_Reflectance.xyz.z - 0.5)), 0.0, 1.0)) * _376.y) * _19.CB0.OutlineBrightness_ShadowInfo.w)) * _368.w;
     vec3 _403 = mix(_318.xyz, texture(SPIRV_Cross_CombinedEnvironmentMapTextureEnvironmentMapSampler, reflect(-IN_View_Depth.xyz, _329)).xyz, vec3(_312));
-    vec4 _404 = vec4(_403.x, _403.y, _403.z, _318.w);
-    vec3 _422 = (((_19.CB0.AmbientColor + (((_19.CB0.Lamp0Color * clamp(_333, 0.0, 1.0)) + (_19.CB0.Lamp1Color * max(-_333, 0.0))) * _392)) + _368.xyz) * _404.xyz) + (_19.CB0.Lamp0Color * (((step(0.0, _333) * _306) * _392) * pow(clamp(dot(_329, normalize(_332 + normalize(IN_View_Depth.xyz))), 0.0, 1.0), _308)));
+    vec3 _422 = (((_19.CB0.AmbientColor + (((_19.CB0.Lamp0Color * clamp(_333, 0.0, 1.0)) + (_19.CB0.Lamp1Color * max(-_333, 0.0))) * _392)) + _368.xyz) * vec4(_403.x, _403.y, _403.z, _318.w).xyz) + (_19.CB0.Lamp0Color * (((step(0.0, _333) * _306) * _392) * pow(clamp(dot(_329, normalize(_332 + normalize(IN_View_Depth.xyz))), 0.0, 1.0), _308)));
     vec4 _425 = vec4(_422.x, _422.y, _422.z, _124.w);
-    _425.w = _404.w;
+    _425.w = vec4(_403.x, _403.y, _403.z, _318.w).w;
     vec2 _435 = min(IN_Uv_EdgeDistance1.wz, IN_UvStuds_EdgeDistance2.wz);
     float _439 = min(_435.x, _435.y) / _163;
     vec3 _445 = _425.xyz * clamp((clamp((_163 * _19.CB0.OutlineBrightness_ShadowInfo.x) + _19.CB0.OutlineBrightness_ShadowInfo.y, 0.0, 1.0) * (1.5 - _439)) + _439, 0.0, 1.0);

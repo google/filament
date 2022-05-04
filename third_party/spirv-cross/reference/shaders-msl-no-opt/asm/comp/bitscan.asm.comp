@@ -5,12 +5,6 @@
 
 using namespace metal;
 
-struct SSBO
-{
-    uint4 u;
-    int4 i;
-};
-
 // Implementation of the GLSL findLSB() function
 template<typename T>
 inline T spvFindLSB(T x)
@@ -32,6 +26,12 @@ inline T spvFindUMSB(T x)
 {
     return select(clz(T(0)) - (clz(x) + T(1)), T(-1), x == T(0));
 }
+
+struct SSBO
+{
+    uint4 u;
+    int4 i;
+};
 
 kernel void main0(device SSBO& _4 [[buffer(0)]])
 {

@@ -1,3 +1,6 @@
+# Copyright 2020-2021 The Khronos Group, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 name: CI
 
 on:
@@ -11,7 +14,7 @@ jobs:
     name: "Build ${{ matrix.platform }}"
     strategy:
       matrix:
-        platform: [windows-latest, ubuntu-16.04, ubuntu-18.04, ubuntu-20.04, macos-latest]
+        platform: [windows-latest, ubuntu-18.04, ubuntu-20.04, macos-latest]
     env:
       PARALLEL: -j 2
 
@@ -51,4 +54,17 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: ctest --verbose -C Release
+  reuse:
+    name: "REUSE license check"
+    runs-on: ubuntu-latest
+    container: khronosgroup/docker-images:asciidoctor-spec
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # REUSE license checker
+      - name: license-check
+        run: |
+          reuse lint
+
 

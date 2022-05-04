@@ -7,7 +7,7 @@ struct SPIRV_Cross_Output
 
 void frag_main()
 {
-    FragColor = float3(asfloat(0x7f800000u), asfloat(0xff800000u), asfloat(0x7fc00000u));
+    FragColor = float3(asfloat(0x7f800000u /* inf */), asfloat(0xff800000u /* -inf */), asfloat(0x7fc00000u /* nan */));
 }
 
 SPIRV_Cross_Output main()

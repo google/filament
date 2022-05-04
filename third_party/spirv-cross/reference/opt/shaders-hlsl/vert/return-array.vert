@@ -1,10 +1,8 @@
 static float4 gl_Position;
-static float4 vInput0;
 static float4 vInput1;
 
 struct SPIRV_Cross_Input
 {
-    float4 vInput0 : TEXCOORD0;
     float4 vInput1 : TEXCOORD1;
 };
 
@@ -20,7 +18,6 @@ void vert_main()
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
 {
-    vInput0 = stage_input.vInput0;
     vInput1 = stage_input.vInput1;
     vert_main();
     SPIRV_Cross_Output stage_output;

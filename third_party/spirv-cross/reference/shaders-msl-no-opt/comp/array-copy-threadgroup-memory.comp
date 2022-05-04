@@ -44,8 +44,6 @@ struct spvUnsafeArray
     }
 };
 
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(8u, 1u, 1u);
-
 template<typename T, uint A>
 inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
 {
@@ -153,6 +151,8 @@ inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device
         dst[i] = src[i];
     }
 }
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(8u, 1u, 1u);
 
 kernel void main0(uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
 {

@@ -49,8 +49,10 @@
          %28 = OpConstant %17 2
          %33 = OpConstant %12 20
          %34 = OpConstant %12 30
+      %int_3 = OpConstant %12 -3
+        %bar = OpSpecConstantOp %12 SRem %13 %int_3
          %35 = OpTypeVector %12 4
-         %36 = OpSpecConstantComposite %35 %33 %34 %15 %15
+         %36 = OpSpecConstantComposite %35 %33 %34 %15 %bar
          %40 = OpTypeVector %12 2
          %41 = OpSpecConstantOp %40 VectorShuffle %36 %36 1 0
 		 %foo = OpSpecConstantOp %12 CompositeExtract %36 1
@@ -63,6 +65,7 @@
          %53 = OpConstant %12 0
          %55 = OpTypePointer Output %7
          %57 = OpSpecConstant %6 3.14159
+        %baz = OpSpecConstantOp %6 QuantizeToF16 %57
           %4 = OpFunction %2 None %3
           %5 = OpLabel
           %9 = OpVariable %8 Function

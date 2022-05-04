@@ -5,30 +5,6 @@
 
 using namespace metal;
 
-struct Data
-{
-    float a;
-    float b;
-};
-
-constant float X_tmp [[function_constant(0)]];
-constant float X = is_function_constant_defined(X_tmp) ? X_tmp : 4.0;
-
-struct Data_1
-{
-    float a;
-    float b;
-};
-
-struct SSBO
-{
-    Data_1 outdata[1];
-};
-
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(2u, 1u, 1u);
-
-constant Data _25[2] = { Data{ 1.0, 2.0 }, Data{ 3.0, 4.0 } };
-
 template<typename T, uint A>
 inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
 {
@@ -136,6 +112,30 @@ inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device
         dst[i] = src[i];
     }
 }
+
+struct Data
+{
+    float a;
+    float b;
+};
+
+constant float X_tmp [[function_constant(0)]];
+constant float X = is_function_constant_defined(X_tmp) ? X_tmp : 4.0;
+
+struct Data_1
+{
+    float a;
+    float b;
+};
+
+struct SSBO
+{
+    Data_1 outdata[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(2u, 1u, 1u);
+
+constant Data _25[2] = { Data{ 1.0, 2.0 }, Data{ 3.0, 4.0 } };
 
 static inline __attribute__((always_inline))
 Data combine(thread const Data& a, thread const Data& b)

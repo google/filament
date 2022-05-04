@@ -19,23 +19,23 @@ struct C
 
 struct main0_out
 {
-    float C_b;
+    float c_b;
     float4 gl_Position;
 };
 
 struct main0_patchOut
 {
-    float P_a;
-    float P_b;
+    float m_11_a;
+    float m_11_b;
 };
 
 static inline __attribute__((always_inline))
 void write_in_function(device main0_patchOut& patchOut, threadgroup C (&c)[4], device main0_out* thread & gl_out, thread uint& gl_InvocationID)
 {
-    patchOut.P_a = 1.0;
-    patchOut.P_b = 2.0;
+    patchOut.m_11_a = 1.0;
+    patchOut.m_11_b = 2.0;
     c[gl_InvocationID].a = 3.0;
-    gl_out[gl_InvocationID].C_b = 4.0;
+    gl_out[gl_InvocationID].c_b = 4.0;
     gl_out[gl_InvocationID].gl_Position = float4(1.0);
 }
 

@@ -3,22 +3,14 @@ RWByteAddressBuffer _6 : register(u1);
 
 void comp_main()
 {
-    bool4 _31 = bool4(int(_5.Load4(16).x) < int4(_5.Load4(0)).x, int(_5.Load4(16).y) < int4(_5.Load4(0)).y, int(_5.Load4(16).z) < int4(_5.Load4(0)).z, int(_5.Load4(16).w) < int4(_5.Load4(0)).w);
-    bool4 _32 = bool4(int(_5.Load4(16).x) <= int4(_5.Load4(0)).x, int(_5.Load4(16).y) <= int4(_5.Load4(0)).y, int(_5.Load4(16).z) <= int4(_5.Load4(0)).z, int(_5.Load4(16).w) <= int4(_5.Load4(0)).w);
-    bool4 _33 = bool4(_5.Load4(16).x < uint(int4(_5.Load4(0)).x), _5.Load4(16).y < uint(int4(_5.Load4(0)).y), _5.Load4(16).z < uint(int4(_5.Load4(0)).z), _5.Load4(16).w < uint(int4(_5.Load4(0)).w));
-    bool4 _34 = bool4(_5.Load4(16).x <= uint(int4(_5.Load4(0)).x), _5.Load4(16).y <= uint(int4(_5.Load4(0)).y), _5.Load4(16).z <= uint(int4(_5.Load4(0)).z), _5.Load4(16).w <= uint(int4(_5.Load4(0)).w));
-    bool4 _35 = bool4(int(_5.Load4(16).x) > int4(_5.Load4(0)).x, int(_5.Load4(16).y) > int4(_5.Load4(0)).y, int(_5.Load4(16).z) > int4(_5.Load4(0)).z, int(_5.Load4(16).w) > int4(_5.Load4(0)).w);
-    bool4 _36 = bool4(int(_5.Load4(16).x) >= int4(_5.Load4(0)).x, int(_5.Load4(16).y) >= int4(_5.Load4(0)).y, int(_5.Load4(16).z) >= int4(_5.Load4(0)).z, int(_5.Load4(16).w) >= int4(_5.Load4(0)).w);
-    bool4 _37 = bool4(_5.Load4(16).x > uint(int4(_5.Load4(0)).x), _5.Load4(16).y > uint(int4(_5.Load4(0)).y), _5.Load4(16).z > uint(int4(_5.Load4(0)).z), _5.Load4(16).w > uint(int4(_5.Load4(0)).w));
-    bool4 _38 = bool4(_5.Load4(16).x >= uint(int4(_5.Load4(0)).x), _5.Load4(16).y >= uint(int4(_5.Load4(0)).y), _5.Load4(16).z >= uint(int4(_5.Load4(0)).z), _5.Load4(16).w >= uint(int4(_5.Load4(0)).w));
-    _6.Store4(0, uint4(_31.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _31.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _31.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _31.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
-    _6.Store4(0, uint4(_32.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _32.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _32.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _32.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
-    _6.Store4(0, uint4(_33.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _33.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _33.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _33.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
-    _6.Store4(0, uint4(_34.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _34.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _34.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _34.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
-    _6.Store4(0, uint4(_35.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _35.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _35.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _35.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
-    _6.Store4(0, uint4(_36.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _36.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _36.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _36.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
-    _6.Store4(0, uint4(_37.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _37.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _37.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _37.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
-    _6.Store4(0, uint4(_38.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, _38.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, _38.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, _38.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w));
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) < int4(_5.Load4(0)).x, int(_5.Load4(16).y) < int4(_5.Load4(0)).y, int(_5.Load4(16).z) < int4(_5.Load4(0)).z, int(_5.Load4(16).w) < int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) <= int4(_5.Load4(0)).x, int(_5.Load4(16).y) <= int4(_5.Load4(0)).y, int(_5.Load4(16).z) <= int4(_5.Load4(0)).z, int(_5.Load4(16).w) <= int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x < uint(int4(_5.Load4(0)).x), _5.Load4(16).y < uint(int4(_5.Load4(0)).y), _5.Load4(16).z < uint(int4(_5.Load4(0)).z), _5.Load4(16).w < uint(int4(_5.Load4(0)).w))));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x <= uint(int4(_5.Load4(0)).x), _5.Load4(16).y <= uint(int4(_5.Load4(0)).y), _5.Load4(16).z <= uint(int4(_5.Load4(0)).z), _5.Load4(16).w <= uint(int4(_5.Load4(0)).w))));
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) > int4(_5.Load4(0)).x, int(_5.Load4(16).y) > int4(_5.Load4(0)).y, int(_5.Load4(16).z) > int4(_5.Load4(0)).z, int(_5.Load4(16).w) > int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) >= int4(_5.Load4(0)).x, int(_5.Load4(16).y) >= int4(_5.Load4(0)).y, int(_5.Load4(16).z) >= int4(_5.Load4(0)).z, int(_5.Load4(16).w) >= int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x > uint(int4(_5.Load4(0)).x), _5.Load4(16).y > uint(int4(_5.Load4(0)).y), _5.Load4(16).z > uint(int4(_5.Load4(0)).z), _5.Load4(16).w > uint(int4(_5.Load4(0)).w))));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x >= uint(int4(_5.Load4(0)).x), _5.Load4(16).y >= uint(int4(_5.Load4(0)).y), _5.Load4(16).z >= uint(int4(_5.Load4(0)).z), _5.Load4(16).w >= uint(int4(_5.Load4(0)).w))));
 }
 
 [numthreads(1, 1, 1)]

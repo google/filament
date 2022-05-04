@@ -23,7 +23,7 @@ struct constant_block
 constant int arraySize = SPIRV_CROSS_CONSTANT_ID_0;
 
 static inline __attribute__((always_inline))
-void doWork(device storage_block* (&storage)[2], constant constant_block* (&constants)[4], thread const array<texture2d<int>, 3> images)
+void doWork(device storage_block* (&storage)[2], constant constant_block* (&constants)[4], thread const array<texture2d<int>, 3>& images)
 {
     storage[0]->baz = uint4(constants[3]->foo);
     storage[1]->quux = images[2].read(uint2(int2(constants[1]->bar))).xy;

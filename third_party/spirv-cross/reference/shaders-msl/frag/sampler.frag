@@ -17,7 +17,7 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float4 sample_texture(thread const texture2d<float> tex, thread const sampler texSmplr, thread const float2& uv)
+float4 sample_texture(texture2d<float> tex, sampler texSmplr, thread const float2& uv)
 {
     return tex.sample(texSmplr, uv);
 }

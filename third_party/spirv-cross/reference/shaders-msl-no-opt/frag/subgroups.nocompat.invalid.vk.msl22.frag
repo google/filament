@@ -5,11 +5,6 @@
 
 using namespace metal;
 
-struct main0_out
-{
-    float FragColor [[color(0)]];
-};
-
 template<typename T>
 inline T spvSubgroupBroadcast(T value, ushort lane)
 {
@@ -53,7 +48,7 @@ inline uint4 spvSubgroupBallot(bool value)
     // SPIR-V callers expect a uint4. We must convert.
     // FIXME: This won't include higher bits if Apple ever supports
     // 128 lanes in an SIMD-group.
-    return uint4((uint)((simd_vote::vote_t)vote & 0xFFFFFFFF), (uint)(((simd_vote::vote_t)vote >> 32) & 0xFFFFFFFF), 0, 0);
+    return uint4(as_type<uint2>((simd_vote::vote_t)vote), 0, 0);
 }
 
 inline bool spvSubgroupBallotBitExtract(uint4 ballot, uint bit)
@@ -223,6 +218,11 @@ inline vec<bool, N> spvQuadSwap(vec<bool, N> value, uint dir)
 {
     return (vec<bool, N>)quad_shuffle_xor((vec<ushort, N>)value, dir + 1);
 }
+
+struct main0_out
+{
+    float FragColor [[color(0)]];
+};
 
 fragment main0_out main0(uint gl_SubgroupSize [[threads_per_simdgroup]], uint gl_SubgroupInvocationID [[thread_index_in_simdgroup]])
 {

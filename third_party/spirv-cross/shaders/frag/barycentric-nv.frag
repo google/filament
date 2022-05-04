@@ -2,17 +2,10 @@
 #extension GL_NV_fragment_shader_barycentric : require
 
 layout(location = 0) out vec2 value;
-
-layout(set = 0, binding = 0) readonly buffer Vertices
-{
-	vec2 uvs[];
-};
+layout(location = 0) pervertexNV in vec2 vUV[3];
+layout(location = 1) pervertexNV in vec2 vUV2[3];
       
 void main () {
-	int prim = gl_PrimitiveID;
-	vec2 uv0 = uvs[3 * prim + 0];
-	vec2 uv1 = uvs[3 * prim + 1];
-	vec2 uv2 = uvs[3 * prim + 2];
-    value = gl_BaryCoordNV.x * uv0 + gl_BaryCoordNV.y * uv1 + gl_BaryCoordNV.z * uv2;
-    value += gl_BaryCoordNoPerspNV.x * uv0 + gl_BaryCoordNoPerspNV.y * uv1 + gl_BaryCoordNoPerspNV.z * uv2;
+    value = gl_BaryCoordNV.x * vUV[0] + gl_BaryCoordNV.y * vUV[1] + gl_BaryCoordNV.z * vUV[2];
+    value += gl_BaryCoordNoPerspNV.x * vUV2[0] + gl_BaryCoordNoPerspNV.y * vUV2[1] + gl_BaryCoordNoPerspNV.z * vUV2[2];
 }

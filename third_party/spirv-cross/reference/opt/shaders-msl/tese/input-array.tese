@@ -19,9 +19,10 @@ struct main0_patchIn
     patch_control_point<main0_in> gl_in;
 };
 
-[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], float2 gl_TessCoord [[position_in_patch]])
+[[ patch(quad, 0) ]] vertex main0_out main0(main0_patchIn patchIn [[stage_in]], float2 gl_TessCoordIn [[position_in_patch]])
 {
     main0_out out = {};
+    float3 gl_TessCoord = float3(gl_TessCoordIn.x, gl_TessCoordIn.y, 0.0);
     out.gl_Position = (patchIn.gl_in[0].Floats * gl_TessCoord.x) + (patchIn.gl_in[1].Floats2 * gl_TessCoord.y);
     return out;
 }

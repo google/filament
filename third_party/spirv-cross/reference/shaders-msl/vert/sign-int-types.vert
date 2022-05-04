@@ -5,6 +5,13 @@
 
 using namespace metal;
 
+// Implementation of the GLSL sign() function for integer types
+template<typename T, typename E = typename enable_if<is_integral<T>::value>::type>
+inline T sign(T x)
+{
+    return select(select(select(x, T(0), x == T(0)), T(1), x > T(0)), T(-1), x < T(0));
+}
+
 struct UBO
 {
     float4x4 uMVP;
@@ -35,13 +42,6 @@ struct main0_in
 {
     float4 aVertex [[attribute(0)]];
 };
-
-// Implementation of the GLSL sign() function for integer types
-template<typename T, typename E = typename enable_if<is_integral<T>::value>::type>
-inline T sign(T x)
-{
-    return select(select(select(x, T(0), x == T(0)), T(1), x > T(0)), T(-1), x < T(0));
-}
 
 vertex main0_out main0(main0_in in [[stage_in]], constant UBO& _21 [[buffer(0)]])
 {

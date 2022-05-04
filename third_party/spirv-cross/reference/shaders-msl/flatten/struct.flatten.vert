@@ -34,7 +34,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant UBO& _18 [[buffer(0)]]
     out.gl_Position = _18.uMVP * in.aVertex;
     out.vColor = float4(0.0);
     float3 L = in.aVertex.xyz - float3(_18.light.Position);
-    out.vColor += ((_18.light.Color * fast::clamp(1.0 - (length(L) / _18.light.Radius), 0.0, 1.0)) * dot(in.aNormal, normalize(L)));
+    out.vColor += ((_18.light.Color * fast::clamp(1.0 - (length(L) / _18.light.Radius), 0.0, 1.0)) * dot(in.aNormal, fast::normalize(L)));
     return out;
 }
 

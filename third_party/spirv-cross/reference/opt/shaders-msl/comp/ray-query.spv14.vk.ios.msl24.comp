@@ -1,0 +1,51 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+#if __METAL_VERSION__ >= 230
+#include <metal_raytracing>
+using namespace metal::raytracing;
+#endif
+
+using namespace metal;
+
+struct Params
+{
+    uint ray_flags;
+    uint cull_mask;
+    char _m2_pad[8];
+    packed_float3 origin;
+    float tmin;
+    packed_float3 dir;
+    float tmax;
+    float thit;
+};
+
+kernel void main0(constant Params& _18 [[buffer(1)]], raytracing::acceleration_structure<raytracing::instancing> AS0 [[buffer(0)]], raytracing::acceleration_structure<raytracing::instancing> AS1 [[buffer(2)]])
+{
+    raytracing::intersection_query<raytracing::instancing, raytracing::triangle_data> q;
+    q.reset(ray(_18.origin, _18.dir, _18.tmin, _18.tmax), AS0, intersection_params());
+    raytracing::intersection_query<raytracing::instancing, raytracing::triangle_data> q2[2];
+    q2[1].reset(ray(_18.origin, _18.dir, _18.tmin, _18.tmax), AS1, intersection_params());
+    bool _63 = q.next();
+    q2[0].abort();
+    q.commit_bounding_box_intersection(_18.thit);
+    q2[1].commit_triangle_intersection();
+    float _71 = q.get_ray_min_distance();
+    float3 _74 = q.get_world_space_ray_direction();
+    float3 _75 = q.get_world_space_ray_origin();
+    uint _80 = uint(q2[1].get_committed_intersection_type());
+    uint _83 = uint(q2[0].get_candidate_intersection_type()) - 1;
+    bool _85 = q2[1].is_candidate_non_opaque_bounding_box();
+    float _87 = q2[1].get_committed_distance();
+    float _89 = q2[1].get_candidate_triangle_distance();
+    int _92 = q.get_committed_user_instance_id();
+    int _94 = q2[0].get_candidate_instance_id();
+    int _96 = q2[1].get_candidate_geometry_id();
+    int _97 = q.get_committed_primitive_id();
+    float2 _100 = q2[0].get_candidate_triangle_barycentric_coord();
+    bool _107 = q.is_committed_triangle_front_facing();
+    float3 _108 = q.get_candidate_ray_direction();
+    float3 _110 = q2[0].get_committed_ray_origin();
+    float4x3 _114 = q.get_candidate_object_to_world_transform();
+    float4x3 _116 = q2[1].get_committed_world_to_object_transform();
+}
+

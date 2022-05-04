@@ -16,10 +16,10 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float4 foo(thread bool& gl_HelperInvocation, thread texture2d<float> uSampler, thread const sampler uSamplerSmplr, thread float2& vUV)
+float4 foo(texture2d<float> uSampler, sampler uSamplerSmplr, thread float2& vUV)
 {
     float4 color;
-    if (!gl_HelperInvocation)
+    if (!simd_is_helper_thread())
     {
         color = uSampler.sample(uSamplerSmplr, vUV, level(0.0));
     }
@@ -33,8 +33,7 @@ float4 foo(thread bool& gl_HelperInvocation, thread texture2d<float> uSampler, t
 fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> uSampler [[texture(0)]], sampler uSamplerSmplr [[sampler(0)]])
 {
     main0_out out = {};
-    bool gl_HelperInvocation = simd_is_helper_thread();
-    out.FragColor = foo(gl_HelperInvocation, uSampler, uSamplerSmplr, in.vUV);
+    out.FragColor = foo(uSampler, uSamplerSmplr, in.vUV);
     return out;
 }
 

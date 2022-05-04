@@ -16,13 +16,13 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float sample_combined(thread float3& vUV, thread depth2d<float> uShadow, thread const sampler uShadowSmplr)
+float sample_combined(thread float3& vUV, depth2d<float> uShadow, sampler uShadowSmplr)
 {
     return uShadow.sample_compare(uShadowSmplr, vUV.xy, vUV.z);
 }
 
 static inline __attribute__((always_inline))
-float sample_separate(thread float3& vUV, thread depth2d<float> uTexture, thread sampler uSampler)
+float sample_separate(thread float3& vUV, depth2d<float> uTexture, sampler uSampler)
 {
     return uTexture.sample_compare(uSampler, vUV.xy, vUV.z);
 }

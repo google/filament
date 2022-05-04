@@ -27,7 +27,7 @@ fragment main0_out main0(main0_in in [[stage_in]], texturecube<float> samplerCol
     inInvModelView[1] = in.inInvModelView_1;
     inInvModelView[2] = in.inInvModelView_2;
     inInvModelView[3] = in.inInvModelView_3;
-    float4 _31 = inInvModelView * float4(reflect(normalize(in.inPos), normalize(in.inNormal)), 0.0);
+    float4 _31 = inInvModelView * float4(reflect(fast::normalize(in.inPos), fast::normalize(in.inNormal)), 0.0);
     float _33 = _31.x;
     float3 _59 = float3(_33, _31.yz);
     _59.x = _33 * (-1.0);

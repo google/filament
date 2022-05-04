@@ -44,22 +44,6 @@ struct spvUnsafeArray
     }
 };
 
-struct main0_out
-{
-    float4 gl_Position;
-};
-
-struct main0_patchOut
-{
-    spvUnsafeArray<float4, 2> pFoo;
-};
-
-struct main0_in
-{
-    spvUnsafeArray<float4, 2> iFoo;
-    float4 ipFoo;
-};
-
 template<typename T, uint A>
 inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
 {
@@ -167,6 +151,22 @@ inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device
         dst[i] = src[i];
     }
 }
+
+struct main0_out
+{
+    float4 gl_Position;
+};
+
+struct main0_patchOut
+{
+    spvUnsafeArray<float4, 2> pFoo;
+};
+
+struct main0_in
+{
+    spvUnsafeArray<float4, 2> iFoo;
+    float4 ipFoo;
+};
 
 kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]], device main0_in* spvIn [[buffer(22)]])
 {

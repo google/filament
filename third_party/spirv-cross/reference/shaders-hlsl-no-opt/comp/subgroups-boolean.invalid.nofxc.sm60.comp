@@ -16,7 +16,7 @@ void comp_main()
     v4.y = bool(WaveActiveBitAnd(uint(v)));
     v4.z = bool(WaveActiveBitXor(uint(v)));
     v4.w = WaveActiveAllEqual(v);
-    uint4 w = uint4(v4.x ? uint4(1u, 1u, 1u, 1u).x : uint4(0u, 0u, 0u, 0u).x, v4.y ? uint4(1u, 1u, 1u, 1u).y : uint4(0u, 0u, 0u, 0u).y, v4.z ? uint4(1u, 1u, 1u, 1u).z : uint4(0u, 0u, 0u, 0u).z, v4.w ? uint4(1u, 1u, 1u, 1u).w : uint4(0u, 0u, 0u, 0u).w);
+    uint4 w = uint4(v4);
     _46.Store(gl_GlobalInvocationID.x * 4 + 0, ((w.x + w.y) + w.z) + w.w);
 }
 

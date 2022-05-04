@@ -84,7 +84,8 @@ void main()
     vec4 _345 = vec4((_310 + uvec2(_384, _385)).xyxy & (~_317).xxyy);
     vec2 _173 = ((_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _156.InvGroundSize_PatchScale.zw) + mix(_345.xy, _345.zw, vec2(_301 - _303))) * _156.InvGroundSize_PatchScale.xy;
     mediump float _362 = textureLod(TexLOD, _173, 0.0).x * 7.96875;
-    float _364 = floor(_362);
+    float hp_copy_362 = _362;
+    float _364 = floor(hp_copy_362);
     vec2 _185 = _156.InvGroundSize_PatchScale.xy * exp2(_364);
     vec3 _230 = (vec3(_173.x, mix(textureLod(TexHeightmap, _173 + (_185 * 0.5), _364).x, textureLod(TexHeightmap, _173 + (_185 * 1.0), _364 + 1.0).x, _362 - _364), _173.y) * _156.GroundScale.xyz) + _156.GroundPosition.xyz;
     EyeVec = _230 - _236.g_CamPos.xyz;

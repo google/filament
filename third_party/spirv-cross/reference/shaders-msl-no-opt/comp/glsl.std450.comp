@@ -5,27 +5,6 @@
 
 using namespace metal;
 
-struct SSBO
-{
-    float res;
-    int ires;
-    uint ures;
-    float4 f32;
-    int4 s32;
-    uint4 u32;
-    float2x2 m2;
-    float3x3 m3;
-    float4x4 m4;
-};
-
-struct ResType
-{
-    float _m0;
-    int _m1;
-};
-
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
-
 // Implementation of the GLSL radians() function
 template<typename T>
 inline T radians(T d)
@@ -170,7 +149,7 @@ float2x2 spvInverse2x2(float2x2 m)
 }
 
 template<typename T>
-inline T spvReflect(T i, T n)
+[[clang::optnone]] T spvReflect(T i, T n)
 {
     return i - T(2) * i * n * n;
 }
@@ -197,6 +176,27 @@ inline T spvFaceForward(T n, T i, T nref)
     return i * nref < T(0) ? n : -n;
 }
 
+struct SSBO
+{
+    float res;
+    int ires;
+    uint ures;
+    float4 f32;
+    int4 s32;
+    uint4 u32;
+    float2x2 m2;
+    float3x3 m3;
+    float4x4 m4;
+};
+
+struct ResType
+{
+    float _m0;
+    int _m1;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
 kernel void main0(device SSBO& _19 [[buffer(0)]])
 {
     _19.res = round(((device float*)&_19.f32)[0u]);
@@ -217,13 +217,13 @@ kernel void main0(device SSBO& _19 [[buffer(0)]])
     _19.res = asin(((device float*)&_19.f32)[0u]);
     _19.res = acos(((device float*)&_19.f32)[0u]);
     _19.res = atan(((device float*)&_19.f32)[0u]);
-    _19.res = sinh(((device float*)&_19.f32)[0u]);
-    _19.res = cosh(((device float*)&_19.f32)[0u]);
-    _19.res = tanh(((device float*)&_19.f32)[0u]);
+    _19.res = fast::sinh(((device float*)&_19.f32)[0u]);
+    _19.res = fast::cosh(((device float*)&_19.f32)[0u]);
+    _19.res = precise::tanh(((device float*)&_19.f32)[0u]);
     _19.res = asinh(((device float*)&_19.f32)[0u]);
     _19.res = acosh(((device float*)&_19.f32)[0u]);
     _19.res = atanh(((device float*)&_19.f32)[0u]);
-    _19.res = atan2(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.res = precise::atan2(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
     _19.res = pow(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
     _19.res = exp(((device float*)&_19.f32)[0u]);
     _19.res = log(((device float*)&_19.f32)[0u]);
@@ -239,7 +239,7 @@ kernel void main0(device SSBO& _19 [[buffer(0)]])
     _19.res = spvRefract(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
     _19.res = length(_19.f32.xy);
     _19.res = distance(_19.f32.xy, _19.f32.zw);
-    float2 v2 = normalize(_19.f32.xy);
+    float2 v2 = fast::normalize(_19.f32.xy);
     v2 = faceforward(_19.f32.xy, _19.f32.yz, _19.f32.zw);
     v2 = reflect(_19.f32.xy, _19.f32.zw);
     v2 = refract(_19.f32.xy, _19.f32.yz, ((device float*)&_19.f32)[3u]);

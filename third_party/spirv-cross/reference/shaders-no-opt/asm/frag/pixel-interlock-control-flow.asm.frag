@@ -1,6 +1,18 @@
 #version 450
-#extension GL_ARB_fragment_shader_interlock : require
+#ifdef GL_ARB_fragment_shader_interlock
+#extension GL_ARB_fragment_shader_interlock : enable
+#define SPIRV_Cross_beginInvocationInterlock() beginInvocationInterlockARB()
+#define SPIRV_Cross_endInvocationInterlock() endInvocationInterlockARB()
+#elif defined(GL_INTEL_fragment_shader_ordering)
+#extension GL_INTEL_fragment_shader_ordering : enable
+#define SPIRV_Cross_beginInvocationInterlock() beginFragmentShaderOrderingINTEL()
+#define SPIRV_Cross_endInvocationInterlock()
+#endif
+#if defined(GL_ARB_fragment_shader_interlock)
 layout(pixel_interlock_ordered) in;
+#elif !defined(GL_INTEL_fragment_shader_ordering)
+#error Fragment Shader Interlock/Ordering extension missing!
+#endif
 
 layout(binding = 1, std430) buffer SSBO1
 {
@@ -47,7 +59,7 @@ void spvMainInterlockedBody()
 void main()
 {
     // Interlocks were used in a way not compatible with GLSL, this is very slow.
-    beginInvocationInterlockARB();
+    SPIRV_Cross_beginInvocationInterlock();
     spvMainInterlockedBody();
-    endInvocationInterlockARB();
+    SPIRV_Cross_endInvocationInterlock();
 }

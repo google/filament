@@ -21,7 +21,8 @@ float4 test_vector()
     bool4 geq = bool4(!(A.x < B.x), !(A.y < B.y), !(A.z < B.z), !(A.w < B.w));
     bool4 eq = bool4(A.x == B.x, A.y == B.y, A.z == B.z, A.w == B.w);
     bool4 neq = bool4(A.x != B.x, A.y != B.y, A.z != B.z, A.w != B.w);
-    return ((((float4(le.x ? 1.0f.xxxx.x : 0.0f.xxxx.x, le.y ? 1.0f.xxxx.y : 0.0f.xxxx.y, le.z ? 1.0f.xxxx.z : 0.0f.xxxx.z, le.w ? 1.0f.xxxx.w : 0.0f.xxxx.w) + float4(leq.x ? 1.0f.xxxx.x : 0.0f.xxxx.x, leq.y ? 1.0f.xxxx.y : 0.0f.xxxx.y, leq.z ? 1.0f.xxxx.z : 0.0f.xxxx.z, leq.w ? 1.0f.xxxx.w : 0.0f.xxxx.w)) + float4(ge.x ? 1.0f.xxxx.x : 0.0f.xxxx.x, ge.y ? 1.0f.xxxx.y : 0.0f.xxxx.y, ge.z ? 1.0f.xxxx.z : 0.0f.xxxx.z, ge.w ? 1.0f.xxxx.w : 0.0f.xxxx.w)) + float4(geq.x ? 1.0f.xxxx.x : 0.0f.xxxx.x, geq.y ? 1.0f.xxxx.y : 0.0f.xxxx.y, geq.z ? 1.0f.xxxx.z : 0.0f.xxxx.z, geq.w ? 1.0f.xxxx.w : 0.0f.xxxx.w)) + float4(eq.x ? 1.0f.xxxx.x : 0.0f.xxxx.x, eq.y ? 1.0f.xxxx.y : 0.0f.xxxx.y, eq.z ? 1.0f.xxxx.z : 0.0f.xxxx.z, eq.w ? 1.0f.xxxx.w : 0.0f.xxxx.w)) + float4(neq.x ? 1.0f.xxxx.x : 0.0f.xxxx.x, neq.y ? 1.0f.xxxx.y : 0.0f.xxxx.y, neq.z ? 1.0f.xxxx.z : 0.0f.xxxx.z, neq.w ? 1.0f.xxxx.w : 0.0f.xxxx.w);
+    neq = bool4(A.x != B.x, A.y != B.y, A.z != B.z, A.w != B.w);
+    return ((((float4(le) + float4(leq)) + float4(ge)) + float4(geq)) + float4(eq)) + float4(neq);
 }
 
 float test_scalar()

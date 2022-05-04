@@ -47,7 +47,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant UBO& _21 [[buffer(0)]]
         light.Radius = _21.lights[i].Radius;
         light.Color = _21.lights[i].Color;
         float3 L = in.aVertex.xyz - light.Position;
-        out.vColor += ((_21.lights[i].Color * fast::clamp(1.0 - (length(L) / light.Radius), 0.0, 1.0)) * dot(in.aNormal, normalize(L)));
+        out.vColor += ((_21.lights[i].Color * fast::clamp(1.0 - (length(L) / light.Radius), 0.0, 1.0)) * dot(in.aNormal, fast::normalize(L)));
     }
     return out;
 }

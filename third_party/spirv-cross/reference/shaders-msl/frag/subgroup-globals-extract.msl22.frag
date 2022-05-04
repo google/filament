@@ -5,11 +5,6 @@
 
 using namespace metal;
 
-struct main0_out
-{
-    uint2 FragColor [[color(0)]];
-};
-
 inline uint spvSubgroupBallotFindLSB(uint4 ballot, uint gl_SubgroupSize)
 {
     uint4 mask = uint4(extract_bits(0xFFFFFFFF, 0, min(gl_SubgroupSize, 32u)), extract_bits(0xFFFFFFFF, 0, (uint)max((int)gl_SubgroupSize - 32, 0)), uint2(0));
@@ -46,6 +41,11 @@ inline uint spvSubgroupBallotExclusiveBitCount(uint4 ballot, uint gl_SubgroupInv
     uint4 mask = uint4(extract_bits(0xFFFFFFFF, 0, min(gl_SubgroupInvocationID, 32u)), extract_bits(0xFFFFFFFF, 0, (uint)max((int)gl_SubgroupInvocationID - 32, 0)), uint2(0));
     return spvPopCount4(ballot & mask);
 }
+
+struct main0_out
+{
+    uint2 FragColor [[color(0)]];
+};
 
 static inline __attribute__((always_inline))
 uint sub1(thread uint& gl_SubgroupSize)

@@ -5,20 +5,6 @@
 
 using namespace metal;
 
-struct ResType
-{
-    half4 _m0;
-    int4 _m1;
-};
-
-struct main0_in
-{
-    half v1 [[user(locn0)]];
-    half2 v2 [[user(locn1)]];
-    half3 v3 [[user(locn2)]];
-    half4 v4 [[user(locn3)]];
-};
-
 // Implementation of the GLSL mod() function, which is slightly different than Metal fmod()
 template<typename Tx, typename Ty>
 inline Tx mod(Tx x, Ty y)
@@ -39,6 +25,20 @@ inline T degrees(T r)
 {
     return r * T(57.2957795131);
 }
+
+struct ResType
+{
+    half4 _m0;
+    int4 _m1;
+};
+
+struct main0_in
+{
+    half v1 [[user(locn0)]];
+    half2 v2 [[user(locn1)]];
+    half3 v3 [[user(locn2)]];
+    half4 v4 [[user(locn3)]];
+};
 
 static inline __attribute__((always_inline))
 half2x2 test_mat2(thread const half2& a, thread const half2& b, thread const half2& c, thread const half2& d)
@@ -77,7 +77,7 @@ void test_conversions()
     half one = test_result();
     int a = int(one);
     uint b = uint(one);
-    bool c = (isunordered(one, half(0.0)) || one != half(0.0));
+    bool c = one != half(0.0);
     float d = float(one);
     half a2 = half(a);
     half b2 = half(b);
@@ -94,11 +94,11 @@ void test_builtins(thread half4& v4, thread half3& v3, thread half& v1)
     res = cos(v4);
     res = tan(v4);
     res = asin(v4);
-    res = atan2(v4, v3.xyzz);
+    res = precise::atan2(v4, v3.xyzz);
     res = atan(v4);
-    res = sinh(v4);
-    res = cosh(v4);
-    res = tanh(v4);
+    res = fast::sinh(v4);
+    res = fast::cosh(v4);
+    res = precise::tanh(v4);
     res = asinh(v4);
     res = acosh(v4);
     res = atanh(v4);
@@ -143,7 +143,7 @@ void test_builtins(thread half4& v4, thread half3& v3, thread half& v1)
     t0 = distance(v4, v4);
     t0 = dot(v4, v4);
     half3 res3 = cross(v3, v3);
-    res = normalize(v4);
+    res = fast::normalize(v4);
     res = faceforward(v4, v4, v4);
     res = reflect(v4, v4);
     res = refract(v4, v4, v1);
@@ -152,7 +152,7 @@ void test_builtins(thread half4& v4, thread half3& v3, thread half& v1)
     btmp = v4 > v4;
     btmp = v4 >= v4;
     btmp = v4 == v4;
-    btmp = (isunordered(v4, v4) || v4 != v4);
+    btmp = v4 != v4;
     res = dfdx(v4);
     res = dfdy(v4);
     res = dfdx(v4);

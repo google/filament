@@ -1,0 +1,85 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google spiregg; 0
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+               OpExtension "SPV_GOOGLE_hlsl_functionality1"
+               OpExtension "SPV_GOOGLE_user_type"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %csMainClear "main" %gl_GlobalInvocationID
+               OpExecutionMode %csMainClear LocalSize 64 1 1
+               OpSource HLSL 600
+               OpName %type_CommonConstants "type.CommonConstants"
+               OpMemberName %type_CommonConstants 0 "g_count"
+               OpMemberName %type_CommonConstants 1 "g_padding4"
+               OpName %CommonConstants "CommonConstants"
+               OpName %type_RWStructuredBuffer_MyStruct "type.RWStructuredBuffer.MyStruct"
+               OpName %MyStruct "MyStruct"
+               OpMemberName %MyStruct 0 "m_coefficients"
+               OpName %g_data "g_data"
+               OpName %csMainClear "csMainClear"
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorateString %gl_GlobalInvocationID UserSemantic "SV_DispatchThreadID"
+               OpDecorate %CommonConstants DescriptorSet 0
+               OpDecorate %CommonConstants Binding 0
+               OpDecorate %g_data DescriptorSet 0
+               OpDecorate %g_data Binding 0
+               OpMemberDecorate %type_CommonConstants 0 Offset 0
+               OpMemberDecorate %type_CommonConstants 1 Offset 4
+               OpDecorate %type_CommonConstants Block
+               OpDecorateString %CommonConstants UserTypeGOOGLE "cbuffer"
+               OpDecorate %_arr_v4float_uint_4 ArrayStride 16
+               OpMemberDecorate %MyStruct 0 Offset 0
+               OpDecorate %_runtimearr_MyStruct ArrayStride 64
+               OpMemberDecorate %type_RWStructuredBuffer_MyStruct 0 Offset 0
+               OpDecorate %type_RWStructuredBuffer_MyStruct BufferBlock
+               OpDecorateString %g_data UserTypeGOOGLE "rwstructuredbuffer"
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+     %v3uint = OpTypeVector %uint 3
+%type_CommonConstants = OpTypeStruct %uint %v3uint
+%_ptr_Uniform_type_CommonConstants = OpTypePointer Uniform %type_CommonConstants
+%_arr_v4float_uint_4 = OpTypeArray %v4float %uint_4
+   %MyStruct = OpTypeStruct %_arr_v4float_uint_4
+%_runtimearr_MyStruct = OpTypeRuntimeArray %MyStruct
+%type_RWStructuredBuffer_MyStruct = OpTypeStruct %_runtimearr_MyStruct
+%_ptr_Uniform_type_RWStructuredBuffer_MyStruct = OpTypePointer Uniform %type_RWStructuredBuffer_MyStruct
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+       %void = OpTypeVoid
+         %21 = OpTypeFunction %void
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+       %bool = OpTypeBool
+%_ptr_Uniform_MyStruct = OpTypePointer Uniform %MyStruct
+%CommonConstants = OpVariable %_ptr_Uniform_type_CommonConstants Uniform
+     %g_data = OpVariable %_ptr_Uniform_type_RWStructuredBuffer_MyStruct Uniform
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+     %uint_0 = OpConstant %uint 0
+         %26 = OpConstantNull %v4float
+         %27 = OpConstantComposite %_arr_v4float_uint_4 %26 %26 %26 %26
+         %28 = OpConstantComposite %MyStruct %27
+%csMainClear = OpFunction %void None %21
+         %29 = OpLabel
+         %30 = OpLoad %v3uint %gl_GlobalInvocationID
+               OpSelectionMerge %31 None
+               OpSwitch %uint_0 %32
+         %32 = OpLabel
+         %33 = OpCompositeExtract %uint %30 0
+         %34 = OpAccessChain %_ptr_Uniform_uint %CommonConstants %int_0
+         %35 = OpLoad %uint %34
+         %36 = OpUGreaterThanEqual %bool %33 %35
+               OpSelectionMerge %37 DontFlatten
+               OpBranchConditional %36 %38 %37
+         %38 = OpLabel
+               OpBranch %31
+         %37 = OpLabel
+         %39 = OpAccessChain %_ptr_Uniform_MyStruct %g_data %int_0 %33
+               OpStore %39 %28
+               OpBranch %31
+         %31 = OpLabel
+               OpReturn
+               OpFunctionEnd

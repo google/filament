@@ -6,13 +6,21 @@ struct Bar
 
 struct V
 {
-    float a : TEXCOORD0;
-    float b[2] : TEXCOORD1;
-    Bar c[2] : TEXCOORD3;
-    Bar d : TEXCOORD9;
+    float a;
+    float b[2];
+    Bar c[2];
+    Bar d;
 };
 
 static V _14;
+
+struct SPIRV_Cross_Output
+{
+    float V_a : TEXCOORD0;
+    float V_b[2] : TEXCOORD1;
+    Bar V_c[2] : TEXCOORD3;
+    Bar V_d : TEXCOORD9;
+};
 
 void vert_main()
 {
@@ -30,8 +38,13 @@ void vert_main()
     _14.d.w = 12.0f;
 }
 
-void main(out V stage_output_14)
+SPIRV_Cross_Output main()
 {
     vert_main();
-    stage_output_14 = _14;
+    SPIRV_Cross_Output stage_output;
+    stage_output.V_a = _14.a;
+    stage_output.V_b = _14.b;
+    stage_output.V_c = _14.c;
+    stage_output.V_d = _14.d;
+    return stage_output;
 }

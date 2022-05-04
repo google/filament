@@ -5,30 +5,6 @@
 
 using namespace metal;
 
-struct UBO
-{
-    float4x4 uMVP;
-    float3 rotDeg;
-    float3 rotRad;
-    int2 bits;
-};
-
-struct main0_out
-{
-    float3 vNormal [[user(locn0)]];
-    float3 vRotDeg [[user(locn1)]];
-    float3 vRotRad [[user(locn2)]];
-    int2 vLSB [[user(locn3)]];
-    int2 vMSB [[user(locn4)]];
-    float4 gl_Position [[position]];
-};
-
-struct main0_in
-{
-    float4 aVertex [[attribute(0)]];
-    float3 aNormal [[attribute(1)]];
-};
-
 // Implementation of the GLSL radians() function
 template<typename T>
 inline T radians(T d)
@@ -107,6 +83,30 @@ float4x4 spvInverse4x4(float4x4 m)
     // If determinant is zero, matrix is not invertable, so leave it unchanged.
     return (det != 0.0f) ? (adj * (1.0f / det)) : m;
 }
+
+struct UBO
+{
+    float4x4 uMVP;
+    float3 rotDeg;
+    float3 rotRad;
+    int2 bits;
+};
+
+struct main0_out
+{
+    float3 vNormal [[user(locn0)]];
+    float3 vRotDeg [[user(locn1)]];
+    float3 vRotRad [[user(locn2)]];
+    int2 vLSB [[user(locn3)]];
+    int2 vMSB [[user(locn4)]];
+    float4 gl_Position [[position]];
+};
+
+struct main0_in
+{
+    float4 aVertex [[attribute(0)]];
+    float3 aNormal [[attribute(1)]];
+};
 
 vertex main0_out main0(main0_in in [[stage_in]], constant UBO& _18 [[buffer(0)]])
 {

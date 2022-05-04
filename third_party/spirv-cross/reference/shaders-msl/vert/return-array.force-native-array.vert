@@ -5,19 +5,6 @@
 
 using namespace metal;
 
-constant float4 _20[2] = { float4(10.0), float4(20.0) };
-
-struct main0_out
-{
-    float4 gl_Position [[position]];
-};
-
-struct main0_in
-{
-    float4 vInput0 [[attribute(0)]];
-    float4 vInput1 [[attribute(1)]];
-};
-
 template<typename T, uint A>
 inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
 {
@@ -125,6 +112,19 @@ inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device
         dst[i] = src[i];
     }
 }
+
+constant float4 _20[2] = { float4(10.0), float4(20.0) };
+
+struct main0_out
+{
+    float4 gl_Position [[position]];
+};
+
+struct main0_in
+{
+    float4 vInput0 [[attribute(0)]];
+    float4 vInput1 [[attribute(1)]];
+};
 
 static inline __attribute__((always_inline))
 void test(thread float4 (&spvReturnValue)[2])

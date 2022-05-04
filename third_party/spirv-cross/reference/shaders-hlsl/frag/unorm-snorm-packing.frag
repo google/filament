@@ -82,9 +82,11 @@ void frag_main()
     FP32Out = spvUnpackUnorm4x8(UNORM8);
     FP32Out = spvUnpackSnorm4x8(SNORM8);
     float2 _21 = spvUnpackUnorm2x16(UNORM16);
-    FP32Out = float4(_21.x, _21.y, FP32Out.z, FP32Out.w);
-    float2 _26 = spvUnpackSnorm2x16(SNORM16);
-    FP32Out = float4(_26.x, _26.y, FP32Out.z, FP32Out.w);
+    FP32Out.x = _21.x;
+    FP32Out.y = _21.y;
+    float2 _31 = spvUnpackSnorm2x16(SNORM16);
+    FP32Out.x = _31.x;
+    FP32Out.y = _31.y;
     UNORM8Out = spvPackUnorm4x8(FP32);
     SNORM8Out = spvPackSnorm4x8(FP32);
     UNORM16Out = spvPackUnorm2x16(FP32.xy);

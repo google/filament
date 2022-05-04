@@ -16,16 +16,16 @@ struct main0_out
 
 struct main0_in
 {
-    float4 VertexOut_color [[user(locn2)]];
-    float4 VertexOut_color2 [[user(locn3)]];
+    float4 inputs_color [[user(locn2)]];
+    float4 inputs_color2 [[user(locn3)]];
 };
 
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
     VertexOut inputs = {};
-    inputs.color = in.VertexOut_color;
-    inputs.color2 = in.VertexOut_color2;
+    inputs.color = in.inputs_color;
+    inputs.color2 = in.inputs_color2;
     out.FragColor = inputs.color + inputs.color2;
     return out;
 }

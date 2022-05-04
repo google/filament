@@ -1,0 +1,28 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float4 values[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 1u, 1u);
+
+static inline __attribute__((always_inline))
+void in_function(threadgroup short4 (&foo)[4], thread uint& gl_LocalInvocationIndex, device SSBO& v_23, thread uint3& gl_GlobalInvocationID)
+{
+    foo[gl_LocalInvocationIndex] = short4(v_23.values[gl_GlobalInvocationID.x] != float4(10.0));
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    v_23.values[gl_GlobalInvocationID.x] = select(float4(40.0), float4(30.0), bool4(foo[gl_LocalInvocationIndex ^ 3u]));
+}
+
+kernel void main0(device SSBO& v_23 [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    threadgroup short4 foo[4];
+    in_function(foo, gl_LocalInvocationIndex, v_23, gl_GlobalInvocationID);
+}
+
