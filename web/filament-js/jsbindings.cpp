@@ -58,7 +58,7 @@
 
 #include <geometry/SurfaceOrientation.h>
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
@@ -2006,14 +2006,14 @@ class_<JsonSerializer>("JsonSerializer")
     .constructor<>()
     .function("writeJson", &JsonSerializer::writeJson);
 
-class_<SimpleViewer>("SimpleViewer")
+class_<ViewerGui>("ViewerGui")
     .constructor<Engine*, Scene*, View*, int>()
-    .function("renderUserInterface", &SimpleViewer::renderUserInterface, allow_raw_pointers())
-    .function("getSettings", &SimpleViewer::getSettings)
-    .function("mouseEvent", &SimpleViewer::mouseEvent)
-    .function("keyDownEvent", &SimpleViewer::keyDownEvent)
-    .function("keyUpEvent", &SimpleViewer::keyUpEvent)
-    .function("keyPressEvent", &SimpleViewer::keyPressEvent);
+    .function("renderUserInterface", &ViewerGui::renderUserInterface, allow_raw_pointers())
+    .function("getSettings", &ViewerGui::getSettings)
+    .function("mouseEvent", &ViewerGui::mouseEvent)
+    .function("keyDownEvent", &ViewerGui::keyDownEvent)
+    .function("keyUpEvent", &ViewerGui::keyUpEvent)
+    .function("keyPressEvent", &ViewerGui::keyPressEvent);
 
 function("fitIntoUnitCube", EMBIND_LAMBDA(flatmat4, (Aabb box, float zoffset), {
     return flatmat4 { fitIntoUnitCube(box, zoffset) };

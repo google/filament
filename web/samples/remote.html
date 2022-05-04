@@ -261,7 +261,7 @@ class App {
         this.renderer.setClearOptions({clearColor: kBackgroundColor, clear: true});
 
         this.render = this.render.bind(this);
-        this.simpleViewer = new Filament.SimpleViewer(engine, scene, view, kInitialSidebarWidth);
+        this.simpleViewer = new Filament.ViewerGui(engine, scene, view, kInitialSidebarWidth);
 
         this.mouseX = -1;
         this.mouseY = -1;

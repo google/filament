@@ -12,7 +12,7 @@ set(PUBLIC_HDRS
         include/viewer/AutomationSpec.h
         include/viewer/RemoteServer.h
         include/viewer/Settings.h
-        include/viewer/SimpleViewer.h
+        include/viewer/ViewerGui.h
 )
 
 set(SRCS
@@ -21,7 +21,7 @@ set(SRCS
         src/AutomationSpec.cpp
         src/RemoteServer.cpp
         src/Settings.cpp
-        src/SimpleViewer.cpp
+        src/ViewerGui.cpp
 )
 
 # ==================================================================================================

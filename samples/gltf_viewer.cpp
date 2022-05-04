@@ -37,7 +37,7 @@
 
 #include <viewer/AutomationEngine.h>
 #include <viewer/AutomationSpec.h>
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <camutils/Manipulator.h>
 
@@ -73,7 +73,7 @@ enum MaterialSource {
 
 struct App {
     Engine* engine;
-    SimpleViewer* viewer;
+    ViewerGui* viewer;
     Config config;
     Camera* mainCamera;
 
@@ -444,7 +444,7 @@ int main(int argc, char** argv) {
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new SimpleViewer(engine, scene, view, 410);
+        app.viewer = new ViewerGui(engine, scene, view, 410);
         app.viewer->getSettings().viewer.autoScaleEnabled = !app.actualSize;
 
         const bool batchMode = !app.batchFile.empty();
