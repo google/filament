@@ -1017,6 +1017,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                         bloomOptions, vignetteOptions);
                 // the padded buffer is resolved now
                 xvp.left = xvp.bottom = 0;
+                svp = xvp;
             }
         }
 
@@ -1025,6 +1026,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     !hasColorGrading || needsAlphaChannel);
             // the padded buffer is resolved now
             xvp.left = xvp.bottom = 0;
+            svp = xvp;
         }
         if (scaled) {
             mightNeedFinalBlit = false;
@@ -1038,6 +1040,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                         .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat });
             }
+            xvp.left = xvp.bottom = 0;
+            svp = xvp;
         }
     }
 
