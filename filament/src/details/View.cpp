@@ -953,6 +953,10 @@ void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions optio
     mScreenSpaceReflectionsOptions = options;
 }
 
+void FView::setGuardBandOptions(GuardBandOptions options) noexcept {
+    mGuardBandOptions = options;
+}
+
 void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
     options.radius = math::max(0.0f, options.radius);
     options.power = std::max(0.0f, options.power);

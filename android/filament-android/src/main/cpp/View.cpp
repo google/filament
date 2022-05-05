@@ -461,3 +461,11 @@ Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass,
         JniCallback::postToJavaAndDestroy(callback);
     }, callback->getHandler());
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetGuardBandOptions(JNIEnv *, jclass,
+        jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setGuardBandOptions({ .enabled = (bool)enabled });
+}

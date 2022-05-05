@@ -123,6 +123,14 @@ const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOption
     return upcast(this)->getScreenSpaceReflectionsOptions();
 }
 
+void View::setGuardBandOptions(GuardBandOptions options) noexcept {
+    upcast(this)->setGuardBandOptions(options);
+}
+
+GuardBandOptions const& View::getGuardBandOptions() const noexcept {
+    return upcast(this)->getGuardBandOptions();
+}
+
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
     return upcast(this)->setColorGrading(upcast(colorGrading));
 }

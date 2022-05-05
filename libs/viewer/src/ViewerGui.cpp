@@ -757,6 +757,8 @@ void ViewerGui::updateUserInterface() {
             ImGui::SliderFloat("Stride", &ssrefl.stride, 1.0, 10.0f);
         }
         ImGui::Unindent();
+
+        ImGui::Checkbox("Screen-space Guard Band", &mSettings.view.guardBand.enabled);
     }
 
     if (ImGui::CollapsingHeader("Dynamic Resolution")) {

@@ -447,6 +447,9 @@ value_object<filament::View::VignetteOptions>("View$VignetteOptions")
     .field("color", &filament::View::VignetteOptions::color)
     .field("enabled", &filament::View::VignetteOptions::enabled);
 
+value_object<filament::View::GuardBandOptions>("View$GuardBandOptions")
+    .field("enabled", &filament::View::GuardBandOptions::enabled);
+
 value_object<LightManager::ShadowOptions>("LightManager$ShadowOptions")
     .field("mapSize", &LightManager::ShadowOptions::mapSize)
     .field("shadowCascades", &LightManager::ShadowOptions::shadowCascades)
@@ -707,6 +710,7 @@ class_<View>("View")
     .function("_setBloomOptions", &View::setBloomOptions)
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
+    .function("_setGuardBandOptions", &View::setGuardBandOptions)
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)
     .function("setAntiAliasing", &View::setAntiAliasing)

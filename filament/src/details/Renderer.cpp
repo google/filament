@@ -66,8 +66,6 @@ FRenderer::FRenderer(FEngine& engine) :
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
-    debugRegistry.registerProperty("d.ssao.enabled",
-            &engine.debug.ssao.enabled);
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
             &engine.debug.renderer.doFrameCapture);
 
@@ -476,6 +474,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto vignetteOptions = view.getVignetteOptions();
     auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
+    auto guardBandOptions = view.getGuardBandOptions();
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
@@ -538,11 +537,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     CameraInfo cameraInfo = view.computeCameraInfo(engine);
 
     // when colorgrading-as-subpass is active, we know that many other effects are disabled
-    // such as dof, bloom. Moreover if fxaa and scaling are not enabled, we're essentially in
+    // such as dof, bloom. Moreover, if fxaa and scaling are not enabled, we're essentially in
     // a very fast rendering path -- in this case, we would need an extra blit to "resolve" the
     // buffer padding (because there are no other pass that can do it as a side effect).
     // In this case, it is better to skip the padding, which won't be helping much.
     const bool noBufferPadding = colorGradingConfig.asSubpass && !hasFXAA && !scaled;
+
+    // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
+    float guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
 
     if (hasPostProcess && !noBufferPadding) {
         // We always pad the rendering viewport to dimensions multiple of 16, this guarantees
@@ -558,10 +560,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         //       Without post-processing, we usually draw directly into
         //       the SwapChain, and we might want to keep it this way.
 
+        auto round = [](uint32_t x) {
+            constexpr uint32_t rounding = 16u;
+            return (x + (rounding - 1u)) & ~(rounding - 1u);
+        };
+
         // compute the new rendering width and height, multiple of 16.
-        constexpr uint32_t rounding = 16u;
-        const float width  = float( (svp.width  + (rounding - 1u)) & ~(rounding - 1u) );
-        const float height = float( (svp.height + (rounding - 1u)) & ~(rounding - 1u) );
+        const float width  = float(round(svp.width )) + 2.0f * guardBand;
+        const float height = float(round(svp.height)) + 2.0f * guardBand;
 
         // scale the field-of-view up, so it covers exactly the extra pixels
         const float3 clipSpaceScaling{
@@ -576,8 +582,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // note: this creates an asymmetric frustum -- but we eventually copy only the
         // left/bottom part, which is a symmetric region.
         const float2 clipSpaceTranslation{
-                1.0f - clipSpaceScaling.x,
-                1.0f - clipSpaceScaling.y
+                1.0f - clipSpaceScaling.x - 2.0f * guardBand / width,
+                1.0f - clipSpaceScaling.y - 2.0f * guardBand / height
         };
 
         mat4f ts = mat4f::scaling(clipSpaceScaling);
@@ -589,6 +595,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // adjust svp to the new, larger, rendering dimensions
         svp.width  = uint32_t(width);
         svp.height = uint32_t(height);
+        xvp.left   = int32_t(guardBand);
+        xvp.bottom = int32_t(guardBand);
     }
 
     view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);

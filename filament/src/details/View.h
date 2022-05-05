@@ -232,6 +232,12 @@ public:
         return mScreenSpaceReflectionsOptions;
     }
 
+    void setGuardBandOptions(GuardBandOptions options) noexcept;
+
+    GuardBandOptions const& getGuardBandOptions() const noexcept {
+        return mGuardBandOptions;
+    }
+
     void setColorGrading(FColorGrading* colorGrading) noexcept {
         mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
     }
@@ -494,6 +500,7 @@ private:
     TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
+    GuardBandOptions mGuardBandOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
