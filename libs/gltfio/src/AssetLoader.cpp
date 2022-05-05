@@ -322,8 +322,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     // Sort the entities so that the renderable ones come first. This allows us to expose
     // a "renderables only" pointer without storing a separate list.
     const auto& rm = mEngine->getRenderableManager();
-    std::sort(mResult->mEntities.begin(), mResult->mEntities.end(),
-            [&rm](const Entity& a, const Entity& b) {
+    std::partition(mResult->mEntities.begin(), mResult->mEntities.end(), [&rm](Entity a) {
         return rm.hasComponent(a);
     });
 
