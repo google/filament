@@ -197,6 +197,10 @@ void FSkybox::setCheckerboardGrays(math::float2 grays) noexcept {
     mSkyboxMaterialInstance->setParameter("checkerboardGrays", grays);
 }
 
+void FSkybox::setPriority(uint8_t priority) noexcept {
+    mRenderableManager.setPriority(mRenderableManager.getInstance(mSkybox), priority);
+}
+
 void FSkybox::commit(backend::DriverApi& driver) noexcept {
     mSkyboxMaterialInstance->commit(driver);
 }
@@ -243,6 +247,10 @@ void Skybox::setCheckerboardGrays(math::float2 grays) noexcept {
 
 Texture const* Skybox::getTexture() const noexcept {
     return upcast(this)->getTexture();
+}
+
+void Skybox::setPriority(uint8_t priority) noexcept {
+    upcast(this)->setPriority(priority);
 }
 
 } // namespace filament

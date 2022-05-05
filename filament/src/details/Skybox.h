@@ -62,6 +62,8 @@ public:
 
     void setCheckerboardGrays(math::float2 grays) noexcept;
 
+    void setPriority(uint8_t priority) noexcept;
+
     // commits UBOs
     void commit(backend::DriverApi& driver) noexcept;
 

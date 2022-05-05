@@ -230,6 +230,11 @@ public:
      * @return the associated texture, or null if it does not exist
      */
     Texture const* getTexture() const noexcept;
+
+    /**
+     * Changes the coarse-level draw ordering.
+     */
+    void setPriority(uint8_t priority) noexcept;
 };
 
 } // namespace filament
