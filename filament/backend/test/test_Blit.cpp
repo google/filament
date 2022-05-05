@@ -866,4 +866,157 @@ TEST_F(BackendTest, Blit2DTextureArray) {
     api.stopCapture(0);
 }
 
+TEST_F(BackendTest, BlitRegion) {
+    auto& api = getDriverApi();
+
+    constexpr int kSrcTexWidth = 1024;
+    constexpr int kSrcTexHeight = 1024;
+    constexpr auto kSrcTexFormat = TextureFormat::RGBA8;
+    constexpr int kDstTexWidth = 384;
+    constexpr int kDstTexHeight = 384;
+    constexpr auto kDstTexFormat = TextureFormat::RGBA8;
+    constexpr int kNumLevels = 3;
+
+    // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
+    auto swapChain = api.createSwapChainHeadless(256, 256, 0);
+    api.makeCurrent(swapChain, swapChain);
+
+    // Create a source texture.
+    Handle<HwTexture> srcTexture = api.createTexture(
+        SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+        TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
+    const bool flipY = sBackend == Backend::OPENGL;
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
+
+    // Create a destination texture.
+    Handle<HwTexture> dstTexture = api.createTexture(
+        SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
+        TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
+
+    // Create a RenderTarget for each texture's miplevel.
+    Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
+    Handle<HwRenderTarget> dstRenderTargets[kNumLevels];
+    for (uint8_t level = 0; level < kNumLevels; level++) {
+        srcRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, { srcTexture, level, 0 }, {}, {});
+        dstRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
+                kDstTexWidth >> level, kDstTexHeight >> level, 1, { dstTexture, level, 0 }, {}, {});
+    }
+
+    // Blit one-quarter of src level 1 to dst level 0.
+    const int srcLevel = 1;
+    Viewport srcRect = {
+        .left = (kSrcTexWidth >> srcLevel) / 2,
+        .bottom = (kSrcTexHeight >> srcLevel) / 2,
+        .width = (kSrcTexWidth >> srcLevel) / 2,
+        .height = (kSrcTexHeight >> srcLevel) / 2,
+    };
+    Viewport dstRect = {
+        .left = 10,
+        .bottom = 10,
+        .width = kDstTexWidth - 10,
+        .height = kDstTexHeight - 10,
+    };
+
+    api.blit(TargetBufferFlags::COLOR0, dstRenderTargets[0],
+            dstRect, srcRenderTargets[srcLevel],
+            srcRect, SamplerMagFilter::LINEAR);
+
+    // Push through an empty frame to allow the texture to upload and the blit to execute.
+    api.beginFrame(0, 0);
+    api.commit(swapChain);
+    api.endFrame(0);
+
+    // Grab a screenshot.
+    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegion.png" };
+    api.beginFrame(0, 0);
+    dumpScreenshot(api, dstRenderTargets[0], &params);
+    api.commit(swapChain);
+    api.endFrame(0);
+
+    // Wait for the ReadPixels result to come back.
+    api.finish();
+    executeCommands();
+    getDriver().purge();
+
+    // Cleanup.
+    api.destroyTexture(srcTexture);
+    api.destroyTexture(dstTexture);
+    api.destroySwapChain(swapChain);
+    for (auto rt : srcRenderTargets)  api.destroyRenderTarget(rt);
+    for (auto rt : dstRenderTargets)  api.destroyRenderTarget(rt);
+    executeCommands();
+}
+
+TEST_F(BackendTest, BlitRegionToSwapChain) {
+    auto& api = getDriverApi();
+
+    constexpr int kSrcTexWidth = 1024;
+    constexpr int kSrcTexHeight = 1024;
+    constexpr auto kSrcTexFormat = TextureFormat::RGBA8;
+    constexpr int kDstTexWidth = 512;
+    constexpr int kDstTexHeight = 512;
+    constexpr int kNumLevels = 3;
+
+    // Create a SwapChain and make it current.
+    auto swapChain = createSwapChain();
+    Handle<HwRenderTarget> dstRenderTarget = api.createDefaultRenderTarget();
+    api.makeCurrent(swapChain, swapChain);
+
+    // Create a source texture.
+    Handle<HwTexture> srcTexture = api.createTexture(
+        SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+        TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
+    const bool flipY = sBackend == Backend::OPENGL;
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
+    createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
+
+    // Create a RenderTarget for each texture's miplevel.
+    Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
+    for (uint8_t level = 0; level < kNumLevels; level++) {
+        srcRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, { srcTexture, level, 0 }, {}, {});
+    }
+
+    // Blit one-quarter of src level 1 to dst level 0.
+    const int srcLevel = 1;
+    Viewport srcRect = {
+        .left = (kSrcTexWidth >> srcLevel) / 2,
+        .bottom = (kSrcTexHeight >> srcLevel) / 2,
+        .width = (kSrcTexWidth >> srcLevel) / 2,
+        .height = (kSrcTexHeight >> srcLevel) / 2,
+    };
+    Viewport dstRect = {
+        .left = 10,
+        .bottom = 10,
+        .width = kDstTexWidth - 10,
+        .height = kDstTexHeight - 10,
+    };
+
+    api.beginFrame(0, 0);
+
+    api.blit(TargetBufferFlags::COLOR0, dstRenderTarget,
+            dstRect, srcRenderTargets[srcLevel],
+            srcRect, SamplerMagFilter::LINEAR);
+
+    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain.png" };
+    dumpScreenshot(api, dstRenderTarget, &params);
+
+    api.commit(swapChain);
+
+    api.endFrame(0);
+
+    // Wait for the ReadPixels result to come back.
+    api.finish();
+    executeCommands();
+    getDriver().purge();
+
+    // Cleanup.
+    api.destroyTexture(srcTexture);
+    api.destroySwapChain(swapChain);
+    for (auto rt : srcRenderTargets)  api.destroyRenderTarget(rt);
+    executeCommands();
+}
+
 } // namespace test
