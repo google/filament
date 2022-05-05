@@ -35,10 +35,8 @@ using std::vector;
 
 static const bool VERBOSE = false;
 
-namespace filament {
-namespace viewer {
+namespace filament::viewer {
 
-// The default spec generates 66 test cases.
 static const char* DEFAULT_AUTOMATION = R"TXT([
     {
         "name": "ppoff",
@@ -63,7 +61,8 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
             "view.ssao.enabled": [false, true],
             "view.screenSpaceReflections.enabled": [false, true]
             "view.bloom.enabled": [false, true],
-            "view.dof.enabled": [false, true]
+            "view.dof.enabled": [false, true],
+            "view.guardBand.enabled": [false, true]
         }
     }
 ]
@@ -335,5 +334,4 @@ size_t AutomationSpec::size() const { return mImpl->cases.size(); }
 AutomationSpec::AutomationSpec(Impl* impl) : mImpl(impl) {}
 AutomationSpec::~AutomationSpec() { delete mImpl; }
 
-} // namespace viewer
-} // namespace filament
+} // namespace filament::viewer

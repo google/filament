@@ -403,6 +403,17 @@ Filament.loadClassExtensions = function() {
         this._setVignetteOptions(options);
     };
 
+    /// setGuardBandOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// enabled.
+    Filament.View.prototype.setGuardBandOptions = function(overrides) {
+        const options = {
+            enabled: false
+        };
+        Object.assign(options, overrides);
+        this._setGuardBandOptions(options);
+    };
+
     /// BufferObject ::core class::
 
     /// setBuffer ::method::

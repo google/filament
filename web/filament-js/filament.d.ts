@@ -152,6 +152,10 @@ export interface View$VignetteOptions {
     enabled?: boolean;
 }
 
+export interface View$GuardBandOptions {
+    enabled?: boolean;
+}
+
 export function fitIntoUnitCube(box: Aabb): mat4;
 export function multiplyMatrices(a: mat4, b: mat4): mat4;
 
@@ -532,6 +536,7 @@ export class View {
     public setScreenSpaceReflectionsOptions(options: View$ScreenSpaceReflectionsOptions): void;
     public setFogOptions(options: View$FogOptions): void;
     public setVignetteOptions(options: View$VignetteOptions): void;
+    public setGuardBandOptions(options: View$GuardBandOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
     public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;
