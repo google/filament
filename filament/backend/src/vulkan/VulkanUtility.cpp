@@ -546,6 +546,7 @@ void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition tra
     if (transition.oldLayout == transition.newLayout) {
         return;
     }
+    assert_invariant(transition.image != nullptr && "Please call bindToSwapChain.");
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = transition.oldLayout;
