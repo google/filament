@@ -404,6 +404,7 @@ void ViewerGui::setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnim
             return;
         }
         mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
+        assert_invariant(mAnimator && "Call loadResources or asyncBeginLoad before setAsset.");
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
     }
