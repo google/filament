@@ -505,9 +505,9 @@ int main(int argc, char** argv) {
         } else {
             loadAsset(filename);
         }
-        app.viewer->setAsset(app.asset);
 
         loadResources(filename);
+        app.viewer->setAsset(app.asset);
 
         createGroundPlane(engine, scene, app);
 
@@ -767,6 +767,7 @@ int main(int argc, char** argv) {
         app.assetLoader->destroyAsset(app.asset);
         loadAsset(path);
         loadResources(path);
+        app.viewer->setAsset(app.asset);
     });
 
     filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);
