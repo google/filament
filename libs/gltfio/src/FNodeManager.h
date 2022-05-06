@@ -24,7 +24,6 @@
 #include <utils/compiler.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Entity.h>
-#include <utils/Log.h>
 #include <utils/Slice.h>
 
 namespace gltfio {
@@ -39,19 +38,7 @@ public:
         assert_invariant(mManager.getComponentCount() == 0);
     }
 
-    void terminate() noexcept {
-        auto& manager = mManager;
-        if (!manager.empty()) {
-    #ifndef NDEBUG
-            utils::slog.d << "cleaning up " << manager.getComponentCount()
-                << " leaked node components" << utils::io::endl;
-    #endif
-            while (!manager.empty()) {
-                Instance ci = manager.end() - 1;
-                manager.removeComponent(manager.getEntity(ci));
-            }
-        }
-    }
+    void terminate() noexcept;
 
     bool hasComponent(utils::Entity e) const noexcept {
         return mManager.hasComponent(e);
@@ -79,7 +66,7 @@ public:
         mManager.gc(em);
     }
 
-    void setMorphTargetNames(Instance ci, utils::FixedCapacityVector<CString>&& names) noexcept {
+    void setMorphTargetNames(Instance ci, utils::FixedCapacityVector<CString> names) noexcept {
         assert_invariant(ci.isValid());
         mManager[ci].morphTargetNames = std::move(names);
     }
@@ -88,7 +75,7 @@ public:
         return mManager[ci].morphTargetNames;
     }
 
-    void setExtras(Instance ci, CString&& extras) noexcept {
+    void setExtras(Instance ci, CString extras) noexcept {
         mManager[ci].extras = std::move(extras);
     }
 

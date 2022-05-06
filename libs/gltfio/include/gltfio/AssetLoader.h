@@ -229,9 +229,9 @@ public:
 
     utils::NameComponentManager* getNames() const noexcept;
 
-    NodeManager* getNodeManager() const noexcept;
+    NodeManager& getNodeManager() noexcept;
 
-    MaterialProvider* getMaterialProvider() const noexcept;
+    MaterialProvider& getMaterialProvider() noexcept;
 
     /*! \cond PRIVATE */
 protected:

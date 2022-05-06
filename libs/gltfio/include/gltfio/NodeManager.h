@@ -81,10 +81,10 @@ public:
      */
     void destroy(Entity e) noexcept;
 
-    void setMorphTargetNames(Instance ci, utils::FixedCapacityVector<CString>&& names) noexcept;
+    void setMorphTargetNames(Instance ci, utils::FixedCapacityVector<CString> names) noexcept;
     const utils::FixedCapacityVector<CString>& getMorphTargetNames(Instance ci) const noexcept;
 
-    void setExtras(Instance ci, CString&& extras) noexcept;
+    void setExtras(Instance ci, CString extras) noexcept;
     const CString& getExtras(Instance ci) const noexcept;
 
     void setSceneMembership(Instance ci, utils::bitset32 scenes) noexcept;

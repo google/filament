@@ -16,6 +16,8 @@
 
 #include "FNodeManager.h"
 
+#include <utils/Log.h>
+
 #include "upcast.h"
 
 using namespace utils;
@@ -23,6 +25,20 @@ using namespace utils;
 namespace gltfio {
 
 using Instance = NodeManager::Instance;
+
+void FNodeManager::terminate() noexcept {
+    auto& manager = mManager;
+    if (!manager.empty()) {
+#ifndef NDEBUG
+        utils::slog.d << "cleaning up " << manager.getComponentCount()
+            << " leaked node components" << utils::io::endl;
+#endif
+        while (!manager.empty()) {
+            Instance ci = manager.end() - 1;
+            manager.removeComponent(manager.getEntity(ci));
+        }
+    }
+}
 
 bool NodeManager::hasComponent(Entity e) const noexcept {
     return upcast(this)->hasComponent(e);
@@ -40,7 +56,7 @@ void NodeManager::destroy(Entity e) noexcept {
     upcast(this)->destroy(e);
 }
 
-void NodeManager::setMorphTargetNames(Instance ci, FixedCapacityVector<CString>&& names) noexcept {
+void NodeManager::setMorphTargetNames(Instance ci, FixedCapacityVector<CString> names) noexcept {
     upcast(this)->setMorphTargetNames(ci, std::move(names));
 }
 
@@ -48,7 +64,7 @@ const FixedCapacityVector<CString>& NodeManager::getMorphTargetNames(Instance ci
     return upcast(this)->getMorphTargetNames(ci);
 }
 
-void NodeManager::setExtras(Instance ci, CString&& extras) noexcept {
+void NodeManager::setExtras(Instance ci, CString extras) noexcept {
     return upcast(this)->setExtras(ci, std::move(extras));
 }
 

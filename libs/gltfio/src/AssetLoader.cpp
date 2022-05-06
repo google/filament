@@ -94,14 +94,9 @@ struct FAssetLoader : public AssetLoader {
             mRenderableManager(config.engine->getRenderableManager()),
             mNameManager(config.names),
             mTransformManager(config.engine->getTransformManager()),
-            mMaterials(config.materials),
-            mEngine(config.engine),
-            mNodeManager(new FNodeManager()),
+            mMaterials(*config.materials),
+            mEngine(*config.engine),
             mDefaultNodeName(config.defaultNodeName) {}
-
-    ~FAssetLoader() {
-        delete mNodeManager;
-    }
 
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
@@ -119,19 +114,19 @@ struct FAssetLoader : public AssetLoader {
     }
 
     size_t getMaterialsCount() const noexcept {
-        return mMaterials->getMaterialsCount();
+        return mMaterials.getMaterialsCount();
     }
 
     NameComponentManager* getNames() const noexcept {
         return mNameManager;
     }
 
-    NodeManager* getNodeManager() const noexcept {
+    NodeManager& getNodeManager() noexcept {
         return mNodeManager;
     }
 
     const Material* const* getMaterials() const noexcept {
-        return mMaterials->getMaterials();
+        return mMaterials.getMaterials();
     }
 
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
@@ -159,9 +154,9 @@ struct FAssetLoader : public AssetLoader {
     RenderableManager& mRenderableManager;
     NameComponentManager* const mNameManager;
     TransformManager& mTransformManager;
-    MaterialProvider* const mMaterials;
-    Engine* const mEngine;
-    FNodeManager* const mNodeManager;
+    MaterialProvider& mMaterials;
+    Engine& mEngine;
+    FNodeManager mNodeManager;
 
     // Transient state used only for the asset currently being loaded:
     FFilamentAsset* mResult;
@@ -281,7 +276,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
     #endif
 
-    mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager, mNodeManager, srcAsset);
+    mResult = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager, srcAsset);
     mDummyBufferObject = nullptr;
 
     // If there is no default scene specified, then the default is the first one.
@@ -332,7 +327,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
 
     // Sort the entities so that the renderable ones come first. This allows us to expose
     // a "renderables only" pointer without storing a separate list.
-    const auto& rm = mEngine->getRenderableManager();
+    const auto& rm = mEngine.getRenderableManager();
     std::partition(mResult->mEntities.begin(), mResult->mEntities.end(), [&rm](Entity a) {
         return rm.hasComponent(a);
     });
@@ -394,7 +389,7 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
 void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* node, Entity parent,
         bool enableLight, FFilamentInstance* instance) {
     Entity entity = mEntityManager.create();
-    mNodeManager->create(entity);
+    mNodeManager.create(entity);
 
     // Always create a transform component to reflect the original hierarchy.
     mat4f localTransform;
@@ -414,8 +409,8 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
     const cgltf_size extras_size = node->extras.end_offset - node->extras.start_offset;
     if (extras_size > 0) {
         const cgltf_data* srcAsset = mResult->mSourceAsset->hierarchy;
-        CString extras(srcAsset->json + node->extras.start_offset, extras_size);
-        mNodeManager->setExtras(mNodeManager->getInstance(entity), std::move(extras));
+        mNodeManager.setExtras(mNodeManager.getInstance(entity),
+                {srcAsset->json + node->extras.start_offset, extras_size});
     }
 
     // Update the asset's entity list and private node mapping.
@@ -541,7 +536,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
         morphTargetNames[i] = CString(mesh->target_names[i]);
     }
-    mNodeManager->setMorphTargetNames(mNodeManager->getInstance(entity),
+    mNodeManager.setMorphTargetNames(mNodeManager.getInstance(entity),
             std::move(morphTargetNames));
 
     const Aabb transformed = aabb.transform(worldTransform);
@@ -568,7 +563,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         .culling(true)
         .castShadows(true)
         .receiveShadows(true)
-        .build(*mEngine, entity);
+        .build(mEngine, entity);
 
     // According to the spec, the mesh may or may not specify default weights, regardless of whether
     // it actually has morph targets. If it has morphing enabled then the default weights are 0. If
@@ -642,7 +637,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         indices = IndexBuffer::Builder()
             .indexCount(accessor->count)
             .bufferType(indexType)
-            .build(*mEngine);
+            .build(mEngine);
 
         BufferSlot slot = { accessor };
         slot.indexBuffer = indices;
@@ -654,7 +649,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         indices = IndexBuffer::Builder()
             .indexCount(vertexCount)
             .bufferType(IndexBuffer::IndexType::UINT)
-            .build(*mEngine);
+            .build(mEngine);
 
         const size_t indexDataSize = vertexCount * sizeof(uint32_t);
         uint32_t* indexData = (uint32_t*) malloc(indexDataSize);
@@ -662,7 +657,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             indexData[i] = i;
         }
         IndexBuffer::BufferDescriptor bd(indexData, indexDataSize, FREE_CALLBACK);
-        indices->setBuffer(*mEngine, std::move(bd));
+        indices->setBuffer(mEngine, std::move(bd));
     }
     mResult->mIndexBuffers.push_back(indices);
 
@@ -834,21 +829,21 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     // the sizes match.
     bool needsDummyData = false;
 
-    if (mMaterials->needsDummyData(VertexAttribute::UV0) && !hasUv0) {
+    if (mMaterials.needsDummyData(VertexAttribute::UV0) && !hasUv0) {
         needsDummyData = true;
         hasUv0 = true;
         vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
         vbb.normalized(VertexAttribute::UV0);
     }
 
-    if (mMaterials->needsDummyData(VertexAttribute::UV1) && !hasUv1) {
+    if (mMaterials.needsDummyData(VertexAttribute::UV1) && !hasUv1) {
         hasUv1 = true;
         needsDummyData = true;
         vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
         vbb.normalized(VertexAttribute::UV1);
     }
 
-    if (mMaterials->needsDummyData(VertexAttribute::COLOR) && !hasVertexColor) {
+    if (mMaterials.needsDummyData(VertexAttribute::COLOR) && !hasVertexColor) {
         needsDummyData = true;
         vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
         vbb.normalized(VertexAttribute::COLOR);
@@ -871,7 +866,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     vbb.bufferCount(needsDummyData ? slot + 1 : slot);
 
-    VertexBuffer* vertices = vbb.build(*mEngine);
+    VertexBuffer* vertices = vbb.build(mEngine);
 
     outPrim->indices = indices;
     outPrim->vertices = vertices;
@@ -886,7 +881,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         MorphTargetBuffer* targets = MorphTargetBuffer::Builder()
                 .vertexCount(vertexCount)
                 .count(targetsCount)
-                .build(*mEngine);
+                .build(mEngine);
         outPrim->targets = targets;
         mResult->mMorphTargetBuffers.push_back(targets);
         const cgltf_accessor* previous = nullptr;
@@ -914,14 +909,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     if (needsDummyData) {
         const uint32_t requiredSize = sizeof(ubyte4) * vertexCount;
         if (mDummyBufferObject == nullptr || requiredSize > mDummyBufferObject->getByteCount()) {
-            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(*mEngine);
+            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
             mResult->mBufferObjects.push_back(mDummyBufferObject);
             uint32_t* dummyData = (uint32_t*) malloc(requiredSize);
             memset(dummyData, 0xff, requiredSize);
             VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
-            mDummyBufferObject->setBuffer(*mEngine, std::move(bd));
+            mDummyBufferObject->setBuffer(mEngine, std::move(bd));
         }
-        vertices->setBufferObjectAt(*mEngine, slot, mDummyBufferObject);
+        vertices->setBufferObjectAt(mEngine, slot, mDummyBufferObject);
     }
 
     return true;
@@ -959,12 +954,12 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
         builder.falloff(light->range);
     }
 
-    builder.build(*mEngine, entity);
+    builder.build(mEngine, entity);
     mResult->mLightEntities.push_back(entity);
 }
 
 void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
-    Camera* filamentCamera = mEngine->createCamera(entity);
+    Camera* filamentCamera = mEngine.createCamera(entity);
 
     if (camera->type == cgltf_camera_type_perspective) {
         auto& projection = camera->data.perspective;
@@ -1127,7 +1122,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
     // This not only creates a material instance, it modifies the material key according to our
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
-    MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name,
+    MaterialInstance* mi = mMaterials.createMaterialInstance(&matkey, uvmap, inputMat->name,
             extras.c_str());
     if (!mi) {
         slog.e << "No material with the specified requirements exists." << io::endl;
@@ -1432,7 +1427,7 @@ const Material* const* AssetLoader::getMaterials() const noexcept {
     return upcast(this)->getMaterials();
 }
 
-MaterialProvider* AssetLoader::getMaterialProvider() const noexcept {
+MaterialProvider& AssetLoader::getMaterialProvider() noexcept {
     return upcast(this)->mMaterials;
 }
 
