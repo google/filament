@@ -42,7 +42,7 @@ class FilamentInstance;
  *
  * This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
  * a filament::TransformManager component, and some entities also have \c Name, \c Renderable,
- * \c Light, or \c Camera components.
+ * \c Light, \c Camera, or \c Node components.
  *
  * In addition to the aforementioned entities, an asset has strong ownership over a list of
  * filament::VertexBuffer, filament::IndexBuffer, filament::MaterialInstance, filament::Texture,

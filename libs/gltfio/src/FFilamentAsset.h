@@ -18,6 +18,7 @@
 #define GLTFIO_FFILAMENTASSET_H
 
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/NodeManager.h>
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -116,8 +117,10 @@ using MatInstanceCache = tsl::robin_map<intptr_t, MaterialEntry>;
 
 struct FFilamentAsset : public FilamentAsset {
     FFilamentAsset(filament::Engine* engine, utils::NameComponentManager* names,
-            utils::EntityManager* entityManager, const cgltf_data* srcAsset) :
-            mEngine(engine), mNameManager(names), mEntityManager(entityManager) {
+            utils::EntityManager* entityManager, NodeManager* nodeManager,
+            const cgltf_data* srcAsset) :
+            mEngine(engine), mNameManager(names), mEntityManager(entityManager),
+            mNodeManager(nodeManager) {
         mSourceAsset.reset(new SourceAsset {(cgltf_data*)srcAsset});
     }
 
@@ -255,9 +258,10 @@ struct FFilamentAsset : public FilamentAsset {
 
     void createAnimators();
 
-    filament::Engine* mEngine;
-    utils::NameComponentManager* mNameManager;
-    utils::EntityManager* mEntityManager;
+    filament::Engine* const mEngine;
+    utils::NameComponentManager* const mNameManager;
+    utils::EntityManager* const mEntityManager;
+    NodeManager* const mNodeManager;
     std::vector<utils::Entity> mEntities; // sorted such that renderables come first
     std::vector<utils::Entity> mLightEntities;
     std::vector<utils::Entity> mCameraEntities;
@@ -278,8 +282,6 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
-    tsl::robin_map<utils::Entity, utils::CString> mNodeExtras;
-    tsl::robin_map<utils::Entity, utils::FixedCapacityVector<utils::CString>> mMorphTargetNames;
     utils::CString mAssetExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.

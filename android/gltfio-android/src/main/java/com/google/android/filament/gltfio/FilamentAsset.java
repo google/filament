@@ -30,9 +30,9 @@ import com.google.android.filament.MaterialInstance;
  *
  * <p>For usage instructions, see the documentation for {@link AssetLoader}.</p>
  *
- * <p>This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
- * a <code>TransformManager</code> component, and some entities also have
- * <code>NameComponentManager</code> and/or <code>RenderableManager</code> components.</p>
+ * <p>This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity
+ * has a <code>TransformManager</code> component, and some entities also have compnents managed by
+ * <code>NameComponentManager</code>, <code>RenderableManager</code>, and others.</p>
  *
  * <p>In addition to the aforementioned entities, an asset has strong ownership over a list of
  * <code>VertexBuffer</code>, <code>IndexBuffer</code>, <code>MaterialInstance</code>, and
