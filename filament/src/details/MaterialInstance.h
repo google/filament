@@ -91,6 +91,12 @@ public:
 
     bool getDepthWrite() const noexcept { return mDepthWrite; }
 
+    bool getStencilWrite() const noexcept { return mStencilWrite; }
+
+    StencilOperation getStencilDepthFail() const noexcept { return mStencilDepthFail; }
+
+    StencilOperation getStencilDepthPass() const noexcept { return mStencilDepthPass; }
+
     TransparencyMode getTransparencyMode() const noexcept { return mTransparencyMode; }
 
     backend::RasterState::DepthFunc getDepthFunc() const noexcept { return mDepthFunc; }
@@ -119,6 +125,12 @@ public:
     void setDepthWrite(bool enable) noexcept { mDepthWrite = enable; }
 
     void setDepthCulling(bool enable) noexcept;
+
+    void setStencilWrite(bool enable) noexcept { mStencilWrite = enable; }
+
+    void setStencilDepthFail(StencilOperation operation) noexcept { mStencilDepthFail = operation; }
+
+    void setStencilDepthPass(StencilOperation operation) noexcept { mStencilDepthPass = operation; }
 
     const char* getName() const noexcept;
 
@@ -162,6 +174,9 @@ private:
     backend::CullingMode mCulling;
     bool mColorWrite;
     bool mDepthWrite;
+    bool mStencilWrite;
+    StencilOperation mStencilDepthFail;
+    StencilOperation mStencilDepthPass;
     backend::RasterState::DepthFunc mDepthFunc;
     TransparencyMode mTransparencyMode;
 

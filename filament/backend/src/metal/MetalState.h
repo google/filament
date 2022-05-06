@@ -260,12 +260,18 @@ using PipelineStateCache = StateCache<PipelineState, id<MTLRenderPipelineState>,
 
 struct DepthStencilState {
     MTLCompareFunction compareFunction = MTLCompareFunctionNever;       // 8 bytes
+    MTLStencilOperation stencilDepthFail = MTLStencilOperationKeep;     // 8 bytes
+    MTLStencilOperation stencilDepthPass = MTLStencilOperationKeep;     // 8 bytes
     bool depthWriteEnabled = false;                                     // 1 byte
-    char padding[7] = { 0 };                                            // 7 bytes
+    bool stencilWriteEnabled = false;                                   // 1 byte
+    char padding[6] = { 0 };                                            // 6 bytes
 
     bool operator==(const DepthStencilState& rhs) const noexcept {
         return this->compareFunction == rhs.compareFunction &&
-               this->depthWriteEnabled == rhs.depthWriteEnabled;
+               this->depthWriteEnabled == rhs.depthWriteEnabled &&
+               this->stencilWriteEnabled == rhs.stencilWriteEnabled && 
+               this->stencilDepthFail == rhs.stencilDepthFail && 
+               this->stencilDepthPass == rhs.stencilDepthPass;
     }
 
     bool operator!=(const DepthStencilState& rhs) const noexcept {
@@ -275,7 +281,7 @@ struct DepthStencilState {
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(DepthStencilState) == 16, "DepthStencilState unexpected size.");
+static_assert(sizeof(DepthStencilState) == 32, "DepthStencilState unexpected size.");
 
 struct DepthStateCreator {
     id<MTLDepthStencilState> operator()(id<MTLDevice> device, const DepthStencilState& state)

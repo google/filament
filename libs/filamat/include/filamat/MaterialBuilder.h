@@ -199,6 +199,7 @@ public:
     using TransparencyMode = filament::TransparencyMode;
     using SpecularAmbientOcclusion = filament::SpecularAmbientOcclusion;
 
+    using StencilOperation = filament::backend::StencilOperation;
     using UniformType = filament::backend::UniformType;
     using SamplerType = filament::backend::SamplerType;
     using SubpassType = filament::backend::SubpassType;
@@ -386,6 +387,15 @@ public:
 
     //! Enable / disable depth based culling (enabled by default, material instances can override).
     MaterialBuilder& depthCulling(bool enable) noexcept;
+
+    //! Enable / disable stencil-buffer write (disabled by default, material instances can override).
+    MaterialBuilder& stencilWrite(bool enable) noexcept;
+
+    //! Set the stencil depth fail operation. Stencil value kept by default.
+    MaterialBuilder& stencilDepthFail(StencilOperation operation) noexcept;
+
+    //! Set the stencil depth pass operation. Stencil value kept by default.
+    MaterialBuilder& stencilDepthPass(StencilOperation operation) noexcept;
 
     /**
      * Double-sided materials don't cull faces, equivalent to culling(CullingMode::NONE).
@@ -719,6 +729,11 @@ private:
     bool mDepthTest = true;
     bool mDepthWrite = true;
     bool mDepthWriteSet = false;
+
+    bool mStencilWrite = false;
+
+    StencilOperation mStencilDepthFail = StencilOperation::KEEP;
+    StencilOperation mStencilDepthPass = StencilOperation::KEEP;
 
     bool mSpecularAntiAliasing = false;
     bool mClearCoatIorChange = true;

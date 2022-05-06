@@ -53,6 +53,17 @@ constexpr inline MTLCompareFunction getMetalCompareFunction(RasterState::DepthFu
     }
 }
 
+constexpr inline MTLStencilOperation getMetalStencilOperation(RasterState::StencilOperation operation)
+        noexcept {
+    using StencilOperation = RasterState::StencilOperation;
+    switch (operation) {
+        case StencilOperation::KEEP:    return MTLStencilOperationKeep;
+        case StencilOperation::ZERO:    return MTLStencilOperationZero;
+        case StencilOperation::REPLACE: return MTLStencilOperationReplace;
+        case StencilOperation::INVERT:  return MTLStencilOperationInvert;
+    }
+}
+
 constexpr inline MTLIndexType getIndexType(size_t elementSize) noexcept {
     if (elementSize == 2) {
         return MTLIndexTypeUInt16;

@@ -210,11 +210,11 @@ public:
 
     struct PrimitiveInfo { // 24 bytes
         FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
-        backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
-        backend::RasterState rasterState;                               // 4 bytes
-        uint16_t index = 0;                                             // 2 bytes
+        backend::RasterState rasterState;                               // 5 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[13 - sizeof(void*)] = {};                      // 5 byte (9)
+        uint16_t index = 0;                                             // 2 bytes
+        backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
+        uint8_t reserved[12 - sizeof(void*)] = {};                      // 4 byte (8)
     };
     static_assert(sizeof(PrimitiveInfo) == 24);
 

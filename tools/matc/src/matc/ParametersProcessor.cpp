@@ -513,6 +513,42 @@ static bool processDepthWrite(MaterialBuilder& builder, const JsonishValue& valu
     return true;
 }
 
+static bool processStencilWrite(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.stencilWrite(value.toJsonBool()->getBool());
+    return true;
+}
+
+static std::optional<MaterialBuilder::StencilOperation> processStencilOperation(const JsonishValue& value, const std::string& log) {
+    static const std::unordered_map<std::string, MaterialBuilder::StencilOperation> strToEnum {
+        { "zero", MaterialBuilder::StencilOperation::ZERO },
+        { "keep", MaterialBuilder::StencilOperation::KEEP },
+        { "replace", MaterialBuilder::StencilOperation::REPLACE },
+        { "invert", MaterialBuilder::StencilOperation::INVERT },
+    };
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        logEnumIssue(log, *jsonString, strToEnum);
+        return std::nullopt;
+    }
+    return stringToEnum(strToEnum, jsonString->getString());
+}
+
+static bool processStencilDepthFail(MaterialBuilder& builder, const JsonishValue& value) {
+    if (auto op = processStencilOperation(value, "stencil_depth_fail"); op) {
+        builder.stencilDepthFail(*op);
+        return false;
+    }
+    return true;
+}
+
+static bool processStencilDepthPass(MaterialBuilder& builder, const JsonishValue& value) {
+    if (auto op = processStencilOperation(value, "stencil_depth_pass"); op) {
+        builder.stencilDepthPass(*op);
+        return false;
+    }
+    return true;
+}
+
 static bool processDepthCull(MaterialBuilder& builder, const JsonishValue& value) {
     builder.depthCulling(value.toJsonBool()->getBool());
     return true;
@@ -726,6 +762,11 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["colorWrite"]                    = { &processColorWrite, Type::BOOL };
     mParameters["depthWrite"]                    = { &processDepthWrite, Type::BOOL };
     mParameters["depthCulling"]                  = { &processDepthCull, Type::BOOL };
+
+    mParameters["stencilWrite"]                  = { &processStencilWrite, Type::BOOL};
+    mParameters["stencilDepthFail"]              = { &processStencilDepthFail, Type::STRING};
+    mParameters["stencilDepthPass"]              = { &processStencilDepthPass, Type::STRING};
+    
     mParameters["doubleSided"]                   = { &processDoubleSided, Type::BOOL };
     mParameters["transparency"]                  = { &processTransparencyMode, Type::STRING };
     mParameters["maskThreshold"]                 = { &processMaskThreshold, Type::NUMBER };

@@ -164,6 +164,22 @@ bool MaterialParser::getDepthWrite(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWrite, value);
 }
 
+bool MaterialParser::getStencilWrite(bool* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialStencilWrite, value);
+}
+
+bool MaterialParser::getStencilDepthFail(backend::StencilOperation* value) const noexcept {
+    static_assert(sizeof(backend::StencilOperation) == sizeof(uint8_t),
+            "StencilOperation expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialStencilDepthFail, reinterpret_cast<uint8_t*>(value));
+}
+
+bool MaterialParser::getStencilDepthPass(backend::StencilOperation* value) const noexcept {
+    static_assert(sizeof(backend::StencilOperation) == sizeof(uint8_t),
+            "StencilOperation expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialStencilDepthPass, reinterpret_cast<uint8_t*>(value));
+}
+
 bool MaterialParser::getDoubleSidedSet(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDoubleSidedSet, value);
 }

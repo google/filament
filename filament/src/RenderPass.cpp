@@ -203,6 +203,9 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
     cmdDraw.primitive.rasterState.colorWrite = mi->getColorWrite();
     cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
+    cmdDraw.primitive.rasterState.stencilWrite = mi->getStencilWrite();
+    cmdDraw.primitive.rasterState.stencilDepthFail = mi->getStencilDepthFail();
+    cmdDraw.primitive.rasterState.stencilDepthPass = mi->getStencilDepthPass();
     cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant.key = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)

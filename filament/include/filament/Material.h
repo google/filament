@@ -54,6 +54,7 @@ public:
     using VertexDomain = VertexDomain;
     using TransparencyMode = TransparencyMode;
 
+    using StencilOperation = backend::StencilOperation;
     using ParameterType = backend::UniformType;
     using Precision = backend::Precision;
     using SamplerType = backend::SamplerType;
@@ -167,6 +168,21 @@ public:
 
     //! Indicates whether instances of this material will, by default, use depth testing.
     bool isDepthCullingEnabled() const noexcept;
+
+    //! Indicates whether instances of this material will write to the stencil buffer
+    bool isStencilWriteEnabled() const noexcept;
+
+    /** 
+     * Indicates whether instances of this material will keep/replace/zero/invert 
+     * the contents of the stencil buffer if the depth test fails.
+     */
+    StencilOperation getStencilDepthFail() const noexcept;
+
+    /** 
+     * Indicates whether instances of this material will keep/replace/zero/invert 
+     * the contents of the stencil buffer if the depth test passes.
+     */
+    StencilOperation getStencilDepthPass() const noexcept;
 
     //! Indicates whether this material is double-sided.
     bool isDoubleSided() const noexcept;

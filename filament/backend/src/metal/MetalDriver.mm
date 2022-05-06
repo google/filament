@@ -1250,7 +1250,10 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     // Set the depth-stencil state, if a state change is needed.
     DepthStencilState depthState {
         .compareFunction = getMetalCompareFunction(rs.depthFunc),
+        .stencilDepthFail = getMetalStencilOperation(rs.stencilDepthFail),
+        .stencilDepthPass = getMetalStencilOperation(rs.stencilDepthPass),
         .depthWriteEnabled = rs.depthWrite,
+        .stencilWriteEnabled = rs.stencilWrite,
     };
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {
@@ -1258,6 +1261,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                 mContext->depthStencilStateCache.getOrCreateState(depthState);
         assert_invariant(state != nil);
         [mContext->currentRenderPassEncoder setDepthStencilState:state];
+        [mContext->currentRenderPassEncoder setStencilReferenceValue:1];
     }
 
     if (ps.polygonOffset.constant != 0.0 || ps.polygonOffset.slope != 0.0) {

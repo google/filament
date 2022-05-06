@@ -190,6 +190,18 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getRefractionMode(&mRefractionMode);
     parser->getRefractionType(&mRefractionType);
 
+    bool stencilWrite;
+    StencilOperation stencilDepthFail;
+    StencilOperation stencilDepthPass;
+
+    parser->getStencilWrite(&stencilWrite);
+    parser->getStencilDepthFail(&stencilDepthFail);
+    parser->getStencilDepthPass(&stencilDepthPass);
+
+    mRasterState.stencilWrite = stencilWrite;
+    mRasterState.stencilDepthFail = stencilDepthFail;
+    mRasterState.stencilDepthPass = stencilDepthPass;
+
     if (mBlendingMode == BlendingMode::MASKED) {
         parser->getMaskThreshold(&mMaskThreshold);
     }
@@ -603,6 +615,18 @@ bool Material::isDepthWriteEnabled() const noexcept {
 
 bool Material::isDepthCullingEnabled() const noexcept {
     return upcast(this)->isDepthCullingEnabled();
+}
+
+bool Material::isStencilWriteEnabled() const noexcept {
+    return upcast(this)->isStencilWriteEnabled();
+}
+
+StencilOperation Material::getStencilDepthFail() const noexcept {
+    return upcast(this)->getStencilDepthFail();
+}
+
+StencilOperation Material::getStencilDepthPass() const noexcept {
+    return upcast(this)->getStencilDepthPass();
 }
 
 bool Material::isDoubleSided() const noexcept {

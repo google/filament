@@ -111,6 +111,12 @@ public:
     bool isDepthCullingEnabled() const noexcept {
         return mRasterState.depthFunc != backend::RasterState::DepthFunc::A;
     }
+
+    bool isStencilWriteEnabled() const noexcept { return mRasterState.stencilWrite; }
+
+    StencilOperation getStencilDepthFail() const noexcept { return mRasterState.stencilDepthFail; }
+    StencilOperation getStencilDepthPass() const noexcept { return mRasterState.stencilDepthPass; }
+
     bool isDoubleSided() const noexcept { return mDoubleSided; }
     bool hasDoubleSidedCapability() const noexcept { return mDoubleSidedCapability; }
     float getMaskThreshold() const noexcept { return mMaskThreshold; }

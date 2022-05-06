@@ -300,6 +300,21 @@ MaterialBuilder& MaterialBuilder::depthWrite(bool enable) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::stencilWrite(bool enable) noexcept {
+    mStencilWrite = enable;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::stencilDepthFail(StencilOperation operation) noexcept {
+    mStencilDepthFail = operation;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::stencilDepthPass(StencilOperation operation) noexcept {
+    mStencilDepthPass = operation;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::depthCulling(bool enable) noexcept {
     mDepthTest = enable;
     return *this;
@@ -1018,6 +1033,10 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
     container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
+
+    container.addSimpleChild<bool>(ChunkType::MaterialStencilWrite, mStencilWrite);
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialStencilDepthFail, static_cast<uint8_t>(mStencilDepthFail));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialStencilDepthPass, static_cast<uint8_t>(mStencilDepthPass));
 
     uint64_t properties = 0;
     for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {

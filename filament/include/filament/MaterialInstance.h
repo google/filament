@@ -40,6 +40,7 @@ class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
 public:
     using CullingMode = filament::backend::CullingMode;
     using TransparencyMode = filament::TransparencyMode;
+    using StencilOperation = filament::backend::StencilOperation;
 
     template<typename T>
     using is_supported_parameter_t = typename std::enable_if<
@@ -224,6 +225,22 @@ public:
      * Overrides the default depth testing state that was set on the material.
      */
     void setDepthCulling(bool enable) noexcept;
+
+    /**
+     * Overrides the default stencil state that was set on the material.
+     */
+    void setStencilWrite(bool enable) noexcept;
+
+    /**
+     * Overrides the default depth fail stencil operation that was set on the material.
+     */
+    void setStencilDepthFail(StencilOperation operation) noexcept;
+
+    /**
+     * Overrides the default depth pass stencil operation that was set on the material.
+     */
+    void setStencilDepthPass(StencilOperation operation) noexcept;
+
 };
 
 } // namespace filament

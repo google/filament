@@ -105,6 +105,10 @@ public:
     inline void endQuery(GLenum target) noexcept;
     inline GLuint getQuery(GLenum target) noexcept;
 
+    inline void stencilMask(GLuint mask) noexcept;
+    inline void stencilFunc(GLenum func, GLuint ref, GLuint mask) noexcept;
+    inline void stencilOp(GLenum stencilFail, GLenum depthFail, GLenum depthPass) noexcept;
+
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
@@ -233,6 +237,13 @@ private:
             GLboolean colorMask         = GL_TRUE;
             GLboolean depthMask         = GL_TRUE;
             GLenum depthFunc            = GL_LESS;
+            GLenum stencilFunc          = GL_ALWAYS;
+            GLenum stencilFail          = GL_KEEP;
+            GLenum stencilDepthFail     = GL_KEEP;
+            GLenum stencilDepthPass     = GL_KEEP;
+            GLuint stencilRef           = 0;
+            GLuint stencilWriteMask     = 0xFF;
+            GLuint stencilReadMask     = 0xFF;
         } raster;
 
         struct PolygonOffset {
@@ -572,6 +583,39 @@ void OpenGLContext::depthFunc(GLenum func) noexcept {
     update_state(state.raster.depthFunc, func, [&]() {
         glDepthFunc(func);
     });
+}
+
+void OpenGLContext::stencilMask(GLuint mask) noexcept {
+    // WARNING: don't call this without updating mRasterState
+    update_state(state.raster.stencilWriteMask, mask, [&]() {
+        glStencilMask(mask);
+    });
+}
+
+void OpenGLContext::stencilFunc(GLenum func, GLuint ref, GLuint mask) noexcept {
+    // WARNING: don't call this without updating mRasterState
+    if (UTILS_UNLIKELY(
+            state.raster.stencilFunc != func ||
+            state.raster.stencilRef != ref ||
+            state.raster.stencilReadMask != mask)) {
+        state.raster.stencilFunc = func;
+        state.raster.stencilRef = ref;
+        state.raster.stencilReadMask = mask;
+        glStencilFunc(func, ref, mask);
+    }
+}
+
+void OpenGLContext::stencilOp(GLenum stencilFail, GLenum depthFail, GLenum depthPass) noexcept {
+    // WARNING: don't call this without updating mRasterState
+    if (UTILS_UNLIKELY(
+            state.raster.stencilFail != stencilFail ||
+            state.raster.stencilDepthFail != depthFail ||
+            state.raster.stencilDepthPass != depthPass)) {
+        state.raster.stencilFail = stencilFail;
+        state.raster.stencilDepthFail = depthFail;
+        state.raster.stencilDepthPass = depthPass;
+        glStencilOp(stencilFail, depthFail, depthPass);
+    }
 }
 
 void OpenGLContext::polygonOffset(GLfloat factor, GLfloat units) noexcept {

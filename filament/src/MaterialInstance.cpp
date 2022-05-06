@@ -184,6 +184,9 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mCulling(other->mCulling),
           mColorWrite(other->mColorWrite),
           mDepthWrite(other->mDepthWrite),
+          mStencilWrite(other->mStencilWrite),
+          mStencilDepthFail(other->mStencilDepthFail),
+          mStencilDepthPass(other->mStencilDepthPass),
           mDepthFunc(other->mDepthFunc),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
@@ -239,6 +242,10 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
     mColorWrite = rasterState.colorWrite;
     mDepthWrite = rasterState.depthWrite;
     mDepthFunc = rasterState.depthFunc;
+
+    mStencilWrite = rasterState.stencilWrite;
+    mStencilDepthFail = rasterState.stencilDepthFail;
+    mStencilDepthPass = rasterState.stencilDepthPass;
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
@@ -419,6 +426,18 @@ void MaterialInstance::setDepthWrite(bool enable) noexcept {
 
 void MaterialInstance::setDepthCulling(bool enable) noexcept {
     upcast(this)->setDepthCulling(enable);
+}
+
+void MaterialInstance::setStencilWrite(bool enable) noexcept {
+    upcast(this)->setStencilWrite(enable);
+}
+
+void MaterialInstance::setStencilDepthFail(StencilOperation operation) noexcept {
+    upcast(this)->setStencilDepthFail(operation);
+}
+
+void MaterialInstance::setStencilDepthPass(StencilOperation operation) noexcept {
+    upcast(this)->setStencilDepthPass(operation);
 }
 
 MaterialInstance* MaterialInstance::duplicate(MaterialInstance const* other, const char* name) noexcept {
