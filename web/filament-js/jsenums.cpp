@@ -147,6 +147,7 @@ enum_<View::AntiAliasing>("View$AntiAliasing")
 
 enum_<View::DepthOfFieldOptions::Filter>("View$DepthOfFieldOptions$Filter")
     .value("NONE", View::DepthOfFieldOptions::Filter::NONE)
+    .value("UNUSED", View::DepthOfFieldOptions::Filter::UNUSED)
     .value("MEDIAN", View::DepthOfFieldOptions::Filter::MEDIAN);
 
 enum_<Camera::Fov>("Camera$Fov")

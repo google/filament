@@ -69,8 +69,8 @@ enum class BlendMode : uint8_t {
  *
  */
 struct DynamicResolutionOptions {
-    math::float2 minScale = math::float2(0.5f);     //!< minimum scale factors in x and y
-    math::float2 maxScale = math::float2(1.0f);     //!< maximum scale factors in x and y
+    math::float2 minScale = {0.5f, 0.5f};           //!< minimum scale factors in x and y
+    math::float2 maxScale = {1.0f, 1.0f};           //!< maximum scale factors in x and y
     float sharpness = 0.9f;                         //!< sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
     bool enabled = false;                           //!< enable or disable dynamic resolution
     bool homogeneousScaling = false;                //!< set to true to force homogeneous scaling
@@ -125,8 +125,8 @@ struct BloomOptions {
         ADD,           //!< Bloom is modulated by the strength parameter and added to the scene
         INTERPOLATE    //!< Bloom is interpolated with the scene using the strength parameter
     };
-    Texture* dirt = nullptr;                //!< user provided dirt texture
-    float dirtStrength = 0.2f;              //!< strength of the dirt texture
+    Texture* dirt = nullptr;                //!< user provided dirt texture %codegen_skip_json%
+    float dirtStrength = 0.2f;              //!< strength of the dirt texture %codegen_skip_json%
     float strength = 0.10f;                 //!< bloom's strength between 0.0 and 1.0
     uint32_t resolution = 360;              //!< resolution of vertical axis (2^levels to 2048)
     float anamorphism = 1.0f;               //!< bloom x/y aspect-ratio (1/32 to 32)
@@ -151,16 +151,16 @@ struct BloomOptions {
  * Options to control fog in the scene
  */
 struct FogOptions {
-    float distance = 0.0f;              //!< distance in world units from the camera where the fog starts ( >= 0.0 )
-    float maximumOpacity = 1.0f;        //!< fog's maximum opacity between 0 and 1
-    float height = 0.0f;                //!< fog's floor in world units
-    float heightFalloff = 1.0f;         //!< how fast fog dissipates with altitude
-    LinearColor color{0.5f};            //!< fog's color (linear), see fogColorFromIbl
-    float density = 0.1f;               //!< fog's density at altitude given by 'height'
-    float inScatteringStart = 0.0f;     //!< distance in world units from the camera where in-scattering starts
-    float inScatteringSize = -1.0f;     //!< size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
-    bool fogColorFromIbl = false;       //!< Fog color will be modulated by the IBL color in the view direction.
-    bool enabled = false;               //!< enable or disable fog
+    float distance = 0.0f;                 //!< distance in world units from the camera where the fog starts ( >= 0.0 )
+    float maximumOpacity = 1.0f;           //!< fog's maximum opacity between 0 and 1
+    float height = 0.0f;                   //!< fog's floor in world units
+    float heightFalloff = 1.0f;            //!< how fast fog dissipates with altitude
+    LinearColor color = {0.5f, 0.5f, 0.5f};//!< fog's color (linear), see fogColorFromIbl
+    float density = 0.1f;                  //!< fog's density at altitude given by 'height'
+    float inScatteringStart = 0.0f;        //!< distance in world units from the camera where in-scattering starts
+    float inScatteringSize = -1.0f;        //!< size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+    bool fogColorFromIbl = false;          //!< Fog color will be modulated by the IBL color in the view direction.
+    bool enabled = false;                  //!< enable or disable fog
 };
 
 /**
@@ -174,8 +174,9 @@ struct FogOptions {
  */
 struct DepthOfFieldOptions {
     enum class Filter : uint8_t {
-        NONE = 0,
-        MEDIAN = 2
+        NONE,
+        UNUSED,
+        MEDIAN
     };
     float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
     float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
@@ -227,7 +228,7 @@ struct VignetteOptions {
     float midPoint = 0.5f;                      //!< high values restrict the vignette closer to the corners, between 0 and 1
     float roundness = 0.5f;                     //!< controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
     float feather = 0.5f;                       //!< softening amount of the vignette effect, between 0 and 1
-    LinearColorA color{0.0f, 0.0f, 0.0f, 1.0f}; //!< color of the vignette effect, alpha is currently ignored
+    LinearColorA color = {0.0f, 0.0f, 0.0f, 1.0f}; //!< color of the vignette effect, alpha is currently ignored
     bool enabled = false;                       //!< enables or disables the vignette effect
 };
 
@@ -275,13 +276,13 @@ struct AmbientOcclusionOptions {
         float shadowDistance = 0.3f;        //!< how far shadows can be cast
         float contactDistanceMax = 1.0f;    //!< max distance for contact
         float intensity = 0.8f;             //!< intensity
-        math::float3 lightDirection{ 0, -1, 0 };    //!< light direction
+        math::float3 lightDirection = { 0, -1, 0 };    //!< light direction
         float depthBias = 0.01f;        //!< depth bias in world units (mitigate self shadowing)
         float depthSlopeBias = 0.01f;   //!< depth slope bias (mitigate self shadowing)
         uint8_t sampleCount = 4;        //!< tracing sample count, between 1 and 255
         uint8_t rayCount = 1;           //!< # of rays to trace, between 1 and 255
         bool enabled = false;           //!< enables or disables SSCT
-    } ssct;
+    } ssct = Ssct();                    // %codegen_skip_javascript%
 };
 
 /**
@@ -343,16 +344,16 @@ struct GuardBandOptions {
  * @see setAntiAliasing, getAntiAliasing, setSampleCount
  */
 enum class AntiAliasing : uint8_t {
-    NONE = 0,   //!< no anti aliasing performed as part of post-processing
-    FXAA = 1    //!< FXAA is a low-quality but very efficient type of anti-aliasing. (default).
+    NONE,   //!< no anti aliasing performed as part of post-processing
+    FXAA    //!< FXAA is a low-quality but very efficient type of anti-aliasing. (default).
 };
 
 /**
  * List of available post-processing dithering techniques.
  */
 enum class Dithering : uint8_t {
-    NONE = 0,       //!< No dithering
-    TEMPORAL = 1    //!< Temporal dithering (default)
+    NONE,       //!< No dithering
+    TEMPORAL    //!< Temporal dithering (default)
 };
 
 /**

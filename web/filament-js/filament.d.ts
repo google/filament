@@ -1089,7 +1089,8 @@ export enum View$AmbientOcclusion {
 
 export enum View$DepthOfFieldOptions$Filter {
     NONE,
-    MEDIAN = 2,
+    UNUSED,
+    MEDIAN,
 }
 
 export enum View$BloomOptions$BlendMode {
