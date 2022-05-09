@@ -1,6 +1,8 @@
 apply plugin: 'kotlin-android'
 
 android {
+    namespace 'com.google.android.filament.utils'
+
     sourceSets {
         main {
             kotlin.srcDirs += "src/main/java"
@@ -10,14 +12,14 @@ android {
     defaultConfig {
         missingDimensionStrategy 'functionality', 'full'
     }
-
-    // No need to package up the following shared libs, which arise as a side effect of our
-    // externalNativeBuild dependencies. When clients pick and choose from project-level gradle
-    // dependencies, these shared libs already get pulled in, so we need to avoid the error:
-    // "More than one file was found with OS independent path ..."
     packagingOptions {
-        exclude 'lib/*/libfilament-jni.so'
-        exclude 'lib/*/libgltfio-jni.so'
+        // No need to package up the following shared libs, which arise as a side effect of our
+        // externalNativeBuild dependencies. When clients pick and choose from project-level gradle
+        // dependencies, these shared libs already get pulled in, so we need to avoid the error:
+        // "More than one file was found with OS independent path ..."
+        jniLibs {
+            excludes += ['lib/*/libfilament-jni.so', 'lib/*/libgltfio-jni.so']
+        }
     }
 }
 

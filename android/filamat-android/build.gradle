@@ -1,4 +1,6 @@
 android {
+    namespace 'com.google.android.filament.filamat'
+
     flavorDimensions "functionality"
     productFlavors {
         full {
