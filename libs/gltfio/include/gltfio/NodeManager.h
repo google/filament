@@ -45,6 +45,9 @@ public:
     using Instance = utils::EntityInstance<NodeManager>;
     using Entity = utils::Entity;
     using CString = utils::CString;
+    using SceneMask = utils::bitset32;
+
+    static constexpr size_t MAX_SCENE_COUNT = 32;
 
     /**
      * Returns whether a particular Entity is associated with a component of this NodeManager
@@ -87,8 +90,8 @@ public:
     void setExtras(Instance ci, CString extras) noexcept;
     const CString& getExtras(Instance ci) const noexcept;
 
-    void setSceneMembership(Instance ci, utils::bitset32 scenes) noexcept;
-    utils::bitset32 getSceneMembership(Instance ci) const noexcept;
+    void setSceneMembership(Instance ci, SceneMask scenes) noexcept;
+    SceneMask getSceneMembership(Instance ci) const noexcept;
 
 protected:
     NodeManager() noexcept = default;

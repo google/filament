@@ -61,6 +61,8 @@ using namespace utils;
 
 namespace gltfio {
 
+using SceneMask = NodeManager::SceneMask;
+
 void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins);
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
@@ -130,10 +132,9 @@ struct FAssetLoader : public AssetLoader {
     }
 
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
-    FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_data* srcAsset,
-            const cgltf_scene* scene);
-    void createEntity(const cgltf_data* srcAsset, const cgltf_node* node, Entity parent,
-            bool enableLight, FFilamentInstance* instance);
+    FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_data* srcAsset);
+    void createEntity(const cgltf_data* srcAsset, const cgltf_node* node, SceneMask scenes,
+            Entity parent, bool enableLight, FFilamentInstance* instance);
     void createRenderable(const cgltf_data* srcAsset, const cgltf_node* node, Entity entity,
             const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
@@ -160,6 +161,7 @@ struct FAssetLoader : public AssetLoader {
 
     // Transient state used only for the asset currently being loaded:
     FFilamentAsset* mResult;
+    tsl::robin_map<cgltf_node*, SceneMask> mRootNodes;
     const char* mDefaultNodeName;
     bool mError = false;
     bool mDiagnosticsEnabled = false;
@@ -246,12 +248,11 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         return nullptr;
     }
     const cgltf_data* srcAsset = primary->mSourceAsset->hierarchy;
-    const cgltf_scene* scene = srcAsset->scene ? srcAsset->scene : srcAsset->scenes;
-    if (!scene) {
+    if (srcAsset->scenes == nullptr) {
         slog.e << "There is no scene in the asset." << io::endl;
         return nullptr;
     }
-    FFilamentInstance* instance = createInstance(primary, srcAsset, scene);
+    FFilamentInstance* instance = createInstance(primary, srcAsset);
 
     // Import the skin data. This is normally done by ResourceLoader but dynamically created
     // instances are a bit special.
@@ -279,10 +280,9 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     mResult = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager, srcAsset);
     mDummyBufferObject = nullptr;
 
-    // If there is no default scene specified, then the default is the first one.
     // It is not an error for a glTF file to have zero scenes.
-    const cgltf_scene* scene = srcAsset->scene ? srcAsset->scene : srcAsset->scenes;
-    if (!scene) {
+    mResult->mScenes.clear();
+    if (srcAsset->scenes == nullptr) {
         return;
     }
 
@@ -305,20 +305,33 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         }
     }
 
+    // Build a mapping of root nodes to scene membership sets.
+    auto& nm = mNodeManager;
+    assert_invariant(srcAsset->scenes_count <= NodeManager::MAX_SCENE_COUNT);
+    mRootNodes.clear();
+    const size_t sic = std::min(srcAsset->scenes_count, NodeManager::MAX_SCENE_COUNT);
+    mResult->mScenes.reserve(sic);
+    for (size_t si = 0; si < sic; ++si) {
+        const cgltf_scene& scene = srcAsset->scenes[si];
+        mResult->mScenes.emplace_back(scene.name);
+        for (size_t ni = 0, nic = scene.nodes_count; ni < nic; ++ni) {
+            mRootNodes[scene.nodes[ni]].set(si);
+        }
+    }
+
     mResult->mRenderableCount = 0;
 
     if (numInstances == 0) {
         // For each scene root, recursively create all entities.
-        for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
-            cgltf_node** nodes = scene->nodes;
-            createEntity(srcAsset, nodes[i], mResult->mRoot, true, nullptr);
+        for (const auto& pair : mRootNodes) {
+            createEntity(srcAsset, pair.first, pair.second, mResult->mRoot, true, nullptr);
         }
     } else {
         // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
         // buffers and index buffers) and MatInstanceCache (materials and textures) help avoid
         // needless duplication of resources.
         for (size_t index = 0; index < numInstances; ++index) {
-            if (createInstance(mResult, srcAsset, scene) == nullptr) {
+            if (createInstance(mResult, srcAsset) == nullptr) {
                 mError = true;
                 break;
             }
@@ -359,7 +372,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
 }
 
 FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
-        const cgltf_data* srcAsset, const cgltf_scene* scene) {
+        const cgltf_data* srcAsset) {
     auto rootTransform = mTransformManager.getInstance(primary->mRoot);
     Entity instanceRoot = mEntityManager.create();
     mTransformManager.create(instanceRoot, rootTransform);
@@ -379,17 +392,19 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
     }
 
     // For each scene root, recursively create all entities.
-    for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
-        cgltf_node** nodes = scene->nodes;
-        createEntity(srcAsset, nodes[i], instanceRoot, false, instance);
+    for (const auto& pair : mRootNodes) {
+        createEntity(srcAsset, pair.first, pair.second, instanceRoot, false, instance);
     }
     return instance;
 }
 
-void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* node, Entity parent,
-        bool enableLight, FFilamentInstance* instance) {
-    Entity entity = mEntityManager.create();
-    mNodeManager.create(entity);
+void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* node,
+        SceneMask scenes, Entity parent, bool enableLight, FFilamentInstance* instance) {
+    NodeManager& nm = mNodeManager;
+    const Entity entity = mEntityManager.create();
+    nm.create(entity);
+    const auto nodeInstance = nm.getInstance(entity);
+    nm.setSceneMembership(nodeInstance, scenes);
 
     // Always create a transform component to reflect the original hierarchy.
     mat4f localTransform;
@@ -452,7 +467,7 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
-        createEntity(srcAsset, node->children[i], entity, enableLight, instance);
+        createEntity(srcAsset, node->children[i], scenes, entity, enableLight, instance);
     }
 }
 
@@ -536,8 +551,8 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
         morphTargetNames[i] = CString(mesh->target_names[i]);
     }
-    mNodeManager.setMorphTargetNames(mNodeManager.getInstance(entity),
-            std::move(morphTargetNames));
+    auto& nm = mNodeManager;
+    nm.setMorphTargetNames(nm.getInstance(entity), std::move(morphTargetNames));
 
     const Aabb transformed = aabb.transform(worldTransform);
 
