@@ -44,7 +44,7 @@ set (BASIS_CONFIG
 # even for debug builds, since it is quite verbose.
 # set (BASIS_CONFIG ${BASIS_CONFIG} $<$<CONFIG:Debug>:BASISU_FORCE_DEVEL_MESSAGES=1>)
 
-# DXT5A and DXT1 are both required for cTFBC3_RGBA aka DXT3_RGBA.
+# DXT5A and DXT1 are both required for cTFBC3_RGBA aka DXT5_RGBA.
 if (NOT IS_MOBILE_TARGET)
     set (BASIS_CONFIG ${BASIS_CONFIG} BASISD_SUPPORT_DXT5A=1 BASISD_SUPPORT_DXT1=1)
 else()
@@ -67,3 +67,4 @@ if (NOT MSVC AND NOT ANDROID)
 endif()
 
 install(TARGETS basisu DESTINATION bin)
+install(TARGETS basis_transcoder ARCHIVE DESTINATION lib/${DIST_DIR})

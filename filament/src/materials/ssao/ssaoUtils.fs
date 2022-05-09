@@ -19,22 +19,6 @@
 
 #include "depthUtils.fs"
 
-// random number between 0 and 1, using interleaved gradient noise
-float random(const highp vec2 w) {
-    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
-    return fract(m.z * fract(dot(w, m.xy)));
-}
-
-// returns the frag coord in the GL convention with (0, 0) at the bottom-left
-// resolution : width, height
-highp vec2 getFragCoord(const highp vec2 resolution) {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    return vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
-#else
-    return gl_FragCoord.xy;
-#endif
-}
-
 vec2 pack(highp float normalizedDepth) {
     // we need 16-bits of precision
     highp float z = clamp(normalizedDepth, 0.0, 1.0);

@@ -39,14 +39,19 @@ using namespace math;
 #pragma clang diagnostic pop
 
 void FSR_ScalingSetup(FSRUniforms* outUniforms, FSRScalingConfig config) noexcept {
-    FsrEasuCon( outUniforms->EasuCon0.v, outUniforms->EasuCon1.v,
+    FsrEasuConOffset( outUniforms->EasuCon0.v, outUniforms->EasuCon1.v,
                 outUniforms->EasuCon2.v, outUniforms->EasuCon3.v,
             // Viewport size (top left aligned) in the input image which is to be scaled.
-            config.viewportWidth, config.viewportHeight,
+            config.input.width, config.input.height,
             // The size of the input image.
             config.inputWidth, config.inputHeight,
             // The output resolution.
-            config.outputWidth, config.outputHeight);
+            config.outputWidth, config.outputHeight,
+            // Input image offset
+            config.input.left, config.input.bottom);
+    // FIXME: FsrEasu api claims it needs the top,left offset, but when using that we get
+    //        some bad artifacts. To investigate. For reference:
+    //           top = config.inputHeight - (config.input.bottom + config.input.height)
 }
 
 void FSR_SharpeningSetup(FSRUniforms* outUniforms, FSRSharpeningConfig config) noexcept {

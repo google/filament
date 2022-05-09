@@ -244,7 +244,6 @@ bool Froxelizer::update() noexcept {
         mClipToFroxelX = (0.5f * viewport.width)  / froxelDimension.x;
         mClipToFroxelY = (0.5f * viewport.height) / froxelDimension.y;
 
-        mOneOverDimension = 1.0f / float2(froxelDimension);
         uniformsNeedUpdating = true;
 
 #ifndef NDEBUG

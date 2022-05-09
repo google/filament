@@ -264,7 +264,7 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
     mValid = OpenGLProgram::checkProgramStatus(name.c_str_safe(),
             gl.program, gl.shaders, initializationData->shaderSourceCode);
 
-    if (mValid) {
+    if (UTILS_LIKELY(mValid)) {
         initializeProgramState(context, gl.program,
                 initializationData->uniformBlockInfo,
                 initializationData->samplerGroupInfo);

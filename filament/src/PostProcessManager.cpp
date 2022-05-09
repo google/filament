@@ -531,8 +531,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     data.history = builder.sample(history);
                 }
             },
-            [this, projection = cameraInfo.projection, viewMatrix = cameraInfo.view,
-                    worldOrigin = cameraInfo.worldOrigin, uvFromClipMatrix, historyProjection,
+            [this, projection = cameraInfo.projection,
+                    userViewMatrix = cameraInfo.getUserViewMatrix(), uvFromClipMatrix, historyProjection,
                     options, &uniforms, renderPass = pass]
             (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
                 // set structure sampler
@@ -542,7 +542,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // set screen-space reflections and screen-space refractions
                 mat4f uvFromViewMatrix = uvFromClipMatrix * projection;
                 mat4f reprojection = mat4f{ uvFromClipMatrix * historyProjection
-                        * inverse(viewMatrix * worldOrigin) };
+                        * inverse(userViewMatrix) };
 
                 // the history sampler is a regular texture2D
                 TextureHandle history = data.history ?
@@ -805,11 +805,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("ssctConeAngleTangeant", std::tan(options.ssct.lightConeRad * 0.5f));
                 mi->setParameter("ssctContactDistanceMaxInv", 1.0f / options.ssct.contactDistanceMax);
                 // light direction in view space
-                // (note: this is actually equivalent to using the camera view matrix -- before the
-                // world matrix is accounted for)
-                const mat4f m{ cameraInfo.view * cameraInfo.worldOrigin };
+                const mat4f view{ cameraInfo.getUserViewMatrix() };
                 const float3 l = normalize(
-                        mat3f::getTransformForNormals(m.upperLeft())
+                        mat3f::getTransformForNormals(view.upperLeft())
                                 * options.ssct.lightDirection);
                 mi->setParameter("ssctIntensity",
                         options.ssct.enabled ? options.ssct.intensity : 0.0f);
@@ -973,8 +971,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
     auto from = input;
     for (size_t i = 0; i < levels - 1; i++) {
         auto output = mipmapPass->out[i];
-        gaussianBlurPass(fg, from, output, reinhard, kernelWidth, sigma);
-        from = output;
+        from = gaussianBlurPass(fg, from, output, reinhard, kernelWidth, sigma);
         reinhard = false; // only do the reinhard filtering on the first level
     }
 
@@ -1035,7 +1032,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
     // and because it's a separable filter, the effective 2D filter kernel size is 17*17
     // The total number of samples needed over the two passes is 18.
 
-    fg.addPass<BlurPassData>("Gaussian Blur Pass (separable)",
+    auto& blurPass = fg.addPass<BlurPassData>("Gaussian Blur Pass (separable)",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto inDesc = builder.getDescriptor(input);
 
@@ -1143,7 +1140,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 render(hwOutRT, separableGaussianBlur.getPipelineState(mEngine), driver);
             });
 
-    return output;
+    return blurPass->out;
 }
 
 PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(FrameGraph& fg,
@@ -1342,7 +1339,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
             input = ppm.resolveBaseLevel(fg, "ssr", input);
             // then blit into an appropriate texture
             // this handles scaling, format conversion and mipmaping
-            input = ppm.opaqueBlit(fg, input, outDesc);
+            input = ppm.opaqueBlit(fg, input, { 0, 0, desc.width, desc.height }, outDesc);
         }
     }
 
@@ -1471,13 +1468,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      */
     const uint32_t dofResolution = dofOptions.nativeResolution ? 1u : 2u;
 
-    constexpr const uint32_t maxMipLevels = 4u; // mip levels at full-resolution
-    constexpr const uint32_t maxMipLevelsMask = (1u << maxMipLevels) - 1u;
     auto const& colorDesc = fg.getDescriptor(input);
-    const uint32_t width  = ((colorDesc.width  + maxMipLevelsMask) & ~maxMipLevelsMask) / dofResolution;
-    const uint32_t height = ((colorDesc.height + maxMipLevelsMask) & ~maxMipLevelsMask) / dofResolution;
-    const uint8_t maxLevelCount = FTexture::maxLevelCount(width, height);
-    uint8_t mipmapCount = min(maxLevelCount, uint8_t(maxMipLevels));
+    const uint32_t width  = colorDesc.width  / dofResolution;
+    const uint32_t height = colorDesc.height / dofResolution;
+
+    // at full resolution, 4 "safe" levels are guaranteed
+    constexpr const uint32_t maxMipLevels = 4u;
+
+    // compute numbers of "safe" levels (should be 4, but can be 3 at half res)
+    const uint8_t mipmapCount = std::min(maxMipLevels, ctz(width | height));
+    assert_invariant(mipmapCount == maxMipLevels || mipmapCount == maxMipLevels-1);
 
     /*
      * Setup:
@@ -1928,7 +1928,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
     if (2 * width < desc.width || 2 * height < desc.height) {
         // if we're scaling down by more than 2x, prescale the image with a blit to improve
         // performance. This is important on mobile/tilers.
-        input = opaqueBlit(fg, input, {
+        input = opaqueBlit(fg, input, { 0, 0, desc.width, desc.height }, {
                 .width = std::max(1u, desc.width / 2),
                 .height = std::max(1u, desc.height / 2),
                 .format = outFormat
@@ -2265,14 +2265,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
         FrameGraphId<FrameGraphTexture> bloom,
         FrameGraphId<FrameGraphTexture> flare,
         FColorGrading const* colorGrading,
         ColorGradingConfig const& colorGradingConfig,
         BloomOptions const& bloomOptions,
-        VignetteOptions const& vignetteOptions,
-        float2 scale) noexcept
+        VignetteOptions const& vignetteOptions) noexcept
 {
     FrameGraphId<FrameGraphTexture> bloomDirt;
     FrameGraphId<FrameGraphTexture> starburst;
@@ -2309,11 +2308,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 
     auto& ppColorGrading = fg.addPass<PostProcessColorGrading>("colorGrading",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto const& inputDesc = fg.getDescriptor(input);
                 data.input = builder.sample(input);
                 data.output = builder.createTexture("colorGrading output", {
-                        .width = inputDesc.width,
-                        .height = inputDesc.height,
+                        .width = vp.width,
+                        .height = vp.height,
                         .format = colorGradingConfig.ldrFormat
                 });
                 data.output = builder.declareRenderPass(data.output);
@@ -2390,6 +2388,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                     bloomParameters.y = 1.0f - bloomParameters.x;
                 }
 
+                auto const& input = resources.getDescriptor(data.input);
                 auto const& output = resources.getDescriptor(data.output);
                 float4 vignetteParameters = getVignetteParameters(
                         vignetteOptions, output.width, output.height);
@@ -2402,6 +2401,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 mi->setParameter("vignetteColor", vignetteOptions.color);
                 mi->setParameter("fxaa", colorGradingConfig.fxaa);
                 mi->setParameter("temporalNoise", temporalNoise);
+                mi->setParameter("viewport", float4{
+                        (float)vp.left   / input.width,
+                        (float)vp.bottom / input.height,
+                        (float)vp.width  / input.width,
+                        (float)vp.height / input.height
+                });
 
                 const uint8_t variant = uint8_t(colorGradingConfig.translucent ?
                             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
@@ -2414,7 +2419,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
         TextureFormat outFormat, bool translucent) noexcept {
 
     struct PostProcessFXAA {
@@ -2424,17 +2429,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
     auto& ppFXAA = fg.addPass<PostProcessFXAA>("fxaa",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto const& inputDesc = fg.getDescriptor(input);
                 data.input = builder.sample(input);
                 data.output = builder.createTexture("fxaa output", {
-                        .width = inputDesc.width,
-                        .height = inputDesc.height,
+                        .width = vp.width,
+                        .height = vp.height,
                         .format = outFormat
                 });
                 data.output = builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources,
-                auto const& data, DriverApi& driver) {
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                auto const& inDesc = resources.getDescriptor(data.input);
                 auto const& texture = resources.getTexture(data.input);
                 auto const& out = resources.getRenderPassInfo();
 
@@ -2444,6 +2448,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+                mi->setParameter("viewport", float4{
+                        (float)vp.left   / inDesc.width,
+                        (float)vp.bottom / inDesc.height,
+                        (float)vp.width  / inDesc.width,
+                        (float)vp.height / inDesc.height
+                });
+                mi->setParameter("texelSize", 1.0f / float2{ inDesc.width, inDesc.height });
 
                 const uint8_t variant = uint8_t(translucent ?
                     PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
@@ -2463,7 +2474,7 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     auto& current = frameHistory.getCurrent().*pTaa;
 
     // compute projection
-    current.projection = mat4f{ inoutCameraInfo->projection * (inoutCameraInfo->view * inoutCameraInfo->worldOrigin) };
+    current.projection = mat4f{ inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix() };
     current.frameId = previous.frameId + 1;
 
     // sample position within a pixel [-0.5, 0.5]
@@ -2560,7 +2571,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                     float2 d = sampleOffsets[i] - current.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
                     // this is a gaussian fit of a 3.3 Blackman Harris window
-                    // see: "High Quality Temporal Supersampling" by Bruan Karis
+                    // see: "High Quality Temporal Supersampling" by Brian Karis
                     weights[i] = std::exp2(-3.3f * (d.x * d.x + d.y * d.y));
                     sum += weights[i];
                 }
@@ -2628,7 +2639,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor const& outDesc,
+        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
+        FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
 
     struct PostProcessScaling {
@@ -2654,7 +2666,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 // HwTexture handle. Using a RenderPass works because data.input will resolve
                 // to the actual imported render target and will have the correct viewport.
                 builder.declareRenderPass("opaque blit input", {
-                        .attachments = { .color = { data.input }}});
+                        .attachments = { .color = { data.input }},
+                        .viewport = vp
+                });
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto out = resources.getRenderPassInfo(0);
@@ -2671,7 +2685,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
         FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
         FrameGraphTexture::Descriptor const& outDesc) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
@@ -2688,13 +2702,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                 || dsrOptions.quality == QualityLevel::HIGH);
 
     // helper to set the EASU uniforms
-    auto setEasuUniforms = [](FMaterialInstance* mi,
+    auto setEasuUniforms = [vp](FMaterialInstance* mi,
             FrameGraphTexture::Descriptor const& inputDesc,
             FrameGraphTexture::Descriptor const& outputDesc) {
         FSRUniforms uniforms{};
         FSR_ScalingSetup(&uniforms, {
-                .viewportWidth = inputDesc.width,
-                .viewportHeight = inputDesc.height,
+                .input = vp,
                 .inputWidth = inputDesc.width,
                 .inputHeight = inputDesc.height,
                 .outputWidth = outputDesc.width,
@@ -2786,6 +2799,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     mi->setParameter("resolution",
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                    mi->setParameter("viewport", float4{
+                            (float)vp.left   / inputDesc.width,
+                            (float)vp.bottom / inputDesc.height,
+                            (float)vp.width  / inputDesc.width,
+                            (float)vp.height / inputDesc.height
+                    });
                     mi->commit(driver);
                     mi->use(driver);
                 }

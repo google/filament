@@ -421,8 +421,15 @@ enum_<backend::CullingMode>("CullingMode")
     .value("BACK", backend::CullingMode::BACK)
     .value("FRONT_AND_BACK", backend::CullingMode::FRONT_AND_BACK);
 
-enum_<ktxreader::Ktx2Reader::TransferFunction>("TransferFunction")
+enum_<ktxreader::Ktx2Reader::TransferFunction>("Ktx2Reader$TransferFunction")
     .value("LINEAR", ktxreader::Ktx2Reader::TransferFunction::LINEAR)
     .value("sRGB", ktxreader::Ktx2Reader::TransferFunction::sRGB);
+
+enum_<ktxreader::Ktx2Reader::Result>("Ktx2Reader$Result")
+    .value("SUCCESS", ktxreader::Ktx2Reader::Result::SUCCESS)
+    .value("COMPRESSED_TRANSCODE_FAILURE", ktxreader::Ktx2Reader::Result::COMPRESSED_TRANSCODE_FAILURE)
+    .value("UNCOMPRESSED_TRANSCODE_FAILURE", ktxreader::Ktx2Reader::Result::UNCOMPRESSED_TRANSCODE_FAILURE)
+    .value("FORMAT_UNSUPPORTED", ktxreader::Ktx2Reader::Result::FORMAT_UNSUPPORTED)
+    .value("FORMAT_ALREADY_REQUESTED", ktxreader::Ktx2Reader::Result::FORMAT_ALREADY_REQUESTED);
 
 }

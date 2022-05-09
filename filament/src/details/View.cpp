@@ -92,9 +92,6 @@ FView::FView(FEngine& engine)
     mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
-    mShadowUbh = driver.createBufferObject(mShadowUb.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
     mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
@@ -114,9 +111,9 @@ void FView::terminate(FEngine& engine) {
 
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mLightUbh);
-    driver.destroyBufferObject(mShadowUbh);
     driver.destroyBufferObject(mRenderableUbh);
     drainFrameHistory(engine);
+    mShadowMapManager.terminate(engine);
     mPerViewUniforms.terminate(driver);
     mFroxelizer.terminate(driver);
 }
@@ -159,10 +156,6 @@ float2 FView::updateScale(FEngine& engine,
         FrameInfo const& info,
         Renderer::FrameRateOptions const& frameRateOptions,
         Renderer::DisplayInfo const& displayInfo) noexcept {
-
-    // scale factor returned to the caller is modified so the scaled viewport is rounded to
-    // 8 pixels. The internal scale factor, mScale, doesn't have this rounding.
-    float2 roundedScale = mScale;
 
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
@@ -241,14 +234,8 @@ float2 FView::updateScale(FEngine& engine,
         // (i.e. we clamped). This help not to have to wait too long for the Integral term
         // to kick in after a clamping event.
         mPidController.setIntegralInhibitionEnabled(mScale != s);
-
-        // now tweak the scaling factor to get multiples of 8 (to help quad-shading)
-        // i.e. 8x8=64 fragments, to try to help with warp sizes.
-        roundedScale.x = mScale.x == 1.0f ? 1.0f : (std::floor(mScale.x * float{ w } / 8) * 8) / float{ w };
-        roundedScale.y = mScale.y == 1.0f ? 1.0f : (std::floor(mScale.y * float{ h } / 8) * 8) / float{ h };
     } else {
         mScale = 1.0f;
-        roundedScale = 1.0f;
     }
 
 #ifndef NDEBUG
@@ -270,7 +257,7 @@ float2 FView::updateScale(FEngine& engine,
     };
 #endif
 
-    return roundedScale;
+    return mScale;
 }
 
 void FView::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
@@ -340,7 +327,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     }
 
     auto shadowTechnique = mShadowMapManager.update(engine, *this, cameraInfo,
-            mShadowUb, renderableData, lightData);
+            renderableData, lightData);
 
     mHasShadowing = any(shadowTechnique);
     mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
@@ -407,8 +394,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     mHasDirectionalLight = directionalLight.isValid();
 }
 
-CameraInfo FView::computeCameraInfo(FEngine& engine) noexcept {
-    FScene* const scene = getScene();
+CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
+    FScene const* const scene = getScene();
 
     /*
      * We apply a "world origin" to "everything" in order to implement the IBL rotation.
@@ -451,11 +438,25 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * and in particular their world-space AABB.
      */
 
-    FScene* const scene = getScene();
+    auto getFrustum = [this, &cameraInfo]() -> Frustum {
+        if (UTILS_LIKELY(mViewingCamera == nullptr)) {
+            // In the common case when we don't have a viewing camera, cameraInfo.view is
+            // already the culling view matrix
+            return Frustum{ mat4f{ highPrecisionMultiply(cameraInfo.projection, cameraInfo.view) }};
+        } else {
+            // Otherwise, we need to recalculate it from the culling camera.
+            // Note: it is correct to always do the math from mCullingCamera, but it hides the
+            // intent of the code, which is that we should only depend on CameraInfo here.
+            // This is an extremely uncommon case.
+            const mat4 projection = mCullingCamera->getCullingProjectionMatrix();
+            const mat4 view = inverse(cameraInfo.worldOrigin * mCullingCamera->getModelMatrix());
+            return Frustum{ mat4f{ projection * view }};
+        }
+    };
 
-    mCullingFrustum = Frustum(mat4f{
-            mCullingCamera->getCullingProjectionMatrix() *
-            inverse(cameraInfo.worldOrigin * mCullingCamera->getModelMatrix()) });
+    const Frustum cullingFrustum = getFrustum();
+
+    FScene* const scene = getScene();
 
     /*
      * Gather all information needed to render this scene. Apply the world origin to all
@@ -470,9 +471,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
     if (scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [this, &engine, &arena, &cameraInfo, scene](JobSystem&, JobSystem::Job*) {
+                [&cullingFrustum, &engine, &arena, &cameraInfo, scene](JobSystem&, JobSystem::Job*) {
                     FView::prepareVisibleLights(engine.getLightManager(), arena,
-                            cameraInfo.view, mCullingFrustum, scene->getLightData());
+                            cameraInfo.view, cullingFrustum, scene->getLightData());
                 }));
     }
 
@@ -489,7 +490,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
          * (this will set the VISIBLE_RENDERABLE bit)
          */
 
-        prepareVisibleRenderables(js, mCullingFrustum, renderableData);
+        prepareVisibleRenderables(js, cullingFrustum, renderableData);
 
 
         /*
@@ -648,14 +649,17 @@ void FView::prepareUpscaler(float2 scale) const noexcept {
     mPerViewUniforms.prepareUpscaler(scale, mDynamicResolution);
 }
 
-void FView::prepareCamera(const CameraInfo& camera) const noexcept {
+void FView::prepareCamera(const CameraInfo& cameraInfo) const noexcept {
     SYSTRACE_CALL();
-    mPerViewUniforms.prepareCamera(camera);
+    mPerViewUniforms.prepareCamera(cameraInfo);
 }
 
-void FView::prepareViewport(const filament::Viewport& viewport) const noexcept {
+void FView::prepareViewport(const filament::Viewport& viewport,
+        uint32_t xoffset, uint32_t yoffset) const noexcept {
     SYSTRACE_CALL();
-    mPerViewUniforms.prepareViewport(viewport);
+    // TODO: we should pass viewport.{left|bottom} to the backend so it can offset the
+    //       scissor properly.
+    mPerViewUniforms.prepareViewport(viewport, xoffset, yoffset);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
@@ -680,25 +684,25 @@ void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
+    const auto& uniforms = mShadowMapManager.getShadowMappingUniforms();
     switch (mShadowType) {
         case filament::ShadowType::PCF:
-            mPerViewUniforms.prepareShadowPCF(texture);
+            mPerViewUniforms.prepareShadowPCF(texture, uniforms);
             break;
         case filament::ShadowType::VSM:
-            mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
+            mPerViewUniforms.prepareShadowVSM(texture, uniforms, mVsmShadowOptions);
             break;
         case filament::ShadowType::DPCF:
-            mPerViewUniforms.prepareShadowDPCF(texture, mSoftShadowOptions);
+            mPerViewUniforms.prepareShadowDPCF(texture, uniforms, mSoftShadowOptions);
             break;
         case filament::ShadowType::PCSS:
-            mPerViewUniforms.prepareShadowPCSS(texture, mSoftShadowOptions);
+            mPerViewUniforms.prepareShadowPCSS(texture, uniforms, mSoftShadowOptions);
             break;
     }
 }
 
 void FView::prepareShadowMap() const noexcept {
-    mPerViewUniforms.prepareShadowMapping(
-            mShadowMapManager.getShadowMappingUniforms(), mVsmShadowOptions);
+    mPerViewUniforms.prepareShadowMapping();
 }
 
 void FView::cleanupRenderPasses() const noexcept {
@@ -713,9 +717,6 @@ void FView::froxelize(FEngine& engine, mat4f const& viewMatrix) const noexcept {
 
 void FView::commitUniforms(DriverApi& driver) const noexcept {
     mPerViewUniforms.commit(driver);
-    if (mShadowUb.isDirty()) {
-        driver.updateBufferObject(mShadowUbh, mShadowUb.toBufferDescriptor(driver), 0);
-    }
 }
 
 void FView::commitFroxels(DriverApi& driverApi) const noexcept {

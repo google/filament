@@ -2986,7 +2986,11 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
                 instanceCount);
     }
 
+#ifdef FILAMENT_ENABLE_MATDBG
+    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+#else
     CHECK_GL_ERROR(utils::slog.e)
+#endif
 }
 
 // explicit instantiation of the Dispatcher

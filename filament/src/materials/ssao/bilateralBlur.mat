@@ -87,7 +87,7 @@ fragment {
 
         // simple dithering helps a lot (assumes 8 bits target)
         // this is most useful with high quality/large blurs
-        ao += ((random(gl_FragCoord.xy) - 0.5) / 255.0);
+        ao += ((interleavedGradientNoise(gl_FragCoord.xy) - 0.5) / 255.0);
 
         postProcess.color.r = ao;
         postProcess.color.gb = data.gb;

@@ -119,7 +119,7 @@ public:
 
     void terminate(FEngine& engine);
 
-    CameraInfo computeCameraInfo(FEngine& engine) noexcept;
+    CameraInfo computeCameraInfo(FEngine& engine) const noexcept;
 
     void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
             filament::Viewport const& viewport, CameraInfo const& cameraInfo,
@@ -161,12 +161,12 @@ public:
 
     // returns the view's name. The pointer is owned by View.
     const char* getName() const noexcept {
-        return mName.c_str();
+        return mName.c_str_safe();
     }
 
     void prepareUpscaler(math::float2 scale) const noexcept;
-    void prepareCamera(const CameraInfo& camera) const noexcept;
-    void prepareViewport(const Viewport& viewport) const noexcept;
+    void prepareCamera(const CameraInfo& cameraInfo) const noexcept;
+    void prepareViewport(const Viewport& viewport, uint32_t xoffset, uint32_t yoffset) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
             CameraInfo const& cameraInfo) noexcept;
@@ -410,8 +410,6 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    auto& getShadowUniforms() const { return mShadowUb; }
-
     PerViewUniforms const& getPerViewUniforms() const noexcept { return mPerViewUniforms; }
     PerViewUniforms& getPerViewUniforms() noexcept { return mPerViewUniforms; }
 
@@ -479,7 +477,7 @@ private:
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         mPerViewUniforms.bind(driver);
         driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
-        driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowUbh);
+        driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowMapManager.getShadowUniformsHandle());
         driver.bindUniformBuffer(BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
     }
 
@@ -496,14 +494,13 @@ private:
 
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwBufferObject> mLightUbh;
-    backend::Handle<backend::HwBufferObject> mShadowUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
 
     FScene* mScene = nullptr;
+    // The camera set by the user, used for culling and viewing
     FCamera* mCullingCamera = nullptr;
+    // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
-
-    Frustum mCullingFrustum{};
 
     mutable Froxelizer mFroxelizer;
 
@@ -542,7 +539,6 @@ private:
     RenderQuality mRenderQuality;
 
     mutable PerViewUniforms mPerViewUniforms;
-    mutable TypedUniformBuffer<ShadowUib> mShadowUb;
 
     mutable FrameHistory mFrameHistory{};
 

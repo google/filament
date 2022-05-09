@@ -535,7 +535,7 @@ void RenderPass::updateSummedPrimitiveCounts(
 
 void RenderPass::Executor::execute(const char* name,
         backend::Handle<backend::HwRenderTarget> renderTarget,
-        backend::RenderPassParams params) const noexcept {
+        backend::RenderPassParams const& params) const noexcept {
     FEngine& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
 

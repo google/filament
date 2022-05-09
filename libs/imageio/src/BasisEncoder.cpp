@@ -94,10 +94,18 @@ Builder& Builder::miplevel(size_t level, size_t layer, const LinearImage& floatI
         std::unique_ptr<uint8_t[]> data = applyTransferFunction ?
             fromLinearTosRGB<uint8_t, 1>(sourceImage) : fromLinearToGrayscale<uint8_t>(sourceImage);
         basisImage->init(data.get(), floatImage.getWidth(), floatImage.getHeight(), 1);
-    } else {
+    } else if (sourceImage.getChannels() == 4) {
         std::unique_ptr<uint8_t[]> data = applyTransferFunction ?
             fromLinearTosRGB<uint8_t, 4>(sourceImage) : fromLinearToRGB<uint8_t, 4>(sourceImage);
         basisImage->init(data.get(), floatImage.getWidth(), floatImage.getHeight(), 4);
+    } else if (sourceImage.getChannels() == 3) {
+        std::unique_ptr<uint8_t[]> data = applyTransferFunction ?
+            fromLinearTosRGB<uint8_t, 3>(sourceImage) : fromLinearToRGB<uint8_t, 3>(sourceImage);
+        basisImage->init(data.get(), floatImage.getWidth(), floatImage.getHeight(), 3);
+    } else {
+        assert_invariant(false);
+        mImpl->error = true;
+        return *this;
     }
 
     return *this;

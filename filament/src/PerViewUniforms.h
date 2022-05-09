@@ -65,7 +65,16 @@ public:
 
     void prepareCamera(const CameraInfo& camera) noexcept;
     void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) noexcept;
-    void prepareViewport(const filament::Viewport& viewport) noexcept;
+
+    /*
+     * @param viewport  viewport (should be same as RenderPassParams::viewport)
+     * @param xoffset   horizontal rendering offset *within* the viewport.
+     *                  Non-zero when we have guard bands.
+     * @param yoffset   vertical rendering offset *within* the viewport.
+     *                  Non-zero when we have guard bands.
+     */
+    void prepareViewport(const filament::Viewport& viewport, uint32_t xoffset, uint32_t yoffset) noexcept;
+
     void prepareTime(math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept;
     void prepareExposure(float ev100) noexcept;
@@ -84,8 +93,7 @@ public:
             math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
 
-    void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
-            VsmShadowOptions const& options) noexcept;
+    void prepareShadowMapping() noexcept;
 
     void prepareDirectionalLight(float exposure,
             math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;
@@ -94,11 +102,20 @@ public:
 
     void prepareDynamicLights(Froxelizer& froxelizer) noexcept;
 
-    // maybe these should have their own UBO, they're needed only when GENERATING the shadowmaps
-    void prepareShadowVSM(TextureHandle texture, VsmShadowOptions const& options) noexcept;
-    void prepareShadowPCF(TextureHandle texture) noexcept;
-    void prepareShadowDPCF(TextureHandle texture, SoftShadowOptions const& options) noexcept;
-    void prepareShadowPCSS(TextureHandle texture, SoftShadowOptions const& options) noexcept;
+    void prepareShadowVSM(TextureHandle texture,
+            ShadowMappingUniforms const& shadowMappingUniforms,
+            VsmShadowOptions const& options) noexcept;
+
+    void prepareShadowPCF(TextureHandle texture,
+            ShadowMappingUniforms const& shadowMappingUniforms) noexcept;
+
+    void prepareShadowDPCF(TextureHandle texture,
+            ShadowMappingUniforms const& shadowMappingUniforms,
+            SoftShadowOptions const& options) noexcept;
+
+    void prepareShadowPCSS(TextureHandle texture,
+            ShadowMappingUniforms const& shadowMappingUniforms,
+            SoftShadowOptions const& options) noexcept;
 
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;
@@ -116,6 +133,8 @@ private:
     backend::Handle<backend::HwBufferObject> mUniformBufferHandle;
     backend::Handle<backend::HwSamplerGroup> mSamplerGroupHandle;
     std::uniform_real_distribution<float> mUniformDistribution{ 0.0f, 1.0f };
+    static void prepareShadowSampling(PerViewUib& uniforms,
+            ShadowMappingUniforms const& shadowMappingUniforms) noexcept;
 };
 
 } // namespace filament

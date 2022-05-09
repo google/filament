@@ -306,7 +306,9 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     ext.EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
     ext.EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
     ext.EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
+#if !defined(__EMSCRIPTEN__)
     ext.EXT_texture_compression_etc2 = true;
+#endif
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = exts.has("GL_KHR_debug"sv);

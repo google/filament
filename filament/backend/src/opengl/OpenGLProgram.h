@@ -60,7 +60,7 @@ public:
 
             // turns out the former might be relatively cheap to check, the later requires
             // a bit less. Compared to what updateSamplers() actually does, which is
-            // pretty little, I'm not sure we'll get ahead.
+            // pretty little, I'm not sure if we'll get ahead.
 
             updateSamplers(gld);
         }
@@ -113,7 +113,7 @@ private:
     union {
         // when mInitialized == true:
         // information about each USED sampler buffer per binding (no gaps)
-        std::array<uint8_t, Program::BINDING_COUNT> mUsedBindingPoints;   // 8 bytes
+        std::array<uint8_t, Program::BINDING_COUNT> mUsedBindingPoints;   // 12 bytes
         // when mInitialized == false:
         // lazy initialization data pointer
         LazyInitializationData* mLazyInitializationData;

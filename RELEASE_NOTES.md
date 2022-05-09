@@ -3,7 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.21.3 (currently main branch)
+## v1.22.1 (currently main branch)
+
+## v1.22.0
+
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
+- engine: Improve effects relying on mipmapping
+- engine: Fix assert seen with VSM shadows.
+- WebGL: Fix `isTextureFormatSupported` for ETC2 formats.
+
+## v1.21.3
 
 - Java: Renamed the `KTXLoader` Kotlin class to `KTX1Loader`.  [⚠️ **API Change**].
 - libs: Added `Ktx2Reader` and `BasisEncoder` to support Basis-encoded KTX2 files.

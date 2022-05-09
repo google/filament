@@ -40,51 +40,85 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("viewFromClipMatrix",      1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("clipFromWorldMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromClipMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("lightFromWorldMatrix",    4, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("cascadeSplits",           1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
-            // view
-            .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
-            // camera
-            .add("cameraPosition",          1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
-            // time
+
+            .add("clipControl",             1, UniformInterfaceBlock::Type::FLOAT2)
             .add("time",                    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            // directional light
+            .add("temporalNoise",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+
+            // ------------------------------------------------------------------------------------
+            // values below should only be accessed in surface materials
+            // ------------------------------------------------------------------------------------
+
+            .add("origin",                  1, UniformInterfaceBlock::Type::FLOAT2, Precision::HIGH)
+            .add("offset",                  1, UniformInterfaceBlock::Type::FLOAT2, Precision::HIGH)
+            .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+
+            .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("refractionLodOffset",     1, UniformInterfaceBlock::Type::FLOAT)
+            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("padding2",                1, UniformInterfaceBlock::Type::FLOAT)
+
+            .add("cameraPosition",          1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
+            .add("oneOverFarMinusNear",     1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("nearOverFarMinusNear",    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("cameraFar",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("exposure",                1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH) // high precision to work around #3602 (qualcomm)
+            .add("ev100",                   1, UniformInterfaceBlock::Type::FLOAT)
+            .add("needsAlphaChannel",       1, UniformInterfaceBlock::Type::FLOAT)
+
+            // AO
+            .add("aoSamplingQualityAndEdgeDistance", 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("aoBentNormals",           1, UniformInterfaceBlock::Type::FLOAT)
+            .add("aoReserved0",             1, UniformInterfaceBlock::Type::FLOAT)
+            .add("aoReserved1",             1, UniformInterfaceBlock::Type::FLOAT)
+
+            // ------------------------------------------------------------------------------------
+            // Dynamic Lighting [variant: DYN]
+            // ------------------------------------------------------------------------------------
+            .add("zParams",                 1, UniformInterfaceBlock::Type::FLOAT4)
+            .add("fParams",                 1, UniformInterfaceBlock::Type::UINT3)
+            .add("lightChannels",           1, UniformInterfaceBlock::Type::UINT)
+            .add("froxelCountXY",           1, UniformInterfaceBlock::Type::FLOAT2)
+
+            .add("iblLuminance",            1, UniformInterfaceBlock::Type::FLOAT)
+            .add("iblRoughnessOneLevel",    1, UniformInterfaceBlock::Type::FLOAT)
+            .add("iblSH",                   9, UniformInterfaceBlock::Type::FLOAT3)
+
+            // ------------------------------------------------------------------------------------
+            // Directional Lighting [variant: DIR]
+            // ------------------------------------------------------------------------------------
+            .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("lightColorIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("lightFarAttenuationParams",1, UniformInterfaceBlock::Type::FLOAT2)
-            .add("needsAlphaChannel",       1, UniformInterfaceBlock::Type::FLOAT)
-            .add("lightChannels",           1, UniformInterfaceBlock::Type::UINT)
-            .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
-            .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)
-            // shadow
+
+            // ------------------------------------------------------------------------------------
+            // Directional light shadowing [variant: SRE | DIR]
+            // ------------------------------------------------------------------------------------
+            .add("directionalShadows",      1, UniformInterfaceBlock::Type::UINT)
+            .add("ssContactShadowDistance", 1, UniformInterfaceBlock::Type::FLOAT)
+
+            .add("cascadeSplits",           1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            .add("cascades",                1, UniformInterfaceBlock::Type::UINT)
             .add("shadowBulbRadiusLs",      1, UniformInterfaceBlock::Type::FLOAT)
             .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT)
             .add("shadowPenumbraRatioScale",1, UniformInterfaceBlock::Type::FLOAT)
-            .add("oneOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
-            // froxels
-            .add("zParams",                 1, UniformInterfaceBlock::Type::FLOAT4)
-            .add("fParams",                 1, UniformInterfaceBlock::Type::UINT2)
-            .add("origin",                  1, UniformInterfaceBlock::Type::FLOAT2)
-            // froxels (again, for alignment purposes)
-            .add("oneOverFroxelDimension",  1, UniformInterfaceBlock::Type::FLOAT)
-            // ibl
-            .add("iblLuminance",            1, UniformInterfaceBlock::Type::FLOAT)
-            // camera
-            .add("exposure",                1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH) // high precision to work around #3602 (qualcomm)
-            .add("ev100",                   1, UniformInterfaceBlock::Type::FLOAT)
-            // ibl
-            .add("iblSH",                   9, UniformInterfaceBlock::Type::FLOAT3)
-            // user time
-            .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4)
-            // ibl max mip level
-            .add("iblRoughnessOneLevel",    1, UniformInterfaceBlock::Type::FLOAT)
-            .add("cameraFar",               1, UniformInterfaceBlock::Type::FLOAT)
-            .add("refractionLodOffset",     1, UniformInterfaceBlock::Type::FLOAT)
-            .add("directionalShadows",      1, UniformInterfaceBlock::Type::UINT)
-            // view
-            .add("worldOffset",             1, UniformInterfaceBlock::Type::FLOAT3)
-            .add("ssContactShadowDistance", 1, UniformInterfaceBlock::Type::FLOAT)
-            // fog
+            .add("lightFromWorldMatrix",    4, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+
+            // ------------------------------------------------------------------------------------
+            // VSM shadows [variant: VSM]
+            // ------------------------------------------------------------------------------------
+            .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
+            .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
+            .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowSamplingType",      1, UniformInterfaceBlock::Type::UINT)
+
+            // ------------------------------------------------------------------------------------
+            // Fog [variant: FOG]
+            // ------------------------------------------------------------------------------------
             .add("fogStart",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogMaxOpacity",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogHeight",               1, UniformInterfaceBlock::Type::FLOAT)
@@ -94,30 +128,11 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("fogInscatteringStart",    1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogInscatteringSize",     1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogColorFromIbl",         1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fogReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
 
-            // CSM information
-            .add("cascades",                1, UniformInterfaceBlock::Type::UINT)
-
-            // SSAO sampling parameters
-            .add("aoSamplingQualityAndEdgeDistance", 1, UniformInterfaceBlock::Type::FLOAT)
-            .add("aoBentNormals",           1, UniformInterfaceBlock::Type::FLOAT)
-            .add("aoReserved2",             1, UniformInterfaceBlock::Type::FLOAT)
-            .add("aoReserved3",             1, UniformInterfaceBlock::Type::FLOAT)
-
-            .add("clipControl",             1, UniformInterfaceBlock::Type::FLOAT2)
-            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT2)
-
-            .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
-            .add("shadowSamplingType",      1, UniformInterfaceBlock::Type::UINT)
-
-            .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
-            .add("oneOverFarMinusNear",     1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("nearOverFarMinusNear",    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("temporalNoise",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-
-            // Screen-space reflection parameters
+            // ------------------------------------------------------------------------------------
+            // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
+            // ------------------------------------------------------------------------------------
             .add("ssrReprojection",         1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("ssrUvFromViewMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("ssrThickness",            1, UniformInterfaceBlock::Type::FLOAT)
@@ -126,7 +141,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("ssrStride",               1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring PerViewUib to 2 KiB
-            .add("padding3", 49, UniformInterfaceBlock::Type::FLOAT4)
+            .add("reserved", sizeof(PerViewUib::reserved)/16, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

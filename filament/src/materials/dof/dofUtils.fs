@@ -17,11 +17,6 @@
 // Currently our dilate pass is set-up for 32 max.
 #define MAX_COC_RADIUS      32.0
 
-float random(const highp vec2 w) {
-    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
-    return fract(m.z * fract(dot(w, m.xy)));
-}
-
 float min2(const vec2 v) {
     return min(v.x, v.y);
 }

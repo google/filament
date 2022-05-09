@@ -42,7 +42,7 @@ namespace BindingPoints {
     constexpr uint8_t FROXEL_RECORDS             = 6;
     constexpr uint8_t PER_MATERIAL_INSTANCE      = 7;    // uniforms/samplers updates per material
     constexpr uint8_t COUNT                      = 8;
-    // These are limited by Program::UNIFORM_BINDING_COUNT (currently 8)
+    // These are limited by CONFIG_BINDING_COUNT (currently 12)
 }
 
 static_assert(BindingPoints::COUNT <= backend::CONFIG_BINDING_COUNT);

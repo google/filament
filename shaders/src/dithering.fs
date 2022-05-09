@@ -45,7 +45,9 @@ vec4 Dither_InterleavedGradientNoise(vec4 rgba, const highp float temporalNoise0
 
 vec4 Dither_TriangleNoise(vec4 rgba, const highp float temporalNoise01) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
-    highp vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
+    highp vec2 fragCoord = gl_FragCoord.xy;
+    // FIXME: resolution.zw is the viewport dimension but we should be using the buffer's
+    highp vec2 uv = fragCoord * frameUniforms.resolution.zw;
     uv += vec2(0.07 * temporalNoise01);
 
     // The noise variable must be highp to workaround Adreno bug #1096.
@@ -58,7 +60,8 @@ vec4 Dither_TriangleNoise(vec4 rgba, const highp float temporalNoise01) {
 
 vec4 Dither_Vlachos(vec4 rgba, const highp float temporalNoise01) {
     // Vlachos 2016, "Advanced VR Rendering"
-    float noise = dot(vec2(171.0, 231.0), gl_FragCoord.xy + temporalNoise01);
+    highp vec2 fragCoord = gl_FragCoord.xy;
+    float noise = dot(vec2(171.0, 231.0), fragCoord + temporalNoise01);
     vec3 noiseRGB = fract(vec3(noise) / vec3(103.0, 71.0, 97.0));
 
     // remap from [0..1[ to [-0.5..0.5[
@@ -69,7 +72,9 @@ vec4 Dither_Vlachos(vec4 rgba, const highp float temporalNoise01) {
 
 vec4 Dither_TriangleNoiseRGB(vec4 rgba, const highp float temporalNoise01) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
-    highp vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
+    highp vec2 fragCoord = gl_FragCoord.xy;
+    // FIXME: resolution.zw is the viewport dimension but we should be using the buffer's
+    highp vec2 uv = fragCoord * frameUniforms.resolution.zw;
     uv += vec2(0.07 * temporalNoise01);
 
     vec3 noiseRGB = vec3(

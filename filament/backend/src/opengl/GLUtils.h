@@ -42,9 +42,11 @@ void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char*
 
 #ifdef NDEBUG
 #   define CHECK_GL_ERROR(out)
+#   define CHECK_GL_ERROR_NON_FATAL(out)
 #   define CHECK_GL_FRAMEBUFFER_STATUS(out, target)
 #else
 #   define CHECK_GL_ERROR(out) { GLUtils::assertGLError(out, __func__, __LINE__); }
+#   define CHECK_GL_ERROR_NON_FATAL(out) { GLUtils::checkGLError(out, __func__, __LINE__); }
 #   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __func__, __LINE__); }
 #endif
 

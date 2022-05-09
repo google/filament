@@ -63,9 +63,9 @@ public:
     void setCustomProjection(math::mat4 const& projection,
             math::mat4 const& projectionForCulling, double near, double far) noexcept;
 
-    void setScaling(math::double2 scaling) noexcept { mScaling = scaling; }
+    void setScaling(math::double2 scaling) noexcept { mScalingCS = scaling; }
 
-    math::double4 getScaling() const noexcept { return math::double4{ mScaling, 1.0, 1.0 }; }
+    math::double4 getScaling() const noexcept { return math::double4{ mScalingCS, 1.0, 1.0 }; }
 
     void setShift(math::double2 shift) noexcept { mShiftCS = shift * 2.0; }
 
@@ -189,8 +189,8 @@ private:
 
     math::mat4 mProjection;                // projection matrix (infinite far)
     math::mat4 mProjectionForCulling;      // projection matrix (with far plane)
-    math::double2 mScaling = { 1.0f };  // additional scaling applied to projection
-    math::double2 mShiftCS = { 0.0f };  // additional translation applied to projection
+    math::double2 mScalingCS = { 1.0 };    // additional scaling applied to projection
+    math::double2 mShiftCS = { 0.0 };      // additional translation applied to projection
 
     float mNear{};
     float mFar{};
@@ -209,18 +209,18 @@ struct CameraInfo {
     math::mat4f projection;         // projection matrix for drawing (infinite zfar)
     math::mat4f cullingProjection;  // projection matrix for culling
     math::mat4f model;              // camera model matrix
-    math::mat4f view;               // camera view matrix
+    math::mat4f view;               // camera view matrix (inverse(model))
+    math::mat4 worldOrigin;         // world origin transform (already applied to model and view)
     float zn{};                     // distance (positive) to the near plane
     float zf{};                     // distance (positive) to the far plane
     float ev100{};                  // exposure
     float f{};                      // focal length [m]
     float A{};                      // f-number or f / aperture diameter [m]
     float d{};                      // focus distance [m]
-    math::float3 worldOffset{};     // world offset, API-level camera position
-    math::mat4 worldOrigin;         // this is already applied to model and view
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
-
+    math::float3 getWorldOffset() const noexcept { return -worldOrigin[3].xyz; }
+    math::mat4 getUserViewMatrix() const noexcept { return view * worldOrigin; }
 };
 
 FILAMENT_UPCAST(Camera)

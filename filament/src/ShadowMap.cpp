@@ -60,6 +60,9 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
     }
 }
 
+void ShadowMap::terminate(FEngine& engine) {
+}
+
 ShadowMap::~ShadowMap() {
     FEngine& engine = mEngine;
     Entity entities[] = { mCamera->getEntity(), mDebugCamera->getEntity() };
@@ -318,7 +321,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
 
         if (params.options.stable) {
             // Use the world origin as reference point, fixed w.r.t. the camera
-            snapLightFrustum(s, o, Mv, camera.worldOrigin[3].xyz,
+            snapLightFrustum(s, o, Mv, -camera.getWorldOffset(),
                     1.0f / mShadowMapInfo.shadowDimension);
         }
 
