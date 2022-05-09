@@ -9,6 +9,8 @@ A new header is inserted each time a *tag* is created.
 
 - engine: Changed UBOs layout [⚠️ **Material breakage**].
 - engine: Improve effects relying on mipmapping
+- engine: Fix assert seen with VSM shadows.
+- WebGL: Fix `isTextureFormatSupported` for ETC2 formats.
 
 ## v1.21.3
 
