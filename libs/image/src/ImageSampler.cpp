@@ -38,7 +38,7 @@ struct FilterFunction {
     bool rejectExternalSamples = true;
 };
 
-constexpr float M_PIf = float(filament::math::F_PI);
+constexpr float MM_PIf = float(filament::math::F_PI);
 
 const FilterFunction Box {
     .fn = [](float t) { return t <= 0.5f ? 1.0f : 0.0f; },
@@ -50,7 +50,7 @@ const FilterFunction Nearest { Box.fn, 0.0f };
 const FilterFunction Gaussian {
     .fn = [](float t) {
         if (t >= 2.0) return 0.0f;
-        const float scale = 1.0f / std::sqrt(0.5f * M_PIf);
+        const float scale = 1.0f / std::sqrt(0.5f * MM_PIf);
         return std::exp(-2.0f * t * t) * scale;
     },
     .boundingRadius = 2
@@ -86,7 +86,7 @@ const FilterFunction Mitchell {
 // Not bothering with a fast approximation since we cache results for each row.
 float sinc(float t) {
     if (t <= 0.00001f) return 1.0f;
-    return std::sin(M_PIf * t) / (M_PIf * t);
+    return std::sin(MM_PIf * t) / (MM_PIf * t);
 }
 
 const FilterFunction Lanczos {
