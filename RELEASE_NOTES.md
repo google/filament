@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.22.1 (currently main branch)
+## v1.22.2 (currently main branch)
+
+## v1.22.1
 
 - Metal: Shaders now use `half` floating-point arithmetic when possible for improved performance. [⚠️ **Recompile Materials**]
 - engine: add support for presentation time in `Renderer`
@@ -13,6 +15,8 @@ A new header is inserted each time a *tag* is created.
 
 - engine: Changed UBOs layout [⚠️ **Material breakage**].
 - engine: Improve effects relying on mipmapping
+- engine: Fix assert seen with VSM shadows.
+- WebGL: Fix `isTextureFormatSupported` for ETC2 formats.
 
 ## v1.21.3
 
