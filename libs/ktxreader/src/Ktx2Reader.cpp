@@ -21,8 +21,8 @@
 
 #include <utils/Log.h>
 
-#include <vector>
 #include <atomic>
+#include <vector>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warray-bounds"
