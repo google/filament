@@ -118,6 +118,7 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.31&nbsp; </span>Shading: customSurfaceShading</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/customvertexattributes" class="level3"><span class="tocNumber">4.3.2&nbsp; </span>Custom vertex attributes</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&nbsp; </span>Fragment block</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/preparematerialfunction" class="level3"><span class="tocNumber">4.4.1&nbsp; </span>prepareMaterial function</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/materialfragmentinputs" class="level3"><span class="tocNumber">4.4.2&nbsp; </span>Material fragment inputs</a><br>
@@ -1536,7 +1537,7 @@ non-shader data.
 
 </p><dl><dt>Type</dt><dd><p>     array of <code>string</code>
 
-</p></dd><dt>Value</dt><dd><p>      Each entry must be any of <code>dynamicLighting</code>, <code>directionalLighting</code>, <code>shadowReceiver</code> or <code>skinning</code>.
+</p></dd><dt>Value</dt><dd><p>      Each entry must be any of <code>dynamicLighting</code>, <code>directionalLighting</code>, <code>shadowReceiver</code>,<code>skinning</code> or <code>ssr</code>.
 
 </p></dd><dt>Description</dt><dd><p>      Used to specify a list of shader variants that the application guarantees will never be
       needed. These shader variants are skipped during the code generation phase, thus reducing
@@ -1561,7 +1562,9 @@ non-shader data.
 </li>
 <li class="minus"><code>fog</code>, used when global fog is applied to the scene
 </li>
-<li class="minus"><code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver</li></ul>
+<li class="minus"><code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver
+</li>
+<li class="minus"><code>ssr</code>, used when screen-space reflections are enabled in the View</li></ul>
 
 <p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    name : <span class="hljs-string">"Invisible shadow plane"</span>,</span>
@@ -1607,7 +1610,8 @@ non-shader data.
 
 </p><dl><dt>Type</dt><dd><p>     array of <code>string</code>
 
-</p></dd><dt>Value</dt><dd><p>      Each entry must be any of <code>uv0</code>, <code>uv1</code>, <code>color</code>, <code>position</code>, <code>tangents</code>.
+</p></dd><dt>Value</dt><dd><p>      Each entry must be any of <code>uv0</code>, <code>uv1</code>, <code>color</code>, <code>position</code>, <code>tangents</code>, <code>custom0</code>
+      through <code>custom7</code>.
 
 </p></dd><dt>Description</dt><dd><p>      Lists the vertex attributes required by the material. The <code>position</code> attribute is always
       required and does not need to be specified. The <code>tangents</code> attribute is automatically required
@@ -1622,7 +1626,8 @@ non-shader data.
 <span class="line">        },</span>
 <span class="line">    ],</span>
 <span class="line">    requires : [</span>
-<span class="line">        uv0</span>
+<span class="line">        uv0,</span>
+<span class="line">        custom0</span>
 <span class="line">    ],</span>
 <span class="line">    shadingModel : lit,</span>
 <span class="line">}</span>
@@ -1631,6 +1636,7 @@ non-shader data.
 <span class="line">    void material(inout MaterialInputs material) {</span>
 <span class="line">        prepareMaterial(material);</span>
 <span class="line">        material.baseColor = texture(materialParams_texture, getUV0());</span>
+<span class="line">        material.baseColor.rgb *= getCustom0().rgb;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
 <a class="target" name="vertexandattributes:variables">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:variables">&nbsp;</a><a class="target" name="toc4.2.8">&nbsp;</a><h3>Vertex and attributes: variables</h3>
@@ -1759,8 +1765,9 @@ non-shader data.
           render target is brightened.
 </li>
     <li class="minus"><strong class="asterisk">Masked</strong>: blending is disabled. This blending mode enables alpha masking. The alpha channel
-          of the material's output defines whether a fragment is discarded or not. See the maskThreshold
-          section for more information.</li></ul>
+          of the material's output defines whether a fragment is discarded or not. Additionally,
+          ALPHA_TO_COVERAGE is enabled for non-translucent views. See the maskThreshold section for more
+          information.</li></ul>
 
 <p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    blending : transparent</span>
@@ -1851,8 +1858,9 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 </p></dd><dt>Value</dt><dd><p>      A value between <code>0.0</code> and <code>1.0</code>. Defaults to <code>0.4</code>.
 
 </p></dd><dt>Description</dt><dd><p>      Sets the minimum alpha value a fragment must have to not be discarded when the <code>blending</code> mode
-      is set to <code>masked</code>. When the blending mode is not <code>masked</code>, this value is ignored. This value
-      can be used to controlled the appearance of alpha-masked objects.
+      is set to <code>masked</code>. If the fragment is not discarded, its source alpha is set to 1. When the
+      blending mode is not <code>masked</code>, this value is ignored. This value can be used to controlled the
+      appearance of alpha-masked objects.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    blending : masked,</span>
@@ -2274,15 +2282,31 @@ APIs listed in the <a href="#shaderpublicapis">Shader public APIs</a> section.
     this behavior using the <code>flipUV</code> property and setting it to <code>false</code>.</p></div>
 
 <p></p>
+<a class="target" name="customvertexattributes">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/customvertexattributes">&nbsp;</a><a class="target" name="toc4.3.2">&nbsp;</a><h3>Custom vertex attributes</h3>
+<p>
+
+
+You can use up to 8 custom vertex attributes, all of type <code>float4</code>. These attributes can be accessed
+using the vertex block shader functions <code>getCustom0()</code> to <code>getCustom7()</code>. However, before using
+custom attributes, you <em class="asterisk">must</em> declare those attributes as required in the <code>requires</code> property of
+the material:
+
+</p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    requires : [</span>
+<span class="line">        custom0,</span>
+<span class="line">        custom1,</span>
+<span class="line">        custom2</span>
+<span class="line">    ]</span>
+<span class="line">}</span></code></pre>
 <a class="target" name="fragmentblock">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock">&nbsp;</a><a class="target" name="toc4.4">&nbsp;</a><h2>Fragment block</h2>
 <p>
 
 
-The fragment block must be used to control the fragment shading stage of the material. The vertex
+The fragment block must be used to control the fragment shading stage of the material. The fragment
 block must contain valid
 <a href="https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf">ESSL 3.0</a>
 code (the version of GLSL supported in OpenGL ES 3.0). You are free to create multiple functions
-inside the vertex block but you <strong class="asterisk">must</strong> declare the <code>material</code> function:
+inside the fragment block but you <strong class="asterisk">must</strong> declare the <code>material</code> function:
 
 </p><pre class="listing tilde"><code><span class="line">fragment {</span>
 <span class="line">    <span class="hljs-type">void</span> material(<span class="hljs-keyword">inout</span> MaterialInputs material) {</span>
@@ -2316,7 +2340,7 @@ standard lit shading model:
 
 
 Note that you <strong class="asterisk">must</strong> call <code>prepareMaterial(material)</code> before exiting the  <code>material()</code> function.
-This <code>prepareMaterial</code> function sets up the internal state of the material mdoel. Some of the APIs
+This <code>prepareMaterial</code> function sets up the internal state of the material model. Some of the APIs
 described in the Fragment APIs section - like <code>shading_normal</code> for instance - can only be accessed
 <em class="underscore">after</em> invoking <code>prepareMaterial()</code>.
 
@@ -2616,7 +2640,7 @@ type aliases:
 <p>
 
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getResolution()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Resolution of the view in pixels: <code>width</code>, <code>height</code>, <code>1 / width</code>, <code>1 / height</code> </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getResolution()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Dimensions of the view's effective viewport in pixels: <code>width</code>, <code>height</code>, <code>1 / width</code>, <code>1 / height</code>. This might be different from <code>View::getViewport()</code> for instance because of added rendering guard-bands. This can be used in conjunction with <code>getNormalizedViewportCoord()</code> to generate pixel coordinates. </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldCameraPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the camera/eye in world space </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldOffset()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> The shift required to obtain API-level world space </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getTime()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time as a remainder of 1 second. Yields a value between 0 and 1 </td></tr>
@@ -2821,7 +2845,9 @@ variants:
 </li>
 <li class="minus"><code>fog</code>, used when global fog is applied to the scene
 </li>
-<li class="minus"><code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver</li></ul>
+<li class="minus"><code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver
+</li>
+<li class="minus"><code>ssr</code>, used when screen-space reflections are enabled in the View</li></ul>
 
 <p></p><p>
 
