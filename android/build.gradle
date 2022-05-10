@@ -106,6 +106,7 @@ buildscript {
     }
 
     ext.cmakeArgs = [
+        "--no-warn-unused-cli",
         "-DANDROID_PIE=ON",
         "-DANDROID_PLATFORM=21",
         "-DANDROID_STL=c++_static",
@@ -117,8 +118,6 @@ buildscript {
 
     ext.cppFlags = [
         "-std=c++17",
-        "-Wno-unused-command-line-argument",
-        "-Wl,--hash-style=both", // Required to support API levels below 23
         "-fno-stack-protector",
         "-fno-exceptions",
         "-fno-unwind-tables",
@@ -131,8 +130,13 @@ buildscript {
         "-fomit-frame-pointer",
         "-ffunction-sections",
         "-fdata-sections",
+        "-no-canonical-prefixes",
+        "-Wformat",
+        "-Werror=format-security",
+        "-Wno-unused-command-line-argument",
         "-Wl,--gc-sections",
         "-Wl,-Bsymbolic-functions",
+        "-Wl,--hash-style=both", // Required to support API levels below 23
     ]
 
     ext.abis = abis
