@@ -403,6 +403,17 @@ Filament.loadClassExtensions = function() {
         this._setVignetteOptions(options);
     };
 
+    /// setGuardBandOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// enabled.
+    Filament.View.prototype.setGuardBandOptions = function(overrides) {
+        const options = {
+            enabled: false
+        };
+        Object.assign(options, overrides);
+        this._setGuardBandOptions(options);
+    };
+
     /// BufferObject ::core class::
 
     /// setBuffer ::method::
@@ -700,6 +711,10 @@ Filament.loadClassExtensions = function() {
 
     Filament.gltfio$FilamentAsset.prototype.getLightEntities = function() {
         return Filament.vectorToArray(this._getLightEntities());
+    };
+
+    Filament.gltfio$FilamentAsset.prototype.getRenderableEntities = function() {
+        return Filament.vectorToArray(this._getRenderableEntities());
     };
 
     Filament.gltfio$FilamentAsset.prototype.getCameraEntities = function() {

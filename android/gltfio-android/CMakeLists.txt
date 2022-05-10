@@ -40,30 +40,33 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,
 set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/Animator.h
         ${GLTFIO_DIR}/include/gltfio/AssetLoader.h
-        ${GLTFIO_DIR}/include/gltfio/MaterialProvider.h
-        ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
         ${GLTFIO_DIR}/include/gltfio/FilamentAsset.h
         ${GLTFIO_DIR}/include/gltfio/FilamentInstance.h
+        ${GLTFIO_DIR}/include/gltfio/MaterialProvider.h
+        ${GLTFIO_DIR}/include/gltfio/NodeManager.h
+        ${GLTFIO_DIR}/include/gltfio/ResourceLoader.h
         ${GLTFIO_DIR}/include/gltfio/TextureProvider.h
         ${GLTFIO_DIR}/include/gltfio/math.h
 
         ${GLTFIO_DIR}/src/Animator.cpp
         ${GLTFIO_DIR}/src/AssetLoader.cpp
-        ${GLTFIO_DIR}/src/DracoCache.cpp
-        ${GLTFIO_DIR}/src/DracoCache.h
         ${GLTFIO_DIR}/src/DependencyGraph.cpp
         ${GLTFIO_DIR}/src/DependencyGraph.h
+        ${GLTFIO_DIR}/src/DracoCache.cpp
+        ${GLTFIO_DIR}/src/DracoCache.h
         ${GLTFIO_DIR}/src/FFilamentAsset.h
-        ${GLTFIO_DIR}/src/FilamentAsset.cpp
         ${GLTFIO_DIR}/src/FFilamentInstance.h
+        ${GLTFIO_DIR}/src/FilamentAsset.cpp
         ${GLTFIO_DIR}/src/FilamentInstance.cpp
+        ${GLTFIO_DIR}/src/FNodeManager.h
         ${GLTFIO_DIR}/src/GltfEnums.h
         ${GLTFIO_DIR}/src/Ktx2Provider.cpp
         ${GLTFIO_DIR}/src/MaterialProvider.cpp
+        ${GLTFIO_DIR}/src/NodeManager.cpp
         ${GLTFIO_DIR}/src/ResourceLoader.cpp
         ${GLTFIO_DIR}/src/StbProvider.cpp
-        ${GLTFIO_DIR}/src/TangentsJob.h
         ${GLTFIO_DIR}/src/TangentsJob.cpp
+        ${GLTFIO_DIR}/src/TangentsJob.h
         ${GLTFIO_DIR}/src/UbershaderLoader.cpp
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h

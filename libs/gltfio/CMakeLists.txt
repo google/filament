@@ -10,10 +10,11 @@ set(PUBLIC_HDR_DIR include)
 set(PUBLIC_HDRS
         include/gltfio/Animator.h
         include/gltfio/AssetLoader.h
-        include/gltfio/MaterialProvider.h
-        include/gltfio/ResourceLoader.h
         include/gltfio/FilamentAsset.h
         include/gltfio/FilamentInstance.h
+        include/gltfio/MaterialProvider.h
+        include/gltfio/NodeManager.h
+        include/gltfio/ResourceLoader.h
         include/gltfio/TextureProvider.h
         include/gltfio/math.h
 )
@@ -23,19 +24,21 @@ set(SRCS
         src/AssetLoader.cpp
         src/DependencyGraph.cpp
         src/DependencyGraph.h
-        src/DracoCache.h
         src/DracoCache.cpp
+        src/DracoCache.h
         src/FFilamentAsset.h
-        src/FilamentAsset.cpp
         src/FFilamentInstance.h
+        src/FilamentAsset.cpp
         src/FilamentInstance.cpp
+        src/FNodeManager.h
         src/GltfEnums.h
         src/Ktx2Provider.cpp
         src/MaterialProvider.cpp
+        src/NodeManager.cpp
         src/ResourceLoader.cpp
         src/StbProvider.cpp
-        src/TangentsJob.h
         src/TangentsJob.cpp
+        src/TangentsJob.h
         src/UbershaderLoader.cpp
         src/Wireframe.cpp
         src/Wireframe.h

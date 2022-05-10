@@ -75,6 +75,9 @@ public:
     // renders a single standalone view. The view must have a a custom rendertarget.
     void renderStandaloneView(FView const* view);
 
+
+    void setPresentationTime(int64_t monotonic_clock_ns);
+
     // start a frame
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
 
@@ -99,7 +102,7 @@ public:
 
 
     void setDisplayInfo(DisplayInfo const& info) noexcept {
-        mDisplayInfo = info;
+        mDisplayInfo.refreshRate = info.refreshRate;
     }
 
     void setFrameRateOptions(FrameRateOptions const& options) noexcept {

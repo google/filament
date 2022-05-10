@@ -22,6 +22,8 @@ clean.doFirst {
 }
 
 android {
+    namespace 'com.google.android.filament.ibl'
+
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.ibl"

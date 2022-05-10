@@ -329,6 +329,16 @@ struct ScreenSpaceReflectionsOptions {
 };
 
 /**
+ * Options for the  screen-space guard band.
+ * A guard band can be enabled to avoid some artifacts towards the edge of the screen when
+ * using screen-space effects such as SSAO. Enabling the guard band reduces performance slightly.
+ * Currently the guard band can only be enabled or disabled.
+ */
+struct GuardBandOptions {
+    bool enabled = false;
+};
+
+/**
  * List of available post-processing anti-aliasing techniques.
  * @see setAntiAliasing, getAntiAliasing, setSampleCount
  */

@@ -66,8 +66,6 @@ FRenderer::FRenderer(FEngine& engine) :
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
-    debugRegistry.registerProperty("d.ssao.enabled",
-            &engine.debug.ssao.enabled);
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
             &engine.debug.renderer.doFrameCapture);
 
@@ -177,6 +175,10 @@ void FRenderer::initializeClearFlags() {
                   | TargetBufferFlags::DEPTH_AND_STENCIL;
 }
 
+void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
+    FEngine::DriverApi& driver = mEngine.getDriverApi();
+    driver.setPresentationTime(monotonic_clock_ns);
+}
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
@@ -230,7 +232,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     * to ignore the return value and render the frame anyways -- which is perfectly fine.
     * The remaining work will be done when the first render() call is made.
     */
-    auto beginFrameInternal = [this, appVsync, vsyncSteadyClockTimeNano]() {
+    auto beginFrameInternal = [this, appVsync]() {
         FEngine& engine = mEngine;
         FEngine::DriverApi& driver = engine.getDriverApi();
 
@@ -242,38 +244,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         mFrameInfoManager.beginFrame(driver, {
                 .historySize = mFrameRateOptions.history
         }, mFrameId);
-
-        if (false && vsyncSteadyClockTimeNano) { // work in progress
-            const size_t interval = mFrameRateOptions.interval; // user requested swap-interval;
-            const steady_clock::duration refreshPeriod(uint64_t(1e9 / mDisplayInfo.refreshRate));
-            const steady_clock::duration presentationDeadline(mDisplayInfo.presentationDeadlineNanos);
-            const steady_clock::duration vsyncOffset(mDisplayInfo.vsyncOffsetNanos);
-
-            // hardware vsync timestamp
-            steady_clock::time_point hwVsync = appVsync - vsyncOffset;
-
-            // compute our desired presentation time. We can't pick a desired presentation time
-            // that's too far, or we won't be able to dequeue buffers.
-            steady_clock::time_point desiredPresentationTime = hwVsync + 2 * interval * refreshPeriod;
-
-            // Compute the deadline. This deadline is when the GPU must be finished.
-            // The deadline has 1ms backed in it on Android.
-            UTILS_UNUSED_IN_RELEASE
-            steady_clock::time_point deadline = desiredPresentationTime - presentationDeadline;
-
-            // one important thing is to make sure that the deadline is comfortably later than
-            // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
-
-            // TODO: evaluate if we can make it in time, and if not why.
-            //   If the problem is cpu+gpu latency we can try to push the desired presentation time
-            //   further away, but this has limits, as only 2 buffers are dequeuable.
-            //   If the problem is the gpu is overwhelmed, then we need to
-            //    - see if there is more headroom in dynamic resolution
-            //    - or start skipping frames. Ideally lower the framerate to
-            // presentation time is set to the middle of the period we're interested in
-            steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
-            driver.setPresentationTime(presentationTime.time_since_epoch().count());
-        }
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
         engine.prepare();
@@ -504,6 +474,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto vignetteOptions = view.getVignetteOptions();
     auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
+    auto guardBandOptions = view.getGuardBandOptions();
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
@@ -566,11 +537,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     CameraInfo cameraInfo = view.computeCameraInfo(engine);
 
     // when colorgrading-as-subpass is active, we know that many other effects are disabled
-    // such as dof, bloom. Moreover if fxaa and scaling are not enabled, we're essentially in
+    // such as dof, bloom. Moreover, if fxaa and scaling are not enabled, we're essentially in
     // a very fast rendering path -- in this case, we would need an extra blit to "resolve" the
     // buffer padding (because there are no other pass that can do it as a side effect).
     // In this case, it is better to skip the padding, which won't be helping much.
     const bool noBufferPadding = colorGradingConfig.asSubpass && !hasFXAA && !scaled;
+
+    // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
+    float guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
 
     if (hasPostProcess && !noBufferPadding) {
         // We always pad the rendering viewport to dimensions multiple of 16, this guarantees
@@ -586,10 +560,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         //       Without post-processing, we usually draw directly into
         //       the SwapChain, and we might want to keep it this way.
 
+        auto round = [](uint32_t x) {
+            constexpr uint32_t rounding = 16u;
+            return (x + (rounding - 1u)) & ~(rounding - 1u);
+        };
+
         // compute the new rendering width and height, multiple of 16.
-        constexpr uint32_t rounding = 16u;
-        const float width  = float( (svp.width  + (rounding - 1u)) & ~(rounding - 1u) );
-        const float height = float( (svp.height + (rounding - 1u)) & ~(rounding - 1u) );
+        const float width  = float(round(svp.width )) + 2.0f * guardBand;
+        const float height = float(round(svp.height)) + 2.0f * guardBand;
 
         // scale the field-of-view up, so it covers exactly the extra pixels
         const float3 clipSpaceScaling{
@@ -604,8 +582,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // note: this creates an asymmetric frustum -- but we eventually copy only the
         // left/bottom part, which is a symmetric region.
         const float2 clipSpaceTranslation{
-                1.0f - clipSpaceScaling.x,
-                1.0f - clipSpaceScaling.y
+                1.0f - clipSpaceScaling.x - 2.0f * guardBand / width,
+                1.0f - clipSpaceScaling.y - 2.0f * guardBand / height
         };
 
         mat4f ts = mat4f::scaling(clipSpaceScaling);
@@ -617,6 +595,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // adjust svp to the new, larger, rendering dimensions
         svp.width  = uint32_t(width);
         svp.height = uint32_t(height);
+        xvp.left   = int32_t(guardBand);
+        xvp.bottom = int32_t(guardBand);
     }
 
     view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
@@ -985,7 +965,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Post Processing...
 
-    auto const& inputDesc = fg.getDescriptor(input);
+    UTILS_UNUSED_IN_RELEASE auto const& inputDesc = fg.getDescriptor(input);
     assert_invariant(inputDesc.width == svp.width);
     assert_invariant(inputDesc.height == svp.height);
 
@@ -1017,6 +997,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                         bloomOptions, vignetteOptions);
                 // the padded buffer is resolved now
                 xvp.left = xvp.bottom = 0;
+                svp = xvp;
             }
         }
 
@@ -1025,6 +1006,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     !hasColorGrading || needsAlphaChannel);
             // the padded buffer is resolved now
             xvp.left = xvp.bottom = 0;
+            svp = xvp;
         }
         if (scaled) {
             mightNeedFinalBlit = false;
@@ -1038,6 +1020,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                         .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat });
             }
+            xvp.left = xvp.bottom = 0;
+            svp = xvp;
         }
     }
 

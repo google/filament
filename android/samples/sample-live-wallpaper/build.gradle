@@ -4,6 +4,8 @@ apply plugin: 'kotlin-android'
 project.ext.isSample = true
 
 android {
+    namespace 'com.google.android.filament.livewallpaper'
+
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.livewallpaper"

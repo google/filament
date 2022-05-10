@@ -84,6 +84,7 @@ public:
     using VsmShadowOptions = VsmShadowOptions;
     using SoftShadowOptions = SoftShadowOptions;
     using ScreenSpaceReflectionsOptions = ScreenSpaceReflectionsOptions;
+    using GuardBandOptions = GuardBandOptions;
 
     /**
      * Sets the View's name. Only useful for debugging.
@@ -344,6 +345,20 @@ public:
      * @return screen-space reflections options
      */
     ScreenSpaceReflectionsOptions const& getScreenSpaceReflectionsOptions() const noexcept;
+
+    /**
+     * Enables or disable screen-space guard band. Disabled by default.
+     *
+     * @param options guard band options
+     */
+    void setGuardBandOptions(GuardBandOptions options) noexcept;
+
+    /**
+     * Returns screen-space guard band options.
+     *
+     * @return guard band options
+     */
+    GuardBandOptions const& getGuardBandOptions() const noexcept;
 
     /**
      * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.

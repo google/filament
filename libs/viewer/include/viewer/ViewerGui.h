@@ -26,6 +26,7 @@
 
 #include <gltfio/Animator.h>
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/NodeManager.h>
 
 #include <viewer/Settings.h>
 
@@ -76,15 +77,25 @@ public:
     ~ViewerGui();
 
     /**
-     * Adds the asset's ready-to-render entities into the scene.
+     * Sets the viewer's current asset.
      *
      * The viewer does not claim ownership over the asset or its entities. Clients should use
      * AssetLoader and ResourceLoader to load an asset before passing it in.
      *
+     * This method does not add renderables to the scene; see populateScene().
+     *
      * @param asset The asset to view.
      * @param instanceToAnimate Optional instance from which to get the animator.
      */
-    void populateScene(FilamentAsset* asset, FilamentInstance* instanceToAnimate = nullptr);
+    void setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnimate = nullptr);
+
+    /**
+     * Adds the asset's ready-to-render entities into the scene.
+     *
+     * This is used for asychronous loading. It can be called once per frame to gradually add
+     * entities into the scene as their textures are loaded.
+     */
+    void populateScene();
 
     /**
      * Removes the current asset from the viewer.
@@ -218,9 +229,13 @@ public:
     int getCurrentCamera() const { return mCurrentCamera; }
 
 private:
+    using SceneMask = gltfio::NodeManager::SceneMask;
+
     void updateIndirectLight();
 
     bool isRemoteMode() const { return mAsset == nullptr; }
+
+    void sceneSelectionUI();
 
     // Immutable properties set from the constructor.
     filament::Engine* const mEngine;
@@ -248,6 +263,7 @@ private:
     uint32_t mFlags;
     utils::Entity mCurrentMorphingEntity;
     std::vector<float> mMorphWeights;
+    SceneMask mVisibleScenes;
     bool mShowingRestPose = false;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).

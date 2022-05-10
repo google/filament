@@ -36,6 +36,8 @@ namespace utils {
  */
 namespace gltfio {
 
+class NodeManager;
+
 /**
  * \struct AssetConfiguration AssetLoader.h gltfio/AssetLoader.h
  * \brief Construction parameters for AssetLoader.
@@ -70,7 +72,8 @@ struct AssetConfiguration {
  * object, which is a bundle of Filament entities, material instances, textures, vertex buffers,
  * and index buffers.
  *
- * Clients must use AssetLoader to create and destroy FilamentAsset objects.
+ * Clients must use AssetLoader to create and destroy FilamentAsset objects. This is similar to
+ * how filament::Engine is used to create and destroy core objects like VertexBuffer.
  *
  * AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
  * ResourceLoader for this, which obtains the URI list from the asset. This is demonstrated in the
@@ -226,7 +229,9 @@ public:
 
     utils::NameComponentManager* getNames() const noexcept;
 
-    MaterialProvider* getMaterialProvider() const noexcept;
+    NodeManager& getNodeManager() noexcept;
+
+    MaterialProvider& getMaterialProvider() noexcept;
 
     /*! \cond PRIVATE */
 protected:

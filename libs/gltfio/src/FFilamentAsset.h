@@ -18,6 +18,7 @@
 #define GLTFIO_FFILAMENTASSET_H
 
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/NodeManager.h>
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -116,8 +117,10 @@ using MatInstanceCache = tsl::robin_map<intptr_t, MaterialEntry>;
 
 struct FFilamentAsset : public FilamentAsset {
     FFilamentAsset(filament::Engine* engine, utils::NameComponentManager* names,
-            utils::EntityManager* entityManager, const cgltf_data* srcAsset) :
-            mEngine(engine), mNameManager(names), mEntityManager(entityManager) {
+            utils::EntityManager* entityManager, NodeManager* nodeManager,
+            const cgltf_data* srcAsset) :
+            mEngine(engine), mNameManager(names), mEntityManager(entityManager),
+            mNodeManager(nodeManager) {
         mSourceAsset.reset(new SourceAsset {(cgltf_data*)srcAsset});
     }
 
@@ -137,6 +140,14 @@ struct FFilamentAsset : public FilamentAsset {
 
     size_t getLightEntityCount() const noexcept {
         return mLightEntities.size();
+    }
+
+    const utils::Entity* getRenderableEntities() const noexcept {
+        return (mRenderableCount == 0) ? nullptr : mEntities.data();
+    }
+
+    size_t getRenderableEntityCount() const noexcept {
+        return mRenderableCount;
     }
 
     const utils::Entity* getCameraEntities() const noexcept {
@@ -231,6 +242,17 @@ struct FFilamentAsset : public FilamentAsset {
         return mInstances.size();
     }
 
+    size_t getSceneCount() const noexcept { return mScenes.size(); }
+
+    const char* getSceneName(size_t sceneIndex) const noexcept {
+        return mScenes[sceneIndex].c_str();
+    }
+
+    void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
+            SceneMask sceneFilter);
+
+    // end public API
+
     void takeOwnership(filament::Texture* texture) {
         mTextures.push_back(texture);
     }
@@ -247,12 +269,14 @@ struct FFilamentAsset : public FilamentAsset {
 
     void createAnimators();
 
-    filament::Engine* mEngine;
-    utils::NameComponentManager* mNameManager;
-    utils::EntityManager* mEntityManager;
-    std::vector<utils::Entity> mEntities;
+    filament::Engine* const mEngine;
+    utils::NameComponentManager* const mNameManager;
+    utils::EntityManager* const mEntityManager;
+    NodeManager* const mNodeManager;
+    std::vector<utils::Entity> mEntities; // sorted such that renderables come first
     std::vector<utils::Entity> mLightEntities;
     std::vector<utils::Entity> mCameraEntities;
+    size_t mRenderableCount = 0;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
     std::vector<filament::BufferObject*> mBufferObjects;
@@ -260,6 +284,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<filament::MorphTargetBuffer*> mMorphTargetBuffers;
     std::vector<filament::Texture*> mTextures;
     utils::FixedCapacityVector<Variant> mVariants;
+    utils::FixedCapacityVector<utils::CString> mScenes;
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
@@ -269,8 +294,6 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
-    tsl::robin_map<utils::Entity, utils::CString> mNodeExtras;
-    tsl::robin_map<utils::Entity, utils::FixedCapacityVector<utils::CString>> mMorphTargetNames;
     utils::CString mAssetExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.

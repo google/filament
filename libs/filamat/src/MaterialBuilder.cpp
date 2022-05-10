@@ -727,6 +727,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 #ifndef FILAMAT_LITE
                 GLSLPostProcessor::Config config{
                         .variant = v.variant,
+                        .targetApi = targetApi,
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
                         .domain = mMaterialDomain,

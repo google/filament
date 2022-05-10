@@ -447,6 +447,9 @@ value_object<filament::View::VignetteOptions>("View$VignetteOptions")
     .field("color", &filament::View::VignetteOptions::color)
     .field("enabled", &filament::View::VignetteOptions::enabled);
 
+value_object<filament::View::GuardBandOptions>("View$GuardBandOptions")
+    .field("enabled", &filament::View::GuardBandOptions::enabled);
+
 value_object<LightManager::ShadowOptions>("LightManager$ShadowOptions")
     .field("mapSize", &LightManager::ShadowOptions::mapSize)
     .field("shadowCascades", &LightManager::ShadowOptions::shadowCascades)
@@ -707,6 +710,7 @@ class_<View>("View")
     .function("_setBloomOptions", &View::setBloomOptions)
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
+    .function("_setGuardBandOptions", &View::setGuardBandOptions)
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)
     .function("setAntiAliasing", &View::setAntiAliasing)
@@ -1824,6 +1828,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("_getLightEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
         const utils::Entity* ptr = self->getLightEntities();
         return EntityVector(ptr, ptr + self->getLightEntityCount());
+    }), allow_raw_pointers())
+
+    .function("_getRenderableEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {
+        const utils::Entity* ptr = self->getRenderableEntities();
+        return EntityVector(ptr, ptr + self->getRenderableEntityCount());
     }), allow_raw_pointers())
 
     .function("_getCameraEntities", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self), {

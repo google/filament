@@ -24,8 +24,6 @@
 
 #include <fg/FrameGraph.h>
 
-#include <private/filament/SibGenerator.h>
-
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 
@@ -117,8 +115,7 @@ void ShadowMapManager::addSpotShadowMap(size_t lightIndex,
     mSpotShadowMaps.emplace_back(shadowMap, lightIndex, options);
 }
 
-FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg,
-        FEngine& engine, backend::DriverApi& driver,
+FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine& engine,
         RenderPass const& pass, FView& view) noexcept {
 
     constexpr size_t MAX_SHADOW_LAYERS =

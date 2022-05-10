@@ -80,11 +80,8 @@ public:
         // refresh-rate of the display in Hz. set to 0 for offscreen or turn off frame-pacing.
         float refreshRate = 60.0f;
 
-        // how far in advance a buffer must be queued for presentation at a given time in ns
-        uint64_t presentationDeadlineNanos = 0;
-
-        // offset by which vsyncSteadyClockTimeNano provided in beginFrame() is offset in ns
-        uint64_t vsyncOffsetNanos = 0;
+        [[deprecated]] uint64_t presentationDeadlineNanos = 0;
+        [[deprecated]] uint64_t vsyncOffsetNanos = 0;
     };
 
     /**
@@ -242,6 +239,20 @@ public:
      */
     bool beginFrame(SwapChain* swapChain,
             uint64_t vsyncSteadyClockTimeNano = 0u);
+
+    /**
+     * Set the time at which the frame must be presented to the display.
+     *
+     * This must be called between beginFrame() and endFrame().
+     *
+     * @param monotonic_clock_ns  the time in nanoseconds corresponding to the system monotonic up-time clock.
+     *                            the presentation time is typically set in the middle of the period
+     *                            of interest. The presentation time cannot be too far in the
+     *                            future because it is limited by how many buffers are available in
+     *                            the display sub-system. Typically it is set to 1 or 2 vsync periods
+     *                            away.
+     */
+    void setPresentationTime(int64_t monotonic_clock_ns);
 
     /**
      * Render a View into this renderer's window.
