@@ -5,11 +5,6 @@ void main() {
 
     inputs.normalizedUV = position.xy * 0.5 + 0.5;
 
-// In Vulkan and Metal, texture coords are Y-down. In OpenGL, texture coords are Y-up.
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    inputs.normalizedUV.y = 1.0 - inputs.normalizedUV.y;
-#endif
-
     gl_Position = getPosition();
     // GL convention to inverted DX convention
     gl_Position.z = gl_Position.z * -0.5 + 0.5;

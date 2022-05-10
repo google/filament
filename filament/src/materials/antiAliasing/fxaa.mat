@@ -29,6 +29,7 @@ vertex {
 
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
         postProcess.vertex.xy = materialParams.viewport.xy + postProcess.normalizedUV * materialParams.viewport.zw;
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.vertex.xy);
     }
 
 }

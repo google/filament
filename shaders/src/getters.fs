@@ -62,26 +62,6 @@ float getNdotV() {
 }
 
 /**
- * Transforms a texture UV to make it suitable for a render target attachment.
- *
- * In Vulkan and Metal, texture coords are Y-down but in OpenGL they are Y-up. This wrapper function
- * accounts for these differences. When sampling from non-render targets (i.e. uploaded textures)
- * these differences do not matter because OpenGL has a second piece of backwardness, which is that
- * the first row of texels in glTexImage2D is interpreted as the bottom row.
- *
- * To protect users from these differences, we recommend that materials in the SURFACE domain
- * leverage this wrapper function when sampling from offscreen render targets.
- *
- * @public-api
- */
-highp vec2 uvToRenderTargetUV(highp vec2 uv) {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    uv.y = 1.0 - uv.y;
-#endif
-    return uv;
-}
-
-/**
  * Returns the normalized [0, 1] viewport coordinates with the origin at the viewport's bottom-left.
  * Z coordinate is in the [0, 1] range as well.
  *

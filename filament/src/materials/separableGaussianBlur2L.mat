@@ -7,11 +7,6 @@ material {
             precision: medium
         },
         {
-            type : float4,
-            name : resolution,
-            precision: high
-        },
-        {
             type : float2,
             name : axis
         },

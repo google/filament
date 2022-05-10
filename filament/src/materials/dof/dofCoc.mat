@@ -20,8 +20,8 @@ material {
             name : cocClamp
         },
         {
-            type : float4,
-            name : uvscale,
+            type : float2,
+            name : texelSize,
             precision: high
         }
     ],
@@ -50,7 +50,7 @@ vertex {
     void dummy(){}
 
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = (postProcess.normalizedUV * materialParams.uvscale.xy) * materialParams.uvscale.zw;
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
     }
 }
 
