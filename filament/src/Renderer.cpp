@@ -320,7 +320,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         initializeClearFlags();
     }
 
-    const float4 clearColor = mClearOptions.clearColor;
+    const float4 clearColor = mClearOptions.clearColorValue;
     const TargetBufferFlags clearFlags = mClearFlags;
     const TargetBufferFlags discardStartFlags = mDiscardStartFlags;
     TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
@@ -349,16 +349,41 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     Handle<HwRenderTarget> viewRenderTarget;
     TargetBufferFlags attachmentMask;
     getRenderTarget(view, attachmentMask, viewRenderTarget);
-    FrameGraphId<FrameGraphTexture> fgViewRenderTarget = fg.import("viewRenderTarget",
-            {
-                    .attachments = attachmentMask,
-                    .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
-                    .clearColor = clearColor,
-                    .samples = 0,
-                    .clearFlags = clearFlags,
-                    .keepOverrideStart = keepOverrideStartFlags,
-                    .keepOverrideEnd = keepOverrideEndFlags
-            }, viewRenderTarget);
+    FrameGraphId<FrameGraphTexture> fgViewRenderTarget;
+    FrameGraphId<FrameGraphTexture> fgHdrTexture;
+    FrameGraphId<FrameGraphTexture> fgDepthTexture;
+
+    Texture::InternalFormat depthFormat = Texture::InternalFormat::DEPTH32F;
+
+    fgViewRenderTarget = fg.import("viewRenderTarget",
+        {
+                .attachments = attachmentMask,
+                .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
+                .clearColor = clearColor,
+                .samples = 0,
+                .clearFlags = clearFlags,
+                .keepOverrideStart = keepOverrideStartFlags,
+                .keepOverrideEnd = keepOverrideEndFlags
+        }, viewRenderTarget);
+
+    auto importTexture = [&](const FTexture* texture, const char* name) {
+        FrameGraphTexture frameGraphTexture{ .handle = texture->getHwHandle() };
+        return fg.import(name, {
+                .width = (uint32_t)texture->getWidth(0u),
+                .height = (uint32_t)texture->getHeight(0u),
+                .format = texture->getFormat()
+        }, texture->getUsage(), frameGraphTexture);
+    };
+
+    auto* colorHdrTexture = upcast(view).getHdrColorTexture();
+    if (colorHdrTexture) {
+        fgHdrTexture = importTexture(colorHdrTexture, "colorHdrTexture");
+    }
+    auto* depthTexture = upcast(view).getDepthStencilTexture();
+    if (depthTexture) {
+        depthFormat = depthTexture->getFormat();
+        fgDepthTexture = importTexture(depthTexture, "depthStencil");
+    }
 
     const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
     const bool blending = blendModeTranslucent;
@@ -371,6 +396,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .vp = vp,
             .svp = svp,
             .scale = scale,
+            .depthFormat = depthFormat,
             .hdrFormat = hdrFormat,
             .msaa = msaaSampleCount,
             .clearFlags = clearFlags,
@@ -626,11 +652,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
 //    auto debug = fg.getBlackboard().get<FrameGraphTexture>("structure");
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
-
     fg.forwardResource(fgViewRenderTarget, input);
-
     fg.present(fgViewRenderTarget);
-
+    if (fgHdrTexture) {
+        fg.forwardResource(fgHdrTexture, fg.getBlackboard().get<FrameGraphTexture>("hdr"));
+        fg.present(fgHdrTexture);
+    }
+    if (fgDepthTexture) {
+        fg.forwardResource(fgDepthTexture, depth);
+        fg.present(fgDepthTexture);
+    }
     fg.compile();
 
     //fg.export_graphviz(slog.d, view.getName());
@@ -729,7 +760,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         }
 
         const TextureFormat format = (view.getBlendMode() == BlendMode::TRANSLUCENT) ? mHdrTranslucent : mHdrQualityMedium;
-        
+
         input = ppm.opaqueBlit(fg, input, {
                 .width = w,
                 .height = h,
@@ -833,7 +864,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                             // the tile depth buffer will be MS, but it'll be resolved to single
                             // sample automatically -- which is what we want.
                             .samples = colorBufferDesc.samples,
-                            .format = TextureFormat::DEPTH32F,
+                            .format = config.depthFormat,
                     });
                 }
 
@@ -864,6 +895,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.clearFlags = clearColorFlags | clearDepthFlags;
 
                 blackboard["depth"] = data.depth;
+                blackboard["hdr"] = data.color;
             },
             [=, &view](FrameGraphResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
@@ -1198,14 +1230,20 @@ void FRenderer::getRenderTarget(FView const& view,
 }
 
 void FRenderer::initializeClearFlags() {
-    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
-    // across views (clear implies discard)
-    mDiscardStartFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-                          TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-                         | TargetBufferFlags::DEPTH_AND_STENCIL;
-
-    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
+    mClearFlags = TargetBufferFlags::NONE;
+    if (mClearOptions.clearColor) {
+        mClearFlags |= TargetBufferFlags::COLOR;
+    }
+    if (mClearOptions.clearDepth) {
+        mClearFlags |= TargetBufferFlags::DEPTH_AND_STENCIL;
+    }
+    mDiscardStartFlags = TargetBufferFlags::NONE;
+    if (mClearOptions.discard) {
+        mDiscardStartFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH_AND_STENCIL;
+    } else {
+        // clear implies discard
+        mDiscardStartFlags = mClearFlags;
+    }
 }
 
 // ------------------------------------------------------------------------------------------------

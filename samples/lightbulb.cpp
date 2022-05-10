@@ -197,8 +197,8 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
 
     // Without an IBL, we must clear the swapchain to black before each frame.
     renderer->setClearOptions({
-            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-            .clear = !FilamentApp::get().getIBL()  });
+            .clearColorValue = { 0.0f, 0.0f, 0.0f, 1.0f },
+            .clearColor = !FilamentApp::get().getIBL()  });
 
 }
 

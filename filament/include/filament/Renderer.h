@@ -121,12 +121,19 @@ public:
      */
     struct ClearOptions {
         /** Color to use to clear the SwapChain */
-        math::float4 clearColor = {};
+        math::float4 clearColorValue = {};
+        
         /**
          * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
          * View will be drawn, for instance.
          */
-        bool clear = false;
+        bool clearColor = false;
+        
+        /**
+         * Whether the SwapChain should be clear the depth.
+         */
+        bool clearDepth = true;
+        
         /**
          * Whether the SwapChain content should be discarded. clear implies discard. Set this
          * to false (along with clear to false as well) if the SwapChain already has content that

@@ -338,7 +338,7 @@ int main(int argc, char** argv) {
     };
 
     auto preRender = [&app](Engine*, View*, Scene*, Renderer* renderer) {
-        renderer->setClearOptions({.clearColor = {0.1,0.2,0.4,1.0}, .clear = true});
+        renderer->setClearOptions({.clearColorValue = {0.1,0.2,0.4,1.0}, .clearColor = true});
     };
 
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {

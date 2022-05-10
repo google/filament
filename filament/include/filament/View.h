@@ -144,6 +144,38 @@ public:
      * @see setRenderTarget
      */
     RenderTarget* getRenderTarget() const noexcept;
+    
+    /**
+     * Specifies an offscreen render target's HDR color output texture to render into.
+     *
+     * @param texture HDR color texture
+     */
+    void setHdrColorTexture(Texture* texture) noexcept;
+    
+    /**
+     * Gets the offscreen render target's HDR color output texture.
+     *
+     * Returns nullptr if the render target is the swap chain (which is default).
+     *
+     * @see setHDRColorTexture
+     */
+    Texture* getHdrColorTexture() const noexcept;
+
+    /**
+     * Specifies an offscreen render target's depth-stencil texture to render into.
+     *
+     * @param texture depth-stencil texture
+     */
+    void setDepthStencilTexture(Texture* texture) noexcept;
+    
+    /**
+     * Gets the offscreen render target's depth-stencil texture.
+     *
+     * Returns nullptr if the render target is the swap chain (which is default).
+     *
+     * @see setDepthStencilTexture
+     */
+    Texture* getDepthStencilTexture() const noexcept;
 
     /**
      * Sets the rectangular region to render to.

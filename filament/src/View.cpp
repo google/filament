@@ -893,6 +893,22 @@ RenderTarget* View::getRenderTarget() const noexcept {
     return upcast(this)->getRenderTarget();
 }
 
+void View::setHdrColorTexture(Texture* texture) noexcept {
+    return upcast(this)->setHdrColorTexture(upcast(texture));
+}
+
+Texture* View::getHdrColorTexture() const noexcept {
+    return upcast(this)->getHdrColorTexture();
+}
+
+void View::setDepthStencilTexture(Texture* texture) noexcept {
+    return upcast(this)->setDepthStencilTexture(upcast(texture));
+}
+
+Texture* View::getDepthStencilTexture() const noexcept {
+    return upcast(this)->getDepthStencilTexture();
+}
+
 void View::setSampleCount(uint8_t count) noexcept {
     upcast(this)->setSampleCount(count);
 }

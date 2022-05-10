@@ -143,6 +143,7 @@ private:
         Viewport vp;
         Viewport svp;
         math::float2 scale;
+        Texture::InternalFormat depthFormat;
         backend::TextureFormat hdrFormat;
         uint8_t msaa;
         backend::TargetBufferFlags clearFlags;
