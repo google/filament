@@ -15,11 +15,6 @@ material {
             type : sampler2d,
             name : tiles,
             precision: medium
-        },
-        {
-            type : float2,
-            name : uvscale,
-            precision: high
         }
     ],
     variables : [
@@ -32,8 +27,7 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV;
-        postProcess.vertex.zw = postProcess.vertex.xy * materialParams.uvscale;
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
     }
 }
 
@@ -121,7 +115,7 @@ vec4 median(ivec2 ij) {
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
-    vec2 tiles = textureLod(materialParams_tiles, variable_vertex.zw, 0.0).rg;
+    vec2 tiles = textureLod(materialParams_tiles, variable_vertex.xy, 0.0).rg;
     vec4 dof = vec4(0.0);
 
     if (!isTrivialTile(tiles)) {

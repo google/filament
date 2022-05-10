@@ -20,8 +20,8 @@ material {
             name : cocClamp
         },
         {
-            type : float4,
-            name : uvscale,
+            type : float2,
+            name : texelSize,
             precision: high
         }
     ],
@@ -50,7 +50,21 @@ vertex {
     void dummy(){}
 
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = (postProcess.normalizedUV * materialParams.uvscale.xy * 2.0 - 0.5) * materialParams.uvscale.zw;
+        // It works to fix-up the UV *before* applying the offsets because materialParams.texelSize
+        // corresponds to one texel.
+        // on GL:           v0 = v - 0.5 * texel                                                (1)
+        //                  v1 = v - 0.5 * texel + 1 * texel
+        //                     = v + 0.5 * texel                                                (2)
+        // on MTL/VK:       v0 = 1 - ((1 - v) - 0.5 * texel)
+        //                     = v + 0.5 * texel                                                (3)
+        //                  v1 = 1 - ((1 - v) - 0.5 * texel + 1 * texel)
+        //                     = v - 0.5 * texel                                                (4)
+        // Because the all the operations on the 4 texels in the fragment shader don't depend on
+        // the order they're fetched, it all works out.
+        postProcess.normalizedUV = uvToRenderTargetUV(postProcess.normalizedUV);
+
+        // offset UVs by -0.5 texel because we use textureLodOffset() in the fragment shader
+        postProcess.vertex.xy = postProcess.normalizedUV - 0.5 * materialParams.texelSize;
     }
 }
 

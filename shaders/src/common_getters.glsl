@@ -47,6 +47,26 @@ highp float getUserTimeMod(float m) {
     return mod(mod(frameUniforms.userTime.x, m) + mod(frameUniforms.userTime.y, m), m);
 }
 
+/**
+ * Transforms a texture UV to make it suitable for a render target attachment.
+ *
+ * In Vulkan and Metal, texture coords are Y-down but in OpenGL they are Y-up. This wrapper function
+ * accounts for these differences. When sampling from non-render targets (i.e. uploaded textures)
+ * these differences do not matter because OpenGL has a second piece of backwardness, which is that
+ * the first row of texels in glTexImage2D is interpreted as the bottom row.
+ *
+ * To protect users from these differences, we recommend that materials in the SURFACE domain
+ * leverage this wrapper function when sampling from offscreen render targets.
+ *
+ * @public-api
+ */
+highp vec2 uvToRenderTargetUV(highp vec2 uv) {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    uv.y = 1.0 - uv.y;
+#endif
+    return uv;
+}
+
 // TODO: below shouldn't be accessible from post-process materials
 
 #define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x1u
