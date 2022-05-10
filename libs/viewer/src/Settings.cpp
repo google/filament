@@ -1247,6 +1247,7 @@ static std::ostream& operator<<(std::ostream& out, CGQL in) {
 static std::ostream& operator<<(std::ostream& out, DepthOfFieldOptions::Filter in) {
     switch (in) {
         case DepthOfFieldOptions::Filter::NONE: return out << "\"NONE\"";
+        case DepthOfFieldOptions::Filter::UNUSED: return out << "\"UNUSED\"";
         case DepthOfFieldOptions::Filter::MEDIAN: return out << "\"MEDIAN\"";
     }
     return out << "\"INVALID\"";

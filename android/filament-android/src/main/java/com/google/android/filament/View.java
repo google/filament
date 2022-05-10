@@ -572,6 +572,7 @@ public class View {
 
         public enum Filter {
             NONE,
+            UNUSED,
             MEDIAN
         }
 
