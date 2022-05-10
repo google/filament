@@ -28,6 +28,7 @@ include:
 - If the default value of a field is a vector, it must be in the form: `{ x, y, z }`.
 - The type of every struct field must be specified without any whitespace (e.g. `Texture*`).
 - There must be no string literals that contain keywords.
+- Enum names must be disambiguated when they appear in a struct field default value.
 
 If the comment for a struct field contains the string `%codegen_skip_json%`, then the field is
 skipped when generating JSON serialization code.

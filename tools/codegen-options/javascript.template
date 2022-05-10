@@ -3,6 +3,8 @@
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
+#include <filament/View.h>
+
 using namespace emscripten;
 using namespace filament;
 
@@ -11,9 +13,13 @@ EMSCRIPTEN_BINDINGS(jsbindings_generated) {
 
 {{define "JsBindingsStruct"}}
 {{- $struct_name := .QualifiedName }}
-value_object<View::{{ $struct_name }}>("View${{ $struct_name }}")
+value_object<View::{{ $struct_name }}>("View${{ qualifiedtype .QualifiedName }}")
 {{- range $index, $field := .Fields}}
+{{- if $field.SkipJavaScript}}
+    // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
+{{- else }}
     .field("{{ $field.Name }}", &View::{{ $struct_name }}::{{ $field.Name }})
+{{- end }}
 {{- end }}
     ;
 {{end}}
@@ -29,6 +35,8 @@ value_object<View::{{ $struct_name }}>("View${{ $struct_name }}")
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
+#include <filament/View.h>
+
 using namespace emscripten;
 using namespace filament;
 
@@ -37,9 +45,9 @@ EMSCRIPTEN_BINDINGS(jsenums_generated) {
 
 {{define "JsEnum"}}
 {{- $enum_name := .QualifiedName }}
-enum_<View::{{ $enum_name }}>("View${{ $enum_name }}")
+enum_<View::{{ $enum_name }}>("View${{ qualifiedtype .QualifiedName }}")
 {{- range .Values}}
-    .value("{{ . }}", &View::{{ $enum_name }}::{{ . }})
+    .value("{{ . }}", View::{{ $enum_name }}::{{ . }})
 {{- end }}
     ;
 {{end}}
@@ -62,7 +70,7 @@ Filament.loadGeneratedExtensions = function() {
 {{- if $field.SkipJavaScript}}
             // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
 {{- else }}
-            {{$field.Name}}: {{jsify $field.DefaultValue}},
+            {{$field.Name}}: {{qualifiedvalue $field.DefaultValue}},
 {{- end }}
 {{- end }}
         };

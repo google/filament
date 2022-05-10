@@ -21,15 +21,31 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
 func EmitJavaScript(definitions []Scope, outputFolder string) {
+	// These template extensions are used to transmogrify C++ symbols and value literals into
+	// JavaScript. We mostly don't need to do anything since the parser has already done some
+	// massaging and verification (e.g. it removed the trailing "f" from floating point literals).
+	// However enums need some special care here. Emscripten bindings are flat, so our own
+	// convention is to use $ for the scoping delimiter, which is a legal symbol character in JS.
+	// However we still use . to separate the enum value from the enum type, because emscripten has
+	// first-class support for class enums.
 	customExtensions := template.FuncMap{
-		"jsify": func(cppvalue string) string {
-			// Values are already massaged in the parsing phase, which is a better place than
-			// here since the parser can report the line number for unexpected syntax.
-			return cppvalue
+		"qualifiedtype": func(typename string) string {
+			typename = strings.ReplaceAll(typename, "::", "$")
+			return typename
+		},
+		"qualifiedvalue": func(name string) string {
+			count := strings.Count(name, "::")
+			if count > 0 {
+				name = "Filament.View$" + name
+			}
+			name = strings.Replace(name, "::", "$", count-1)
+			name = strings.Replace(name, "::", ".", 1)
+			return name
 		},
 	}
 
