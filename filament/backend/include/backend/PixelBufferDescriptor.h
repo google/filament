@@ -247,7 +247,7 @@ public:
         }
 
         size_t bpr = bpp * stride;
-        size_t bprAligned = (bpr + (alignment - 1)) & -alignment;
+        size_t bprAligned = (bpr + (alignment - 1)) & (~alignment + 1);
         return bprAligned * height;
     }
 
