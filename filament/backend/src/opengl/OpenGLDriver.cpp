@@ -1640,7 +1640,7 @@ void OpenGLDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t ex
 
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.id);
-    glBufferStorageExternalEXT(GL_ELEMENT_ARRAY_BUFFER, 0, ib->count * ib->elementSize, externalBuffer, 0);
+    glBufferStorageExternalEXT(GL_ELEMENT_ARRAY_BUFFER, 0, ib->count * ib->elementSize, (GLeglClientBufferEXT)externalBuffer, 0);
 
     CHECK_GL_ERROR(utils::slog.e)
 #else
@@ -1659,7 +1659,7 @@ void OpenGLDriver::setExternalBuffer(Handle<HwBufferObject> boh, intptr_t extern
 
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
-    glBufferStorageExternalEXT(GL_ARRAY_BUFFER, 0, bo->byteCount, externalBuffer, 0);
+    glBufferStorageExternalEXT(GL_ARRAY_BUFFER, 0, bo->byteCount, (GLeglClientBufferEXT)externalBuffer, 0);
 
     CHECK_GL_ERROR(utils::slog.e)
 #else
