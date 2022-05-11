@@ -60,7 +60,7 @@ Filament.loadGeneratedExtensions = function() {
             cocScale: 1.0,
             maxApertureDiameter: 0.01,
             enabled: false,
-            filter: Filament.View$Filter.MEDIAN,
+            filter: Filament.View$DepthOfFieldOptions$Filter.MEDIAN,
             nativeResolution: false,
             foregroundRingCount: 0,
             backgroundRingCount: 0,

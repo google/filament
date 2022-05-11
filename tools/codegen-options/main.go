@@ -62,6 +62,7 @@ func main() {
 
 	EmitSerializer(definitions, filepath.Join(root, "libs", "viewer", "src"))
 	EmitJavaScript(definitions, filepath.Join(root, "web", "filament-js"))
+	EditTypeScript(definitions, filepath.Join(root, "web", "filament-js"))
 
 	fmt.Print(`
 Note that this tool does not generate bindings for setter methods on

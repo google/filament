@@ -81,3 +81,27 @@ Filament.loadGeneratedExtensions = function() {
 {{define "JsExtensionsFooter"}}
 };
 {{end}}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+{{define "TsStruct"}}
+{{- $struct_name := .QualifiedName }}
+export interface View${{ qualifiedtype .QualifiedName }} {
+{{- range $index, $field := .Fields}}
+{{- if $field.SkipJavaScript}}
+    // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
+{{- else }}
+    {{ $field.Name }}?: {{ tstype $field.Type }};
+    {{- if $field.Description}} // {{ $field.Description }}{{end}}
+{{- end }}
+{{- end }}
+}
+{{end}}
+
+{{define "TsEnum"}}
+export enum View${{ qualifiedtype .QualifiedName }} {
+{{- range .Values}}
+    {{ . }},
+{{- end }}
+}
+{{end}}
