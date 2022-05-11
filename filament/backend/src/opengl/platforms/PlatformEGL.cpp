@@ -80,7 +80,7 @@ static void clearGlError() noexcept {
 
 PlatformEGL::PlatformEGL() noexcept = default;
 
-Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
+Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
@@ -219,7 +219,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     clearGlError();
 
     // success!!
-    return OpenGLDriverFactory::create(this, sharedContext);
+    return OpenGLDriverFactory::create(this, sharedContext, driverConfig);
 
 error:
     // if we're here, we've failed
