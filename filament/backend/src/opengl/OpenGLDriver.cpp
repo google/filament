@@ -1079,9 +1079,9 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     rt->gl.samples = samples;
     rt->targets = targets;
 
+    GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
+    const size_t maxDrawBuffers = getMaxDrawBuffers();
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
-        GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
-        const size_t maxDrawBuffers = getMaxDrawBuffers();
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
                 rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
@@ -1089,8 +1089,6 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
         }
-        glDrawBuffers(maxDrawBuffers, bufs);
-        CHECK_GL_ERROR(utils::slog.e)
     }
 
     // handle special cases first (where depth/stencil are packed)
@@ -1118,6 +1116,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         }
     }
 
+    glDrawBuffers(maxDrawBuffers, bufs);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
