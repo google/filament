@@ -62,7 +62,7 @@ public:
 
     // Creates an Invocable from the functor passed in.
     template<typename Fn, EnableIfFnMatchesInvocable<Fn, R, Args...> = 0>
-    Invocable(Fn&& fn) noexcept;
+    Invocable(Fn&& fn) noexcept; // NOLINT(google-explicit-constructor)
 
     Invocable(const Invocable&) = delete;
     Invocable(Invocable&& rhs) noexcept;
@@ -121,12 +121,9 @@ Invocable<R(Args...)>::Invocable(Invocable&& rhs) noexcept
 template<typename R, typename... Args>
 Invocable<R(Args...)>& Invocable<R(Args...)>::operator=(Invocable&& rhs) noexcept {
     if (this != &rhs) {
-        mInvocable = rhs.mInvocable;
-        mDeleter = rhs.mDeleter;
-        mInvoker = rhs.mInvoker;
-        rhs.mInvocable = nullptr;
-        rhs.mDeleter = nullptr;
-        rhs.mInvoker = nullptr;
+        std::swap(mInvocable, rhs.mInvocable);
+        std::swap(mDeleter, rhs.mDeleter);
+        std::swap(mInvoker, rhs.mInvoker);
     }
     return *this;
 }
