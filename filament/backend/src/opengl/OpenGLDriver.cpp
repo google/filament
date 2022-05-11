@@ -1843,11 +1843,11 @@ void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint
     // Must fit within int8_t.
     assert_invariant(minLevel <= 0x7f && maxLevel <= 0x7f);
 
-    t->gl.baseLevel = minLevel;
+    /*t->gl.baseLevel = minLevel;
     glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
 
     t->gl.maxLevel = maxLevel; // NOTE: according to the GL spec, the default value of this 1000
-    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
+    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);*/
 }
 
 void OpenGLDriver::update3DImage(Handle<HwTexture> th,
@@ -3176,14 +3176,14 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
         if (targetLevel < texture->gl.baseLevel || targetLevel > texture->gl.maxLevel) {
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, texture);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            if (targetLevel < texture->gl.baseLevel) {
+            /*if (targetLevel < texture->gl.baseLevel) {
                 texture->gl.baseLevel = targetLevel;
                 glTexParameteri(texture->gl.target, GL_TEXTURE_BASE_LEVEL, targetLevel);
             }
             if (targetLevel > texture->gl.maxLevel) {
                 texture->gl.maxLevel = targetLevel;
                 glTexParameteri(texture->gl.target, GL_TEXTURE_MAX_LEVEL, targetLevel);
-            }
+            }*/
         }
         CHECK_GL_ERROR(utils::slog.e)
     }
