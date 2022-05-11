@@ -123,11 +123,6 @@ func (context parserContext) distillValue(cppvalue string, lineNumber int) strin
 		}
 	}
 
-	// Assume it's a enum in the View scope if there's a qualifier.
-	if strings.Contains(cppvalue, "::") {
-		cppvalue = "Filament.View" + strings.ReplaceAll(cppvalue, "::", "$")
-	}
-
 	if len(cppvalue) == 0 {
 		log.Fatalf("%d: empty value specified", lineNumber)
 	}

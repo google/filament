@@ -4,12 +4,15 @@ project(filament-js)
 
 set(EXTERN_POSTJS_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/wasmloader.js
+  ${CMAKE_CURRENT_SOURCE_DIR}/extensions_generated.js
   ${CMAKE_CURRENT_SOURCE_DIR}/extensions.js
   ${CMAKE_CURRENT_SOURCE_DIR}/utilities.js)
 
 set(CPP_SRC
   jsenums.cpp
-  jsbindings.cpp)
+  jsenums_generated.cpp
+  jsbindings.cpp
+  jsbindings_generated.cpp)
 
 # The emcc options are not documented well, the best place to find them is the source:
 # https://github.com/kripken/emscripten/blob/main/src/settings.js

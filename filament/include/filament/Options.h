@@ -125,13 +125,13 @@ struct BloomOptions {
         ADD,           //!< Bloom is modulated by the strength parameter and added to the scene
         INTERPOLATE    //!< Bloom is interpolated with the scene using the strength parameter
     };
-    Texture* dirt = nullptr;                //!< user provided dirt texture %codegen_skip_json%
-    float dirtStrength = 0.2f;              //!< strength of the dirt texture %codegen_skip_json%
+    Texture* dirt = nullptr;                //!< user provided dirt texture %codegen_skip_json% %codegen_skip_javascript%
+    float dirtStrength = 0.2f;              //!< strength of the dirt texture %codegen_skip_json% %codegen_skip_javascript%
     float strength = 0.10f;                 //!< bloom's strength between 0.0 and 1.0
     uint32_t resolution = 360;              //!< resolution of vertical axis (2^levels to 2048)
     float anamorphism = 1.0f;               //!< bloom x/y aspect-ratio (1/32 to 32)
     uint8_t levels = 6;                     //!< number of blur levels (3 to 11)
-    BlendMode blendMode = BlendMode::ADD;   //!< how the bloom effect is applied
+    BlendMode blendMode = BloomOptions::BlendMode::ADD;   //!< how the bloom effect is applied
     bool threshold = true;                  //!< whether to threshold the source
     bool enabled = false;                   //!< enable or disable bloom
     float highlight = 1000.0f;              //!< limit highlights to this value before bloom [10, +inf]

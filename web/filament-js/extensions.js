@@ -55,6 +55,8 @@ Filament.shadowOptions = function(overrides) {
 
 Filament.loadClassExtensions = function() {
 
+    Filament.loadGeneratedExtensions();
+
     /// Engine ::core class::
 
     /// create ::static method:: Creates an Engine instance for the given canvas.
@@ -268,149 +270,56 @@ Filament.loadClassExtensions = function() {
     };
 
     /// setAmbientOcclusionOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// radius, power, bias, resolution, intensity, quality.
     Filament.View.prototype.setAmbientOcclusionOptions = function(overrides) {
-        const options = {
-            radius: 0.3,
-            power: 1.0,
-            bias: 0.0005,
-            resolution: 0.5,
-            intensity: 1.0,
-            quality: Filament.View$QualityLevel.LOW
-        };
-        Object.assign(options, overrides);
+        const options = this.setAmbientOcclusionOptionsDefaults(overrides);
         this._setAmbientOcclusionOptions(options);
     };
 
     /// setDepthOfFieldOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// cocScale, maxApertureDiameter, enabled.
     Filament.View.prototype.setDepthOfFieldOptions = function(overrides) {
-        const options = {
-            cocScale: 1.0,
-            maxApertureDiameter: 0.01,
-            enabled: false
-        };
-        Object.assign(options, overrides);
+        const options = this.setDepthOfFieldOptionsDefaults(overrides);
         this._setDepthOfFieldOptions(options);
     };
 
     /// setMultiSampleAntiAliasingOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// enabled, sampleCount, customResolve.
     Filament.View.prototype.setMultiSampleAntiAliasingOptions = function(overrides) {
-        const options = {
-            enabled: false,
-            sampleCount: 4,
-            customResolve: false
-        };
-        Object.assign(options, overrides);
+        const options = this.setMultiSampleAntiAliasingOptionsDefaults(overrides);
         this._setMultiSampleAntiAliasingOptions(options);
     };
 
     /// setTemporalAntiAliasingOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// filterWidth, feedback, enabled.
     Filament.View.prototype.setTemporalAntiAliasingOptions = function(overrides) {
-        const options = {
-            filterWidth: 1.0,
-            feedback: 0.04,
-            enabled: false
-        };
-        Object.assign(options, overrides);
+        const options = this.setTemporalAntiAliasingOptionsDefaults(overrides);
         this._setTemporalAntiAliasingOptions(options);
     };
 
     /// setScreenSpaceReflectionsOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// thickness, bias, maxDistance, stride, enabled.
     Filament.View.prototype.setScreenSpaceReflectionsOptions = function(overrides) {
-        const options = {
-            thickness: 0.5,
-            bias: 0.01,
-            maxDistance: 3.0,
-            stride: 1.0,
-            enabled: false
-        };
-        Object.assign(options, overrides);
+        const options = this.setScreenSpaceReflectionsOptionsDefaults(overrides);
         this._setScreenSpaceReflectionsOptions(options);
     };
 
     /// setBloomOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// enabled, strength, resolution, anomorphism, levels, blendMode, threshold, highlight.
-    /// NOTE: dirt texture is not yet supported in the JavaScript API.
     Filament.View.prototype.setBloomOptions = function(overrides) {
-        const options = {
-            dirtStrength: 0.2,
-            strength: 0.10,
-            resolution: 360,
-            anamorphism: 1.0,
-            levels: 6,
-            blendMode: Filament.View$BloomOptions$BlendMode.ADD,
-            threshold: true,
-            enabled: false,
-            highlight: 1000.0,
-            lensFlare: false,
-            starburst: true,
-            chromaticAberration: 0.005,
-            ghostCount: 4,
-            ghostSpacing: 0.6,
-            ghostThreshold: 10.0,
-            haloThickness: 0.1,
-            haloRadius: 0.4,
-            haloThreshold: 10.0,
-            dirt: null
-        };
-        Object.assign(options, overrides);
+        const options = this.setBloomOptionsDefaults(overrides);
         this._setBloomOptions(options);
     };
 
     /// setFogOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// distance, maximumOpacity, height, heightFalloff, color, density, inScatteringStart,
-    /// inScatteringSize, fogColorFromIbl, enabled.
     Filament.View.prototype.setFogOptions = function(overrides) {
-        const options = {
-            distance:  0.0,
-            maximumOpacity:  1.0,
-            height:  0.0,
-            heightFalloff:  1.0,
-            color: .5,
-            density:  0.1,
-            inScatteringStart:  0.0,
-            inScatteringSize:  -1.0,
-            fogColorFromIbl:  false,
-            enabled:  false
-        };
-        Object.assign(options, overrides);
+        const options = this.setFogOptionsDefaults(overrides);
         this._setFogOptions(options);
     };
 
     /// setVignetteOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// midPoint, roundness, feather, color, enabled.
     Filament.View.prototype.setVignetteOptions = function(overrides) {
-        const options = {
-            midPoint: 0.5,
-            roundness: 0.5,
-            feather: 0.5,
-            color: [0, 0, 0, 1],
-            enabled: false
-        };
-        Object.assign(options, overrides);
+        const options = this.setVignetteOptionsDefaults(overrides);
         this._setVignetteOptions(options);
     };
 
     /// setGuardBandOptions ::method::
-    /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// enabled.
     Filament.View.prototype.setGuardBandOptions = function(overrides) {
-        const options = {
-            enabled: false
-        };
-        Object.assign(options, overrides);
+        const options = this.setGuardBandOptionsDefaults(overrides);
         this._setGuardBandOptions(options);
     };
 
