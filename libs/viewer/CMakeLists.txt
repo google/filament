@@ -21,6 +21,8 @@ set(SRCS
         src/AutomationSpec.cpp
         src/RemoteServer.cpp
         src/Settings.cpp
+        src/Settings_generated.cpp
+        src/Settings_generated.h
         src/ViewerGui.cpp
 )
 
