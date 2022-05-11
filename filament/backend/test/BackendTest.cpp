@@ -149,7 +149,7 @@ void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, si
         bool exportScreenshot;
         size_t width, height;
     };
-    Capture* c = new Capture();
+    auto* c = new Capture();
     c->expectedHash = expectedHash;
     c->name = strdup(testName);
     c->exportScreenshot = exportScreenshot;
@@ -158,24 +158,18 @@ void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, si
 
     PixelBufferDescriptor pbd(buffer, width * height * 4, PixelDataFormat::RGBA, PixelDataType::UBYTE,
             1, 0, 0, width, [](void* buffer, size_t size, void* user) {
-                Capture* c = (Capture*)user;
+                auto* c = (Capture*)user;
 
                 // Export a screenshot, if requested.
                 if (c->exportScreenshot) {
 #ifndef IOS
                     LinearImage image(c->width, c->height, 4);
-                    // TODO:
-                    //if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
                     image = toLinearWithAlpha<uint8_t>(c->width, c->height, c->width * 4,
                             (uint8_t*) buffer);
-                    //}
-                    //if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
-                    //memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
-                    //}
-                    std::string png = std::string(c->name) + ".png";
+                    const std::string png = std::string(c->name) + ".png";
                     std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
                     ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                            png.c_str());
+                            png);
 #endif
                 }
 
