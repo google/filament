@@ -13,6 +13,8 @@ project(TNT)
 # ==================================================================================================
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
+option(FILAMENT_USE_ANGLE "Compile Filament against ANGLE" OFF)
+
 option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
@@ -103,7 +105,7 @@ if (LINUX)
     endif()
 endif()
 
-if (ANDROID OR WEBGL OR IOS)
+if (ANDROID OR WEBGL OR IOS OR FILAMENT_USE_ANGLE)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
@@ -253,6 +255,10 @@ endif()
 
 if (FILAMENT_USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILAMENT_USE_EXTERNAL_GLES3")
+endif()
+
+if (FILAMENT_USE_ANGLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILAMENT_USE_ANGLE")
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
@@ -658,6 +664,10 @@ endif()
 
 if (APPLE)
     add_subdirectory(${EXTERNAL}/moltenvk/tnt)
+endif()
+
+if (FILAMENT_USE_ANGLE)
+    add_subdirectory(${EXTERNAL}/angle/tnt)
 endif()
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
