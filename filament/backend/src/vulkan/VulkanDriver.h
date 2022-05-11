@@ -50,7 +50,7 @@ private:
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
     inline VulkanDriver(VulkanPlatform* platform,
-            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount
+            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
             const Platform::DriverConfig& driverConfig) noexcept;
 
     ~VulkanDriver() noexcept override;

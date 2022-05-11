@@ -33,7 +33,7 @@ public:
 
     PlatformEGL() noexcept;
 
-    Driver* createDriver(void* sharedContext) noexcept override;
+    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;

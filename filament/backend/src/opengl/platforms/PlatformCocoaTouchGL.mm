@@ -59,7 +59,7 @@ PlatformCocoaTouchGL::~PlatformCocoaTouchGL() noexcept {
     delete pImpl;
 }
 
-Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     EAGLSharegroup* sharegroup = (__bridge EAGLSharegroup*) sharedGLContext;
 
     EAGLContext *context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES3 sharegroup:sharegroup];
@@ -93,7 +93,7 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext) noexcept
 
     pImpl->mExternalImageSharedGl = new CocoaTouchExternalImage::SharedGl();
 
-    return OpenGLDriverFactory::create(this, sharedGLContext);
+    return OpenGLDriverFactory::create(this, sharedGLContext, driverConfig);
 }
 
 void PlatformCocoaTouchGL::terminate() noexcept {

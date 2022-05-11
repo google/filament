@@ -33,7 +33,7 @@ namespace filament::backend {
 class PlatformGLX final : public OpenGLPlatform {
 public:
 
-    Driver* createDriver(void* const sharedGLContext) noexcept override;
+    Driver* createDriver(void* const sharedGLContext, const DriverConfig& driverConfig) noexcept override;
 
     void terminate() noexcept override;
 
