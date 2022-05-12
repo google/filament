@@ -96,7 +96,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     elseif (WIN32)
         if (FILAMENT_USE_ANGLE)
             list(APPEND SRCS src/opengl/PlatformEGL.cpp)
-            list(APPEND SRCS src/opengl/PlatformEGL_ANGLE.cpp)
         else()
             list(APPEND SRCS src/opengl/PlatformWGL.cpp)
         endif()
