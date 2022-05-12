@@ -81,23 +81,27 @@ func (defn generalScope) BaseName() string      { return "" }
 func (defn generalScope) QualifiedName() string { return "" }
 
 type parserContext struct {
-	stack            []Scope
-	definitions      []Scope
-	insideComment    bool
-	cppTokenizer     *regexp.Regexp
-	rhsMatcher       *regexp.Regexp
-	floatMatcher     *regexp.Regexp
-	vectorMatcher    *regexp.Regexp
-	fieldDescMatcher *regexp.Regexp
+	stack         []Scope
+	definitions   []Scope
+	insideComment bool
+	cppTokenizer  *regexp.Regexp
+	floatMatcher  *regexp.Regexp
+	vectorMatcher *regexp.Regexp
+	fieldParser   *regexp.Regexp
 }
 
 // https://github.com/google/re2/wiki/Syntax
 func (context *parserContext) compileRegexps() {
 	context.cppTokenizer = regexp.MustCompile(`((?:/\*)|(?:\*/)|(?:;)|(?://)|(?:\})|(?:\{))`)
-	context.rhsMatcher = regexp.MustCompile(`=(.*);`)
 	context.floatMatcher = regexp.MustCompile(`(\-?[0-9]+\.[0-9]*)f?`)
 	context.vectorMatcher = regexp.MustCompile(`\{(\s*\-?[0-9\.]+\s*(,\s*\-?[0-9\.]+\s*){1,})\}`)
-	context.fieldDescMatcher = regexp.MustCompile(`//.*\!\<\s*(.*)`)
+
+	const kFieldType = `(?P<type>.*)`
+	const kFieldName = `(?P<name>[A-Za-z0-9_]+)`
+	const kFieldValue = `(?P<value>(.*?))`
+	const kFieldDesc = `(?://\s*\!\<\s*(?P<description>.*))?`
+	context.fieldParser = regexp.MustCompile(
+		`^\s*` + kFieldType + `\s+` + kFieldName + `\s*=\s*` + kFieldValue + `\s*;\s*` + kFieldDesc)
 }
 
 func (context parserContext) generateQualifier() string {
@@ -200,27 +204,38 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 		if !scanner.Scan() {
 			log.Fatalf("%d: bad struct field", lineNumber)
 		}
-		if inPlaceDefinition == "" {
-			// Field has a "normal" type.
-			field.Type = firstWord
-			field.Name = scanner.Text()
-		} else {
-			// Field has a nested type.
+
+		// Check if this field type has an in place definition. For example:
+		//     struct OuterType {
+		//         int foo;
+		//         struct Baz { int bar } baz;
+		//     };
+		// In the above example, inPlaceDefinition == Baz.
+		if inPlaceDefinition != "" {
 			field.Type = inPlaceDefinition
 			field.Name = firstWord
+			defn.Fields = append(defn.Fields, field)
+			return
 		}
 
-		// Use a regex to extract the doxygen comment.
-		if matches := context.fieldDescMatcher.FindStringSubmatch(codeline); len(matches) > 0 {
-			field.Description = matches[1]
+		if !context.fieldParser.MatchString(codeline) {
+			log.Fatalf("%d: unexpected form in struct field declaration", lineNumber)
 		}
 
-		// Use a regex to extract the right hand side in the default value assignment, then
-		// do some custom processing via distillValue().
-		if matches := context.rhsMatcher.FindStringSubmatch(codeline); len(matches) > 0 {
-			field.DefaultValue = context.distillValue(matches[1], lineNumber)
+		// To make the regex usage somewhat readable, extract the named subgroups into a map rather
+		// than referring to each result by index.
+		subexpList := context.fieldParser.FindStringSubmatch(codeline)
+		subexpMap := make(map[string]string)
+		for i, name := range context.fieldParser.SubexpNames() {
+			if i != 0 && name != "" {
+				subexpMap[name] = subexpList[i]
+			}
 		}
 
+		field.Type = subexpMap["type"]
+		field.Name = subexpMap["name"]
+		field.Description = subexpMap["description"]
+		field.DefaultValue = context.distillValue(subexpMap["value"], lineNumber)
 		defn.Fields = append(defn.Fields, field)
 	}
 
