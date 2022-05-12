@@ -131,7 +131,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float4* v
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, {{$enum_name}}* out) {
     {{- range $index, $value := .Values}}
     {{elseif $index}} (0 == compare(tokens[i], jsonChunk, "
-    {{- $value}}")) { *out = {{$enum_name}}::{{.}}; }
+    {{- $value.Name }}")) { *out = {{$enum_name}}::{{.Name}}; }
     {{- end}}
     else {
         slog.w << "Invalid {{$enum_name}}: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
@@ -147,7 +147,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, {{$enum_name}}*
 std::ostream& operator<<(std::ostream& out, {{$enum_name}} in) {
     switch (in) {
         {{- range $index, $value := .Values}}
-        case {{$enum_name}}::{{$value}}: return out << "\"{{$value}}\"";
+        case {{$enum_name}}::{{$value.Name}}: return out << "\"{{$value.Name}}\"";
         {{- end}}
     }
     return out << "\"INVALID\"";

@@ -47,7 +47,7 @@ EMSCRIPTEN_BINDINGS(jsenums_generated) {
 {{- $enum_name := .QualifiedName }}
 enum_<{{ cprefix }}{{ $enum_name }}>("{{ jsprefix }}{{ qualifiedtype .QualifiedName }}")
 {{- range .Values}}
-    .value("{{ . }}", {{ cprefix }}{{ $enum_name }}::{{ . }})
+    .value("{{ .Name }}", {{ cprefix }}{{ $enum_name }}::{{ .Name }})
 {{- end }}
     ;
 {{end}}
@@ -86,7 +86,7 @@ Filament.loadGeneratedExtensions = function() {
 
 {{define "TsStruct"}}
 {{- $struct_name := .QualifiedName }}
-export interface {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
+{{.Description}}export interface {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
 {{- range $index, $field := .Fields}}
 {{- if $field.SkipJavaScript}}
     // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
@@ -99,9 +99,9 @@ export interface {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
 {{end}}
 
 {{define "TsEnum"}}
-export enum {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
+{{.Description}}export enum {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
 {{- range .Values}}
-    {{ . }},
+    {{ .Name }},{{if .Description}} // {{.Description}}{{end}}
 {{- end }}
 }
 {{end}}
