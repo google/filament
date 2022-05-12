@@ -26,7 +26,6 @@ include:
 - There are no namespaces other than the top-level namespace.
 - Every struct field must supply a default value on a single codeline using the = operator.
 - If the default value of a field is a vector, it must be in the form: `{ x, y, z }`.
-- The type of every struct field must be specified without any whitespace (e.g. `Texture*`).
 - There must be no string literals that contain keywords.
 - Enums must be fully qualified when they appear in struct field types and default values.
 
