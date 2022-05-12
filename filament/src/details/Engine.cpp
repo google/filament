@@ -49,6 +49,7 @@
 #include <utils/Systrace.h>
 #include <utils/ThreadUtils.h>
 
+#include <algorithm>
 #include <memory>
 
 #include "generated/resources/materials.h"
@@ -61,12 +62,13 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
-FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams *configParams) {
+FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext, const Config *config) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
-    ConfigParams config(configParams);
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext, config);
+    Config validConfig;
+    validateConfig(config, validConfig);
+    FEngine* instance = new FEngine(backend, platform, sharedGLContext, validConfig);
 
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
@@ -84,7 +86,10 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
             delete instance;
             return nullptr;
         }
-        instance->mDriver = platform->createDriver(sharedGLContext, config.DriverParams());
+        DriverConfig driverConfig{ .handleArenaSize = instance->mDriverHandleArenaSize };
+        instance->mDriver = platform->createDriver(sharedGLContext, driverConfig);
+        instance->mDriverHandleArenaSize = driverConfig.handleArenaSize;      // Get updated handle arena size in case driver changed it
+
     } else {
         // start the driver thread
         instance->mDriverThread = std::thread(&FEngine::loop, instance);
@@ -113,11 +118,12 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
 #if UTILS_HAS_THREADING
 
 void FEngine::createAsync(CreateCallback callback, void* user,
-        Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams* configParams) {
+        Backend backend, Platform* platform, void* sharedGLContext, const Config* config) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
-    ConfigParams params(configParams);
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext, params);
+    Config validConfig;
+    validateConfig(config, validConfig);
+    FEngine* instance = new FEngine(backend, platform, sharedGLContext, validConfig);
 
     // start the driver thread
     instance->mDriverThread = std::thread(&FEngine::loop, instance);
@@ -130,6 +136,27 @@ void FEngine::createAsync(CreateCallback callback, void* user,
 
     // let the callback thread die on its own
     callbackThread.detach();
+}
+
+void FEngine::validateConfig(const Config* config, Config& validConfig) noexcept
+{
+    constexpr uint32_t ARENA_COMMANDS_DELTA = 1;    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
+    constexpr uint32_t NUM_FRAMES_OVERLAP = 3;      // Number of potential concurrent frames in flight
+
+    if (config == nullptr)
+    {
+        Config defaultConfig;
+        validConfig = defaultConfig;
+        return;
+    }
+
+    validConfig.minCommandBufferSizeMB = max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, config->minCommandBufferSizeMB);
+    validConfig.minCommandBufferSizeMB = max(config->perFrameCommandsSizeMB, validConfig.minCommandBufferSizeMB);                   // As a rule of thumb use the same value as perFrameCommandsMB
+    validConfig.commandBufferSizeMB = max(config->commandBufferSizeMB, validConfig.minCommandBufferSizeMB * NUM_FRAMES_OVERLAP);
+    validConfig.perFrameCommandsSizeMB = max((uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, config->minCommandBufferSizeMB);
+    validConfig.perRenderPassArenaSizeMB = max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, config->perRenderPassArenaSizeMB);
+    validConfig.perRenderPassArenaSizeMB = max(validConfig.perRenderPassArenaSizeMB, validConfig.perFrameCommandsSizeMB + ARENA_COMMANDS_DELTA);    // Enforce pre-render-pass arena rule-of-thumb
+    validConfig.driverHandleArenaSizeMB = config->driverHandleArenaSizeMB;      // This value gets validated during driver creation, so pass it through
 }
 
 FEngine* FEngine::getEngine(void* token) {
@@ -169,10 +196,9 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, const ConfigParams& configParams) :
+FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, const Config& configParams) :
         mBackend(backend),
         mPlatform(platform),
-        mConfigParams(&configParams),
         mSharedGLContext(sharedGLContext),
         mPostProcessManager(*this),
         mEntityManager(EntityManager::get()),
@@ -180,8 +206,8 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, con
         mTransformManager(),
         mLightManager(*this),
         mCameraManager(*this),
-        mCommandBufferQueue(configParams.MinCommandBufferSize(), configParams.CommandBufferSize()),
-        mPerRenderPassAllocator("per-renderpass allocator", configParams.PerRenderPassArenaSize()),
+        mCommandBufferQueue(configParams.minCommandBufferSizeMB * 1024 * 1024, configParams.commandBufferSizeMB * 1024 * 1024),
+        mPerRenderPassAllocator("per-renderpass allocator", configParams.perRenderPassArenaSizeMB * 1024 * 1024),
         mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
@@ -190,6 +216,13 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, con
     // we're assuming we're on the main thread here.
     // (it may not be the case)
     mJobSystem.adopt();
+
+    const size_t MB = 1024U * 1024U;
+    mMinCommandBufferSize = configParams.minCommandBufferSizeMB * MB;
+    mCommandBufferSize = configParams.commandBufferSizeMB * MB;
+    mPerFrameCommandsSize = configParams.perFrameCommandsSizeMB * MB;
+    mPerRenderPassArenaSize = configParams.perRenderPassArenaSizeMB * MB;
+    mDriverHandleArenaSize = configParams.driverHandleArenaSizeMB * MB;
 
     slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
@@ -361,7 +394,7 @@ void FEngine::shutdown() {
 #ifndef NDEBUG
     // print out some statistics about this run
     size_t wm = mCommandBufferQueue.getHighWatermark();
-    size_t wmpct = wm / (mConfigParams.CommandBufferSize() / 100);
+    size_t wmpct = wm / (mCommandBufferSize / 100);
     slog.d << "CircularBuffer: High watermark "
            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
 #endif
@@ -586,7 +619,10 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    mDriver = mPlatform->createDriver(mSharedGLContext, mConfigParams.DriverParams());
+    DriverConfig driverConfig { .handleArenaSize = mDriverHandleArenaSize };
+    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
+    mDriverHandleArenaSize = driverConfig.handleArenaSize;      // Get updated handle arena size in case driver changed it
+
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
         // if we get here, it's because the driver couldn't be initialized and the problem has

@@ -30,7 +30,7 @@ namespace filament::backend {
 
 class PlatformWGL final : public OpenGLPlatform {
 public:
-    Driver* createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* const sharedGLContext, Platform::DriverConfig& driverConfig) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;

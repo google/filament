@@ -31,7 +31,7 @@ public:
 
     void terminate() noexcept override;
 
-    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept final;
+    Driver* createDriver(void* sharedContext, Platform::DriverConfig& driverConfig) noexcept final;
 
     int getOSVersion() const noexcept final;
 

@@ -104,7 +104,7 @@ FRenderer::~FRenderer() noexcept {
     // to free what we can (it would probably mean something when wrong).
 #ifndef NDEBUG
     size_t wm = getCommandsHighWatermark();
-    size_t wmpct = wm / (mEngine.GetConfig().PerFrameCommandsSize() / 100);
+    size_t wmpct = wm / (mEngine.mPerFrameCommandsSize / 100);
     slog.d << "Renderer: Commands High watermark "
     << wm / 1024 << " KiB (" << wmpct << "%), "
     << wm / sizeof(Command) << " commands, " << sizeof(Command) << " bytes/command"
@@ -619,7 +619,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
-    size_t perFrameCommandsSize = engine.GetConfig().PerFrameCommandsSize();
+    size_t perFrameCommandsSize = engine.mPerFrameCommandsSize;
     void* const arenaBegin = arena.allocate(perFrameCommandsSize, CACHELINE_SIZE);
     void* const arenaEnd = pointermath::add(arenaBegin, perFrameCommandsSize);
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });

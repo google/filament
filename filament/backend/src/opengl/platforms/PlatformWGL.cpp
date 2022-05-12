@@ -76,7 +76,7 @@ struct WGLSwapChain {
     bool isHeadless = false;
 };
 
-Driver* PlatformWGL::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformWGL::createDriver(void* const sharedGLContext, Platform::DriverConfig& driverConfig) noexcept {
     int result = 0;
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
     int pixelFormat = 0;

@@ -34,7 +34,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-Driver* PlatformVkCocoa::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformVkCocoa::createDriver(void* sharedContext, Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requiredInstanceExtensions[] = {
         "VK_MVK_macos_surface", // TODO: replace with VK_EXT_metal_surface

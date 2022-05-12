@@ -31,7 +31,7 @@ DefaultPlatform* createDefaultMetalPlatform() {
 
 MetalPlatform::~MetalPlatform() = default;
 
-Driver* MetalPlatform::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* MetalPlatform::createDriver(void* sharedContext, Platform::DriverConfig& driverConfig) noexcept {
     return MetalDriverFactory::create(this, driverConfig);
 }
 
