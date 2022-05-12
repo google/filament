@@ -131,7 +131,7 @@ struct BloomOptions {
     uint32_t resolution = 360;              //!< resolution of vertical axis (2^levels to 2048)
     float anamorphism = 1.0f;               //!< bloom x/y aspect-ratio (1/32 to 32)
     uint8_t levels = 6;                     //!< number of blur levels (3 to 11)
-    BloomOptions::BlendMode blendMode = BloomOptions::BlendMode::ADD;   //!< how the bloom effect is applied
+    BlendMode blendMode = BlendMode::ADD;   //!< how the bloom effect is applied
     bool threshold = true;                  //!< whether to threshold the source
     bool enabled = false;                   //!< enable or disable bloom
     float highlight = 1000.0f;              //!< limit highlights to this value before bloom [10, +inf]
@@ -181,7 +181,7 @@ struct DepthOfFieldOptions {
     float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
     float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
     bool enabled = false;               //!< enable or disable depth of field effect
-    DepthOfFieldOptions::Filter filter = DepthOfFieldOptions::Filter::MEDIAN;     //!< filter to use for filling gaps in the kernel
+    Filter filter = Filter::MEDIAN;     //!< filter to use for filling gaps in the kernel
     bool nativeResolution = false;      //!< perform DoF processing at native resolution
     /**
      * Number of of rings used by the gather kernels. The number of rings affects quality
