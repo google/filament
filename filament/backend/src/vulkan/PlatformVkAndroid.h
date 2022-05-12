@@ -27,7 +27,7 @@ namespace filament::backend {
 class PlatformVkAndroid final : public VulkanPlatform {
 public:
 
-    Driver* createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* const sharedContext, Platform::DriverConfig& driverConfig) noexcept override;
 
     void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept override;
 

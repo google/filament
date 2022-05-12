@@ -105,7 +105,7 @@ void PlatformEGLAndroid::terminate() noexcept {
     PlatformEGL::terminate();
 }
 
-Driver* PlatformEGLAndroid::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformEGLAndroid::createDriver(void* sharedContext, Platform::DriverConfig& driverConfig) noexcept {
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 

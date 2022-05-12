@@ -29,7 +29,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-Driver* PlatformVkAndroid::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformVkAndroid::createDriver(void* const sharedContext, Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requiredInstanceExtensions[] = { "VK_KHR_android_surface" };
     return VulkanDriverFactory::create(this, requiredInstanceExtensions, 1, driverConfig);

@@ -84,26 +84,6 @@ namespace backend {
 // this generates the vtable in this translation unit
 Platform::~Platform() noexcept = default;
 
-Platform::DriverConfig::DriverConfig(const DriverConfig* srcConfig) {
-    if (srcConfig != nullptr) {
-        *this = *srcConfig;
-    }
-    else {
-        init(0);
-    }
-}
-
-Platform::DriverConfig::DriverConfig(uint32_t handleArenaSizeInMB)
-{
-    init(handleArenaSizeInMB);
-}
-
-void Platform::DriverConfig::init(uint32_t handleArenaSizeInMB) {
-    constexpr size_t MB = 1024 * 1024;
-
-    mHandleArenaSize = handleArenaSizeInMB * MB;
-}
-
 // Creates the platform-specific Platform object. The caller takes ownership and is
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.

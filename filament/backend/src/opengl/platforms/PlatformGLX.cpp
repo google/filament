@@ -130,7 +130,7 @@ namespace filament::backend {
 
 using namespace backend;
 
-Driver* PlatformGLX::createDriver(void* const sharedGLContext, const DriverConfig& driverConfig) noexcept {
+Driver* PlatformGLX::createDriver(void* const sharedGLContext, DriverConfig& driverConfig) noexcept {
     loadLibraries();
     // Get the display device
     mGLXDisplay = g_x11.openDisplay(NULL);

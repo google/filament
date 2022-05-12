@@ -80,7 +80,7 @@ static void clearGlError() noexcept {
 
 PlatformEGL::PlatformEGL() noexcept = default;
 
-Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformEGL::createDriver(void* sharedContext, Platform::DriverConfig& driverConfig) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
