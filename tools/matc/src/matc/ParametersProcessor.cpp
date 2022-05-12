@@ -536,17 +536,17 @@ static std::optional<MaterialBuilder::StencilOperation> processStencilOperation(
 static bool processStencilDepthFail(MaterialBuilder& builder, const JsonishValue& value) {
     if (auto op = processStencilOperation(value, "stencil_depth_fail"); op) {
         builder.stencilDepthFail(*op);
-        return false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 static bool processStencilDepthPass(MaterialBuilder& builder, const JsonishValue& value) {
     if (auto op = processStencilOperation(value, "stencil_depth_pass"); op) {
         builder.stencilDepthPass(*op);
-        return false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 static bool processDepthCull(MaterialBuilder& builder, const JsonishValue& value) {
