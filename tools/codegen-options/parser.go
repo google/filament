@@ -38,6 +38,7 @@ func Parse(sourcePath string) []Scope {
 	if err := lineScanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+	context.addTypeQualifiers()
 	return context.definitions
 }
 
@@ -53,6 +54,7 @@ type StructField struct {
 	Description    string
 	SkipJson       bool
 	SkipJavaScript bool
+	LineNumber     int
 }
 
 type StructDefinition struct {
@@ -108,6 +110,41 @@ func (context parserContext) generateQualifier() string {
 	return qualifier
 }
 
+func (context parserContext) addTypeQualifiers() {
+	typeMap := make(map[string]Scope)
+	for _, defn := range context.definitions {
+		typeMap[defn.BaseName()] = defn
+	}
+	for _, defn := range context.definitions {
+		switch structDefn := defn.(type) {
+		case *StructDefinition:
+			for fieldIndex, field := range structDefn.Fields {
+				if typeDefn, found := typeMap[field.Type]; found {
+					mutable := &structDefn.Fields[fieldIndex]
+
+					// If this is an enum, add qualifier to the RHS of the assignment.
+					// Remember that all enums must be class enums.
+					if end := strings.LastIndex(field.DefaultValue, "::"); end != -1 {
+						enumValue := field.DefaultValue[end+2:]
+						mutable.DefaultValue = typeDefn.QualifiedName() + "::" + enumValue
+					}
+
+					mutable.Type = typeDefn.QualifiedName()
+					continue
+				}
+				if isSimpleType(field.Type) {
+					continue
+				}
+				// If this field is neither a simple type nor a type that was defined in the source
+				// file, then emit a warning.  Unknown custom types are error prone because it is
+				// difficult to know if additional scoping qualifiers are required, or how they are
+				// bound in the target language.
+				log.Printf("%d: WARNING: %v is an unrecognized type", field.LineNumber, field.Type)
+			}
+		}
+	}
+}
+
 // Validate and transform the RHS of an assignment.
 // For vectors, this converts curly braces into square brackets.
 func (context parserContext) distillValue(cppvalue string, lineNumber int) string {
@@ -154,6 +191,7 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 		var field = StructField{
 			SkipJson:       strings.Contains(codeline, `%codegen_skip_json%`),
 			SkipJavaScript: strings.Contains(codeline, `%codegen_skip_javascript%`),
+			LineNumber:     lineNumber,
 		}
 
 		// Normally when we're inside a struct, the first word on each codeline is the field type,
@@ -249,4 +287,19 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 	if err := scanner.Err(); err != nil {
 		log.Fatalf("%d: %s", lineNumber, err)
 	}
+}
+
+func isSimpleType(cpptype string) bool {
+	if strings.HasPrefix(cpptype, "math::") {
+		return true
+	}
+	switch cpptype {
+	case "bool", "int", "uint8_t", "uint16_t", "uint32_t", "uint64_t":
+		return true
+	case "float", "double":
+		return true
+	case "LinearColor", "LinearColorA":
+		return true
+	}
+	return false
 }
