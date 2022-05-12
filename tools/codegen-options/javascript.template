@@ -13,12 +13,12 @@ EMSCRIPTEN_BINDINGS(jsbindings_generated) {
 
 {{define "JsBindingsStruct"}}
 {{- $struct_name := .QualifiedName }}
-value_object<View::{{ $struct_name }}>("View${{ qualifiedtype .QualifiedName }}")
+value_object<{{ cprefix }}{{ $struct_name }}>("{{ jsprefix }}{{ qualifiedtype .QualifiedName }}")
 {{- range $index, $field := .Fields}}
 {{- if $field.SkipJavaScript}}
     // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
 {{- else }}
-    .field("{{ $field.Name }}", &View::{{ $struct_name }}::{{ $field.Name }})
+    .field("{{ $field.Name }}", &{{ cprefix }}{{ $struct_name }}::{{ $field.Name }})
 {{- end }}
 {{- end }}
     ;
@@ -45,9 +45,9 @@ EMSCRIPTEN_BINDINGS(jsenums_generated) {
 
 {{define "JsEnum"}}
 {{- $enum_name := .QualifiedName }}
-enum_<View::{{ $enum_name }}>("View${{ qualifiedtype .QualifiedName }}")
+enum_<{{ cprefix }}{{ $enum_name }}>("{{ jsprefix }}{{ qualifiedtype .QualifiedName }}")
 {{- range .Values}}
-    .value("{{ . }}", View::{{ $enum_name }}::{{ . }})
+    .value("{{ . }}", {{ cprefix }}{{ $enum_name }}::{{ . }})
 {{- end }}
     ;
 {{end}}
@@ -64,7 +64,7 @@ Filament.loadGeneratedExtensions = function() {
 {{end}}
 
 {{define "JsExtension"}}
-    Filament.View.prototype.set{{ .BaseName }}Defaults = function(overrides) {
+    Filament.{{ classprefix}}set{{ .BaseName }}Defaults = function(overrides) {
         const options = {
 {{- range $index, $field := .Fields}}
 {{- if $field.SkipJavaScript}}
@@ -86,7 +86,7 @@ Filament.loadGeneratedExtensions = function() {
 
 {{define "TsStruct"}}
 {{- $struct_name := .QualifiedName }}
-export interface View${{ qualifiedtype .QualifiedName }} {
+export interface {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
 {{- range $index, $field := .Fields}}
 {{- if $field.SkipJavaScript}}
     // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
@@ -99,7 +99,7 @@ export interface View${{ qualifiedtype .QualifiedName }} {
 {{end}}
 
 {{define "TsEnum"}}
-export enum View${{ qualifiedtype .QualifiedName }} {
+export enum {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
 {{- range .Values}}
     {{ . }},
 {{- end }}
