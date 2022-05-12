@@ -1,24 +1,30 @@
-# codegen-options
+# beamsplitter
+
+- [Description](#description)
+- [Instructions](#instructions)
+- [Input Limitations](#input-limitations)
+- [Magic Strings](#magic-strings)
+- [Input Files](#input-files)
+- [Output Files](#output-files)
 
 ### Description
 
-This is a small Go program that consumes a C++ header file and generates Java bindings, JavaScript
-bindings, and C++ code that performs JSON serialization.
+This Go program consumes C++ header file(s) and generates Java bindings, JavaScript bindings, and
+C++ code that performs JSON serialization.
 
 ### Instructions
 
-To install the Go compiler, just do:
+To install the Go compiler on macOS, just do:
 
     brew install go
 
 To build and invoke the code generator, do:
 
-    cd tools/codegen-options ; go run .
+    cd tools/beamsplitter ; go run .
 
-### Input Description
+### Input Limitations
 
-This utility consumes `Options.h`, which must have very simple C++ syntax. Some of the limitations
-include:
+The source files must have very simple C++ syntax. Some of the limitations include:
 
 - Only `enum class` is supported; no old-style enums.
 - Opening braces for `enum` and `struct` must live at the end of a codeline.
@@ -28,13 +34,19 @@ include:
 - If the default value of a field is a vector, it must be in the form: `{ x, y, z }`.
 - There must be no string literals that contain keywords.
 
+### Magic Strings
+
 If the comment for a struct field contains the string `%codegen_skip_json%`, then the field is
 skipped when generating JSON serialization code.
 
 If the comment for a struct field contains the string `%codegen_skip_javascript%`, then the field is
 skipped when generating JavaScript and TypeScript bindings.
 
-### Output Description
+### Input Files
+
+- `filament/include/filament/Options.h`
+
+### Output Files
 
  The following files are created:
 
