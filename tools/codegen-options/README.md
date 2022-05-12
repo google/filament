@@ -28,13 +28,13 @@ include:
 - If the default value of a field is a vector, it must be in the form: `{ x, y, z }`.
 - The type of every struct field must be specified without any whitespace (e.g. `Texture*`).
 - There must be no string literals that contain keywords.
-- Enum names must be disambiguated when they appear in a struct field default value.
+- Enums must be fully qualified when they appear in struct field types and default values.
 
 If the comment for a struct field contains the string `%codegen_skip_json%`, then the field is
 skipped when generating JSON serialization code.
 
 If the comment for a struct field contains the string `%codegen_skip_javascript%`, then the field is
-skipped when generating JavaScript bindings.
+skipped when generating JavaScript and TypeScript bindings.
 
 ### Output Description
 
@@ -49,5 +49,5 @@ skipped when generating JavaScript bindings.
 
 Additionally, in-place edits are made to the following files:
 
-- `web/filament-js/filament.d.ts` (TBD)
+- `web/filament-js/filament.d.ts`
 - `android/filament-android/src/main/java/.../View.java` (TBD)

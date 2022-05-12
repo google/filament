@@ -50,6 +50,7 @@ type StructField struct {
 	Type           string
 	Name           string
 	DefaultValue   string
+	Description    string
 	SkipJson       bool
 	SkipJavaScript bool
 }
@@ -78,13 +79,23 @@ func (defn generalScope) BaseName() string      { return "" }
 func (defn generalScope) QualifiedName() string { return "" }
 
 type parserContext struct {
-	stack             []Scope
-	definitions       []Scope
-	insideComment     bool
-	cppTokenizer      *regexp.Regexp
-	assignmentMatcher *regexp.Regexp
-	floatMatcher      *regexp.Regexp
-	vecMatcher        *regexp.Regexp
+	stack            []Scope
+	definitions      []Scope
+	insideComment    bool
+	cppTokenizer     *regexp.Regexp
+	rhsMatcher       *regexp.Regexp
+	floatMatcher     *regexp.Regexp
+	vectorMatcher    *regexp.Regexp
+	fieldDescMatcher *regexp.Regexp
+}
+
+// https://github.com/google/re2/wiki/Syntax
+func (context *parserContext) compileRegexps() {
+	context.cppTokenizer = regexp.MustCompile(`((?:/\*)|(?:\*/)|(?:;)|(?://)|(?:\})|(?:\{))`)
+	context.rhsMatcher = regexp.MustCompile(`=(.*);`)
+	context.floatMatcher = regexp.MustCompile(`(\-?[0-9]+\.[0-9]*)f?`)
+	context.vectorMatcher = regexp.MustCompile(`\{(\s*\-?[0-9\.]+\s*(,\s*\-?[0-9\.]+\s*){1,})\}`)
+	context.fieldDescMatcher = regexp.MustCompile(`//.*\!\<\s*(.*)`)
 }
 
 func (context parserContext) generateQualifier() string {
@@ -116,8 +127,8 @@ func (context parserContext) distillValue(cppvalue string, lineNumber int) strin
 
 	// Assume it's a vector if there's a curly brace.
 	if strings.Contains(cppvalue, "{") {
-		if context.vecMatcher.MatchString(cppvalue) {
-			cppvalue = context.vecMatcher.ReplaceAllString(cppvalue, "[$1]")
+		if context.vectorMatcher.MatchString(cppvalue) {
+			cppvalue = context.vectorMatcher.ReplaceAllString(cppvalue, "[$1]")
 		} else {
 			log.Fatalf("%d: vectors must have the form {x, y ...}", lineNumber)
 		}
@@ -132,17 +143,51 @@ func (context parserContext) distillValue(cppvalue string, lineNumber int) strin
 
 func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 	if context.cppTokenizer == nil {
-		// https://github.com/google/re2/wiki/Syntax
-		context.cppTokenizer = regexp.MustCompile(`((?:/\*)|(?:\*/)|(?:;)|(?://)|(?:\})|(?:\{))`)
-		context.assignmentMatcher = regexp.MustCompile(`=(.*);`)
-		context.floatMatcher = regexp.MustCompile(`(\-?[0-9]+\.[0-9]*)f?`)
-		context.vecMatcher = regexp.MustCompile(`\{(\s*\-?[0-9\.]+\s*(,\s*\-?[0-9\.]+\s*){1,})\}`)
+		context.compileRegexps()
 	}
 	codeline = context.cppTokenizer.ReplaceAllString(codeline, " $1 ")
 	scanner := bufio.NewScanner(strings.NewReader(codeline))
 	scanner.Split(bufio.ScanWords)
 	inPlaceDefinition := ""
+
+	scanStructField := func(defn *StructDefinition, firstWord string) {
+		var field = StructField{
+			SkipJson:       strings.Contains(codeline, `%codegen_skip_json%`),
+			SkipJavaScript: strings.Contains(codeline, `%codegen_skip_javascript%`),
+		}
+
+		// Normally when we're inside a struct, the first word on each codeline is the field type,
+		// and the second word is the field name. However if a nested struct is defined, then the
+		// type is potentially anonymous and the first word is the field name.
+		if !scanner.Scan() {
+			log.Fatalf("%d: bad struct field", lineNumber)
+		}
+		if inPlaceDefinition == "" {
+			// Field has a "normal" type.
+			field.Type = firstWord
+			field.Name = scanner.Text()
+		} else {
+			// Field has a nested type.
+			field.Type = inPlaceDefinition
+			field.Name = firstWord
+		}
+
+		// Use a regex to extract the doxygen comment.
+		if matches := context.fieldDescMatcher.FindStringSubmatch(codeline); len(matches) > 0 {
+			field.Description = matches[1]
+		}
+
+		// Use a regex to extract the right hand side in the default value assignment, then
+		// do some custom processing via distillValue().
+		if matches := context.rhsMatcher.FindStringSubmatch(codeline); len(matches) > 0 {
+			field.DefaultValue = context.distillValue(matches[1], lineNumber)
+		}
+
+		defn.Fields = append(defn.Fields, field)
+	}
+
 	for scanner.Scan() {
+		depth := len(context.stack) - 1
 		token := scanner.Text()
 		switch {
 		case token == "//":
@@ -158,15 +203,11 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 		case token == "{":
 			context.stack = append(context.stack, &generalScope{})
 		case token == "}":
-			depth := len(context.stack) - 1
 			if depth < 0 {
 				log.Fatalf("%d: bizarre nesting", lineNumber)
 			}
 			switch defn := context.stack[depth].(type) {
-			case *generalScope:
-				// Do nothing here since this scope is neither a struct definition
-				// nor an enum definition. (e.g. it could be a namespace or initializer)
-			default:
+			case *StructDefinition, *EnumDefinition:
 				inPlaceDefinition = defn.BaseName()
 				context.definitions = append(context.definitions, defn)
 			}
@@ -191,26 +232,10 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 			stackEntry := EnumDefinition{scanner.Text(), context.generateQualifier(), nil}
 			context.stack = append(context.stack, &stackEntry)
 			return
-		case len(context.stack) > 1:
-			depth := len(context.stack) - 1
+		case depth > 0:
 			switch defn := context.stack[depth].(type) {
 			case *StructDefinition:
-				scanner.Scan()
-				defaultValueTokens := context.assignmentMatcher.FindStringSubmatch(codeline)
-				defaultValue := ""
-				if len(defaultValueTokens) > 0 {
-					defaultValue = defaultValueTokens[1]
-				}
-				defaultValue = context.distillValue(defaultValue, lineNumber)
-				var field StructField
-				skipJson := strings.Contains(codeline, `%codegen_skip_json%`)
-				skipJs := strings.Contains(codeline, `%codegen_skip_javascript%`)
-				if inPlaceDefinition != "" {
-					field = StructField{inPlaceDefinition, token, defaultValue, skipJson, skipJs}
-				} else {
-					field = StructField{token, scanner.Text(), defaultValue, skipJson, skipJs}
-				}
-				defn.Fields = append(defn.Fields, field)
+				scanStructField(defn, token)
 				return
 			case *EnumDefinition:
 				if strings.Contains(codeline, "=") {
