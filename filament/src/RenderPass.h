@@ -214,8 +214,10 @@ public:
     }
 
     struct PrimitiveInfo { // 40 bytes
-        FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
-        uint8_t reserved0[8 - sizeof(void*)] = {};                      // 0 bytes (4)
+        union {
+            FMaterialInstance const* mi;
+            uint64_t reserved0 = {}; // ensures mi is 8 bytes on all archs
+        };                                                              // 8 bytes
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
