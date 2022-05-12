@@ -53,7 +53,7 @@
         #include "opengl/PlatformWGL.h"
     #endif
     #if defined(FILAMENT_SUPPORTS_OPENGL) && defined(FILAMENT_USE_ANGLE)
-        #include "opengl/PlatformEGL_ANGLE.h"
+        #include "opengl/PlatformEGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkWindows.h"
@@ -144,7 +144,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDevice) n
         #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
             return nullptr;
         #elif defined(FILAMENT_USE_ANGLE)
-            return new PlatformEGL_ANGLE(nativeDevice);
+            return new PlatformEGL(nativeDevice);
         #elif defined(ANDROID)
             return new PlatformEGLAndroid();
         #elif defined(IOS)
