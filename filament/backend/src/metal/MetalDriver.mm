@@ -1138,8 +1138,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     }
 
     if (any(buffers & TargetBufferFlags::DEPTH)) {
-        MetalRenderTarget::Attachment srcDepthAttachment = srcTarget->getDepthAttachment();
-        MetalRenderTarget::Attachment dstDepthAttachment = dstTarget->getDepthAttachment();
+        MetalRenderTarget::Attachment srcDepthAttachment = srcTarget->getDepthStencilAttachment();
+        MetalRenderTarget::Attachment dstDepthAttachment = dstTarget->getDepthStencilAttachment();
 
         if (srcDepthAttachment && dstDepthAttachment) {
             ASSERT_PRECONDITION(isBlitableTextureType(srcDepthAttachment.getTexture().textureType) &&
@@ -1193,10 +1193,10 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
         }
         colorPixelFormat[i] = attachment.getPixelFormat();
     }
-    MTLPixelFormat depthPixelFormat = MTLPixelFormatInvalid;
-    const auto& depthAttachment = mContext->currentRenderTarget->getDepthAttachment();
-    if (depthAttachment) {
-        depthPixelFormat = depthAttachment.getPixelFormat();
+    MTLPixelFormat depthStencilPixelFormat = MTLPixelFormatInvalid;
+    const auto& depthStencilAttachment = mContext->currentRenderTarget->getDepthStencilAttachment();
+    if (depthStencilAttachment) {
+        depthStencilPixelFormat = depthStencilAttachment.getPixelFormat();
     }
     metal::PipelineState pipelineState {
         .vertexFunction = program->vertexFunction,
@@ -1212,7 +1212,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             colorPixelFormat[6],
             colorPixelFormat[7]
         },
-        .depthAttachmentPixelFormat = depthPixelFormat,
+        .depthStencilAttachmentPixelFormat = depthStencilPixelFormat,
         .sampleCount = mContext->currentRenderTarget->getSamples(),
         .blendState = BlendState {
             .blendingEnabled = rs.hasBlending(),

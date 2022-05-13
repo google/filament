@@ -780,19 +780,19 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
     }
 
     if (depthAttachment) {
-        depth = depthAttachment;
+        depthStencil = depthAttachment;
 
-        ASSERT_PRECONDITION(depth.getSampleCount() <= samples,
+        ASSERT_PRECONDITION(depthStencil.getSampleCount() <= samples,
                 "MetalRenderTarget was initialized with a MSAA DEPTH texture, but sample count is %d.",
                 samples);
 
         // If we were given a single-sampled texture but the samples parameter is > 1, we create
         // a multisampled sidecar texture and do a resolve automatically.
-        if (samples > 1 && depth.getSampleCount() == 1) {
-            auto& sidecar = depth.metalTexture->msaaSidecar;
+        if (samples > 1 && depthStencil.getSampleCount() == 1) {
+            auto& sidecar = depthStencil.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(*context, depth.getPixelFormat(),
-                        depth.metalTexture->width, depth.metalTexture->height, samples);
+                sidecar = createMultisampledTexture(*context, depthStencil.getPixelFormat(),
+                        depthStencil.metalTexture->width, depthStencil.metalTexture->height, samples);
             }
         }
     }
@@ -841,22 +841,33 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         }
     }
 
-    Attachment depthAttachment = getDepthAttachment();
-    descriptor.depthAttachment.texture = depthAttachment.getTexture();
-    descriptor.depthAttachment.level = depthAttachment.level;
-    descriptor.depthAttachment.slice = depthAttachment.layer;
+    Attachment depthStencilAttachment = getDepthStencilAttachment();
+    descriptor.depthAttachment.texture = depthStencilAttachment.getTexture();
+    descriptor.depthAttachment.level = depthStencilAttachment.level;
+    descriptor.depthAttachment.slice = depthStencilAttachment.layer;
     descriptor.depthAttachment.loadAction = getLoadAction(params, TargetBufferFlags::DEPTH);
     descriptor.depthAttachment.storeAction = getStoreAction(params, TargetBufferFlags::DEPTH);
     descriptor.depthAttachment.clearDepth = params.clearDepth;
 
-    const bool automaticResolve = samples > 1 && depthAttachment.getSampleCount() == 1;
+    const auto hasStencil = (MTLPixelFormatDepth32Float_Stencil8 == depthStencilAttachment.getPixelFormat()) ||
+                            (MTLPixelFormatDepth24Unorm_Stencil8 == depthStencilAttachment.getPixelFormat());
+    if (hasStencil) {
+        descriptor.stencilAttachment.texture = depthStencilAttachment.getTexture();
+        descriptor.stencilAttachment.level = depthStencilAttachment.level;
+        descriptor.stencilAttachment.slice = depthStencilAttachment.layer;
+        descriptor.stencilAttachment.loadAction = getLoadAction(params, TargetBufferFlags::STENCIL);
+        descriptor.stencilAttachment.storeAction = getStoreAction(params, TargetBufferFlags::STENCIL);
+        descriptor.stencilAttachment.clearStencil = params.clearStencil;
+    }
+
+    const bool automaticResolve = samples > 1 && depthStencilAttachment.getSampleCount() == 1;
     if (automaticResolve) {
         // We're rendering into our temporary MSAA texture and doing an automatic resolve.
         // We should not be attempting to load anything into the MSAA texture.
         assert_invariant(descriptor.depthAttachment.loadAction != MTLLoadActionLoad);
         assert_invariant(!defaultRenderTarget);
 
-        id<MTLTexture> sidecar = depthAttachment.getMSAASidecarTexture();
+        id<MTLTexture> sidecar = depthStencilAttachment.getMSAASidecarTexture();
         assert_invariant(sidecar);
 
         descriptor.depthAttachment.texture = sidecar;
@@ -864,10 +875,21 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.depthAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::DEPTH);
         if (!discard) {
-            descriptor.depthAttachment.resolveTexture = depthAttachment.getTexture();
-            descriptor.depthAttachment.resolveLevel = depthAttachment.level;
-            descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
+            descriptor.depthAttachment.resolveTexture = depthStencilAttachment.getTexture();
+            descriptor.depthAttachment.resolveLevel = depthStencilAttachment.level;
+            descriptor.depthAttachment.resolveSlice = depthStencilAttachment.layer;
             descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
+        }
+        if (hasStencil) {
+            descriptor.stencilAttachment.texture = sidecar;
+            descriptor.stencilAttachment.level = 0;
+            descriptor.stencilAttachment.slice = 0;
+            if (!discard) {
+                descriptor.stencilAttachment.resolveTexture = depthStencilAttachment.getTexture();
+                descriptor.stencilAttachment.resolveLevel = depthStencilAttachment.level;
+                descriptor.stencilAttachment.resolveSlice = depthStencilAttachment.layer;
+                descriptor.stencilAttachment.storeAction = MTLStoreActionMultisampleResolve;
+            }
         }
     }
 }
@@ -892,8 +914,8 @@ MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t i
     return result;
 }
 
-MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
-    Attachment result = depth;
+MetalRenderTarget::Attachment MetalRenderTarget::getDepthStencilAttachment() {
+    Attachment result = depthStencil;
     if (defaultRenderTarget) {
         result.texture = context->currentDrawSwapChain->acquireDepthTexture();
     }

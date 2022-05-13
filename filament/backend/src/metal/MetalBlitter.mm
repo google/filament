@@ -315,7 +315,7 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
             MTLPixelFormatInvalid,
             MTLPixelFormatInvalid
         },
-        .depthAttachmentPixelFormat =
+        .depthStencilAttachmentPixelFormat =
                 blitDepth ? args.destination.depth.pixelFormat : MTLPixelFormatInvalid,
         .sampleCount = 1,
         .blendState = {}
