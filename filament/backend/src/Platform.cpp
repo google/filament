@@ -49,11 +49,8 @@
         #include "vulkan/PlatformVkLinux.h"
     #endif
 #elif defined(WIN32)
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER) && !defined(FILAMENT_USE_ANGLE)
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
         #include "opengl/PlatformWGL.h"
-    #endif
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && defined(FILAMENT_USE_ANGLE)
-        #include "opengl/PlatformEGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkWindows.h"
@@ -83,7 +80,7 @@ Platform::~Platform() noexcept = default;
 // Creates the platform-specific Platform object. The caller takes ownership and is
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
-DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDisplay) noexcept {
+DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDevice) noexcept {
     SYSTRACE_CALL();
     assert_invariant(backend);
 
@@ -97,8 +94,6 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDisplay) 
 
     if (*backend == Backend::DEFAULT) {
 #if defined(__EMSCRIPTEN__)
-        *backend = Backend::OPENGL;
-#elif defined(FILAMENT_USE_ANGLE)
         *backend = Backend::OPENGL;
 #elif defined(ANDROID)
         *backend = Backend::OPENGL;
@@ -143,8 +138,6 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDisplay) 
     #if defined(FILAMENT_SUPPORTS_OPENGL)
         #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
             return nullptr;
-        #elif defined(FILAMENT_USE_ANGLE)
-            return new PlatformEGL(nativeDisplay);
         #elif defined(ANDROID)
             return new PlatformEGLAndroid();
         #elif defined(IOS)

@@ -1079,9 +1079,9 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     rt->gl.samples = samples;
     rt->targets = targets;
 
-    GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
-    const size_t maxDrawBuffers = getMaxDrawBuffers();
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
+        GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
+        const size_t maxDrawBuffers = getMaxDrawBuffers();
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
                 rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
@@ -1089,6 +1089,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
         }
+        glDrawBuffers(maxDrawBuffers, bufs);
+        CHECK_GL_ERROR(utils::slog.e)
     }
 
     // handle special cases first (where depth/stencil are packed)
@@ -1116,7 +1118,6 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         }
     }
 
-    glDrawBuffers(maxDrawBuffers, bufs);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -1639,7 +1640,7 @@ void OpenGLDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, intptr_t ex
 
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.id);
-    glBufferStorageExternalEXT(GL_ELEMENT_ARRAY_BUFFER, 0, ib->count * ib->elementSize, (GLeglClientBufferEXT)externalBuffer, 0);
+    glBufferStorageExternalEXT(GL_ELEMENT_ARRAY_BUFFER, 0, ib->count * ib->elementSize, externalBuffer, 0);
 
     CHECK_GL_ERROR(utils::slog.e)
 #else
@@ -1658,7 +1659,7 @@ void OpenGLDriver::setExternalBuffer(Handle<HwBufferObject> boh, intptr_t extern
 
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
-    glBufferStorageExternalEXT(GL_ARRAY_BUFFER, 0, bo->byteCount, (GLeglClientBufferEXT)externalBuffer, 0);
+    glBufferStorageExternalEXT(GL_ARRAY_BUFFER, 0, bo->byteCount, externalBuffer, 0);
 
     CHECK_GL_ERROR(utils::slog.e)
 #else
@@ -1842,11 +1843,11 @@ void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint
     // Must fit within int8_t.
     assert_invariant(minLevel <= 0x7f && maxLevel <= 0x7f);
 
-    /*t->gl.baseLevel = minLevel;
+    t->gl.baseLevel = minLevel;
     glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
 
     t->gl.maxLevel = maxLevel; // NOTE: according to the GL spec, the default value of this 1000
-    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);*/
+    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
 }
 
 void OpenGLDriver::update3DImage(Handle<HwTexture> th,
@@ -2454,10 +2455,10 @@ GLsizei OpenGLDriver::getAttachments(AttachmentArray& attachments,
         assert_invariant(!defaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT7;
     }
-    if (any(buffers & TargetBufferFlags::DEPTH) && rt->width != 0 && rt->height != 0) {
+    if (any(buffers & TargetBufferFlags::DEPTH)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_DEPTH : GL_DEPTH_ATTACHMENT;
     }
-    if (any(buffers & TargetBufferFlags::STENCIL) && rt->width != 0 && rt->height != 0) {
+    if (any(buffers & TargetBufferFlags::STENCIL)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_STENCIL : GL_STENCIL_ATTACHMENT;
     }
     return attachmentCount;
@@ -3175,14 +3176,14 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
         if (targetLevel < texture->gl.baseLevel || targetLevel > texture->gl.maxLevel) {
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, texture);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            /*if (targetLevel < texture->gl.baseLevel) {
+            if (targetLevel < texture->gl.baseLevel) {
                 texture->gl.baseLevel = targetLevel;
                 glTexParameteri(texture->gl.target, GL_TEXTURE_BASE_LEVEL, targetLevel);
             }
             if (targetLevel > texture->gl.maxLevel) {
                 texture->gl.maxLevel = targetLevel;
                 glTexParameteri(texture->gl.target, GL_TEXTURE_MAX_LEVEL, targetLevel);
-            }*/
+            }
         }
         CHECK_GL_ERROR(utils::slog.e)
     }

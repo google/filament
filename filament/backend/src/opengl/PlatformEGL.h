@@ -31,7 +31,7 @@ namespace filament {
 class PlatformEGL : public backend::OpenGLPlatform {
 public:
 
-    PlatformEGL(EGLDisplay display = EGL_NO_DISPLAY) noexcept;
+    PlatformEGL() noexcept;
 
     backend::Driver* createDriver(void* sharedContext) noexcept override;
     void terminate() noexcept override;
@@ -74,7 +74,7 @@ protected:
     EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept;
     void initializeGlExtensions() noexcept;
 
-    EGLDisplay mEGLDisplay;
+    EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
     EGLContext mEGLContext = EGL_NO_CONTEXT;
     EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
     EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;

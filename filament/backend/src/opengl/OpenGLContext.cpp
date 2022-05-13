@@ -267,7 +267,6 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.WEBGL_compressed_texture_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     ext.WEBGL_compressed_texture_s3tc_srgb = hasExtension(exts, "WEBGL_compressed_texture_s3tc_srgb");
     ext.WEBGL_compressed_texture_etc = hasExtension(exts, "WEBGL_compressed_texture_etc");
-    ext.EXT_external_buffer = hasExtension(exts, "GL_EXT_external_buffer");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -290,7 +289,6 @@ void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet cons
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
     ext.EXT_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
     ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
-    ext.EXT_external_buffer = hasExtension(exts, "GL_EXT_external_buffer");
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {

@@ -94,11 +94,7 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     elseif (LINUX)
         list(APPEND SRCS src/opengl/PlatformGLX.cpp)
     elseif (WIN32)
-        if (FILAMENT_USE_ANGLE)
-            list(APPEND SRCS src/opengl/PlatformEGL.cpp)
-        else()
-            list(APPEND SRCS src/opengl/PlatformWGL.cpp)
-        endif()
+        list(APPEND SRCS src/opengl/PlatformWGL.cpp)
     else()
         list(APPEND SRCS src/opengl/PlatformDummyGL.cpp)
     endif()
@@ -299,10 +295,6 @@ endif()
 
 if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
-endif()
-
-if (WIN32 AND FILAMENT_USE_ANGLE)
-    target_link_libraries(${TARGET} PUBLIC angle)
 endif()
 
 # ==================================================================================================

@@ -75,15 +75,11 @@ static void clearGlError() noexcept {
 
 // ---------------------------------------------------------------------------------------------
 
-PlatformEGL::PlatformEGL(EGLDisplay display) noexcept
-    mEGLDisplay(display) {
-}
+PlatformEGL::PlatformEGL() noexcept = default;
 
 Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
-    if (mEGLDisplay == EGL_NO_DISPLAY) {
-        mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-        assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
-    }
+    mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
     EGLint major, minor;
     EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);

@@ -119,9 +119,9 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
         std::array<backend::TextureSwizzle, 4> swizzle,
         backend::TextureUsage usage) noexcept {
 
-    // ANGLE and some WebGL implementations complain about an incomplete framebuffer when the attachment sizes
+    // Some WebGL implementations complain about an incomplete framebuffer when the attachment sizes
     // are heterogeneous. This merits further investigation.
-#if !defined(__EMSCRIPTEN__) && !defined(FILAMENT_USE_ANGLE)
+#if !defined(__EMSCRIPTEN__)
     if (!(usage & TextureUsage::SAMPLEABLE)) {
         // If this texture is not going to be sampled, we can round its size up
         // this helps prevent many reallocations for small size changes.
