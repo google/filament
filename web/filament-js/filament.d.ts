@@ -504,8 +504,16 @@ interface Filamesh {
     indexBuffer: IndexBuffer;
 }
 
+export interface Engine$Config {
+    minCommandBufferSizeMB: number;
+    commandBufferSizeMB: number;
+    perFrameCommandsSizeMB: number;
+    perRenderPassArenaSizeMB: number;
+    driverHandleArenaSizeMB: number;
+}
+
 export class Engine {
-    public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
+    public static create(canvas: HTMLCanvasElement, contextOptions?: object, config?: Engine$Config): Engine;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
     public createMaterial(urlOrBuffer: BufferReference): Material;
