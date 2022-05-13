@@ -2705,11 +2705,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                     auto const& data, DriverApi& driver) {
 
                 // helper to set the EASU uniforms
-                auto setEasuUniforms = [vp](FMaterialInstance* mi,
+                auto setEasuUniforms = [vp, backend = mEngine.getBackend()](FMaterialInstance* mi,
                         FrameGraphTexture::Descriptor const& inputDesc,
                         FrameGraphTexture::Descriptor const& outputDesc) {
                     FSRUniforms uniforms{};
                     FSR_ScalingSetup(&uniforms, {
+                            .backend = backend,
                             .input = vp,
                             .inputWidth = inputDesc.width,
                             .inputHeight = inputDesc.height,
