@@ -155,6 +155,7 @@ public:
         bool WEBGL_compressed_texture_etc = false;
         bool WEBGL_compressed_texture_s3tc = false;
         bool WEBGL_compressed_texture_s3tc_srgb = false;
+        bool EXT_external_buffer = false;
     } ext;
 
     struct {

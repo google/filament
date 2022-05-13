@@ -76,15 +76,19 @@ public:
     /**
      * Creates a Platform configured for the requested backend if available
      *
-     * @param backendHint Preferred backend, if not available the backend most suitable for the
-     *                    underlying platform is returned and \p backendHint is updated
-     *                    accordingly. Can't be nullptr.
+     * @param backendHint   Preferred backend, if not available the backend most suitable for the
+     *                      underlying platform is returned and \p backendHint is updated
+     *                      accordingly. Can't be nullptr.
+     * 
+     * @param nativeDisplay Specify a display to connect to. Currently only meaningful for the EGL
+     *                      platform, on which you should pass in an EGLDisplay if you want to use
+     *                      one different from the default.
      *
      * @return A pointer to the Plaform object.
      *
      * @see destroy
      */
-    static DefaultPlatform* create(backend::Backend* backendHint, void* nativeDevice = nullptr) noexcept;
+    static DefaultPlatform* create(backend::Backend* backendHint, void* nativeDisplay = nullptr) noexcept;
 
     /**
      * Destroys a Platform object returned by create()
