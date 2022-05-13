@@ -56,7 +56,7 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<MetalDriver>::make();
 }
 
-MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+MetalDriver::MetalDriver(MetalPlatform* platform, Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
           mContext(new MetalContext),
           mHandleAllocator("Handles", driverConfig.handleArenaSize) {
