@@ -24,13 +24,20 @@ import (
 	"strings"
 )
 
-func Parse(sourcePath string) []Scope {
+// Consumes a C++ header file and produces a type database.
+func Parse(sourcePath string) []TypeDefinition {
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sourceFile.Close()
+
+	// In the first pass, gather all block-style comments.
 	context := parserContext{}
+	context.commentBlocks = gatherCommentBlocks(sourceFile)
+	sourceFile.Seek(0, 0)
+
+	// In the second pass, pry apart each C++ codeline.
 	lineScanner := bufio.NewScanner(sourceFile)
 	for lineNumber := 1; lineScanner.Scan(); lineNumber++ {
 		context.scanCppCodeline(lineScanner.Text(), lineNumber)
@@ -42,7 +49,7 @@ func Parse(sourcePath string) []Scope {
 	return context.definitions
 }
 
-type Scope interface {
+type TypeDefinition interface {
 	BaseName() string
 	QualifiedName() string
 }
@@ -58,36 +65,81 @@ type StructField struct {
 }
 
 type StructDefinition struct {
-	StructName string
-	Qualifier  string
-	Fields     []StructField
+	StructName  string
+	Qualifier   string
+	Fields      []StructField
+	Description string
 }
-
-type EnumDefinition struct {
-	EnumName  string
-	Qualifier string
-	Values    []string
-}
-
-type generalScope struct{}
 
 func (defn StructDefinition) BaseName() string      { return defn.StructName }
 func (defn StructDefinition) QualifiedName() string { return defn.Qualifier + defn.StructName }
 
+type EnumValue struct {
+	Description string
+	Name        string
+}
+
+type EnumDefinition struct {
+	EnumName    string
+	Qualifier   string
+	Values      []EnumValue
+	Description string
+}
+
 func (defn EnumDefinition) BaseName() string      { return defn.EnumName }
 func (defn EnumDefinition) QualifiedName() string { return defn.Qualifier + defn.EnumName }
+
+type generalScope struct{}
+
+type scope interface {
+	BaseName() string
+	QualifiedName() string
+}
 
 func (defn generalScope) BaseName() string      { return "" }
 func (defn generalScope) QualifiedName() string { return "" }
 
 type parserContext struct {
-	stack         []Scope
-	definitions   []Scope
-	insideComment bool
-	cppTokenizer  *regexp.Regexp
-	floatMatcher  *regexp.Regexp
-	vectorMatcher *regexp.Regexp
-	fieldParser   *regexp.Regexp
+	definitions     []TypeDefinition
+	stack           []scope
+	insideComment   bool
+	commentBlocks   map[int]string
+	cppTokenizer    *regexp.Regexp
+	floatMatcher    *regexp.Regexp
+	vectorMatcher   *regexp.Regexp
+	fieldParser     *regexp.Regexp
+	fieldDescParser *regexp.Regexp
+}
+
+// Creates a mapping from line numbers to strings, where the strings are entire block comments
+// and the line numbers correspond to the last line of each block comment.
+func gatherCommentBlocks(sourceFile *os.File) map[int]string {
+	comments := make(map[int]string)
+	scanner := bufio.NewScanner(sourceFile)
+	var comment = ""
+	var indention = 0
+	for lineNumber := 1; scanner.Scan(); lineNumber++ {
+		codeline := scanner.Text()
+		if strings.Contains(codeline, `/**`) {
+			indention = strings.Index(codeline, `/**`)
+			comment = codeline[indention:] + "\n"
+			continue
+		}
+		if comment != "" {
+			if len(codeline) > indention {
+				codeline = codeline[indention:]
+			}
+			comment += codeline + "\n"
+			if strings.Contains(codeline, `*/`) {
+				comments[lineNumber] = comment
+				comment = ""
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return comments
 }
 
 // https://github.com/google/re2/wiki/Syntax
@@ -102,6 +154,8 @@ func (context *parserContext) compileRegexps() {
 	const kFieldDesc = `(?://\s*\!\<\s*(?P<description>.*))?`
 	context.fieldParser = regexp.MustCompile(
 		`^\s*` + kFieldType + `\s+` + kFieldName + `\s*=\s*` + kFieldValue + `\s*;\s*` + kFieldDesc)
+
+	context.fieldDescParser = regexp.MustCompile(`(?://\s*\!\<\s*(.*))`)
 }
 
 func (context parserContext) generateQualifier() string {
@@ -115,7 +169,7 @@ func (context parserContext) generateQualifier() string {
 }
 
 func (context parserContext) addTypeQualifiers() {
-	typeMap := make(map[string]Scope)
+	typeMap := make(map[string]scope)
 	for _, defn := range context.definitions {
 		typeMap[defn.BaseName()] = defn
 	}
@@ -149,7 +203,7 @@ func (context parserContext) addTypeQualifiers() {
 	}
 }
 
-// Validate and transform the RHS of an assignment.
+// Validates and transforms the RHS of an assignment.
 // For vectors, this converts curly braces into square brackets.
 func (context parserContext) distillValue(cppvalue string, lineNumber int) string {
 	cppvalue = strings.TrimSpace(cppvalue)
@@ -248,9 +302,12 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 		case token == "/*":
 			context.insideComment = true
 		case token == "*/":
+			if !context.insideComment {
+				log.Fatalf("%d: strange comment", lineNumber)
+			}
 			context.insideComment = false
 		case context.insideComment:
-			// Do nothing inside a comment.
+			// Do nothing.
 		case token == ";":
 			// Do nothing.
 		case token == "{":
@@ -272,7 +329,11 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 			if !strings.Contains(codeline, "{") || strings.Contains(codeline, "}") {
 				log.Fatalf("%d: bad formatting", lineNumber)
 			}
-			stackEntry := StructDefinition{scanner.Text(), context.generateQualifier(), nil}
+			stackEntry := StructDefinition{
+				StructName:  scanner.Text(),
+				Qualifier:   context.generateQualifier(),
+				Description: context.commentBlocks[lineNumber-1],
+			}
 			context.stack = append(context.stack, &stackEntry)
 			return
 		case token == "enum":
@@ -282,7 +343,11 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 			if !strings.Contains(codeline, "{") || strings.Contains(codeline, "}") {
 				log.Fatalf("%d: bad formatting", lineNumber)
 			}
-			stackEntry := EnumDefinition{scanner.Text(), context.generateQualifier(), nil}
+			stackEntry := EnumDefinition{
+				EnumName:    scanner.Text(),
+				Qualifier:   context.generateQualifier(),
+				Description: context.commentBlocks[lineNumber-1],
+			}
 			context.stack = append(context.stack, &stackEntry)
 			return
 		case depth > 0:
@@ -294,7 +359,13 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 				if strings.Contains(codeline, "=") {
 					log.Fatalf("%d: custom values are not allowed", lineNumber)
 				}
-				defn.Values = append(defn.Values, strings.Trim(token, ","))
+				value := EnumValue{
+					Name: strings.Trim(token, ","),
+				}
+				if matches := context.fieldDescParser.FindStringSubmatch(codeline); matches != nil {
+					value.Description = matches[1]
+				}
+				defn.Values = append(defn.Values, value)
 				return
 			}
 		}

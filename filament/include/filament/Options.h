@@ -25,6 +25,9 @@ namespace filament {
 
 class Texture;
 
+/**
+ * Generic quality level.
+ */
 enum class QualityLevel : uint8_t {
     LOW,
     MEDIUM,

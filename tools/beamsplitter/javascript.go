@@ -26,7 +26,9 @@ import (
 	"text/template"
 )
 
-func createCodeGenerator(namespace string) *template.Template {
+// Returns a templating function that automatically checks for fatal errors. The returned function
+// takes an output stream, a template name to invoke, and a template context object.
+func createJsCodeGenerator(namespace string) func(*os.File, string, TypeDefinition) {
 	jsPrefix := ""
 	classPrefix := ""
 	cppPrefix := ""
@@ -77,12 +79,18 @@ func createCodeGenerator(namespace string) *template.Template {
 		"classprefix": func() string { return classPrefix },
 	}
 
-	codegen := template.New("Settings").Funcs(customExtensions)
-	return template.Must(codegen.ParseFiles("javascript.template"))
+	templ := template.New("beamsplitter").Funcs(customExtensions)
+	templ = template.Must(templ.ParseFiles("javascript.template"))
+	return func(file *os.File, section string, definition TypeDefinition) {
+		err := templ.ExecuteTemplate(file, section, definition)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
 }
 
-func EmitJavaScript(definitions []Scope, namespace string, outputFolder string) {
-	codegen := createCodeGenerator(namespace)
+func EmitJavaScript(definitions []TypeDefinition, namespace string, outputFolder string) {
+	generate := createJsCodeGenerator(namespace)
 	{
 		path := filepath.Join(outputFolder, "jsbindings_generated.cpp")
 		file, err := os.Create(path)
@@ -91,14 +99,16 @@ func EmitJavaScript(definitions []Scope, namespace string, outputFolder string) 
 		}
 		defer file.Close()
 		defer fmt.Println("Generated " + path)
-		codegen.ExecuteTemplate(file, "JsBindingsHeader", nil)
+
+		generate(file, "JsBindingsHeader", nil)
+
 		for _, definition := range definitions {
 			switch definition.(type) {
 			case *StructDefinition:
-				codegen.ExecuteTemplate(file, "JsBindingsStruct", definition)
+				generate(file, "JsBindingsStruct", definition)
 			}
 		}
-		codegen.ExecuteTemplate(file, "JsBindingsFooter", nil)
+		generate(file, "JsBindingsFooter", nil)
 	}
 	{
 		path := filepath.Join(outputFolder, "jsenums_generated.cpp")
@@ -108,14 +118,17 @@ func EmitJavaScript(definitions []Scope, namespace string, outputFolder string) 
 		}
 		defer file.Close()
 		defer fmt.Println("Generated " + path)
-		codegen.ExecuteTemplate(file, "JsEnumsHeader", nil)
+
+		generate(file, "JsEnumsHeader", nil)
+
 		for _, definition := range definitions {
 			switch definition.(type) {
 			case *EnumDefinition:
-				codegen.ExecuteTemplate(file, "JsEnum", definition)
+				generate(file, "JsEnum", definition)
 			}
 		}
-		codegen.ExecuteTemplate(file, "JsEnumsFooter", nil)
+
+		generate(file, "JsEnumsFooter", nil)
 	}
 	{
 		path := filepath.Join(outputFolder, "extensions_generated.js")
@@ -125,18 +138,20 @@ func EmitJavaScript(definitions []Scope, namespace string, outputFolder string) 
 		}
 		defer file.Close()
 		defer fmt.Println("Generated " + path)
-		codegen.ExecuteTemplate(file, "JsExtensionsHeader", nil)
+
+		generate(file, "JsExtensionsHeader", nil)
+
 		for _, definition := range definitions {
 			switch definition.(type) {
 			case *StructDefinition:
-				codegen.ExecuteTemplate(file, "JsExtension", definition)
+				generate(file, "JsExtension", definition)
 			}
 		}
-		codegen.ExecuteTemplate(file, "JsExtensionsFooter", nil)
+		generate(file, "JsExtensionsFooter", nil)
 	}
 }
 
-func EditTypeScript(definitions []Scope, namespace string, folder string) {
+func EditTypeScript(definitions []TypeDefinition, namespace string, folder string) {
 	path := filepath.Join(folder, "filament.d.ts")
 	var codelines []string
 	{
@@ -173,13 +188,13 @@ func EditTypeScript(definitions []Scope, namespace string, folder string) {
 	}
 	file.WriteString("// " + CodelineMarker + "\n")
 
-	codegen := createCodeGenerator(namespace)
+	generate := createJsCodeGenerator(namespace)
 	for _, definition := range definitions {
 		switch definition.(type) {
 		case *StructDefinition:
-			codegen.ExecuteTemplate(file, "TsStruct", definition)
+			generate(file, "TsStruct", definition)
 		case *EnumDefinition:
-			codegen.ExecuteTemplate(file, "TsEnum", definition)
+			generate(file, "TsEnum", definition)
 		}
 	}
 }
