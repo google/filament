@@ -441,7 +441,8 @@ public:
         const static size_t kEditCmdLength = kEditCmd.size();
 
         if (0 == strncmp(data, kEditCmd.c_str(), kEditCmdLength)) {
-            std::istringstream str(data + kEditCmdLength);
+            std::string command(data + kEditCmdLength, size - kEditCmdLength);
+            std::istringstream str(command);
             uint32_t matid;
             int api;
             int shaderIndex;
@@ -546,8 +547,7 @@ DebugServer::addMaterial(const CString& name, const void* data, size_t size, voi
     }
 
     const uint32_t seed = 42;
-    auto words = (const uint32_t*) data;
-    MaterialKey key = utils::hash::murmur3(words, size / 4, seed);
+    const MaterialKey key = utils::hash::murmurSlow((const uint8_t*) data, size, seed);
 
     // Retain a copy of the package to permit queries after the client application has
     // freed up the original material package.

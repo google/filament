@@ -324,15 +324,18 @@ void ShaderIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
         stream.read((char*) &record.stage, sizeof(ShaderRecord::stage));
         stream.read((char*) &record.offset, sizeof(ShaderRecord::offset));
 
-        const uint8_t* linePtr = chunkContent + record.offset;
-        record.stringLength = *((uint32_t*) linePtr);
-        linePtr += sizeof(uint32_t);
+        const auto previousPosition = stream.tellg();
+        stream.seekg(record.offset);
+        {
+            stream.read((char*) &record.stringLength, sizeof(ShaderRecord::stringLength));
 
-        const uint32_t lineCount = *((uint32_t*) linePtr);
-        record.lineIndices.resize(lineCount);
-        linePtr += sizeof(uint32_t);
+            uint32_t lineCount;
+            stream.read((char*) &lineCount, sizeof(lineCount));
 
-        memcpy(record.lineIndices.data(), linePtr, lineCount * sizeof(uint16_t));
+            record.lineIndices.resize(lineCount);
+            stream.read((char*) record.lineIndices.data(), lineCount * sizeof(uint16_t));
+        }
+        stream.seekg(previousPosition);
     }
 }
 
