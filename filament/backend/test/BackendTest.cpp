@@ -67,7 +67,8 @@ void BackendTest::initializeDriver() {
     auto backend = static_cast<filament::backend::Backend>(sBackend);
     DefaultPlatform* platform = DefaultPlatform::create(&backend);
     assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
-    driver = platform->createDriver(nullptr);
+    Platform::DriverConfig driverConfig;
+    driver = platform->createDriver(nullptr, driverConfig);
     commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }
 
