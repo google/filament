@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <optional>
 
 #include <ctype.h>
 #include <private/filament/Variant.h>

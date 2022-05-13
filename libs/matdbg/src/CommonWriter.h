@@ -197,6 +197,18 @@ const char* toString(backend::SamplerType type) noexcept {
 }
 
 inline
+const char* toString(backend::SamplerFormat type) noexcept {
+    switch (type) {
+    case backend::SamplerFormat::FLOAT: return "float";
+    case backend::SamplerFormat::INT: return "int";
+    case backend::SamplerFormat::SHADOW: return "shadow";
+    case backend::SamplerFormat::UINT: return "uint";
+    default: break;
+    }
+    return "float";
+}
+
+inline
 const char* toString(backend::SubpassType type) noexcept {
     switch (type) {
         case backend::SubpassType::SUBPASS_INPUT: return "subpassInput";
@@ -214,13 +226,15 @@ const char* toString(backend::Precision precision) noexcept {
 }
 
 inline
-const char* toString(backend::SamplerFormat format) noexcept {
-    switch (format) {
-        case backend::SamplerFormat::INT: return "int";
-        case backend::SamplerFormat::UINT: return "uint";
-        case backend::SamplerFormat::FLOAT: return "float";
-        case backend::SamplerFormat::SHADOW: return "shadow";
+const char* toString(backend::StencilOperation stencilOp) noexcept {
+    switch (stencilOp) {
+    case backend::StencilOperation::INVERT: return "invert";
+    case backend::StencilOperation::KEEP: return "keep";
+    case backend::StencilOperation::REPLACE: return "replace";
+    case backend::StencilOperation::ZERO: return "zero";
+    default: break;
     }
+    return "zero";
 }
 
 // Returns a human-readable variant description.
