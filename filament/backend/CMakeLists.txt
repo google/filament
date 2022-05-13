@@ -389,6 +389,7 @@ if (APPLE)
         test/test_MRT.cpp
         test/test_LoadImage.cpp
         test/test_RenderExternalImage.cpp
+        test/test_StencilBuffer.cpp
         )
 
     target_link_libraries(backend_test PRIVATE

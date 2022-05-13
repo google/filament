@@ -213,22 +213,25 @@ public:
         return boolish ? std::numeric_limits<uint64_t>::max() : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 32 bytes
-        FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
+    struct PrimitiveInfo { // 40 bytes
+        union {
+            FMaterialInstance const* mi;
+            uint64_t reserved0 = {}; // ensures mi is 8 bytes on all archs
+        };                                                              // 8 bytes
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
-        backend::RasterState rasterState;                               // 4 bytes
         uint16_t index = 0;                                             // 2 bytes
         uint16_t instanceCount;                                         // 2 bytes
+        backend::RasterState rasterState;                               // 8 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[11 - sizeof(void*)] = {};                      // 3 bytes (7)
+        uint8_t reserved1[7] = {};                                      // 7 bytes
     };
-    static_assert(sizeof(PrimitiveInfo) == 32);
+    static_assert(sizeof(PrimitiveInfo) == 40);
 
     struct alignas(8) Command {     // 40 bytes
         CommandKey key = 0;         //  8 bytes
-        PrimitiveInfo primitive;    // 32 bytes
+        PrimitiveInfo primitive;    // 40 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t, void* ptr) {
@@ -236,7 +239,7 @@ public:
             return ptr;
         }
     };
-    static_assert(sizeof(Command) == 40);
+    static_assert(sizeof(Command) == 48);
     static_assert(std::is_trivially_destructible_v<Command>,
             "Command isn't trivially destructible");
 
