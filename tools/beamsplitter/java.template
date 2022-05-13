@@ -1,0 +1,17 @@
+{{ define "Struct" }}
+    {{ docblock .  1 }}public static class {{ .BaseName }} {
+    {{- range $index, $field := .Fields}}
+        {{ docblock . 2 }}public {{ java_type $field.Type }} {{ $field.Name }} = {{ java_value $field.DefaultValue}};
+    {{- end }}
+    };
+{{ end }}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+{{ define "Enum" }}
+    {{ docblock . 1 }}public enum {{ .BaseName }} {
+    {{- range .Values}}
+        {{ docblock . 2 }}{{ .Name }},
+    {{- end }}
+    };
+{{ end }}
