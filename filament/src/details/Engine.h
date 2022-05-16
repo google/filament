@@ -353,6 +353,12 @@ public:
     backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
     backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
 
+    size_t getMinCommandBufferSize()    { return mMinCommandBufferSize; }
+    size_t getCommandBufferSize()       { return mCommandBufferSize; }
+    size_t getPerFrameCommandsSize()    { return mPerFrameCommandsSize; }
+    size_t getPerRenderPassArenaSize()  { return mPerRenderPassArenaSize; }
+    size_t getDriverHandleArenaSize()   { return mDriverHandleArenaSize; }
+
 private:
     static Config validateConfig(const Config* config) noexcept;
 
