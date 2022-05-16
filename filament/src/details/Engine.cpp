@@ -66,9 +66,8 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
-    Config validConfig;
-    validateConfig(config, validConfig);
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext, validConfig);
+    Config validConfig = validateConfig(config);
+    FEngine* instance = new FEngine(backend, platform, validConfig, sharedGLContext);
 
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
@@ -121,9 +120,8 @@ void FEngine::createAsync(CreateCallback callback, void* user,
         Backend backend, Platform* platform, void* sharedGLContext, const Config* config) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
-    Config validConfig;
-    validateConfig(config, validConfig);
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext, validConfig);
+    Config validConfig = validateConfig(config);
+    FEngine* instance = new FEngine(backend, platform, validConfig, sharedGLContext);
 
     // start the driver thread
     instance->mDriverThread = std::thread(&FEngine::loop, instance);
@@ -138,16 +136,15 @@ void FEngine::createAsync(CreateCallback callback, void* user,
     callbackThread.detach();
 }
 
-void FEngine::validateConfig(const Config* config, Config& validConfig) noexcept
+Engine::Config FEngine::validateConfig(const Config* config) noexcept
 {
     constexpr uint32_t ARENA_COMMANDS_DELTA = 1;    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
     constexpr uint32_t NUM_FRAMES_OVERLAP = 3;      // Number of potential concurrent frames in flight
 
+    Config validConfig;
     if (config == nullptr)
     {
-        Config defaultConfig;
-        validConfig = defaultConfig;
-        return;
+        return validConfig;
     }
 
     validConfig.minCommandBufferSizeMB = max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, config->minCommandBufferSizeMB);
@@ -157,6 +154,7 @@ void FEngine::validateConfig(const Config* config, Config& validConfig) noexcept
     validConfig.perRenderPassArenaSizeMB = max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, config->perRenderPassArenaSizeMB);
     validConfig.perRenderPassArenaSizeMB = max(validConfig.perRenderPassArenaSizeMB, validConfig.perFrameCommandsSizeMB + ARENA_COMMANDS_DELTA);    // Enforce pre-render-pass arena rule-of-thumb
     validConfig.driverHandleArenaSizeMB = config->driverHandleArenaSizeMB;      // This value gets validated during driver creation, so pass it through
+    return validConfig;
 }
 
 FEngine* FEngine::getEngine(void* token) {
@@ -196,7 +194,7 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, const Config& configParams) :
+FEngine::FEngine(Backend backend, Platform* platform, const Config& config, void* sharedGLContext) :
         mBackend(backend),
         mPlatform(platform),
         mSharedGLContext(sharedGLContext),
@@ -206,8 +204,8 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, con
         mTransformManager(),
         mLightManager(*this),
         mCameraManager(*this),
-        mCommandBufferQueue(configParams.minCommandBufferSizeMB * 1024 * 1024, configParams.commandBufferSizeMB * 1024 * 1024),
-        mPerRenderPassAllocator("per-renderpass allocator", configParams.perRenderPassArenaSizeMB * 1024 * 1024),
+        mCommandBufferQueue(config.minCommandBufferSizeMB * 1024 * 1024, config.commandBufferSizeMB * 1024 * 1024),
+        mPerRenderPassAllocator("per-renderpass allocator", config.perRenderPassArenaSizeMB * 1024 * 1024),
         mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
@@ -217,12 +215,12 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, con
     // (it may not be the case)
     mJobSystem.adopt();
 
-    const size_t MB = 1024U * 1024U;
-    mMinCommandBufferSize = configParams.minCommandBufferSizeMB * MB;
-    mCommandBufferSize = configParams.commandBufferSizeMB * MB;
-    mPerFrameCommandsSize = configParams.perFrameCommandsSizeMB * MB;
-    mPerRenderPassArenaSize = configParams.perRenderPassArenaSizeMB * MB;
-    mDriverHandleArenaSize = configParams.driverHandleArenaSizeMB * MB;
+    const size_t MiB = 1024U * 1024U;
+    mMinCommandBufferSize = config.minCommandBufferSizeMB * MiB;
+    mCommandBufferSize = config.commandBufferSizeMB * MiB;
+    mPerFrameCommandsSize = config.perFrameCommandsSizeMB * MiB;
+    mPerRenderPassArenaSize = config.perRenderPassArenaSizeMB * MiB;
+    mDriverHandleArenaSize = config.driverHandleArenaSizeMB * MiB;
 
     slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;

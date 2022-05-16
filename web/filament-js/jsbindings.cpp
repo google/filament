@@ -430,6 +430,11 @@ class_<Engine>("Engine")
         return Engine::create();
     }, allow_raw_pointers())
 
+    /// validateConfig ::static method:: validates engine configuration parameters
+    /// engine ::argument:: pointer to config to validate. If null, returns default values.
+    /// ::retVal:: a validated instance of [Engine::Config]
+    .class_function("validateConfig", &Engine::validateConfig, allow_raw_pointers())
+
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({
             const handle = window.filament_contextHandle;
