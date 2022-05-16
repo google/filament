@@ -215,7 +215,7 @@ FEngine::FEngine(Backend backend, Platform* platform, const Config& config, void
     // (it may not be the case)
     mJobSystem.adopt();
 
-    const size_t MiB = 1024U * 1024U;
+    constexpr size_t MiB = 1024U * 1024U;
     mMinCommandBufferSize = config.minCommandBufferSizeMB * MiB;
     mCommandBufferSize = config.commandBufferSizeMB * MiB;
     mPerFrameCommandsSize = config.perFrameCommandsSizeMB * MiB;
