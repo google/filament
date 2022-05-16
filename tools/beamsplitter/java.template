@@ -1,7 +1,10 @@
 {{ define "Struct" }}
     {{ docblock .  1 }}public static class {{ .BaseName }} {
+    {{- nested_type_declarations . }}
     {{- range $index, $field := .Fields}}
-        {{ docblock . 2 }}public {{ java_type $field.Type }} {{ $field.Name }} = {{ java_value $field.DefaultValue}};
+        {{ docblock . 2 }}{{ annotation $field 2 }}public
+        {{- java_type $field }} {{ $field.Name }} =
+        {{- java_value $field}};
     {{- end }}
     };
 {{ end }}

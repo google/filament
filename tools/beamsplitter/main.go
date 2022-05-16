@@ -53,7 +53,7 @@ func main() {
 			case *parse.StructDefinition:
 				fmt.Println("STRUCT:", concrete.QualifiedName())
 				for _, field := range concrete.Fields {
-					fmt.Println("\t", field.Type, "...", field.Name, "...", field.DefaultValue)
+					fmt.Println("\t", field.TypeString, "...", field.Name, "...", field.DefaultValue)
 				}
 			case *parse.EnumDefinition:
 				fmt.Println("  ENUM:", concrete.QualifiedName())

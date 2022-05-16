@@ -18,7 +18,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -28,39 +30,32 @@ import (
 	"beamsplitter/parse"
 )
 
-// Returns a templating function that automatically checks for fatal errors. The returned function
-// takes an output stream, a template name to invoke, and a template context object.
-func createJavaCodeGenerator() func(*os.File, string, parse.TypeDefinition) {
-	customExtensions := template.FuncMap{
-		"docblock": func(defn parse.Documented, depth int) string {
-			doc := defn.GetDoc()
-			if doc == "" {
-				return ""
-			}
-			indent := strings.Repeat("    ", depth)
-			if strings.Count(doc, "\n") > 0 {
-				return strings.ReplaceAll(doc, "\n", "\n"+indent)
-			}
-			return "/**\n" + indent + " * " + doc + "\n" + indent + " */\n" + indent
-		},
-		"java_type": func(cpptype string) string {
-			switch cpptype {
-			case "bool":
-				return "boolean"
-			case "uint8_t":
-				return "int"
-			}
-			return cpptype
-		},
-		"java_value": func(cppval string) string {
-			return strings.ReplaceAll(cppval, "::", ".")
-		},
+// Adds one level of indention to the given multi-line string.
+// Isolated newlines are intentially not indented.
+func indent(src string) string {
+	dst := &bytes.Buffer{}
+	buf := bytes.NewBufferString(src)
+	scanner := bufio.NewScanner(buf)
+	for scanner.Scan() {
+		codeline := scanner.Text()
+		if codeline != "" {
+			dst.WriteString("    ")
+			dst.WriteString(scanner.Text())
+		}
+		dst.WriteByte('\n')
 	}
+	return dst.String()
+}
 
+// Wrapper for ExecuteTemplate that performs error checking. Takes an output stream, a template name
+// to invoke, and a template context object.
+type templateFn = func(io.Writer, string, parse.TypeDefinition)
+
+func createJavaCodeGenerator(customExtensions template.FuncMap) templateFn {
 	templ := template.New("beamsplitter").Funcs(customExtensions)
 	templ = template.Must(templ.ParseFiles("java.template"))
-	return func(file *os.File, section string, definition parse.TypeDefinition) {
-		err := templ.ExecuteTemplate(file, section, definition)
+	return func(writer io.Writer, section string, definition parse.TypeDefinition) {
+		err := templ.ExecuteTemplate(writer, section, definition)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -102,17 +97,110 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 	}
 	file.WriteString("    // " + kCodelineMarker + "\n")
 
-	generate := createJavaCodeGenerator()
+	// Declare a closure variable to handle nested types.
+	var sharedExtensions template.FuncMap
 
-	enabled := false
-	if enabled {
-		for _, definition := range definitions {
-			switch definition.(type) {
-			case *parse.StructDefinition:
-				generate(file, "Struct", definition)
-			case *parse.EnumDefinition:
-				generate(file, "Enum", definition)
+	// These template extensions are used to transmogrify C++ symbols and value literals to Java.
+	customExtensions := template.FuncMap{
+		"docblock": func(defn parse.Documented, depth int) string {
+			doc := defn.GetDoc()
+			if doc == "" {
+				return ""
 			}
+			indent := strings.Repeat("    ", depth)
+			if strings.Count(doc, "\n") > 0 {
+				return strings.ReplaceAll(doc, "\n", "\n"+indent)
+			}
+			return "/**\n" + indent + " * " + doc + "\n" + indent + " */\n" + indent
+		},
+		"nested_type_declarations": func(parent parse.TypeDefinition) string {
+			generate := createJavaCodeGenerator(sharedExtensions)
+			buf := &bytes.Buffer{}
+			for _, definition := range definitions {
+				if definition.Parent() != parent {
+					continue
+				}
+				switch definition.(type) {
+				case *parse.StructDefinition:
+					generate(buf, "Struct", definition)
+				case *parse.EnumDefinition:
+					generate(buf, "Enum", definition)
+				}
+			}
+			return indent(buf.String())
+		},
+		"annotation": func(field parse.StructField, depth int) string {
+			if _, exists := field.EmitterFlags["java_float"]; exists {
+				return ""
+			}
+			annotation := ""
+			switch {
+			case field.DefaultValue == "nullptr":
+				annotation = "@Nullable"
+			case field.TypeString == "math::float2":
+				annotation = "@NonNull @Size(min = 2)"
+			case field.TypeString == "math::float3" || field.TypeString == "LinearColor":
+				annotation = "@NonNull @Size(min = 3)"
+			case field.TypeString == "math::float4" || field.TypeString == "LinearColorA":
+				annotation = "@NonNull @Size(min = 4)"
+			case strings.Contains(field.DefaultValue, "::"):
+				annotation = "@NonNull"
+			default:
+				return ""
+			}
+			return annotation + "\n" + strings.Repeat("    ", depth)
+		},
+		"java_type": func(field parse.StructField) string {
+			if _, exists := field.EmitterFlags["java_float"]; exists {
+				return " float"
+			}
+			switch field.TypeString {
+			case "math::float2", "math::float3", "math::float4", "LinearColor", "LinearColorA":
+				return " float[]"
+			case "bool":
+				return " boolean"
+			case "uint8_t", "uint16_t", "uint32_t":
+				return " int"
+			}
+			return " " + strings.ReplaceAll(field.TypeString, "*", "")
+		},
+		"java_value": func(field parse.StructField) string {
+			if _, exists := field.EmitterFlags["java_float"]; exists {
+				arrayContents := strings.Trim(field.DefaultValue, " []")
+
+				// If we're forcing an array to be bound to a flat, then extract the first component
+				// and use that as the default value.
+				if comma := strings.Index(arrayContents, ","); comma > -1 {
+					return " " + arrayContents[:comma]
+				}
+
+				return " " + arrayContents
+			}
+			if field.DefaultValue == "nullptr" {
+				return " null"
+			}
+			value := strings.ReplaceAll(field.DefaultValue, "::", ".")
+			if field.TypeString == "float" {
+				value += "f"
+			} else if c := len(value); c > 1 && value[0] == '[' && value[c-1] == ']' {
+				value = "{" + value[1:c-1] + "}"
+			}
+			return " " + value
+		},
+	}
+
+	sharedExtensions = customExtensions
+
+	generate := createJavaCodeGenerator(customExtensions)
+	for _, definition := range definitions {
+		if definition.Parent() != nil {
+			continue
+		}
+		switch definition.(type) {
+		case *parse.StructDefinition:
+			generate(file, "Struct", definition)
+		case *parse.EnumDefinition:
+			generate(file, "Enum", definition)
 		}
 	}
 

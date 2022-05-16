@@ -15,7 +15,7 @@ EMSCRIPTEN_BINDINGS(jsbindings_generated) {
 {{- $struct_name := .QualifiedName }}
 value_object<{{ cprefix }}{{ $struct_name }}>("{{ jsprefix }}{{ qualifiedtype .QualifiedName }}")
 {{- range $index, $field := .Fields}}
-{{- if $field.SkipJavaScript}}
+{{- if flag $field "skip_javascript" }}
     // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
 {{- else }}
     .field("{{ $field.Name }}", &{{ cprefix }}{{ $struct_name }}::{{ $field.Name }})
@@ -67,7 +67,7 @@ Filament.loadGeneratedExtensions = function() {
     Filament.{{ classprefix}}set{{ .BaseName }}Defaults = function(overrides) {
         const options = {
 {{- range $index, $field := .Fields}}
-{{- if $field.SkipJavaScript}}
+{{- if flag $field "skip_javascript" }}
             // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
 {{- else }}
             {{$field.Name}}: {{qualifiedvalue $field.DefaultValue}},
@@ -88,10 +88,10 @@ Filament.loadGeneratedExtensions = function() {
 {{- $struct_name := .QualifiedName }}
 {{.Description}}export interface {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
 {{- range $index, $field := .Fields}}
-{{- if $field.SkipJavaScript}}
+{{- if flag $field "skip_javascript" }}
     // JavaScript binding for {{$field.Name}} is not yet supported, must use default value.
 {{- else }}
-    {{ $field.Name }}?: {{ tstype $field.Type }};
+    {{ $field.Name }}?: {{ tstype $field.TypeString }};
     {{- if $field.Description}} // {{ $field.Description }}{{end}}
 {{- end }}
 {{- end }}
