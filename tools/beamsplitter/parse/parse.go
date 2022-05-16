@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package parse
 
 import (
 	"bufio"
@@ -88,6 +88,13 @@ type EnumDefinition struct {
 
 func (defn EnumDefinition) BaseName() string      { return defn.EnumName }
 func (defn EnumDefinition) QualifiedName() string { return defn.Qualifier + defn.EnumName }
+
+type Documented interface{ GetDoc() string }
+
+func (defn EnumDefinition) GetDoc() string   { return defn.Description }
+func (defn StructDefinition) GetDoc() string { return defn.Description }
+func (field StructField) GetDoc() string     { return field.Description }
+func (value EnumValue) GetDoc() string       { return value.Description }
 
 type generalScope struct{}
 

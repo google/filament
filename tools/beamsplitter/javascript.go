@@ -17,6 +17,7 @@
 package main
 
 import (
+	"beamsplitter/parse"
 	"bufio"
 	"fmt"
 	"log"
@@ -28,7 +29,7 @@ import (
 
 // Returns a templating function that automatically checks for fatal errors. The returned function
 // takes an output stream, a template name to invoke, and a template context object.
-func createJsCodeGenerator(namespace string) func(*os.File, string, TypeDefinition) {
+func createJsCodeGenerator(namespace string) func(*os.File, string, parse.TypeDefinition) {
 	jsPrefix := ""
 	classPrefix := ""
 	cppPrefix := ""
@@ -81,7 +82,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string, TypeDefiniti
 
 	templ := template.New("beamsplitter").Funcs(customExtensions)
 	templ = template.Must(templ.ParseFiles("javascript.template"))
-	return func(file *os.File, section string, definition TypeDefinition) {
+	return func(file *os.File, section string, definition parse.TypeDefinition) {
 		err := templ.ExecuteTemplate(file, section, definition)
 		if err != nil {
 			log.Fatal(err.Error())
@@ -89,7 +90,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string, TypeDefiniti
 	}
 }
 
-func EmitJavaScript(definitions []TypeDefinition, namespace string, outputFolder string) {
+func emitJavaScript(definitions []parse.TypeDefinition, namespace string, outputFolder string) {
 	generate := createJsCodeGenerator(namespace)
 	{
 		path := filepath.Join(outputFolder, "jsbindings_generated.cpp")
@@ -104,7 +105,7 @@ func EmitJavaScript(definitions []TypeDefinition, namespace string, outputFolder
 
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case *StructDefinition:
+			case *parse.StructDefinition:
 				generate(file, "JsBindingsStruct", definition)
 			}
 		}
@@ -123,7 +124,7 @@ func EmitJavaScript(definitions []TypeDefinition, namespace string, outputFolder
 
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case *EnumDefinition:
+			case *parse.EnumDefinition:
 				generate(file, "JsEnum", definition)
 			}
 		}
@@ -143,7 +144,7 @@ func EmitJavaScript(definitions []TypeDefinition, namespace string, outputFolder
 
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case *StructDefinition:
+			case *parse.StructDefinition:
 				generate(file, "JsExtension", definition)
 			}
 		}
@@ -151,7 +152,7 @@ func EmitJavaScript(definitions []TypeDefinition, namespace string, outputFolder
 	}
 }
 
-func EditTypeScript(definitions []TypeDefinition, namespace string, folder string) {
+func editTypeScript(definitions []parse.TypeDefinition, namespace string, folder string) {
 	path := filepath.Join(folder, "filament.d.ts")
 	var codelines []string
 	{
@@ -164,7 +165,7 @@ func EditTypeScript(definitions []TypeDefinition, namespace string, folder strin
 		foundMarker := false
 		for lineNumber := 1; lineScanner.Scan(); lineNumber++ {
 			codeline := lineScanner.Text()
-			if strings.Contains(codeline, CodelineMarker) {
+			if strings.Contains(codeline, kCodelineMarker) {
 				foundMarker = true
 				break
 			}
@@ -186,14 +187,14 @@ func EditTypeScript(definitions []TypeDefinition, namespace string, folder strin
 		file.WriteString(codeline)
 		file.WriteString("\n")
 	}
-	file.WriteString("// " + CodelineMarker + "\n")
+	file.WriteString("// " + kCodelineMarker + "\n")
 
 	generate := createJsCodeGenerator(namespace)
 	for _, definition := range definitions {
 		switch definition.(type) {
-		case *StructDefinition:
+		case *parse.StructDefinition:
 			generate(file, "TsStruct", definition)
-		case *EnumDefinition:
+		case *parse.EnumDefinition:
 			generate(file, "TsEnum", definition)
 		}
 	}
