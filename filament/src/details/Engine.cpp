@@ -85,9 +85,8 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
             delete instance;
             return nullptr;
         }
-        DriverConfig driverConfig{ .handleArenaSize = instance->mDriverHandleArenaSize };
+        DriverConfig driverConfig{ .handleArenaSize = instance->getRequestedDriverHandleArenaSize() };
         instance->mDriver = platform->createDriver(sharedGLContext, driverConfig);
-        instance->mDriverHandleArenaSize = driverConfig.handleArenaSize;      // Get updated handle arena size in case driver changed it
 
     } else {
         // start the driver thread
@@ -147,12 +146,12 @@ Engine::Config FEngine::validateConfig(const Config* config) noexcept
         return validConfig;
     }
 
-    validConfig.minCommandBufferSizeMB = max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, config->minCommandBufferSizeMB);
-    validConfig.minCommandBufferSizeMB = max(config->perFrameCommandsSizeMB, validConfig.minCommandBufferSizeMB);                   // As a rule of thumb use the same value as perFrameCommandsMB
-    validConfig.commandBufferSizeMB = max(config->commandBufferSizeMB, validConfig.minCommandBufferSizeMB * NUM_FRAMES_OVERLAP);
-    validConfig.perFrameCommandsSizeMB = max((uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, config->minCommandBufferSizeMB);
-    validConfig.perRenderPassArenaSizeMB = max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, config->perRenderPassArenaSizeMB);
-    validConfig.perRenderPassArenaSizeMB = max(validConfig.perRenderPassArenaSizeMB, validConfig.perFrameCommandsSizeMB + ARENA_COMMANDS_DELTA);    // Enforce pre-render-pass arena rule-of-thumb
+    validConfig.minCommandBufferSizeMB = std::max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, config->minCommandBufferSizeMB);
+    validConfig.minCommandBufferSizeMB = std::max(config->perFrameCommandsSizeMB, validConfig.minCommandBufferSizeMB);                   // As a rule of thumb use the same value as perFrameCommandsMB
+    validConfig.commandBufferSizeMB = std::max(config->commandBufferSizeMB, validConfig.minCommandBufferSizeMB * NUM_FRAMES_OVERLAP);
+    validConfig.perFrameCommandsSizeMB = std::max((uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, config->minCommandBufferSizeMB);
+    validConfig.perRenderPassArenaSizeMB = std::max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, config->perRenderPassArenaSizeMB);
+    validConfig.perRenderPassArenaSizeMB = std::max(validConfig.perRenderPassArenaSizeMB, validConfig.perFrameCommandsSizeMB + ARENA_COMMANDS_DELTA);    // Enforce pre-render-pass arena rule-of-thumb
     validConfig.driverHandleArenaSizeMB = config->driverHandleArenaSizeMB;      // This value gets validated during driver creation, so pass it through
     return validConfig;
 }
@@ -220,7 +219,7 @@ FEngine::FEngine(Backend backend, Platform* platform, const Config& config, void
     mCommandBufferSize = config.commandBufferSizeMB * MiB;
     mPerFrameCommandsSize = config.perFrameCommandsSizeMB * MiB;
     mPerRenderPassArenaSize = config.perRenderPassArenaSizeMB * MiB;
-    mDriverHandleArenaSize = config.driverHandleArenaSizeMB * MiB;
+    mRequestedDriverHandleArenaSize = config.driverHandleArenaSizeMB * MiB;
 
     slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
@@ -617,9 +616,8 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    DriverConfig driverConfig { .handleArenaSize = mDriverHandleArenaSize };
+    DriverConfig driverConfig { .handleArenaSize = getRequestedDriverHandleArenaSize() };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
-    mDriverHandleArenaSize = driverConfig.handleArenaSize;      // Get updated handle arena size in case driver changed it
 
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {

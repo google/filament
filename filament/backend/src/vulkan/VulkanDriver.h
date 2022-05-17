@@ -42,7 +42,7 @@ struct VulkanSamplerGroup;
 class VulkanDriver final : public DriverBase {
 public:
     static Driver* create(VulkanPlatform* platform,
-            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount, Platform::DriverConfig& driverConfig) noexcept;
+            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount, const Platform::DriverConfig& driverConfig) noexcept;
 
 private:
 
@@ -50,7 +50,7 @@ private:
 
     inline VulkanDriver(VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
-            Platform::DriverConfig& driverConfig) noexcept;
+            const Platform::DriverConfig& driverConfig) noexcept;
 
     ~VulkanDriver() noexcept override;
 

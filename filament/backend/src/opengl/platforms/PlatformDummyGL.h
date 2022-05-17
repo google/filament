@@ -28,7 +28,7 @@ namespace filament::backend {
 class PlatformDummyGL final : public OpenGLPlatform {
 public:
 
-    Driver* createDriver(void* const sharedGLContext, Platform::DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept override;
     void terminate() noexcept override { }
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override {

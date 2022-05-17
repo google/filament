@@ -88,7 +88,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 namespace filament::backend {
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
-        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount, Platform::DriverConfig& driverConfig) noexcept {
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount, const Platform::DriverConfig& driverConfig) noexcept {
     return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount, driverConfig);
 }
 
@@ -98,7 +98,7 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount,
-        Platform::DriverConfig& driverConfig) noexcept :
+        const Platform::DriverConfig& driverConfig) noexcept :
         mHandleAllocator("Handles", driverConfig.handleArenaSize),
         mContextManager(*platform),
         mStagePool(mContext),
@@ -307,7 +307,7 @@ VulkanDriver::~VulkanDriver() noexcept = default;
 UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* const platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
-        Platform::DriverConfig& driverConfig) noexcept {
+        const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     driverConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);

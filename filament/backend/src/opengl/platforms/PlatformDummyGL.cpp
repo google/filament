@@ -18,7 +18,7 @@
 
 namespace filament::backend {
 
-Driver* PlatformDummyGL::createDriver(void* const sharedGLContext, Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformDummyGL::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     return nullptr;
 }
 

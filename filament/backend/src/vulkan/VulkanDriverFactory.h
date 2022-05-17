@@ -27,7 +27,7 @@ class Driver;
 class VulkanDriverFactory {
 public:
     static Driver* create(VulkanPlatform* platform,
-            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount, Platform::DriverConfig& driverConfig) noexcept;
+            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount, const Platform::DriverConfig& driverConfig) noexcept;
 };
 
 } // namespace filament::backend

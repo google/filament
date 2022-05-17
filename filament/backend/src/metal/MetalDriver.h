@@ -42,12 +42,12 @@ struct UniformBufferState;
 #endif
 
 class MetalDriver final : public DriverBase {
-    explicit MetalDriver(MetalPlatform* platform, Platform::DriverConfig& driverConfig) noexcept;
+    explicit MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept;
     ~MetalDriver() noexcept override;
     Dispatcher getDispatcher() const noexcept final;
 
 public:
-    static Driver* create(MetalPlatform* platform, Platform::DriverConfig& driverConfig);
+    static Driver* create(MetalPlatform* platform, const Platform::DriverConfig& driverConfig);
 
 private:
 

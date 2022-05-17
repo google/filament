@@ -52,12 +52,12 @@ class OpenGLBlitter;
 class OpenGLTimerQueryInterface;
 
 class OpenGLDriver final : public DriverBase {
-    inline explicit OpenGLDriver(OpenGLPlatform* platform, Platform::DriverConfig& driverConfig) noexcept;
+    inline explicit OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept;
     ~OpenGLDriver() noexcept final;
     Dispatcher getDispatcher() const noexcept final;
 
 public:
-    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext, Platform::DriverConfig& driverConfig) noexcept;
+    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept;
 
     class DebugMarker {
         OpenGLDriver& driver;

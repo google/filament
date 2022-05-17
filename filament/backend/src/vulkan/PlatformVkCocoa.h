@@ -26,7 +26,7 @@ namespace filament::backend {
 
 class PlatformVkCocoa final : public VulkanPlatform {
 public:
-    Driver* createDriver(void* sharedContext, Platform::DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
     void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
 };

@@ -357,7 +357,7 @@ public:
     size_t getCommandBufferSize()       { return mCommandBufferSize; }
     size_t getPerFrameCommandsSize()    { return mPerFrameCommandsSize; }
     size_t getPerRenderPassArenaSize()  { return mPerRenderPassArenaSize; }
-    size_t getDriverHandleArenaSize()   { return mDriverHandleArenaSize; }
+    size_t getRequestedDriverHandleArenaSize() { return mRequestedDriverHandleArenaSize; }
 
 private:
     static Config validateConfig(const Config* config) noexcept;
@@ -475,7 +475,7 @@ private:
     size_t mCommandBufferSize;              // size of command buffer (in bytes)
     size_t mPerFrameCommandsSize;           // size of the high-level draw commands buffer (in bytes)
     size_t mPerRenderPassArenaSize;         // size of the per-pass arena buffer (in bytes)
-    size_t mDriverHandleArenaSize;          // size of driver handle arena (in bytes)
+    size_t mRequestedDriverHandleArenaSize; // requested size of driver handle arena (in bytes). Driver will validate and clam
 
 public:
     // these are the debug properties used by FDebug. They're accessed directly by modules who need them.
