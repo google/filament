@@ -82,6 +82,17 @@ func createJsCodeGenerator(namespace string) func(*os.File, string, parse.TypeDe
 		"jsprefix":    func() string { return jsPrefix },
 		"cprefix":     func() string { return cppPrefix },
 		"classprefix": func() string { return classPrefix },
+		"docblock": func(defn parse.Documented, depth int) string {
+			doc := defn.GetDoc()
+			if doc == "" {
+				return ""
+			}
+			indent := strings.Repeat("    ", depth)
+			if strings.Count(doc, "\n") > 0 {
+				return strings.ReplaceAll(doc, "\n", "\n"+indent)
+			}
+			return "/**\n" + indent + " * " + doc + "\n" + indent + " */\n" + indent
+		},
 	}
 
 	templ := template.New("beamsplitter").Funcs(customExtensions)

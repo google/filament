@@ -59,9 +59,8 @@ flag                        | description
 - `web/filament-js/jsbindings_generated.cpp`
 - `web/filament-js/jsenums_generated.cpp`
 - `web/filament-js/extensions_generated.js`
-- `android/filament-android/src/main/cpp/View_generated.cpp` (TBD)
 
 Additionally, in-place edits are made to the following files:
 
 - `web/filament-js/filament.d.ts`
-- `android/filament-android/src/main/java/.../View.java` (TBD)
+- `android/filament-android/src/main/java/.../View.java`

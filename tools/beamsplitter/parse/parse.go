@@ -18,6 +18,7 @@ package parse
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -145,7 +146,7 @@ func (context *parserContext) compileRegexps() {
 
 // Creates a mapping from line numbers to strings, where the strings are entire block comments
 // and the line numbers correspond to the last line of each block comment.
-func gatherCommentBlocks(sourceFile *os.File) map[int]string {
+func gatherCommentBlocks(sourceFile io.Reader) map[int]string {
 	comments := make(map[int]string)
 	scanner := bufio.NewScanner(sourceFile)
 	var comment = ""
@@ -154,6 +155,10 @@ func gatherCommentBlocks(sourceFile *os.File) map[int]string {
 		codeline := scanner.Text()
 		if strings.Contains(codeline, `/**`) {
 			indention = strings.Index(codeline, `/**`)
+			if strings.Contains(codeline, `*/`) {
+				comments[lineNumber] = codeline[indention:] + "\n"
+				continue
+			}
 			comment = codeline[indention:] + "\n"
 			continue
 		}
@@ -293,6 +298,20 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 	if context.cppTokenizer == nil {
 		context.compileRegexps()
 	}
+
+	// For "group begin" or "group end" comments inside a struct, emit a faux field.
+	commentBlock := context.commentBlocks[lineNumber]
+	if strings.Contains(commentBlock, "@{") || strings.Contains(commentBlock, "@}") {
+		depth := len(context.stack) - 1
+		if depth > 0 {
+			_, insideStruct := context.stack[depth].(*StructDefinition)
+			if insideStruct {
+				// TODO: support group comments
+				log.Printf("%d: Grouping comments are ignored.\n", lineNumber)
+			}
+		}
+	}
+
 	codeline = context.cppTokenizer.ReplaceAllString(codeline, " $1 ")
 	scanner := bufio.NewScanner(strings.NewReader(codeline))
 	scanner.Split(bufio.ScanWords)
@@ -351,6 +370,10 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 		field.Name = subexpMap["name"]
 		field.Description = subexpMap["description"]
 		field.DefaultValue = context.distillValue(subexpMap["value"], lineNumber)
+
+		if commentBlock := context.commentBlocks[lineNumber-1]; commentBlock != "" {
+			field.Description = commentBlock
+		}
 
 		defn.Fields = append(defn.Fields, field)
 	}
