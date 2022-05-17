@@ -439,7 +439,7 @@ public class View {
         /**
          * How the bloom effect is applied
          */
-        public BlendingMode blendingMode = BlendingMode.ADD;
+        public BlendingMode blendMode = BlendingMode.ADD;
 
         /**
          * Whether to threshold the source
@@ -1646,7 +1646,7 @@ public class View {
         mBloomOptions = options;
         nSetBloomOptions(getNativeObject(), options.dirt != null ? options.dirt.getNativeObject() : 0,
                 options.dirtStrength, options.strength, options.resolution,
-                options.anamorphism, options.levels, options.blendingMode.ordinal(),
+                options.anamorphism, options.levels, options.blendMode.ordinal(),
                 options.threshold, options.enabled, options.highlight,
                 options.lensFlare, options.starburst, options.chromaticAberration,
                 options.ghostCount, options.ghostSpacing, options.ghostThreshold,
