@@ -31,7 +31,7 @@ namespace filament {
 class PlatformEGL : public backend::OpenGLPlatform {
 public:
 
-    PlatformEGL() noexcept;
+    PlatformEGL(EGLDisplay = EGL_NO_DISPLAY) noexcept;
 
     backend::Driver* createDriver(void* sharedContext) noexcept override;
     void terminate() noexcept override;

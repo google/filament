@@ -83,7 +83,7 @@ Platform::~Platform() noexcept = default;
 // Creates the platform-specific Platform object. The caller takes ownership and is
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
-DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDevice) noexcept {
+DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDisplay) noexcept {
     SYSTRACE_CALL();
     assert_invariant(backend);
 
@@ -144,7 +144,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDevice) n
         #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
             return nullptr;
         #elif defined(FILAMENT_USE_ANGLE)
-            return new PlatformEGL();
+            return new PlatformEGL(nativeDisplay);
         #elif defined(ANDROID)
             return new PlatformEGLAndroid();
         #elif defined(IOS)
