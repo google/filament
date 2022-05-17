@@ -56,6 +56,14 @@ if (TNT_DEV)
     target_link_libraries(test_depth PRIVATE utils)
 endif()
 
+if (ANDROID)
+    add_executable(test_compiler compiler_test.cpp)
+    target_link_libraries(test_compiler PRIVATE gtest)
+    target_link_libraries(test_compiler PRIVATE utils)
+    target_link_libraries(test_compiler PRIVATE EGL)
+    target_link_libraries(test_compiler PRIVATE GLESv3)
+endif()
+
 add_executable(test_material_parser
         filament_test_material_parser.cpp
         ${RESGEN_SOURCE})
