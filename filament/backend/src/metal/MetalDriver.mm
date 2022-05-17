@@ -48,8 +48,8 @@ UTILS_NOINLINE
 Driver* MetalDriver::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    driverConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
-    return new MetalDriver(platform, driverConfig);
+    Platform::DriverConfig validConfig { .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    return new MetalDriver(platform, validConfig);
 }
 
 Dispatcher MetalDriver::getDispatcher() const noexcept {

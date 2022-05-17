@@ -310,8 +310,8 @@ Driver* VulkanDriver::create(VulkanPlatform* const platform,
         const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    driverConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
-    return new VulkanDriver(platform, ppEnabledExtensions, enabledExtensionCount, driverConfig);
+    Platform::DriverConfig validConfig{ .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    return new VulkanDriver(platform, ppEnabledExtensions, enabledExtensionCount, validConfig);
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {
