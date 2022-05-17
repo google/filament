@@ -32,14 +32,14 @@ import (
 
 // Adds one level of indention to the given multi-line string.
 // Isolated newlines are intentially not indented.
-func indent(src string) string {
+func indent(src string, depth int) string {
 	dst := &bytes.Buffer{}
 	buf := bytes.NewBufferString(src)
 	scanner := bufio.NewScanner(buf)
 	for scanner.Scan() {
 		codeline := scanner.Text()
 		if codeline != "" {
-			dst.WriteString("    ")
+			dst.WriteString(strings.Repeat("    ", depth))
 			dst.WriteString(scanner.Text())
 		}
 		dst.WriteByte('\n')
@@ -97,27 +97,149 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 	}
 	file.WriteString("    // " + kCodelineMarker + "\n")
 
-	// Declare a closure variable to handle nested types.
+	// Forward declarations for usage in a closure.
+	var flattener func(*parse.StructDefinition) string
 	var sharedExtensions template.FuncMap
+
+	javifyType := func(field parse.StructField) string {
+		if _, exists := field.EmitterFlags["java_float"]; exists {
+			return " float"
+		}
+		switch field.TypeString {
+		case "math::float2", "math::float3", "math::float4", "LinearColor", "LinearColorA":
+			return " float[]"
+		case "bool":
+			return " boolean"
+		case "uint8_t", "uint16_t", "uint32_t":
+			return " int"
+		}
+		result := strings.ReplaceAll(field.TypeString, "*", "")
+		result = strings.ReplaceAll(result, "::", ".")
+		return " " + result
+	}
+
+	javifyValue := func(field parse.StructField) string {
+
+		// When forcing an array to be bound to a float, extract the first component and use
+		// that as the default value.
+		if _, exists := field.EmitterFlags["java_float"]; exists {
+			arrayContents := strings.Trim(field.DefaultValue, " []")
+			if comma := strings.Index(arrayContents, ","); comma > -1 {
+				arrayContents = arrayContents[:comma]
+			}
+			if !strings.HasSuffix(arrayContents, "f") {
+				arrayContents += "f"
+			}
+			return " " + arrayContents
+		}
+
+		if field.DefaultValue == "nullptr" {
+			return " null"
+		}
+
+		// Handle enums
+		value := strings.ReplaceAll(field.DefaultValue, "::", ".")
+
+		// Add "f" suffix for scalars
+		if field.TypeString == "float" {
+			value += "f"
+
+		} else if c := len(value); c > 1 && value[0] == '[' && value[c-1] == ']' {
+			// For vector types, replace [] with {} and add "f" suffix to components.
+			switch field.TypeString {
+			case "math::float2", "math::float3", "math::float4", "LinearColor", "LinearColorA":
+				slices := strings.Split(value[1:c-1], ",")
+				for i := range slices {
+					slices[i] = strings.TrimSpace(slices[i])
+					if !strings.HasSuffix(slices[i], "f") {
+						slices[i] += "f"
+					}
+				}
+				value = "{" + strings.Join(slices, ", ") + "}"
+			default:
+				value = "{" + value[1:c-1] + "}"
+			}
+		}
+		return " " + value
+	}
+
+	getDocBlock := func(defn parse.Documented, depth int) string {
+		doc := defn.GetDoc()
+		if doc == "" {
+			return ""
+		}
+		indent := strings.Repeat("    ", depth)
+		if strings.Count(doc, "\n") > 0 {
+			return strings.ReplaceAll(doc, "\n", "\n"+indent)
+		}
+		return "/**\n" + indent + " * " + doc + "\n" + indent + " */\n" + indent
+	}
+
+	getFieldAnnotation := func(field parse.StructField, depth int) string {
+		if _, exists := field.EmitterFlags["java_float"]; exists {
+			return ""
+		}
+		annotation := ""
+		switch {
+		case field.DefaultValue == "nullptr":
+			annotation = "@Nullable"
+		case field.TypeString == "math::float2":
+			annotation = "@NonNull @Size(min = 2)"
+		case field.TypeString == "math::float3" || field.TypeString == "LinearColor":
+			annotation = "@NonNull @Size(min = 3)"
+		case field.TypeString == "math::float4" || field.TypeString == "LinearColorA":
+			annotation = "@NonNull @Size(min = 4)"
+		case strings.Contains(field.DefaultValue, "::"):
+			annotation = "@NonNull"
+		default:
+			return ""
+		}
+		return annotation + "\n" + strings.Repeat("    ", depth)
+	}
+
+	flattenStruct := func(defn *parse.StructDefinition) string {
+		prefix := strings.ToLower(defn.BaseName())
+		buf := &bytes.Buffer{}
+		for _, field := range defn.Fields {
+			doc := getDocBlock(defn, 0)
+			buf.WriteString(doc)
+			buf.WriteString(getFieldAnnotation(field, 0))
+			buf.WriteString("public")
+			buf.WriteString(javifyType(field))
+			buf.WriteByte(' ')
+			buf.WriteString(prefix + strings.ToUpper(field.Name[0:1]) + field.Name[1:])
+			buf.WriteString(" =")
+			buf.WriteString(javifyValue(field))
+			buf.WriteString(";\n")
+		}
+		return indent(buf.String(), 2)
+	}
+	flattener = flattenStruct
 
 	// These template extensions are used to transmogrify C++ symbols and value literals to Java.
 	customExtensions := template.FuncMap{
-		"docblock": func(defn parse.Documented, depth int) string {
-			doc := defn.GetDoc()
-			if doc == "" {
-				return ""
-			}
-			indent := strings.Repeat("    ", depth)
-			if strings.Count(doc, "\n") > 0 {
-				return strings.ReplaceAll(doc, "\n", "\n"+indent)
-			}
-			return "/**\n" + indent + " * " + doc + "\n" + indent + " */\n" + indent
-		},
+		"docblock": getDocBlock,
 		"nested_type_declarations": func(parent parse.TypeDefinition) string {
+			// Look for all fields that request flattening since we should skip their emission.
+			flattenedTypes := make(map[parse.TypeDefinition]struct{})
+			if structDefn, isStruct := parent.(*parse.StructDefinition); isStruct {
+				for _, field := range structDefn.Fields {
+					_, flatten := field.EmitterFlags["java_flatten"]
+					if flatten && field.CustomType != nil {
+						flattenedTypes[field.CustomType] = struct{}{}
+					}
+				}
+			}
+
+			// Find all child types and emit them.
 			generate := createJavaCodeGenerator(sharedExtensions)
 			buf := &bytes.Buffer{}
 			for _, definition := range definitions {
 				if definition.Parent() != parent {
+					continue
+				}
+				_, skip := flattenedTypes[definition]
+				if skip {
 					continue
 				}
 				switch definition.(type) {
@@ -127,65 +249,21 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 					generate(buf, "Enum", definition)
 				}
 			}
-			return indent(buf.String())
+			return indent(buf.String(), 1)
 		},
-		"annotation": func(field parse.StructField, depth int) string {
-			if _, exists := field.EmitterFlags["java_float"]; exists {
-				return ""
+		"annotation": getFieldAnnotation,
+		"java_type":  javifyType,
+		"java_value": javifyValue,
+		"flatten": func(field *parse.StructField) string {
+			if structDefn, isStruct := field.CustomType.(*parse.StructDefinition); isStruct {
+				return strings.TrimLeft(flattener(structDefn), " ")
 			}
-			annotation := ""
-			switch {
-			case field.DefaultValue == "nullptr":
-				annotation = "@Nullable"
-			case field.TypeString == "math::float2":
-				annotation = "@NonNull @Size(min = 2)"
-			case field.TypeString == "math::float3" || field.TypeString == "LinearColor":
-				annotation = "@NonNull @Size(min = 3)"
-			case field.TypeString == "math::float4" || field.TypeString == "LinearColorA":
-				annotation = "@NonNull @Size(min = 4)"
-			case strings.Contains(field.DefaultValue, "::"):
-				annotation = "@NonNull"
-			default:
-				return ""
-			}
-			return annotation + "\n" + strings.Repeat("    ", depth)
+			log.Fatal("Unexpected flatten flag.")
+			return ""
 		},
-		"java_type": func(field parse.StructField) string {
-			if _, exists := field.EmitterFlags["java_float"]; exists {
-				return " float"
-			}
-			switch field.TypeString {
-			case "math::float2", "math::float3", "math::float4", "LinearColor", "LinearColorA":
-				return " float[]"
-			case "bool":
-				return " boolean"
-			case "uint8_t", "uint16_t", "uint32_t":
-				return " int"
-			}
-			return " " + strings.ReplaceAll(field.TypeString, "*", "")
-		},
-		"java_value": func(field parse.StructField) string {
-			if _, exists := field.EmitterFlags["java_float"]; exists {
-				arrayContents := strings.Trim(field.DefaultValue, " []")
-
-				// If we're forcing an array to be bound to a flat, then extract the first component
-				// and use that as the default value.
-				if comma := strings.Index(arrayContents, ","); comma > -1 {
-					return " " + arrayContents[:comma]
-				}
-
-				return " " + arrayContents
-			}
-			if field.DefaultValue == "nullptr" {
-				return " null"
-			}
-			value := strings.ReplaceAll(field.DefaultValue, "::", ".")
-			if field.TypeString == "float" {
-				value += "f"
-			} else if c := len(value); c > 1 && value[0] == '[' && value[c-1] == ']' {
-				value = "{" + value[1:c-1] + "}"
-			}
-			return " " + value
+		"flag": func(field *parse.StructField, flag string) bool {
+			_, exists := field.EmitterFlags[flag]
+			return exists
 		},
 	}
 
