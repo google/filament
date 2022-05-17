@@ -252,7 +252,7 @@ public class View {
         * Distance from where tracing starts.
         * This affects how far shadows are cast.
         */
-       public float ssctStartTraceDistance = 0.01f;
+       public float ssctShadowDistance = 0.01f;
 
        /**
         * Maximum contact distance with the cone. Intersections between the traced cone and
@@ -1616,7 +1616,7 @@ public class View {
                 options.resolution, options.intensity, options.bilateralThreshold,
                 options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
                 options.enabled, options.bentNormals, options.minHorizonAngleRad);
-        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance,
+        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctShadowDistance,
                 options.ssctContactDistanceMax,  options.ssctIntensity,
                 options.ssctLightDirection[0], options.ssctLightDirection[1], options.ssctLightDirection[2],
                 options.ssctDepthBias, options.ssctDepthSlopeBias, options.ssctSampleCount,
