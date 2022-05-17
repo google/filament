@@ -287,6 +287,17 @@ if (APPLE AND NOT Vulkan_LIBRARY AND NOT FILAMENT_USE_SWIFTSHADER)
             ${PROJECT_BINARY_DIR}/libMoltenVK.dylib)
 endif()
 
+# Uncomment the following lines and specify your folder containing ANGLE libraries
+# to enable linking sample projects using ANGLE. You have to do this with the
+# CMakeLists.txt for ANGLE too.
+# set(ANGLE_LIBS_DIR "")
+# configure_file(
+#     ${ANGLE_LIBS_DIR}/libEGL.dll
+#     ${PROJECT_BINARY_DIR}/libEGL.dll COPYONLY)
+# configure_file(
+#     ${ANGLE_LIBS_DIR}/libGLESv2.dll
+#     ${PROJECT_BINARY_DIR}/libGLESv2.dll COPYONLY)
+
 # ==================================================================================================
 # Copy Assets
 #

@@ -544,7 +544,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         builder.shading(Shading::LIT);
     }
 
-#if defined(__EMSCRIPTEN__) || defined(ANDROID) || defined(IOS) || defined(FILAMENT_USE_EXTERNAL_GLES3)
+#if defined(__EMSCRIPTEN__) || defined(ANDROID) || defined(IOS) || defined(FILAMENT_USE_ANGLE) || defined(FILAMENT_USE_EXTERNAL_GLES3)
     builder.platform(MaterialBuilderBase::Platform::MOBILE);
 #endif
 
