@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.22.2 (currently main branch)
 
 - Java minor API change: rename ssctStartTraceDistance to ssctShadowDistance
+- Java minor API change: rename blendingMode to blendMode
 
 ## v1.22.1
 
