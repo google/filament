@@ -346,8 +346,11 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
             continue;
         }
 
+        assert_invariant( source[source.size() - 1] == '\0' );
+
+        // the shader string is null terminated and the length includes the null character
         NSString* objcSource = [[NSString alloc] initWithBytes:source.data()
-                                                        length:source.size()
+                                                        length:source.size() - 1
                                                       encoding:NSUTF8StringEncoding];
         NSError* error = nil;
         // When options is nil, Metal uses the most recent language version available.
