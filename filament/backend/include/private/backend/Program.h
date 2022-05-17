@@ -67,6 +67,8 @@ public:
             utils::Invocable<utils::io::ostream&(utils::io::ostream& out)>&& logger);
 
     // sets one of the program's shader (e.g. vertex, fragment)
+    // string-based shaders are null terminated, consequently the size parameter must include the
+    // null terminating character.
     Program& shader(Shader shader, void const* data, size_t size) noexcept;
 
     // sets the 'bindingPoint' uniform block's name for this program.
@@ -84,10 +86,14 @@ public:
     Program& setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
             Sampler const* samplers, size_t count) noexcept;
 
+    // string-based shaders are null terminated, consequently the size parameter must include the
+    // null terminating character.
     Program& withVertexShader(void const* data, size_t size) {
         return shader(Shader::VERTEX, data, size);
     }
 
+    // string-based shaders are null terminated, consequently the size parameter must include the
+    // null terminating character.
     Program& withFragmentShader(void const* data, size_t size) {
         return shader(Shader::FRAGMENT, data, size);
     }
