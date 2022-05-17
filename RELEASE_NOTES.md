@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.22.2 (currently main branch)
 
+- Java minor API change: rename ssctStartTraceDistance to ssctShadowDistance
+
 ## v1.22.1
 
 - Metal: Shaders now use `half` floating-point arithmetic when possible for improved performance. [⚠️ **Recompile Materials**]
