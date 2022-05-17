@@ -164,7 +164,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, {{.QualifiedNam
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
         {{- range $index, $field := .Fields}}
-        {{- if $field.SkipJson}}
+        {{- if flag $field "skip_json" }}
         {{braceif $index}} (compare(tok, jsonChunk, "{{$field.Name}}") == 0) {
             // JSON serialization for {{$field.Name}} is not supported.
             int unused;
@@ -194,10 +194,10 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, {{.QualifiedNam
 std::ostream& operator<<(std::ostream& out, const {{.QualifiedName}}& in) {
     return out << "{\n"
     {{- range $index, $field := .Fields}}
-        {{- if $field.SkipJson }}
+        {{- if flag $field "skip_json" }}
         // JSON serialization for {{$field.Name}} is not supported.
         {{- else }}
-        << "\"{{$field.Name}}\": " << {{ cast $field.Type }}(in.{{$field.Name}}) << "
+        << "\"{{$field.Name}}\": " << {{ cast $field.TypeString }}(in.{{$field.Name}}) << "
         {{- trailingcomma $index $length}}\n"
         {{- end}}
     {{- end}}

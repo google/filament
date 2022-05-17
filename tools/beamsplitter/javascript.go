@@ -50,6 +50,10 @@ func createJsCodeGenerator(namespace string) func(*os.File, string, parse.TypeDe
 			typename = strings.ReplaceAll(typename, "::", "$")
 			return typename
 		},
+		"flag": func(field *parse.StructField, flag string) bool {
+			_, exists := field.EmitterFlags[flag]
+			return exists
+		},
 		"qualifiedvalue": func(name string) string {
 			count := strings.Count(name, "::")
 			if count > 0 {

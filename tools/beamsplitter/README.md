@@ -3,7 +3,7 @@
 - [Description](#description)
 - [Instructions](#instructions)
 - [Input Limitations](#input-limitations)
-- [Magic Strings](#magic-strings)
+- [Emitter Flags](#emitter-flags)
 - [Input Files](#input-files)
 - [Output Files](#output-files)
 
@@ -34,13 +34,17 @@ The source files must have very simple C++ syntax. Some of the limitations inclu
 - If the default value of a field is a vector, it must be in the form: `{ x, y, z }`.
 - There must be no string literals that contain keywords.
 
-### Magic Strings
+### Emitter Flags
 
-If the comment for a struct field contains the string `%codegen_skip_json%`, then the field is
-skipped when generating JSON serialization code.
+Special directives in the form `%codegen_foo%` are called *emitter flags*. They are typically
+embedded in a comment associated with a particular struct field.
 
-If the comment for a struct field contains the string `%codegen_skip_javascript%`, then the field is
-skipped when generating JavaScript and TypeScript bindings.
+flag                        | description
+--------------------------- | ----
+**codegen_skip_json**       | Field is skipped when generating JSON serialization code.
+**codegen_skip_javascript** | Field is skipped when generating JavaScript and TypeScript bindings.
+**codegen_java_flatten**    | Field is replaced with constituent sub-fields. (TBD)
+**codegen_java_float**      | Field will be forced to have a `float` representation in Java.
 
 ### Input Files
 

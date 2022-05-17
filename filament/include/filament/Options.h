@@ -72,8 +72,8 @@ enum class BlendMode : uint8_t {
  *
  */
 struct DynamicResolutionOptions {
-    math::float2 minScale = {0.5f, 0.5f};           //!< minimum scale factors in x and y
-    math::float2 maxScale = {1.0f, 1.0f};           //!< maximum scale factors in x and y
+    math::float2 minScale = {0.5f, 0.5f};           //!< minimum scale factors in x and y %codegen_java_float%
+    math::float2 maxScale = {1.0f, 1.0f};           //!< maximum scale factors in x and y %codegen_java_float%
     float sharpness = 0.9f;                         //!< sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
     bool enabled = false;                           //!< enable or disable dynamic resolution
     bool homogeneousScaling = false;                //!< set to true to force homogeneous scaling
@@ -285,7 +285,7 @@ struct AmbientOcclusionOptions {
         uint8_t sampleCount = 4;        //!< tracing sample count, between 1 and 255
         uint8_t rayCount = 1;           //!< # of rays to trace, between 1 and 255
         bool enabled = false;           //!< enables or disables SSCT
-    } ssct;                             // %codegen_skip_javascript%
+    } ssct;                             // %codegen_skip_javascript% %codegen_java_flatten%
 };
 
 /**

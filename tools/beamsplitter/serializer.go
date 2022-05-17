@@ -35,6 +35,10 @@ func emitSerializer(definitions []parse.TypeDefinition, outputFolder string) {
 			}
 			return ","
 		},
+		"flag": func(field *parse.StructField, flag string) bool {
+			_, exists := field.EmitterFlags[flag]
+			return exists
+		},
 		"elseif": func(index int) string {
 			if index == 0 {
 				return "if"
