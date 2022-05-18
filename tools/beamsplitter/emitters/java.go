@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package main
+package emitters
 
 import (
+	db "beamsplitter/database"
 	"bufio"
 	"bytes"
 	"fmt"
@@ -26,43 +27,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-
-	"beamsplitter/parse"
 )
 
-// Adds one level of indention to the given multi-line string.
-// Isolated newlines are intentially not indented.
-func indent(src string, depth int) string {
-	dst := &bytes.Buffer{}
-	buf := bytes.NewBufferString(src)
-	scanner := bufio.NewScanner(buf)
-	for scanner.Scan() {
-		codeline := scanner.Text()
-		if codeline != "" {
-			dst.WriteString(strings.Repeat("    ", depth))
-			dst.WriteString(scanner.Text())
-		}
-		dst.WriteByte('\n')
-	}
-	return dst.String()
-}
-
-// Wrapper for ExecuteTemplate that performs error checking. Takes an output stream, a template name
-// to invoke, and a template context object.
-type templateFn = func(io.Writer, string, parse.TypeDefinition)
-
-func createJavaCodeGenerator(customExtensions template.FuncMap) templateFn {
-	templ := template.New("beamsplitter").Funcs(customExtensions)
-	templ = template.Must(templ.ParseFiles("java.template"))
-	return func(writer io.Writer, section string, definition parse.TypeDefinition) {
-		err := templ.ExecuteTemplate(writer, section, definition)
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-	}
-}
-
-func editJava(definitions []parse.TypeDefinition, classname string, folder string) {
+func EditJava(definitions []db.TypeDefinition, classname string, folder string) {
 	path := filepath.Join(folder, classname+".java")
 	var codelines []string
 	{
@@ -98,10 +65,10 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 	file.WriteString("    // " + kCodelineMarker + "\n")
 
 	// Forward declarations for usage in a closure.
-	var flattener func(*parse.StructDefinition) string
+	var flattener func(*db.StructDefinition) string
 	var sharedExtensions template.FuncMap
 
-	javifyType := func(field parse.StructField) string {
+	javifyType := func(field db.StructField) string {
 		if _, exists := field.EmitterFlags["java_float"]; exists {
 			return " float"
 		}
@@ -118,7 +85,7 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 		return " " + result
 	}
 
-	javifyValue := func(field parse.StructField) string {
+	javifyValue := func(field db.StructField) string {
 
 		// When forcing an array to be bound to a float, extract the first component and use
 		// that as the default value.
@@ -163,7 +130,7 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 		return " " + value
 	}
 
-	getDocBlock := func(defn parse.Documented, depth int) string {
+	getDocBlock := func(defn db.Documented, depth int) string {
 		doc := defn.GetDoc()
 		if doc == "" {
 			return ""
@@ -175,7 +142,7 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 		return "/**\n" + indent + " * " + doc + "\n" + indent + " */\n" + indent
 	}
 
-	getFieldAnnotation := func(field parse.StructField, depth int) string {
+	getFieldAnnotation := func(field db.StructField, depth int) string {
 		if _, exists := field.EmitterFlags["java_float"]; exists {
 			return ""
 		}
@@ -197,7 +164,7 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 		return annotation + "\n" + strings.Repeat("    ", depth)
 	}
 
-	flattenStruct := func(defn *parse.StructDefinition) string {
+	flattenStruct := func(defn *db.StructDefinition) string {
 		prefix := strings.ToLower(defn.BaseName())
 		buf := &bytes.Buffer{}
 		for _, field := range defn.Fields {
@@ -219,10 +186,10 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 	// These template extensions are used to transmogrify C++ symbols and value literals to Java.
 	customExtensions := template.FuncMap{
 		"docblock": getDocBlock,
-		"nested_type_declarations": func(parent parse.TypeDefinition) string {
+		"nested_type_declarations": func(parent db.TypeDefinition) string {
 			// Look for all fields that request flattening since we should skip their emission.
-			flattenedTypes := make(map[parse.TypeDefinition]struct{})
-			if structDefn, isStruct := parent.(*parse.StructDefinition); isStruct {
+			flattenedTypes := make(map[db.TypeDefinition]struct{})
+			if structDefn, isStruct := parent.(*db.StructDefinition); isStruct {
 				for _, field := range structDefn.Fields {
 					_, flatten := field.EmitterFlags["java_flatten"]
 					if flatten && field.CustomType != nil {
@@ -243,9 +210,9 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 					continue
 				}
 				switch definition.(type) {
-				case *parse.StructDefinition:
+				case *db.StructDefinition:
 					generate(buf, "Struct", definition)
-				case *parse.EnumDefinition:
+				case *db.EnumDefinition:
 					generate(buf, "Enum", definition)
 				}
 			}
@@ -254,14 +221,14 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 		"annotation": getFieldAnnotation,
 		"java_type":  javifyType,
 		"java_value": javifyValue,
-		"flatten": func(field *parse.StructField) string {
-			if structDefn, isStruct := field.CustomType.(*parse.StructDefinition); isStruct {
+		"flatten": func(field *db.StructField) string {
+			if structDefn, isStruct := field.CustomType.(*db.StructDefinition); isStruct {
 				return strings.TrimLeft(flattener(structDefn), " ")
 			}
 			log.Fatal("Unexpected flatten flag.")
 			return ""
 		},
-		"flag": func(field *parse.StructField, flag string) bool {
+		"flag": func(field *db.StructField, flag string) bool {
 			_, exists := field.EmitterFlags[flag]
 			return exists
 		},
@@ -275,12 +242,44 @@ func editJava(definitions []parse.TypeDefinition, classname string, folder strin
 			continue
 		}
 		switch definition.(type) {
-		case *parse.StructDefinition:
+		case *db.StructDefinition:
 			generate(file, "Struct", definition)
-		case *parse.EnumDefinition:
+		case *db.EnumDefinition:
 			generate(file, "Enum", definition)
 		}
 	}
 
 	file.WriteString("}\n")
+}
+
+// Adds one level of indention to the given multi-line string.
+// Isolated newlines are intentially not indented.
+func indent(src string, depth int) string {
+	dst := &bytes.Buffer{}
+	buf := bytes.NewBufferString(src)
+	scanner := bufio.NewScanner(buf)
+	for scanner.Scan() {
+		codeline := scanner.Text()
+		if codeline != "" {
+			dst.WriteString(strings.Repeat("    ", depth))
+			dst.WriteString(scanner.Text())
+		}
+		dst.WriteByte('\n')
+	}
+	return dst.String()
+}
+
+// Wrapper for ExecuteTemplate that performs error checking. Takes an output stream, a template name
+// to invoke, and a template context object.
+type templateFn = func(io.Writer, string, db.TypeDefinition)
+
+func createJavaCodeGenerator(customExtensions template.FuncMap) templateFn {
+	templ := template.New("beamsplitter").Funcs(customExtensions)
+	templ = template.Must(templ.ParseFiles("emitters/java.template"))
+	return func(writer io.Writer, section string, definition db.TypeDefinition) {
+		err := templ.ExecuteTemplate(writer, section, definition)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
 }
