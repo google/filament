@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Java View has several minor changes due to generated code, such as field ordering.
+
 ## v1.22.2
 
 - Java minor API change: rename ssctStartTraceDistance to ssctShadowDistance
