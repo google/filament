@@ -37,7 +37,7 @@
 
 #include <viewer/AutomationEngine.h>
 #include <viewer/AutomationSpec.h>
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <camutils/Manipulator.h>
 
@@ -73,7 +73,7 @@ enum MaterialSource {
 
 struct App {
     Engine* engine;
-    SimpleViewer* viewer;
+    ViewerGui* viewer;
     Config config;
     Camera* mainCamera;
 
@@ -85,7 +85,8 @@ struct App {
     MaterialSource materialSource = GENERATE_SHADERS;
 
     gltfio::ResourceLoader* resourceLoader = nullptr;
-    gltfio::TextureProvider* decoder = nullptr;
+    gltfio::TextureProvider* stbDecoder = nullptr;
+    gltfio::TextureProvider* ktxDecoder = nullptr;
     bool recomputeAabb = false;
     bool ignoreBindTransform = false;
 
@@ -425,9 +426,11 @@ int main(int argc, char** argv) {
         configuration.normalizeSkinningWeights = true;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
-            app.decoder = createStbProvider(app.engine);
-            app.resourceLoader->addTextureProvider("image/png", app.decoder);
-            app.resourceLoader->addTextureProvider("image/jpeg", app.decoder);
+            app.stbDecoder = createStbProvider(app.engine);
+            app.ktxDecoder = createKtx2Provider(app.engine);
+            app.resourceLoader->addTextureProvider("image/png", app.stbDecoder);
+            app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
+            app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
         app.asset->releaseSourceData();
@@ -441,7 +444,7 @@ int main(int argc, char** argv) {
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new SimpleViewer(engine, scene, view, 410);
+        app.viewer = new ViewerGui(engine, scene, view, 410);
         app.viewer->getSettings().viewer.autoScaleEnabled = !app.actualSize;
 
         const bool batchMode = !app.batchFile.empty();
@@ -504,6 +507,7 @@ int main(int argc, char** argv) {
         }
 
         loadResources(filename);
+        app.viewer->setAsset(app.asset);
 
         createGroundPlane(engine, scene, app);
 
@@ -650,7 +654,8 @@ int main(int argc, char** argv) {
         delete app.viewer;
         delete app.materials;
         delete app.names;
-        delete app.decoder;
+        delete app.stbDecoder;
+        delete app.ktxDecoder;
 
         AssetLoader::destroy(&app.assetLoader);
     };
@@ -661,8 +666,8 @@ int main(int argc, char** argv) {
         // Optionally fit the model into a unit cube at the origin.
         app.viewer->updateRootTransform();
 
-        // Add renderables to the scene as they become ready.
-        app.viewer->populateScene(app.asset);
+        // Gradually add renderables to the scene as their textures become ready.
+        app.viewer->populateScene();
 
         app.viewer->applyAnimation(now);
     };
@@ -762,6 +767,7 @@ int main(int argc, char** argv) {
         app.assetLoader->destroyAsset(app.asset);
         loadAsset(path);
         loadResources(path);
+        app.viewer->setAsset(app.asset);
     });
 
     filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);

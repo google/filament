@@ -38,20 +38,20 @@ using utils::EntityManager;
 class FilamentApp {
 public:
 
-    FilamentApp(void* nativeLayer, uint32_t width, uint32_t height)
-        : nativeLayer(nativeLayer), width(width), height(height) {}
+    FilamentApp(void* nativeLayer)
+        : nativeLayer(nativeLayer) {}
     ~FilamentApp();
 
     void initialize();
     void render();
     void pan(float deltaX, float deltaY);
+    void updateViewportAndCameraProjection(uint32_t width, uint32_t height, float scaleFactor);
 
 private:
 
     void updateRotation();
 
     void* nativeLayer = nullptr;
-    uint32_t width, height;
 
     Engine* engine = nullptr;
     Renderer* renderer = nullptr;

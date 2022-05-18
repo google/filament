@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
@@ -34,7 +34,6 @@
 
 #include <string>
 #include <vector>
-#include <sstream>
 
 using namespace filagui;
 using namespace filament::math;
@@ -359,7 +358,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
     }
 }
 
-SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
+ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament::View* view,
         int sidebarWidth) :
         mEngine(engine), mScene(scene), mView(view),
         mSunlight(utils::EntityManager::get().create()),
@@ -389,39 +388,43 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
     view->setAmbientOcclusionOptions({ .upsampling = View::QualityLevel::HIGH });
 }
 
-SimpleViewer::~SimpleViewer() {
+ViewerGui::~ViewerGui() {
     mEngine->destroy(mSunlight);
     delete mImGuiHelper;
 }
 
-void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
+void ViewerGui::setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
     if (mAsset != asset) {
         removeAsset();
         mAsset = asset;
+        mVisibleScenes.reset();
+        mVisibleScenes.set(0);
         mCurrentCamera = 0;
         if (!asset) {
             mAnimator = nullptr;
             return;
         }
         mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
+        assert_invariant(mAnimator && "Call loadResources or asyncBeginLoad before setAsset.");
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
-    }
-
-    auto& tcm = mEngine->getRenderableManager();
-
-    static constexpr int kNumAvailable = 128;
-    utils::Entity renderables[kNumAvailable];
-    while (size_t numWritten = mAsset->popRenderables(renderables, kNumAvailable)) {
-        for (size_t i = 0; i < numWritten; i++) {
-            auto ri = tcm.getInstance(renderables[i]);
+        auto& tcm = mEngine->getRenderableManager();
+        for (size_t i = 0, n = asset->getRenderableEntityCount(); i < n; i++) {
+            auto ri = tcm.getInstance(asset->getRenderableEntities()[i]);
             tcm.setScreenSpaceContactShadows(ri, true);
         }
-        mScene->addEntities(renderables, numWritten);
     }
 }
 
-void SimpleViewer::removeAsset() {
+void ViewerGui::populateScene() {
+    static constexpr int kNumAvailable = 128;
+    utils::Entity renderables[kNumAvailable];
+    while (size_t numWritten = mAsset->popRenderables(renderables, kNumAvailable)) {
+        mAsset->addEntitiesToScene(*mScene, renderables, numWritten, mVisibleScenes);
+    }
+}
+
+void ViewerGui::removeAsset() {
     if (!isRemoteMode()) {
         mScene->removeEntities(mAsset->getEntities(), mAsset->getEntityCount());
         mAsset = nullptr;
@@ -429,7 +432,7 @@ void SimpleViewer::removeAsset() {
     }
 }
 
-void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
+void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
     mSettings.view.fog.color = sh3[0];
@@ -446,7 +449,7 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
     }
 }
 
-void SimpleViewer::updateRootTransform() {
+void ViewerGui::updateRootTransform() {
     if (isRemoteMode()) {
         return;
     }
@@ -459,7 +462,7 @@ void SimpleViewer::updateRootTransform() {
     tcm.setTransform(root, transform);
 }
 
-void SimpleViewer::updateIndirectLight() {
+void ViewerGui::updateIndirectLight() {
     using namespace filament::math;
     if (mIndirectLight) {
         mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
@@ -467,7 +470,35 @@ void SimpleViewer::updateIndirectLight() {
     }
 }
 
-void SimpleViewer::applyAnimation(double currentTime) {
+void ViewerGui::sceneSelectionUI() {
+    // Build a list of checkboxes, one for each glTF scene.
+    bool changed = false;
+    for (size_t i = 0, n = mAsset->getSceneCount(); i < n; ++i) {
+        bool isVisible = mVisibleScenes.test(i);
+        const char* name = mAsset->getSceneName(i);
+        if (name) {
+            changed = ImGui::Checkbox(name, &isVisible) || changed;
+        } else {
+            char label[16];
+            snprintf(label, 16, "Scene %zu", i);
+            changed = ImGui::Checkbox(label, &isVisible) || changed;
+        }
+        if (isVisible) {
+            mVisibleScenes.set(i);
+        } else {
+            mVisibleScenes.unset(i);
+        }
+    }
+    // If any checkboxes have been toggled, rebuild the scene list.
+    if (changed) {
+        const utils::Entity* entities = mAsset->getRenderableEntities();
+        const size_t entityCount = mAsset->getRenderableEntityCount();
+        mScene->removeEntities(entities, entityCount);
+        mAsset->addEntitiesToScene(*mScene, entities, entityCount, mVisibleScenes);
+    }
+}
+
+void ViewerGui::applyAnimation(double currentTime) {
     assert_invariant(!isRemoteMode());
     static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
@@ -488,7 +519,7 @@ void SimpleViewer::applyAnimation(double currentTime) {
     }
 }
 
-void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio) {
+void ViewerGui::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio) {
     if (mImGuiHelper == nullptr) {
         mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
 
@@ -529,7 +560,7 @@ void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, f
     });
 }
 
-void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY,
+void ViewerGui::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY,
         bool control) {
     if (mImGuiHelper) {
         ImGuiIO& io = ImGui::GetIO();
@@ -543,25 +574,25 @@ void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, floa
     }
 }
 
-void SimpleViewer::keyDownEvent(int keyCode) {
+void ViewerGui::keyDownEvent(int keyCode) {
     if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
         ImGui::GetIO().KeysDown[keyCode] = true;
     }
 }
 
-void SimpleViewer::keyUpEvent(int keyCode) {
+void ViewerGui::keyUpEvent(int keyCode) {
     if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
         ImGui::GetIO().KeysDown[keyCode] = false;
     }
 }
 
-void SimpleViewer::keyPressEvent(int charCode) {
+void ViewerGui::keyPressEvent(int charCode) {
     if (mImGuiHelper) {
         ImGui::GetIO().AddInputCharacter(charCode);
     }
 }
 
-void SimpleViewer::updateUserInterface() {
+void ViewerGui::updateUserInterface() {
     using namespace filament;
 
     auto& tm = mEngine->getTransformManager();
@@ -754,6 +785,8 @@ void SimpleViewer::updateUserInterface() {
             ImGui::SliderFloat("Stride", &ssrefl.stride, 1.0, 10.0f);
         }
         ImGui::Unindent();
+
+        ImGui::Checkbox("Screen-space Guard Band", &mSettings.view.guardBand.enabled);
     }
 
     if (ImGui::CollapsingHeader("Dynamic Resolution")) {
@@ -847,18 +880,24 @@ void SimpleViewer::updateUserInterface() {
     if (ImGui::CollapsingHeader("Scene")) {
         ImGui::Indent();
 
-        ImGui::Checkbox("Scale to unit cube", &mSettings.viewer.autoScaleEnabled);
-        updateRootTransform();
+        if (ImGui::Checkbox("Scale to unit cube", &mSettings.viewer.autoScaleEnabled)) {
+            updateRootTransform();
+        }
 
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 
-        // We do not yet support ground shadow in remote mode,
+        // We do not yet support ground shadow or scene selection in remote mode.
         if (!isRemoteMode()) {
             ImGui::Checkbox("Ground shadow", &mSettings.viewer.groundPlaneEnabled);
             ImGui::Indent();
             ImGui::SliderFloat("Strength", &mSettings.viewer.groundShadowStrength, 0.0f, 1.0f);
             ImGui::Unindent();
+
+            if (mAsset->getSceneCount() > 1) {
+                ImGui::Separator();
+                sceneSelectionUI();
+            }
         }
 
         ImGui::Unindent();
@@ -906,7 +945,7 @@ void SimpleViewer::updateUserInterface() {
 
         // We do not yet support camera selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
-        if (isRemoteMode()) {
+        if (!isRemoteMode()) {
 
             const utils::Entity* cameras = mAsset->getCameraEntities();
             const size_t cameraCount = mAsset->getCameraEntityCount();

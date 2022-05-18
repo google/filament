@@ -695,7 +695,6 @@ FRenderer* FEngine::createRenderer() noexcept {
     FRenderer* p = mHeapAllocator.make<FRenderer>(*this);
     if (p) {
         mRenderers.insert(p);
-        p->init();
     }
     return p;
 }

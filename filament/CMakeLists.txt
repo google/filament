@@ -77,6 +77,7 @@ set(SRCS
         src/RenderTarget.cpp
         src/RenderableManager.cpp
         src/Renderer.cpp
+        src/RendererUtils.cpp
         src/ResourceAllocator.cpp
         src/ResourceList.cpp
         src/Scene.cpp
@@ -143,6 +144,7 @@ set(PRIVATE_HDRS
         src/PerViewUniforms.h
         src/PIDController.h
         src/PostProcessManager.h
+        src/RendererUtils.h
         src/RenderPass.h
         src/RenderPrimitive.h
         src/ResourceAllocator.h

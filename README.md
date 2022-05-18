@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.22.0'
+    implementation 'com.google.android.filament:filament-android:1.22.1'
 }
 ```
 
@@ -51,7 +51,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.22.0'
+pod 'Filament', '~> 1.22.1'
 ```
 
 ### Snapshots
@@ -177,6 +177,7 @@ steps:
   - [x] KHR_materials_variants
   - [x] KHR_materials_volume
   - [x] KHR_mesh_quantization
+  - [x] KHR_texture_basisu
   - [x] KHR_texture_transform
 
 

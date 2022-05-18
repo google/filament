@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef VIEWER_SIMPLEVIEWER_H
-#define VIEWER_SIMPLEVIEWER_H
+#ifndef VIEWER_VIEWERGUI_H
+#define VIEWER_VIEWERGUI_H
 
 #include <filament/Box.h>
 #include <filament/DebugRegistry.h>
@@ -26,6 +26,7 @@
 
 #include <gltfio/Animator.h>
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/NodeManager.h>
 
 #include <viewer/Settings.h>
 
@@ -45,15 +46,15 @@ namespace filament {
 namespace viewer {
 
 /**
- * \class SimpleViewer SimpleViewer.h viewer/SimpleViewer.h
- * \brief Manages the state for a simple glTF viewer with imgui controls and a tree view.
+ * \class ViewerGui ViewerGui.h viewer/ViewerGui.h
+ * \brief Builds ImGui widgets for a simple glTF viewer and manages the associated state.
  *
  * This is a utility that can be used across multiple platforms, including web.
  *
  * \note If you don't need ImGui controls, there is no need to use this class, just use AssetLoader
  * instead.
  */
-class UTILS_PUBLIC SimpleViewer {
+class UTILS_PUBLIC ViewerGui {
 public:
     using Animator = gltfio::Animator;
     using FilamentAsset = gltfio::FilamentAsset;
@@ -62,29 +63,39 @@ public:
     static constexpr int DEFAULT_SIDEBAR_WIDTH = 350;
 
     /**
-     * Constructs a SimpleViewer that has a fixed association with the given Filament objects.
+     * Constructs a ViewerGui that has a fixed association with the given Filament objects.
      *
      * Upon construction, the simple viewer may create some additional Filament objects (such as
      * light sources) that it owns.
      */
-    SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
+    ViewerGui(filament::Engine* engine, filament::Scene* scene, filament::View* view,
             int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
 
     /**
-     * Destroys the SimpleViewer and any Filament entities that it owns.
+     * Destroys the ViewerGui and any Filament entities that it owns.
      */
-    ~SimpleViewer();
+    ~ViewerGui();
 
     /**
-     * Adds the asset's ready-to-render entities into the scene.
+     * Sets the viewer's current asset.
      *
      * The viewer does not claim ownership over the asset or its entities. Clients should use
      * AssetLoader and ResourceLoader to load an asset before passing it in.
      *
+     * This method does not add renderables to the scene; see populateScene().
+     *
      * @param asset The asset to view.
      * @param instanceToAnimate Optional instance from which to get the animator.
      */
-    void populateScene(FilamentAsset* asset, FilamentInstance* instanceToAnimate = nullptr);
+    void setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnimate = nullptr);
+
+    /**
+     * Adds the asset's ready-to-render entities into the scene.
+     *
+     * This is used for asychronous loading. It can be called once per frame to gradually add
+     * entities into the scene as their textures are loaded.
+     */
+    void populateScene();
 
     /**
      * Removes the current asset from the viewer.
@@ -126,7 +137,7 @@ public:
     void renderUserInterface(float timeStepInSeconds, filament::View* guiView, float pixelRatio);
 
     /**
-     * Event-passing methods, useful only when SimpleViewer manages its own instance of ImGuiHelper.
+     * Event-passing methods, useful only when ViewerGui manages its own instance of ImGuiHelper.
      * The key codes used in these methods are just normal ASCII/ANSI codes.
      * @{
      */
@@ -218,9 +229,13 @@ public:
     int getCurrentCamera() const { return mCurrentCamera; }
 
 private:
+    using SceneMask = gltfio::NodeManager::SceneMask;
+
     void updateIndirectLight();
 
     bool isRemoteMode() const { return mAsset == nullptr; }
+
+    void sceneSelectionUI();
 
     // Immutable properties set from the constructor.
     filament::Engine* const mEngine;
@@ -248,6 +263,7 @@ private:
     uint32_t mFlags;
     utils::Entity mCurrentMorphingEntity;
     std::vector<float> mMorphWeights;
+    SceneMask mVisibleScenes;
     bool mShowingRestPose = false;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).
@@ -265,4 +281,4 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffse
 } // namespace viewer
 } // namespace filament
 
-#endif // VIEWER_SIMPLEVIEWER_H
+#endif // VIEWER_VIEWERGUI_H

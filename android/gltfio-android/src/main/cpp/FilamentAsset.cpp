@@ -120,10 +120,34 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetLightEntities(JNIEnv* env, jclass,
         jlong nativeAsset, jintArray result) {
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
-    jsize available = env->GetArrayLength(result);
+    const jsize available = env->GetArrayLength(result);
+    const size_t minCount = std::min(available, (jsize) asset->getLightEntityCount());
+    if (minCount == 0) {
+        return;
+    }
     Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
-    std::copy_n(asset->getLightEntities(),
-            std::min(available, (jsize) asset->getLightEntityCount()), entities);
+    std::copy_n(asset->getLightEntities(), minCount, entities);
+    env->ReleaseIntArrayElements(result, (jint*) entities, 0);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetRenderableEntityCount(JNIEnv*, jclass,
+        jlong nativeAsset) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    return asset->getRenderableEntityCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetRenderableEntities(JNIEnv* env, jclass,
+        jlong nativeAsset, jintArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    const jsize available = env->GetArrayLength(result);
+    const size_t minCount = std::min(available, (jsize) asset->getRenderableEntityCount());
+    if (minCount == 0) {
+        return;
+    }
+    Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
+    std::copy_n(asset->getRenderableEntities(), minCount, entities);
     env->ReleaseIntArrayElements(result, (jint*) entities, 0);
 }
 
@@ -131,10 +155,13 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetCameraEntities(JNIEnv* env, jclass,
         jlong nativeAsset, jintArray result) {
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
-    jsize available = env->GetArrayLength(result);
+    const jsize available = env->GetArrayLength(result);
+    const size_t minCount = std::min(available, (jsize) asset->getCameraEntityCount());
+    if (minCount == 0) {
+        return;
+    }
     Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
-    std::copy_n(asset->getCameraEntities(),
-            std::min(available, (jsize) asset->getCameraEntityCount()), entities);
+    std::copy_n(asset->getCameraEntities(), minCount, entities);
     env->ReleaseIntArrayElements(result, (jint*) entities, 0);
 }
 

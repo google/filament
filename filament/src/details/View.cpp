@@ -17,7 +17,6 @@
 #include "details/View.h"
 
 #include "Culler.h"
-#include "DFG.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
 #include "ResourceAllocator.h"
@@ -887,7 +886,7 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
 FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FrameGraph& fg, FEngine& engine,
         FEngine::DriverApi& driver,
         RenderPass const& pass) noexcept {
-    return mShadowMapManager.render(fg, engine, driver, pass, *this);
+    return mShadowMapManager.render(fg, engine, pass, *this);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {
@@ -952,6 +951,10 @@ void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions optio
     options.maxDistance = std::max(0.0f, options.maxDistance);
     options.stride = std::max(1.0f, options.stride);
     mScreenSpaceReflectionsOptions = options;
+}
+
+void FView::setGuardBandOptions(GuardBandOptions options) noexcept {
+    mGuardBandOptions = options;
 }
 
 void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {

@@ -19,6 +19,7 @@
 #include <gltfio/Animator.h>
 
 #include <filament/RenderableManager.h>
+#include <filament/Scene.h>
 
 #include <utils/EntityManager.h>
 #include <utils/Log.h>
@@ -54,6 +55,8 @@ FFilamentAsset::~FFilamentAsset() {
         if (mNameManager) {
             mNameManager->removeComponent(entity);
         }
+        // Destroy the node component.
+        mNodeManager->destroy(entity);
         // Destroy the actual entity.
         mEntityManager->destroy(entity);
     }
@@ -81,8 +84,7 @@ const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
     if (entity.isNull()) {
         return mAssetExtras.c_str();
     }
-    const auto iter = mNodeExtras.find(entity);
-    return iter == mNodeExtras.cend() ? nullptr : iter->second.c_str();
+    return mNodeManager->getExtras(mNodeManager->getInstance(entity)).c_str();
 }
 
 void FFilamentAsset::createAnimators() {
@@ -124,17 +126,12 @@ const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         return nullptr;
     }
 
-    const auto iter = mMorphTargetNames.find(entity);
-    if (iter == mMorphTargetNames.end()) {
+    const auto& names =  mNodeManager->getMorphTargetNames(mNodeManager->getInstance(entity));
+    if (targetIndex >= names.size()) {
         return nullptr;
     }
 
-    const auto& morphTargetNames = iter->second;
-    if (targetIndex >= morphTargetNames.size()) {
-        return nullptr;
-    }
-
-    return morphTargetNames[targetIndex].c_str();
+    return names[targetIndex].c_str();
 }
 
 size_t FFilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcept {
@@ -142,12 +139,8 @@ size_t FFilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcep
         return 0;
     }
 
-    const auto iter = mMorphTargetNames.find(entity);
-    if (iter == mMorphTargetNames.end()) {
-        return 0;
-    }
-
-    return iter->second.size();
+    const auto& names = mNodeManager->getMorphTargetNames(mNodeManager->getInstance(entity));
+    return names.size();
 }
 
 size_t FFilamentAsset::getMaterialVariantCount() const noexcept {
@@ -264,6 +257,18 @@ size_t FFilamentAsset::getEntitiesByPrefix(const char* prefix, Entity* entities,
     return count;
 }
 
+void FFilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities,
+        size_t count, SceneMask sceneFilter) {
+    auto& nm = *mNodeManager;
+    for (size_t ei = 0; ei < count; ++ei) {
+        const Entity entity = entities[ei];
+        NodeManager::SceneMask mask = nm.getSceneMembership(nm.getInstance(entity));
+        if ((mask & sceneFilter).any()) {
+            targetScene.addEntity(entity);
+        }
+    }
+}
+
 size_t FilamentAsset::getEntityCount() const noexcept {
     return upcast(this)->getEntityCount();
 }
@@ -278,6 +283,14 @@ const Entity* FilamentAsset::getLightEntities() const noexcept {
 
 size_t FilamentAsset::getLightEntityCount() const noexcept {
     return upcast(this)->getLightEntityCount();
+}
+
+const Entity* FilamentAsset::getRenderableEntities() const noexcept {
+    return upcast(this)->getRenderableEntities();
+}
+
+size_t FilamentAsset::getRenderableEntityCount() const noexcept {
+    return upcast(this)->getRenderableEntityCount();
 }
 
 const utils::Entity* FilamentAsset::getCameraEntities() const noexcept {
@@ -411,6 +424,19 @@ FilamentInstance** FilamentAsset::getAssetInstances() noexcept {
 
 size_t FilamentAsset::getAssetInstanceCount() const noexcept {
     return upcast(this)->getAssetInstanceCount();
+}
+
+size_t FilamentAsset::getSceneCount() const noexcept {
+    return upcast(this)->getSceneCount();
+}
+
+const char* FilamentAsset::getSceneName(size_t sceneIndex) const noexcept {
+    return upcast(this)->getSceneName(sceneIndex);
+}
+
+void FilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
+        SceneMask sceneFilter) {
+    upcast(this)->addEntitiesToScene(targetScene, entities, count, sceneFilter);
 }
 
 } // namespace gltfio

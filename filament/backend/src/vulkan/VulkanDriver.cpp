@@ -1633,19 +1633,21 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
 
     VkFilter vkfilter = filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
 
+    // The Y inversion below makes it so that Vk matches GL and Metal.
+
     const VkExtent2D srcExtent = srcTarget->getExtent();
-    const int32_t srcLeft = std::min(srcRect.left, (int32_t) srcExtent.width);
-    const int32_t srcBottom = std::min(srcRect.bottom, (int32_t) srcExtent.height);
-    const int32_t srcRight = std::min(srcRect.left + srcRect.width, srcExtent.width);
-    const int32_t srcTop = std::min(srcRect.bottom + srcRect.height, srcExtent.height);
-    const VkOffset3D srcOffsets[2] = { { srcLeft, srcBottom, 0 }, { srcRight, srcTop, 1 }};
+    const int32_t srcLeft = srcRect.left;
+    const int32_t srcTop = srcExtent.height - srcRect.bottom - srcRect.height;
+    const int32_t srcRight = srcRect.left + srcRect.width;
+    const int32_t srcBottom = srcTop + srcRect.height;
+    const VkOffset3D srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
 
     const VkExtent2D dstExtent = dstTarget->getExtent();
-    const int32_t dstLeft = std::min(dstRect.left, (int32_t) dstExtent.width);
-    const int32_t dstBottom = std::min(dstRect.bottom, (int32_t) dstExtent.height);
-    const int32_t dstRight = std::min(dstRect.left + dstRect.width, dstExtent.width);
-    const int32_t dstTop = std::min(dstRect.bottom + dstRect.height, dstExtent.height);
-    const VkOffset3D dstOffsets[2] = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }};
+    const int32_t dstLeft = dstRect.left;
+    const int32_t dstTop = dstExtent.height - dstRect.bottom - dstRect.height;
+    const int32_t dstRight = dstRect.left + dstRect.width;
+    const int32_t dstBottom = dstTop + dstRect.height;
+    const VkOffset3D dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
 
     if (any(buffers & TargetBufferFlags::DEPTH) && srcTarget->hasDepth() && dstTarget->hasDepth()) {
         mBlitter.blitDepth({dstTarget, dstOffsets, srcTarget, srcOffsets});

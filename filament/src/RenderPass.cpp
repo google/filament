@@ -138,6 +138,15 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
     // "eof" command. these commands are guaranteed to be sorted last in the
     // command buffer.
     curr[commandCount - 1].key = uint64_t(Pass::SENTINEL);
+
+    // Go over all the commands and call prepareProgram().
+    // This must be done from the main thread.
+    for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
+        if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
+            auto ma = first->primitive.mi->getMaterial();
+            ma->prepareProgram(first->primitive.materialVariant);
+        }
+    }
 }
 
 void RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
@@ -402,7 +411,6 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
                 RenderPass::setupColorCommand(cmdColor, variant, mi, inverseFrontFaces);
-                ma->prepareProgram(cmdColor.primitive.materialVariant);
 
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
@@ -487,7 +495,6 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             }
 
             if constexpr (isDepthPass) {
-                ma->prepareProgram(cmdDepth.primitive.materialVariant);
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();

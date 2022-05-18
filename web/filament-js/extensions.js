@@ -403,6 +403,17 @@ Filament.loadClassExtensions = function() {
         this._setVignetteOptions(options);
     };
 
+    /// setGuardBandOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// enabled.
+    Filament.View.prototype.setGuardBandOptions = function(overrides) {
+        const options = {
+            enabled: false
+        };
+        Object.assign(options, overrides);
+        this._setGuardBandOptions(options);
+    };
+
     /// BufferObject ::core class::
 
     /// setBuffer ::method::
@@ -645,9 +656,11 @@ Filament.loadClassExtensions = function() {
                 config.ignoreBindTransform);
 
         const stbProvider = new Filament.gltfio$StbProvider(engine);
+        const ktx2Provider = new Filament.gltfio$Ktx2Provider(engine);
 
-        resourceLoader.addTextureProvider("image/jpeg", stbProvider);
-        resourceLoader.addTextureProvider("image/png", stbProvider);
+        resourceLoader.addStbProvider("image/jpeg", stbProvider);
+        resourceLoader.addStbProvider("image/png", stbProvider);
+        resourceLoader.addKtx2Provider("image/ktx2", ktx2Provider);
 
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);
@@ -698,6 +711,10 @@ Filament.loadClassExtensions = function() {
 
     Filament.gltfio$FilamentAsset.prototype.getLightEntities = function() {
         return Filament.vectorToArray(this._getLightEntities());
+    };
+
+    Filament.gltfio$FilamentAsset.prototype.getRenderableEntities = function() {
+        return Filament.vectorToArray(this._getRenderableEntities());
     };
 
     Filament.gltfio$FilamentAsset.prototype.getCameraEntities = function() {

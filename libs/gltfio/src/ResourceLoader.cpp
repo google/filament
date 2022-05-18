@@ -571,7 +571,8 @@ void ResourceLoader::asyncUpdateLoad() {
 
 Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
     const cgltf_texture* srcTexture = tb.texture;
-    const cgltf_image* image = srcTexture->image;
+    const cgltf_image* image = srcTexture->basisu_image ?
+            srcTexture->basisu_image : srcTexture->image;
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 

@@ -27,8 +27,9 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <camutils/Manipulator.h>
 
@@ -58,7 +59,7 @@ enum MaterialSource {
 
 struct App {
     Engine* engine;
-    SimpleViewer* viewer;
+    ViewerGui* viewer;
     Config config;
     AssetLoader* loader;
     FilamentAsset* asset = nullptr;
@@ -66,6 +67,8 @@ struct App {
     MaterialProvider* materials;
     MaterialSource materialSource = GENERATE_SHADERS;
     ResourceLoader* resourceLoader = nullptr;
+    gltfio::TextureProvider* stbDecoder = nullptr;
+    gltfio::TextureProvider* ktxDecoder = nullptr;
     int instanceToAnimate = -1;
     std::vector<FilamentInstance*> instances;
 };
@@ -210,6 +213,11 @@ int main(int argc, char** argv) {
         configuration.recomputeBoundingBoxes = false;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
+            app.stbDecoder = createStbProvider(app.engine);
+            app.ktxDecoder = createKtx2Provider(app.engine);
+            app.resourceLoader->addTextureProvider("image/png", app.stbDecoder);
+            app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
+            app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
 
@@ -242,7 +250,7 @@ int main(int argc, char** argv) {
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new SimpleViewer(engine, scene, view, app.instanceToAnimate);
+        app.viewer = new ViewerGui(engine, scene, view, app.instanceToAnimate);
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
@@ -254,8 +262,12 @@ int main(int argc, char** argv) {
             loadAsset(filename);
         }
 
+        FilamentInstance* const instance = app.instanceToAnimate > -1 ?
+                app.instances[app.instanceToAnimate] : nullptr;
+
         arrangeIntoCircle();
         loadResources(filename);
+        app.viewer->setAsset(app.asset, instance);
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
@@ -265,18 +277,16 @@ int main(int argc, char** argv) {
         delete app.viewer;
         delete app.materials;
         delete app.names;
+        delete app.stbDecoder;
+        delete app.ktxDecoder;
 
         AssetLoader::destroy(&app.loader);
     };
 
     auto animate = [&app, arrangeIntoCircle](Engine* engine, View* view, double now) {
         app.resourceLoader->asyncUpdateLoad();
-        FilamentInstance* instance = nullptr;
-        if (app.instanceToAnimate > -1) {
-            instance = app.instances[app.instanceToAnimate];
-        }
         app.viewer->updateRootTransform();
-        app.viewer->populateScene(app.asset, instance);
+        app.viewer->populateScene();
         app.viewer->applyAnimation(now);
 
         // Add a new instance every second until reaching 100 instances.

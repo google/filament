@@ -117,10 +117,17 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nAsyncCancelLoad(JNIEnv*,
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_ResourceLoader_nCreateTextureProvider(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_ResourceLoader_nCreateStbProvider(JNIEnv*, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
     return (jlong) createStbProvider(engine);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nCreateKtx2Provider(JNIEnv*, jclass,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jlong) createKtx2Provider(engine);
 }
 
 extern "C" JNIEXPORT void JNICALL

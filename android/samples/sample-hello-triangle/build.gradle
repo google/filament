@@ -16,6 +16,8 @@ clean.doFirst {
 }
 
 android {
+    namespace 'com.google.android.filament.hellotriangle'
+
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.hellotriangle"

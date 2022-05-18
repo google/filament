@@ -32,7 +32,7 @@
 
 #include <utils/EntityManager.h>
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <camutils/Manipulator.h>
 
@@ -63,7 +63,7 @@ using namespace utils;
 
 struct App {
     Engine* engine;
-    SimpleViewer* viewer;
+    ViewerGui* viewer;
     Config config;
     Camera* mainCamera;
 
@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
 
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
-        app.viewer = new SimpleViewer(engine, scene, view, 410);
+        app.viewer = new ViewerGui(engine, scene, view, 410);
         app.viewer->getSettings().viewer.autoScaleEnabled = false;
         app.viewer->getSettings().view.bloom.enabled = false;
         app.viewer->getSettings().view.ssao.enabled = false;

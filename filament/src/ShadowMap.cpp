@@ -22,7 +22,6 @@
 
 #include "details/Engine.h"
 #include "details/Scene.h"
-#include "details/View.h"
 
 #include <backend/DriverEnums.h>
 
@@ -31,10 +30,11 @@
 
 #include <limits>
 
-using namespace filament::math;
 using namespace utils;
 
 namespace filament {
+
+using namespace math;
 using namespace backend;
 
 // do this only if depth-clamp is available

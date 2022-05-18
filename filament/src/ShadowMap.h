@@ -30,8 +30,42 @@
 
 namespace filament {
 
-class FView;
 class RenderPass;
+
+// The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
+// (either camera or light).
+//
+//                                    1
+// bits                               5 ... 7 6 5 4 3 2 1 0
+// +------------------------------------------------------+
+// VISIBLE_RENDERABLE                                     X
+// VISIBLE_DIR_SHADOW_RENDERABLE                        X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_0                   X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_1                 X
+// ...
+
+// A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
+// PCF shadows: only shadow casters
+// VSM shadows: both shadow casters and shadow receivers
+
+static constexpr size_t VISIBLE_RENDERABLE_BIT              = 0u;
+static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT   = 1u;
+
+static constexpr size_t VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(size_t n) { return n + 2; }
+
+static constexpr Culler::result_type VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
+static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) {
+    return 1u << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(n);
+}
+
+// ORing of all the VISIBLE_SPOT_SHADOW_RENDERABLE bits
+static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE =
+        (0xFFu >> (sizeof(Culler::result_type) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
+
+// Because we're using a uint16_t for the visibility mask, we're limited to 14 spot light shadows.
+// (2 of the bits are used for visible renderables + directional light shadow casters).
+static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= sizeof(Culler::result_type) * 8 - 2,
+        "CONFIG_MAX_SHADOW_CASTING_SPOTS cannot be higher than 14.");
 
 class ShadowMap {
 public:
@@ -107,7 +141,7 @@ public:
             SceneInfo& sceneInfo) noexcept;
 
     void render(FScene const& scene, utils::Range<uint32_t> range,
-            FScene::VisibleMaskType visibilityMask, RenderPass* const pass) noexcept;
+            FScene::VisibleMaskType visibilityMask, RenderPass* pass) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }

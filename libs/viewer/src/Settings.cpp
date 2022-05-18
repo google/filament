@@ -248,6 +248,27 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        GuardBandOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (0 == compare(tok, jsonChunk, "enabled")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else {
+            slog.w << "Invalid guard band options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid guard band options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         DynamicResolutionOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -783,6 +804,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->dynamicLighting);
         } else if (compare(tok, jsonChunk, "shadowType") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->shadowType);
+        } else if (compare(tok, jsonChunk, "guardBand") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->guardBand);
         } else if (compare(tok, jsonChunk, "vsmShadowOptions") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->vsmShadowOptions);
         } else if (compare(tok, jsonChunk, "postProcessingEnabled") == 0) {
@@ -1051,6 +1074,7 @@ void applySettings(const ViewSettings& settings, View* dest) {
             settings.dynamicLighting.zLightFar);
     dest->setShadowType(settings.shadowType);
     dest->setVsmShadowOptions(settings.vsmShadowOptions);
+    dest->setGuardBandOptions(settings.guardBand);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
 }
 
@@ -1551,6 +1575,12 @@ static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
         << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, const GuardBandOptions& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
     return out << "{\n"
         << "\"antiAliasing\": " << in.antiAliasing << ",\n"
@@ -1569,6 +1599,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"dynamicLighting\": " << (in.dynamicLighting) << ",\n"
         << "\"shadowType\": " << (in.shadowType) << ",\n"
         << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
+        << "\"guardBand\": " << (in.guardBand) << ",\n"
         << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
         << "}";
 }

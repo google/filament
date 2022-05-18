@@ -87,15 +87,6 @@ class App {
         const onDone = () => {
             this.allowRefresh = true;
 
-            // Enable shadows on every renderable.
-            const entities = asset.getEntities();
-            const rm = engine.getRenderableManager();
-            for (const entity of entities) {
-                const instance = rm.getInstance(entity);
-                rm.setCastShadows(instance, true);
-                instance.delete();
-            }
-
             // Hide the HUD.
             messages.remove();
         };
@@ -149,7 +140,7 @@ class App {
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
 
-        // Add renderable entities to the scene as they become ready.
+        // Gradually add renderables to the scene as their textures become ready.
         let entity;
         const popRenderable = () => {
             entity = this.asset.popRenderable();
