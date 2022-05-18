@@ -68,7 +68,7 @@ For example, this:
 becomes:
 
 ```
-## Next release (main branch)
+## main branch
 
 ## v1.9.4
 - foo

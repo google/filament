@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.22.2 (currently main branch)
+## main branch
+
+## v1.22.2
 
 - Java minor API change: rename ssctStartTraceDistance to ssctShadowDistance
 - Java minor API change: rename blendingMode to blendMode
@@ -13,6 +15,9 @@ A new header is inserted each time a *tag* is created.
 - Metal: Shaders now use `half` floating-point arithmetic when possible for improved performance. [⚠️ **Recompile Materials**]
 - engine: add support for presentation time in `Renderer`
 - engine: added guard bands support for screen-space effects
+- gltfio: Add multi-scene support.
+- gltfio: Various glTF-related cleanup and enhancements.
+- gltfio: Add support for KHR_texture_basisu.
 
 ## v1.22.0
 
