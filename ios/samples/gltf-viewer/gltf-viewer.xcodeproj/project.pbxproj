@@ -432,7 +432,8 @@
 					"-lcivetweb",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -485,7 +486,8 @@
 					"-lcivetweb",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -600,7 +602,8 @@
 					"-lcivetweb",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -653,7 +656,8 @@
 					"-lcivetweb",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.gltf-viewer";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

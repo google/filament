@@ -252,7 +252,8 @@
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -358,7 +359,8 @@
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -457,7 +459,8 @@
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -501,7 +504,8 @@
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

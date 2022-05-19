@@ -389,7 +389,8 @@
 					"-lgeometry",
 					"-libl",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -431,7 +432,8 @@
 					"-lgeometry",
 					"-libl",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -473,7 +475,8 @@
 					"-lgeometry",
 					"-libl",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -515,7 +518,8 @@
 					"-lgeometry",
 					"-libl",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.transparent-rendering";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

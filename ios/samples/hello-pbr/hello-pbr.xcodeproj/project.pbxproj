@@ -309,7 +309,8 @@
 					"-limage",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-pbr";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -355,7 +356,8 @@
 					"-limage",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-pbr";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -401,7 +403,8 @@
 					"-limage",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-pbr";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -557,7 +560,8 @@
 					"-limage",
 					"-lktxreader",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-pbr";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
