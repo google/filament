@@ -141,7 +141,7 @@ Engine::Config FEngine::validateConfig(const Config* config) noexcept
     constexpr uint32_t NUM_FRAMES_OVERLAP = 3;      // Number of potential concurrent frames in flight
 
     Config validConfig;
-    if (config == nullptr)
+    if (!config)
     {
         return validConfig;
     }
