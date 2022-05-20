@@ -56,6 +56,8 @@ using namespace ktxreader;
     Texture* _iblTexture;
     IndirectLight* _indirectLight;
     Entity _sun;
+
+    UITapGestureRecognizer* _doubleTapRecognizer;
 }
 
 #pragma mark UIViewController methods
@@ -91,6 +93,10 @@ using namespace ktxreader;
 
     _server = new viewer::RemoteServer();
     _automation = viewer::AutomationEngine::createDefault();
+
+    _doubleTapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(reloadModel)];
+    _doubleTapRecognizer.numberOfTapsRequired = 2;
+    [self.modelView addGestureRecognizer:_doubleTapRecognizer];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -100,6 +106,8 @@ using namespace ktxreader;
 - (void)viewWillDisappear:(BOOL)animated {
     [self stopDisplayLink];
 }
+
+#pragma mark Private
 
 - (void)startDisplayLink {
     [self stopDisplayLink];
@@ -115,8 +123,6 @@ using namespace ktxreader;
     [_displayLink invalidate];
     _displayLink = nil;
 }
-
-#pragma mark Private
 
 - (void)createRenderablesFromPath:(NSString*)model {
     // Retrieve the full path to the model in the documents directory.
@@ -255,6 +261,11 @@ using namespace ktxreader;
     }
 
     [self.modelView render];
+}
+
+- (void)reloadModel {
+    [self.modelView destroyModel];
+    [self createDefaultRenderables];
 }
 
 - (void)dealloc {
