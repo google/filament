@@ -4,8 +4,8 @@ Filament.loadGeneratedExtensions = function() {
 
     Filament.View.prototype.setDynamicResolutionOptionsDefaults = function(overrides) {
         const options = {
-            minScale: [ 0.5, 0.5 ],
-            maxScale: [ 1.0, 1.0 ],
+            minScale: [0.5, 0.5],
+            maxScale: [1.0, 1.0],
             sharpness: 0.9,
             enabled: false,
             homogeneousScaling: false,
@@ -45,7 +45,7 @@ Filament.loadGeneratedExtensions = function() {
             maximumOpacity: 1.0,
             height: 0.0,
             heightFalloff: 1.0,
-            color: [ 0.5, 0.5, 0.5 ],
+            color: [0.5, 0.5, 0.5],
             density: 0.1,
             inScatteringStart: 0.0,
             inScatteringSize: -1.0,
@@ -76,7 +76,7 @@ Filament.loadGeneratedExtensions = function() {
             midPoint: 0.5,
             roundness: 0.5,
             feather: 0.5,
-            color: [ 0.0, 0.0, 0.0, 1.0 ],
+            color: [0.0, 0.0, 0.0, 1.0],
             enabled: false,
         };
         return Object.assign(options, overrides);
@@ -95,7 +95,7 @@ Filament.loadGeneratedExtensions = function() {
             shadowDistance: 0.3,
             contactDistanceMax: 1.0,
             intensity: 0.8,
-            lightDirection: [  0, -1, 0  ],
+            lightDirection: [ 0, -1, 0 ],
             depthBias: 0.01,
             depthSlopeBias: 0.01,
             sampleCount: 4,
