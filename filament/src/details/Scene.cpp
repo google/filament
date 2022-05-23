@@ -250,19 +250,16 @@ void FScene::updateUBOs(
         hasContactShadows = hasContactShadows || visibility.screenSpaceContactShadows;
 
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, flags),
-                PerRenderableUib::packFlags(
+                offset + offsetof(PerRenderableUib, flagsChannels),
+                PerRenderableUib::packFlagsChannels(
                         visibility.skinning,
                         visibility.morphing,
-                        visibility.screenSpaceContactShadows));
+                        visibility.screenSpaceContactShadows,
+                        sceneData.elementAt<CHANNELS>(i)));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, morphTargetCount),
                 sceneData.elementAt<MORPHING_BUFFER>(i).count);
-
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, channels),
-                (uint32_t)sceneData.elementAt<CHANNELS>(i));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, objectId),

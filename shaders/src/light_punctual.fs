@@ -194,7 +194,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 
     uint index = froxel.recordOffset;
     uint end = index + froxel.count;
-    uint channels = objectUniforms.channels & 0xFFu;
+    uint channels = objectUniforms.flagsChannels & 0xFFu;
 
     // Iterate point lights
     for ( ; index < end; index++) {
@@ -217,7 +217,7 @@ void evaluatePunctualLights(const MaterialInputs material,
                 visibility = shadow(false, light_shadowMap, light.shadowLayer, light.shadowIndex, 0u);
             }
             if (light.contactShadows && visibility > 0.0) {
-                if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
+                if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
                     visibility *= 1.0 - screenSpaceContactShadow(light.l);
                 }
             }

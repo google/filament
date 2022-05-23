@@ -116,7 +116,7 @@ vec4 getPosition() {
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 
-    if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+    if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
         #if defined(LEGACY_MORPHING)
         pos += morphingUniforms.weights[0] * mesh_custom0;
         pos += morphingUniforms.weights[1] * mesh_custom1;
@@ -127,7 +127,7 @@ vec4 getPosition() {
         #endif
     }
 
-    if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
+    if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
     }
 

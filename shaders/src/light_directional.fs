@@ -36,7 +36,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
 
     Light light = getDirectionalLight();
 
-    uint channels = objectUniforms.channels & 0xFFu;
+    uint channels = objectUniforms.flagsChannels & 0xFFu;
     if ((light.channels & channels) == 0u) {
         return;
     }
@@ -60,7 +60,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
             visibility = shadow(true, light_shadowMap, layer, 0u, cascade);
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
-            if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
+            if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
                 ssContactShadowOcclusion = screenSpaceContactShadow(light.l);
             }
         }
