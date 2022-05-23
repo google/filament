@@ -180,8 +180,13 @@ struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-memb
     uint32_t flags;                           // see packFlags() below
     uint32_t channels;                        // 0x000000ll
     uint32_t objectId;                        // used for picking
+
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
+    float reserved0;
+    float reserved1;
+    float reserved2;
+    math::float4 reserved[7];
 
     static uint32_t packFlags(bool skinning, bool morphing, bool contactShadows) noexcept {
         return (skinning ? 1 : 0) |
@@ -189,7 +194,8 @@ struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-memb
                (contactShadows ? 4 : 0);
     }
 };
-static_assert(sizeof(PerRenderableUib) % 256 == 0, "sizeof(Transform) should be a multiple of 256");
+
+static_assert(sizeof(PerRenderableUib) == 256, "sizeof(PerRenderableUib) must be 256 bytes");
 
 struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "LightsUniforms" };
