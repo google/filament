@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - Java View has several minor changes due to generated code, such as field ordering.
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
 
 ## v1.22.2
 
