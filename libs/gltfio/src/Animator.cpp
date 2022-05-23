@@ -46,7 +46,7 @@ namespace gltfio {
 
 using TimeValues = map<float, size_t>;
 using SourceValues = vector<float>;
-using BoneVector = vector<filament::math::mat4f>;
+using BoneVector = vector<mat4f>;
 
 struct Sampler {
     TimeValues times;
@@ -75,8 +75,11 @@ struct AnimatorImpl {
     RenderableManager* renderableManager;
     TransformManager* transformManager;
     vector<float> weights;
+    FixedCapacityVector<mat4f> crossFade;
     void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst);
     void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
+    void stashCrossFade();
+    void applyCrossFade(float alpha);
 };
 
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
@@ -219,6 +222,12 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
             }
         }
     }
+}
+
+void Animator::applyCrossFade(size_t previousAnimIndex, float previousAnimTime, float alpha) {
+    mImpl->stashCrossFade();
+    applyAnimation(previousAnimIndex, previousAnimTime);
+    mImpl->applyCrossFade(alpha);
 }
 
 void Animator::addInstance(FFilamentInstance* instance) {
@@ -367,6 +376,58 @@ const char* Animator::getAnimationName(size_t animationIndex) const {
     return mImpl->animations[animationIndex].name.c_str();
 }
 
+void AnimatorImpl::stashCrossFade() {
+    using Instance = TransformManager::Instance;
+    auto& tm = *this->transformManager;
+    auto& stash = this->crossFade;
+
+    // Count the total number of transformable nodes to preallocate the stash memory.
+    // We considered caching this count, but the cache would need to be invalidated when entities
+    // are added into the hierarchy.
+    auto recursiveCount = [&tm](Instance node, size_t count, auto& fn) -> size_t {
+        ++count;
+        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
+            count = fn(*iter, count, fn);
+        }
+        return count;
+    };
+
+    auto recursiveStash = [&tm, &stash](Instance node, size_t index, auto& fn) -> size_t {
+        stash[index++] = tm.getTransform(node);
+        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
+            index = fn(*iter, index, fn);
+        }
+        return index;
+    };
+
+    const Instance root = tm.getInstance(asset->mRoot);
+    const size_t count = recursiveCount(root, 0, recursiveCount);
+    crossFade.reserve(count);
+    crossFade.resize(count);
+    recursiveStash(root, 0, recursiveStash);
+}
+
+void AnimatorImpl::applyCrossFade(float alpha) {
+    using Instance = TransformManager::Instance;
+    auto& tm = *this->transformManager;
+    auto& stash = this->crossFade;
+    auto recursiveFn = [&tm, &stash, alpha](Instance node, size_t index, auto& fn) -> size_t {
+        float3 scale0, scale1;
+        quatf rotation0, rotation1;
+        float3 translation0, translation1;
+        decomposeMatrix(stash[index++], &translation1, &rotation1, &scale1);
+        decomposeMatrix(tm.getTransform(node), &translation0, &rotation0, &scale0);
+        const float3 scale = mix(scale0, scale1, alpha);
+        const quatf rotation = slerp(rotation0, rotation1, alpha);
+        const float3 translation = mix(translation0, translation1, alpha);
+        tm.setTransform(node, composeMatrix(translation, rotation, scale));
+        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
+            index = fn(*iter, index, fn);
+        }
+        return index;
+    };
+    recursiveFn(tm.getInstance(asset->mRoot), 0, recursiveFn);
+}
 
 void AnimatorImpl::addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim,
         Animation& dst) {

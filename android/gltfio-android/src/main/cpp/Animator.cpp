@@ -37,6 +37,13 @@ Java_com_google_android_filament_gltfio_Animator_nUpdateBoneMatrices(JNIEnv*, jc
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_Animator_nApplyCrossFade(JNIEnv*, jclass, jlong nativeAnimator,
+        jint previousAnimIndex, jfloat previousAnimTime, jfloat alpha) {
+    Animator* animator = (Animator*) nativeAnimator;
+    animator->applyCrossFade(previousAnimIndex, previousAnimTime, alpha);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_Animator_nResetBoneMatrices(JNIEnv*, jclass, jlong nativeAnimator) {
     Animator* animator = (Animator*) nativeAnimator;
     animator->resetBoneMatrices();

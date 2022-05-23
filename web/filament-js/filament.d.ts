@@ -598,6 +598,7 @@ export class gltfio$FilamentInstance {
 
 export class gltfio$Animator {
     public applyAnimation(index: number): void;
+    public applyCrossFade(previousAnimIndex: number, previousAnimTime: number, alpha: number): void;
     public updateBoneMatrices(): void;
     public resetBoneMatrices(): void;
     public getAnimationCount(): number;
