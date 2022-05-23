@@ -500,17 +500,20 @@ void ViewerGui::sceneSelectionUI() {
 
 void ViewerGui::applyAnimation(double currentTime) {
     assert_invariant(!isRemoteMode());
-    static double startTime = 0;
     const size_t numAnimations = mAnimator->getAnimationCount();
     if (mResetAnimation) {
-        startTime = currentTime;
-        for (size_t i = 0; i < numAnimations; i++) {
-            mAnimator->applyAnimation(i, 0);
-        }
+        mPreviousStartTime = mCurrentStartTime;
+        mCurrentStartTime = currentTime;
         mResetAnimation = false;
     }
+    const double elapsedSeconds = currentTime - mCurrentStartTime;
     if (numAnimations > 0 && mCurrentAnimation > 0) {
-        mAnimator->applyAnimation(mCurrentAnimation - 1, currentTime - startTime);
+        mAnimator->applyAnimation(mCurrentAnimation - 1, elapsedSeconds);
+        if (elapsedSeconds < mCrossFadeDuration && mPreviousAnimation > 0) {
+            const double previousSeconds = currentTime - mPreviousStartTime;
+            const float lerpFactor = elapsedSeconds / mCrossFadeDuration;
+            mAnimator->applyCrossFade(mPreviousAnimation - 1, previousSeconds, lerpFactor);
+        }
     }
     if (mShowingRestPose) {
         mAnimator->resetBoneMatrices();
@@ -1031,6 +1034,8 @@ void ViewerGui::updateUserInterface() {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;
             ImGui::RadioButton("Disable", &selectedAnimation, 0);
+            ImGui::SliderFloat("Cross fade", &mCrossFadeDuration, 0.0f, 2.0f,
+                    "%4.2f seconds", ImGuiSliderFlags_AlwaysClamp);
             for (size_t i = 0, count = mAnimator->getAnimationCount(); i < count; ++i) {
                 std::string label = mAnimator->getAnimationName(i);
                 if (label.empty()) {
@@ -1039,6 +1044,7 @@ void ViewerGui::updateUserInterface() {
                 ImGui::RadioButton(label.c_str(), &selectedAnimation, i + 1);
             }
             if (selectedAnimation != mCurrentAnimation) {
+                mPreviousAnimation = mCurrentAnimation;
                 mCurrentAnimation = selectedAnimation;
                 mResetAnimation = true;
             }
