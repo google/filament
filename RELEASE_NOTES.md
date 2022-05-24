@@ -5,6 +5,7 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Normals on morphed models have been fixed (core Filament change)
 - Java View has several minor changes due to generated code, such as field ordering.
 - engine: Changed UBOs layout [⚠️ **Material breakage**].
 
