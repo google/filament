@@ -21,6 +21,7 @@
 
 #include <utils/Log.h>
 
+#include <atomic>
 #include <vector>
 
 #pragma clang diagnostic push

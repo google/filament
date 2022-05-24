@@ -1125,7 +1125,8 @@ Type
 :    array of `string`
 
 Value
-:     Each entry must be any of `uv0`, `uv1`, `color`, `position`, `tangents`.
+:     Each entry must be any of `uv0`, `uv1`, `color`, `position`, `tangents`, `custom0`
+      through `custom7`.
 
 Description
 :     Lists the vertex attributes required by the material. The `position` attribute is always
@@ -1142,7 +1143,8 @@ material {
         },
     ],
     requires : [
-        uv0
+        uv0,
+        custom0
     ],
     shadingModel : lit,
 }
@@ -1151,6 +1153,7 @@ fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
         material.baseColor = texture(materialParams_texture, getUV0());
+        material.baseColor.rgb *= getCustom0().rgb;
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1841,13 +1844,30 @@ struct MaterialVertexInputs {
     of the current mesh: `material.uv0 = vec2(mesh_uv0.x, 1.0 - mesh_uv0.y)`. You can control
     this behavior using the `flipUV` property and setting it to `false`.
 
+### Custom vertex attributes
+
+You can use up to 8 custom vertex attributes, all of type `float4`. These attributes can be accessed
+using the vertex block shader functions `getCustom0()` to `getCustom7()`. However, before using
+custom attributes, you *must* declare those attributes as required in the `requires` property of
+the material:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    requires : [
+        custom0,
+        custom1,
+        custom2
+    ]
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ## Fragment block
 
-The fragment block must be used to control the fragment shading stage of the material. The vertex
+The fragment block must be used to control the fragment shading stage of the material. The fragment
 block must contain valid
 [ESSL 3.0](https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf)
 code (the version of GLSL supported in OpenGL ES 3.0). You are free to create multiple functions
-inside the vertex block but you **must** declare the `material` function:
+inside the fragment block but you **must** declare the `material` function:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
 fragment {
@@ -1882,7 +1902,7 @@ fragment {
 ### prepareMaterial function
 
 Note that you **must** call `prepareMaterial(material)` before exiting the  `material()` function.
-This `prepareMaterial` function sets up the internal state of the material mdoel. Some of the APIs
+This `prepareMaterial` function sets up the internal state of the material model. Some of the APIs
 described in the Fragment APIs section - like `shading_normal` for instance - can only be accessed
 _after_ invoking `prepareMaterial()`.
 

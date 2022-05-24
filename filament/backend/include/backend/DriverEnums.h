@@ -719,7 +719,7 @@ enum class SamplerCompareMode : uint8_t {
     COMPARE_TO_TEXTURE = 1
 };
 
-//! comparison function for the depth sampler
+//! comparison function for the depth / stencil sampler
 enum class SamplerCompareFunc : uint8_t {
     // don't change the enums values
     LE = 0,     //!< Less or equal
@@ -728,8 +728,8 @@ enum class SamplerCompareFunc : uint8_t {
     G,          //!< Strictly greater than
     E,          //!< Equal
     NE,         //!< Not equal
-    A,          //!< Always. Depth testing is deactivated.
-    N           //!< Never. The depth test always fails.
+    A,          //!< Always. Depth / stencil testing is deactivated.
+    N           //!< Never. The depth / stencil test always fails.
 };
 
 //! Sampler paramters
@@ -785,6 +785,18 @@ enum class BlendFunction : uint8_t {
     SRC_ALPHA_SATURATE      //!< f(src, dst) = (1,1,1) * min(src.a, 1 - dst.a), 1
 };
 
+//! stencil operation
+enum class StencilOperation : uint8_t {
+    KEEP,                   //!< Keeps the current value.
+    ZERO,                   //!< Sets the value to 0.
+    REPLACE,                //!< Sets the value to the stencil reference value.
+    INCR,                   //!< Increments the current value. Clamps to the maximum representable unsigned value.
+    INCR_WRAP,              //!< Increments the current value. Wraps value to zero when incrementing the maximum representable unsigned value.
+    DECR,                   //!< Decrements the current value. Clamps to 0.
+    DECR_WRAP,              //!< Decrements the current value. Wraps value to the maximum representable unsigned value when decrementing a value of zero.
+    INVERT,                 //!< Bitwise inverts the current value.
+};
+
 //! Stream for external textures
 enum class StreamType {
     NATIVE,     //!< Not synchronized but copy-free. Good for video.
@@ -817,9 +829,11 @@ struct RasterState {
     using DepthFunc = backend::SamplerCompareFunc;
     using BlendEquation = backend::BlendEquation;
     using BlendFunction = backend::BlendFunction;
+    using StencilFunction = backend::SamplerCompareFunc;
+    using StencilOperation = backend::StencilOperation;
 
     RasterState() noexcept { // NOLINT
-        static_assert(sizeof(RasterState) == sizeof(uint32_t),
+        static_assert(sizeof(RasterState) == sizeof(uint64_t),
                 "RasterState size not what was intended");
         culling = CullingMode::BACK;
         blendEquationRGB = BlendEquation::ADD;
@@ -828,6 +842,10 @@ struct RasterState {
         blendFunctionSrcAlpha = BlendFunction::ONE;
         blendFunctionDstRGB = BlendFunction::ZERO;
         blendFunctionDstAlpha = BlendFunction::ZERO;
+        stencilFunc = StencilFunction::A;
+        stencilOpStencilFail = StencilOperation::KEEP;
+        stencilOpDepthFail = StencilOperation::KEEP;
+        stencilOpDepthStencilPass = StencilOperation::KEEP;
     }
 
     bool operator == (RasterState rhs) const noexcept { return u == rhs.u; }
@@ -856,40 +874,56 @@ struct RasterState {
     union {
         struct {
             //! culling mode
-            CullingMode culling                 : 2;        //  2
+            CullingMode culling                         : 2;        //  2
 
             //! blend equation for the red, green and blue components
-            BlendEquation blendEquationRGB      : 3;        //  5
+            BlendEquation blendEquationRGB              : 3;        //  5
             //! blend equation for the alpha component
-            BlendEquation blendEquationAlpha    : 3;        //  8
+            BlendEquation blendEquationAlpha            : 3;        //  8
 
             //! blending function for the source color
-            BlendFunction blendFunctionSrcRGB   : 4;        // 12
+            BlendFunction blendFunctionSrcRGB           : 4;        // 12
             //! blending function for the source alpha
-            BlendFunction blendFunctionSrcAlpha : 4;        // 16
+            BlendFunction blendFunctionSrcAlpha         : 4;        // 16
             //! blending function for the destination color
-            BlendFunction blendFunctionDstRGB   : 4;        // 20
+            BlendFunction blendFunctionDstRGB           : 4;        // 20
             //! blending function for the destination alpha
-            BlendFunction blendFunctionDstAlpha : 4;        // 24
+            BlendFunction blendFunctionDstAlpha         : 4;        // 24
 
             //! Whether depth-buffer writes are enabled
-            bool depthWrite                     : 1;        // 25
+            bool depthWrite                             : 1;        // 25
             //! Depth test function
-            DepthFunc depthFunc                 : 3;        // 28
+            DepthFunc depthFunc                         : 3;        // 28
 
             //! Whether color-buffer writes are enabled
-            bool colorWrite                     : 1;        // 29
+            bool colorWrite                             : 1;        // 29
 
             //! use alpha-channel as coverage mask for anti-aliasing
-            bool alphaToCoverage                : 1;        // 30
+            bool alphaToCoverage                        : 1;        // 30
 
             //! whether front face winding direction must be inverted
-            bool inverseFrontFaces              : 1;        // 31
+            bool inverseFrontFaces                      : 1;        // 31
 
+            //! Whether stencil-buffer writes are enabled
+            bool stencilWrite                           : 1;        // 32
+            //! Stencil reference value
+            uint8_t stencilRef                          : 8;        // 40
+            //! Stencil test function
+            StencilFunction stencilFunc                 : 3;        // 43
+            //! Stencil operation when stencil test fails
+            StencilOperation stencilOpStencilFail       : 3;        // 46
             //! padding, must be 0
-            uint8_t padding                     : 1;        // 32
+            uint8_t padding0                            : 2;        // 48
+            //! Stencil operation when stencil test passes but depth test fails
+            StencilOperation stencilOpDepthFail         : 3;        // 51
+            //! Stencil operation when both stencil and depth test pass
+            StencilOperation stencilOpDepthStencilPass  : 3;        // 54
+            //! padding, must be 0
+            uint8_t padding1                            : 2;        // 56
+            //! padding, must be 0
+            uint8_t padding2                            : 8;        // 64
         };
-        uint32_t u = 0;
+        uint64_t u = 0;
     };
 };
 

@@ -294,6 +294,19 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
         gl.depthMask(GLboolean(rs.depthWrite));
     }
 
+    // stencil test / operation
+    if (rs.stencilFunc == RasterState::StencilFunction::A && !rs.stencilWrite) {
+        gl.disable(GL_STENCIL_TEST);
+    } else {
+        gl.enable(GL_STENCIL_TEST);
+        gl.stencilFunc(getStencilFunc(rs.stencilFunc), rs.stencilRef, ~GLuint(0));
+        gl.stencilOp(getStencilOp(rs.stencilOpStencilFail),
+                getStencilOp(rs.stencilOpDepthFail),
+                getStencilOp(rs.stencilOpDepthStencilPass));
+        GLuint stencilMask = rs.stencilWrite ? ~GLuint(0) : 0x00;
+        gl.stencilMask(stencilMask);
+    }
+
     // write masks
     gl.colorMask(GLboolean(rs.colorWrite));
 

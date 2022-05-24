@@ -649,7 +649,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
             return nullptr;
         }
         using namespace std;
-        ifstream filest(fullpath);
+        ifstream filest(fullpath, std::ifstream::in | std::ifstream::binary);
         vector<uint8_t> buffer;
         filest.seekg(0, ios::end);
         buffer.reserve((size_t) filest.tellg());

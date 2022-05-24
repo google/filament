@@ -654,6 +654,7 @@ int main(int argc, char** argv) {
         delete app.viewer;
         delete app.materials;
         delete app.names;
+        delete app.resourceLoader;
         delete app.stbDecoder;
         delete app.ktxDecoder;
 

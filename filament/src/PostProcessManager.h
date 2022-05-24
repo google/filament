@@ -211,10 +211,15 @@ public:
             FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
-    FrameGraphId<FrameGraphTexture> blendBlit(
-            FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
+    FrameGraphId<FrameGraphTexture> upscale(FrameGraph& fg, bool translucent,
+            DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
+            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
+
+    FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
             FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-            FrameGraphTexture::Descriptor const& outDesc) noexcept;
+            FrameGraphTexture::Descriptor const& outDesc,
+            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
     // resolve base level of input and outputs a 1-level texture
     FrameGraphId<FrameGraphTexture> resolveBaseLevel(FrameGraph& fg,

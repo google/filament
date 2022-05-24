@@ -1,0 +1,20 @@
+{{ define "Struct" }}
+    {{ docblock .  1 }}public static class {{ .BaseName }} {
+    {{- nested_type_declarations . }}
+    {{- range $index, $field := .Fields}}
+        {{ docblock . 2 }}{{ annotation $field 2 }}public
+        {{- java_type $field }} {{ $field.Name }} =
+        {{- java_value $field}};
+    {{- end }}
+    };
+{{ end }}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+{{ define "Enum" }}
+    {{ docblock . 1 }}public enum {{ .BaseName }} {
+    {{- range .Values}}
+        {{ docblock . 2 }}{{ .Name }},
+    {{- end }}
+    };
+{{ end }}

@@ -32,7 +32,7 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV * vec2(materialParams.size);
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV) * vec2(materialParams.size);
     }
 }
 

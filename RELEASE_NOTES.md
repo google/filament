@@ -3,7 +3,13 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.22.2 (currently main branch)
+## main branch
+
+## v1.22.2
+
+- Java: Minor API change: rename `ssctStartTraceDistance` to `ssctShadowDistance`. [⚠️ **API Change**]
+- Java: Minor API change: rename `blendingMode` to `blendMode`. [⚠️ **API Change**]
+- engine: Fix some memory leaks.
 
 ## v1.22.1
 

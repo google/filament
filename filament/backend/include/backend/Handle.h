@@ -26,6 +26,7 @@
 #include <stdint.h>
 
 #include <limits>
+#include <type_traits>
 
 namespace filament::backend {
 

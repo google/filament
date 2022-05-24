@@ -32,12 +32,6 @@ material {
     framebufferFetch: true
 }
 
-vertex {
-    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV;
-    }
-}
-
 fragment {
 
     void dummy(){}

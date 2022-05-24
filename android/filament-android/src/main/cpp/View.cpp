@@ -259,14 +259,14 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetSSCTOptions(JNIEnv *, jclass, jlong nativeView,
-        jfloat ssctLightConeRad, jfloat ssctStartTraceDistance, jfloat ssctContactDistanceMax,
+        jfloat ssctLightConeRad, jfloat ssctShadowDistance, jfloat ssctContactDistanceMax,
         jfloat ssctIntensity, jfloat ssctLightDirX, jfloat ssctLightDirY, jfloat ssctLightDirZ,
         jfloat ssctDepthBias, jfloat ssctDepthSlopeBias, jint ssctSampleCount,
         jint ssctRayCount, jboolean ssctEnabled) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = view->getAmbientOcclusionOptions();
     options.ssct.lightConeRad = ssctLightConeRad;
-    options.ssct.shadowDistance = ssctStartTraceDistance;
+    options.ssct.shadowDistance = ssctShadowDistance;
     options.ssct.contactDistanceMax = ssctContactDistanceMax;
     options.ssct.intensity = ssctIntensity;
     options.ssct.lightDirection = math::float3{ ssctLightDirX, ssctLightDirY, ssctLightDirZ };

@@ -34,6 +34,7 @@
 #include <utils/compiler.h>
 #include <utils/ThreadUtils.h>
 
+#include <cstddef>
 #include <functional>
 #include <tuple>
 #include <thread>

@@ -29,13 +29,7 @@ highp float linearizeDepth(highp float depth) {
 }
 
 highp float sampleDepth(const highp sampler2D depthTexture, const highp vec2 uv, float lod) {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    // On metal/vulkan, texture space is flipped vertically and we need to adjust the uv
-    // coordinates.
-    return textureLod(depthTexture, vec2(uv.x, 1.0 - uv.y), lod).r;
-#else
-    return textureLod(depthTexture, uv, lod).r;
-#endif
+    return textureLod(depthTexture, uvToRenderTargetUV(uv), lod).r;
 }
 
 highp float sampleDepthLinear(const highp sampler2D depthTexture,
