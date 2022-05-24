@@ -419,7 +419,7 @@ register_vector<const MaterialInstance*>("MaterialInstanceVector");
 
 /// Engine ::core class:: Central manager and resource owner.
 class_<Engine>("Engine")
-    .class_function("_create", (Engine* (*)()) [] {
+    .class_function("_create", (Engine* (*)(Engine::Config* config)) [] {
         EM_ASM_INT({
             const options = window.filament_glOptions;
             const context = window.filament_glContext;
@@ -427,13 +427,8 @@ class_<Engine>("Engine")
             window.filament_contextHandle = handle;
             GL.makeContextCurrent(handle);
         });
-        return Engine::create();
+        return Engine::create(Backend::DEFAULT, nullptr, nullptr, config);
     }, allow_raw_pointers())
-
-    /// validateConfig ::static method:: validates engine configuration parameters
-    /// engine ::argument:: pointer to config to validate. If null, returns default values.
-    /// ::retVal:: a validated instance of [Engine::Config]
-    .class_function("validateConfig", &Engine::validateConfig, allow_raw_pointers())
 
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({

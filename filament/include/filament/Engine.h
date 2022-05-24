@@ -232,7 +232,7 @@ public:
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
      *
-     * @param configParams      A pointer to optional parameters to specify memory size
+     * @param config            A pointer to optional parameters to specify memory size
      *                          configuration options.  If nullptr, then defaults used.
      *
      * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
@@ -249,7 +249,7 @@ public:
      */
     static Engine* create(Backend backend = Backend::DEFAULT,
             Platform* platform = nullptr, void* sharedGLContext = nullptr,
-            const Config* configParams = nullptr);
+            const Config* config = nullptr);
 
 #if UTILS_HAS_THREADING
     /**
