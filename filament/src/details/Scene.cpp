@@ -147,6 +147,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
                     worldAABB.halfExtent,           // WORLD_AABB_EXTENT
                     {},                             // PRIMITIVES
                     0,                              // SUMMED_PRIMITIVE_COUNT
+                    {},                             // UBO
                     scale                           // USER_DATA
             );
         }
@@ -197,28 +198,17 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
     }
 }
 
-void FScene::updateUBOs(
-        Range<uint32_t> visibleRenderables,
-        Handle<HwBufferObject> renderableUbh) noexcept {
-    FEngine::DriverApi& driver = mEngine.getDriverApi();
+void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexcept {
+    RenderableSoa& sceneData = mRenderableData;
     FRenderableManager& rcm = mEngine.getRenderableManager();
 
-    const size_t size = visibleRenderables.size() * sizeof(PerRenderableUib);
-
-    // allocate space into the command stream directly
-    void* const buffer = driver.allocatePod<PerRenderableUib>(visibleRenderables.size());
-
-    bool hasContactShadows = false;
-    auto& sceneData = mRenderableData;
+    mHasContactShadows = false;
     for (uint32_t i : visibleRenderables) {
-        mat4f const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
-        FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
-        auto ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
+        PerRenderableData& uboData = sceneData.elementAt<UBO>(i);
 
-        const size_t offset = i * sizeof(PerRenderableUib);
-
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, worldFromModelMatrix), model);
+        auto const visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
+        auto const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
+        auto const ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
 
         // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
@@ -241,41 +231,50 @@ void FScene::updateUBOs(
             m = -m;
         }
 
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, worldFromModelNormalMatrix), m);
+        uboData.worldFromModelMatrix = model;
 
-        // Note that we cast bool to uint32_t. Booleans are byte-sized in C++, but we need to
-        // initialize all 32 bits in the UBO field.
+        uboData.worldFromModelNormalMatrix = m;
 
-        hasContactShadows = hasContactShadows || visibility.screenSpaceContactShadows;
+        uboData.flagsChannels = PerRenderableData::packFlagsChannels(
+                visibility.skinning,
+                visibility.morphing,
+                visibility.screenSpaceContactShadows,
+                sceneData.elementAt<CHANNELS>(i));
 
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, flagsChannels),
-                PerRenderableUib::packFlagsChannels(
-                        visibility.skinning,
-                        visibility.morphing,
-                        visibility.screenSpaceContactShadows,
-                        sceneData.elementAt<CHANNELS>(i)));
+        uboData.morphTargetCount = sceneData.elementAt<MORPHING_BUFFER>(i).count;
 
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, morphTargetCount),
-                sceneData.elementAt<MORPHING_BUFFER>(i).count);
-
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, objectId),
-                rcm.getEntity(ri).getId()); // we could also store the entity in sceneData
+        uboData.objectId = rcm.getEntity(ri).getId();
 
         // TODO: We need to find a better way to provide the scale information per object
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, userData),
-                sceneData.elementAt<USER_DATA>(i));
+        uboData.userData = sceneData.elementAt<USER_DATA>(i);
+
+        mHasContactShadows = mHasContactShadows || visibility.screenSpaceContactShadows;
+    }
+}
+
+void FScene::updateUBOs(
+        Range<uint32_t> visibleRenderables,
+        Handle<HwBufferObject> renderableUbh) noexcept {
+    FEngine::DriverApi& driver = mEngine.getDriverApi();
+
+    // store the UBO handle
+    mRenderableViewUbh = renderableUbh;
+
+    // allocate space into the command stream directly
+    const size_t count = visibleRenderables.size();
+    PerRenderableUib* const buffer = driver.allocatePod<PerRenderableUib>(count);
+
+    // copy our data into the UBO for each visible renderable
+    auto& sceneData = mRenderableData;
+    for (uint32_t i : visibleRenderables) {
+        PerRenderableData const& uboData = sceneData.elementAt<UBO>(i);
+        buffer[i].data = uboData;
     }
 
-    // TODO: handle static objects separately
-    mHasContactShadows = hasContactShadows;
-    mRenderableViewUbh = renderableUbh;
-    driver.updateBufferObject(renderableUbh, { buffer, size }, 0);
+    // update the UBO
+    driver.updateBufferObject(renderableUbh, { buffer, count * sizeof(PerRenderableUib) }, 0);
 
+    // update skybox
     if (mSkybox) {
         mSkybox->commit(driver);
     }
@@ -430,23 +429,27 @@ void FScene::setSkybox(FSkybox* skybox) noexcept {
 }
 
 bool FScene::hasContactShadows() const noexcept {
+    // at least some renderables in the scene must have contact-shadows enabled
+    // TODO: we should refine this with only the visible ones
+    if (!mHasContactShadows) {
+        return false;
+    }
+
     // find out if at least one light has contact-shadow enabled
-    // TODO: cache the the result of this Loop in the LightManager
-    bool hasContactShadows = false;
+    // TODO: we could cache the the result of this Loop in the LightManager
     auto& lcm = mEngine.getLightManager();
     const auto *pFirst = mLightData.begin<LIGHT_INSTANCE>();
     const auto *pLast = mLightData.end<LIGHT_INSTANCE>();
-    while (pFirst != pLast && !hasContactShadows) {
+    while (pFirst != pLast) {
         if (pFirst->isValid()) {
             auto const& shadowOptions = lcm.getShadowOptions(*pFirst);
-            hasContactShadows = shadowOptions.screenSpaceContactShadows;
+            if (shadowOptions.screenSpaceContactShadows) {
+                return true;
+            }
         }
         ++pFirst;
     }
-
-    // at least some renderables in the scene must have contact-shadows enabled
-    // TODO: we should refine this with only the visible ones
-    return hasContactShadows && mHasContactShadows;
+    return false;
 }
 
 UTILS_NOINLINE

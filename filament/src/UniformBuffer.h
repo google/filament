@@ -95,7 +95,7 @@ public:
      * -----------------------------------------------
      */
 
-    // Note: we purposedly not include types that require conversion here
+    // Note: we purposely not include types that require conversion here
     // (e.g. bool and bool vectors)
     template <typename T>
     struct is_supported_type {
