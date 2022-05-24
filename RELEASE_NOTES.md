@@ -9,7 +9,6 @@ A new header is inserted each time a *tag* is created.
 
 - Java: Minor API change: rename `ssctStartTraceDistance` to `ssctShadowDistance`. [⚠️ **API Change**]
 - Java: Minor API change: rename `blendingMode` to `blendMode`. [⚠️ **API Change**]
-- iOS: Add support for headleass `SwapChain`s.
 - engine: Fix some memory leaks.
 
 ## v1.22.1
