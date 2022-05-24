@@ -85,10 +85,6 @@ struct ResourceLoader::Impl {
     bool mIgnoreBindTransform;
     std::string mGltfPath;
 
-    // This is used to calculate skinIndex when updateBoundingBoxes, so that the mapping between
-    // cgltf_node* and FFilamentInstance::Skin can be retrieved. This pointer doesn't need to be freed.
-    cgltf_skin* mSkinBaseAddress;
-
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
     UriDataCache mUriDataCache;
@@ -458,7 +454,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         if (!pImpl->mIgnoreBindTransform) {
             pImpl->mIgnoreBindTransform = asset->isInstanced();
         }
-        pImpl->mSkinBaseAddress = &gltf->skins[0];
         updateBoundingBoxes(asset);
     }
 
@@ -902,101 +897,105 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
         *result = aabb;
     };
 
-    const size_t posAttrSize = cgltf_num_components(cgltf_type_vec3);
-    const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
-    auto computeBoundingBoxSkinned = [&](const cgltf_primitive* prim, const Skin* skin, Aabb* result) {
-        Aabb aabb;
-        std::vector<mat4f> inverseGlobalTransforms(skin->targets.size());
-        for (size_t i = 0; i < skin->targets.size(); i++) {
-            auto xformable = tm.getInstance(skin->targets[i]);
-            if (xformable) {
-                inverseGlobalTransforms[i] = inverse(tm.getWorldTransform(xformable));
-            }
-        }
-        std::vector<float> verts;
-        std::vector<float> rawJoints;
-        std::vector<float> weights;
-        for (cgltf_size slot = 0; slot < prim->attributes_count; slot++) {
-            const cgltf_attribute& attr = prim->attributes[slot];
-            const cgltf_accessor* accessor = attr.data;
-            if (attr.type == cgltf_attribute_type_position &&
-                    cgltf_num_components(accessor->type) >= posAttrSize) {
-                verts.resize(accessor->count * posAttrSize);
-                cgltf_accessor_unpack_floats(accessor, &verts[0], accessor->count * posAttrSize);
-            }
-            if (attr.type == cgltf_attribute_type_joints &&
-                    cgltf_num_components(accessor->type) >= skinningAttrSize) {
-                rawJoints.resize(accessor->count * skinningAttrSize);
-                cgltf_accessor_unpack_floats(accessor, &rawJoints[0], accessor->count * skinningAttrSize);
-            }
-            if (attr.type == cgltf_attribute_type_weights &&
-                    cgltf_num_components(accessor->type) >= skinningAttrSize) {
-                weights.resize(accessor->count * skinningAttrSize);
-                cgltf_accessor_unpack_floats(accessor, &weights[0], accessor->count * skinningAttrSize);
-            }
-        }
-        std::vector<size_t> jointIndices(rawJoints.begin(), rawJoints.end());
-        auto primitiveCount = static_cast<size_t>(verts.size() / posAttrSize);
-        for (size_t i = 0; i < primitiveCount; i++) {
-            float3 point(verts[posAttrSize * i], verts[posAttrSize * i + 1], verts[posAttrSize * i + 2]);
-            mat4f tmp = mat4f(0.0f);
-            for (size_t j = 0; j < skinningAttrSize; j++) {
-                size_t jointIndex = jointIndices[skinningAttrSize * i + j];
-                float jointWeight = weights[skinningAttrSize * i + j];
-                Entity jointEntity = skin->joints[jointIndex];
-                mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
-                mat4f inverseBindMatrix = skin->inverseBindMatrices[jointIndex];
-                tmp += jointWeight * globalJointTransform * inverseBindMatrix;
-            }
-            for (const auto& inverseGlobalTransform: inverseGlobalTransforms) {
-                mat4f skinMatrix = inverseGlobalTransform * tmp;
-                if (!pImpl->mNormalizeSkinningWeights) {
-                    skinMatrix /= skinMatrix[3].w;
+    struct Prim {
+        cgltf_primitive const* prim;
+        Skin const* skin;
+        Entity node;
+    };
+
+    auto computeBoundingBoxSkinned = [&](const Prim& prim, Aabb* result) {
+        FixedCapacityVector<float3> verts;
+        FixedCapacityVector<uint4> joints;
+        FixedCapacityVector<float4> weights;
+        for (cgltf_size slot = 0, n = prim.prim->attributes_count; slot < n; ++slot) {
+            const cgltf_attribute& attr = prim.prim->attributes[slot];
+            const cgltf_accessor& accessor = *attr.data;
+            switch (attr.type) {
+            case cgltf_attribute_type_position:
+                verts = FixedCapacityVector<float3>(accessor.count);
+                cgltf_accessor_unpack_floats(&accessor, &verts.data()->x, accessor.count * 3);
+                break;
+            case cgltf_attribute_type_joints: {
+                FixedCapacityVector<float4> tmp(accessor.count);
+                cgltf_accessor_unpack_floats(&accessor, &tmp.data()->x, accessor.count * 4);
+                joints = FixedCapacityVector<uint4>(accessor.count);
+                for (size_t i = 0, n = accessor.count; i < n; ++i) {
+                    joints[i] = uint4(tmp[i]);
                 }
-                float3 skinnedPoint = (point.x * skinMatrix[0] +
-                        point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
-                aabb.min = min(aabb.min, skinnedPoint);
-                aabb.max = max(aabb.max, skinnedPoint);
+                break;
             }
+            case cgltf_attribute_type_weights:
+                weights = FixedCapacityVector<float4>(accessor.count);
+                cgltf_accessor_unpack_floats(&accessor, &weights.data()->x, accessor.count * 4);
+                break;
+            default:
+                break;
+            }
+        }
+
+        Aabb aabb;
+        TransformManager::Instance transformable = tm.getInstance(prim.node);
+        const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
+        for (size_t i = 0, n = verts.size(); i < n; i++) {
+            float3 point = verts[i];
+            mat4f tmp = mat4f(0.0f);
+            for (size_t j = 0; j < 4; j++) {
+                size_t jointIndex = joints[i][j];
+                Entity jointEntity = prim.skin->joints[jointIndex];
+                mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
+                mat4f inverseBindMatrix = prim.skin->inverseBindMatrices[jointIndex];
+                tmp += weights[i][j] * globalJointTransform * inverseBindMatrix;
+            }
+            mat4f skinMatrix = inverseGlobalTransform * tmp;
+            if (!pImpl->mNormalizeSkinningWeights) {
+                skinMatrix /= skinMatrix[3].w;
+            }
+            float3 skinnedPoint = (point.x * skinMatrix[0] +
+                    point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
+            aabb.min = min(aabb.min, skinnedPoint);
+            aabb.max = max(aabb.max, skinnedPoint);
         }
         *result = aabb;
     };
 
     // Collect all mesh primitives that we wish to find bounds for. For each mesh primitive, we also
-    // collect the skin it bound to (nullptr if not skinned) for bounds computation.
-    std::vector<std::pair<cgltf_primitive*, const Skin*>> primitives;
+    // collect the skin it is bound to (nullptr if not skinned) for bounds computation.
+    size_t primCount = 0;
     for (auto iter : nodeMap) {
-        const Skin* skin = nullptr;
-        cgltf_skin* const cgltfSkin = iter.first->skin;
-        if (cgltfSkin) {
-            // importSkins unpacked cgltfSkin into FFilamentInstance::SkinVector bijectively so that
-            // the unpacked Skin can be retrieved given cgltfSkin index
-            int skinIndex = cgltfSkin - pImpl->mSkinBaseAddress;
-            skin = &asset->mSkins[skinIndex];
+        const cgltf_mesh* mesh = iter.first->mesh;
+        if (mesh) {
+            primCount += mesh->primitives_count;
         }
-        const cgltf_mesh* cgltfMesh = iter.first->mesh;
-        if (cgltfMesh) {
-            for (cgltf_size index = 0, nprims = cgltfMesh->primitives_count; index < nprims; ++index) {
-                primitives.push_back({&cgltfMesh->primitives[index], skin});
+    }
+    auto primitives = FixedCapacityVector<Prim>::with_capacity(primCount);
+    const cgltf_skin* baseSkin = &asset->mSourceAsset->hierarchy->skins[0];
+    for (auto iter : nodeMap) {
+        const cgltf_mesh* mesh = iter.first->mesh;
+        if (mesh) {
+            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
+                primitives.push_back({&mesh->primitives[index], nullptr, iter.second});
+            }
+            if (cgltf_skin* const skin = iter.first->skin; skin) {
+                primitives.back().skin = &asset->mSkins[skin - baseSkin];
             }
         }
     }
 
     // Kick off a bounding box job for every primitive.
-    std::vector<Aabb> bounds(primitives.size());
+    FixedCapacityVector<Aabb> bounds(primitives.size());
     JobSystem* js = &pImpl->mEngine->getJobSystem();
     JobSystem::Job* parent = js->createJob();
     for (size_t i = 0; i < primitives.size(); ++i) {
         Aabb* result = &bounds[i];
-        if (pImpl->mIgnoreBindTransform || !primitives[i].second) {
-            cgltf_primitive const* prim = primitives[i].first;
+        if (pImpl->mIgnoreBindTransform || primitives[i].skin == nullptr) {
+            cgltf_primitive const* prim = primitives[i].prim;
             js->run(jobs::createJob(*js, parent, [prim, result, computeBoundingBox] {
                 computeBoundingBox(prim, result);
             }));
         } else {
-            std::pair<cgltf_primitive*, const Skin*> skinnedPrimitive = primitives[i];
-            js->run(jobs::createJob(*js, parent, [skinnedPrimitive, result, computeBoundingBoxSkinned] {
-                computeBoundingBoxSkinned(skinnedPrimitive.first, skinnedPrimitive.second, result);
+            const Prim& prim = primitives[i];
+            js->run(jobs::createJob(*js, parent, [&prim, result, computeBoundingBoxSkinned] {
+                computeBoundingBoxSkinned(prim, result);
             }));
         }
     }
