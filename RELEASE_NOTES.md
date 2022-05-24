@@ -5,14 +5,17 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.23.0
+
 - Normals on morphed models have been fixed (core Filament change)
 - Java View has several minor changes due to generated code, such as field ordering.
 - engine: Changed UBOs layout [⚠️ **Material breakage**].
 
 ## v1.22.2
 
-- Java minor API change: rename ssctStartTraceDistance to ssctShadowDistance
-- Java minor API change: rename blendingMode to blendMode
+- Java: Minor API change: rename `ssctStartTraceDistance` to `ssctShadowDistance`. [⚠️ **API Change**]
+- Java: Minor API change: rename `blendingMode` to `blendMode`. [⚠️ **API Change**]
+- engine: Fix some memory leaks.
 
 ## v1.22.1
 
