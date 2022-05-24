@@ -104,12 +104,12 @@ public class MorphTargetBuffer {
     }
 
     /**
-     * Updates positions of morph target at the index.
+     * Updates float4 positions for the given morph target.
      *
      * @param engine {@link Engine} instance
      * @param targetIndex The index of morph target to be updated
-     * @param positions Pointer to at least count positions
-     * @param count Number of position elements in positions
+     * @param positions An array with at least count*4 floats
+     * @param count Number of float4 vectors in positions to be consumed
      */
     public void setPositionsAt(@NonNull Engine engine,
             @IntRange(from = 0) int targetIndex,
@@ -122,12 +122,15 @@ public class MorphTargetBuffer {
     }
 
     /**
-     * Updates tangents of morph target at the index.
+     * Updates tangents for the given morph target.
+     *
+     * These quaternions must be represented as signed shorts, where real numbers in the [-1,+1]
+     * range multiplied by 32767.
      *
      * @param engine {@link Engine} instance
      * @param targetIndex The index of morph target to be updated
-     * @param tangents Pointer to at least count tangents
-     * @param count Number of tangent elements in tangents
+     * @param tangents An array with at least "count*4" shorts
+     * @param count number of short4 quaternions in tangents
      */
     public void setTangentsAt(@NonNull Engine engine,
             @IntRange(from = 0) int targetIndex,
@@ -140,14 +143,14 @@ public class MorphTargetBuffer {
     }
 
     /**
-     * @return number of vertex count in this {@link MorphTargetBuffer}
+     * @return number of vertices in this {@link MorphTargetBuffer}
      */
     public int getVertexCount() {
         return nGetVertexCount(mNativeObject);
     }
 
     /**
-     * @return number of target count in this {@link MorphTargetBuffer}
+     * @return number of morph targets in this {@link MorphTargetBuffer}
      */
     public int getCount() {
         return nGetCount(mNativeObject);
