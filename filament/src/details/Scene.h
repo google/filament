@@ -68,6 +68,9 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(const math::mat4& worldOriginTransform, bool shadowReceiversAreCasters) noexcept;
+
+    void prepareVisibleRenderables(utils::Range<uint32_t> visibleRenderables) noexcept;
+
     void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena,
             backend::Handle<backend::HwBufferObject> lightUbh) noexcept;
 
@@ -82,26 +85,27 @@ public:
     using VisibleMaskType = Culler::result_type;
 
     enum {
-        RENDERABLE_INSTANCE,    //  4 | instance of the Renderable component
-        WORLD_TRANSFORM,        // 16 | instance of the Transform component
-        VISIBILITY_STATE,       //  2 | visibility data of the component
-        SKINNING_BUFFER,        //  8 | bones uniform buffer handle, offset
-        MORPHING_BUFFER,        // 16 | weights uniform buffer handle, count, morph targets
-        WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
-        VISIBLE_MASK,           //  2 | each bit represents a visibility in a pass
-        CHANNELS,               //  1 | currently light channels only
-        INSTANCE_COUNT,         //  2 | draw instance count
+        RENDERABLE_INSTANCE,    //   4 | instance of the Renderable component
+        WORLD_TRANSFORM,        //  16 | instance of the Transform component
+        VISIBILITY_STATE,       //   2 | visibility data of the component
+        SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset
+        MORPHING_BUFFER,        //  16 | weights uniform buffer handle, count, morph targets
+        WORLD_AABB_CENTER,      //  12 | world-space bounding box center of the renderable
+        VISIBLE_MASK,           //   2 | each bit represents a visibility in a pass
+        CHANNELS,               //   1 | currently light channels only
+        INSTANCE_COUNT,         //   2 | draw instance count
 
         // These are not needed anymore after culling
-        LAYERS,                 //  1 | layers
-        WORLD_AABB_EXTENT,      // 12 | world-space bounding box half-extent of the renderable
+        LAYERS,                 //   1 | layers
+        WORLD_AABB_EXTENT,      //  12 | world-space bounding box half-extent of the renderable
 
         // These are temporaries and should be stored out of line
-        PRIMITIVES,             //  8 | level-of-detail'ed primitives
-        SUMMED_PRIMITIVE_COUNT, //  4 | summed visible primitive counts
+        PRIMITIVES,             //   8 | level-of-detail'ed primitives
+        SUMMED_PRIMITIVE_COUNT, //   4 | summed visible primitive counts
+        UBO,                    // 128 |
 
         // FIXME: We need a better way to handle this
-        USER_DATA,              //  4 | user data currently used to store the scale
+        USER_DATA,              //   4 | user data currently used to store the scale
     };
 
     using RenderableSoa = utils::StructureOfArrays<
@@ -118,6 +122,7 @@ public:
             math::float3,                               // WORLD_AABB_EXTENT
             utils::Slice<FRenderPrimitive>,             // PRIMITIVES
             uint32_t,                                   // SUMMED_PRIMITIVE_COUNT
+            PerRenderableData,                          // UBO
             // FIXME: We need a better way to handle this
             float                                       // USER_DATA
     >;
