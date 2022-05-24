@@ -129,11 +129,11 @@ public class MorphTargetBuffer {
      * @param tangents Pointer to at least count tangents
      * @param count Number of tangent elements in tangents
      */
-    public void setTangentsAt(@NonNull Engine engine,
+    public void setNormalsAt(@NonNull Engine engine,
             @IntRange(from = 0) int targetIndex,
-            @NonNull short[] tangents, @IntRange(from = 0, to = 125) int count) {
-        int result = nSetTangentsAt(mNativeObject, engine.getNativeObject(), targetIndex,
-                tangents, count);
+            @NonNull short[] normals, @IntRange(from = 0, to = 125) int count) {
+        int result = nSetNormalsAt(mNativeObject, engine.getNativeObject(), targetIndex,
+                normals, count);
         if (result < 0) {
             throw new BufferOverflowException();
         }
@@ -171,7 +171,7 @@ public class MorphTargetBuffer {
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nSetPositionsAt(long nativeObject, long nativeEngine, int targetIndex, float[] positions, int count);
-    private static native int nSetTangentsAt(long nativeObject, long nativeEngine, int targetIndex, short[] tangents, int count);
+    private static native int nSetNormalsAt(long nativeObject, long nativeEngine, int targetIndex, short[] normals, int count);
     private static native int nGetVertexCount(long nativeObject);
     private static native int nGetCount(long nativeObject);
 }

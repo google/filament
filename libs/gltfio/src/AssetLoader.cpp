@@ -911,11 +911,15 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                     assert_invariant(!previous || previous->component_type == accessor->component_type);
                     assert_invariant(!previous || previous->type == accessor->type);
                     previous = accessor;
-                    BufferSlot slot = { accessor };
+                    BufferSlot slot = { accessor, atype };
                     slot.morphTargetBuffer = targets;
                     slot.bufferIndex = tindex;
                     addBufferSlot(slot);
-                    break;
+                } else if (atype == cgltf_attribute_type_normal) {
+                    BufferSlot slot = { accessor, atype };
+                    slot.morphTargetBuffer = targets;
+                    slot.bufferIndex = tindex;
+                    addBufferSlot(slot);
                 }
             }
         }

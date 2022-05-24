@@ -42,6 +42,7 @@
 #include <math/quat.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include <math/norm.h>
 
 #include <tsl/robin_map.h>
 
@@ -505,13 +506,28 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             continue;
         }
         assert(slot.morphTargetBuffer);
-        if (accessor->type == cgltf_type_vec3) {
-            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                    (const float3*) data, slot.morphTargetBuffer->getVertexCount());
+        if (slot.attribute == cgltf_attribute_type_position) {
+            if (accessor->type == cgltf_type_vec3) {
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                                                       (const float3*) data, slot.morphTargetBuffer->getVertexCount());
+            } else {
+                assert_invariant(accessor->type == cgltf_type_vec4);
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                                                       (const float4*) data, slot.morphTargetBuffer->getVertexCount());
+            }
         } else {
-            assert_invariant(accessor->type == cgltf_type_vec4);
-            slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                    (const float4*) data, slot.morphTargetBuffer->getVertexCount());
+            assert_invariant(slot.attribute == cgltf_attribute_type_normal);
+            assert_invariant(accessor->type == cgltf_type_vec3);
+
+            const auto vertexCount = slot.morphTargetBuffer->getVertexCount();
+            const auto *normals = (float3 *) data;
+            std::vector<short4> packedNormals(vertexCount);
+
+            for (auto i = 0; i < vertexCount; ++i) {
+                packedNormals[i] = packSnorm16(float4(normals[i], 0.0));
+            }
+
+            slot.morphTargetBuffer->setNormalsAt(engine, slot.bufferIndex, packedNormals.data(), vertexCount);
         }
     }
 
@@ -744,43 +760,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(Params {{ pair.first }, {vb, nullptr, iter->second }});
-        }
-    }
-    // Create a job description for morph targets.
-    NodeMap& nodeMap = asset->isInstanced() ? asset->mInstances[0]->nodeMap : asset->mNodeMap;
-    for (auto iter : nodeMap) {
-        cgltf_node const* node = iter.first;
-        cgltf_mesh const* mesh = node->mesh;
-        if (UTILS_UNLIKELY(!mesh || !mesh->weights_count)) {
-            continue;
-        }
-        cgltf_primitive const* prims = mesh->primitives;
-        for (cgltf_size pindex = 0, pcount = mesh->primitives_count; pindex < pcount; ++pindex) {
-            const cgltf_primitive& prim = mesh->primitives[pindex];
-            const auto& gltfioPrim = asset->mMeshCache.at(mesh)[pindex];
-            MorphTargetBuffer* tb = gltfioPrim.targets;
-            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++ tindex) {
-                const cgltf_morph_target& target = prim.targets[tindex];
-                bool hasNormals = false;
-                for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
-                    const cgltf_attribute& attribute = target.attributes[aindex];
-                    const cgltf_accessor* accessor = attribute.data;
-                    const cgltf_attribute_type atype = attribute.type;
-                    if (atype != cgltf_attribute_type_tangent) {
-                        continue;
-                    }
-                    hasNormals = true;
-                    jobParams.emplace_back(Params { { &prim, (int) tindex },
-                                                    { nullptr, tb, (uint8_t) pindex } });
-                    break;
-                }
-                // Generate flat normals if necessary.
-                if (!hasNormals && !prim.material->unlit) {
-                    jobParams.emplace_back(Params { { &prim, (int) tindex },
-                                                    { nullptr, tb, (uint8_t) pindex } });
-                }
-            }
+            jobParams.emplace_back(Params {{ pair.first }, {vb, iter->second }});
         }
     }
 
@@ -802,11 +782,6 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
             bo->setBuffer(*mEngine, BufferDescriptor(
                     params.out.results, bo->getByteCount(), FREE_CALLBACK));
             params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
-        } else {
-            assert_invariant(params.context.tb);
-            params.context.tb->setTangentsAt(*mEngine, params.in.morphTargetIndex,
-                    params.out.results, params.out.vertexCount);
-            free(params.out.results);
         }
     }
 }

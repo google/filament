@@ -91,7 +91,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Vari
             .name("MorphTargetBuffer")
             .stageFlags({ .vertex = true })
             .add({  { "positions", Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH },
-                    { "tangents",  Type::SAMPLER_2D_ARRAY, Format::INT,   Precision::HIGH }})
+                    { "normals",   Type::SAMPLER_2D_ARRAY, Format::INT,   Precision::HIGH }})
             .build();
 
     return sib;

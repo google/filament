@@ -33,20 +33,16 @@ namespace gltfio {
  * required to do so.
  */
 struct TangentsJob {
-    static constexpr int kMorphTargetUnused = -1;
-
     // The inputs to the procedure. The prim is owned by the client, which should ensure that it
     // stays alive for the duration of the procedure.
     struct InputParams {
         const cgltf_primitive* prim;
-        const int morphTargetIndex = kMorphTargetUnused;
     };
 
     // The context of the procedure. These fields are not used by the procedure but are provided as
     // a convenience to clients. You can think of this as a scratch space for clients.
     struct Context {
         filament::VertexBuffer* const vb;
-        filament::MorphTargetBuffer* const tb;
         const uint8_t slot;
     };
 

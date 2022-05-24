@@ -182,8 +182,8 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
             count, offset);
 }
 
-void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
-        math::short4 const* tangents, size_t count, size_t offset) {
+void FMorphTargetBuffer::setNormalsAt(FEngine& engine, size_t targetIndex,
+        math::short4 const* normals, size_t count, size_t offset) {
 
     ASSERT_PRECONDITION(offset + count <= mVertexCount,
             "MorphTargetBuffer (size=%lu) overflow (count=%u, offset=%u)",
@@ -196,7 +196,7 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
 
     // We could use a pool instead of malloc() directly.
     auto* out = (short4*) malloc(size);
-    memcpy(out, tangents, sizeof(short4) * count);
+    memcpy(out, normals, sizeof(short4) * count);
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     updateDataAt(driver, mTbHandle,

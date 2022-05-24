@@ -86,7 +86,7 @@ public:
      * @param targetIndex the index of morph target to be updated.
      * @param weights pointer to at least count positions
      * @param count number of position elements in positions
-     * @see setTangentsAt
+     * @see setNormalsAt
      */
     void setPositionsAt(Engine& engine, size_t targetIndex,
             math::float3 const* positions, size_t count, size_t offset = 0);
@@ -112,12 +112,11 @@ public:
      *
      * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
-     * @param tangents pointer to at least count tangents
-     * @param count number of tangent elements in tangents
-     * @see setTangentsAt
+     * @param normals pointer to at least count normals
+     * @param count number of tangent elements in normals
      */
-    void setTangentsAt(Engine& engine, size_t targetIndex,
-            math::short4 const* tangents, size_t count, size_t offset = 0);
+    void setNormalsAt(Engine& engine, size_t targetIndex,
+            math::short4 const* normals, size_t count, size_t offset = 0);
 
     /**
      * Returns the vertex count of this MorphTargetBuffer.

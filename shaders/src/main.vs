@@ -37,11 +37,10 @@ void main() {
         #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
         if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
             #if defined(LEGACY_MORPHING)
-            vec3 normal0, normal1, normal2, normal3;
-            toTangentFrame(mesh_custom4, normal0);
-            toTangentFrame(mesh_custom5, normal1);
-            toTangentFrame(mesh_custom6, normal2);
-            toTangentFrame(mesh_custom7, normal3);
+            vec3 normal0 = mesh_custom4.xyz;
+            vec3 normal1 = mesh_custom5.xyz;
+            vec3 normal2 = mesh_custom6.xyz;
+            vec3 normal3 = mesh_custom7.xyz;
             material.worldNormal += morphingUniforms.weights[0].xyz * normal0;
             material.worldNormal += morphingUniforms.weights[1].xyz * normal1;
             material.worldNormal += morphingUniforms.weights[2].xyz * normal2;
@@ -72,11 +71,10 @@ void main() {
         #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
         if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
             #if defined(LEGACY_MORPHING)
-            vec3 normal0, normal1, normal2, normal3;
-            toTangentFrame(mesh_custom4, normal0);
-            toTangentFrame(mesh_custom5, normal1);
-            toTangentFrame(mesh_custom6, normal2);
-            toTangentFrame(mesh_custom7, normal3);
+            vec3 normal0 = mesh_custom4.xyz;
+            vec3 normal1 = mesh_custom5.xyz;
+            vec3 normal2 = mesh_custom6.xyz;
+            vec3 normal3 = mesh_custom7.xyz;
             material.worldNormal += morphingUniforms.weights[0].xyz * normal0;
             material.worldNormal += morphingUniforms.weights[1].xyz * normal1;
             material.worldNormal += morphingUniforms.weights[2].xyz * normal2;
