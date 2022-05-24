@@ -42,10 +42,11 @@ void main() {
             toTangentFrame(mesh_custom5, normal1);
             toTangentFrame(mesh_custom6, normal2);
             toTangentFrame(mesh_custom7, normal3);
-            material.worldNormal += morphingUniforms.weights[0].xyz * normal0;
-            material.worldNormal += morphingUniforms.weights[1].xyz * normal1;
-            material.worldNormal += morphingUniforms.weights[2].xyz * normal2;
-            material.worldNormal += morphingUniforms.weights[3].xyz * normal3;
+            vec3 baseNormal = material.worldNormal;
+            material.worldNormal += morphingUniforms.weights[0].xyz * (normal0 - baseNormal);
+            material.worldNormal += morphingUniforms.weights[1].xyz * (normal1 - baseNormal);
+            material.worldNormal += morphingUniforms.weights[2].xyz * (normal2 - baseNormal);
+            material.worldNormal += morphingUniforms.weights[3].xyz * (normal3 - baseNormal);
             #else
             morphNormal(material.worldNormal);
             material.worldNormal = normalize(material.worldNormal);
@@ -77,10 +78,11 @@ void main() {
             toTangentFrame(mesh_custom5, normal1);
             toTangentFrame(mesh_custom6, normal2);
             toTangentFrame(mesh_custom7, normal3);
-            material.worldNormal += morphingUniforms.weights[0].xyz * normal0;
-            material.worldNormal += morphingUniforms.weights[1].xyz * normal1;
-            material.worldNormal += morphingUniforms.weights[2].xyz * normal2;
-            material.worldNormal += morphingUniforms.weights[3].xyz * normal3;
+            vec3 baseNormal = material.worldNormal;
+            material.worldNormal += morphingUniforms.weights[0].xyz * (normal0 - baseNormal);
+            material.worldNormal += morphingUniforms.weights[1].xyz * (normal1 - baseNormal);
+            material.worldNormal += morphingUniforms.weights[2].xyz * (normal2 - baseNormal);
+            material.worldNormal += morphingUniforms.weights[3].xyz * (normal3 - baseNormal);
             #else
             morphNormal(material.worldNormal);
             material.worldNormal = normalize(material.worldNormal);
