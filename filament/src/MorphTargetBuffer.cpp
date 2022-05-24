@@ -30,9 +30,9 @@ void MorphTargetBuffer::setPositionsAt(Engine& engine, size_t targetIndex,
     upcast(this)->setPositionsAt(upcast(engine), targetIndex, positions, count, offset);
 }
 
-void MorphTargetBuffer::setTangentsAt(Engine& engine, size_t targetIndex,
-        math::short4 const* tangents, size_t count, size_t offset) {
-    upcast(this)->setTangentsAt(upcast(engine), targetIndex, tangents, count, offset);
+void MorphTargetBuffer::setNormalsAt(Engine& engine, size_t targetIndex,
+        math::short4 const* normals, size_t count, size_t offset) {
+    upcast(this)->setNormalsAt(upcast(engine), targetIndex, normals, count, offset);
 }
 
 size_t MorphTargetBuffer::getVertexCount() const noexcept {

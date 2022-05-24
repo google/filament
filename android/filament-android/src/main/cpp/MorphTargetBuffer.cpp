@@ -85,15 +85,15 @@ Java_com_google_android_filament_MorphTargetBuffer_nSetPositionsAt(JNIEnv* env, 
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_MorphTargetBuffer_nSetTangentsAt(JNIEnv* env, jclass,
+Java_com_google_android_filament_MorphTargetBuffer_nSetNormalssAt(JNIEnv* env, jclass,
         jlong nativeObject, jlong nativeEngine,
-        jint targetIndex, jshortArray tangents, jint count) {
+        jint targetIndex, jshortArray normals, jint count) {
     MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeObject;
     Engine *engine = (Engine *) nativeEngine;
-    jshort* data = env->GetShortArrayElements(tangents, NULL);
-    morphTargetBuffer->setTangentsAt(*engine, targetIndex,
-            (math::short4*) data, size_t(count));
-    env->ReleaseShortArrayElements(tangents, data, JNI_ABORT);
+    jshort* data = env->GetShortArrayElements(normals, NULL);
+    morphTargetBuffer->setNormalsAt(*engine, targetIndex,
+            (math::short4*) normals, size_t(count));
+    env->ReleaseShortArrayElements(normals, data, JNI_ABORT);
     return 0;
 }
 

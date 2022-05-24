@@ -101,10 +101,8 @@ void morphNormal(inout vec3 n) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
             texcoord.z = int(i);
-            ivec4 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0);
-            vec3 normal;
-            toTangentFrame(float4(tangent) * (1.0 / 32767.0), normal);
-            n += w * normal;
+            ivec4 normal = texelFetch(morphTargetBuffer_normals, texcoord, 0);
+            n += w * (float4(normal) * (1.0 / 32767.0)).xyz;
         }
     }
 }

@@ -27,8 +27,6 @@ using namespace filament::math;
 // This procedure is designed to run in an isolated job.
 void TangentsJob::run(Params* params) {
     const cgltf_primitive& prim = *params->in.prim;
-    const int morphTargetIndex = params->in.morphTargetIndex;
-    const bool isMorphTarget = morphTargetIndex != kMorphTargetUnused;
 
     // Extract the vertex count from the first attribute. All attributes must have the same count.
     assert(prim.attributes_count > 0);
@@ -46,7 +44,6 @@ void TangentsJob::run(Params* params) {
     std::unique_ptr<float3[]> unpackedPositions;
     std::unique_ptr<float2[]> unpackedTexCoords;
     std::unique_ptr<uint3[]> unpackedTriangles;
-    std::unique_ptr<float3[]> morphDeltas;
 
     // Build a mapping from cgltf_attribute_type to cgltf_accessor.
     const int NUM_ATTRIBUTES = 8;
@@ -62,25 +59,9 @@ void TangentsJob::run(Params* params) {
             baseAccessors[attr.type] = attr.data;
         }
     }
-    if (isMorphTarget) {
-        const cgltf_morph_target& morphTarget = prim.targets[morphTargetIndex];
-        for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-            const cgltf_attribute& attr = morphTarget.attributes[aindex];
-            if (attr.index == 0) {
-                assert(baseAccessors[attr.type] &&
-                        "Morph target data has no corresponding base vertex data.");
-                morphTargetAccessors[attr.type] = attr.data;
-            }
-        }
-    }
 
     geometry::SurfaceOrientation::Builder sob;
     sob.vertexCount(vertexCount);
-
-    // Allocate scratch space to store morph deltas.
-    if (isMorphTarget) {
-        morphDeltas.reset(new float3[vertexCount]);
-    }
 
     // Convert normals into packed floats.
     if (auto baseNormalsInfo = baseAccessors[cgltf_attribute_type_normal]; baseNormalsInfo) {
@@ -88,12 +69,6 @@ void TangentsJob::run(Params* params) {
         assert(baseNormalsInfo->type == cgltf_type_vec3);
         unpackedNormals.reset(new float3[vertexCount]);
         cgltf_accessor_unpack_floats(baseNormalsInfo, &unpackedNormals[0].x, vertexCount * 3);
-        if (auto mtNormalsInfo = morphTargetAccessors[cgltf_attribute_type_normal]) {
-            cgltf_accessor_unpack_floats(mtNormalsInfo, &morphDeltas[0].x, vertexCount * 3);
-            for (cgltf_size i = 0; i < vertexCount; i++) {
-                unpackedNormals[i] += morphDeltas[i];
-            }
-        }
         sob.normals(unpackedNormals.get());
     }
 
@@ -102,12 +77,6 @@ void TangentsJob::run(Params* params) {
         assert(baseTangentsInfo->count == vertexCount);
         unpackedTangents.reset(new float4[vertexCount]);
         cgltf_accessor_unpack_floats(baseTangentsInfo, &unpackedTangents[0].x, vertexCount * 4);
-        if (auto mtTangentsInfo = morphTargetAccessors[cgltf_attribute_type_tangent]) {
-            cgltf_accessor_unpack_floats(mtTangentsInfo, &morphDeltas[0].x, vertexCount * 3);
-            for (cgltf_size i = 0; i < vertexCount; i++) {
-                unpackedTangents[i].xyz += morphDeltas[i];
-            }
-        }
         sob.tangents(unpackedTangents.get());
     }
 
@@ -116,12 +85,6 @@ void TangentsJob::run(Params* params) {
         unpackedPositions.reset(new float3[vertexCount]);
         cgltf_accessor_unpack_floats(basePosInfo, &unpackedPositions[0].x, vertexCount * 3);
         sob.positions(unpackedPositions.get());
-        if (auto mtPositionsInfo = morphTargetAccessors[cgltf_attribute_type_position]) {
-            cgltf_accessor_unpack_floats(mtPositionsInfo, &morphDeltas[0].x, vertexCount * 3);
-            for (cgltf_size i = 0; i < vertexCount; i++) {
-                unpackedPositions[i] += morphDeltas[i];
-            }
-        }
     }
 
     const size_t triangleCount = prim.indices ? (prim.indices->count / 3) : (vertexCount / 3);
