@@ -26,6 +26,8 @@
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
 
+#include "BufferPoolAllocator.h"
+
 #include <filament/Box.h>
 #include <filament/Scene.h>
 
@@ -219,6 +221,7 @@ private:
     LightSoa mLightData;
     backend::Handle<backend::HwBufferObject> mRenderableViewUbh; // This is actually owned by the view.
     bool mHasContactShadows = false;
+    BufferPoolAllocator<3> mBufferPoolAllocator;
 };
 
 FILAMENT_UPCAST(Scene)
