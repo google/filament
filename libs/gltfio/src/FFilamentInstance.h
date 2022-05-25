@@ -26,6 +26,7 @@
 #include <math/mat4.h>
 
 #include <tsl/robin_map.h>
+#include <tsl/robin_set.h>
 
 #include <vector>
 
@@ -49,13 +50,12 @@ struct Skin {
     // corresponds to a single bone. We considered using the ECS to store these, but this would be
     // complicated because a single node might be used as a bone in more than one skin, and its
     // inverse bind matrix might be unique in each of these skins.
-    std::vector<filament::math::mat4f> inverseBindMatrices;
-    std::vector<utils::Entity> joints;
+    utils::FixedCapacityVector<filament::math::mat4f> inverseBindMatrices;
+    utils::FixedCapacityVector<utils::Entity> joints;
 
     // The set of all nodes that are influenced by this skin.
     // This is initially gleaned from the glTF file using the "skin" attribute of each node.
-    // TODO: consider using tsl::robin_set to allow dynamic attachment / detachment.
-    std::vector<utils::Entity> targets;
+    tsl::robin_set<utils::Entity> targets;
 };
 
 struct VariantMapping {
