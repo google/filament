@@ -1186,3 +1186,4 @@ Filament.getSupportedFormatSuffix = function(desiredFormats) {
     }
     return '';
 }
+
