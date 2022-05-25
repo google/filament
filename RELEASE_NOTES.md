@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- gltfio: support skinning with bones that do not belong to any scene
+- gltfio: add attachSkin / detachSkin method to FilamentAsset
+
 ## v1.23.0
 
 - Normals on morphed models have been fixed (core Filament change)

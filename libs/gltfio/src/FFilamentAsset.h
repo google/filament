@@ -212,6 +212,10 @@ struct FFilamentAsset : public FilamentAsset {
 
     const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
 
+    void attachSkin(size_t skinIndex, Entity target) noexcept;
+
+    void detachSkin(size_t skinIndex, Entity target) noexcept;
+
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
     size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
