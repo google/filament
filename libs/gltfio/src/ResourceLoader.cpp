@@ -130,7 +130,7 @@ void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dst
         if (node.skin) {
             int skinIndex = node.skin - &gltf->skins[0];
             Entity entity = nodeMap.at(&node);
-            dstSkins[skinIndex].targets.push_back(entity);
+            dstSkins[skinIndex].targets.insert(entity);
         }
     }
     for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
@@ -141,23 +141,16 @@ void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dst
         }
 
         // Build a list of transformables for this skin, one for each joint.
-        // TODO: We've seen models with joint nodes that do not belong to the scene's node graph.
-        // e.g. BrainStem after Draco compression. That's why we have a fallback here. AssetManager
-        // should maybe create an Entity for every glTF node, period. (regardless of hierarchy)
-        // https://github.com/CesiumGS/gltf-pipeline/issues/532
-        dstSkin.joints.resize(srcSkin.joints_count);
+        dstSkin.joints = FixedCapacityVector<Entity>(srcSkin.joints_count);
         for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
             auto iter = nodeMap.find(srcSkin.joints[i]);
-            if (iter == nodeMap.end()) {
-                dstSkin.joints[i] = nodeMap.begin()->second;
-            } else {
-                dstSkin.joints[i] = iter->second;
-            }
+            assert_invariant(iter != nodeMap.end());
+            dstSkin.joints[i] = iter->second;
         }
 
         // Retain a copy of the inverse bind matrices because the source blob could be evicted later.
         const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
-        dstSkin.inverseBindMatrices.resize(srcSkin.joints_count);
+        dstSkin.inverseBindMatrices = FixedCapacityVector<mat4f>(srcSkin.joints_count);
         if (srcMatrices) {
             auto dstMatrices = (uint8_t*) dstSkin.inverseBindMatrices.data();
             uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
