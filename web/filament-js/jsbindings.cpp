@@ -1803,6 +1803,17 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return retval;
     }), allow_raw_pointers())
 
+    .function("getSkinNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
+        std::vector<std::string> names(self->getSkinCount());
+        for (size_t i = 0; i < names.size(); ++i) {
+            names[i] = self->getSkinNameAt(i);
+        }
+        return names;
+    }), allow_raw_pointers())
+
+    .function("attachSkin", &FilamentAsset::attachSkin)
+    .function("detachSkin", &FilamentAsset::detachSkin)
+
     .function("getBoundingBox", &FilamentAsset::getBoundingBox)
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getName(entity));
