@@ -120,6 +120,10 @@ export class Texture {
     public static Builder(): Texture$Builder;
     public setImage(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
     public setImageCube(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor) : void;
+    public getWidth(engine: Engine, level: number) : number;
+    public getHeight(engine: Engine, level: number) : number;
+    public getDepth(engine: Engine, level: number) : number;
+    public getLevels(engine: Engine) : number;
     public generateMipmaps(engine: Engine) : void;
 }
 

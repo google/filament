@@ -971,7 +971,7 @@ class_<RenderableManager>("RenderableManager")
         }
         self->setBones(instance, bones.data(), bones.size(), offset);
     }), allow_raw_pointers())
-    
+
     .function("setMorphWeights", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, emscripten::val weights), {
         auto nfloats = weights["length"].as<size_t>();
@@ -1289,6 +1289,22 @@ class_<Texture>("Texture")
         uint32_t faceSize = pbd.pbd->size / 6;
         Texture::FaceOffsets offsets(faceSize);
         self->setImage(*engine, level, std::move(*pbd.pbd), offsets);
+    }), allow_raw_pointers())
+    .function("_getWidth", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine, uint8_t level), {
+        return self->getWidth(level);
+    }), allow_raw_pointers())
+    .function("_getHeight", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine, uint8_t level), {
+        return self->getHeight(level);
+    }), allow_raw_pointers())
+    .function("_getDepth", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine, uint8_t level), {
+        return self->getDepth(level);
+    }), allow_raw_pointers())
+    .function("_getLevels", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine), {
+        return self->getLevels();
     }), allow_raw_pointers());
 
 class_<TexBuilder>("Texture$Builder")

@@ -611,6 +611,22 @@ Filament.loadClassExtensions = function() {
         pbd.delete();
     }
 
+    Filament.Texture.prototype.getWidth = function(engine, level = 0) {
+        return this._getWidth(engine, level);
+    }
+
+    Filament.Texture.prototype.getHeight = function(engine, level = 0) {
+        return this._getHeight(engine, level);
+    }
+
+    Filament.Texture.prototype.getDepth = function(engine, level = 0) {
+        return this._getDepth(engine, level);
+    }
+
+    Filament.Texture.prototype.getLevels = function(engine) {
+        return this._getLevels(engine);
+    }
+
     Filament.SurfaceOrientation$Builder.prototype.normals = function(buffer, stride = 0) {
         buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         this.norPointer = Filament._malloc(buffer.byteLength);
