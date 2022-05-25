@@ -131,6 +131,7 @@ set(SRCS
 
 set(PRIVATE_HDRS
         src/Allocators.h
+        src/BufferPoolAllocator.h
         src/ColorSpace.h
         src/Culler.h
         src/DFG.h

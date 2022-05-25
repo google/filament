@@ -53,6 +53,7 @@ RenderPass::~RenderPass() noexcept = default;
 RenderPass::Command* RenderPass::append(size_t count) noexcept {
     // this is like a "in-place" realloc(). Works only with LinearAllocator.
     Command* const curr = mCommandArena.alloc<Command>(count);
+    assert_invariant(curr);
     assert_invariant(mCommandBegin == nullptr || curr == mCommandEnd);
     if (mCommandBegin == nullptr) {
         mCommandBegin = mCommandEnd = curr;

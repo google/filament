@@ -25,6 +25,8 @@
 #include "details/IndirectLight.h"
 #include "details/Skybox.h"
 
+#include "BufferPoolAllocator.h"
+
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/Range.h>
@@ -260,19 +262,35 @@ void FScene::updateUBOs(
     // store the UBO handle
     mRenderableViewUbh = renderableUbh;
 
-    // allocate space into the command stream directly
+    // don't allocate more than 16 KiB directly into the render stream
+    static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
     const size_t count = visibleRenderables.size();
-    PerRenderableUib* const buffer = driver.allocatePod<PerRenderableUib>(count);
+    PerRenderableUib* buffer = [&]{
+        if (count >= MAX_STREAM_ALLOCATION_COUNT) {
+            // use the heap allocator
+            return (PerRenderableUib*)mBufferPoolAllocator.get(count * sizeof(PerRenderableUib));
+        } else {
+            // allocate space into the command stream directly
+            return driver.allocatePod<PerRenderableUib>(count);
+        }
+    }();
 
     // copy our data into the UBO for each visible renderable
-    auto& sceneData = mRenderableData;
+    PerRenderableData const* const uboData = mRenderableData.data<UBO>();
     for (uint32_t i : visibleRenderables) {
-        PerRenderableData const& uboData = sceneData.elementAt<UBO>(i);
-        buffer[i].data = uboData;
+        buffer[i].data = uboData[i];
     }
 
     // update the UBO
-    driver.updateBufferObject(renderableUbh, { buffer, count * sizeof(PerRenderableUib) }, 0);
+    driver.updateBufferObject(renderableUbh, {
+            buffer, count * sizeof(PerRenderableUib),
+            +[](void* p, size_t s, void* user) {
+                if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableUib)) {
+                    FScene* const that = static_cast<FScene*>(user);
+                    that->mBufferPoolAllocator.put(p);
+                }
+            }, this
+    }, 0);
 
     // update skybox
     if (mSkybox) {
