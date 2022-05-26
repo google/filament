@@ -24,11 +24,7 @@
 
 #include <utils/Log.h>
 
-#if GLTFIO_LITE
-#include "gltfresources_lite.h"
-#else
 #include "gltfresources.h"
-#endif
 
 using namespace filament;
 using namespace filament::math;
@@ -76,22 +72,6 @@ public:
     Engine* mEngine;
 };
 
-#if GLTFIO_LITE
-
-#define CREATE_MATERIAL(name) Material::Builder() \
-    .package(GLTFRESOURCES_LITE_ ## name ## _DATA, GLTFRESOURCES_LITE_ ## name ## _SIZE) \
-    .build(*mEngine);
-
-#else
-
-#define CREATE_MATERIAL(name) Material::Builder() \
-    .package(GLTFRESOURCES_ ## name ## _DATA, GLTFRESOURCES_ ## name ## _SIZE) \
-    .build(*mEngine);
-
-#endif
-
-#define MATINDEX(shading, alpha, sheen, transmit, volume) (volume ? 11 : (transmit ? 10 : (sheen ? 9 : (int(shading) + 3 * int(alpha)))))
-
 UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
     unsigned char texels[4] = {};
     mDummyTexture = Texture::Builder()
@@ -119,6 +99,12 @@ void UbershaderLoader::destroyMaterials() {
     mEngine->destroy(mDummyTexture);
 }
 
+#define CREATE_MATERIAL(name) Material::Builder() \
+    .package(GLTFRESOURCES_ ## name ## _DATA, GLTFRESOURCES_ ## name ## _SIZE) \
+    .build(*mEngine);
+
+#define MATINDEX(shading, alpha, sheen, transmit, volume) (volume ? 11 : (transmit ? 10 : (sheen ? 9 : (int(shading) + 3 * int(alpha)))))
+
 Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
     const ShadingMode shading = config.unlit ? UNLIT :
             (config.useSpecularGlossiness ? SPECULAR_GLOSSINESS : LIT);
@@ -127,15 +113,8 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
         return mMaterials[matindex];
     }
     switch (matindex) {
-        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_OPAQUE_DATA)
         case MATINDEX(LIT, AlphaMode::OPAQUE, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
-        #endif
-
-        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_FADE_DATA)
         case MATINDEX(LIT, AlphaMode::BLEND, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
-        #endif
-
-        #if !GLTFIO_LITE
         case MATINDEX(LIT, AlphaMode::MASK, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
         case MATINDEX(UNLIT, AlphaMode::OPAQUE, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_OPAQUE); break;
         case MATINDEX(UNLIT, AlphaMode::MASK, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_MASKED); break;
@@ -146,7 +125,6 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
         case MATINDEX(0, 0, false, true, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_TRANSMISSION); break;
         case MATINDEX(0, 0, true, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_SHEEN); break;
         case MATINDEX(0, 0, false, false, true): mMaterials[matindex] = CREATE_MATERIAL(LIT_VOLUME); break;
-        #endif
     }
     if (mMaterials[matindex] == nullptr) {
         slog.w << "Unsupported glTF material configuration; falling back to LIT_OPAQUE." << io::endl;
@@ -212,8 +190,6 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
             MaterialInstance::TransparencyMode::TWO_PASSES_TWO_SIDES :
             MaterialInstance::TransparencyMode::DEFAULT);
 
-    #if !GLTFIO_LITE
-
     // Initially, assume that the clear coat texture can be honored.  This is changed to false when
     // running into a sampler count limitation. TODO: check if these constraints can now be relaxed.
     bool clearCoatNeedsTexture = true;
@@ -262,17 +238,6 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
                     getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
         }
     }
-    #else
-
-    // In the GLTFIO_LITE configuration we do not support UV matrices, clear coat, sheen, specular
-    // glossiness, or transmission. For more details, see `gltflite.mat.in`. To configure a custom
-    // set of features, create your own MaterialProvider class, perhaps using UbershaderLoader as a
-    // starting point.
-    const bool clearCoatNeedsTexture = false;
-
-    const bool volumeThicknessNeedsTexture = false;
-
-    #endif
 
     TextureSampler sampler;
     mi->setParameter("normalMap", mDummyTexture, sampler);
