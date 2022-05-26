@@ -78,7 +78,8 @@ EMSCRIPTEN_BINDINGS(my_module) {
   constant("SPV_ENV_VULKAN_1_1_SPIRV_1_4", static_cast<uint32_t>(SPV_ENV_VULKAN_1_1_SPIRV_1_4));
   constant("SPV_ENV_UNIVERSAL_1_5", static_cast<uint32_t>(SPV_ENV_UNIVERSAL_1_5));
   constant("SPV_ENV_VULKAN_1_2", static_cast<uint32_t>(SPV_ENV_VULKAN_1_2));
-
+  constant("SPV_ENV_UNIVERSAL_1_6",
+           static_cast<uint32_t>(SPV_ENV_UNIVERSAL_1_6));
 
   constant("SPV_BINARY_TO_TEXT_OPTION_NONE", static_cast<uint32_t>(SPV_BINARY_TO_TEXT_OPTION_NONE));
   constant("SPV_BINARY_TO_TEXT_OPTION_PRINT", static_cast<uint32_t>(SPV_BINARY_TO_TEXT_OPTION_PRINT));

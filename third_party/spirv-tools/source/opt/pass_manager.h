@@ -54,7 +54,7 @@ class PassManager {
   // Adds an externally constructed pass.
   void AddPass(std::unique_ptr<Pass> pass);
   // Uses the argument |args| to construct a pass instance of type |T|, and adds
-  // the pass instance to this pass manger. The pass added will use this pass
+  // the pass instance to this pass manager. The pass added will use this pass
   // manager's message consumer.
   template <typename T, typename... Args>
   void AddPass(Args&&... args);
@@ -70,7 +70,7 @@ class PassManager {
   // Runs all passes on the given |module|. Returns Status::Failure if errors
   // occur when processing using one of the registered passes. All passes
   // registered after the error-reporting pass will be skipped. Returns the
-  // corresponding Status::Success if processing is succesful to indicate
+  // corresponding Status::Success if processing is successful to indicate
   // whether changes are made to the module.
   //
   // After running all the passes, they are removed from the list.

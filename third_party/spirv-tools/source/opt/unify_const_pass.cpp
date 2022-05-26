@@ -151,7 +151,7 @@ Pass::Status UnifyConstantPass::Process() {
       // 'SpecId' decoration and all of them should be treated as unique.
       // 'SpecId' is not applicable to SpecConstants defined with
       // OpSpecConstant{Op|Composite}, their values are not necessary to be
-      // unique. When all the operands/compoents are the same between two
+      // unique. When all the operands/components are the same between two
       // OpSpecConstant{Op|Composite} results, their result values must be the
       // same so are unifiable.
       case SpvOp::SpvOpSpecConstantOp:

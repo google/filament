@@ -160,6 +160,13 @@ class TypeManager {
 
   uint32_t GetFloatTypeId() { return GetTypeInstruction(GetFloatType()); }
 
+  Type* GetDoubleType() {
+    Float float_type(64);
+    return GetRegisteredType(&float_type);
+  }
+
+  uint32_t GetDoubleTypeId() { return GetTypeInstruction(GetDoubleType()); }
+
   Type* GetUIntVectorType(uint32_t size) {
     Vector vec_type(GetUIntType(), size);
     return GetRegisteredType(&vec_type);

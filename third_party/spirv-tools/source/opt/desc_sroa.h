@@ -115,10 +115,11 @@ class DescriptorScalarReplacement : public Pass {
                                    const bool is_old_var_struct,
                                    Instruction* old_var_type);
 
-  // Create a new OpDecorate instruction by cloning |old_decoration|. The new
-  // OpDecorate instruction will be used for a variable whose id is
-  // |new_var_ptr_type_id|. If |old_decoration| is a decoration for a binding,
-  // the new OpDecorate instruction will have |new_binding| as its binding.
+  // Create a new OpDecorate(String) instruction by cloning |old_decoration|.
+  // The new OpDecorate(String) instruction will be used for a variable whose id
+  // is |new_var_ptr_type_id|. If |old_decoration| is a decoration for a
+  // binding, the new OpDecorate(String) instruction will have |new_binding| as
+  // its binding.
   void CreateNewDecorationForNewVariable(Instruction* old_decoration,
                                          uint32_t new_var_id,
                                          uint32_t new_binding);
@@ -131,7 +132,7 @@ class DescriptorScalarReplacement : public Pass {
 
   // A map from an OpVariable instruction to the set of variables that will be
   // used to replace it. The entry |replacement_variables_[var][i]| is the id of
-  // a variable that will be used in the place of the the ith element of the
+  // a variable that will be used in the place of the ith element of the
   // array |var|. If the entry is |0|, then the variable has not been
   // created yet.
   std::map<Instruction*, std::vector<uint32_t>> replacement_variables_;

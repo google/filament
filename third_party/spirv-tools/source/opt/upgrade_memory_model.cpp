@@ -20,6 +20,7 @@
 #include "source/opt/ir_context.h"
 #include "source/spirv_constant.h"
 #include "source/util/make_unique.h"
+#include "source/util/string_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -58,9 +59,7 @@ void UpgradeMemoryModel::UpgradeMemoryModelInstruction() {
       std::initializer_list<Operand>{
           {SPV_OPERAND_TYPE_CAPABILITY, {SpvCapabilityVulkanMemoryModelKHR}}}));
   const std::string extension = "SPV_KHR_vulkan_memory_model";
-  std::vector<uint32_t> words(extension.size() / 4 + 1, 0);
-  char* dst = reinterpret_cast<char*>(words.data());
-  strncpy(dst, extension.c_str(), extension.size());
+  std::vector<uint32_t> words = spvtools::utils::MakeVector(extension);
   context()->AddExtension(
       MakeUnique<Instruction>(context(), SpvOpExtension, 0, 0,
                               std::initializer_list<Operand>{
@@ -85,8 +84,7 @@ void UpgradeMemoryModel::UpgradeInstructions() {
         if (ext_inst == GLSLstd450Modf || ext_inst == GLSLstd450Frexp) {
           auto import =
               get_def_use_mgr()->GetDef(inst->GetSingleWordInOperand(0u));
-          if (reinterpret_cast<char*>(import->GetInOperand(0u).words.data()) ==
-              std::string("GLSL.std.450")) {
+          if (import->GetInOperand(0u).AsString() == "GLSL.std.450") {
             UpgradeExtInst(inst);
           }
         }

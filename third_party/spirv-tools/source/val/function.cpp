@@ -57,7 +57,7 @@ spv_result_t Function::RegisterFunctionParameter(uint32_t parameter_id,
                                                  uint32_t type_id) {
   assert(current_block_ == nullptr &&
          "RegisterFunctionParameter can only be called when parsing the binary "
-         "ouside of a block");
+         "outside of a block");
   // TODO(umar): Validate function parameter type order and count
   // TODO(umar): Use these variables to validate parameter type
   (void)parameter_id;
@@ -130,7 +130,7 @@ spv_result_t Function::RegisterBlock(uint32_t block_id, bool is_definition) {
     undefined_blocks_.erase(block_id);
     current_block_ = &inserted_block->second;
     ordered_blocks_.push_back(current_block_);
-  } else if (success) {  // Block doesn't exsist but this is not a definition
+  } else if (success) {  // Block doesn't exist but this is not a definition
     undefined_blocks_.insert(block_id);
   }
 

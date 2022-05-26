@@ -1,0 +1,9 @@
+               OpCapability Kernel
+               OpCapability Addresses
+               OpCapability Linkage
+               OpMemoryModel Logical OpenCL
+               OpName %Aptr "Aptr"
+               OpTypeForwardPointer %Aptr Function
+       %uint = OpTypeInt 32 0
+          %A = OpTypeStruct %Aptr %uint
+  %Aptr = OpTypePointer Function %A

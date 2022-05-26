@@ -165,7 +165,7 @@ bool LoopFusion::AreCompatible() {
 
   // Check adjacency, |loop_0_| should come just before |loop_1_|.
   // There is always at least one block between loops, even if it's empty.
-  // We'll check at most 2 preceeding blocks.
+  // We'll check at most 2 preceding blocks.
 
   auto pre_header_1 = loop_1_->GetPreHeaderBlock();
 
@@ -712,7 +712,7 @@ void LoopFusion::Fuse() {
 
   ld->RemoveLoop(loop_1_);
 
-  // Kill unnessecary instructions and remove all empty blocks.
+  // Kill unnecessary instructions and remove all empty blocks.
   for (auto inst : instr_to_delete) {
     context_->KillInst(inst);
   }

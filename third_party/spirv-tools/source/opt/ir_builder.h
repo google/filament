@@ -487,6 +487,15 @@ class InstructionBuilder {
     return AddInstruction(std::move(new_inst));
   }
 
+  Instruction* AddVariable(uint32_t type_id, uint32_t storage_class) {
+    std::vector<Operand> operands;
+    operands.push_back({SPV_OPERAND_TYPE_ID, {storage_class}});
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), SpvOpVariable, type_id,
+                        GetContext()->TakeNextId(), operands));
+    return AddInstruction(std::move(new_inst));
+  }
+
   Instruction* AddStore(uint32_t ptr_id, uint32_t obj_id) {
     std::vector<Operand> operands;
     operands.push_back({SPV_OPERAND_TYPE_ID, {ptr_id}});

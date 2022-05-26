@@ -23,6 +23,7 @@
 #include "source/opt/log.h"
 #include "source/opt/reflect.h"
 #include "source/util/make_unique.h"
+#include "source/util/string_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -234,6 +235,7 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     DefineParameterlessCase(PipeStorage);
     DefineParameterlessCase(NamedBarrier);
     DefineParameterlessCase(AccelerationStructureNV);
+    DefineParameterlessCase(RayQueryKHR);
 #undef DefineParameterlessCase
     case Type::kInteger:
       typeInst = MakeUnique<Instruction>(
@@ -349,11 +351,8 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     }
     case Type::kOpaque: {
       const Opaque* opaque = type->AsOpaque();
-      size_t size = opaque->name().size();
       // Convert to null-terminated packed UTF-8 string.
-      std::vector<uint32_t> words(size / 4 + 1, 0);
-      char* dst = reinterpret_cast<char*>(words.data());
-      strncpy(dst, opaque->name().c_str(), size);
+      std::vector<uint32_t> words = spvtools::utils::MakeVector(opaque->name());
       typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeOpaque, 0, id,
           std::initializer_list<Operand>{
@@ -529,6 +528,7 @@ Type* TypeManager::RebuildType(const Type& type) {
     DefineNoSubtypeCase(PipeStorage);
     DefineNoSubtypeCase(NamedBarrier);
     DefineNoSubtypeCase(AccelerationStructureNV);
+    DefineNoSubtypeCase(RayQueryKHR);
 #undef DefineNoSubtypeCase
     case Type::kVector: {
       const Vector* vec_ty = type.AsVector();
@@ -781,8 +781,7 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
       }
     } break;
     case SpvOpTypeOpaque: {
-      const uint32_t* data = inst.GetInOperand(0).words.data();
-      type = new Opaque(reinterpret_cast<const char*>(data));
+      type = new Opaque(inst.GetInOperand(0).AsString());
     } break;
     case SpvOpTypePointer: {
       uint32_t pointee_type_id = inst.GetSingleWordInOperand(1);

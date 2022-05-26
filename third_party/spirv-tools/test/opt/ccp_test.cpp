@@ -582,6 +582,35 @@ TEST_F(CCPTest, SkipSpecConstantInstrucitons) {
   EXPECT_EQ(std::get<1>(res), Pass::Status::SuccessWithoutChange);
 }
 
+TEST_F(CCPTest, FoldConstantCompositeInstrucitonsWithSpecConst) {
+  const std::string spv_asm = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %1 "main"
+               OpExecutionMode %1 OriginUpperLeft
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %bool = OpTypeBool
+     %v3bool = OpTypeVector %bool 3
+  %_struct_8 = OpTypeStruct %v3bool
+       %true = OpConstantTrue %bool
+; CHECK: [[spec_const:%\w+]] = OpSpecConstantComposite %v3bool
+         %11 = OpSpecConstantComposite %v3bool %true %true %true
+         %12 = OpConstantComposite %_struct_8 %11
+; CHECK: OpFunction
+          %1 = OpFunction %void None %4
+         %29 = OpLabel
+         %31 = OpCompositeExtract %v3bool %12 0
+; CHECK: OpCompositeExtract %bool [[spec_const]] 0
+         %32 = OpCompositeExtract %bool %31 0
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  auto result = SinglePassRunAndMatch<CCPPass>(spv_asm, true);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+
 TEST_F(CCPTest, UpdateSubsequentPhisToVarying) {
   const std::string text = R"(
 OpCapability Shader
@@ -1234,6 +1263,86 @@ OpFunctionEnd
 
   SinglePassRunAndCheck<CCPPass>(text, text, false);
 }
+
+// Test from https://github.com/KhronosGroup/SPIRV-Tools/issues/4462.
+// The test was causing a lateral movement in the constant lattice, which was
+// not being detected as varying by CCP. In this test, FClamp is evaluated
+// twice.  On the first evaluation, if computes FClamp(0.5, 0.5, -1) which
+// returns -1.  On the second evaluation, it computes FClamp(0.5, 0.5, VARYING)
+// which returns 0.5.
+//
+// Both fold() computations are correct given the semantics of FClamp() but
+// this causes a lateral transition in the constant lattice which was not being
+// considered VARYING by CCP.
+TEST_F(CCPTest, LateralLatticeTransition) {
+  const std::string text = R"(OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragCoord %outColor
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpName %outColor "outColor"
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorate %outColor Location 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+  %float_0_5 = OpConstant %float 0.5
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+    %float_0 = OpConstant %float 0
+       %bool = OpTypeBool
+   %float_n1 = OpConstant %float -1
+    %float_1 = OpConstant %float 1
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+   %outColor = OpVariable %_ptr_Output_v4float Output
+
+; This constant is created during the first evaluation of the CompositeConstruct
+; CHECK: [[new_constant:%\d+]] = OpConstantComposite %v4float %float_n1 %float_0_5 %float_0 %float_1
+
+       %main = OpFunction %void None %6
+         %19 = OpLabel
+         %20 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+         %21 = OpLoad %float %20
+         %22 = OpFOrdLessThan %bool %21 %float_0
+               OpSelectionMerge %23 None
+               OpBranchConditional %22 %24 %25
+         %24 = OpLabel
+               OpBranch %23
+         %25 = OpLabel
+               OpBranch %26
+         %26 = OpLabel
+               OpBranch %23
+         %23 = OpLabel
+         %27 = OpPhi %float %float_n1 %24 %float_0_5 %26
+         %28 = OpExtInst %float %1 FClamp %float_0_5 %float_0_5 %27
+
+         ; On first evaluation, the result from FClamp will return 0.5.
+         ; But on second evaluation, FClamp should return VARYING.  Check
+         ; that CCP is not keeping the first result.
+         ; CHECK-NOT: %29 = OpCompositeConstruct %v4float %float_0_5 %float_0_5 %float_0 %float_1
+         %29 = OpCompositeConstruct %v4float %28 %float_0_5 %float_0 %float_1
+
+         ; CHECK-NOT: OpCopyObject %v4float [[new_constant]]
+         %42 = OpCopyObject %v4float %29
+
+         ; CHECK-NOT: OpStore %outColor [[new_constant]]
+               OpStore %outColor %42
+
+               OpReturn
+               OpFunctionEnd
+)";
+
+  auto result = SinglePassRunAndMatch<CCPPass>(text, true);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

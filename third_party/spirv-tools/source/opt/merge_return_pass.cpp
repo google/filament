@@ -431,6 +431,7 @@ bool MergeReturnPass::BreakFromConstruct(
     std::list<BasicBlock*>* order, Instruction* break_merge_inst) {
   // Make sure the CFG is build here.  If we don't then it becomes very hard
   // to know which new blocks need to be updated.
+  context()->InvalidateAnalyses(IRContext::kAnalysisCFG);
   context()->BuildInvalidAnalyses(IRContext::kAnalysisCFG);
 
   // When predicating, be aware of whether this block is a header block, a

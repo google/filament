@@ -33,6 +33,7 @@
 #include "source/operand.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_endian.h"
+#include "source/util/string_utils.h"
 
 spv_result_t spvBinaryHeaderGet(const spv_const_binary binary,
                                 const spv_endianness_t endian,
@@ -60,6 +61,15 @@ spv_result_t spvBinaryHeaderGet(const spv_const_binary binary,
   pHeader->instructions = &binary->code[SPV_INDEX_INSTRUCTION];
 
   return SPV_SUCCESS;
+}
+
+std::string spvDecodeLiteralStringOperand(const spv_parsed_instruction_t& inst,
+                                          const uint16_t operand_index) {
+  assert(operand_index < inst.num_operands);
+  const spv_parsed_operand_t& operand = inst.operands[operand_index];
+
+  return spvtools::utils::MakeString(inst.words + operand.offset,
+                                     operand.num_words);
 }
 
 namespace {
@@ -205,7 +215,7 @@ class Parser {
     size_t word_index;           // The current position in words.
     size_t instruction_count;    // The count of processed instructions
     spv_endianness_t endian;     // The endianness of the binary.
-    // Is the SPIR-V binary in a different endiannes from the host native
+    // Is the SPIR-V binary in a different endianness from the host native
     // endianness?
     bool requires_endian_conversion;
 
@@ -290,7 +300,7 @@ spv_result_t Parser::parseInstruction() {
   const uint32_t first_word = peek();
 
   // If the module's endianness is different from the host native endianness,
-  // then converted_words contains the the endian-translated words in the
+  // then converted_words contains the endian-translated words in the
   // instruction.
   _.endian_converted_words.clear();
   _.endian_converted_words.push_back(first_word);
@@ -577,27 +587,18 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
 
     case SPV_OPERAND_TYPE_LITERAL_STRING:
     case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_STRING: {
-      convert_operand_endianness = false;
-      const char* string =
-          reinterpret_cast<const char*>(_.words + _.word_index);
-      // Compute the length of the string, but make sure we don't run off the
-      // end of the input.
-      const size_t remaining_input_bytes =
-          sizeof(uint32_t) * (_.num_words - _.word_index);
-      const size_t string_num_content_bytes =
-          spv_strnlen_s(string, remaining_input_bytes);
-      // If there was no terminating null byte, then that's an end-of-input
-      // error.
-      if (string_num_content_bytes == remaining_input_bytes)
+      const size_t max_words = _.num_words - _.word_index;
+      std::string string =
+          spvtools::utils::MakeString(_.words + _.word_index, max_words, false);
+
+      if (string.length() == max_words * 4)
         return exhaustedInputDiagnostic(inst_offset, opcode, type);
-      // Account for null in the word length, so add 1 for null, then add 3 to
-      // make sure we round up.  The following is equivalent to:
-      //    (string_num_content_bytes + 1 + 3) / 4
-      const size_t string_num_words = string_num_content_bytes / 4 + 1;
+
       // Make sure we can record the word count without overflow.
       //
       // This error can't currently be triggered because of validity
       // checks elsewhere.
+      const size_t string_num_words = string.length() / 4 + 1;
       if (string_num_words > std::numeric_limits<uint16_t>::max()) {
         return diagnostic() << "Literal string is longer than "
                             << std::numeric_limits<uint16_t>::max()
@@ -611,7 +612,7 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
         // There is only one string literal argument to OpExtInstImport,
         // so it's sufficient to guard this just on the opcode.
         const spv_ext_inst_type_t ext_inst_type =
-            spvExtInstImportTypeGet(string);
+            spvExtInstImportTypeGet(string.c_str());
         if (SPV_EXT_INST_TYPE_NONE == ext_inst_type) {
           return diagnostic()
                  << "Invalid extended instruction import '" << string << "'";

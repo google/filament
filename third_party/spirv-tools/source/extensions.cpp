@@ -18,6 +18,7 @@
 #include <sstream>
 #include <string>
 
+#include "source/binary.h"
 #include "source/enum_string_mapping.h"
 
 namespace spvtools {
@@ -30,8 +31,9 @@ std::string GetExtensionString(const spv_parsed_instruction_t* inst) {
   const auto& operand = inst->operands[0];
   assert(operand.type == SPV_OPERAND_TYPE_LITERAL_STRING);
   assert(inst->num_words > operand.offset);
+  (void)operand; /* No unused variables in release builds. */
 
-  return reinterpret_cast<const char*>(inst->words + operand.offset);
+  return spvDecodeLiteralStringOperand(*inst, 0);
 }
 
 std::string ExtensionSetToString(const ExtensionSet& extensions) {

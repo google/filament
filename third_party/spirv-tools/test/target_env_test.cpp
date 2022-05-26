@@ -135,7 +135,8 @@ INSTANTIATE_TEST_SUITE_P(
         {VK(1, 0), SPV(1, 3), true, SPV_ENV_VULKAN_1_1},
         {VK(1, 0), SPV(1, 4), true, SPV_ENV_VULKAN_1_1_SPIRV_1_4},
         {VK(1, 0), SPV(1, 5), true, SPV_ENV_VULKAN_1_2},
-        {VK(1, 0), SPV(1, 6), false, SPV_ENV_UNIVERSAL_1_0},
+        {VK(1, 0), SPV(1, 6), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 0), SPV(1, 7), false, SPV_ENV_UNIVERSAL_1_0},
         // Vulkan 1.1 cases
         {VK(1, 1), SPV(1, 0), true, SPV_ENV_VULKAN_1_1},
         {VK(1, 1), SPV(1, 1), true, SPV_ENV_VULKAN_1_1},
@@ -143,7 +144,8 @@ INSTANTIATE_TEST_SUITE_P(
         {VK(1, 1), SPV(1, 3), true, SPV_ENV_VULKAN_1_1},
         {VK(1, 1), SPV(1, 4), true, SPV_ENV_VULKAN_1_1_SPIRV_1_4},
         {VK(1, 1), SPV(1, 5), true, SPV_ENV_VULKAN_1_2},
-        {VK(1, 1), SPV(1, 6), false, SPV_ENV_UNIVERSAL_1_0},
+        {VK(1, 1), SPV(1, 6), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 1), SPV(1, 7), false, SPV_ENV_UNIVERSAL_1_0},
         // Vulkan 1.2 cases
         {VK(1, 2), SPV(1, 0), true, SPV_ENV_VULKAN_1_2},
         {VK(1, 2), SPV(1, 1), true, SPV_ENV_VULKAN_1_2},
@@ -151,9 +153,17 @@ INSTANTIATE_TEST_SUITE_P(
         {VK(1, 2), SPV(1, 3), true, SPV_ENV_VULKAN_1_2},
         {VK(1, 2), SPV(1, 4), true, SPV_ENV_VULKAN_1_2},
         {VK(1, 2), SPV(1, 5), true, SPV_ENV_VULKAN_1_2},
-        {VK(1, 2), SPV(1, 6), false, SPV_ENV_UNIVERSAL_1_0},
+        {VK(1, 2), SPV(1, 6), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 2), SPV(1, 7), false, SPV_ENV_UNIVERSAL_1_0},
         // Vulkan 1.3 cases
-        {VK(1, 3), SPV(1, 0), false, SPV_ENV_UNIVERSAL_1_0},
+        {VK(1, 3), SPV(1, 0), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 3), SPV(1, 1), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 3), SPV(1, 2), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 3), SPV(1, 3), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 3), SPV(1, 4), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 3), SPV(1, 5), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 3), SPV(1, 6), true, SPV_ENV_VULKAN_1_3},
+        {VK(1, 3), SPV(1, 7), false, SPV_ENV_UNIVERSAL_1_0},
         // Vulkan 2.0 cases
         {VK(2, 0), SPV(1, 0), false, SPV_ENV_UNIVERSAL_1_0},
         // Vulkan 99.0 cases

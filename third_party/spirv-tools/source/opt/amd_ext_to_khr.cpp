@@ -584,9 +584,9 @@ bool ReplaceCubeFaceCoord(IRContext* ctx, Instruction* inst,
   }
 
   // Get the constants that will be used.
-  uint32_t f0_const_id = const_mgr->GetFloatConst(0.0);
-  uint32_t f2_const_id = const_mgr->GetFloatConst(2.0);
-  uint32_t f0_5_const_id = const_mgr->GetFloatConst(0.5);
+  uint32_t f0_const_id = const_mgr->GetFloatConstId(0.0);
+  uint32_t f2_const_id = const_mgr->GetFloatConstId(2.0);
+  uint32_t f0_5_const_id = const_mgr->GetFloatConstId(0.5);
   const analysis::Constant* vec_const =
       const_mgr->GetConstant(v2_float_type, {f0_5_const_id, f0_5_const_id});
   uint32_t vec_const_id =
@@ -731,12 +731,12 @@ bool ReplaceCubeFaceIndex(IRContext* ctx, Instruction* inst,
   }
 
   // Get the constants that will be used.
-  uint32_t f0_const_id = const_mgr->GetFloatConst(0.0);
-  uint32_t f1_const_id = const_mgr->GetFloatConst(1.0);
-  uint32_t f2_const_id = const_mgr->GetFloatConst(2.0);
-  uint32_t f3_const_id = const_mgr->GetFloatConst(3.0);
-  uint32_t f4_const_id = const_mgr->GetFloatConst(4.0);
-  uint32_t f5_const_id = const_mgr->GetFloatConst(5.0);
+  uint32_t f0_const_id = const_mgr->GetFloatConstId(0.0);
+  uint32_t f1_const_id = const_mgr->GetFloatConstId(1.0);
+  uint32_t f2_const_id = const_mgr->GetFloatConstId(2.0);
+  uint32_t f3_const_id = const_mgr->GetFloatConstId(3.0);
+  uint32_t f4_const_id = const_mgr->GetFloatConstId(4.0);
+  uint32_t f5_const_id = const_mgr->GetFloatConstId(5.0);
 
   // Extract the input values.
   Instruction* x = ir_builder.AddCompositeExtract(float_type_id, input_id, {0});
@@ -935,8 +935,7 @@ Pass::Status AmdExtensionToKhrPass::Process() {
   std::vector<Instruction*> to_be_killed;
   for (Instruction& inst : context()->module()->extensions()) {
     if (inst.opcode() == SpvOpExtension) {
-      if (ext_to_remove.count(reinterpret_cast<const char*>(
-              &(inst.GetInOperand(0).words[0]))) != 0) {
+      if (ext_to_remove.count(inst.GetInOperand(0).AsString()) != 0) {
         to_be_killed.push_back(&inst);
       }
     }
@@ -944,8 +943,7 @@ Pass::Status AmdExtensionToKhrPass::Process() {
 
   for (Instruction& inst : context()->ext_inst_imports()) {
     if (inst.opcode() == SpvOpExtInstImport) {
-      if (ext_to_remove.count(reinterpret_cast<const char*>(
-              &(inst.GetInOperand(0).words[0]))) != 0) {
+      if (ext_to_remove.count(inst.GetInOperand(0).AsString()) != 0) {
         to_be_killed.push_back(&inst);
       }
     }

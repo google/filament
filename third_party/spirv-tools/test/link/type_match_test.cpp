@@ -66,6 +66,7 @@ using TypeMatch = spvtest::LinkerTest;
         "OpCapability Kernel\n"                                 \
         "OpCapability Shader\n"                                 \
         "OpCapability Addresses\n"                              \
+        "OpMemoryModel Physical64 OpenCL\n"                     \
         "OpDecorate %var LinkageAttributes \"foo\" "            \
         "{Import,Export}\n"                                     \
         "; CHECK: [[baseint:%\\w+]] = OpTypeInt 32 1\n"         \

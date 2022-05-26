@@ -40,6 +40,7 @@ declare interface SpirvTools {
   SPV_ENV_VULKAN_1_1_SPIRV_1_4: number;
   SPV_ENV_UNIVERSAL_1_5: number;
   SPV_ENV_VULKAN_1_2: number;
+  SPV_ENV_UNIVERSAL_1_6: number;
 
   SPV_TEXT_TO_BINARY_OPTION_NONE: number;
   SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS: number;

@@ -2,7 +2,7 @@
 .ycm_extra_conf.py*
 *.pyc
 compile_commands.json
-/build/
+/build*/
 /buildtools/
 /external/googletest
 /external/effcee
@@ -18,6 +18,7 @@ bazel-bin
 bazel-genfiles
 bazel-out
 bazel-spirv-tools
+bazel-SPIRV-Tools
 bazel-testlogs
 
 # Vim

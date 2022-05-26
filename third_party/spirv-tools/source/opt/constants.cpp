@@ -158,6 +158,7 @@ Type* ConstantManager::GetType(const Instruction* inst) const {
 std::vector<const Constant*> ConstantManager::GetOperandConstants(
     const Instruction* inst) const {
   std::vector<const Constant*> constants;
+  constants.reserve(inst->NumInOperands());
   for (uint32_t i = 0; i < inst->NumInOperands(); i++) {
     const Operand* operand = &inst->GetInOperand(i);
     if (operand->type != SPV_OPERAND_TYPE_ID) {
@@ -420,11 +421,28 @@ const Constant* ConstantManager::GetNumericVectorConstantWithWords(
   return GetConstant(type, element_ids);
 }
 
-uint32_t ConstantManager::GetFloatConst(float val) {
+uint32_t ConstantManager::GetFloatConstId(float val) {
+  const Constant* c = GetFloatConst(val);
+  return GetDefiningInstruction(c)->result_id();
+}
+
+const Constant* ConstantManager::GetFloatConst(float val) {
   Type* float_type = context()->get_type_mgr()->GetFloatType();
   utils::FloatProxy<float> v(val);
   const Constant* c = GetConstant(float_type, v.GetWords());
+  return c;
+}
+
+uint32_t ConstantManager::GetDoubleConstId(double val) {
+  const Constant* c = GetDoubleConst(val);
   return GetDefiningInstruction(c)->result_id();
+}
+
+const Constant* ConstantManager::GetDoubleConst(double val) {
+  Type* float_type = context()->get_type_mgr()->GetDoubleType();
+  utils::FloatProxy<double> v(val);
+  const Constant* c = GetConstant(float_type, v.GetWords());
+  return c;
 }
 
 uint32_t ConstantManager::GetSIntConst(int32_t val) {

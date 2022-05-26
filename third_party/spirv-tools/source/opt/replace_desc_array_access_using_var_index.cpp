@@ -95,7 +95,7 @@ void ReplaceDescArrayAccessUsingVarIndex::ReplaceUsersOfAccessChain(
   CollectRecursiveUsersWithConcreteType(access_chain, &final_users);
   for (auto* inst : final_users) {
     std::deque<Instruction*> insts_to_be_cloned =
-        CollectRequiredImageInsts(inst);
+        CollectRequiredImageAndAccessInsts(inst);
     ReplaceNonUniformAccessWithSwitchCase(
         inst, access_chain, number_of_elements, insts_to_be_cloned);
   }
@@ -121,8 +121,8 @@ void ReplaceDescArrayAccessUsingVarIndex::CollectRecursiveUsersWithConcreteType(
 }
 
 std::deque<Instruction*>
-ReplaceDescArrayAccessUsingVarIndex::CollectRequiredImageInsts(
-    Instruction* user_of_image_insts) const {
+ReplaceDescArrayAccessUsingVarIndex::CollectRequiredImageAndAccessInsts(
+    Instruction* user) const {
   std::unordered_set<uint32_t> seen_inst_ids;
   std::queue<Instruction*> work_list;
 
@@ -131,21 +131,23 @@ ReplaceDescArrayAccessUsingVarIndex::CollectRequiredImageInsts(
     if (!seen_inst_ids.insert(*idp).second) return;
     Instruction* operand = get_def_use_mgr()->GetDef(*idp);
     if (context()->get_instr_block(operand) != nullptr &&
-        HasImageOrImagePtrType(operand)) {
+        (HasImageOrImagePtrType(operand) ||
+         operand->opcode() == SpvOpAccessChain ||
+         operand->opcode() == SpvOpInBoundsAccessChain)) {
       work_list.push(operand);
     }
   };
 
-  std::deque<Instruction*> required_image_insts;
-  required_image_insts.push_front(user_of_image_insts);
-  user_of_image_insts->ForEachInId(decision_to_include_operand);
+  std::deque<Instruction*> required_insts;
+  required_insts.push_front(user);
+  user->ForEachInId(decision_to_include_operand);
   while (!work_list.empty()) {
     auto* inst_from_work_list = work_list.front();
     work_list.pop();
-    required_image_insts.push_front(inst_from_work_list);
+    required_insts.push_front(inst_from_work_list);
     inst_from_work_list->ForEachInId(decision_to_include_operand);
   }
-  return required_image_insts;
+  return required_insts;
 }
 
 bool ReplaceDescArrayAccessUsingVarIndex::HasImageOrImagePtrType(
@@ -253,8 +255,12 @@ void ReplaceDescArrayAccessUsingVarIndex::ReplaceNonUniformAccessWithSwitchCase(
     Instruction* access_chain_final_user, Instruction* access_chain,
     uint32_t number_of_elements,
     const std::deque<Instruction*>& insts_to_be_cloned) const {
-  // Create merge block and add terminator
   auto* block = context()->get_instr_block(access_chain_final_user);
+  // If the instruction does not belong to a block (i.e. in the case of
+  // OpDecorate), no replacement is needed.
+  if (!block) return;
+
+  // Create merge block and add terminator
   auto* merge_block = SeparateInstructionsIntoNewBlock(
       block, access_chain_final_user->NextNode());
 

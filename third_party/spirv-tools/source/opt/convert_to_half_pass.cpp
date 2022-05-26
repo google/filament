@@ -181,7 +181,7 @@ bool ConvertToHalfPass::ProcessPhi(Instruction* inst, uint32_t from_width,
                                    uint32_t to_width) {
   // Add converts of any float operands to to_width if they are of from_width.
   // If converting to 16, change type of phi to float16 equivalent and remember
-  // result id. Converts need to be added to preceeding blocks.
+  // result id. Converts need to be added to preceding blocks.
   uint32_t ocnt = 0;
   uint32_t* prev_idp;
   bool modified = false;

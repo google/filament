@@ -203,16 +203,7 @@ class BinaryParseTest : public spvtest::TextToBinaryTestBase<::testing::Test> {
   void Parse(const SpirvVector& words, spv_result_t expected_result,
              bool flip_words = false) {
     SpirvVector flipped_words(words);
-    SCOPED_TRACE(flip_words ? "Flipped Endianness" : "Normal Endianness");
-    if (flip_words) {
-      std::transform(flipped_words.begin(), flipped_words.end(),
-                     flipped_words.begin(), [](const uint32_t raw_word) {
-                       return spvFixWord(raw_word,
-                                         I32_ENDIAN_HOST == I32_ENDIAN_BIG
-                                             ? SPV_ENDIANNESS_LITTLE
-                                             : SPV_ENDIANNESS_BIG);
-                     });
-    }
+    MaybeFlipWords(flip_words, flipped_words.begin(), flipped_words.end());
     EXPECT_EQ(expected_result,
               spvBinaryParse(ScopedContext().context, &client_,
                              flipped_words.data(), flipped_words.size(),
@@ -486,27 +477,27 @@ TEST_F(BinaryParseTest, EarlyReturnWithTwoPassingCallbacks) {
 }
 
 TEST_F(BinaryParseTest, InstructionWithStringOperand) {
-  const std::string str =
-      "the future is already here, it's just not evenly distributed";
-  const auto str_words = MakeVector(str);
-  const auto instruction = MakeInstruction(SpvOpName, {99}, str_words);
-  const auto words = Concatenate({ExpectedHeaderForBound(100), instruction});
-  InSequence calls_expected_in_specific_order;
-  EXPECT_HEADER(100).WillOnce(Return(SPV_SUCCESS));
-  const auto operands = std::vector<spv_parsed_operand_t>{
-      MakeSimpleOperand(1, SPV_OPERAND_TYPE_ID),
-      MakeLiteralStringOperand(2, static_cast<uint16_t>(str_words.size()))};
-  EXPECT_CALL(client_,
-              Instruction(ParsedInstruction(spv_parsed_instruction_t{
-                  instruction.data(), static_cast<uint16_t>(instruction.size()),
-                  SpvOpName, SPV_EXT_INST_TYPE_NONE, 0 /*type id*/,
-                  0 /* No result id for OpName*/, operands.data(),
-                  static_cast<uint16_t>(operands.size())})))
-      .WillOnce(Return(SPV_SUCCESS));
-  // Since we are actually checking the output, don't test the
-  // endian-swapped version.
-  Parse(words, SPV_SUCCESS, false);
-  EXPECT_EQ(nullptr, diagnostic_);
+  for (bool endian_swap : kSwapEndians) {
+    const std::string str =
+        "the future is already here, it's just not evenly distributed";
+    const auto str_words = MakeVector(str);
+    const auto instruction = MakeInstruction(SpvOpName, {99}, str_words);
+    const auto words = Concatenate({ExpectedHeaderForBound(100), instruction});
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(100).WillOnce(Return(SPV_SUCCESS));
+    const auto operands = std::vector<spv_parsed_operand_t>{
+        MakeSimpleOperand(1, SPV_OPERAND_TYPE_ID),
+        MakeLiteralStringOperand(2, static_cast<uint16_t>(str_words.size()))};
+    EXPECT_CALL(client_, Instruction(ParsedInstruction(spv_parsed_instruction_t{
+                             instruction.data(),
+                             static_cast<uint16_t>(instruction.size()),
+                             SpvOpName, SPV_EXT_INST_TYPE_NONE, 0 /*type id*/,
+                             0 /* No result id for OpName*/, operands.data(),
+                             static_cast<uint16_t>(operands.size())})))
+        .WillOnce(Return(SPV_SUCCESS));
+    Parse(words, SPV_SUCCESS, endian_swap);
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
 }
 
 // Checks for non-zero values for the result_id and ext_inst_type members
@@ -613,7 +604,7 @@ INSTANTIATE_TEST_SUITE_P(
                       MakeInstruction(SpvOpNop, {42})}),
          "Invalid instruction OpNop starting at word 5: expected "
          "no more operands after 1 words, but stated word count is 2."},
-        // Supply several more unexpectd words.
+        // Supply several more unexpected words.
         {Concatenate({ExpectedHeaderForBound(1),
                       MakeInstruction(SpvOpNop, {42, 43, 44, 45, 46, 47})}),
          "Invalid instruction OpNop starting at word 5: expected "

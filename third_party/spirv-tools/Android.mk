@@ -106,8 +106,10 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/eliminate_dead_constant_pass.cpp \
 		source/opt/eliminate_dead_functions_pass.cpp \
 		source/opt/eliminate_dead_functions_util.cpp \
+		source/opt/eliminate_dead_input_components_pass.cpp \
 		source/opt/eliminate_dead_members_pass.cpp \
 		source/opt/feature_manager.cpp \
+		source/opt/fix_func_call_arguments.cpp \
 		source/opt/fix_storage_class.cpp \
 		source/opt/flatten_decoration_pass.cpp \
 		source/opt/fold.cpp \
@@ -126,6 +128,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/instruction.cpp \
 		source/opt/instruction_list.cpp \
 		source/opt/instrument_pass.cpp \
+		source/opt/interface_var_sroa.cpp \
 		source/opt/interp_fixup_pass.cpp \
 		source/opt/ir_context.cpp \
 		source/opt/ir_loader.cpp \
@@ -156,6 +159,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/redundancy_elimination.cpp \
 		source/opt/register_pressure.cpp \
 		source/opt/relax_float_ops_pass.cpp \
+		source/opt/remove_dontinline_pass.cpp \
 		source/opt/remove_duplicates_pass.cpp \
 		source/opt/remove_unused_interface_variables_pass.cpp \
 		source/opt/replace_desc_array_access_using_var_index.cpp \
@@ -165,10 +169,11 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/scalar_replacement_pass.cpp \
 		source/opt/set_spec_constant_default_value_pass.cpp \
 		source/opt/simplification_pass.cpp \
+		source/opt/spread_volatile_semantics.cpp \
 		source/opt/ssa_rewrite_pass.cpp \
 		source/opt/strength_reduction_pass.cpp \
 		source/opt/strip_debug_info_pass.cpp \
-		source/opt/strip_reflect_info_pass.cpp \
+		source/opt/strip_nonsemantic_info_pass.cpp \
 		source/opt/struct_cfg_analysis.cpp \
 		source/opt/type_manager.cpp \
 		source/opt/types.cpp \
@@ -299,7 +304,7 @@ $(1)/build-version.inc: \
         $(LOCAL_PATH)/utils/update_build_version.py \
         $(LOCAL_PATH)/CHANGES
 		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/update_build_version.py \
-		                $(LOCAL_PATH) $(1)/build-version.inc
+		                $(LOCAL_PATH)/CHANGES $(1)/build-version.inc
 		@echo "[$(TARGET_ARCH_ABI)] Generate       : build-version.inc <= CHANGES"
 $(LOCAL_PATH)/source/software_version.cpp: $(1)/build-version.inc
 endef

@@ -90,6 +90,21 @@ TEST_F(IRContextTest, IndividualValidAfterBuild) {
   }
 }
 
+TEST_F(IRContextTest, DontRebuildValidAnalysis) {
+  std::unique_ptr<Module> module(new Module());
+  IRContext localContext(SPV_ENV_UNIVERSAL_1_2, std::move(module),
+                         spvtools::MessageConsumer());
+
+  auto* oldCfg = localContext.cfg();
+  auto* oldDefUse = localContext.get_def_use_mgr();
+  localContext.BuildInvalidAnalyses(IRContext::kAnalysisCFG |
+                                    IRContext::kAnalysisDefUse);
+  auto* newCfg = localContext.cfg();
+  auto* newDefUse = localContext.get_def_use_mgr();
+  EXPECT_EQ(oldCfg, newCfg);
+  EXPECT_EQ(oldDefUse, newDefUse);
+}
+
 TEST_F(IRContextTest, AllValidAfterBuild) {
   std::unique_ptr<Module> module = MakeUnique<Module>();
   IRContext localContext(SPV_ENV_UNIVERSAL_1_2, std::move(module),

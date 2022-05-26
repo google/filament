@@ -20,7 +20,7 @@
 #include "spirv-tools/libspirv.h"
 
 // Dumps the control flow graph for the given module to the output stream.
-// Returns SPV_SUCCESS on succes.
+// Returns SPV_SUCCESS on success.
 spv_result_t BinaryToDot(const spv_const_context context, const uint32_t* words,
                          size_t num_words, std::iostream* out,
                          spv_diagnostic* diagnostic);

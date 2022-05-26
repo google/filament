@@ -30,7 +30,7 @@ class CFG {
  public:
   explicit CFG(Module* module);
 
-  // Return the list of predecesors for basic block with label |blkid|.
+  // Return the list of predecessors for basic block with label |blkid|.
   // TODO(dnovillo): Move this to BasicBlock.
   const std::vector<uint32_t>& preds(uint32_t blk_id) const {
     assert(label2preds_.count(blk_id));

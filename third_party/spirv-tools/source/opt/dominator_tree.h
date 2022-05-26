@@ -278,7 +278,7 @@ class DominatorTree {
 
  private:
   // Wrapper function which gets the list of pairs of each BasicBlocks to its
-  // immediately  dominating BasicBlock and stores the result in the the edges
+  // immediately  dominating BasicBlock and stores the result in the edges
   // parameter.
   //
   // The |edges| vector will contain the dominator tree as pairs of nodes.

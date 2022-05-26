@@ -24,6 +24,7 @@
 
 #include "NonSemanticShaderDebugInfo100.h"
 #include "OpenCLDebugInfo100.h"
+#include "source/binary.h"
 #include "source/common_debug_info.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/latest_version_spirv_header.h"
@@ -32,6 +33,7 @@
 #include "source/opt/reflect.h"
 #include "source/util/ilist_node.h"
 #include "source/util/small_vector.h"
+#include "source/util/string_utils.h"
 #include "spirv-tools/libspirv.h"
 
 const uint32_t kNoDebugScope = 0;
@@ -82,21 +84,32 @@ struct Operand {
 
   Operand(spv_operand_type_t t, const OperandData& w) : type(t), words(w) {}
 
+  template <class InputIt>
+  Operand(spv_operand_type_t t, InputIt firstOperandData,
+          InputIt lastOperandData)
+      : type(t), words(firstOperandData, lastOperandData) {}
+
   spv_operand_type_t type;  // Type of this logical operand.
   OperandData words;        // Binary segments of this logical operand.
 
-  // Returns a string operand as a C-style string.
-  const char* AsCString() const {
-    assert(type == SPV_OPERAND_TYPE_LITERAL_STRING);
-    return reinterpret_cast<const char*>(words.data());
+  uint32_t AsId() const {
+    assert(spvIsIdType(type));
+    assert(words.size() == 1);
+    return words[0];
   }
 
   // Returns a string operand as a std::string.
-  std::string AsString() const { return AsCString(); }
+  std::string AsString() const {
+    assert(type == SPV_OPERAND_TYPE_LITERAL_STRING);
+    return spvtools::utils::MakeString(words);
+  }
 
   // Returns a literal integer operand as a uint64_t
   uint64_t AsLiteralUint64() const {
-    assert(type == SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER);
+    assert(type == SPV_OPERAND_TYPE_LITERAL_INTEGER ||
+           type == SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER ||
+           type == SPV_OPERAND_TYPE_OPTIONAL_LITERAL_INTEGER ||
+           type == SPV_OPERAND_TYPE_OPTIONAL_TYPED_LITERAL_INTEGER);
     assert(1 <= words.size());
     assert(words.size() <= 2);
     uint64_t result = 0;
@@ -123,7 +136,7 @@ inline bool operator!=(const Operand& o1, const Operand& o2) {
 }
 
 // This structure is used to represent a DebugScope instruction from
-// the OpenCL.100.DebugInfo extened instruction set. Note that we can
+// the OpenCL.100.DebugInfo extended instruction set. Note that we can
 // ignore the result id of DebugScope instruction because it is not
 // used for anything. We do not keep it to reduce the size of
 // structure.
@@ -295,6 +308,7 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   inline void SetInOperands(OperandList&& new_operands);
   // Sets the result type id.
   inline void SetResultType(uint32_t ty_id);
+  inline bool HasResultType() const { return has_type_id_; }
   // Sets the result id
   inline void SetResultId(uint32_t res_id);
   inline bool HasResultId() const { return has_result_id_; }

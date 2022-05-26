@@ -263,7 +263,7 @@ TEST_F(UnifyFrontEndConstantSingleTest, UnifyWithDecorationOnTypes) {
           // decorated flat struct
           "%flat_d = OpTypeStruct %int %float",
           "%_pf_flat_d = OpTypePointer Function %flat_d",
-          // perserved contants. %flat_1 and %flat_d has same members, but
+          // preserved constants. %flat_1 and %flat_d has same members, but
           // their type are different in decorations, so they should not be
           // used to replace each other.
           "%int_1 = OpConstant %int 1",
@@ -682,7 +682,7 @@ INSTANTIATE_TEST_SUITE_P(
             // zero-valued composite constant built from zero-valued constant
             // component. inner_zero should not be replace by null_inner.
             "%inner_zero = OpConstantComposite %inner_struct %bool_zero %float_zero",
-            // zero-valued composite contant built from zero-valued constants
+            // zero-valued composite constant built from zero-valued constants
             // and null constants.
             "%outer_zero = OpConstantComposite %outer_struct %inner_zero %int_null %double_null",
             // outer_struct type null constant, it should not be replaced by
@@ -820,7 +820,7 @@ INSTANTIATE_TEST_SUITE_P(
           {
             "%spec_signed_add_duplicate = OpSpecConstantOp %int IAdd %spec_signed_1 %spec_signed_2",
           },
-          // use duplicated contants in main
+          // use duplicated constants in main
           {
             "%int_var = OpVariable %_pf_int Function",
             "OpStore %int_var %spec_signed_add_duplicate",

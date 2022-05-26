@@ -112,8 +112,7 @@ bool ReplaceInvalidOpcodePass::RewriteFunction(Function* function,
             }
             Instruction* file_name =
                 context()->get_def_use_mgr()->GetDef(file_name_id);
-            const char* source = reinterpret_cast<const char*>(
-                &file_name->GetInOperand(0).words[0]);
+            const std::string source = file_name->GetInOperand(0).AsString();
 
             // Get the line number and column number.
             uint32_t line_number =
@@ -121,7 +120,7 @@ bool ReplaceInvalidOpcodePass::RewriteFunction(Function* function,
             uint32_t col_number = last_line_dbg_inst->GetSingleWordInOperand(2);
 
             // Replace the instruction.
-            ReplaceInstruction(inst, source, line_number, col_number);
+            ReplaceInstruction(inst, source.c_str(), line_number, col_number);
           }
         }
       },

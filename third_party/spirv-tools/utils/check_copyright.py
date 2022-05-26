@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Checks for copyright notices in all the files that need them under the
+
 current directory.  Optionally insert them.  When inserting, replaces
 an MIT or Khronos free use license with Apache 2.
 """
@@ -41,11 +42,28 @@ AUTHORS = ['The Khronos Group Inc.',
            'Mostafa Ashraf',
            'Shiyu Liu',
            'ZHOU He']
-CURRENT_YEAR='2021'
+CURRENT_YEAR = 2022
 
-YEARS = '(2014-2016|2015-2016|2015-2020|2016|2016-2017|2017|2017-2019|2018|2019|2020|2021)'
-COPYRIGHT_RE = re.compile(
-        'Copyright \(c\) {} ({})'.format(YEARS, '|'.join(AUTHORS)))
+FIRST_YEAR = 2014
+FINAL_YEAR = CURRENT_YEAR + 5
+# A regular expression to match the valid years in the copyright information.
+YEAR_REGEX = '(' + '|'.join(
+    str(year) for year in range(FIRST_YEAR, FINAL_YEAR + 1)) + ')'
+
+# A regular expression to make a range of years in the form <year1>-<year2>.
+YEAR_RANGE_REGEX = '('
+for year1 in range(FIRST_YEAR, FINAL_YEAR + 1):
+  for year2 in range(year1 + 1, FINAL_YEAR + 1):
+    YEAR_RANGE_REGEX += str(year1) + '-' + str(year2) + '|'
+YEAR_RANGE_REGEX = YEAR_RANGE_REGEX[:-1] + ')'
+
+# In the copyright info, the year can be a single year or a range.  This is a
+# regex to make sure it matches one of them.
+YEAR_OR_RANGE_REGEX = '(' + YEAR_REGEX + '|' + YEAR_RANGE_REGEX + ')'
+
+# The final regular expression to match a valid copyright line.
+COPYRIGHT_RE = re.compile('Copyright \(c\) {} ({})'.format(
+    YEAR_OR_RANGE_REGEX, '|'.join(AUTHORS)))
 
 MIT_BEGIN_RE = re.compile('Permission is hereby granted, '
                           'free of charge, to any person obtaining a')

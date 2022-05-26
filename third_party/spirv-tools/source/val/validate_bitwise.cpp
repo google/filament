@@ -14,15 +14,47 @@
 
 // Validates correctness of bitwise instructions.
 
-#include "source/val/validate.h"
-
 #include "source/diagnostic.h"
 #include "source/opcode.h"
+#include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
+#include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {
 namespace val {
+
+// Validates when base and result need to be the same type
+spv_result_t ValidateBaseType(ValidationState_t& _, const Instruction* inst,
+                              const uint32_t base_type) {
+  const SpvOp opcode = inst->opcode();
+
+  if (!_.IsIntScalarType(base_type) && !_.IsIntVectorType(base_type)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << _.VkErrorID(4781)
+           << "Expected int scalar or vector type for Base operand: "
+           << spvOpcodeString(opcode);
+  }
+
+  // Vulkan has a restriction to 32 bit for base
+  if (spvIsVulkanEnv(_.context()->target_env)) {
+    if (_.GetBitWidth(base_type) != 32) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << _.VkErrorID(4781)
+             << "Expected 32-bit int type for Base operand: "
+             << spvOpcodeString(opcode);
+    }
+  }
+
+  // OpBitCount just needs same number of components
+  if (base_type != inst->type_id() && opcode != SpvOpBitCount) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "Expected Base Type to be equal to Result Type: "
+           << spvOpcodeString(opcode);
+  }
+
+  return SPV_SUCCESS;
+}
 
 // Validates correctness of bitwise instructions.
 spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
@@ -109,20 +141,14 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
     }
 
     case SpvOpBitFieldInsert: {
-      if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected int scalar or vector type as Result Type: "
-               << spvOpcodeString(opcode);
-
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
       const uint32_t insert_type = _.GetOperandTypeId(inst, 3);
       const uint32_t offset_type = _.GetOperandTypeId(inst, 4);
       const uint32_t count_type = _.GetOperandTypeId(inst, 5);
 
-      if (base_type != result_type)
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected Base Type to be equal to Result Type: "
-               << spvOpcodeString(opcode);
+      if (spv_result_t error = ValidateBaseType(_, inst, base_type)) {
+        return error;
+      }
 
       if (insert_type != result_type)
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -143,19 +169,13 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
 
     case SpvOpBitFieldSExtract:
     case SpvOpBitFieldUExtract: {
-      if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected int scalar or vector type as Result Type: "
-               << spvOpcodeString(opcode);
-
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
       const uint32_t offset_type = _.GetOperandTypeId(inst, 3);
       const uint32_t count_type = _.GetOperandTypeId(inst, 4);
 
-      if (base_type != result_type)
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected Base Type to be equal to Result Type: "
-               << spvOpcodeString(opcode);
+      if (spv_result_t error = ValidateBaseType(_, inst, base_type)) {
+        return error;
+      }
 
       if (!offset_type || !_.IsIntScalarType(offset_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -170,17 +190,12 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
     }
 
     case SpvOpBitReverse: {
-      if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected int scalar or vector type as Result Type: "
-               << spvOpcodeString(opcode);
-
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
 
-      if (base_type != result_type)
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected Base Type to be equal to Result Type: "
-               << spvOpcodeString(opcode);
+      if (spv_result_t error = ValidateBaseType(_, inst, base_type)) {
+        return error;
+      }
+
       break;
     }
 
@@ -191,14 +206,12 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
                << spvOpcodeString(opcode);
 
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
-      if (!base_type ||
-          (!_.IsIntScalarType(base_type) && !_.IsIntVectorType(base_type)))
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected Base Type to be int scalar or vector: "
-               << spvOpcodeString(opcode);
-
       const uint32_t base_dimension = _.GetDimension(base_type);
       const uint32_t result_dimension = _.GetDimension(result_type);
+
+      if (spv_result_t error = ValidateBaseType(_, inst, base_type)) {
+        return error;
+      }
 
       if (base_dimension != result_dimension)
         return _.diag(SPV_ERROR_INVALID_DATA, inst)

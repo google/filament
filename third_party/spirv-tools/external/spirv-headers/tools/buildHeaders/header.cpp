@@ -69,9 +69,9 @@ namespace {
         TPrinter();
 
         static const int         DocMagicNumber = 0x07230203;
-        static const int         DocVersion     = 0x00010500;
-        static const int         DocRevision    = 4;
-        #define DocRevisionString                "4"
+        static const int         DocVersion     = 0x00010600;
+        static const int         DocRevision    = 1;
+        #define DocRevisionString                "1"
         static const std::string DocCopyright;
         static const std::string DocComment1;
         static const std::string DocComment2;
@@ -199,7 +199,7 @@ namespace {
 
     const std::string TPrinter::DocComment2 =
         "Enumeration tokens for SPIR-V, in various styles:\n"
-        "  C, C++, C++11, JSON, Lua, Python, C#, D\n"
+        "  C, C++, C++11, JSON, Lua, Python, C#, D, Beef\n"
         "\n"
         "- C will have tokens with a \"Spv\" prefix, e.g.: SpvSourceLanguageGLSL\n"
         "- C++ will have tokens in the \"spv\" name space, e.g.: spv::SourceLanguageGLSL\n"
@@ -209,6 +209,8 @@ namespace {
         "- C# will use enum classes in the Specification class located in the \"Spv\" namespace,\n"
         "    e.g.: Spv.Specification.SourceLanguage.GLSL\n"
         "- D will have tokens under the \"spv\" module, e.g: spv.SourceLanguage.GLSL\n"
+        "- Beef will use enum classes in the Specification class located in the \"Spv\" namespace,\n"
+        "    e.g.: Spv.Specification.SourceLanguage.GLSL\n"
         "\n"
         "Some tokens act like mask values, which can be OR'd together,\n"
         "while others are mutually exclusive.  The mask-like ones have\n"
@@ -513,6 +515,9 @@ namespace {
                 }
 
                 out << "#ifdef SPV_ENABLE_UTILITY_CODE" << std::endl;
+                out << "#ifndef __cplusplus" << std::endl;
+                out << "#include <stdbool.h>" << std::endl;
+                out << "#endif" << std::endl;
                 out << "inline void " << pre() << "HasResultAndType(" << pre() << opName << " opcode, bool *hasResult, bool *hasResultType) {" << std::endl;
                 out << "    *hasResult = *hasResultType = false;" << std::endl;
                 out << "    switch (opcode) {" << std::endl;
@@ -776,6 +781,43 @@ namespace {
         }
     };
 
+    // Beef printer
+    class TPrinterBeef final : public TPrinter {
+    private:
+        std::string commentBOL() const override { return "// "; }
+
+        void printPrologue(std::ostream& out) const override {
+            out << "namespace Spv\n{\n";
+            out << indent() << "using System;\n\n";
+            out << indent() << "public static class Specification\n";
+            out << indent() << "{\n";
+        }
+
+        void printEpilogue(std::ostream& out) const override {
+            out << indent() << "}\n";
+            out << "}\n";
+        }
+
+        std::string enumBeg(const std::string& s, enumStyle_t style) const override {
+            return indent(2) + "[AllowDuplicates, CRepr] public enum " + s + styleStr(style) + "\n" + indent(2) + "{\n";
+        }
+
+        std::string enumEnd(const std::string& s, enumStyle_t style, bool isLast) const override {
+            return indent(2) + "}" + +(isLast ? "\n" : "\n\n");
+        }
+
+        std::string enumFmt(const std::string& s, const valpair_t& v,
+            enumStyle_t style, bool isLast) const override {
+            return indent(3) + prependIfDigit(s, v.second) + " = " + fmtStyleVal(v.first, style) + ",\n";
+        }
+
+        std::string fmtConstInt(unsigned val, const std::string& name,
+            const char* fmt, bool isLast) const override {
+            return indent(2) + std::string("public const uint32 ") + name +
+                " = " + fmtNum(fmt, val) + (isLast ? ";\n\n" : ";\n");
+        }
+    };
+
 } // namespace
 
 namespace spv {
@@ -792,6 +834,7 @@ namespace spv {
         langInfo.push_back(std::make_pair(ELangPython,  "spirv.py"));
         langInfo.push_back(std::make_pair(ELangCSharp,  "spirv.cs"));
         langInfo.push_back(std::make_pair(ELangD,       "spv.d"));
+        langInfo.push_back(std::make_pair(ELangBeef,    "spirv.bf"));
 
         for (const auto& lang : langInfo) {
             std::ofstream out(lang.second, std::ios::out);
@@ -819,6 +862,7 @@ namespace spv {
             case ELangPython:  p = TPrinterPtr(new TPrinterPython);  break;
             case ELangCSharp:  p = TPrinterPtr(new TPrinterCSharp);  break;
             case ELangD:       p = TPrinterPtr(new TPrinterD);       break;
+            case ELangBeef:    p = TPrinterPtr(new TPrinterBeef);    break;
             case ELangAll:     PrintAllHeaders();                    break;
             default:
                 std::cerr << "Unknown language." << std::endl;

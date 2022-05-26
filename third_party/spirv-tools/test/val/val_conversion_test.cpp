@@ -1557,7 +1557,7 @@ OpExtension "SPV_EXT_physical_storage_buffer"
 OpMemoryModel PhysicalStorageBuffer64 GLSL450
 OpEntryPoint Fragment %main "main"
 OpExecutionMode %main OriginUpperLeft
-OpDecorate %val1 RestrictPointerEXT
+OpDecorate %val1 RestrictPointer
 %uint64 = OpTypeInt 64 0
 %u64_1 = OpConstant %uint64 1
 %ptr = OpTypePointer PhysicalStorageBuffer %uint64
@@ -1615,7 +1615,7 @@ OpExtension "SPV_EXT_physical_storage_buffer"
 OpMemoryModel PhysicalStorageBuffer64 GLSL450
 OpEntryPoint Fragment %main "main"
 OpExecutionMode %main OriginUpperLeft
-OpDecorate %val1 RestrictPointerEXT
+OpDecorate %val1 RestrictPointer
 %uint32 = OpTypeInt 32 0
 %uint64 = OpTypeInt 64 0
 %ptr = OpTypePointer PhysicalStorageBuffer %uint64

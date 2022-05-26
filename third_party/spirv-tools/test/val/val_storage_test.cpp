@@ -280,7 +280,7 @@ TEST_P(ValidateStorageExecutionModel, VulkanOutsideStoreFailure) {
               AnyVUID("VUID-StandaloneSpirv-None-04644"));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("in Vulkan evironment, Output Storage Class must not be used "
+      HasSubstr("in Vulkan environment, Output Storage Class must not be used "
                 "in GLCompute, RayGenerationKHR, IntersectionKHR, AnyHitKHR, "
                 "ClosestHitKHR, MissKHR, or CallableKHR execution models"));
 }

@@ -98,7 +98,7 @@ class DeadBranchElimPass : public MemPass {
   // Fix phis in reachable blocks so that only live (or unremovable) incoming
   // edges are present. If the block now only has a single live incoming edge,
   // remove the phi and replace its uses with its data input. If the single
-  // remaining incoming edge is from the phi itself, the the phi is in an
+  // remaining incoming edge is from the phi itself, the phi is in an
   // unreachable single block loop. Either the block is dead and will be
   // removed, or it's reachable from an unreachable continue target. In the
   // latter case that continue target block will be collapsed into a block that
@@ -158,7 +158,7 @@ class DeadBranchElimPass : public MemPass {
       uint32_t cont_id, uint32_t header_id, uint32_t merge_id,
       std::unordered_set<BasicBlock*>* blocks_with_back_edges);
 
-  // Returns true if there is a brach to the merge node of the selection
+  // Returns true if there is a branch to the merge node of the selection
   // construct |switch_header_id| that is inside a nested selection construct or
   // in the header of the nested selection construct.
   bool SwitchHasNestedBreak(uint32_t switch_header_id);

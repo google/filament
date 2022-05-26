@@ -6045,6 +6045,18 @@ OpMemoryModel Logical GLSL450
                         "declared without SPV_KHR_non_semantic_info"));
 }
 
+TEST_F(ValidateClspvReflection, DoesNotRequiresNonSemanticExtensionPost1p6) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "NonSemantic.ClspvReflection.1"
+OpMemoryModel Logical GLSL450
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_6);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+}
+
 TEST_F(ValidateClspvReflection, MissingVersion) {
   const std::string text = R"(
 OpCapability Shader
