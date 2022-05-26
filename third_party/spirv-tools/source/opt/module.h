@@ -36,7 +36,7 @@ struct ModuleHeader {
   uint32_t version;
   uint32_t generator;
   uint32_t bound;
-  uint32_t reserved;
+  uint32_t schema;
 };
 
 // A SPIR-V module. It contains all the information for a SPIR-V module and
@@ -61,7 +61,7 @@ class Module {
   }
 
   // Returns the Id bound.
-  uint32_t IdBound() { return header_.bound; }
+  uint32_t IdBound() const { return header_.bound; }
 
   // Returns the current Id bound and increases it to the next available value.
   // If the id bound has already reached its maximum value, then 0 is returned.
@@ -141,6 +141,8 @@ class Module {
   inline uint32_t id_bound() const { return header_.bound; }
 
   inline uint32_t version() const { return header_.version; }
+  inline uint32_t generator() const { return header_.generator; }
+  inline uint32_t schema() const { return header_.schema; }
 
   inline void set_version(uint32_t v) { header_.version = v; }
 

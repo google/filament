@@ -225,7 +225,7 @@ spv_result_t ValidateMemoryScope(ValidationState_t& _, const Instruction* inst,
              << _.VkErrorID(4638) << spvOpcodeString(opcode)
              << ": in Vulkan environment, Memory Scope cannot be CrossDevice";
     }
-    // Vulkan 1.0 specifc rules
+    // Vulkan 1.0 specific rules
     if (_.context()->target_env == SPV_ENV_VULKAN_1_0 &&
         value != SpvScopeDevice && value != SpvScopeWorkgroup &&
         value != SpvScopeInvocation) {
@@ -234,7 +234,7 @@ spv_result_t ValidateMemoryScope(ValidationState_t& _, const Instruction* inst,
              << ": in Vulkan 1.0 environment Memory Scope is limited to "
              << "Device, Workgroup and Invocation";
     }
-    // Vulkan 1.1 specifc rules
+    // Vulkan 1.1 specific rules
     if ((_.context()->target_env == SPV_ENV_VULKAN_1_1 ||
          _.context()->target_env == SPV_ENV_VULKAN_1_2) &&
         value != SpvScopeDevice && value != SpvScopeWorkgroup &&

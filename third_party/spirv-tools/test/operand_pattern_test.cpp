@@ -91,9 +91,14 @@ INSTANTIATE_TEST_SUITE_P(
         {SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS, 0, {PREFIX0}, {PREFIX0}},
         // Unknown bits means no change.  Use all bits that aren't in the
         // grammar.
-        // The last mask enum is 0x20
+        // The used mask bits are:
+        //          1 through...
+        //       0x20 SpvMemoryAccessNonPrivatePointerMask
+        // also
+        //    0x10000 SpvMemoryAccessAliasScopeINTELMaskShift
+        //    0x20000 SpvMemoryAccessNoAliasINTELMaskMask
         {SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS,
-         0xffffffc0,
+         0xffffffc0 ^ (0x10000) ^ (0x20000),
          {PREFIX1},
          {PREFIX1}},
         // Volatile has no operands.
@@ -111,6 +116,7 @@ INSTANTIATE_TEST_SUITE_P(
          SpvMemoryAccessVolatileMask | SpvMemoryAccessAlignedMask,
          {PREFIX1},
          {PREFIX1, SPV_OPERAND_TYPE_LITERAL_INTEGER}},
+        // Newer masks are not tested
     }));
 #undef PREFIX0
 #undef PREFIX1

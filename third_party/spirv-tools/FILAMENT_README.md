@@ -1,9 +1,6 @@
-When updating spirv-tools to a new version, make sure to preserve all the changes marked with
-the following in `CMakeLists.txt` and `source/CMakeLists.txt`:
-
-`# Filament specific changes`
-
-You can easily apply these changes by running the following command at Filament's root:
+When updating spirv-tools to a new version there are several `CMakeLists.txt` files that need
+to patched with Filament specific changes. This can be done by running the following command at
+Filament's root:
 
 ```
 git apply third_party/spirv-tools/filament-specific-changes.patch
@@ -25,6 +22,13 @@ rm master.zip
 git add spirv-tools
 ```
 
-Edit the .gitignore so it doesn't prevent `spirv-headers` from being committed.
+The patch file also edits the `.gitignore` to allow `spirv-headers` to be committed.
 
 Finally, remember to bring back the Filament-specific changes in CMakeLists.
+
+To restore this file and the patch file do:
+
+```
+git checkout main spirv-tools/FILAMENT_README.md
+git checkout main spirv-tools/filament-specific-changes.patch
+```

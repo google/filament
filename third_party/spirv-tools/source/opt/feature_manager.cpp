@@ -39,8 +39,7 @@ void FeatureManager::AddExtension(Instruction* ext) {
   assert(ext->opcode() == SpvOpExtension &&
          "Expecting an extension instruction.");
 
-  const std::string name =
-      reinterpret_cast<const char*>(ext->GetInOperand(0u).words.data());
+  const std::string name = ext->GetInOperand(0u).AsString();
   Extension extension;
   if (GetExtensionFromString(name.c_str(), &extension)) {
     extensions_.Add(extension);

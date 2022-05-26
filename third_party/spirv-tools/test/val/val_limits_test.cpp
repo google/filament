@@ -750,7 +750,7 @@ TEST_F(ValidateLimits, CustomizedControlFlowDepthBad) {
 }
 
 // Valid. The purpose here is to test the CFG depth calculation code when a loop
-// continue target is the loop iteself. It also exercises the case where a loop
+// continue target is the loop itself. It also exercises the case where a loop
 // is unreachable.
 TEST_F(ValidateLimits, ControlFlowNoEntryToLoopGood) {
   std::string str = header + R"(

@@ -1178,6 +1178,26 @@ OpFunctionEnd
               HasSubstr("Expected bool scalar type as Result Type"));
 }
 
+TEST_F(ValidateMode, LocalSizeIdVulkan1p3DoesNotRequireOption) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionModeId %main LocalSizeId %int_1 %int_1 %int_1
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

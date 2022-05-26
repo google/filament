@@ -22,85 +22,56 @@ namespace {
 
 using ::testing::HasSubstr;
 
+const uint32_t binary_count = 2u;
+
 class EntryPointsAmountTest : public spvtest::LinkerTest {
  public:
-  EntryPointsAmountTest() { binaries.reserve(0xFFFF); }
+  EntryPointsAmountTest() { binaries.reserve(binary_count + 1u); }
 
   void SetUp() override {
-    binaries.push_back({SpvMagicNumber,
-                        SpvVersion,
-                        SPV_GENERATOR_CODEPLAY,
-                        10u,  // NOTE: Bound
-                        0u,   // NOTE: Schema; reserved
+    const uint32_t global_variable_count_per_binary =
+        (SPV_LIMIT_GLOBAL_VARIABLES_MAX - 1u) / binary_count;
 
-                        3u << SpvWordCountShift | SpvOpTypeFloat,
-                        1u,   // NOTE: Result ID
-                        32u,  // NOTE: Width
+    spvtest::Binary common_binary = {
+        // clang-format off
+        SpvMagicNumber,
+        SpvVersion,
+        SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS, 0),
+        3u + global_variable_count_per_binary,  // NOTE: Bound
+        0u,                                     // NOTE: Schema; reserved
 
-                        4u << SpvWordCountShift | SpvOpTypePointer,
-                        2u,  // NOTE: Result ID
-                        SpvStorageClassInput,
-                        1u,  // NOTE: Type ID
+        SpvOpCapability | 2u << SpvWordCountShift,
+        SpvCapabilityShader,
 
-                        2u << SpvWordCountShift | SpvOpTypeVoid,
-                        3u,  // NOTE: Result ID
+        SpvOpMemoryModel | 3u << SpvWordCountShift,
+        SpvAddressingModelLogical,
+        SpvMemoryModelSimple,
 
-                        3u << SpvWordCountShift | SpvOpTypeFunction,
-                        4u,  // NOTE: Result ID
-                        3u,  // NOTE: Return type
+        SpvOpTypeFloat | 3u << SpvWordCountShift,
+        1u,   // NOTE: Result ID
+        32u,  // NOTE: Width
 
-                        5u << SpvWordCountShift | SpvOpFunction,
-                        3u,  // NOTE: Result type
-                        5u,  // NOTE: Result ID
-                        SpvFunctionControlMaskNone,
-                        4u,  // NOTE: Function type
+        SpvOpTypePointer | 4u << SpvWordCountShift,
+        2u,  // NOTE: Result ID
+        SpvStorageClassInput,
+        1u  // NOTE: Type ID
+        // clang-format on
+    };
 
-                        2u << SpvWordCountShift | SpvOpLabel,
-                        6u,  // NOTE: Result ID
+    binaries.push_back({});
+    spvtest::Binary& binary = binaries.back();
+    binary.reserve(common_binary.size() + global_variable_count_per_binary * 4);
+    binary.insert(binary.end(), common_binary.cbegin(), common_binary.cend());
 
-                        4u << SpvWordCountShift | SpvOpVariable,
-                        2u,  // NOTE: Type ID
-                        7u,  // NOTE: Result ID
-                        SpvStorageClassFunction,
+    for (uint32_t i = 0u; i < global_variable_count_per_binary; ++i) {
+      binary.push_back(SpvOpVariable | 4u << SpvWordCountShift);
+      binary.push_back(2u);      // NOTE: Type ID
+      binary.push_back(3u + i);  // NOTE: Result ID
+      binary.push_back(SpvStorageClassInput);
+    }
 
-                        4u << SpvWordCountShift | SpvOpVariable,
-                        2u,  // NOTE: Type ID
-                        8u,  // NOTE: Result ID
-                        SpvStorageClassFunction,
-
-                        4u << SpvWordCountShift | SpvOpVariable,
-                        2u,  // NOTE: Type ID
-                        9u,  // NOTE: Result ID
-                        SpvStorageClassFunction,
-
-                        1u << SpvWordCountShift | SpvOpReturn,
-
-                        1u << SpvWordCountShift | SpvOpFunctionEnd});
-    for (size_t i = 0u; i < 2u; ++i) {
-      spvtest::Binary binary = {
-          SpvMagicNumber,
-          SpvVersion,
-          SPV_GENERATOR_CODEPLAY,
-          103u,  // NOTE: Bound
-          0u,    // NOTE: Schema; reserved
-
-          3u << SpvWordCountShift | SpvOpTypeFloat,
-          1u,   // NOTE: Result ID
-          32u,  // NOTE: Width
-
-          4u << SpvWordCountShift | SpvOpTypePointer,
-          2u,  // NOTE: Result ID
-          SpvStorageClassInput,
-          1u  // NOTE: Type ID
-      };
-
-      for (uint32_t j = 0u; j < 0xFFFFu / 2u; ++j) {
-        binary.push_back(4u << SpvWordCountShift | SpvOpVariable);
-        binary.push_back(2u);      // NOTE: Type ID
-        binary.push_back(j + 3u);  // NOTE: Result ID
-        binary.push_back(SpvStorageClassInput);
-      }
-      binaries.push_back(binary);
+    for (uint32_t i = 0u; i < binary_count - 1u; ++i) {
+      binaries.push_back(binaries.back());
     }
   }
   void TearDown() override { binaries.clear(); }
@@ -111,42 +82,53 @@ class EntryPointsAmountTest : public spvtest::LinkerTest {
 TEST_F(EntryPointsAmountTest, UnderLimit) {
   spvtest::Binary linked_binary;
 
-  EXPECT_EQ(SPV_SUCCESS, Link(binaries, &linked_binary));
+  ASSERT_EQ(SPV_SUCCESS, Link(binaries, &linked_binary)) << GetErrorMessage();
   EXPECT_THAT(GetErrorMessage(), std::string());
 }
 
 TEST_F(EntryPointsAmountTest, OverLimit) {
-  binaries.push_back({SpvMagicNumber,
-                      SpvVersion,
-                      SPV_GENERATOR_CODEPLAY,
-                      5u,  // NOTE: Bound
-                      0u,  // NOTE: Schema; reserved
+  binaries.push_back({
+      // clang-format off
+      SpvMagicNumber,
+      SpvVersion,
+      SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS, 0),
+      5u,  // NOTE: Bound
+      0u,  // NOTE: Schema; reserved
 
-                      3u << SpvWordCountShift | SpvOpTypeFloat,
-                      1u,   // NOTE: Result ID
-                      32u,  // NOTE: Width
+      SpvOpCapability | 2u << SpvWordCountShift,
+      SpvCapabilityShader,
 
-                      4u << SpvWordCountShift | SpvOpTypePointer,
-                      2u,  // NOTE: Result ID
-                      SpvStorageClassInput,
-                      1u,  // NOTE: Type ID
+      SpvOpMemoryModel | 3u << SpvWordCountShift,
+      SpvAddressingModelLogical,
+      SpvMemoryModelSimple,
 
-                      4u << SpvWordCountShift | SpvOpVariable,
-                      2u,  // NOTE: Type ID
-                      3u,  // NOTE: Result ID
-                      SpvStorageClassInput,
+      SpvOpTypeFloat | 3u << SpvWordCountShift,
+      1u,   // NOTE: Result ID
+      32u,  // NOTE: Width
 
-                      4u << SpvWordCountShift | SpvOpVariable,
-                      2u,  // NOTE: Type ID
-                      4u,  // NOTE: Result ID
-                      SpvStorageClassInput});
+      SpvOpTypePointer | 4u << SpvWordCountShift,
+      2u,  // NOTE: Result ID
+      SpvStorageClassInput,
+      1u,  // NOTE: Type ID
+
+      SpvOpVariable | 4u << SpvWordCountShift,
+      2u,  // NOTE: Type ID
+      3u,  // NOTE: Result ID
+      SpvStorageClassInput,
+
+      SpvOpVariable | 4u << SpvWordCountShift,
+      2u,  // NOTE: Type ID
+      4u,  // NOTE: Result ID
+      SpvStorageClassInput
+      // clang-format on
+  });
 
   spvtest::Binary linked_binary;
-
-  EXPECT_EQ(SPV_ERROR_INTERNAL, Link(binaries, &linked_binary));
-  EXPECT_THAT(GetErrorMessage(),
-              HasSubstr("The limit of global values, 65535, was exceeded; "
-                        "65536 global values were found."));
+  ASSERT_EQ(SPV_SUCCESS, Link(binaries, &linked_binary)) << GetErrorMessage();
+  EXPECT_THAT(
+      GetErrorMessage(),
+      HasSubstr("The minimum limit of global values, 65535, was exceeded; "
+                "65536 global values were found."));
 }
 
 }  // namespace

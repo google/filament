@@ -656,7 +656,7 @@ TEST_F(ValidateArithmetics, DotDifferentVectorSize) {
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "Expected operands to have the same number of componenets: Dot"));
+          "Expected operands to have the same number of components: Dot"));
 }
 
 TEST_F(ValidateArithmetics, VectorTimesScalarSuccess) {

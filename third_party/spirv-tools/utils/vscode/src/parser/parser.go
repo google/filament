@@ -798,7 +798,7 @@ type Identifier struct {
 	References []*Token     // all the places the identifier was referenced
 }
 
-// Severity is an enumerator of diagnositc seeverities
+// Severity is an enumerator of diagnostic severities
 type Severity int
 
 // Severity levels

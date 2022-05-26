@@ -1547,7 +1547,7 @@ OpExtension "SPV_KHR_non_semantic_info"
                         "integer scalar type"));
 }
 
-TEST_F(ValidateVulkan100DebugInfo, DebugTypeArrayFailComponentCountZero) {
+TEST_F(ValidateVulkan100DebugInfo, DebugTypeArrayComponentCountZero) {
   const std::string src = R"(
 %src = OpString "simple.hlsl"
 %code = OpString "main() {}"
@@ -1574,12 +1574,7 @@ OpExtension "SPV_KHR_non_semantic_info"
 
   CompileSuccessfully(GenerateShaderCodeForDebugInfo(
       src, constants, dbg_inst_header, "", extension, "Vertex"));
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Component Count must be OpConstant with a 32- or "
-                        "64-bits integer scalar type or DebugGlobalVariable or "
-                        "DebugLocalVariable with a 32- or 64-bits unsigned "
-                        "integer scalar type"));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 TEST_F(ValidateVulkan100DebugInfo, DebugTypeArrayFailVariableSizeTypeFloat) {
@@ -1866,6 +1861,178 @@ OpExtension "SPV_KHR_non_semantic_info"
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Component Count must be positive "
+                        "integer less than or equal to 4"));
+}
+
+TEST_F(ValidateVulkan100DebugInfo, DebugTypeMatrix) {
+  const std::string src = R"(
+%src = OpString "simple.hlsl"
+%code = OpString "main() {}"
+%float_name = OpString "float"
+)";
+
+  const std::string constants = R"(
+%u32_4 = OpConstant %u32 4
+%u32_5 = OpConstant %u32 5
+%u32_32 = OpConstant %u32 32
+%true = OpConstantTrue %bool
+)";
+
+  const std::string dbg_inst_header = R"(
+%dbg_src = OpExtInst %void %DbgExt DebugSource %src %code
+%comp_unit = OpExtInst %void %DbgExt DebugCompilationUnit %u32_2 %u32_4 %dbg_src %u32_5
+%float_info = OpExtInst %void %DbgExt DebugTypeBasic %float_name %u32_32 %u32_3 %u32_0
+%vfloat_info = OpExtInst %void %DbgExt DebugTypeVector %float_info %u32_4
+%mfloat_info = OpExtInst %void %DbgExt DebugTypeMatrix %vfloat_info %u32_4 %true
+)";
+
+  const std::string extension = R"(
+OpExtension "SPV_KHR_non_semantic_info"
+%DbgExt = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+)";
+
+  CompileSuccessfully(GenerateShaderCodeForDebugInfo(
+      src, constants, dbg_inst_header, "", extension, "Vertex"));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateVulkan100DebugInfo, DebugTypeMatrixFailVectorTypeType) {
+  const std::string src = R"(
+%src = OpString "simple.hlsl"
+%code = OpString "main() {}"
+%float_name = OpString "float"
+)";
+
+  const std::string constants = R"(
+%u32_4 = OpConstant %u32 4
+%u32_5 = OpConstant %u32 5
+%u32_32 = OpConstant %u32 32
+%true = OpConstantTrue %bool
+)";
+
+  const std::string dbg_inst_header = R"(
+%dbg_src = OpExtInst %void %DbgExt DebugSource %src %code
+%comp_unit = OpExtInst %void %DbgExt DebugCompilationUnit %u32_2 %u32_4 %dbg_src %u32_5
+%float_info = OpExtInst %void %DbgExt DebugTypeBasic %float_name %u32_32 %u32_3 %u32_0
+%vfloat_info = OpExtInst %void %DbgExt DebugTypeVector %float_info %u32_4
+%mfloat_info = OpExtInst %void %DbgExt DebugTypeMatrix %dbg_src %u32_4 %true
+)";
+
+  const std::string extension = R"(
+OpExtension "SPV_KHR_non_semantic_info"
+%DbgExt = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+)";
+
+  CompileSuccessfully(GenerateShaderCodeForDebugInfo(
+      src, constants, dbg_inst_header, "", extension, "Vertex"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("expected operand Vector Type must be a result id of "
+                        "DebugTypeVector"));
+}
+
+TEST_F(ValidateVulkan100DebugInfo, DebugTypeMatrixFailVectorCountType) {
+  const std::string src = R"(
+%src = OpString "simple.hlsl"
+%code = OpString "main() {}"
+%float_name = OpString "float"
+)";
+
+  const std::string constants = R"(
+%u32_4 = OpConstant %u32 4
+%u32_5 = OpConstant %u32 5
+%u32_32 = OpConstant %u32 32
+%true = OpConstantTrue %bool
+)";
+
+  const std::string dbg_inst_header = R"(
+%dbg_src = OpExtInst %void %DbgExt DebugSource %src %code
+%comp_unit = OpExtInst %void %DbgExt DebugCompilationUnit %u32_2 %u32_4 %dbg_src %u32_5
+%float_info = OpExtInst %void %DbgExt DebugTypeBasic %float_name %u32_32 %u32_3 %u32_0
+%vfloat_info = OpExtInst %void %DbgExt DebugTypeVector %float_info %u32_4
+%mfloat_info = OpExtInst %void %DbgExt DebugTypeMatrix %vfloat_info %dbg_src %true
+)";
+
+  const std::string extension = R"(
+OpExtension "SPV_KHR_non_semantic_info"
+%DbgExt = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+)";
+
+  CompileSuccessfully(GenerateShaderCodeForDebugInfo(
+      src, constants, dbg_inst_header, "", extension, "Vertex"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("expected operand Vector Count must be a result id of "
+                        "32-bit unsigned OpConstant"));
+}
+
+TEST_F(ValidateVulkan100DebugInfo, DebugTypeMatrixFailVectorCountZero) {
+  const std::string src = R"(
+%src = OpString "simple.hlsl"
+%code = OpString "main() {}"
+%float_name = OpString "float"
+)";
+
+  const std::string constants = R"(
+%u32_4 = OpConstant %u32 4
+%u32_5 = OpConstant %u32 5
+%u32_32 = OpConstant %u32 32
+%true = OpConstantTrue %bool
+)";
+
+  const std::string dbg_inst_header = R"(
+%dbg_src = OpExtInst %void %DbgExt DebugSource %src %code
+%comp_unit = OpExtInst %void %DbgExt DebugCompilationUnit %u32_2 %u32_4 %dbg_src %u32_5
+%float_info = OpExtInst %void %DbgExt DebugTypeBasic %float_name %u32_32 %u32_3 %u32_0
+%vfloat_info = OpExtInst %void %DbgExt DebugTypeVector %float_info %u32_4
+%mfloat_info = OpExtInst %void %DbgExt DebugTypeMatrix %vfloat_info %u32_0 %true
+)";
+
+  const std::string extension = R"(
+OpExtension "SPV_KHR_non_semantic_info"
+%DbgExt = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+)";
+
+  CompileSuccessfully(GenerateShaderCodeForDebugInfo(
+      src, constants, dbg_inst_header, "", extension, "Vertex"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Vector Count must be positive "
+                        "integer less than or equal to 4"));
+}
+
+TEST_F(ValidateVulkan100DebugInfo, DebugTypeMatrixFailVectorCountFive) {
+  const std::string src = R"(
+%src = OpString "simple.hlsl"
+%code = OpString "main() {}"
+%float_name = OpString "float"
+)";
+
+  const std::string constants = R"(
+%u32_4 = OpConstant %u32 4
+%u32_5 = OpConstant %u32 5
+%u32_32 = OpConstant %u32 32
+%true = OpConstantTrue %bool
+)";
+
+  const std::string dbg_inst_header = R"(
+%dbg_src = OpExtInst %void %DbgExt DebugSource %src %code
+%comp_unit = OpExtInst %void %DbgExt DebugCompilationUnit %u32_2 %u32_4 %dbg_src %u32_5
+%float_info = OpExtInst %void %DbgExt DebugTypeBasic %float_name %u32_32 %u32_3 %u32_0
+%vfloat_info = OpExtInst %void %DbgExt DebugTypeVector %float_info %u32_4
+%mfloat_info = OpExtInst %void %DbgExt DebugTypeMatrix %vfloat_info %u32_5 %true
+)";
+
+  const std::string extension = R"(
+OpExtension "SPV_KHR_non_semantic_info"
+%DbgExt = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+)";
+
+  CompileSuccessfully(GenerateShaderCodeForDebugInfo(
+      src, constants, dbg_inst_header, "", extension, "Vertex"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Vector Count must be positive "
                         "integer less than or equal to 4"));
 }
 

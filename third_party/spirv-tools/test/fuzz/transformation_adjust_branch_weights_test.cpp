@@ -106,7 +106,7 @@ TEST(TransformationAdjustBranchWeightsTest, IsApplicableTest) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  // Tests OpBranchConditional instruction with weigths.
+  // Tests OpBranchConditional instruction with weights.
   auto instruction_descriptor =
       MakeInstructionDescriptor(33, SpvOpBranchConditional, 0);
   auto transformation =

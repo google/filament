@@ -1,6 +1,6 @@
 # SVA
 
-SPIR-V Assember for WebGPU. The SPIR-V Assembler is a JavaScript library to
+SPIR-V Assembler for WebGPU. The SPIR-V Assembler is a JavaScript library to
 convert SPIR-V assembly (as produced by spirv-dis in SPIR-V Tools) into a
 SPIR-V binary. The assembler assumes it is generating WebGPU SPIR-V and thus has
 the following limitations.

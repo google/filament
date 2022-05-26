@@ -23,7 +23,7 @@ target_include_directories(SPIRV-Tools-link
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE ${spirv-tools_BINARY_DIR}
 )
-# We need the IR functionnalities from the optimizer
+# We need the IR functionalities from the optimizer
 target_link_libraries(SPIRV-Tools-link
   PUBLIC SPIRV-Tools-opt)
 

@@ -581,7 +581,7 @@ static void PushToString(T id, std::u32string* str) {
 
 // Implements the hashing of SENodes.
 size_t SENodeHash::operator()(const SENode* node) const {
-  // Concatinate the terms into a string which we can hash.
+  // Concatenate the terms into a string which we can hash.
   std::u32string hash_string{};
 
   // Hashing the type as a string is safer than hashing the enum as the enum is

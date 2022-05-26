@@ -9984,8 +9984,8 @@ TEST_F(InstBindlessTest, SamplerBufferConstructorOOBFetch) {
 //
 //   Compute shader
 //   Geometry shader
-//   Tesselation control shader
-//   Tesselation eval shader
+//   Tessellation control shader
+//   Tessellation eval shader
 //   OpImage
 //   SampledImage variable
 

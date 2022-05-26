@@ -50,7 +50,7 @@
 // A validation pass may read or write multiple buffers. All such buffers
 // are located in a single debug descriptor set whose index is passed at the
 // creation of the instrumentation pass. The bindings of the buffers used by
-// a validation pass are permanantly assigned and fixed and documented by
+// a validation pass are permanently assigned and fixed and documented by
 // the kDebugOutput* static consts.
 
 namespace spvtools {
@@ -179,8 +179,8 @@ class InstrumentPass : public Pass {
   // the error. Every stage will write a fixed number of words. Vertex shaders
   // will write the Vertex and Instance ID. Fragment shaders will write
   // FragCoord.xy. Compute shaders will write the GlobalInvocation ID.
-  // The tesselation eval shader will write the Primitive ID and TessCoords.uv.
-  // The tesselation control shader and geometry shader will write the
+  // The tessellation eval shader will write the Primitive ID and TessCoords.uv.
+  // The tessellation control shader and geometry shader will write the
   // Primitive ID and Invocation ID.
   //
   // The Validation Error Code specifies the exact error which has occurred.

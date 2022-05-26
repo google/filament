@@ -168,7 +168,7 @@ def git_checkout_to_directory(git, repo, checkoutable, directory, verbose):
 
   with open(os.devnull, 'w') as devnull:
     # If this fails, we will fetch before trying again.  Don't spam user
-    # with error infomation.
+    # with error information.
     if 0 == subprocess.call([git, 'checkout', '--quiet', checkoutable],
                             cwd=directory, stderr=devnull):
       # if this succeeds, skip slow `git fetch`.

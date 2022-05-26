@@ -1343,7 +1343,7 @@ struct StreamParseCase {
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const StreamParseCase<T>& fspc) {
   os << "StreamParseCase(" << fspc.literal
-     << ", expect_succes:" << int(fspc.expect_success) << ","
+     << ", expect_success:" << int(fspc.expect_success) << ","
      << fspc.expected_suffix << "," << fspc.expected_value << ")";
   return os;
 }

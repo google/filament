@@ -27,6 +27,7 @@
 #include "source/opt/iterator.h"
 #include "source/opt/reflect.h"
 #include "source/spirv_constant.h"
+#include "source/util/string_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -146,8 +147,7 @@ void AggressiveDCEPass::AddStores(Function* func, uint32_t ptrId) {
 bool AggressiveDCEPass::AllExtensionsSupported() const {
   // If any extension not in allowlist, return false
   for (auto& ei : get_module()->extensions()) {
-    const char* extName =
-        reinterpret_cast<const char*>(&ei.GetInOperand(0).words[0]);
+    const std::string extName = ei.GetInOperand(0).AsString();
     if (extensions_allowlist_.find(extName) == extensions_allowlist_.end())
       return false;
   }
@@ -156,11 +156,9 @@ bool AggressiveDCEPass::AllExtensionsSupported() const {
   for (auto& inst : context()->module()->ext_inst_imports()) {
     assert(inst.opcode() == SpvOpExtInstImport &&
            "Expecting an import of an extension's instruction set.");
-    const char* extension_name =
-        reinterpret_cast<const char*>(&inst.GetInOperand(0).words[0]);
-    if (0 == std::strncmp(extension_name, "NonSemantic.", 12) &&
-        0 != std::strncmp(extension_name, "NonSemantic.Shader.DebugInfo.100",
-                          32)) {
+    const std::string extension_name = inst.GetInOperand(0).AsString();
+    if (spvtools::utils::starts_with(extension_name, "NonSemantic.") &&
+        extension_name != "NonSemantic.Shader.DebugInfo.100") {
       return false;
     }
   }
@@ -569,12 +567,7 @@ void AggressiveDCEPass::InitializeModuleScopeLiveInstructions() {
   }
   // Keep all entry points.
   for (auto& entry : get_module()->entry_points()) {
-    if (get_module()->version() >= SPV_SPIRV_VERSION_WORD(1, 4) &&
-        !preserve_interface_) {
-      // In SPIR-V 1.4 and later, entry points must list all global variables
-      // used. DCE can still remove non-input/output variables and update the
-      // interface list. Mark the entry point as live and inputs and outputs as
-      // live, but defer decisions all other interfaces.
+    if (!preserve_interface_) {
       live_insts_.Set(entry.unique_id());
       // The actual function is live always.
       AddToWorklist(
@@ -582,8 +575,9 @@ void AggressiveDCEPass::InitializeModuleScopeLiveInstructions() {
       for (uint32_t i = 3; i < entry.NumInOperands(); ++i) {
         auto* var = get_def_use_mgr()->GetDef(entry.GetSingleWordInOperand(i));
         auto storage_class = var->GetSingleWordInOperand(0u);
-        if (storage_class == SpvStorageClassInput ||
-            storage_class == SpvStorageClassOutput) {
+        // Vulkan support outputs without an associated input, but not inputs
+        // without an associated output.
+        if (storage_class == SpvStorageClassOutput) {
           AddToWorklist(var);
         }
       }
@@ -885,8 +879,7 @@ bool AggressiveDCEPass::ProcessGlobalValues() {
     }
   }
 
-  if (get_module()->version() >= SPV_SPIRV_VERSION_WORD(1, 4) &&
-      !preserve_interface_) {
+  if (!preserve_interface_) {
     // Remove the dead interface variables from the entry point interface list.
     for (auto& entry : get_module()->entry_points()) {
       std::vector<Operand> new_operands;
@@ -974,6 +967,8 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_KHR_integer_dot_product",
       "SPV_EXT_shader_image_int64",
       "SPV_KHR_non_semantic_info",
+      "SPV_KHR_uniform_group_instructions",
+      "SPV_KHR_fragment_shader_barycentric",
   });
 }
 

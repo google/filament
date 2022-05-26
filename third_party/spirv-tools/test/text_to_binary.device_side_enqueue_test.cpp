@@ -83,7 +83,8 @@ TEST_F(OpKernelEnqueueBad, MissingLastOperand) {
       CompileFailure(
           "%result = OpEnqueueKernel %type %queue %flags %NDRange %num_events"
           " %wait_events %ret_event %invoke %param %param_size"),
-      Eq("Expected operand, found end of stream."));
+      Eq("Expected operand for OpEnqueueKernel instruction, but found the end "
+         "of the stream."));
 }
 
 TEST_F(OpKernelEnqueueBad, InvalidLastOperand) {

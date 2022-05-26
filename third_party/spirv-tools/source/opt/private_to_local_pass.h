@@ -44,7 +44,7 @@ class PrivateToLocalPass : public Pass {
   // class of |function|.  Returns false if the variable could not be moved.
   bool MoveVariable(Instruction* variable, Function* function);
 
-  // |inst| is an instruction declaring a varible.  If that variable is
+  // |inst| is an instruction declaring a variable.  If that variable is
   // referenced in a single function and all of uses are valid as defined by
   // |IsValidUse|, then that function is returned.  Otherwise, the return
   // value is |nullptr|.

@@ -169,6 +169,8 @@ bool IfConversion::CheckBlock(BasicBlock* block, DominatorAnalysis* dominators,
   if (branch->opcode() != SpvOpBranchConditional) return false;
   auto merge = (*common)->GetMergeInst();
   if (!merge || merge->opcode() != SpvOpSelectionMerge) return false;
+  if (merge->GetSingleWordInOperand(1) == SpvSelectionControlDontFlattenMask)
+    return false;
   if ((*common)->MergeBlockIdIfAny() != block->id()) return false;
 
   return true;

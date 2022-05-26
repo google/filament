@@ -31,7 +31,7 @@ uint64_t spvFixDoubleWord(const uint32_t low, const uint32_t high,
 spv_result_t spvBinaryEndianness(const spv_const_binary binary,
                                  spv_endianness_t* endian);
 
-// Returns true if the given endianness matches the host's native endiannes.
+// Returns true if the given endianness matches the host's native endianness.
 bool spvIsHostEndian(spv_endianness_t endian);
 
 #endif  // SOURCE_SPIRV_ENDIAN_H_

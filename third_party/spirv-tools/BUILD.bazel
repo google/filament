@@ -81,6 +81,7 @@ genrule(
     srcs = ["@spirv_headers//:spirv_xml_registry"],
     outs = ["generators.inc"],
     cmd = "$(location generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
+    cmd_bat = "$(location //:generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
     tools = [":generate_registry_tables"],
 )
 
@@ -93,7 +94,8 @@ genrule(
     name = "gen_build_version",
     srcs = ["CHANGES"],
     outs = ["build-version.inc"],
-    cmd = "SOURCE_DATE_EPOCH=0 $(location update_build_version) $$(dirname $(location CHANGES)) $(location build-version.inc)",
+    cmd = "SOURCE_DATE_EPOCH=0 $(location update_build_version) $(location CHANGES) $(location build-version.inc)",
+    cmd_bat = "set SOURCE_DATE_EPOCH=0  && $(location //:update_build_version) $(location CHANGES) $(location build-version.inc)",
     tools = [":update_build_version"],
 )
 

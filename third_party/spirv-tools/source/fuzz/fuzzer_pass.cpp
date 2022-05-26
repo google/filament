@@ -261,7 +261,7 @@ uint32_t FuzzerPass::FindOrCreateFloatType(uint32_t width) {
 
 uint32_t FuzzerPass::FindOrCreateFunctionType(
     uint32_t return_type_id, const std::vector<uint32_t>& argument_id) {
-  // FindFunctionType has a sigle argument for OpTypeFunction operands
+  // FindFunctionType has a single argument for OpTypeFunction operands
   // so we will have to copy them all in this vector
   std::vector<uint32_t> type_ids(argument_id.size() + 1);
   type_ids[0] = return_type_id;

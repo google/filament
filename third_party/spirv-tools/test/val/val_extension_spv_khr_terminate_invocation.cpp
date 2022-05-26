@@ -55,7 +55,7 @@ TEST_F(ValidateSpvKHRTerminateInvocation, Valid) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-TEST_F(ValidateSpvKHRTerminateInvocation, RequiresExtension) {
+TEST_F(ValidateSpvKHRTerminateInvocation, RequiresExtensionPre1p6) {
   const std::string str = R"(
     OpCapability Shader
     OpMemoryModel Logical Simple
@@ -72,9 +72,30 @@ TEST_F(ValidateSpvKHRTerminateInvocation, RequiresExtension) {
 )";
   CompileSuccessfully(str.c_str());
   EXPECT_NE(SPV_SUCCESS, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("TerminateInvocation requires one of the following "
-                        "extensions: SPV_KHR_terminate_invocation"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "TerminateInvocation requires SPIR-V version 1.6 at minimum or one "
+          "of the following extensions: SPV_KHR_terminate_invocation"));
+}
+
+TEST_F(ValidateSpvKHRTerminateInvocation, RequiresNoExtensionPost1p6) {
+  const std::string str = R"(
+    OpCapability Shader
+    OpMemoryModel Logical Simple
+    OpEntryPoint Fragment %main "main"
+    OpExecutionMode %main OriginUpperLeft
+    
+    %void    = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+
+    %main = OpFunction %void None %void_fn
+    %entry = OpLabel
+    OpTerminateInvocation
+    OpFunctionEnd
+)";
+  CompileSuccessfully(str.c_str(), SPV_ENV_UNIVERSAL_1_6);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
 }
 
 TEST_F(ValidateSpvKHRTerminateInvocation, RequiresShaderCapability) {

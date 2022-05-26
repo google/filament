@@ -149,7 +149,7 @@ void DebugInfoManager::RegisterDbgDeclare(uint32_t var_id,
 // Create new constant directly into global value area, bypassing the
 // Constant manager. This is used when the DefUse or Constant managers
 // are invalid and cannot be regenerated due to the module being in an
-// inconsistant state e.g. in the middle of significant modification
+// inconsistent state e.g. in the middle of significant modification
 // such as inlining. Invalidate Constant and DefUse managers if used.
 uint32_t AddNewConstInGlobals(IRContext* context, uint32_t const_value) {
   uint32_t id = context->TakeNextId();

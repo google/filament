@@ -167,7 +167,7 @@ class SENode {
   const ChildContainerType& GetChildren() const { return children_; }
   ChildContainerType& GetChildren() { return children_; }
 
-  // Return true if this node is a cant compute node.
+  // Return true if this node is a can't compute node.
   bool IsCantCompute() const { return GetType() == CanNotCompute; }
 
 // Implements a casting method for each type.

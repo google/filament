@@ -547,7 +547,7 @@ INSTANTIATE_TEST_SUITE_P(
         },
 
         // Uint vector type spec constants. One vector has all component dead,
-        // another vector has one dead unsigend integer and one used unsigned
+        // another vector has one dead unsigned integer and one used unsigned
         // integer.
         {
             /* .used_consts = */

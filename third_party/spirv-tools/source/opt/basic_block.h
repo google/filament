@@ -83,7 +83,7 @@ class BasicBlock {
   const Instruction* GetMergeInst() const;
   Instruction* GetMergeInst();
 
-  // Returns the OpLoopMerge instruciton in this basic block, if it exists.
+  // Returns the OpLoopMerge instruction in this basic block, if it exists.
   // Otherwise return null.  May be used whenever tail() can be used.
   const Instruction* GetLoopMergeInst() const;
   Instruction* GetLoopMergeInst();

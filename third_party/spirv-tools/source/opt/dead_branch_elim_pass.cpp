@@ -207,7 +207,7 @@ bool DeadBranchElimPass::SimplifyBranch(BasicBlock* block,
       Instruction::OperandList new_operands;
       new_operands.push_back(terminator->GetInOperand(0));
       new_operands.push_back({SPV_OPERAND_TYPE_ID, {live_lab_id}});
-      terminator->SetInOperands(move(new_operands));
+      terminator->SetInOperands(std::move(new_operands));
       context()->UpdateDefUse(terminator);
     } else {
       // Check if the merge instruction is still needed because of a

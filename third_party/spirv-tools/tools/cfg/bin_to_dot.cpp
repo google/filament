@@ -57,13 +57,13 @@ class DotConverter {
   // Ends processing for the current block, emitting its dot code.
   void FlushBlock(const std::vector<uint32_t>& successors);
 
-  // The ID of the current functio, or 0 if outside of a function.
+  // The ID of the current function, or 0 if outside of a function.
   uint32_t current_function_id_ = 0;
 
   // The ID of the current basic block, or 0 if outside of a block.
   uint32_t current_block_id_ = 0;
 
-  // Have we completed processing for the entry block to this fuction?
+  // Have we completed processing for the entry block to this function?
   bool seen_function_entry_block_ = false;
 
   // The Id of the merge block for this block if it exists, or 0 otherwise.

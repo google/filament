@@ -65,7 +65,7 @@ INSTANTIATE_TEST_SUITE_P(
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 1, "NotNaN"},
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 2, "NotInf"},
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 3, "NotNaN|NotInf"},
-        // Mask experssions are symmetric.
+        // Mask expressions are symmetric.
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 3, "NotInf|NotNaN"},
         // Repeating a value has no effect.
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 3, "NotInf|NotNaN|NotInf"},

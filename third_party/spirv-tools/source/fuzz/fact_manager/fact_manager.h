@@ -163,7 +163,7 @@ class FactManager {
   std::vector<const protobufs::DataDescriptor*> GetSynonymsForDataDescriptor(
       const protobufs::DataDescriptor& data_descriptor) const;
 
-  // Returns true if and ony if |data_descriptor1| and |data_descriptor2| are
+  // Returns true if and only if |data_descriptor1| and |data_descriptor2| are
   // known to be synonymous.
   bool IsSynonymous(const protobufs::DataDescriptor& data_descriptor1,
                     const protobufs::DataDescriptor& data_descriptor2) const;
@@ -174,7 +174,7 @@ class FactManager {
   //==============================
   // Querying facts about dead blocks
 
-  // Returns true if and ony if |block_id| is the id of a block known to be
+  // Returns true if and only if |block_id| is the id of a block known to be
   // dynamically unreachable.
   bool BlockIsDead(uint32_t block_id) const;
 
@@ -184,7 +184,7 @@ class FactManager {
   //==============================
   // Querying facts about livesafe function
 
-  // Returns true if and ony if |function_id| is the id of a function known
+  // Returns true if and only if |function_id| is the id of a function known
   // to be livesafe.
   bool FunctionIsLivesafe(uint32_t function_id) const;
 
@@ -194,7 +194,7 @@ class FactManager {
   //==============================
   // Querying facts about irrelevant values
 
-  // Returns true if and ony if the value of the pointee associated with
+  // Returns true if and only if the value of the pointee associated with
   // |pointer_id| is irrelevant.
   bool PointeeValueIsIrrelevant(uint32_t pointer_id) const;
 

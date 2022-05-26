@@ -57,7 +57,7 @@ void check_dominance(const DominatorAnalysisBase& dom_tree, const Function* fn,
   }
 }
 
-// Check that x does not dominates y and vise versa
+// Check that x does not dominates y and vice versa
 void check_no_dominance(const DominatorAnalysisBase& dom_tree,
                         const Function* fn, uint32_t x, uint32_t y) {
   SCOPED_TRACE("Check no domination for Basic Block " + std::to_string(x) +

@@ -21,11 +21,13 @@
 #include <utility>
 #include <vector>
 
+#include "source/binary.h"
 #include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
 #include "source/spirv_validator_options.h"
+#include "source/util/string_utils.h"
 #include "source/val/validate_scopes.h"
 #include "source/val/validation_state.h"
 
@@ -94,6 +96,14 @@ bool isBuiltInStruct(uint32_t struct_id, ValidationState_t& vstate) {
         return SpvDecorationBuiltIn == d.dec_type() &&
                Decoration::kInvalidMember != d.struct_member_index();
       });
+}
+
+// Returns true if the given structure type has a Block decoration.
+bool isBlock(uint32_t struct_id, ValidationState_t& vstate) {
+  const auto& decorations = vstate.id_decorations(struct_id);
+  return std::any_of(
+      decorations.begin(), decorations.end(),
+      [](const Decoration& d) { return SpvDecorationBlock == d.dec_type(); });
 }
 
 // Returns true if the given ID has the Import LinkageAttributes decoration.
@@ -455,7 +465,7 @@ spv_result_t checkLayout(uint32_t struct_id, const char* storage_class_str,
         return lhs.offset < rhs.offset;
       });
 
-  // Now scan from lowest offest to highest offset.
+  // Now scan from lowest offset to highest offset.
   uint32_t nextValidOffset = 0;
   for (size_t ordered_member_idx = 0;
        ordered_member_idx < member_offsets.size(); ordered_member_idx++) {
@@ -702,7 +712,7 @@ spv_result_t CheckBuiltInVariable(uint32_t var_id, ValidationState_t& vstate) {
       if (d.dec_type() == SpvDecorationLocation ||
           d.dec_type() == SpvDecorationComponent) {
         return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-               << "A BuiltIn variable (id " << var_id
+               << vstate.VkErrorID(4915) << "A BuiltIn variable (id " << var_id
                << ") cannot have any Location or Component decorations";
       }
     }
@@ -710,12 +720,12 @@ spv_result_t CheckBuiltInVariable(uint32_t var_id, ValidationState_t& vstate) {
   return SPV_SUCCESS;
 }
 
-// Checks whether proper decorations have been appied to the entry points.
+// Checks whether proper decorations have been applied to the entry points.
 spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
   for (uint32_t entry_point : vstate.entry_points()) {
     const auto& descs = vstate.entry_point_descriptions(entry_point);
-    int num_builtin_inputs = 0;
-    int num_builtin_outputs = 0;
+    int num_builtin_block_inputs = 0;
+    int num_builtin_block_outputs = 0;
     int num_workgroup_variables = 0;
     int num_workgroup_variables_with_block = 0;
     int num_workgroup_variables_with_aliased = 0;
@@ -766,9 +776,20 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
         Instruction* type_instr = vstate.FindDef(type_id);
         if (type_instr && SpvOpTypeStruct == type_instr->opcode() &&
             isBuiltInStruct(type_id, vstate)) {
-          if (storage_class == SpvStorageClassInput) ++num_builtin_inputs;
-          if (storage_class == SpvStorageClassOutput) ++num_builtin_outputs;
-          if (num_builtin_inputs > 1 || num_builtin_outputs > 1) break;
+          if (!isBlock(type_id, vstate)) {
+            return vstate.diag(SPV_ERROR_INVALID_DATA, vstate.FindDef(type_id))
+                   << vstate.VkErrorID(4919)
+                   << "Interface struct has no Block decoration but has "
+                      "BuiltIn members. "
+                      "Location decorations must be used on each member of "
+                      "OpVariable with a structure type that is a block not "
+                      "decorated with Location.";
+          }
+          if (storage_class == SpvStorageClassInput) ++num_builtin_block_inputs;
+          if (storage_class == SpvStorageClassOutput)
+            ++num_builtin_block_outputs;
+          if (num_builtin_block_inputs > 1 || num_builtin_block_outputs > 1)
+            break;
           if (auto error = CheckBuiltInVariable(interface, vstate))
             return error;
         } else if (isBuiltInVar(interface, vstate)) {
@@ -786,7 +807,7 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
           }
         }
       }
-      if (num_builtin_inputs > 1 || num_builtin_outputs > 1) {
+      if (num_builtin_block_inputs > 1 || num_builtin_block_outputs > 1) {
         return vstate.diag(SPV_ERROR_INVALID_BINARY,
                            vstate.FindDef(entry_point))
                << "There must be at most one object per Storage Class that can "
@@ -798,8 +819,8 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
       // targeted by an OpEntryPoint instruction
       for (auto& decoration : vstate.id_decorations(entry_point)) {
         if (SpvDecorationLinkageAttributes == decoration.dec_type()) {
-          const char* linkage_name =
-              reinterpret_cast<const char*>(&decoration.params()[0]);
+          const std::string linkage_name =
+              spvtools::utils::MakeString(decoration.params());
           return vstate.diag(SPV_ERROR_INVALID_BINARY,
                              vstate.FindDef(entry_point))
                  << "The LinkageAttributes Decoration (Linkage name: "
@@ -935,41 +956,41 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
       const bool storage_buffer = storageClass == SpvStorageClassStorageBuffer;
 
       if (spvIsVulkanEnv(vstate.context()->target_env)) {
-        // Vulkan 14.5.1: There must be no more than one PushConstant block
-        // per entry point.
+        // Vulkan: There must be no more than one PushConstant block per entry
+        // point.
         if (push_constant) {
           auto entry_points = vstate.EntryPointReferences(var_id);
           for (auto ep_id : entry_points) {
             const bool already_used = !uses_push_constant.insert(ep_id).second;
             if (already_used) {
               return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                     << "Entry point id '" << ep_id
+                     << vstate.VkErrorID(6674) << "Entry point id '" << ep_id
                      << "' uses more than one PushConstant interface.\n"
-                     << "From Vulkan spec, section 14.5.1:\n"
+                     << "From Vulkan spec:\n"
                      << "There must be no more than one push constant block "
                      << "statically used per shader entry point.";
             }
           }
         }
-        // Vulkan 14.5.2: Check DescriptorSet and Binding decoration for
+        // Vulkan: Check DescriptorSet and Binding decoration for
         // UniformConstant which cannot be a struct.
         if (uniform_constant) {
           auto entry_points = vstate.EntryPointReferences(var_id);
           if (!entry_points.empty() &&
               !hasDecoration(var_id, SpvDecorationDescriptorSet, vstate)) {
             return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                   << "UniformConstant id '" << var_id
+                   << vstate.VkErrorID(6677) << "UniformConstant id '" << var_id
                    << "' is missing DescriptorSet decoration.\n"
-                   << "From Vulkan spec, section 14.5.2:\n"
+                   << "From Vulkan spec:\n"
                    << "These variables must have DescriptorSet and Binding "
                       "decorations specified";
           }
           if (!entry_points.empty() &&
               !hasDecoration(var_id, SpvDecorationBinding, vstate)) {
             return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                   << "UniformConstant id '" << var_id
+                   << vstate.VkErrorID(6677) << "UniformConstant id '" << var_id
                    << "' is missing Binding decoration.\n"
-                   << "From Vulkan spec, section 14.5.2:\n"
+                   << "From Vulkan spec:\n"
                    << "These variables must have DescriptorSet and Binding "
                       "decorations specified";
           }
@@ -996,7 +1017,7 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
       }
 
       const bool phys_storage_buffer =
-          storageClass == SpvStorageClassPhysicalStorageBufferEXT;
+          storageClass == SpvStorageClassPhysicalStorageBuffer;
       const bool workgroup =
           storageClass == SpvStorageClassWorkgroup &&
           vstate.HasCapability(SpvCapabilityWorkgroupMemoryExplicitLayoutKHR);
@@ -1030,55 +1051,55 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
               hasDecoration(id, SpvDecorationBufferBlock, vstate);
           if (storage_buffer && buffer_block) {
             return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                   << "Storage buffer id '" << var_id
+                   << vstate.VkErrorID(6675) << "Storage buffer id '" << var_id
                    << " In Vulkan, BufferBlock is disallowed on variables in "
                       "the StorageBuffer storage class";
           }
-          // Vulkan 14.5.1/2: Check Block decoration for PushConstant, Uniform
+          // Vulkan: Check Block decoration for PushConstant, Uniform
           // and StorageBuffer variables. Uniform can also use BufferBlock.
           if (push_constant && !block) {
             return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(id))
-                   << "PushConstant id '" << id
+                   << vstate.VkErrorID(6675) << "PushConstant id '" << id
                    << "' is missing Block decoration.\n"
-                   << "From Vulkan spec, section 14.5.1:\n"
+                   << "From Vulkan spec:\n"
                    << "Such variables must be identified with a Block "
                       "decoration";
           }
           if (storage_buffer && !block) {
             return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(id))
-                   << "StorageBuffer id '" << id
+                   << vstate.VkErrorID(6675) << "StorageBuffer id '" << id
                    << "' is missing Block decoration.\n"
-                   << "From Vulkan spec, section 14.5.2:\n"
+                   << "From Vulkan spec:\n"
                    << "Such variables must be identified with a Block "
                       "decoration";
           }
           if (uniform && !block && !buffer_block) {
             return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(id))
-                   << "Uniform id '" << id
+                   << vstate.VkErrorID(6676) << "Uniform id '" << id
                    << "' is missing Block or BufferBlock decoration.\n"
-                   << "From Vulkan spec, section 14.5.2:\n"
+                   << "From Vulkan spec:\n"
                    << "Such variables must be identified with a Block or "
                       "BufferBlock decoration";
           }
-          // Vulkan 14.5.2: Check DescriptorSet and Binding decoration for
+          // Vulkan: Check DescriptorSet and Binding decoration for
           // Uniform and StorageBuffer variables.
           if (uniform || storage_buffer) {
             auto entry_points = vstate.EntryPointReferences(var_id);
             if (!entry_points.empty() &&
                 !hasDecoration(var_id, SpvDecorationDescriptorSet, vstate)) {
               return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                     << sc_str << " id '" << var_id
+                     << vstate.VkErrorID(6677) << sc_str << " id '" << var_id
                      << "' is missing DescriptorSet decoration.\n"
-                     << "From Vulkan spec, section 14.5.2:\n"
+                     << "From Vulkan spec:\n"
                      << "These variables must have DescriptorSet and Binding "
                         "decorations specified";
             }
             if (!entry_points.empty() &&
                 !hasDecoration(var_id, SpvDecorationBinding, vstate)) {
               return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(var_id))
-                     << sc_str << " id '" << var_id
+                     << vstate.VkErrorID(6677) << sc_str << " id '" << var_id
                      << "' is missing Binding decoration.\n"
-                     << "From Vulkan spec, section 14.5.2:\n"
+                     << "From Vulkan spec:\n"
                      << "These variables must have DescriptorSet and Binding "
                         "decorations specified";
             }
@@ -1386,11 +1407,11 @@ spv_result_t CheckFPRoundingModeForShaders(ValidationState_t& vstate,
         storage != SpvStorageClassUniform &&
         storage != SpvStorageClassPushConstant &&
         storage != SpvStorageClassInput && storage != SpvStorageClassOutput &&
-        storage != SpvStorageClassPhysicalStorageBufferEXT) {
+        storage != SpvStorageClassPhysicalStorageBuffer) {
       return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
              << "FPRoundingMode decoration can be applied only to the "
                 "Object operand of an OpStore in the StorageBuffer, "
-                "PhysicalStorageBufferEXT, Uniform, PushConstant, Input, or "
+                "PhysicalStorageBuffer, Uniform, PushConstant, Input, or "
                 "Output Storage Classes.";
     }
   }

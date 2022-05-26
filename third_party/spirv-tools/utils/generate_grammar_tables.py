@@ -23,7 +23,7 @@ import re
 PYGEN_VARIABLE_PREFIX = 'pygen_variable'
 
 # Extensions to recognize, but which don't necessarily come from the SPIR-V
-# core or KHR grammar files.  Get this list from the SPIR-V registery web page.
+# core or KHR grammar files.  Get this list from the SPIR-V registry web page.
 # NOTE: Only put things on this list if it is not in those grammar files.
 EXTENSIONS_FROM_SPIRV_REGISTRY_AND_NOT_FROM_GRAMMARS = """
 SPV_AMD_gcn_shader

@@ -26,7 +26,7 @@
 // the Binary Section of the SPIR-V specification.
 
 // Enumeration tokens for SPIR-V, in various styles:
-//   C, C++, C++11, JSON, Lua, Python, C#, D
+//   C, C++, C++11, JSON, Lua, Python, C#, D, Beef
 // 
 // - C will have tokens with a "Spv" prefix, e.g.: SpvSourceLanguageGLSL
 // - C++ will have tokens in the "spv" name space, e.g.: spv::SourceLanguageGLSL
@@ -36,6 +36,8 @@
 // - C# will use enum classes in the Specification class located in the "Spv" namespace,
 //     e.g.: Spv.Specification.SourceLanguage.GLSL
 // - D will have tokens under the "spv" module, e.g: spv.SourceLanguage.GLSL
+// - Beef will use enum classes in the Specification class located in the "Spv" namespace,
+//     e.g.: Spv.Specification.SourceLanguage.GLSL
 // 
 // Some tokens act like mask values, which can be OR'd together,
 // while others are mutually exclusive.  The mask-like ones have
@@ -48,8 +50,8 @@ namespace Spv
     public static class Specification
     {
         public const uint MagicNumber = 0x07230203;
-        public const uint Version = 0x00010500;
-        public const uint Revision = 4;
+        public const uint Version = 0x00010600;
+        public const uint Revision = 1;
         public const uint OpCodeMask = 0xffff;
         public const uint WordCountShift = 16;
 
@@ -62,6 +64,7 @@ namespace Spv
             OpenCL_CPP = 4,
             HLSL = 5,
             CPP_for_OpenCL = 6,
+            SYCL = 7,
         }
 
         public enum ExecutionModel
@@ -176,6 +179,7 @@ namespace Spv
             NoGlobalOffsetINTEL = 5895,
             NumSIMDWorkitemsINTEL = 5896,
             SchedulerTargetFmaxMhzINTEL = 5903,
+            NamedBarrierCountINTEL = 6417,
         }
 
         public enum StorageClass
@@ -349,6 +353,7 @@ namespace Spv
             VolatileTexelKHR = 11,
             SignExtend = 12,
             ZeroExtend = 13,
+            Nontemporal = 14,
             Offsets = 16,
         }
 
@@ -373,6 +378,7 @@ namespace Spv
             VolatileTexelKHR = 0x00000800,
             SignExtend = 0x00001000,
             ZeroExtend = 0x00002000,
+            Nontemporal = 0x00004000,
             Offsets = 0x00010000,
         }
 
@@ -492,6 +498,7 @@ namespace Spv
             PerPrimitiveNV = 5271,
             PerViewNV = 5272,
             PerTaskNV = 5273,
+            PerVertexKHR = 5285,
             PerVertexNV = 5285,
             NonUniform = 5300,
             NonUniformEXT = 5300,
@@ -537,11 +544,14 @@ namespace Spv
             PrefetchINTEL = 5902,
             StallEnableINTEL = 5905,
             FuseLoopsInFunctionINTEL = 5907,
+            AliasScopeINTEL = 5914,
+            NoAliasINTEL = 5915,
             BufferLocationINTEL = 5921,
             IOPipeStorageINTEL = 5944,
             FunctionFloatingPointModeINTEL = 6080,
             SingleElementVectorINTEL = 6085,
             VectorComputeCallableFunctionINTEL = 6087,
+            MediaBlockIOINTEL = 6140,
         }
 
         public enum BuiltIn
@@ -626,7 +636,9 @@ namespace Spv
             LayerPerViewNV = 5279,
             MeshViewCountNV = 5280,
             MeshViewIndicesNV = 5281,
+            BaryCoordKHR = 5286,
             BaryCoordNV = 5286,
+            BaryCoordNoPerspKHR = 5287,
             BaryCoordNoPerspNV = 5287,
             FragSizeEXT = 5292,
             FragmentSizeNV = 5292,
@@ -665,6 +677,7 @@ namespace Spv
             SMCountNV = 5375,
             WarpIDNV = 5376,
             SMIDNV = 5377,
+            CullMaskKHR = 6021,
         }
 
         public enum SelectionControlShift
@@ -796,6 +809,8 @@ namespace Spv
             MakePointerVisibleKHR = 4,
             NonPrivatePointer = 5,
             NonPrivatePointerKHR = 5,
+            AliasScopeINTELMask = 16,
+            NoAliasINTELMask = 17,
         }
 
         public enum MemoryAccessMask
@@ -810,6 +825,8 @@ namespace Spv
             MakePointerVisibleKHR = 0x00000010,
             NonPrivatePointer = 0x00000020,
             NonPrivatePointerKHR = 0x00000020,
+            AliasScopeINTELMask = 0x00010000,
+            NoAliasINTELMask = 0x00020000,
         }
 
         public enum Scope
@@ -924,6 +941,7 @@ namespace Spv
             GroupNonUniformQuad = 68,
             ShaderLayer = 69,
             ShaderViewportIndex = 70,
+            UniformDecoration = 71,
             FragmentShadingRateKHR = 4422,
             SubgroupBallotKHR = 4423,
             DrawParameters = 4427,
@@ -972,6 +990,7 @@ namespace Spv
             FragmentFullyCoveredEXT = 5265,
             MeshShadingNV = 5266,
             ImageFootprintNV = 5282,
+            FragmentBarycentricKHR = 5284,
             FragmentBarycentricNV = 5284,
             ComputeDerivativeGroupQuadsNV = 5288,
             FragmentDensityEXT = 5291,
@@ -1016,6 +1035,7 @@ namespace Spv
             FragmentShaderShadingRateInterlockEXT = 5372,
             ShaderSMBuiltinsNV = 5373,
             FragmentShaderPixelInterlockEXT = 5378,
+            DemoteToHelperInvocation = 5379,
             DemoteToHelperInvocationEXT = 5379,
             BindlessTextureNV = 5390,
             SubgroupShuffleINTEL = 5568,
@@ -1050,23 +1070,32 @@ namespace Spv
             FPGAMemoryAccessesINTEL = 5898,
             FPGAClusterAttributesINTEL = 5904,
             LoopFuseINTEL = 5906,
+            MemoryAccessAliasingINTEL = 5910,
             FPGABufferLocationINTEL = 5920,
             ArbitraryPrecisionFixedPointINTEL = 5922,
             USMStorageClassesINTEL = 5935,
             IOPipesINTEL = 5943,
             BlockingPipesINTEL = 5945,
             FPGARegINTEL = 5948,
+            DotProductInputAll = 6016,
             DotProductInputAllKHR = 6016,
+            DotProductInput4x8Bit = 6017,
             DotProductInput4x8BitKHR = 6017,
+            DotProductInput4x8BitPacked = 6018,
             DotProductInput4x8BitPackedKHR = 6018,
+            DotProduct = 6019,
             DotProductKHR = 6019,
+            RayCullMaskKHR = 6020,
             BitInstructions = 6025,
+            GroupNonUniformRotateKHR = 6026,
             AtomicFloat32AddEXT = 6033,
             AtomicFloat64AddEXT = 6034,
             LongConstantCompositeINTEL = 6089,
             OptNoneINTEL = 6094,
             AtomicFloat16AddEXT = 6095,
             DebugInfoModuleINTEL = 6114,
+            SplitBarrierINTEL = 6141,
+            GroupUniformArithmeticKHR = 6400,
         }
 
         public enum RayFlagsShift
@@ -1168,6 +1197,7 @@ namespace Spv
 
         public enum PackedVectorFormat
         {
+            PackedVectorFormat4x8Bit = 0,
             PackedVectorFormat4x8BitKHR = 0,
         }
 
@@ -1523,17 +1553,24 @@ namespace Spv
             OpSubgroupAllKHR = 4428,
             OpSubgroupAnyKHR = 4429,
             OpSubgroupAllEqualKHR = 4430,
+            OpGroupNonUniformRotateKHR = 4431,
             OpSubgroupReadInvocationKHR = 4432,
             OpTraceRayKHR = 4445,
             OpExecuteCallableKHR = 4446,
             OpConvertUToAccelerationStructureKHR = 4447,
             OpIgnoreIntersectionKHR = 4448,
             OpTerminateRayKHR = 4449,
+            OpSDot = 4450,
             OpSDotKHR = 4450,
+            OpUDot = 4451,
             OpUDotKHR = 4451,
+            OpSUDot = 4452,
             OpSUDotKHR = 4452,
+            OpSDotAccSat = 4453,
             OpSDotAccSatKHR = 4453,
+            OpUDotAccSat = 4454,
             OpUDotAccSatKHR = 4454,
+            OpSUDotAccSat = 4455,
             OpSUDotAccSatKHR = 4455,
             OpTypeRayQueryKHR = 4472,
             OpRayQueryInitializeKHR = 4473,
@@ -1573,6 +1610,7 @@ namespace Spv
             OpCooperativeMatrixLengthNV = 5362,
             OpBeginInvocationInterlockEXT = 5364,
             OpEndInvocationInterlockEXT = 5365,
+            OpDemoteToHelperInvocation = 5380,
             OpDemoteToHelperInvocationEXT = 5380,
             OpIsHelperInvocationEXT = 5381,
             OpConvertUToImageNV = 5391,
@@ -1782,6 +1820,9 @@ namespace Spv
             OpArbitraryFloatPowRINTEL = 5881,
             OpArbitraryFloatPowNINTEL = 5882,
             OpLoopControlINTEL = 5887,
+            OpAliasDomainDeclINTEL = 5911,
+            OpAliasScopeDeclINTEL = 5912,
+            OpAliasScopeListDeclINTEL = 5913,
             OpFixedSqrtINTEL = 5923,
             OpFixedRecipINTEL = 5924,
             OpFixedRsqrtINTEL = 5925,
@@ -1820,6 +1861,16 @@ namespace Spv
             OpTypeStructContinuedINTEL = 6090,
             OpConstantCompositeContinuedINTEL = 6091,
             OpSpecConstantCompositeContinuedINTEL = 6092,
+            OpControlBarrierArriveINTEL = 6142,
+            OpControlBarrierWaitINTEL = 6143,
+            OpGroupIMulKHR = 6401,
+            OpGroupFMulKHR = 6402,
+            OpGroupBitwiseAndKHR = 6403,
+            OpGroupBitwiseOrKHR = 6404,
+            OpGroupBitwiseXorKHR = 6405,
+            OpGroupLogicalAndKHR = 6406,
+            OpGroupLogicalOrKHR = 6407,
+            OpGroupLogicalXorKHR = 6408,
         }
     }
 }

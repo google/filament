@@ -76,10 +76,9 @@ Instruction::Instruction(IRContext* c, const spv_parsed_instruction_t& inst,
       dbg_scope_(kNoDebugScope, kNoInlinedAt) {
   for (uint32_t i = 0; i < inst.num_operands; ++i) {
     const auto& current_payload = inst.operands[i];
-    std::vector<uint32_t> words(
-        inst.words + current_payload.offset,
+    operands_.emplace_back(
+        current_payload.type, inst.words + current_payload.offset,
         inst.words + current_payload.offset + current_payload.num_words);
-    operands_.emplace_back(current_payload.type, std::move(words));
   }
   assert((!IsLineInst() || dbg_line.empty()) &&
          "Op(No)Line attaching to Op(No)Line found");
@@ -96,10 +95,9 @@ Instruction::Instruction(IRContext* c, const spv_parsed_instruction_t& inst,
       dbg_scope_(dbg_scope) {
   for (uint32_t i = 0; i < inst.num_operands; ++i) {
     const auto& current_payload = inst.operands[i];
-    std::vector<uint32_t> words(
-        inst.words + current_payload.offset,
+    operands_.emplace_back(
+        current_payload.type, inst.words + current_payload.offset,
         inst.words + current_payload.offset + current_payload.num_words);
-    operands_.emplace_back(current_payload.type, std::move(words));
   }
 }
 
