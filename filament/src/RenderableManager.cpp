@@ -102,6 +102,11 @@ void RenderableManager::setBlendOrderAt(Instance instance, size_t primitiveIndex
     upcast(this)->setBlendOrderAt(instance, 0, primitiveIndex, order);
 }
 
+void RenderableManager::setGlobalBlendOrderEnabledAt(RenderableManager::Instance instance,
+        size_t primitiveIndex, bool enabled) noexcept {
+    upcast(this)->setGlobalBlendOrderEnabledAt(instance, 0, primitiveIndex, enabled);
+}
+
 AttributeBitset RenderableManager::getEnabledAttributesAt(Instance instance, size_t primitiveIndex) const noexcept {
     return upcast(this)->getEnabledAttributesAt(instance, 0, primitiveIndex);
 }

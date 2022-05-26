@@ -53,18 +53,26 @@ public:
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
+    bool isGlobalBlendOrderEnabled() const noexcept { return mGlobalBlendOrderEnabled; }
 
     void setMaterialInstance(FMaterialInstance const* mi) noexcept { mMaterialInstance = mi; }
+
     void setBlendOrder(uint16_t order) noexcept {
         mBlendOrder = static_cast<uint16_t>(order & 0x7FFF);
     }
 
+    void setGlobalBlendOrderEnabled(bool enabled) noexcept {
+        mGlobalBlendOrderEnabled = enabled;
+    }
+
 private:
     FMaterialInstance const* mMaterialInstance = nullptr;
-    backend::Handle<backend::HwRenderPrimitive> mHandle;
-    backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::NONE;
-    AttributeBitset mEnabledAttributes;
+    backend::Handle<backend::HwRenderPrimitive> mHandle = {};
+    AttributeBitset mEnabledAttributes = {};
     uint16_t mBlendOrder = 0;
+    bool mGlobalBlendOrderEnabled = false;
+    backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::NONE;
+    UTILS_UNUSED uint8_t reserved[4] = {};
 };
 
 } // namespace filament

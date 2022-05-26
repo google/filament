@@ -27,6 +27,8 @@
 #include "details/Material.h"
 
 #include "private/filament/SibGenerator.h"
+#include "filament/RenderableManager.h"
+
 
 #include <backend/DriverEnums.h>
 
@@ -210,9 +212,18 @@ RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, 
     return *this;
 }
 
-RenderableManager::Builder& RenderableManager::Builder::blendOrder(size_t index, uint16_t blendOrder) noexcept {
+RenderableManager::Builder& RenderableManager::Builder::blendOrder(
+        size_t index, uint16_t blendOrder) noexcept {
     if (index < mImpl->mEntries.size()) {
         mImpl->mEntries[index].blendOrder = blendOrder;
+    }
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::globalBlendOrderEnabled(
+        size_t index, bool enabled) noexcept {
+    if (index < mImpl->mEntries.size()) {
+        mImpl->mEntries[index].globalBlendOrderEnabled = enabled;
     }
     return *this;
 }
@@ -531,6 +542,16 @@ void FRenderableManager::setBlendOrderAt(Instance instance, uint8_t level,
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setBlendOrder(order);
+        }
+    }
+}
+
+void FRenderableManager::setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level,
+        size_t primitiveIndex, bool enabled) noexcept {
+    if (instance) {
+        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        if (primitiveIndex < primitives.size()) {
+            primitives[primitiveIndex].setGlobalBlendOrderEnabled(enabled);
         }
     }
 }
