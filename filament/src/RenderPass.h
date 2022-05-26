@@ -213,6 +213,11 @@ public:
         return boolish ? std::numeric_limits<uint64_t>::max() : uint64_t(0);
     }
 
+    template<typename T>
+    static CommandKey select(T boolish, uint64_t value) noexcept {
+        return boolish ? value : uint64_t(0);
+    }
+
     struct PrimitiveInfo { // 48 bytes
         union {
             FMaterialInstance const* mi;

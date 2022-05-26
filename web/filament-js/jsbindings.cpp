@@ -919,6 +919,10 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             (RenderableBuilder* builder, size_t index, uint16_t order), {
         return &builder->blendOrder(index, order); })
 
+    .BUILDER_FUNCTION("globalBlendOrderEnabled", RenderableBuilder,
+            (RenderableBuilder* builder, size_t index, bool enabled), {
+        return &builder->globalBlendOrderEnabled(index, enabled); })
+
     .BUILDER_FUNCTION("lightChannel", RenderableBuilder,
             (RenderableBuilder* builder, unsigned int channel, bool enable), {
         return &builder->lightChannel(channel, enable); })
@@ -1003,6 +1007,8 @@ class_<RenderableManager>("RenderableManager")
     }), allow_raw_pointers())
 
     .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
+
+    .function("setGlobalBlendOrderEnabledAt", &RenderableManager::setGlobalBlendOrderEnabledAt)
 
     .function("getEnabledAttributesAt", EMBIND_LAMBDA(uint32_t, (RenderableManager* self,
             RenderableManager::Instance instance, size_t primitiveIndex), {
