@@ -187,10 +187,8 @@ public:
      *
      *                              Defaults to FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB.
      *
-     * perFrameCommandsSizeMB       Memory size (in MB) to allocate for per-frame commands.
-     *
-     *                              This size dictates the maximum number of visible objects in
-     *                              the scene.
+     * perFrameCommandsSizeMB       Size in MiB of the per-frame high level command buffer. It is allocated from
+     the 'per-render-pass arena' below. This buffer is related to the number of draw calls within a frame. If this size is too small, the program will abort on debug builds and have undefined behavior otherwise.
      *
      * perRenderPassArenaSizeMB     Size in MiB of the per-render-pass Arena.  This is the main arena used for allocations when preparing a frame. e.g.: Froxel data and high-level commands are allocated from this arena. If this size is too small, the program will abort on debug builds and have undefined behavior otherwise.
      *
