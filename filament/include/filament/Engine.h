@@ -192,10 +192,7 @@ public:
      *                              This size dictates the maximum number of visible objects in
      *                              the scene.
      *
-     * perRenderPassArenaSizeMB     Memory size (in MB) to allocate for per-render-pass arena.
-     *
-     *                              Rule of thumb: perRenderPassArenaSizeMB must be roughly
-     *                              1 MB larger than perFrameCommandsSizeMB
+     * perRenderPassArenaSizeMB     Size in MiB of the per-render-pass Arena.  This is the main arena used for allocations when preparing a frame. e.g.: Froxel data and high-level commands are allocated from this arena. If this size is too small, the program will abort on debug builds and have undefined behavior otherwise.
      *
      * driverHandleArenaSizeMB      Size in MiB of the backend's handle arena. Backends will fallback to slower heap based allocations when running out of space and log this condition.
      *
