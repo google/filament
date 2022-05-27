@@ -178,7 +178,7 @@ public:
      * command buffer size. Config can be used to customize engine requirements based 
      * on the applications needs.
      * 
-     * minCommandBufferSizeMB       Minimum memory size (in MB) to allocate for Engine command buffer.
+     * minCommandBufferSizeMB       Minimum size in MiB of the low-level command buffer. If this is too small, the engine might have to stall to wait for more space to become available, this situation is logged.
      * 
      * commandBufferSizeMB          Size in MiB of the low-level command buffer. If this buffer is too small the program might terminate or rendering errors might occur.
      *
