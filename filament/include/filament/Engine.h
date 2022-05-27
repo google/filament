@@ -180,10 +180,10 @@ public:
      * 
      * minCommandBufferSizeMB       Minimum memory size (in MB) to allocate for Engine command buffer.
      * 
-     * commandBufferSizeMB          Memory size (in MB) to allocate for Engine command buffer.
+     * commandBufferSizeMB          Size in MiB of the low-level command buffer. If this buffer is too small the program might terminate or rendering errors might occur.
      *
-     *                              Should always be 3 * perFrameCommandsSizeMB so up to 3 frames can
-     *                              be overlapping at once.
+     *                              Should always be 3 * minCommandBufferSizeMB so that up to 3 frames can
+     *                              be batched-up at once.
      *
      *                              Defaults to FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB.
      *
