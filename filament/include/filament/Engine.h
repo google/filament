@@ -197,7 +197,7 @@ public:
      *                              Rule of thumb: perRenderPassArenaSizeMB must be roughly
      *                              1 MB larger than perFrameCommandsSizeMB
      *
-     * driverHandleArenaSizeMB      Memory size (in MB) to allocate to the driver handle arena.
+     * driverHandleArenaSizeMB      Size in MiB of the backend's handle arena. Backends will fallback to slower heap based allocations when running out of space and log this condition.
      *
      *                              If 0, then the default value for the given platform is used.
      */
