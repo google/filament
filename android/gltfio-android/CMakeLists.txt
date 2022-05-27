@@ -31,6 +31,10 @@ add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
+add_library(uberzlib STATIC IMPORTED)
+set_target_properties(uberzlib PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libuberzlib.a)
+
 add_library(gltfio_resources STATIC IMPORTED)
 set_target_properties(gltfio_resources PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources.a)
@@ -104,7 +108,7 @@ add_library(gltfio-jni SHARED ${GLTFIO_SRCS})
 target_include_directories(gltfio-jni PRIVATE ${GLTFIO_INCLUDE_DIRS})
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
-target_link_libraries(gltfio-jni filament-jni utils log stb ktxreader basis_transcoder zstd gltfio_resources)
+target_link_libraries(gltfio-jni filament-jni utils uberzlib log stb ktxreader basis_transcoder zstd gltfio_resources)
 target_link_libraries(gltfio-jni dracodec)
 target_compile_definitions(gltfio-jni PUBLIC GLTFIO_DRACO_SUPPORTED=1)
 target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/src)
