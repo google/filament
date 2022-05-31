@@ -217,7 +217,14 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
 DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
         uint32_t, size)
 
-DECL_DRIVER_API_R_0(backend::RenderPrimitiveHandle, createRenderPrimitive)
+DECL_DRIVER_API_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
+        backend::VertexBufferHandle, vbh,
+        backend::IndexBufferHandle, ibh,
+        backend::PrimitiveType, pt,
+        uint32_t, offset,
+        uint32_t, minIndex,
+        uint32_t, maxIndex,
+        uint32_t, count)
 
 DECL_DRIVER_API_R_N(backend::ProgramHandle, createProgram,
         backend::Program&&, program)
@@ -376,19 +383,6 @@ DECL_DRIVER_API_N(beginRenderPass,
 DECL_DRIVER_API_0(endRenderPass)
 
 DECL_DRIVER_API_0(nextSubpass)
-
-DECL_DRIVER_API_N(setRenderPrimitiveBuffer,
-        backend::RenderPrimitiveHandle, rph,
-        backend::VertexBufferHandle, vbh,
-        backend::IndexBufferHandle, ibh)
-
-DECL_DRIVER_API_N(setRenderPrimitiveRange,
-        backend::RenderPrimitiveHandle, rph,
-        backend::PrimitiveType, pt,
-        uint32_t, offset,
-        uint32_t, minIndex,
-        uint32_t, maxIndex,
-        uint32_t, count)
 
 DECL_DRIVER_API_N(beginTimerQuery,
         backend::TimerQueryHandle, query)

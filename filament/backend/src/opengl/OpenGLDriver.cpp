@@ -431,11 +431,37 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
+void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
+        PrimitiveType pt, uint32_t offset,
+        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
     DEBUG_MARKER()
 
+    auto& gl = mContext;
+
+    GLVertexBuffer const* const eb = handle_cast<const GLVertexBuffer*>(vbh);
+    GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
+    assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
+
     GLRenderPrimitive* rp = handle_cast<GLRenderPrimitive*>(rph);
+    rp->gl.indicesSize = (ib->elementSize == 4u) ? 4u : 2u;
+    rp->gl.vertexBufferWithObjects = vbh;
+    rp->type = pt;
+    rp->offset = offset * rp->gl.indicesSize;
+    rp->count = count;
+    rp->minIndex = minIndex;
+    rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
+
     glGenVertexArrays(1, &rp->gl.vao);
+
+    gl.bindVertexArray(&rp->gl);
+
+    // update the VBO bindings in the VAO
+    updateVertexArrayObject(rp, eb);
+
+    // this records the index buffer into the currently bound VAO
+    gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
+
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -2369,47 +2395,6 @@ GLsizei OpenGLDriver::getAttachments(AttachmentArray& attachments,
         attachments[attachmentCount++] = defaultFramebuffer ? GL_STENCIL : GL_STENCIL_ATTACHMENT;
     }
     return attachmentCount;
-}
-
-void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
-    DEBUG_MARKER()
-    auto& gl = mContext;
-
-    if (rph) {
-        GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
-        GLVertexBuffer const* const eb = handle_cast<const GLVertexBuffer*>(vbh);
-        GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
-
-        assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
-
-        gl.bindVertexArray(&rp->gl);
-        CHECK_GL_ERROR(utils::slog.e)
-
-        rp->gl.indicesSize = (ib->elementSize == 4u) ? 4u : 2u;
-        rp->gl.vertexBufferWithObjects = vbh;
-
-        // update the VBO bindings in the VAO
-        updateVertexArrayObject(rp, eb);
-
-        // this records the index buffer into the currently bound VAO
-        gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
-
-        CHECK_GL_ERROR(utils::slog.e)
-    }
-}
-
-void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
-    DEBUG_MARKER()
-
-    GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
-    rp->type = pt;
-    rp->offset = offset * rp->gl.indicesSize;
-    rp->count = count;
-    rp->minIndex = minIndex;
-    rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
 }
 
 // Sets up a scissor rectangle that automatically gets clipped against the viewport.
