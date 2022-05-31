@@ -278,8 +278,13 @@ void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size)
     mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size));
 }
 
-void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int dummy) {
+void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
+        PrimitiveType pt, uint32_t offset,
+        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
     construct_handle<MetalRenderPrimitive>(rph);
+    MetalDriver::setRenderPrimitiveBuffer(rph, vbh, ibh);
+    MetalDriver::setRenderPrimitiveRange(rph, pt, offset, minIndex, maxIndex, count);
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {

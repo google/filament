@@ -233,11 +233,9 @@ void FEngine::init() {
     mFullScreenTriangleIb->setBuffer(*this,
             { sFullScreenTriangleIndices, sizeof(sFullScreenTriangleIndices) });
 
-    mFullScreenTriangleRph = driverApi.createRenderPrimitive();
-    driverApi.setRenderPrimitiveBuffer(mFullScreenTriangleRph,
-            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle());
-    driverApi.setRenderPrimitiveRange(mFullScreenTriangleRph, PrimitiveType::TRIANGLES,
-            0, 0, 2, (uint32_t)mFullScreenTriangleIb->getIndexCount());
+    mFullScreenTriangleRph = driverApi.createRenderPrimitive(
+            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle(),
+            PrimitiveType::TRIANGLES, 0, 0, 2, (uint32_t)mFullScreenTriangleIb->getIndexCount());
 
     // Compute a clip-space [-1 to 1] to texture space [0 to 1] matrix, taking into account
     // backend differences.

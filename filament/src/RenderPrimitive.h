@@ -42,9 +42,6 @@ public:
             FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
             size_t minIndex, size_t maxIndex, size_t count) noexcept;
 
-    void set(FEngine& engine, RenderableManager::PrimitiveType type,
-            size_t offset, size_t minIndex, size_t maxIndex, size_t count) noexcept;
-
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
