@@ -19,6 +19,7 @@
 
 #include "upcast.h"
 
+#include "HwRenderPrimitiveFactory.h"
 #include "UniformBuffer.h"
 
 #include "private/backend/DriverApiForward.h"
@@ -175,7 +176,8 @@ public:
 
 private:
     void destroyComponent(Instance ci) noexcept;
-    static void destroyComponentPrimitives(FEngine& engine,
+    static void destroyComponentPrimitives(
+            HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
     static void destroyComponentMorphTargets(FEngine& engine,
             utils::Slice<MorphTargets>& morphTargets) noexcept;
@@ -252,6 +254,7 @@ private:
 
     Sim mManager;
     FEngine& mEngine;
+    HwRenderPrimitiveFactory mHwRenderPrimitiveFactory;
 };
 
 FILAMENT_UPCAST(RenderableManager)

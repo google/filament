@@ -25,7 +25,7 @@
 
 namespace filament {
 
-void FRenderPrimitive::init(backend::DriverApi& driver,
+void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
         const RenderableManager::Builder::Entry& entry) noexcept {
 
     assert_invariant(entry.materialInstance);
@@ -42,7 +42,7 @@ void FRenderPrimitive::init(backend::DriverApi& driver,
         auto const& ebh = vertexBuffer->getHwHandle();
         auto const& ibh = indexBuffer->getHwHandle();
 
-        mHandle = driver.createRenderPrimitive(ebh, ibh, entry.type, (uint32_t)entry.offset,
+        mHandle = factory.create(driver, ebh, ibh, entry.type, (uint32_t)entry.offset,
                 (uint32_t)entry.minIndex, (uint32_t)entry.maxIndex, (uint32_t)entry.count);
 
         mPrimitiveType = entry.type;
@@ -50,14 +50,14 @@ void FRenderPrimitive::init(backend::DriverApi& driver,
     }
 }
 
-void FRenderPrimitive::terminate(FEngine& engine) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
+void FRenderPrimitive::terminate(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver) {
     if (mHandle) {
-        driver.destroyRenderPrimitive(mHandle);
+        factory.destroy(driver, mHandle);
     }
 }
 
-void FRenderPrimitive::set(FEngine& engine, RenderableManager::PrimitiveType type,
+void FRenderPrimitive::set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
+        RenderableManager::PrimitiveType type,
         FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
         size_t minIndex, size_t maxIndex, size_t count) noexcept {
 
@@ -66,13 +66,11 @@ void FRenderPrimitive::set(FEngine& engine, RenderableManager::PrimitiveType typ
     auto const& ebh = vertices->getHwHandle();
     auto const& ibh = indices->getHwHandle();
 
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
     if (mHandle) {
-        driver.destroyRenderPrimitive(mHandle);
+        factory.destroy(driver, mHandle);
     }
 
-    mHandle = driver.createRenderPrimitive(ebh, ibh, type,
+    mHandle = factory.create(driver, ebh, ibh, type,
             (uint32_t)offset, (uint32_t)minIndex, (uint32_t)maxIndex, (uint32_t)count);
 
     mPrimitiveType = type;
