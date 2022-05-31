@@ -319,8 +319,6 @@ export class RenderableManager {
     public setGeometryAt(instance: RenderableManager$Instance, primitiveIndex: number,
             type: RenderableManager$PrimitiveType, vertices: VertexBuffer, indices: IndexBuffer,
             offset: number, count: number): void;
-    public setGeometryRangeAt(instance: RenderableManager$Instance, primitiveIndex: number,
-            type: RenderableManager$PrimitiveType, offset: number, count: number): void;
     public setBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number,
             order: number): void;
     public getEnabledAttributesAt(instance: RenderableManager$Instance,

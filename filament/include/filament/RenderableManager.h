@@ -601,14 +601,6 @@ public:
             size_t offset, size_t count) noexcept;
 
     /**
-     * Changes the active range of indices or topology for the given primitive.
-     *
-     * \see Builder::geometry()
-     */
-    void setGeometryAt(Instance instance, size_t primitiveIndex,
-            PrimitiveType type, size_t offset, size_t count) noexcept;
-
-    /**
      * Changes the drawing order for blended primitives. The drawing order is either global or
      * local (default) to this Renderable. In either case, the Renderable priority takes precedence.
      *

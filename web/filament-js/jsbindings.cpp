@@ -1000,12 +1000,6 @@ class_<RenderableManager>("RenderableManager")
         self->setGeometryAt(instance, primitiveIndex, type, vertices, indices, offset, count);
     }), allow_raw_pointers())
 
-    .function("setGeometryRangeAt", EMBIND_LAMBDA(void, (RenderableManager* self,
-            RenderableManager::Instance instance, size_t primitiveIndex,
-            RenderableManager::PrimitiveType type, size_t offset, size_t count), {
-        self->setGeometryAt(instance, primitiveIndex, type, offset, count);
-    }), allow_raw_pointers())
-
     .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
 
     .function("setGlobalBlendOrderEnabledAt", &RenderableManager::setGlobalBlendOrderEnabledAt)
