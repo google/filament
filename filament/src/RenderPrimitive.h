@@ -31,19 +31,22 @@ class FEngine;
 class FVertexBuffer;
 class FIndexBuffer;
 class FRenderer;
+class HwRenderPrimitiveFactory;
 
 class FRenderPrimitive {
 public:
     FRenderPrimitive() noexcept = default;
 
-    void init(backend::DriverApi& driver, const RenderableManager::Builder::Entry& entry) noexcept;
+    void init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
+            const RenderableManager::Builder::Entry& entry) noexcept;
 
-    void set(FEngine& engine, RenderableManager::PrimitiveType type,
+    void set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
+            RenderableManager::PrimitiveType type,
             FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
             size_t minIndex, size_t maxIndex, size_t count) noexcept;
 
     // frees driver resources, object becomes invalid
-    void terminate(FEngine& engine);
+    void terminate(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver);
 
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
     backend::Handle<backend::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }

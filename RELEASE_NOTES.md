@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - gltfio: fix morphing for un-packed accessors
 - engine: disable user scissor while rendering the Shadow Maps (#5607)
+- engine: merge identical backend RenderPrimitives together
 - utils: remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
 
 ## v1.23.1
