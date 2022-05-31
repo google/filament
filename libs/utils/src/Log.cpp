@@ -82,7 +82,7 @@ ostream& LogStream::flush() noexcept {
 #endif
             break;
     }
-#endif // ANDROID
+#endif // __ANDROID__
     buf.reset();
     return *this;
 }

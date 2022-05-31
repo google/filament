@@ -2,7 +2,7 @@ material {
     name : sheen_${SHADINGMODEL}_${BLENDING},
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
-    blending : fade,
+    blending : opaque,
     depthWrite : true,
     doubleSided : ${DOUBLESIDED},
     transparency : ${TRANSPARENCY},

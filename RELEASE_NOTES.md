@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: support skinning with bones that do not belong to any scene
 - gltfio: add attachSkin / detachSkin method to FilamentAsset
 - Metal: fix issues seen with dynamic resolution on M1 Macs
+- engine: add a "global" mode for render primitive's `blendOrder`
 
 ## v1.23.0
 

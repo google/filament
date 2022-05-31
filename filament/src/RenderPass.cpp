@@ -424,15 +424,23 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
                     // TODO: at least for transparent objects, AABB should be per primitive
+                    //       but that would break the "local" blend-order, which relies on
+                    //       all primitives having the same Z
                     // blend pass:
-                    // this will sort back-to-front for blended, and honor explicit ordering
-                    // for a given Z value
+                    //   This will sort back-to-front for blended, and honor explicit ordering
+                    //   for a given Z value, or globally.
                     cmdColor.key &= ~BLEND_ORDER_MASK;
                     cmdColor.key &= ~BLEND_DISTANCE_MASK;
+                    // write the distance
                     cmdColor.key |= makeField(~distanceBits,
                             BLEND_DISTANCE_MASK, BLEND_DISTANCE_SHIFT);
+                    // clear the distance if global ordering is enabled
+                    cmdColor.key &= ~select(primitive.isGlobalBlendOrderEnabled(),
+                            BLEND_DISTANCE_MASK);
+                    // write blend order
                     cmdColor.key |= makeField(primitive.getBlendOrder(),
                             BLEND_ORDER_MASK, BLEND_ORDER_SHIFT);
+
 
                     const TransparencyMode mode = mi->getTransparencyMode();
 
