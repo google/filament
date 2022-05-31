@@ -806,17 +806,7 @@ public class RenderableManager {
                 0, indices.getIndexCount());
     }
 
-    /**
-     * Changes the geometry for the given primitive.
-     *
-     * @see Builder#geometry Builder.geometry
-     */
-    public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
-            @NonNull PrimitiveType type, @IntRange(from = 0) int offset, @IntRange(from = 0) int count) {
-        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), offset, count);
-    }
-
-    /**
+     /**
      * Changes the drawing order for blended primitives. The drawing order is either global or
      * local (default) to this Renderable. In either case, the Renderable priority takes precedence.
      *
@@ -921,7 +911,6 @@ public class RenderableManager {
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex, long nativeMaterialInstance);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
-    private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);
     private static native void nSetGlobalBlendOrderEnabledAt(long nativeRenderableManager, int i, int primitiveIndex, boolean enabled);
     private static native int nGetEnabledAttributesAt(long nativeRenderableManager, int i, int primitiveIndex);

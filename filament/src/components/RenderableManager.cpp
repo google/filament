@@ -579,16 +579,6 @@ void FRenderableManager::setGeometryAt(Instance instance, uint8_t level, size_t 
     }
 }
 
-void FRenderableManager::setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
-        PrimitiveType type, size_t offset, size_t count) noexcept {
-    if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
-        if (primitiveIndex < primitives.size()) {
-            primitives[primitiveIndex].set(mEngine, type, offset, 0, 0, count);
-        }
-    }
-}
-
 void FRenderableManager::setBones(Instance ci,
         Bone const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) {
     if (ci) {

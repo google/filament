@@ -118,11 +118,6 @@ void RenderableManager::setGeometryAt(Instance instance, size_t primitiveIndex,
             type, upcast(vertices), upcast(indices), offset, count);
 }
 
-void RenderableManager::setGeometryAt(RenderableManager::Instance instance, size_t primitiveIndex,
-        RenderableManager::PrimitiveType type, size_t offset, size_t count) noexcept {
-    upcast(this)->setGeometryAt(instance, 0, primitiveIndex, type, offset, count);
-}
-
 void RenderableManager::setBones(Instance instance,
         RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) {
     upcast(this)->setBones(instance, transforms, boneCount, offset);

@@ -431,15 +431,6 @@ Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJJII(JNIE
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIII(JNIEnv*, jclass,
-        jlong nativeRenderableManager, jint i, jint primitiveIndex, jint primitiveType, jint offset,
-        jint count) {
-    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
-            (RenderableManager::PrimitiveType) primitiveType, (size_t) offset, (size_t) count);
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetBlendOrderAt(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jint primitiveIndex, jint blendOrder) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
