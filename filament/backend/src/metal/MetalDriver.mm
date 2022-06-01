@@ -1073,33 +1073,13 @@ void MetalDriver::blit(TargetBufferFlags buffers,
                         dstRect.left >= 0 && dstRect.bottom >= 0,
             "Source and destination rects must be positive.");
 
-    // Metal's texture coordinates have (0, 0) at the top-left of the texture, but Filament's
-    // coordinates have (0, 0) at bottom-left.
-    const NSInteger srcHeight =
-            srcTarget->isDefaultRenderTarget() ?
-            mContext->currentReadSwapChain->getSurfaceHeight() : srcTarget->height;
-    MTLRegion srcRegion = MTLRegionMake2D(
-            (NSUInteger) srcRect.left,
-            srcHeight - (NSUInteger) srcRect.bottom - srcRect.height,
-            srcRect.width, srcRect.height);
-
-    const NSInteger dstHeight =
-            dstTarget->isDefaultRenderTarget() ?
-            mContext->currentDrawSwapChain->getSurfaceHeight() : dstTarget->height;
-    MTLRegion dstRegion = MTLRegionMake2D(
-            (NSUInteger) dstRect.left,
-            dstHeight - (NSUInteger) dstRect.bottom - dstRect.height,
-            dstRect.width, dstRect.height);
-
     auto isBlitableTextureType = [](MTLTextureType t) {
         return t == MTLTextureType2D || t == MTLTextureType2DMultisample ||
                t == MTLTextureType2DArray;
     };
 
-    MetalBlitter::BlitArgs args;
-    args.filter = filter;
-    args.source.region = srcRegion;
-    args.destination.region = dstRegion;
+    // MetalBlitter supports blitting color and depth simultaneously, but for simplicitly we'll blit
+    // them separately. In practice, Filament only ever blits a single buffer at a time anyway.
 
     if (any(buffers & TargetBufferFlags::COLOR_ALL)) {
         // We always blit from/to the COLOR0 attachment.
@@ -1111,12 +1091,17 @@ void MetalDriver::blit(TargetBufferFlags buffers,
                                 isBlitableTextureType(dstColorAttachment.getTexture().textureType),
                                "Metal does not support blitting to/from non-2D textures.");
 
+            MetalBlitter::BlitArgs args;
+            args.filter = filter;
+            args.source.region = srcColorAttachment.getRegionFromClientRect(srcRect);
+            args.destination.region = dstColorAttachment.getRegionFromClientRect(dstRect);
             args.source.color = srcColorAttachment.getTexture();
             args.destination.color = dstColorAttachment.getTexture();
             args.source.level = srcColorAttachment.level;
             args.destination.level = dstColorAttachment.level;
             args.source.slice = srcColorAttachment.layer;
             args.destination.slice = dstColorAttachment.layer;
+            mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
         }
     }
 
@@ -1129,34 +1114,19 @@ void MetalDriver::blit(TargetBufferFlags buffers,
                                 isBlitableTextureType(dstDepthAttachment.getTexture().textureType),
                                "Metal does not support blitting to/from non-2D textures.");
 
+            MetalBlitter::BlitArgs args;
+            args.filter = filter;
+            args.source.region = srcDepthAttachment.getRegionFromClientRect(srcRect);
+            args.destination.region = dstDepthAttachment.getRegionFromClientRect(dstRect);
             args.source.depth = srcDepthAttachment.getTexture();
             args.destination.depth = dstDepthAttachment.getTexture();
-
-            if (args.blitColor()) {
-                // If blitting color, we've already set the source and destination levels and slices.
-                // Check that they match the requested depth levels/slices.
-                ASSERT_PRECONDITION(args.source.level == srcDepthAttachment.level,
-                                   "Color and depth source LOD must match. (%d != %d)",
-                                   args.source.level, srcDepthAttachment.level);
-                ASSERT_PRECONDITION(args.destination.level == dstDepthAttachment.level,
-                                   "Color and depth destination LOD must match. (%d != %d)",
-                                   args.destination.level, dstDepthAttachment.level);
-                ASSERT_PRECONDITION(args.source.slice == srcDepthAttachment.layer,
-                        "Color and depth source layer must match. (%d != %d)",
-                        args.source.slice, srcDepthAttachment.layer);
-                ASSERT_PRECONDITION(args.destination.slice == dstDepthAttachment.layer,
-                        "Color and depth destination layer must match. (%d != %d)",
-                        args.destination.slice, dstDepthAttachment.layer);
-            }
-
             args.source.level = srcDepthAttachment.level;
             args.destination.level = dstDepthAttachment.level;
             args.source.slice = srcDepthAttachment.layer;
             args.destination.slice = dstDepthAttachment.layer;
+            mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
         }
     }
-
-    mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
 }
 
 void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
