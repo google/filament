@@ -76,3 +76,4 @@ if (IS_HOST_PLATFORM)
 endif()
 
 install(TARGETS basis_transcoder ARCHIVE DESTINATION lib/${DIST_DIR})
+install(TARGETS zstd ARCHIVE DESTINATION lib/${DIST_DIR})
