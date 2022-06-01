@@ -687,10 +687,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
 endif()
 
-if (APPLE)
-    add_subdirectory(${EXTERNAL}/moltenvk/tnt)
-endif()
-
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
 if (WEBGL)
