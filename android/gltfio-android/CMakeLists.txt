@@ -23,6 +23,10 @@ add_library(basis_transcoder STATIC IMPORTED)
 set_target_properties(basis_transcoder PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbasis_transcoder.a)
 
+add_library(zstd STATIC IMPORTED)
+set_target_properties(zstd PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libzstd.a)
+
 add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
@@ -108,9 +112,9 @@ set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_
 
 if(GLTFIO_LITE)
         target_compile_definitions(gltfio-jni PUBLIC GLTFIO_LITE=1)
-        target_link_libraries(gltfio-jni filament-jni utils log stb ktxreader basis_transcoder gltfio_resources_lite)
+        target_link_libraries(gltfio-jni filament-jni utils log stb ktxreader basis_transcoder zstd gltfio_resources_lite)
 else()
-        target_link_libraries(gltfio-jni filament-jni utils log stb ktxreader basis_transcoder gltfio_resources)
+        target_link_libraries(gltfio-jni filament-jni utils log stb ktxreader basis_transcoder zstd gltfio_resources)
 
         # Enable Draco in the non-lite variant of gltfio.
         target_link_libraries(gltfio-jni dracodec)
