@@ -49,6 +49,9 @@ To use the Vulkan backend on macOS you must also make the following libraries av
 - `libMoltenVK.dylib`
 - `libvulkan.1.dylib`
 
+The easiest way to install those files is to use the macOS
+[LunarG Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) installer.
+
 ## Linking against Filament
 
 This walkthrough will get you successfully compiling and linking native code
