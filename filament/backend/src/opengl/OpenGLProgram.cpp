@@ -186,7 +186,11 @@ highp uint packHalf2x16(vec2 v) {
             GLuint shaderId = glCreateShader(glShaderType);
             { // scope for source/length (we don't want them to leak out)
                 const char* const source = shaderView.data();
-                const GLint length = (GLint)shaderView.length();
+
+                // the shader string is null terminated and the length includes the null character
+                const GLint length = (GLint)shaderView.length() - 1;
+                assert_invariant( source[length] == '\0' );
+
                 glShaderSource(shaderId, 1, &source, &length);
                 glCompileShader(shaderId);
 #ifndef NDEBUG

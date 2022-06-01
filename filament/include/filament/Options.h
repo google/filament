@@ -275,17 +275,18 @@ struct AmbientOcclusionOptions {
      * Ambient shadows from dominant light
      */
     struct Ssct {
-        float lightConeRad = 1.0f;          //!< full cone angle in radian, between 0 and pi/2
-        float shadowDistance = 0.3f;        //!< how far shadows can be cast
-        float contactDistanceMax = 1.0f;    //!< max distance for contact
-        float intensity = 0.8f;             //!< intensity
+        float lightConeRad = 1.0f;       //!< full cone angle in radian, between 0 and pi/2
+        float shadowDistance = 0.3f;     //!< how far shadows can be cast
+        float contactDistanceMax = 1.0f; //!< max distance for contact
+        float intensity = 0.8f;          //!< intensity
         math::float3 lightDirection = { 0, -1, 0 };    //!< light direction
-        float depthBias = 0.01f;        //!< depth bias in world units (mitigate self shadowing)
-        float depthSlopeBias = 0.01f;   //!< depth slope bias (mitigate self shadowing)
-        uint8_t sampleCount = 4;        //!< tracing sample count, between 1 and 255
-        uint8_t rayCount = 1;           //!< # of rays to trace, between 1 and 255
-        bool enabled = false;           //!< enables or disables SSCT
-    } ssct;                             // %codegen_skip_javascript% %codegen_java_flatten%
+        float depthBias = 0.01f;         //!< depth bias in world units (mitigate self shadowing)
+        float depthSlopeBias = 0.01f;    //!< depth slope bias (mitigate self shadowing)
+        uint8_t sampleCount = 4;         //!< tracing sample count, between 1 and 255
+        uint8_t rayCount = 1;            //!< # of rays to trace, between 1 and 255
+        bool enabled = false;            //!< enables or disables SSCT
+    };
+    Ssct ssct;                           // %codegen_skip_javascript% %codegen_java_flatten%
 };
 
 /**

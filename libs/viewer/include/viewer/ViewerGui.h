@@ -255,7 +255,6 @@ private:
     // Properties that can be changed from the UI.
     int mCurrentAnimation = 1; // It is a 1-based index and 0 means not playing animation
     int mCurrentVariant = 0;
-    bool mResetAnimation = true;
     bool mEnableWireframe = false;
     int mVsmMsaaSamplesLog2 = 1;
     Settings mSettings;
@@ -268,6 +267,13 @@ private:
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).
     int mCurrentCamera = 0;
+
+    // Cross fade animation parameters.
+    float mCrossFadeDuration = 0.5f;  // number of seconds to transition between animations
+    int mPreviousAnimation = 0;       // one-based index of the previous animation
+    double mCurrentStartTime = 0.0f;  // start time of most recent cross-fade (seconds)
+    double mPreviousStartTime = 0.0f; // start time of previous cross-fade (seconds)
+    bool mResetAnimation = true;      // set when building ImGui widgets, honored in applyAnimation
 
     // Color grading UI state.
     float mToneMapPlot[1024];

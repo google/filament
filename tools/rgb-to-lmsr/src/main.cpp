@@ -1756,15 +1756,15 @@ int main(int argc, char* argv[]) {
     std::cout << "Rec.709 to LMSR matrix (4x3, column major):" << std::endl;
     std::cout << std::fixed << std::setprecision(6) << l.r << ", ";
     std::cout << std::fixed << std::setprecision(6) << l.g << ", ";
-    std::cout << std::fixed << std::setprecision(6) << l.b << ", ";;
+    std::cout << std::fixed << std::setprecision(6) << l.b << ", ";
     std::cout << std::endl;
     std::cout << std::fixed << std::setprecision(6) << m.r << ", ";
     std::cout << std::fixed << std::setprecision(6) << m.g << ", ";
-    std::cout << std::fixed << std::setprecision(6) << m.b << ", ";;
+    std::cout << std::fixed << std::setprecision(6) << m.b << ", ";
     std::cout << std::endl;
     std::cout << std::fixed << std::setprecision(6) << s.r << ", ";
     std::cout << std::fixed << std::setprecision(6) << s.g << ", ";
-    std::cout << std::fixed << std::setprecision(6) << s.b << ", ";;
+    std::cout << std::fixed << std::setprecision(6) << s.b << ", ";
     std::cout << std::endl;
     std::cout << std::fixed << std::setprecision(6) << r.r << ", ";
     std::cout << std::fixed << std::setprecision(6) << r.g << ", ";

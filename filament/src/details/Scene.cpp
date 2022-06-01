@@ -32,6 +32,7 @@
 
 #include <algorithm>
 
+using namespace filament::backend;
 using namespace filament::math;
 using namespace utils;
 
@@ -196,7 +197,9 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
     }
 }
 
-void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwBufferObject> renderableUbh) noexcept {
+void FScene::updateUBOs(
+        Range<uint32_t> visibleRenderables,
+        Handle<HwBufferObject> renderableUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FRenderableManager& rcm = mEngine.getRenderableManager();
 
@@ -219,7 +222,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
 
         // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
-        // in the shader (that's already the case anyways, since normalization is needed after
+        // in the shader (that's already the case anyway, since normalization is needed after
         // interpolation).
         //
         // We pre-scale normals by the inverse of the largest scale factor to avoid
@@ -247,19 +250,16 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         hasContactShadows = hasContactShadows || visibility.screenSpaceContactShadows;
 
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, flags),
-                PerRenderableUib::packFlags(
+                offset + offsetof(PerRenderableUib, flagsChannels),
+                PerRenderableUib::packFlagsChannels(
                         visibility.skinning,
                         visibility.morphing,
-                        visibility.screenSpaceContactShadows));
+                        visibility.screenSpaceContactShadows,
+                        sceneData.elementAt<CHANNELS>(i)));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, morphTargetCount),
                 sceneData.elementAt<MORPHING_BUFFER>(i).count);
-
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, channels),
-                (uint32_t)sceneData.elementAt<CHANNELS>(i));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, objectId),
@@ -287,7 +287,7 @@ void FScene::terminate(FEngine& engine) {
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena,
-        backend::Handle<backend::HwBufferObject> lightUbh) noexcept {
+        Handle<HwBufferObject> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager& lcm = mEngine.getLightManager();
     FScene::LightSoa& lightData = getLightData();
@@ -450,7 +450,7 @@ bool FScene::hasContactShadows() const noexcept {
 }
 
 UTILS_NOINLINE
-void FScene::forEach(Invocable<void(utils::Entity)>&& functor) const noexcept {
+void FScene::forEach(Invocable<void(Entity)>&& functor) const noexcept {
     std::for_each(mEntities.begin(), mEntities.end(), std::move(functor));
 }
 

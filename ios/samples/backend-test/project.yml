@@ -1,6 +1,6 @@
 name: backend-test
 options:
-    bundleIdPrefix: google.filament
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
 include: ../app-template.yml
 targets:
     backend-test:

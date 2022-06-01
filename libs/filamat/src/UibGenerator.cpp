@@ -152,10 +152,10 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("worldFromModelMatrix",       1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromModelNormalMatrix", 1, UniformInterfaceBlock::Type::MAT3, Precision::HIGH)
             .add("morphTargetCount", 1, UniformInterfaceBlock::Type::UINT)
-            .add("flags", 1, UniformInterfaceBlock::Type::UINT)
-            .add("channels", 1, UniformInterfaceBlock::Type::UINT)
+            .add("flagsChannels", 1, UniformInterfaceBlock::Type::UINT)
             .add("objectId", 1, UniformInterfaceBlock::Type::UINT)
             .add("userData", 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved", 8, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

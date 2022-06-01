@@ -182,18 +182,18 @@ bool MeshWriter::serialize(ostream& out, Mesh& mesh) {
         header.strideTangents = sizeof(Vertex);
         header.strideColor    = sizeof(Vertex);
         header.strideUV0      = sizeof(Vertex);
-        header.strideUV1      = numeric_limits<uint32_t>::max();;
+        header.strideUV1      = numeric_limits<uint32_t>::max();
     } else {
         header.offsetPosition = 0;
         header.offsetTangents = mesh.vertexCount * sizeof(Vertex::position);
         header.offsetColor    = header.offsetTangents + mesh.vertexCount * sizeof(Vertex::tangents);
         header.offsetUV0      = header.offsetColor + mesh.vertexCount * sizeof(Vertex::color);
-        header.offsetUV1      = numeric_limits<uint32_t>::max();;
+        header.offsetUV1      = numeric_limits<uint32_t>::max();
         header.stridePosition = 0;
         header.strideTangents = 0;
         header.strideColor    = 0;
         header.strideUV0      = 0;
-        header.strideUV1      = numeric_limits<uint32_t>::max();;
+        header.strideUV1      = numeric_limits<uint32_t>::max();
         if (hasUV1) {
             header.offsetUV1  = header.offsetUV0 + mesh.vertexCount * sizeof(Vertex::uv0);
             header.strideUV1  = 0;

@@ -509,7 +509,7 @@ private:
         mSize = needed;
     }
 
-    // this calculate the offset adjusted for all data alignment of a given array
+    // this calculates the offset adjusted for all data alignment of a given array
     static inline size_t getOffset(size_t index, size_t capacity) noexcept {
         auto offsets = getOffsets(capacity);
         return offsets[index];

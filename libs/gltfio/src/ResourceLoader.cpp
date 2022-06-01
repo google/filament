@@ -342,6 +342,11 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     SYSTRACE_CONTEXT();
     SYSTRACE_ASYNC_END("addResourceData", 1);
 
+    // Clear our texture caches. Previous calls to loadResources may have populated these, but the
+    // Texture objects could have since been destroyed.
+    pImpl->mBufferTextureCache.clear();
+    pImpl->mFilepathTextureCache.clear();
+
     if (asset->mResourcesLoaded) {
         return false;
     }

@@ -5,6 +5,14 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.23.0
+
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
+- engine: Normals on morphed models have been fixed (core Filament change).
+- Java: View has several minor changes due to generated code, such as field ordering.
+- gltfio: Fix crash when reloading glTF assets.
+- gltfio: introduce cross-fade animation API [**NEW API**].
+
 ## v1.22.2
 
 - Java: Minor API change: rename `ssctStartTraceDistance` to `ssctShadowDistance`. [⚠️ **API Change**]

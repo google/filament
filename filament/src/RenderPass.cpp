@@ -51,6 +51,7 @@ RenderPass::RenderPass(RenderPass const& rhs) = default;
 RenderPass::~RenderPass() noexcept = default;
 
 RenderPass::Command* RenderPass::append(size_t count) noexcept {
+    // this is like a "in-place" realloc(). Works only with LinearAllocator.
     Command* const curr = mCommandArena.alloc<Command>(count);
     assert_invariant(mCommandBegin == nullptr || curr == mCommandEnd);
     if (mCommandBegin == nullptr) {
@@ -301,9 +302,10 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
+    auto const* const UTILS_RESTRICT soaSkinning        = soa.data<FScene::SKINNING_BUFFER>();
     auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
-    auto const* const UTILS_RESTRICT soaInstanceCount  = soa.data<FScene::INSTANCE_COUNT>();
+    auto const* const UTILS_RESTRICT soaInstanceCount   = soa.data<FScene::INSTANCE_COUNT>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
@@ -396,6 +398,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
+        const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
         const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
 
         /*
@@ -412,6 +415,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
                 RenderPass::setupColorCommand(cmdColor, variant, mi, inverseFrontFaces);
 
+                cmdColor.primitive.skinningHandle = skinning.handle;
+                cmdColor.primitive.skinningOffset = skinning.offset;
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
@@ -506,6 +511,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdDepth.primitive.mi = mi;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
+                cmdDepth.primitive.skinningHandle = skinning.handle;
+                cmdDepth.primitive.skinningOffset = skinning.offset;
                 cmdDepth.primitive.morphWeightBuffer = morphing.handle;
                 cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
@@ -552,21 +559,17 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(engine, driver, mBegin, mEnd, mRenderableSoa, params.readOnlyDepthStencil);
+    recordDriverCommands(engine, driver, mBegin, mEnd, params.readOnlyDepthStencil);
     driver.endRenderPass();
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(FEngine& engine,
-        backend::DriverApi& driver,
-        const Command* first, const Command* last,
-        FScene::RenderableSoa const& soa, uint16_t readOnlyDepthStencil) const noexcept {
+void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::DriverApi& driver,
+        const Command* first, const Command* last, uint16_t readOnlyDepthStencil) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
-
-        auto const* const UTILS_RESTRICT soaSkinning = soa.data<FScene::SKINNING_BUFFER>();
 
         PolygonOffset dummyPolyOffset;
         PipelineState pipeline{ .polygonOffset = mPolygonOffset };
@@ -614,14 +617,13 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
                     uboHandle, offset, sizeof(PerRenderableUib));
 
-            auto skinning = soaSkinning[info.index];
-            if (UTILS_UNLIKELY(skinning.handle)) {
+            if (UTILS_UNLIKELY(info.skinningHandle)) {
                 // note: we can't bind less than CONFIG_MAX_BONE_COUNT due to glsl limitations
                 driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE_BONES,
-                        skinning.handle,
-                        skinning.offset * sizeof(PerRenderableUibBone),
+                        info.skinningHandle,
+                        info.skinningOffset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
-                // note: even if skinning is only enabled, binding morphTargetBuffer is needed.
+                // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
                 driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
             }
@@ -643,7 +645,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine,
 // ------------------------------------------------------------------------------------------------
 
 RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-        : mEngine(pass->mEngine), mBegin(b), mEnd(e), mRenderableSoa(*pass->mRenderableSoa),
+        : mEngine(pass->mEngine), mBegin(b), mEnd(e),
           mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
           mPolygonOffset(pass->mPolygonOffset),
           mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {

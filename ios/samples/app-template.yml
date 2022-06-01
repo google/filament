@@ -22,6 +22,9 @@ targetTemplates:
                 OTHER_LDFLAGS: ["-lfilament", "-lbackend", "-lfilaflat", "-lktxreader",
                                 "-lfilabridge", "-lutils", "-lsmol-v", "-lgeometry", "-libl"]
                 ENABLE_BITCODE: NO
+                CLANG_CXX_LANGUAGE_STANDARD: gnu++17
+                # This allows users to not have to specify a unique bundle ID when building the sample apps.
+                SAMPLE_CODE_DISAMBIGUATOR: ${DEVELOPMENT_TEAM}
             configs:
                 debug:
                     HEADER_SEARCH_PATHS: ["../../../out/ios-debug/filament/include", "generated"]

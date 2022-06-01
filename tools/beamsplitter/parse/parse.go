@@ -17,424 +17,291 @@
 package parse
 
 import (
-	"bufio"
 	"log"
-	"os"
-	"regexp"
-	"strings"
+	"strconv"
 )
 
-// Consumes a C++ header file and produces a type database.
-func Parse(sourcePath string) []TypeDefinition {
-	sourceFile, err := os.Open(sourcePath)
-	if err != nil {
-		log.Fatal(err)
+// Consumes the entire content of a C++ header file and produces an abstract syntax tree.
+func Parse(contents string) *RootNode {
+	lexer := createLexer(contents)
+	return parseRoot(lexer)
+}
+
+// Assumes that we have just consumed the open brace from the lexer.
+// This consumes all lexemes in the entire struct, including the outer end brace.
+// It does not consume anything after the end brace.
+func parseStructBody(lex *lexer) []Node {
+	var members []Node
+	append := func(node Node) {
+		members = append(members, node)
 	}
-	defer sourceFile.Close()
 
-	// In the first pass, gather all block-style comments.
-	context := parserContext{}
-	context.commentBlocks = gatherCommentBlocks(sourceFile)
-	sourceFile.Seek(0, 0)
-
-	// In the second pass, pry apart each C++ codeline.
-	lineScanner := bufio.NewScanner(sourceFile)
-	for lineNumber := 1; lineScanner.Scan(); lineNumber++ {
-		context.scanCppCodeline(lineScanner.Text(), lineNumber)
-	}
-	if err := lineScanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	context.addTypeQualifiers()
-	return context.definitions
-}
-
-type TypeDefinition interface {
-	BaseName() string
-	QualifiedName() string
-	Parent() TypeDefinition
-}
-
-type StructField struct {
-	TypeString   string
-	Name         string
-	DefaultValue string
-	Description  string
-	LineNumber   int
-	EmitterFlags map[string]struct{}
-	CustomType   TypeDefinition
-}
-
-type StructDefinition struct {
-	name        string
-	qualifier   string
-	Fields      []StructField
-	Description string
-	parent      TypeDefinition
-}
-
-func (defn StructDefinition) BaseName() string       { return defn.name }
-func (defn StructDefinition) QualifiedName() string  { return defn.qualifier + defn.name }
-func (defn StructDefinition) Parent() TypeDefinition { return defn.parent }
-
-type EnumValue struct {
-	Description string
-	Name        string
-}
-
-type EnumDefinition struct {
-	name        string
-	qualifier   string
-	Values      []EnumValue
-	Description string
-	parent      TypeDefinition
-}
-
-func (defn EnumDefinition) BaseName() string       { return defn.name }
-func (defn EnumDefinition) QualifiedName() string  { return defn.qualifier + defn.name }
-func (defn EnumDefinition) Parent() TypeDefinition { return defn.parent }
-
-type Documented interface{ GetDoc() string }
-
-func (defn EnumDefinition) GetDoc() string   { return defn.Description }
-func (defn StructDefinition) GetDoc() string { return defn.Description }
-func (field StructField) GetDoc() string     { return field.Description }
-func (value EnumValue) GetDoc() string       { return value.Description }
-
-type generalScope struct{}
-
-type scope interface {
-	BaseName() string
-	QualifiedName() string
-	Parent() TypeDefinition
-}
-
-func (defn generalScope) BaseName() string       { return "" }
-func (defn generalScope) QualifiedName() string  { return "" }
-func (defn generalScope) Parent() TypeDefinition { return nil }
-
-type parserContext struct {
-	definitions      []TypeDefinition
-	stack            []scope
-	insideComment    bool
-	commentBlocks    map[int]string
-	cppTokenizer     *regexp.Regexp
-	floatMatcher     *regexp.Regexp
-	vectorMatcher    *regexp.Regexp
-	fieldParser      *regexp.Regexp
-	fieldDescParser  *regexp.Regexp
-	customFlagFinder *regexp.Regexp
-}
-
-// https://github.com/google/re2/wiki/Syntax
-func (context *parserContext) compileRegexps() {
-	context.cppTokenizer = regexp.MustCompile(`((?:/\*)|(?:\*/)|(?:;)|(?://)|(?:\})|(?:\{))`)
-	context.floatMatcher = regexp.MustCompile(`(\-?[0-9]+\.[0-9]*)f?`)
-	context.vectorMatcher = regexp.MustCompile(`\{(\s*\-?[0-9\.]+\s*(,\s*\-?[0-9\.]+\s*){1,})\}`)
-	context.customFlagFinder = regexp.MustCompile(`\s*\%codegen_([a-zA-Z0-9_]+)\%\s*`)
-
-	const kFieldType = `(?P<type>.*)`
-	const kFieldName = `(?P<name>[A-Za-z0-9_]+)`
-	const kFieldValue = `(?P<value>(.*?))`
-	const kFieldDesc = `(?://\s*\!\<\s*(?P<description>.*))?`
-	context.fieldParser = regexp.MustCompile(
-		`^\s*` + kFieldType + `\s+` + kFieldName + `\s*=\s*` + kFieldValue + `\s*;\s*` + kFieldDesc)
-
-	context.fieldDescParser = regexp.MustCompile(`(?://\s*\!\<\s*(.*))`)
-}
-
-// Creates a mapping from line numbers to strings, where the strings are entire block comments
-// and the line numbers correspond to the last line of each block comment.
-func gatherCommentBlocks(sourceFile *os.File) map[int]string {
-	comments := make(map[int]string)
-	scanner := bufio.NewScanner(sourceFile)
-	var comment = ""
-	var indention = 0
-	for lineNumber := 1; scanner.Scan(); lineNumber++ {
-		codeline := scanner.Text()
-		if strings.Contains(codeline, `/**`) {
-			indention = strings.Index(codeline, `/**`)
-			comment = codeline[indention:] + "\n"
-			continue
+	// Assumes that we have just consumed the end paren in the argument list.
+	parseMethod := func(name, returns, args item, isTemplate bool) *MethodNode {
+		item := lex.nextItem()
+		for item.typ == itemConst || item.typ == itemNoexcept {
+			item = lex.nextItem()
 		}
-		if comment != "" {
-			if len(codeline) > indention {
-				codeline = codeline[indention:]
-			}
-			comment += codeline + "\n"
-			if strings.Contains(codeline, `*/`) {
-				comments[lineNumber] = comment
-				comment = ""
-			}
+		for item.typ == itemConst || item.typ == itemNoexcept {
+			item = lex.nextItem()
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return comments
-}
-
-func (context parserContext) generateQualifier() string {
-	qualifier := ""
-	for _, defn := range context.stack {
-		if defn.BaseName() != "" {
-			qualifier = qualifier + defn.BaseName() + "::"
+		method := &MethodNode{
+			Line:       item.line,
+			Name:       name.val,
+			ReturnType: returns.val,
+			Arguments:  args.val,
+			Body:       "",
+			IsTemplate: isTemplate,
 		}
-	}
-	return qualifier
-}
-
-func (context parserContext) findParent() TypeDefinition {
-	for i := len(context.stack) - 1; i >= 0; i-- {
-		switch defn := context.stack[i].(type) {
-		case *StructDefinition, *EnumDefinition:
-			var result TypeDefinition = defn
-			return result
+		switch item.typ {
+		case itemMethodBody:
+			method.Body = item.val
+		case itemSemicolon:
+		default:
+			panic(lex, item)
+			return nil
 		}
+		return method
 	}
-	return nil
-}
-
-// Annotates struct fields that have custom types (i.e. enums or structs).
-func (context parserContext) addTypeQualifiers() {
-	typeMap := make(map[string]TypeDefinition)
-	for _, defn := range context.definitions {
-		typeMap[defn.QualifiedName()] = defn
-	}
-	for _, defn := range context.definitions {
-		structDefn, isStruct := defn.(*StructDefinition)
-		if !isStruct {
-			continue
-		}
-		for fieldIndex, field := range structDefn.Fields {
-			// Extract the namespace prefix (if any) explicitly specified for this field type.
-			var namespace string
-			localTypeName := field.TypeString
-			if index := strings.LastIndex(field.TypeString, "::"); index > -1 {
-				namespace = field.TypeString[:index]
-				localTypeName = field.TypeString[index+2:]
-			}
-
-			// Prepend additional qualifiers to the type string by searching upward through
-			// the current namespace hierarchy, and looking for a match.
-			mutable := &structDefn.Fields[fieldIndex]
-			for ancestor := defn; ; ancestor = ancestor.Parent() {
-				var qualified string
-				if namespace != "" && strings.HasSuffix(ancestor.QualifiedName(), namespace) {
-					qualified = ancestor.QualifiedName() + "::" + localTypeName
-				} else {
-					qualified = ancestor.QualifiedName() + "::" + field.TypeString
-				}
-				if fieldType, found := typeMap[qualified]; found {
-					mutable.TypeString = qualified
-					mutable.CustomType = fieldType
-					break
-				}
-				if ancestor.Parent() == nil {
-					if fieldType, found := typeMap[field.TypeString]; found {
-						mutable.CustomType = fieldType
-					}
-					break
-				}
-			}
-
-			if mutable.CustomType == nil {
-				continue
-			}
-
-			// Prepend additional qualifiers to the value string if it is a known enum.
-			var fieldType TypeDefinition = structDefn.Fields[fieldIndex].CustomType
-			enumDefn, isEnum := fieldType.(*EnumDefinition)
-			if isEnum {
-				selectedEnum := field.DefaultValue
-				if index := strings.LastIndex(field.DefaultValue, "::"); index > -1 {
-					selectedEnum = field.DefaultValue[index+2:]
-				}
-				mutable.DefaultValue = enumDefn.QualifiedName() + "::" + selectedEnum
-			}
-		}
-	}
-}
-
-// Validates and transforms the RHS of an assignment.
-// For vectors, this converts curly braces into square brackets.
-func (context parserContext) distillValue(cppvalue string, lineNumber int) string {
-	cppvalue = strings.TrimSpace(cppvalue)
-
-	// Remove trailing "f" from floats, which isn't allowed in JavaScript.
-	if context.floatMatcher.MatchString(cppvalue) {
-		cppvalue = context.floatMatcher.ReplaceAllString(cppvalue, "$1")
-	}
-
-	// There are many ways to declare vector values (multi-arg constructor, single-arg
-	// constructor, curly braces with type, curly braces without type), so just poop out if
-	// the syntax is anything other than "curly braces without type".
-	if strings.Contains(cppvalue, "math::") || strings.Contains(cppvalue, "Color") {
-		log.Fatalf("%d: vectors must have the form {x, y ...}", lineNumber)
-	}
-
-	// Assume it's a vector if there's a curly brace.
-	if strings.Contains(cppvalue, "{") {
-		if context.vectorMatcher.MatchString(cppvalue) {
-			cppvalue = context.vectorMatcher.ReplaceAllString(cppvalue, "[$1]")
-		} else {
-			log.Fatalf("%d: vectors must have the form {x, y ...}", lineNumber)
-		}
-	}
-
-	if len(cppvalue) == 0 {
-		log.Fatalf("%d: empty value specified", lineNumber)
-	}
-
-	return cppvalue
-}
-
-func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
-	if context.cppTokenizer == nil {
-		context.compileRegexps()
-	}
-	codeline = context.cppTokenizer.ReplaceAllString(codeline, " $1 ")
-	scanner := bufio.NewScanner(strings.NewReader(codeline))
-	scanner.Split(bufio.ScanWords)
-	inPlaceDefinition := ""
-
-	scanStructField := func(defn *StructDefinition, firstWord string) {
-		var field = StructField{
-			LineNumber: lineNumber,
-		}
-
-		// Extract all custom flags into a string set. These are special backend-specific directives
-		// delimited by percent signs, e.g. %codegen_skip_javascript%
-		if matches := context.customFlagFinder.FindAllStringSubmatch(codeline, -1); matches != nil {
-			field.EmitterFlags = make(map[string]struct{}, len(matches))
-			for _, flag := range matches {
-				field.EmitterFlags[flag[1]] = struct{}{}
-			}
-		}
-		codeline = context.customFlagFinder.ReplaceAllString(codeline, "")
-
-		// Normally when we're inside a struct, the first word on each codeline is the field type,
-		// and the second word is the field name. However if a nested struct is defined, then the
-		// type is potentially anonymous and the first word is the field name.
-		if !scanner.Scan() {
-			log.Fatalf("%d: bad struct field", lineNumber)
-		}
-
-		// Check if this field type has an in place definition. For example:
-		//     struct OuterType {
-		//         int foo;
-		//         struct Baz { int bar } baz;
-		//     };
-		// In the above example, inPlaceDefinition == Baz.
-		if inPlaceDefinition != "" {
-			field.TypeString = inPlaceDefinition
-			field.Name = firstWord
-			defn.Fields = append(defn.Fields, field)
-			return
-		}
-
-		if !context.fieldParser.MatchString(codeline) {
-			log.Fatalf("%d: unexpected form in struct field declaration", lineNumber)
-		}
-
-		// To make the regex usage somewhat readable, extract the named subgroups into a map rather
-		// than referring to each result by index.
-		subexpList := context.fieldParser.FindStringSubmatch(codeline)
-		subexpMap := make(map[string]string)
-		for i, name := range context.fieldParser.SubexpNames() {
-			if i != 0 && name != "" {
-				subexpMap[name] = subexpList[i]
-			}
-		}
-
-		field.TypeString = subexpMap["type"]
-		field.Name = subexpMap["name"]
-		field.Description = subexpMap["description"]
-		field.DefaultValue = context.distillValue(subexpMap["value"], lineNumber)
-
-		defn.Fields = append(defn.Fields, field)
-	}
-
-	for scanner.Scan() {
-		depth := len(context.stack) - 1
-		token := scanner.Text()
+	for item := lex.nextItem(); item.typ != itemCloseBrace; item = lex.nextItem() {
 		switch {
-		case token == "//":
-			return
-		case token == "/*":
-			context.insideComment = true
-		case token == "*/":
-			if !context.insideComment {
-				log.Fatalf("%d: strange comment", lineNumber)
+		case item.val == "constexpr", item.val == "friend":
+			// do nothing for these annotations
+		case item.val == "enum":
+			append(parseEnum(lex))
+		case item.val == "struct":
+			append(parseStruct(lex))
+		case item.val == "class":
+			append(parseClass(lex))
+		case item.val == "namespace":
+			append(parseNamespace(lex))
+		case item.val == "using":
+			append(parseUsing(lex))
+		case item.val == "public", item.val == "private", item.val == "protected":
+			expect(lex, itemColon)
+			append(&AccessSpecifierNode{
+				Line:   item.line,
+				Access: item.val,
+			})
+		case item.typ == itemCloseBrace:
+			break
+		case item.typ == itemSimpleType:
+			name := expect(lex, itemIdentifier)
+			nextItem := lex.nextItem()
+			arrayLength := 0
+			if nextItem.typ == itemOpenBracket {
+				arrayLength, _ = strconv.Atoi(expect(lex, itemArrayLength).val)
+				expect(lex, itemCloseBracket)
+				nextItem = lex.nextItem()
 			}
-			context.insideComment = false
-		case context.insideComment:
-			// Do nothing.
-		case token == ";":
-			// Do nothing.
-		case token == "{":
-			context.stack = append(context.stack, &generalScope{})
-		case token == "}":
-			if depth < 0 {
-				log.Fatalf("%d: bizarre nesting", lineNumber)
+			switch nextItem.typ {
+			case itemMethodArgs:
+				parseMethod(name, item, nextItem, false)
+			case itemSemicolon:
+				append(&FieldNode{
+					Line:        item.line,
+					Name:        name.val,
+					Type:        item.val,
+					Rhs:         "",
+					ArrayLength: arrayLength,
+				})
+			case itemEquals:
+				rhs := expect(lex, itemDefaultValue)
+				expect(lex, itemSemicolon)
+				append(&FieldNode{
+					Line:        item.line,
+					Name:        name.val,
+					Type:        item.val,
+					Rhs:         rhs.val,
+					ArrayLength: arrayLength,
+				})
 			}
-			switch defn := context.stack[depth].(type) {
-			case *StructDefinition, *EnumDefinition:
-				inPlaceDefinition = defn.BaseName()
-				context.definitions = append(context.definitions, defn)
-			}
-			context.stack = context.stack[:depth]
-		case token == "struct":
-			if !scanner.Scan() {
-				log.Fatalf("%d: bizarre struct", lineNumber)
-			}
-			if !strings.Contains(codeline, "{") || strings.Contains(codeline, "}") {
-				log.Fatalf("%d: bad formatting", lineNumber)
-			}
-			stackEntry := StructDefinition{
-				name:        scanner.Text(),
-				qualifier:   context.generateQualifier(),
-				Description: context.commentBlocks[lineNumber-1],
-				parent:      context.findParent(),
-			}
-			context.stack = append(context.stack, &stackEntry)
-			return
-		case token == "enum":
-			if !scanner.Scan() || scanner.Text() != "class" || !scanner.Scan() {
-				log.Fatalf("%d: bad enum", lineNumber)
-			}
-			if !strings.Contains(codeline, "{") || strings.Contains(codeline, "}") {
-				log.Fatalf("%d: bad formatting", lineNumber)
-			}
-			stackEntry := EnumDefinition{
-				name:        scanner.Text(),
-				qualifier:   context.generateQualifier(),
-				Description: context.commentBlocks[lineNumber-1],
-				parent:      context.findParent(),
-			}
-			context.stack = append(context.stack, &stackEntry)
-			return
-		case depth > 0:
-			switch defn := context.stack[depth].(type) {
-			case *StructDefinition:
-				scanStructField(defn, token)
+		case item.typ == itemTemplate:
+			expect(lex, itemTemplateArgs)
+			returns := expect(lex, itemSimpleType)
+			name := expect(lex, itemIdentifier)
+			args := expect(lex, itemMethodArgs)
+			append(parseMethod(name, returns, args, true))
+		default:
+			panic(lex, item)
+		}
+	}
+	return members
+}
+
+// Assumes that we have just consumed the "class" keyword from the lexer.
+// Consumes everything up to (and including) the trailing semicolon.
+func parseClass(lex *lexer) *ClassNode {
+	name := expect(lex, itemIdentifier)
+	item := lex.nextItem()
+	if item.typ == itemSemicolon {
+		// We don't have an AST node for forward declarations, just skip it.
+		return nil
+	}
+	if item.typ == itemColon {
+		// Only one base class is allowed.
+		item = lex.nextItem()
+		if item.typ == itemPublic {
+			item = lex.nextItem()
+		}
+		expect(lex, itemSimpleType)
+		item = lex.nextItem()
+	}
+	if item.typ != itemOpenBrace {
+		panic(lex, item)
+	}
+	members := parseStructBody(lex)
+	expect(lex, itemSemicolon)
+	return &ClassNode{
+		Line:    name.line,
+		Name:    name.val,
+		Members: members,
+	}
+}
+
+// Assumes that we have just consumed the "struct" keyword from the lexer.
+// Consumes everything up to (and including) the trailing semicolon.
+func parseStruct(lex *lexer) *StructNode {
+	name := expect(lex, itemIdentifier)
+	item := lex.nextItem()
+	if item.typ == itemSemicolon {
+		// We don't have an AST node for forward declarations, just skip it.
+		return nil
+	}
+	if item.typ != itemOpenBrace {
+		panic(lex, item)
+	}
+	members := parseStructBody(lex)
+	expect(lex, itemSemicolon)
+	return &StructNode{
+		Line:    name.line,
+		Name:    name.val,
+		Members: members,
+	}
+}
+
+// Assumes that we have just consumed the "enum" keyword from the lexer.
+// Consumes everything up to (and including) the trailing semicolon.
+func parseEnum(lex *lexer) *EnumNode {
+	expect(lex, itemClass)
+	name := expect(lex, itemIdentifier)
+	item := lex.nextItem()
+	if item.typ == itemColon {
+		expect(lex, itemSimpleType)
+		item = lex.nextItem()
+	}
+	if item.typ != itemOpenBrace {
+		panic(lex, item)
+	}
+	firstVal := expect(lex, itemIdentifier)
+	node := &EnumNode{
+		Name:       name.val,
+		Line:       name.line,
+		Values:     []string{firstVal.val},
+		ValueLines: []int{firstVal.line},
+	}
+	for item = lex.nextItem(); item.typ != itemCloseBrace; {
+		if item.typ != itemComma {
+			panic(lex, item)
+		}
+		item = lex.nextItem()
+		if item.typ == itemCloseBrace {
+			break
+		}
+		if item.typ != itemIdentifier {
+			panic(lex, item)
+		}
+		node.Values = append(node.Values, item.val)
+		node.ValueLines = append(node.ValueLines, item.line)
+		item = lex.nextItem()
+	}
+	expect(lex, itemSemicolon)
+	return node
+}
+
+// Assumes that we have just consumed the "using" keyword from the lexer.
+// Consumes everything up to (and including) the trailing semicolon.
+func parseUsing(lex *lexer) *UsingNode {
+	name := expect(lex, itemIdentifier)
+	expect(lex, itemEquals)
+	rhs := expect(lex, itemSimpleType)
+	expect(lex, itemSemicolon)
+	return &UsingNode{name.line, name.val, rhs.val}
+}
+
+// Assumes that we have just consumed the "namespace" keyword from the lexer.
+// Consumes everything up to (and including) the closing brace.
+func parseNamespace(lex *lexer) *NamespaceNode {
+	name := expect(lex, itemIdentifier)
+	expect(lex, itemOpenBrace)
+	ns := &NamespaceNode{name.line, name.val, nil}
+	item := lex.nextItem()
+
+	// Filter out nil nodes (e.g. forward declarations)
+	// Note that checking for nil is tricky due to a classic Go gotcha.
+	append := func(child Node) {
+		switch concrete := child.(type) {
+		case *StructNode:
+			if concrete == nil {
 				return
-			case *EnumDefinition:
-				if strings.Contains(codeline, "=") {
-					log.Fatalf("%d: custom values are not allowed", lineNumber)
-				}
-				value := EnumValue{
-					Name: strings.Trim(token, ","),
-				}
-				if matches := context.fieldDescParser.FindStringSubmatch(codeline); matches != nil {
-					value.Description = matches[1]
-				}
-				defn.Values = append(defn.Values, value)
+			}
+		case *ClassNode:
+			if concrete == nil {
 				return
 			}
 		}
+		ns.Children = append(ns.Children, child)
 	}
-	if err := scanner.Err(); err != nil {
-		log.Fatalf("%d: %s", lineNumber, err)
+
+	for ; item.typ != itemCloseBrace; item = lex.nextItem() {
+		switch item.typ {
+		case itemTemplate:
+			expect(lex, itemTemplateArgs)
+			switch lex.nextItem().typ {
+			case itemClass:
+				node := parseClass(lex)
+				node.IsTemplate = true
+				append(node)
+			case itemStruct:
+				node := parseStruct(lex)
+				node.IsTemplate = true
+				append(node)
+			default:
+				panic(lex, item)
+			}
+		case itemClass:
+			append(parseClass(lex))
+		case itemStruct:
+			append(parseStruct(lex))
+		case itemEnum:
+			append(parseEnum(lex))
+		case itemUsing:
+			append(parseUsing(lex))
+		case itemNamespace:
+			append(parseNamespace(lex))
+		default:
+			panic(lex, item)
+		}
 	}
+	return ns
+}
+
+func parseRoot(lex *lexer) *RootNode {
+	expect(lex, itemNamespace)
+	ns := parseNamespace(lex)
+	return &RootNode{0, ns}
+}
+
+func expect(lex *lexer, expectedType itemType) item {
+	item := lex.nextItem()
+	if item.typ != expectedType {
+		panic(lex, item)
+	}
+	return item
+}
+
+func panic(lex *lexer, unexpected item) {
+	lex.drain()
+	// Very useful local hack: change this to Panicf to see a call stack.
+	log.Fatalf("%d: parser sees unexpected lexeme %s", unexpected.line, unexpected.String())
 }
