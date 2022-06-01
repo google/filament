@@ -150,7 +150,13 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
     };
 
     NSOpenGLContext* shareContext = (__bridge NSOpenGLContext*) sharedContext;
-    NSOpenGLPixelFormat* pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes];
+    NSOpenGLPixelFormat* pixelFormat;
+    // If a share context is specified, use its pixel format
+    if (shareContext) {
+        pixelFormat = shareContext.pixelFormat;
+    } else {
+        pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes];
+    }
     NSOpenGLContext* nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:shareContext];
 
     GLint interval = 0;
