@@ -34,8 +34,6 @@ static void* module = nullptr;
 bool loadLibrary() {
 
 #ifndef FILAMENT_VKLIBRARY_PATH
-    // Rather than looking in the working directory, look for the dylib in the same folder that the
-    // executable lives in. This allows MacOS users to run Vulkan-based Filament apps from anywhere.
     const Path dylibPath = VKLIBRARY_PATH;
 
     // Provide a value for VK_ICD_FILENAMES only if it has not already been set.
