@@ -263,11 +263,4 @@ inline bool getElementType(cgltf_type type, cgltf_component_type ctype,
     return false;
 }
 
-inline bool requiresConversion(cgltf_type type, cgltf_component_type ctype) {
-    filament::VertexBuffer::AttributeType permitted;
-    filament::VertexBuffer::AttributeType actual;
-    bool supported = getElementType(type, ctype, &permitted, &actual);
-    return supported && permitted != actual;
-}
-
 #endif // GLTFIO_GLTFENUMS_H

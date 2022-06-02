@@ -176,8 +176,9 @@ static ComponentType getComponentType(const cgltf_accessor* accessor) {
         case cgltf_component_type_r_8u: return ComponentType::UBYTE;
         case cgltf_component_type_r_16: return ComponentType::SHORT;
         case cgltf_component_type_r_16u: return ComponentType::USHORT;
+        case cgltf_component_type_r_32f: return ComponentType::FLOAT;
+        case cgltf_component_type_r_32u:
         default:
-            // This should be unreachable because other types do not require conversion.
             assert_invariant(false);
             return {};
     }
@@ -195,6 +196,34 @@ static void convertToFloats(float* dest, const cgltf_accessor* accessor) {
     auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
     const uint8_t* source = computeBindingOffset(accessor) + bufferData;
     transcode(dest, source, accessor->count);
+}
+
+static bool requiresConversion(cgltf_type type, cgltf_component_type ctype) {
+    filament::VertexBuffer::AttributeType permitted;
+    filament::VertexBuffer::AttributeType actual;
+    bool supported = getElementType(type, ctype, &permitted, &actual);
+    return supported && permitted != actual;
+}
+
+static bool requiresPacking(const cgltf_accessor* accessor) {
+    if (requiresConversion(accessor->type, accessor->component_type)) {
+        return true;
+    }
+    const size_t dim = cgltf_num_components(accessor->type);
+    switch (accessor->component_type) {
+        case cgltf_component_type_r_8:
+        case cgltf_component_type_r_8u:
+            return accessor->stride != dim;
+        case cgltf_component_type_r_16:
+        case cgltf_component_type_r_16u:
+            return accessor->stride != dim * 2;
+        case cgltf_component_type_r_32u:
+        case cgltf_component_type_r_32f:
+            return accessor->stride != dim * 4;
+        default:
+            assert_invariant(false);
+            return true;
+    }
 }
 
 static void decodeDracoMeshes(FFilamentAsset* asset) {
@@ -492,7 +521,27 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             slot.indexBuffer->setBuffer(engine, std::move(bd));
             continue;
         }
+
+        // If the buffer slot does not have an associated VertexBuffer or IndexBuffer, then this
+        // must be a morph target.
         assert(slot.morphTargetBuffer);
+
+        if (requiresPacking(accessor)) {
+            const size_t dim = cgltf_num_components(accessor->type);
+            const size_t floatsSize = accessor->count * sizeof(float) * dim;
+            float* floatsData = (float*) malloc(floatsSize);
+            convertToFloats(floatsData, accessor);
+            if (accessor->type == cgltf_type_vec3) {
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                        (const float3*) floatsData, slot.morphTargetBuffer->getVertexCount());
+            } else {
+                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                        (const float4*) data, slot.morphTargetBuffer->getVertexCount());
+            }
+            free(floatsData);
+            continue;
+        }
+
         if (accessor->type == cgltf_type_vec3) {
             slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
                     (const float3*) data, slot.morphTargetBuffer->getVertexCount());
