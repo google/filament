@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- gltfio: fix morphing for un-packed accessors
+
 ## v1.23.1
 
 - gltfio: support skinning with bones that do not belong to any scene
