@@ -72,8 +72,8 @@ private:
     bool hasProperty(const char* name) const noexcept;
     void* getPropertyAddress(const char* name) noexcept;
     DataSource getDataSource(const char* name) const noexcept;
-    std::unordered_map<utils::StaticString, void*> mPropertyMap;
-    std::unordered_map<utils::StaticString, DataSource> mDataSourceMap;
+    std::unordered_map<utils::StaticString, void*, utils::StaticString::Hasher> mPropertyMap;
+    std::unordered_map<utils::StaticString, DataSource, utils::StaticString::Hasher> mDataSourceMap;
 };
 
 FILAMENT_UPCAST(DebugRegistry)

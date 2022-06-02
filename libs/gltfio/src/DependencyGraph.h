@@ -118,8 +118,8 @@ private:
     TextureNode* getStatus(filament::Texture* texture);
 
     // The following maps contain the directed edges in the graph.
-    tsl::robin_map<Entity, EntityNode> mEntityToMaterial;
-    tsl::robin_map<Material*, tsl::robin_set<Entity>> mMaterialToEntity;
+    tsl::robin_map<Entity, EntityNode, Entity::Hasher> mEntityToMaterial;
+    tsl::robin_map<Material*, tsl::robin_set<Entity, Entity::Hasher>> mMaterialToEntity;
     tsl::robin_map<Material*, MaterialNode> mMaterialToTexture;
     tsl::robin_map<filament::Texture*, tsl::robin_set<Material*>> mTextureToMaterial;
 

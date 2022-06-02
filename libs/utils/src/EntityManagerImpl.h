@@ -178,7 +178,7 @@ private:
     tsl::robin_set<Listener*> mListeners;
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
-    tsl::robin_map<Entity, CallStack> mDebugActiveEntities;
+    tsl::robin_map<Entity, CallStack, Entity::Hasher> mDebugActiveEntities;
 #endif
 };
 

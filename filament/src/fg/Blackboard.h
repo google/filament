@@ -26,7 +26,10 @@
 namespace filament {
 
 class Blackboard {
-    using Container = std::unordered_map<utils::StaticString, FrameGraphHandle>;
+    using Container = std::unordered_map<
+            utils::StaticString,
+            FrameGraphHandle,
+            utils::StaticString::Hasher>;
 
 public:
     Blackboard() noexcept;
