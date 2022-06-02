@@ -17,17 +17,18 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 
-#include <array>
-#include <stddef.h>
-
 #include <utils/compiler.h>
 #include <utils/bitset.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-namespace filament {
-namespace backend {
+#include <array>
+#include <memory>
+
+#include <stddef.h>
+
+namespace filament::backend {
 
 class SamplerGroup {
 public:
@@ -151,7 +152,6 @@ private:
     mutable utils::bitset32 mDirty;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H

@@ -316,7 +316,12 @@ private:
         mutable bool mHasMaterial{};
     };
 
-    tsl::robin_map<utils::StaticString, PostProcessMaterial> mMaterialRegistry;
+    using MaterialRegistryMap = tsl::robin_map<
+            utils::StaticString,
+            PostProcessMaterial,
+            utils::StaticString::Hasher>;
+
+    MaterialRegistryMap mMaterialRegistry;
 
     void registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size);
     PostProcessMaterial& getPostProcessMaterial(utils::StaticString name) noexcept;

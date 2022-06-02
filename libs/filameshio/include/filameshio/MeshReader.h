@@ -63,7 +63,7 @@ public:
 
          void unregisterAll();
 
-         std::size_t numRegistered() const noexcept;
+         size_t numRegistered() const noexcept;
 
          void getRegisteredMaterials(filament::MaterialInstance** materialList,
                  utils::CString* materialNameList) const;

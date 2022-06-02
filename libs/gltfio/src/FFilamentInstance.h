@@ -55,7 +55,7 @@ struct Skin {
 
     // The set of all nodes that are influenced by this skin.
     // This is initially gleaned from the glTF file using the "skin" attribute of each node.
-    tsl::robin_set<utils::Entity> targets;
+    tsl::robin_set<utils::Entity, utils::Entity::Hasher> targets;
 };
 
 struct VariantMapping {

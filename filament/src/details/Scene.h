@@ -208,7 +208,7 @@ private:
      * (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
      * nicely as vector<>, which is a good compromise.
      */
-    tsl::robin_set<utils::Entity> mEntities;
+    tsl::robin_set<utils::Entity, utils::Entity::Hasher> mEntities;
 
 
     /*

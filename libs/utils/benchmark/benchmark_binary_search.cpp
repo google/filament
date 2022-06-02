@@ -16,14 +16,12 @@
 
 #include "PerformanceCounters.h"
 
-#include <utils/algorithm.h>
 #include <utils/compiler.h>
 
 #include <benchmark/benchmark.h>
 
 #include <random>
 #include <vector>
-#include <iostream>
 
 using namespace utils;
 
@@ -95,70 +93,5 @@ BENCHMARK_DEFINE_F(BinarySearch, stdLowerBound)(benchmark::State& state) {
     }
 }
 
-BENCHMARK_DEFINE_F(BinarySearch, utilsLowerBound)(benchmark::State& state) {
-    auto first = data.begin();
-    auto last = data.begin() + state.range(0);
-    std::vector<value_type> indices = prepareItems(state.range(0));
-    value_type const* ip = indices.data();
-    size_t i = 0;
-
-    {
-        PerformanceCounters pc(state);
-        for (auto _ : state) {
-            auto item = ip[i++ % state.range(0)];
-            auto const& pos = utils::lower_bound(first, last, item);
-            benchmark::DoNotOptimize(pos);
-        }
-    }
-}
-
-BENCHMARK_DEFINE_F(BinarySearch, utilsLowerBoundPOT)(benchmark::State& state) {
-    auto first = data.begin();
-    auto last = data.begin() + state.range(0);
-    std::vector<value_type> indices = prepareItems(state.range(0));
-    value_type const* ip = indices.data();
-    size_t i = 0;
-
-    {
-        PerformanceCounters pc(state);
-        for (auto _ : state) {
-            auto item = ip[i++ % state.range(0)];
-            auto const& pos = utils::lower_bound(first, last, item, {}, true);
-            benchmark::DoNotOptimize(pos);
-        }
-    }
-}
-
-BENCHMARK_DEFINE_F(BinarySearch, utilsLowerBound4096)(benchmark::State& state) {
-    auto first = data.begin();
-    auto last = data.begin() + 4096;
-    std::vector<value_type> indices = prepareItems(4096);
-    value_type const* ip = indices.data();
-    size_t i = 0;
-
-    {
-        PerformanceCounters pc(state);
-        for (auto _ : state) {
-            auto item = ip[i++ % 4096];
-            auto const& pos = utils::lower_bound(first, last, item, {}, true);
-            benchmark::DoNotOptimize(pos);
-        }
-    }
-}
-
 BENCHMARK_REGISTER_F(BinarySearch, linearSearch)->Range(2, 1<<20);
 BENCHMARK_REGISTER_F(BinarySearch, stdLowerBound)->Range(2, 1<<20);
-BENCHMARK_REGISTER_F(BinarySearch, utilsLowerBound)->Range(2, 1<<20);
-BENCHMARK_REGISTER_F(BinarySearch, utilsLowerBoundPOT)
-        ->Arg(2)
-        ->Arg(4)
-        ->Arg(16)
-        ->Arg(32)
-        ->Arg(64)
-        ->Arg(256)
-        ->Arg(4096)
-        ->Arg(32768)
-        ->Arg(262144)
-        ->Arg(1048576);
-
-BENCHMARK_REGISTER_F(BinarySearch, utilsLowerBound4096);

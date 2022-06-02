@@ -22,8 +22,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-namespace utils {
-namespace hash {
+namespace utils::hash {
 
 // Hash function that takes an arbitrary swath of word-aligned data.
 inline uint32_t murmur3(const uint32_t* key, size_t wordCount, uint32_t seed) noexcept {
@@ -99,7 +98,6 @@ inline void combine_fast(size_t& seed, const T& v) noexcept {
     seed ^= hasher(v) << 1u;
 }
 
-} // namespace hash
-} // namespace utils
+} // namespace utils::hash
 
 #endif // TNT_UTILS_HASH_H

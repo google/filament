@@ -26,6 +26,8 @@
 
 #include <utils/compiler.h>
 
+#include <functional>
+
 #include <stdint.h>
 
 // Command debugging off. debugging virtuals are not called.
