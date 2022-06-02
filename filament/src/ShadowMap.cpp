@@ -74,9 +74,13 @@ ShadowMap::~ShadowMap() {
 
 void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
         FScene::VisibleMaskType visibilityMask, RenderPass* const pass) noexcept {
+    const backend::Viewport disabledScissor{ 0, 0,
+            (uint32_t)std::numeric_limits<int32_t>::max(),
+            (uint32_t)std::numeric_limits<int32_t>::max() };
     pass->setVisibilityMask(visibilityMask);
     pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
     pass->overridePolygonOffset(&mShadowMapInfo.polygonOffset);
+    pass->overrideScissor(&disabledScissor);
     pass->appendCommands(RenderPass::SHADOW);
     pass->sortCommands();
 }

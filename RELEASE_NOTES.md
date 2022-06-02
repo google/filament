@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - gltfio: fix morphing for un-packed accessors
+- engine: disable user scissor while rendering the Shadow Maps (#5607)
 
 ## v1.23.1
 
