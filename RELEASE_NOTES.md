@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - engine: improve ResourceAllocator performance a bit by reserving 128 cache entries
 - utils: remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
 - backend: fix WGL context attributes
+- Metal: Fix potential invalid shaders when using gltfio in Ubershader mode. [⚠️ **Recompile Materials to get the fix**]
 
 ## v1.23.1
 
