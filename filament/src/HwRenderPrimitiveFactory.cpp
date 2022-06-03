@@ -64,7 +64,7 @@ inline bool operator<(HwRenderPrimitiveFactory::Entry const& lhs,
 HwRenderPrimitiveFactory::HwRenderPrimitiveFactory()
         : mArena("HwRenderPrimitiveFactory::mArena", SET_ARENA_SIZE),
           mSet(mArena) {
-    // note: currently the arena size doesn't matter b/c we're using the heap allocator
+    mMap.reserve(256);
 }
 
 HwRenderPrimitiveFactory::~HwRenderPrimitiveFactory() noexcept = default;
