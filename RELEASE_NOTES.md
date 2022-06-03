@@ -8,6 +8,8 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fix morphing for un-packed accessors
 - engine: disable user scissor while rendering the Shadow Maps (#5607)
 - engine: merge identical backend RenderPrimitives together
+- engine: improve ResourceAllocator performance a bit by reserving 128 cache entries
+>>>>>>> 8354353b3 (reserve 128 entries in ResourceAllocator)
 - utils: remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
 - backend: fix WGL context attributes
 
