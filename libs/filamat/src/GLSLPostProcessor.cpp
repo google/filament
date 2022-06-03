@@ -469,8 +469,10 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass());
 
-    if (config.shaderModel != ShaderModel::GL_CORE_41) {
-        // this triggers a segfault with AMD drivers on MacOS
+    if (config.shaderModel != ShaderModel::GL_CORE_41 ||
+            config.targetApi != MaterialBuilder::TargetApi::OPENGL) {
+        // this triggers a segfault with AMD OpenGL drivers on MacOS
+        // note that Metal also requires this pass in order to correctly generate half-precision MSL
         optimizer.RegisterPass(CreateMergeReturnPass());
     }
 
