@@ -844,6 +844,9 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     };
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
 
+    mContext->currentRenderTargetHeight = renderTargetHeight;
+    mContext->currentViewport = metalViewport;
+
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
     // We must bind certain states for each command encoder, so we dirty the states here to force a
     // rebinding at the first the draw call of this pass.
