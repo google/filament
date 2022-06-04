@@ -1228,8 +1228,23 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
                                                    clamp:0.0];
     }
 
-    // FIXME: implement take ps.scissor into account
-    //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
+    // Set scissor-rectangle.
+    const int32_t renderTargetHeight = mContext->currentRenderTargetHeight;
+    const MTLViewport& viewport = mContext->currentViewport;
+
+    const int32_t left   = std::max(static_cast<int32_t>(viewport.originX                  ), ps.scissor.left   );
+    const int32_t right  = std::min(static_cast<int32_t>(viewport.originX + viewport.width ), ps.scissor.right());
+    const int32_t top    = std::max(static_cast<int32_t>(viewport.originY                  ), renderTargetHeight - ps.scissor.top() );
+    const int32_t bottom = std::min(static_cast<int32_t>(viewport.originY + viewport.height), renderTargetHeight - ps.scissor.bottom);
+
+    MTLScissorRect scissorRect = {
+        .x      = static_cast<NSUInteger>(left),
+        .y      = static_cast<NSUInteger>(top ),
+        .width  = static_cast<NSUInteger>(right  - left),
+        .height = static_cast<NSUInteger>(bottom - top )
+    };
+
+    [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
 
     // Bind uniform buffers.
     MetalBuffer* uniformsToBind[Program::BINDING_COUNT] = { nil };
