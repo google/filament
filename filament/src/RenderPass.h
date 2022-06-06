@@ -213,25 +213,33 @@ public:
         return boolish ? std::numeric_limits<uint64_t>::max() : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 40 bytes
+    template<typename T>
+    static CommandKey select(T boolish, uint64_t value) noexcept {
+        return boolish ? value : uint64_t(0);
+    }
+
+    struct PrimitiveInfo { // 48 bytes
         union {
             FMaterialInstance const* mi;
-            uint64_t reserved0 = {}; // ensures mi is 8 bytes on all archs
+            uint64_t padding = {}; // ensures mi is 8 bytes on all archs
         };                                                              // 8 bytes
+        backend::RasterState rasterState;                               // 8 bytes
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
+        backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
-        uint16_t index = 0;                                             // 2 bytes
+        uint32_t index = 0;                                             // 4 bytes
+        uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes
-        backend::RasterState rasterState;                               // 8 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved1[7] = {};                                      // 7 bytes
+        uint8_t reserved[5] = {};                                       // 5 bytes
     };
-    static_assert(sizeof(PrimitiveInfo) == 40);
+    static_assert(sizeof(PrimitiveInfo) == 48);
 
-    struct alignas(8) Command {     // 40 bytes
+    struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
-        PrimitiveInfo primitive;    // 40 bytes
+        PrimitiveInfo primitive;    // 48 bytes
+        uint64_t reserved = 0;      //  8 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t, void* ptr) {
@@ -239,7 +247,7 @@ public:
             return ptr;
         }
     };
-    static_assert(sizeof(Command) == 48);
+    static_assert(sizeof(Command) == 64);
     static_assert(std::is_trivially_destructible_v<Command>,
             "Command isn't trivially destructible");
 
@@ -249,7 +257,7 @@ public:
 
     // Arena used for commands
     using Arena = utils::Arena<
-            utils::LinearAllocator,
+            utils::LinearAllocator,                 // note: can't change this allocator
             utils::LockingPolicy::NoLock,
             utils::TrackingPolicy::HighWatermark,
             utils::AreaPolicy::StaticArea>;
@@ -268,7 +276,10 @@ public:
     ~RenderPass() noexcept;
 
     // if non-null, overrides the material's polygon offset
-    void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
+    void overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept;
+
+    // if non-null, overrides the material's scissor
+    void overrideScissor(backend::Viewport const* scissor) noexcept;
 
     // specifies the geometry to generate commands for
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
@@ -319,17 +330,17 @@ public:
         FEngine& mEngine;
         Command const* mBegin;
         Command const* mEnd;
-        FScene::RenderableSoa const& mRenderableSoa;
         const CustomCommandVector mCustomCommands;
         const backend::Handle<backend::HwBufferObject> mUboHandle;
         const backend::PolygonOffset mPolygonOffset;
-        const bool mPolygonOffsetOverride;
+        const backend::Viewport mScissor;
+        const bool mPolygonOffsetOverride : 1;
+        const bool mScissorOverride : 1;
 
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
 
         void recordDriverCommands(FEngine& engine, backend::DriverApi& driver,
-                const Command* first, const Command* last,
-                FScene::RenderableSoa const& soa, uint16_t readOnlyDepthStencil) const noexcept;
+                const Command* first, const Command* last, uint16_t readOnlyDepthStencil) const noexcept;
 
     public:
         Executor(Executor const& rhs);
@@ -424,8 +435,14 @@ private:
     // whether to override the polygon offset setting
     bool mPolygonOffsetOverride = false;
 
+    // whether to override the polygon offset setting
+    bool mScissorOverride = false;
+
     // value of the override
     backend::PolygonOffset mPolygonOffset{};
+
+    // value of scissor override
+    backend::Viewport mScissor{};
 
     // a vector for our custom commands
     mutable Executor::CustomCommandVector mCustomCommands;

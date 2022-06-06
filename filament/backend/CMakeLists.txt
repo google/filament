@@ -438,16 +438,3 @@ if (APPLE AND NOT IOS)
     target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
 endif()
 
-if (APPLE AND NOT Vulkan_LIBRARY AND NOT FILAMENT_USE_SWIFTSHADER)
-    message(STATUS "No Vulkan SDK was found, using prebuilt MoltenVK.")
-    set(MOLTENVK_DIR "../../third_party/moltenvk")
-    configure_file(
-            ${MOLTENVK_DIR}/libvulkan.1.dylib
-            ${PROJECT_BINARY_DIR}/libvulkan.1.dylib COPYONLY)
-    configure_file(
-            ${MOLTENVK_DIR}/MoltenVK_icd.json
-            ${PROJECT_BINARY_DIR}/MoltenVK_icd.json COPYONLY)
-    configure_file(
-            ${MOLTENVK_DIR}/libMoltenVK.dylib
-            ${PROJECT_BINARY_DIR}/libMoltenVK.dylib COPYONLY)
-endif()

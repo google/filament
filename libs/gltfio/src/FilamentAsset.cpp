@@ -120,6 +120,20 @@ const utils::Entity* FFilamentAsset::getJointsAt(size_t skinIndex) const noexcep
     return mSkins[skinIndex].joints.data();
 }
 
+void FFilamentAsset::attachSkin(size_t skinIndex, Entity target) noexcept {
+    if (UTILS_UNLIKELY(mSkins.size() <= skinIndex || target.isNull())) {
+        return;
+    }
+    mSkins[skinIndex].targets.insert(target);
+}
+
+void FFilamentAsset::detachSkin(size_t skinIndex, Entity target) noexcept {
+    if (UTILS_UNLIKELY(mSkins.size() <= skinIndex || target.isNull())) {
+        return;
+    }
+    mSkins[skinIndex].targets.erase(target);
+}
+
 const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         size_t targetIndex) const noexcept {
     if (!mResourcesLoaded) {
@@ -379,6 +393,14 @@ size_t FilamentAsset::getJointCountAt(size_t skinIndex) const noexcept {
 
 const utils::Entity* FilamentAsset::getJointsAt(size_t skinIndex) const noexcept {
     return upcast(this)->getJointsAt(skinIndex);
+}
+
+void FilamentAsset::attachSkin(size_t skinIndex, Entity target) noexcept {
+    upcast(this)->attachSkin(skinIndex, target);
+}
+
+void FilamentAsset::detachSkin(size_t skinIndex, Entity target) noexcept {
+    upcast(this)->detachSkin(skinIndex, target);
 }
 
 const char* FilamentAsset::getMorphTargetNameAt(utils::Entity entity,

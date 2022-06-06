@@ -1015,7 +1015,7 @@ TEST_F(ValidateIdWithMessage, OpTypeRuntimeArrayBad) {
                 "type."));
 }
 // TODO: Object of this type can only be created with OpVariable using the
-// Unifrom Storage Class
+// Uniform Storage Class
 
 TEST_F(ValidateIdWithMessage, OpTypeStructGood) {
   std::string spirv = kGLSL450MemoryModel + R"(
@@ -2859,7 +2859,7 @@ TEST_F(ValidateIdWithMessage, OpStoreTypeRelaxedStruct) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-// Same code as the last test excect for an extra decoration on one of the
+// Same code as the last test except for an extra decoration on one of the
 // members. With the relaxed rules, the code is still valid.
 TEST_F(ValidateIdWithMessage, OpStoreTypeRelaxedStructWithExtraDecoration) {
   std::string spirv = kGLSL450MemoryModel + R"(

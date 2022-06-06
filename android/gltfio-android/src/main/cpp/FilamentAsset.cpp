@@ -340,3 +340,19 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nReleaseSourceData(JNIEnv*
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     asset->releaseSourceData();
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nAttachSkin(JNIEnv* env, jclass,
+        jlong nativeAsset, jint skinIndex, jint targetEntity) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    Entity target = Entity::import(targetEntity);
+    asset->attachSkin(skinIndex, target);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nDetachSkin(JNIEnv* env, jclass,
+        jlong nativeAsset, jint skinIndex, jint targetEntity) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    Entity target = Entity::import(targetEntity);
+    asset->detachSkin(skinIndex, target);
+}

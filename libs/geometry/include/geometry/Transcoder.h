@@ -31,6 +31,7 @@ enum class ComponentType {
     SHORT,  //!< If normalization is enabled, this maps from [-32767,32767] to [-1,+1]
     USHORT, //!< If normalization is enabled, this maps from [0,65535] to [0, +1]
     HALF,   //!< 1 sign bit, 5 exponent bits, and 5 mantissa bits.
+    FLOAT,  //!< Standard 32-bit float
 };
 
 /**

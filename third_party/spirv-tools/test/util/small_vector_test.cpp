@@ -56,6 +56,18 @@ TEST(SmallVectorTest, Initialize_list2) {
   }
 }
 
+TEST(SmallVectorTest, Initialize_list3) {
+  std::vector<uint32_t> result = {0, 1, 2, 3};
+  SmallVector<uint32_t, 6> vec(result.begin(), result.end());
+
+  EXPECT_FALSE(vec.empty());
+  EXPECT_EQ(vec.size(), 4);
+
+  for (uint32_t i = 0; i < vec.size(); ++i) {
+    EXPECT_EQ(vec[i], result[i]);
+  }
+}
+
 TEST(SmallVectorTest, Initialize_copy1) {
   SmallVector<uint32_t, 6> vec1 = {0, 1, 2, 3};
   SmallVector<uint32_t, 6> vec2(vec1);
@@ -591,6 +603,68 @@ TEST(SmallVectorTest, Resize6) {
   vec.resize(3, 10);
   EXPECT_EQ(vec.size(), 3);
   EXPECT_EQ(vec, result);
+}
+
+TEST(SmallVectorTest, Pop_back) {
+  SmallVector<uint32_t, 8> vec = {0, 1, 2, 10, 10, 10};
+  SmallVector<uint32_t, 8> result = {0, 1, 2};
+
+  EXPECT_EQ(vec.size(), 6);
+  vec.pop_back();
+  vec.pop_back();
+  vec.pop_back();
+  EXPECT_EQ(vec.size(), 3);
+  EXPECT_EQ(vec, result);
+}
+
+TEST(SmallVectorTest, Pop_back_TestDestructor) {
+  // Tracks number of constructions and destructions to ensure they are called.
+  struct TracksDtor {
+    TracksDtor& operator=(TracksDtor&&) = delete;
+    TracksDtor& operator=(const TracksDtor&) = delete;
+
+    TracksDtor(int& num_ctors, int& num_dtors)
+        : num_ctors_(num_ctors), num_dtors_(num_dtors) {
+      num_ctors_++;
+    }
+    TracksDtor(const TracksDtor& that)
+        : TracksDtor(that.num_ctors_, that.num_dtors_) {}
+    TracksDtor(TracksDtor&& that)
+        : TracksDtor(that.num_ctors_, that.num_dtors_) {}
+    ~TracksDtor() { num_dtors_++; }
+
+    int& num_ctors_;
+    int& num_dtors_;
+  };
+
+  constexpr int capacity = 4;
+  SmallVector<TracksDtor, capacity> vec;
+
+  int num_ctors = 0;
+  int num_dtors = 0;
+
+  // Make sure it works when staying within the smallvector capacity
+  for (int i = 0; i < capacity; ++i) {
+    vec.emplace_back(num_ctors, num_dtors);
+  }
+
+  EXPECT_EQ(num_ctors, capacity);
+  while (!vec.empty()) {
+    vec.pop_back();
+  }
+
+  EXPECT_EQ(num_ctors, capacity);
+  EXPECT_EQ(num_dtors, num_ctors);
+
+  // And when larger than builtin capacity
+  for (int i = 0; i < capacity * 2; ++i) {
+    vec.emplace_back(num_ctors, num_dtors);
+  }
+
+  while (!vec.empty()) {
+    vec.pop_back();
+  }
+  EXPECT_EQ(num_dtors, num_ctors);
 }
 
 }  // namespace

@@ -732,7 +732,7 @@ enum class SamplerCompareFunc : uint8_t {
     N           //!< Never. The depth / stencil test always fails.
 };
 
-//! Sampler paramters
+//! Sampler parameters
 struct SamplerParams { // NOLINT
     union {
         struct {

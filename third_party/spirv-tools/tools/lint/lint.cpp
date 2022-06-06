@@ -19,7 +19,7 @@
 #include "tools/io.h"
 #include "tools/util/cli_consumer.h"
 
-const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_5;
+const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
 
 namespace {
 // Status and actions to perform after parsing command-line arguments.

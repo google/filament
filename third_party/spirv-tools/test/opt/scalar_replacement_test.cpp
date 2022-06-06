@@ -470,9 +470,9 @@ TEST_F(ScalarReplacementTest, NonUniformCompositeInitialization) {
 ; CHECK: [[const_array:%\w+]] = OpConstantComposite [[array]]
 ; CHECK: [[const_matrix:%\w+]] = OpConstantNull [[matrix]]
 ; CHECK: [[const_struct1:%\w+]] = OpConstantComposite [[struct1]]
-; CHECK: OpConstantNull [[uint]]
-; CHECK: OpConstantNull [[vector]]
-; CHECK: OpConstantNull [[long]]
+; CHECK: OpUndef [[uint]]
+; CHECK: OpUndef [[vector]]
+; CHECK: OpUndef [[long]]
 ; CHECK: OpFunction
 ; CHECK-NOT: OpVariable [[struct2_ptr]] Function
 ; CHECK: OpVariable [[uint_ptr]] Function
@@ -654,11 +654,10 @@ TEST_F(ScalarReplacementTest, ReplaceWholeLoadCopyMemoryAccess) {
 ; CHECK: [[uint:%\w+]] = OpTypeInt 32 0
 ; CHECK: [[struct1:%\w+]] = OpTypeStruct [[uint]] [[uint]]
 ; CHECK: [[uint_ptr:%\w+]] = OpTypePointer Function [[uint]]
-; CHECK: [[const:%\w+]] = OpConstant [[uint]] 0
-; CHECK: [[null:%\w+]] = OpConstantNull [[uint]]
+; CHECK: [[undef:%\w+]] = OpUndef [[uint]]
 ; CHECK: [[var0:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[l0:%\w+]] = OpLoad [[uint]] [[var0]] Nontemporal
-; CHECK: OpCompositeConstruct [[struct1]] [[l0]] [[null]]
+; CHECK: OpCompositeConstruct [[struct1]] [[l0]] [[undef]]
 ;
 OpCapability Shader
 OpCapability Linkage
@@ -1267,16 +1266,16 @@ TEST_F(ScalarReplacementTest, ReplaceWholeLoadAndStore) {
 ; CHECK: [[struct1:%\w+]] = OpTypeStruct [[uint]] [[uint]]
 ; CHECK: [[uint_ptr:%\w+]] = OpTypePointer Function [[uint]]
 ; CHECK: [[const:%\w+]] = OpConstant [[uint]] 0
-; CHECK: [[null:%\w+]] = OpConstantNull [[uint]]
+; CHECK: [[undef:%\w+]] = OpUndef [[uint]]
 ; CHECK: [[var0:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[var1:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK-NOT: OpVariable
 ; CHECK: [[l0:%\w+]] = OpLoad [[uint]] [[var0]]
-; CHECK: [[c0:%\w+]] = OpCompositeConstruct [[struct1]] [[l0]] [[null]]
+; CHECK: [[c0:%\w+]] = OpCompositeConstruct [[struct1]] [[l0]] [[undef]]
 ; CHECK: [[e0:%\w+]] = OpCompositeExtract [[uint]] [[c0]] 0
 ; CHECK: OpStore [[var1]] [[e0]]
 ; CHECK: [[l1:%\w+]] = OpLoad [[uint]] [[var1]]
-; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[null]]
+; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[undef]]
 ; CHECK: [[e1:%\w+]] = OpCompositeExtract [[uint]] [[c1]] 0
 ;
 OpCapability Shader
@@ -1314,7 +1313,7 @@ TEST_F(ScalarReplacementTest, ReplaceWholeLoadAndStore2) {
 ; CHECK: [[struct1:%\w+]] = OpTypeStruct [[uint]] [[uint]]
 ; CHECK: [[uint_ptr:%\w+]] = OpTypePointer Function [[uint]]
 ; CHECK: [[const:%\w+]] = OpConstant [[uint]] 0
-; CHECK: [[null:%\w+]] = OpConstantNull [[uint]]
+; CHECK: [[undef:%\w+]] = OpUndef [[uint]]
 ; CHECK: [[var1:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[var0a:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[var0b:%\w+]] = OpVariable [[uint_ptr]] Function
@@ -1325,7 +1324,7 @@ TEST_F(ScalarReplacementTest, ReplaceWholeLoadAndStore2) {
 ; CHECK: [[e0:%\w+]] = OpCompositeExtract [[uint]] [[c0]] 0
 ; CHECK: OpStore [[var1]] [[e0]]
 ; CHECK: [[l1:%\w+]] = OpLoad [[uint]] [[var1]]
-; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[null]]
+; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[undef]]
 ; CHECK: [[e1:%\w+]] = OpCompositeExtract [[uint]] [[c1]] 0
 ;
 OpCapability Shader
@@ -1362,14 +1361,14 @@ TEST_F(ScalarReplacementTest, CreateAmbiguousNullConstant1) {
 ; CHECK: [[struct1:%\w+]] = OpTypeStruct [[uint]] [[struct_member:%\w+]]
 ; CHECK: [[uint_ptr:%\w+]] = OpTypePointer Function [[uint]]
 ; CHECK: [[const:%\w+]] = OpConstant [[uint]] 0
-; CHECK: [[null:%\w+]] = OpConstantNull [[struct_member]]
+; CHECK: [[undef:%\w+]] = OpUndef [[struct_member]]
 ; CHECK: [[var0a:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[var1:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[var0b:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK-NOT: OpVariable
 ; CHECK: OpStore [[var1]]
 ; CHECK: [[l1:%\w+]] = OpLoad [[uint]] [[var1]]
-; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[null]]
+; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[undef]]
 ; CHECK: [[e1:%\w+]] = OpCompositeExtract [[uint]] [[c1]] 0
 ;
 OpCapability Shader
@@ -1444,13 +1443,13 @@ TEST_F(ScalarReplacementTest, CreateAmbiguousNullConstant2) {
 ; CHECK: [[struct1:%\w+]] = OpTypeStruct [[uint]] [[struct_member:%\w+]]
 ; CHECK: [[uint_ptr:%\w+]] = OpTypePointer Function [[uint]]
 ; CHECK: [[const:%\w+]] = OpConstant [[uint]] 0
-; CHECK: [[null:%\w+]] = OpConstantNull [[struct_member]]
+; CHECK: [[undef:%\w+]] = OpUndef [[struct_member]]
 ; CHECK: [[var0a:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[var1:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: [[var0b:%\w+]] = OpVariable [[uint_ptr]] Function
 ; CHECK: OpStore [[var1]]
 ; CHECK: [[l1:%\w+]] = OpLoad [[uint]] [[var1]]
-; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[null]]
+; CHECK: [[c1:%\w+]] = OpCompositeConstruct [[struct1]] [[l1]] [[undef]]
 ; CHECK: [[e1:%\w+]] = OpCompositeExtract [[uint]] [[c1]] 0
 ;
 OpCapability Shader
@@ -2261,6 +2260,40 @@ OpFunctionEnd
 )";
 
   SinglePassRunAndCheck<ScalarReplacementPass>(text, text, false);
+}
+
+TEST_F(ScalarReplacementTest, UndefImageMember) {
+  // Test that scalar replacement creates an undef for a type that cannot have
+  // and OpConstantNull.
+  const std::string text = R"(
+; CHECK: [[image_type:%\w+]] = OpTypeSampledImage {{%\w+}}
+; CHECK: [[struct_type:%\w+]] = OpTypeStruct [[image_type]]
+; CHECK: [[undef:%\w+]] = OpUndef [[image_type]]
+; CHECK: {{%\w+}} = OpCompositeConstruct [[struct_type]] [[undef]]
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+          %6 = OpTypeImage %float 2D 0 0 0 1 Unknown
+          %7 = OpTypeSampledImage %6
+  %_struct_8 = OpTypeStruct %7
+          %9 = OpTypeFunction %_struct_8
+         %10 = OpUndef %_struct_8
+%_ptr_Function__struct_8 = OpTypePointer Function %_struct_8
+          %2 = OpFunction %void None %4
+         %11 = OpLabel
+         %16 = OpVariable %_ptr_Function__struct_8 Function
+               OpStore %16 %10
+         %12 = OpLoad %_struct_8 %16
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<ScalarReplacementPass>(text, true);
 }
 
 }  // namespace

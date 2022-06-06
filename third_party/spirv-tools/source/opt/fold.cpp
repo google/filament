@@ -540,7 +540,7 @@ std::vector<uint32_t> InstructionFolder::FoldVectors(
         // in 32-bit words here. The reason of not using FoldScalars() here
         // is that we do not create temporary null constants as components
         // when the vector operand is a NullConstant because Constant creation
-        // may need extra checks for the validity and that is not manageed in
+        // may need extra checks for the validity and that is not managed in
         // here.
         if (const analysis::ScalarConstant* scalar_component =
                 vector_operand->GetComponents().at(d)->AsScalarConstant()) {

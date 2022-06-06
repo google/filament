@@ -78,43 +78,49 @@ public:
     };
 
     /**
-     * Updates the position of morph target at the index.
+     * Updates positions for the given morph target.
+     *
+     * This is equivalent to the float4 method, but uses 1.0 for the 4th component.
      *
      * Both positions and tangents must be provided.
      *
      * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
-     * @param weights pointer to at least count positions
-     * @param count number of position elements in positions
+     * @param positions pointer to at least "count" positions
+     * @param count number of float3 vectors in positions
+     * @param offset offset into the target buffer, expressed as a number of float4 vectors
      * @see setTangentsAt
      */
     void setPositionsAt(Engine& engine, size_t targetIndex,
             math::float3 const* positions, size_t count, size_t offset = 0);
 
     /**
-     * Updates the position of morph target at the index.
+     * Updates positions for the given morph target.
      *
      * Both positions and tangents must be provided.
      *
      * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
-     * @param weights pointer to at least count positions
-     * @param count number of position elements in positions
-     * @see setPositionsAt
+     * @param positions pointer to at least "count" positions
+     * @param count number of float4 vectors in positions
+     * @param offset offset into the target buffer, expressed as a number of float4 vectors
+     * @see setTangentsAt
      */
     void setPositionsAt(Engine& engine, size_t targetIndex,
             math::float4 const* positions, size_t count, size_t offset = 0);
 
     /**
-     * Updates the position of morph target at the index.
+     * Updates tangents for the given morph target.
      *
-     * Both positions and tangents must be provided.
+     * These quaternions must be represented as signed shorts, where real numbers in the [-1,+1]
+     * range multiplied by 32767.
      *
      * @param engine Reference to the filament::Engine associated with this MorphTargetBuffer.
      * @param targetIndex the index of morph target to be updated.
-     * @param tangents pointer to at least count tangents
-     * @param count number of tangent elements in tangents
-     * @see setTangentsAt
+     * @param tangents pointer to at least "count" tangents
+     * @param count number of short4 quaternions in tangents
+     * @param offset offset into the target buffer, expressed as a number of short4 vectors
+     * @see setPositionsAt
      */
     void setTangentsAt(Engine& engine, size_t targetIndex,
             math::short4 const* tangents, size_t count, size_t offset = 0);

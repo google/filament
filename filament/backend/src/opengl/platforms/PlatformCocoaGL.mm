@@ -145,7 +145,6 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
             NSOpenGLPFADepthSize,    (NSOpenGLPixelFormatAttribute) 24,
             NSOpenGLPFADoubleBuffer, (NSOpenGLPixelFormatAttribute) true,
             NSOpenGLPFAAccelerated,  (NSOpenGLPixelFormatAttribute) true,
-            NSOpenGLPFANoRecovery,   (NSOpenGLPixelFormatAttribute) true,
             0, 0,
     };
 

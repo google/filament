@@ -44,7 +44,7 @@ const (
 	CodeServerOverloaded = -32000
 )
 
-// WireRequest is sent to a server to represent a Call or Notify operaton.
+// WireRequest is sent to a server to represent a Call or Notify operation.
 type WireRequest struct {
 	// VersionTag is always encoded as the string "2.0"
 	VersionTag VersionTag `json:"jsonrpc"`

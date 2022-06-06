@@ -79,7 +79,7 @@ public:
     using const_pointer   = const value_type*;
     using const_iterator  = const value_type*;
 
-    constexpr StaticString() noexcept = default;
+    constexpr StaticString() noexcept {} // NOLINT(modernize-use-equals-default), Ubuntu compiler bug
 
     // initialization from a string literal
     template<size_t N>
@@ -149,6 +149,14 @@ public:
 
     size_type getHash() const noexcept { return mHash; }
 
+    struct Hasher {
+        typedef StaticString argument_type;
+        typedef size_t result_type;
+        result_type operator()(const argument_type& s) const noexcept {
+            return s.getHash();
+        }
+    };
+
 private:
     const_pointer mString = nullptr;
     size_type mLength = 0;
@@ -200,7 +208,7 @@ public:
     using iterator        = value_type*;
     using const_iterator  = const value_type*;
 
-    CString() noexcept = default;
+    CString() noexcept {} // NOLINT(modernize-use-equals-default), Ubuntu compiler bug
 
     // Allocates memory and appends a null. This constructor can be used to hold arbitrary data
     // inside the string (i.e. it can contain nulls or non-ASCII encodings).
@@ -220,7 +228,7 @@ public:
             : CString(other, N - 1) {
     }
 
-    CString(StaticString const& s) : CString(s.c_str(), s.size()) {}
+    CString(StaticString const& s) : CString(s.c_str(), s.size()) {} // NOLINT(google-explicit-constructor)
 
     CString(const CString& rhs);
 
@@ -309,10 +317,18 @@ public:
     }
 
     // placement new declared as "throw" to avoid the compiler's null-check
-    inline void* operator new(size_t size, void* ptr) {
+    inline void* operator new(size_t, void* ptr) {
         assert(ptr);
         return ptr;
     }
+
+    struct Hasher : private hashCStrings {
+        typedef CString argument_type;
+        typedef size_t result_type;
+        result_type operator()(const argument_type& s) const noexcept {
+            return hashCStrings::operator()(s.c_str());
+        }
+    };
 
 private:
     struct Data {
@@ -364,35 +380,5 @@ template<typename T>
 CString to_string(T value) noexcept;
 
 } // namespace utils
-
-// FIXME: how could we not include this one?
-// needed for std::hash, since implementation is inline, this would not cause
-// binaries incompatibilities if another STL version was used.
-#include <functional>
-
-namespace std {
-
-//! \privatesection
-template<>
-struct hash<utils::CString> {
-    typedef utils::CString argument_type;
-    typedef size_t result_type;
-    utils::hashCStrings hasher;
-    size_t operator()(const utils::CString& s) const noexcept {
-        return hasher(s.c_str());
-    }
-};
-
-//! \privatesection
-template<>
-struct hash<utils::StaticString> {
-    typedef utils::StaticString argument_type;
-    typedef size_t result_type;
-    size_t operator()(const utils::StaticString& s) const noexcept {
-        return s.getHash();
-    }
-};
-
-} // namespace std
 
 #endif // TNT_UTILS_CSTRING_H

@@ -319,6 +319,16 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         }
     }
 
+    // Some exporters (e.g. Cinema4D) produce assets with a separate animation hierarchy and
+    // modeling hierarchy, where nodes in the former have no associated scene. We need to create
+    // transformable entities for "un-scened" nodes in case they have bones.
+    for (size_t i = 0, n = srcAsset->nodes_count; i < n; ++i) {
+        cgltf_node* node = &srcAsset->nodes[i];
+        if (node->parent == nullptr && mRootNodes.find(node) == mRootNodes.end()) {
+            mRootNodes.insert({node, {}});
+        }
+    }
+
     mResult->mRenderableCount = 0;
 
     if (numInstances == 0) {

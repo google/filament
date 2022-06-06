@@ -96,6 +96,8 @@ spv_result_t spvExtInstTableGet(spv_ext_inst_table* pExtInstTable,
     case SPV_ENV_UNIVERSAL_1_4:
     case SPV_ENV_UNIVERSAL_1_5:
     case SPV_ENV_VULKAN_1_2:
+    case SPV_ENV_UNIVERSAL_1_6:
+    case SPV_ENV_VULKAN_1_3:
       *pExtInstTable = &kTable_1_0;
       return SPV_SUCCESS;
     default:

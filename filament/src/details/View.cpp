@@ -547,6 +547,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         mSpotLightShadowCasters = Range{ 0, iSpotLightCastersEnd };
         merged = Range{ 0, iSpotLightCastersEnd };
 
+        scene->prepareVisibleRenderables(merged);
+
         // update those UBOs
         const size_t size = merged.size() * sizeof(PerRenderableUib);
         if (size) {

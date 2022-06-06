@@ -26,6 +26,7 @@
 namespace filament {
 
 struct FSRScalingConfig {
+    filament::backend::Backend backend;
     filament::Viewport input;   // region of source to be scaled
     uint32_t inputWidth;        // width of source
     uint32_t inputHeight;       // height of source

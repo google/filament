@@ -409,8 +409,13 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t coun
     construct<VulkanSamplerGroup>(sbh, count);
 }
 
-void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
+void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
+        PrimitiveType pt, uint32_t offset,
+        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
     construct<VulkanRenderPrimitive>(rph);
+    VulkanDriver::setRenderPrimitiveBuffer(rph, vbh, ibh);
+    VulkanDriver::setRenderPrimitiveRange(rph, pt, offset, minIndex, maxIndex, count);
 }
 
 void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {

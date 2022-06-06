@@ -139,7 +139,7 @@ void Module::ToBinary(std::vector<uint32_t>* binary, bool skip_nop) const {
   // TODO(antiagainst): should we change the generator number?
   binary->push_back(header_.generator);
   binary->push_back(header_.bound);
-  binary->push_back(header_.reserved);
+  binary->push_back(header_.schema);
 
   size_t bound_idx = binary->size() - 2;
   DebugScope last_scope(kNoDebugScope, kNoInlinedAt);
@@ -260,9 +260,7 @@ bool Module::HasExplicitCapability(uint32_t cap) {
 
 uint32_t Module::GetExtInstImportId(const char* extstr) {
   for (auto& ei : ext_inst_imports_)
-    if (!strcmp(extstr,
-                reinterpret_cast<const char*>(&(ei.GetInOperand(0).words[0]))))
-      return ei.result_id();
+    if (!ei.GetInOperand(0).AsString().compare(extstr)) return ei.result_id();
   return 0;
 }
 

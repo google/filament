@@ -1118,8 +1118,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 commitAndRender(hwTempRT, separableGaussianBlur, driver);
 
                 // vertical pass
-                auto width = outDesc.width;
-                auto height = outDesc.height;
+                UTILS_UNUSED_IN_RELEASE auto width = outDesc.width;
+                UTILS_UNUSED_IN_RELEASE auto height = outDesc.height;
                 assert_invariant(width == hwOutRT.params.viewport.width);
                 assert_invariant(height == hwOutRT.params.viewport.height);
 
@@ -2652,51 +2652,28 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
     return ppBlit->output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
-        FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
-        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-        FrameGraphTexture::Descriptor const& outDesc) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
+        DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
+        filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+        backend::SamplerMagFilter filter) noexcept {
 
-    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
+    if (UTILS_LIKELY(!translucent && dsrOptions.quality == QualityLevel::LOW)) {
+        return opaqueBlit(fg, input, vp, outDesc, filter);
+    }
 
-    bool lowQualityFallback = false;
-    if (translucent && dsrOptions.quality != QualityLevel::LOW) {
+    // The code below cannot handle sub-resources
+    assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
+    assert_invariant(fg.getSubResourceDescriptor(input).level == 0);
+
+    const bool lowQualityFallback = translucent && dsrOptions.quality != QualityLevel::LOW;
+    if (lowQualityFallback) {
         // FidelityFX-FSR doesn't support the alpha channel currently
         dsrOptions.quality = QualityLevel::LOW;
-        lowQualityFallback = true;
     }
 
     const bool twoPassesEASU = mWorkaroundSplitEasu &&
             (dsrOptions.quality == QualityLevel::MEDIUM
                 || dsrOptions.quality == QualityLevel::HIGH);
-
-    // helper to set the EASU uniforms
-    auto setEasuUniforms = [vp](FMaterialInstance* mi,
-            FrameGraphTexture::Descriptor const& inputDesc,
-            FrameGraphTexture::Descriptor const& outputDesc) {
-        FSRUniforms uniforms{};
-        FSR_ScalingSetup(&uniforms, {
-                .input = vp,
-                .inputWidth = inputDesc.width,
-                .inputHeight = inputDesc.height,
-                .outputWidth = outputDesc.width,
-                .outputHeight = outputDesc.height,
-        });
-        mi->setParameter("EasuCon0", uniforms.EasuCon0);
-        mi->setParameter("EasuCon1", uniforms.EasuCon1);
-        mi->setParameter("EasuCon2", uniforms.EasuCon2);
-        mi->setParameter("EasuCon3", uniforms.EasuCon3);
-        mi->setParameter("textureSize",
-                float2{ inputDesc.width, inputDesc.height });
-    };
-
-    // helper to enable blending
-    auto enableTranslucentBlending = [](PipelineState& pipeline) {
-        pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
-        pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
-        pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
-        pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
-    };
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
@@ -2704,14 +2681,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
         FrameGraphId<FrameGraphTexture> depth;
     };
 
-    auto& ppQuadBlit = fg.addPass<QuadBlitData>(dsrOptions.enabled ? "quad scaling" : "blendBlit",
+    auto& ppQuadBlit = fg.addPass<QuadBlitData>(dsrOptions.enabled ? "upscaling" : "compositing",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
-                data.output = builder.createTexture("scaled output", outDesc);
+                data.output = builder.createTexture("upscaled output", outDesc);
 
                 if (twoPassesEASU) {
-                    // FIXME: it would be better to use the stencil buffer in this case
-                    data.depth = builder.createTexture("scaled output depth", {
+                    // FIXME: it would be better to use the stencil buffer in this case (less bandwidth)
+                    data.depth = builder.createTexture("upscaled output depth", {
                         .width = outDesc.width,
                         .height = outDesc.height,
                         .format = TextureFormat::DEPTH16
@@ -2724,8 +2701,37 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                         .attachments = { .color = { data.output }, .depth = { data.depth }},
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [=](FrameGraphResources const& resources,
+            [this, twoPassesEASU, dsrOptions, vp, translucent, filter](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
+
+                // helper to set the EASU uniforms
+                auto setEasuUniforms = [vp, backend = mEngine.getBackend()](FMaterialInstance* mi,
+                        FrameGraphTexture::Descriptor const& inputDesc,
+                        FrameGraphTexture::Descriptor const& outputDesc) {
+                    FSRUniforms uniforms{};
+                    FSR_ScalingSetup(&uniforms, {
+                            .backend = backend,
+                            .input = vp,
+                            .inputWidth = inputDesc.width,
+                            .inputHeight = inputDesc.height,
+                            .outputWidth = outputDesc.width,
+                            .outputHeight = outputDesc.height,
+                    });
+                    mi->setParameter("EasuCon0", uniforms.EasuCon0);
+                    mi->setParameter("EasuCon1", uniforms.EasuCon1);
+                    mi->setParameter("EasuCon2", uniforms.EasuCon2);
+                    mi->setParameter("EasuCon3", uniforms.EasuCon3);
+                    mi->setParameter("textureSize",
+                            float2{ inputDesc.width, inputDesc.height });
+                };
+
+                // helper to enable blending
+                auto enableTranslucentBlending = [](PipelineState& pipeline) {
+                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                };
 
                 auto color = resources.getTexture(data.input);
                 auto const& inputDesc = resources.getDescriptor(data.input);
@@ -2742,8 +2748,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     auto* mi = splitEasuMaterial->getMaterialInstance(mEngine);
                     setEasuUniforms(mi, inputDesc, outputDesc);
                     mi->setParameter("color", color, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
+                        .filterMag = SamplerMagFilter::LINEAR
                     });
                     mi->setParameter("resolution",
                             float4{ outputDesc.width, outputDesc.height,
@@ -2762,8 +2767,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                         setEasuUniforms(mi, inputDesc, outputDesc);
                     }
                     mi->setParameter("color", color, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
+                        .filterMag = (dsrOptions.quality == QualityLevel::LOW) ?
+                                filter : SamplerMagFilter::LINEAR
                     });
                     mi->setParameter("resolution",
                             float4{ outputDesc.width, outputDesc.height,
@@ -2780,6 +2785,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
 
                 // --------------------------------------------------------------------------------
                 // render pass with draw calls
+
+                auto fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
                 auto out = resources.getRenderPassInfo();
 
@@ -2848,6 +2855,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
 
     // we rely on automatic culling of unused render passes
     return output;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool translucent,
+        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
+        FrameGraphTexture::Descriptor const& outDesc,
+        backend::SamplerMagFilter filter) noexcept {
+    // for now, we implement this by calling upscale() with the low-quality setting.
+    return upscale(fg, translucent, { .quality = QualityLevel::LOW }, input, vp, outDesc, filter);
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevel(FrameGraph& fg,

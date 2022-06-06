@@ -67,6 +67,27 @@ public class Animator {
     }
 
     /**
+     * Applies a blended transform to the union of nodes affected by two animations.
+     * Used for cross-fading from a previous skinning-based animation or rigid body animation.
+     *
+     * First, this stashes the current transform hierarchy into a transient memory buffer.
+     *
+     * Next, this applies previousAnimIndex / previousAnimTime to the actual asset by internally
+     * calling applyAnimation().
+     *
+     * Finally, the stashed local transforms are lerped (via the scale / translation / rotation
+     * components) with their live counterparts, and the results are pushed to the asset.
+     *
+     * To achieve a cross fade effect with skinned models, clients will typically call animator
+     * methods in this order: (1) applyAnimation (2) applyCrossFade (3) updateBoneMatrices. The
+     * animation that clients pass to applyAnimation is the "current" animation corresponding to
+     * alpha=1, while the "previous" animation passed to applyCrossFade corresponds to alpha=0.
+     */
+    public void applyCrossFade(int previousAnimIndex, float previousAnimTime, float alpha) {
+        nApplyCrossFade(getNativeObject(), previousAnimIndex, previousAnimTime, alpha);
+    }
+
+    /**
      * Pass the identity matrix into all bone nodes, useful for returning to the T pose.
      *
      * <p>NOTE: this operation is independent of <code>animation</code>.</p>
@@ -118,6 +139,7 @@ public class Animator {
 
     private static native void nApplyAnimation(long nativeAnimator, int index, float time);
     private static native void nUpdateBoneMatrices(long nativeAnimator);
+    private static native void nApplyCrossFade(long nativeAnimator, int animIndex, float animTime, float alpha);
     private static native void nResetBoneMatrices(long nativeAnimator);
     private static native int nGetAnimationCount(long nativeAnimator);
     private static native float nGetAnimationDuration(long nativeAnimator, int index);

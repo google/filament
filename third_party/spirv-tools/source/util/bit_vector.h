@@ -32,7 +32,7 @@ class BitVector {
   enum { kInitialNumBits = 1024 };
 
  public:
-  // Creates a bit vector contianing 0s.
+  // Creates a bit vector containing 0s.
   BitVector(uint32_t reserved_size = kInitialNumBits)
       : bits_((reserved_size - 1) / kBitContainerSize + 1, 0) {}
 

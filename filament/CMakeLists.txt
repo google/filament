@@ -63,6 +63,7 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
+        src/HwRenderPrimitiveFactory.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/LightManager.cpp
@@ -131,6 +132,7 @@ set(SRCS
 
 set(PRIVATE_HDRS
         src/Allocators.h
+        src/BufferPoolAllocator.h
         src/ColorSpace.h
         src/Culler.h
         src/DFG.h
@@ -139,6 +141,7 @@ set(PRIVATE_HDRS
         src/FrameInfo.h
         src/FrameSkipper.h
         src/Froxelizer.h
+        src/HwRenderPrimitiveFactory.h
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h

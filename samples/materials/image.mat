@@ -45,7 +45,7 @@ fragment {
             material.baseColor = bg;
         } else {
             uv.t = 1.0 - uv.t;
-            vec4 color = texture(materialParams_image, uv.st);
+            vec4 color = max(texture(materialParams_image, uv.st), 0.0);
             color.rgb *= color.a;
             // Manual, pre-multiplied srcOver with opaque destination optimization
             material.baseColor.rgb = color.rgb + bg.rgb * (1.0 - color.a);

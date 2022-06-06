@@ -58,10 +58,8 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
     BufferDescriptor indexBufferDesc(gIndices, sizeof(short) * 3);
     mDriverApi.updateIndexBuffer(mIndexBuffer, std::move(indexBufferDesc), 0);
 
-    mRenderPrimitive = mDriverApi.createRenderPrimitive(0);
-
-    mDriverApi.setRenderPrimitiveBuffer(mRenderPrimitive, mVertexBuffer, mIndexBuffer);
-    mDriverApi.setRenderPrimitiveRange(mRenderPrimitive, PrimitiveType::TRIANGLES, 0, 0, 2, 3);
+    mRenderPrimitive = mDriverApi.createRenderPrimitive(
+            mVertexBuffer, mIndexBuffer, PrimitiveType::TRIANGLES, 0, 0, 2, 3);
 }
 
 void TrianglePrimitive::updateVertices(const filament::math::float2 vertices[3]) noexcept {

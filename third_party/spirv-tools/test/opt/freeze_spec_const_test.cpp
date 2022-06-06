@@ -128,6 +128,51 @@ TEST_F(FreezeSpecConstantValueRemoveDecorationTest,
                                                      /* skip_nop = */ true);
 }
 
+TEST_F(FreezeSpecConstantValueRemoveDecorationTest,
+       RemoveDecorationForLocalSizeIdWithSpecId) {
+  std::vector<const char*> text = {
+      // clang-format off
+               "OpCapability Shader",
+          "%1 = OpExtInstImport \"GLSL.std.450\"",
+               "OpMemoryModel Logical GLSL450",
+               "OpEntryPoint GLCompute %2 \"main\"",
+               "OpExecutionModeId %2 LocalSizeId %uint_32 %uint_1 %uint_1_0",
+               "OpSource GLSL 450",
+               "OpDecorate %3 SpecId 18",
+               "OpDecorate %5 SpecId 19",
+       "%void = OpTypeVoid",
+          "%9 = OpTypeFunction %void",
+       "%uint = OpTypeInt 32 0",
+    "%uint_32 = OpSpecConstant %uint 32",
+     "%uint_1 = OpConstant %uint 1",
+   "%uint_1_0 = OpSpecConstant %uint 1",
+          "%2 = OpFunction %void None %9",
+         "%11 = OpLabel",
+               "OpReturn",
+               "OpFunctionEnd",
+      // clang-format on
+  };
+  std::string expected_disassembly = SelectiveJoin(text, [](const char* line) {
+    return std::string(line).find("SpecId") != std::string::npos;
+  });
+  std::vector<std::pair<const char*, const char*>> replacement_pairs = {
+      {"%uint_32 = OpSpecConstant %uint 32", "%uint_32 = OpConstant %uint 32"},
+      {"%uint_1_0 = OpSpecConstant %uint 1", "%uint_1_0 = OpConstant %uint 1"},
+  };
+  for (auto& p : replacement_pairs) {
+    EXPECT_TRUE(FindAndReplace(&expected_disassembly, p.first, p.second))
+        << "text:\n"
+        << expected_disassembly << "\n"
+        << "find_str:\n"
+        << p.first << "\n"
+        << "replace_str:\n"
+        << p.second << "\n";
+  }
+  SinglePassRunAndCheck<FreezeSpecConstantValuePass>(JoinAllInsts(text),
+                                                     expected_disassembly,
+                                                     /* skip_nop = */ true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

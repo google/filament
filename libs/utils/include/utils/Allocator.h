@@ -162,7 +162,7 @@ public:
     }
 
     void free(void* p, size_t) noexcept {
-        free(p);
+        this->free(p);
     }
 
     ~HeapAllocator() noexcept = default;
@@ -455,6 +455,12 @@ public:
 private:
     void* mBegin = nullptr;
     void* mEnd = nullptr;
+};
+
+class NullArea {
+public:
+    void* data() const noexcept { return nullptr; }
+    size_t size() const noexcept { return 0; }
 };
 
 } // namespace AreaPolicy

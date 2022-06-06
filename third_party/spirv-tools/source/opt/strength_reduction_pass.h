@@ -34,7 +34,7 @@ class StrengthReductionPass : public Pass {
   // Returns true if something changed.
   bool ReplaceMultiplyByPowerOf2(BasicBlock::iterator*);
 
-  // Scan the types and constants in the module looking for the the integer
+  // Scan the types and constants in the module looking for the integer
   // types that we are
   // interested in.  The shift operation needs a small unsigned integer.  We
   // need to find

@@ -12,6 +12,8 @@ unzip imgui.zip
 rsync -r imgui-1.77/ imgui/ --delete
 git checkout imgui/tnt
 rm -rf imgui-1.77 imgui.zip
+rm imgui/examples/libs/glfw/lib-vc2010-32/*.lib
+rm imgui/examples/libs/glfw/lib-vc2010-64/*.lib
 git add imgui
 ```
 

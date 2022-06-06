@@ -136,9 +136,9 @@ RemoveUnusedStructMemberReductionOpportunityFinder::GetAvailableOpportunities(
     }
   }
 
-  // We now know those struct indices that are unsed, and we make a reduction
+  // We now know those struct indices that are unused, and we make a reduction
   // opportunity for each of them. By mapping each relevant member index to the
-  // structs in which it is unsed, we will group all opportunities to remove
+  // structs in which it is unused, we will group all opportunities to remove
   // member k of a struct (for some k) together.  This reduces the likelihood
   // that opportunities to remove members from the same struct will be adjacent,
   // which is good because such opportunities mutually disable one another.

@@ -50,13 +50,13 @@ Do not push to origin yet.
 git cherry-pick rc/$RELEASE
 ```
 
-Update the headers. The "Next release" header becomes a header for $NEXT_RELEASE, and a new "Next
-release" header is added.
+Update the headers. The "main branch" header becomes a header for $NEXT_RELEASE, and a new "main
+branch" header is added.
 
 For example, this:
 
 ```
-## Next release (main branch)
+## main branch
 - foo
 - bar
 
@@ -68,7 +68,7 @@ For example, this:
 becomes:
 
 ```
-## Next release (main branch)
+## main branch
 
 ## v1.9.4
 - foo

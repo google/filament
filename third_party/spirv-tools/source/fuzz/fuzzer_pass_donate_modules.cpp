@@ -479,7 +479,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
              "should have been donated.");
 
       // It is OK to have duplicate constant composite definitions, so add
-      // this to the module using remapped versions of all consituent ids and
+      // this to the module using remapped versions of all constituent ids and
       // the result type.
       new_result_id = GetFuzzerContext()->GetFreshId();
       std::vector<uint32_t> constituent_ids;

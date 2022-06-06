@@ -88,7 +88,7 @@ class SENodeSimplifyImpl {
 
  private:
   // Recursively descend through the graph to build up the accumulator objects
-  // which are used to flatten the graph. |child| is the node currenty being
+  // which are used to flatten the graph. |child| is the node currently being
   // traversed and the |negation| flag is used to signify that this operation
   // was preceded by a unary negative operation and as such the result should be
   // negated.
@@ -134,7 +134,7 @@ class SENodeSimplifyImpl {
   // offset.
   SENode* EliminateZeroCoefficientRecurrents(SENode* node);
 
-  // A reference the the analysis which requested the simplification.
+  // A reference the analysis which requested the simplification.
   ScalarEvolutionAnalysis& analysis_;
 
   // The node being simplified.

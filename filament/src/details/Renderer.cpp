@@ -192,7 +192,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
-    mViewRenderedCount = 0;
 
     { // scope for frame id trace
         char buf[64];
@@ -421,13 +420,9 @@ void FRenderer::render(FView const* view) {
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
-        if (mViewRenderedCount) {
-            // this is a good place to kick the GPU, since we've rendered a View before
-            // and we're about to render another one.
-            mEngine.getDriverApi().flush();
-        }
+        // NOTE: in the past we tried to kick the GPU here with a flush (b2cdf9f), but this
+        // was problematic on certain devices. b/232224942
         renderInternal(view);
-        mViewRenderedCount++;
     }
 }
 
@@ -1012,15 +1007,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (scaled) {
             mightNeedFinalBlit = false;
             auto viewport = DEBUG_DYNAMIC_SCALING ? xvp : vp;
-            if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
-                input = ppm.opaqueBlit(fg, input, xvp, {
-                        .width = viewport.width, .height = viewport.height,
-                        .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
-            } else {
-                input = ppm.blendBlit(fg, blending, dsrOptions, input, xvp, {
-                        .width = viewport.width, .height = viewport.height,
-                        .format = colorGradingConfig.ldrFormat });
-            }
+            input = ppm.upscale(fg, blending, dsrOptions, input, xvp, {
+                    .width = viewport.width, .height = viewport.height,
+                    .format = colorGradingConfig.ldrFormat });
             xvp.left = xvp.bottom = 0;
             svp = xvp;
         }
@@ -1048,21 +1037,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             (outputIsSwapChain &&
                     (msaaSampleCount > 1 ||
                     colorGradingConfig.asSubpass ||
-                    ssReflectionsOptions.enabled)))
-        {
+                    ssReflectionsOptions.enabled))) {
             assert_invariant(!scaled);
-            if (UTILS_LIKELY(!blending)) {
-                input = ppm.opaqueBlit(fg, input, xvp, {
-                        .width = vp.width, .height = vp.height,
-                        .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
-            } else {
-                input = ppm.blendBlit(fg, blending, { .quality = QualityLevel::LOW }, input, xvp, {
-                        .width = vp.width, .height = vp.height,
-                        .format = colorGradingConfig.ldrFormat});
-            }
+            input = ppm.blit(fg, blending, input, xvp, {
+                    .width = vp.width, .height = vp.height,
+                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
         }
     }
-
 
 //    auto debug = structure
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);

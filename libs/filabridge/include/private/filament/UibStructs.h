@@ -171,25 +171,53 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 128,
         "PerViewUib should be exactly 2KiB");
 
-// PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
-struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
-    static constexpr utils::StaticString _name{ "ObjectUniforms" };
+// ------------------------------------------------------------------------------------------------
+// MARK: -
+
+struct PerRenderableData {
+
+    struct alignas(16) vec3_std140 : public std::array<float, 3> { };
+    struct mat33_std140 : public std::array<vec3_std140, 3> {
+        mat33_std140& operator=(math::mat3f const& rhs) noexcept {
+            for (int i = 0; i < 3; i++) {
+                (*this)[i][0] = rhs[i][0];
+                (*this)[i][1] = rhs[i][1];
+                (*this)[i][2] = rhs[i][2];
+            }
+            return *this;
+        }
+    };
+
     math::mat4f worldFromModelMatrix;
-    math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
-    alignas(16) uint32_t morphTargetCount;
-    uint32_t flags;                           // see packFlags() below
-    uint32_t channels;                        // 0x000000ll
+    mat33_std140 worldFromModelNormalMatrix;
+    uint32_t morphTargetCount;
+    uint32_t flagsChannels;                   // see packFlags() below (0x00000fll)
     uint32_t objectId;                        // used for picking
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
 
-    static uint32_t packFlags(bool skinning, bool morphing, bool contactShadows) noexcept {
-        return (skinning ? 1 : 0) |
-               (morphing ? 2 : 0) |
-               (contactShadows ? 4 : 0);
+    static uint32_t packFlagsChannels(
+            bool skinning, bool morphing, bool contactShadows, uint8_t channels) noexcept {
+        return (skinning       ? 0x100 : 0) |
+               (morphing       ? 0x200 : 0) |
+               (contactShadows ? 0x400 : 0) |
+               channels;
     }
 };
-static_assert(sizeof(PerRenderableUib) % 256 == 0, "sizeof(Transform) should be a multiple of 256");
+static_assert(sizeof(PerRenderableData) == 128,
+        "sizeof(PerRenderableData) must be 128 bytes");
+
+struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
+    static constexpr utils::StaticString _name{ "ObjectUniforms" };
+    PerRenderableData data;
+    math::float4 reserved[8];
+};
+// PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
+static_assert(sizeof(PerRenderableUib) == 256,
+        "sizeof(PerRenderableUib) must be 256 bytes");
+
+// ------------------------------------------------------------------------------------------------
+// MARK: -
 
 struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "LightsUniforms" };
@@ -210,7 +238,11 @@ struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         return lightChannels | (castShadows ? 0x10000 : 0);
     }
 };
-static_assert(sizeof(LightsUib) == 64, "the actual UBO is an array of 256 mat4");
+static_assert(sizeof(LightsUib) == 64,
+        "the actual UBO is an array of 256 mat4");
+
+// ------------------------------------------------------------------------------------------------
+// MARK: -
 
 // UBO for punctual (spot light) shadows.
 struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -227,14 +259,22 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     };
     ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
 };
-static_assert(sizeof(ShadowUib) <= 16384, "ShadowUib exceed max UBO size");
+static_assert(sizeof(ShadowUib) <= 16384,
+        "ShadowUib exceed max UBO size");
+
+// ------------------------------------------------------------------------------------------------
+// MARK: -
 
 // UBO froxel record buffer.
 struct FroxelRecordUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "FroxelRecordUniforms" };
     math::uint4 records[1024];
 };
-static_assert(sizeof(FroxelRecordUib) == 16384, "FroxelRecordUib should be exactly 16KiB");
+static_assert(sizeof(FroxelRecordUib) == 16384,
+        "FroxelRecordUib should be exactly 16KiB");
+
+// ------------------------------------------------------------------------------------------------
+// MARK: -
 
 // This is not the UBO proper, but just an element of a bone array.
 struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -249,6 +289,9 @@ struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
 };
 static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
         "PerRenderableUibBone exceed max UBO size");
+
+// ------------------------------------------------------------------------------------------------
+// MARK: -
 
 struct alignas(16) PerRenderableMorphingUib {
     static constexpr utils::StaticString _name{ "MorphingUniforms" };

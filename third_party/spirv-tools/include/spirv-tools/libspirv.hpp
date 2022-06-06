@@ -36,7 +36,7 @@ class Context {
  public:
   // Constructs a context targeting the given environment |env|.
   //
-  // See specific API calls for how the target environment is interpeted
+  // See specific API calls for how the target environment is interpreted
   // (particularly assembly and validation).
   //
   // The constructed instance will have an empty message consumer, which just
@@ -139,7 +139,7 @@ class ValidatorOptions {
   //    set that option.
   // 2) Pointers that are pass as parameters to function calls do not have to
   //    match the storage class of the formal parameter.
-  // 3) Pointers that are actaul parameters on function calls do not have to
+  // 3) Pointers that are actual parameters on function calls do not have to
   //    point to the same type pointed as the formal parameter.  The types just
   //    need to logically match.
   // 4) GLSLstd450 Interpolate* instructions can have a load of an interpolant

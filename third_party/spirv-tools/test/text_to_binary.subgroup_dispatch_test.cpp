@@ -46,11 +46,13 @@ TEST_F(OpGetKernelLocalSizeForSubgroupCountTest, ArgumentCount) {
                  "found 'OpGetKernelLocalSizeForSubgroupCount'."));
   EXPECT_THAT(CompileFailure("%res = OpGetKernelLocalSizeForSubgroupCount",
                              SPV_ENV_UNIVERSAL_1_1),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpGetKernelLocalSizeForSubgroupCount "
+                 "instruction, but found the end of the stream."));
   EXPECT_THAT(
       CompileFailure("%1 = OpGetKernelLocalSizeForSubgroupCount %2 %3 %4 %5 %6",
                      SPV_ENV_UNIVERSAL_1_1),
-      Eq("Expected operand, found end of stream."));
+      Eq("Expected operand for OpGetKernelLocalSizeForSubgroupCount "
+         "instruction, but found the end of the stream."));
   EXPECT_THAT(
       CompiledInstructions("%res = OpGetKernelLocalSizeForSubgroupCount %type "
                            "%sgcount %invoke %param %param_size %param_align",
@@ -93,10 +95,12 @@ TEST_F(OpGetKernelMaxNumSubgroupsTest, ArgumentCount) {
          "'OpGetKernelMaxNumSubgroups'."));
   EXPECT_THAT(CompileFailure("%res = OpGetKernelMaxNumSubgroups",
                              SPV_ENV_UNIVERSAL_1_1),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpGetKernelMaxNumSubgroups instruction, "
+                 "but found the end of the stream."));
   EXPECT_THAT(CompileFailure("%1 = OpGetKernelMaxNumSubgroups %2 %3 %4 %5",
                              SPV_ENV_UNIVERSAL_1_1),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpGetKernelMaxNumSubgroups instruction, "
+                 "but found the end of the stream."));
   EXPECT_THAT(
       CompiledInstructions("%res = OpGetKernelMaxNumSubgroups %type "
                            "%invoke %param %param_size %param_align",

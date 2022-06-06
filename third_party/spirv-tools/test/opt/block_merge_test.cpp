@@ -884,7 +884,7 @@ TEST_F(BlockMergeTest, MergeHeaders) {
 ; CHECK-NEXT: [[header]] = OpLabel
 ; CHECK-NEXT: OpSelectionMerge [[merge:%\w+]]
 ; CHECK: [[merge]] = OpLabel
-; CHEKC: OpReturn
+; CHECK: OpReturn
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %func "func"

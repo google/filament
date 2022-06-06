@@ -65,7 +65,7 @@ class Block {
   /// Creates a Block with a given label
   ///
   /// @param[in]: label the label id of the block
-  /// @param[in]: type the branch instruciton that ends the block
+  /// @param[in]: type the branch instruction that ends the block
   explicit Block(std::string label, SpvOp type = SpvOpBranch)
       : label_(label), body_(), type_(type), successors_() {}
 
@@ -3523,7 +3523,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeSwitchBad2) {
@@ -3550,7 +3550,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeOneBranchToMergeGood) {
@@ -3622,7 +3622,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeOneUnseenTargetSwitchBad) {
@@ -3654,7 +3654,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeLoopBreakGood) {
@@ -4577,6 +4577,51 @@ OpFunctionEnd
 
   CompileSuccessfully(spirv);
   EXPECT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, BranchConditionalDifferentTargetsPre1p6) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranchConditional %undef %target %target
+%target = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+}
+
+TEST_F(ValidateCFG, BranchConditionalDifferentTargetsPost1p6) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranchConditional %undef %target %target
+%target = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_6);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("In SPIR-V 1.6 or later, True Label and False Label "
+                        "must be different labels"));
 }
 
 }  // namespace

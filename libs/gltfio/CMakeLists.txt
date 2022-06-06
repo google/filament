@@ -55,41 +55,67 @@ if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
 endif()
 
-function(generate_mat TEMPLATE SHADINGMODEL BLENDING)
-    set(DOUBLESIDED false)
-    set(TRANSPARENCY default)
-    set(GENERATED_MAT "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
-    configure_file(materials/${TEMPLATE}.mat.in ${GENERATED_MAT})
-    set(MATERIAL_SRCS ${MATERIAL_SRCS} ${GENERATED_MAT} PARENT_SCOPE)
+set(DOUBLESIDED false)
+set(TRANSPARENCY default)
+
+function(generate_ubershader_base SHADINGMODEL BLENDING)
+    configure_file(materials/base.mat.in "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
+    configure_file(materials/base.spec.in "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.spec")
+    set(MATERIAL_NAMES ${MATERIAL_NAMES} "${SHADINGMODEL}_${BLENDING}" PARENT_SCOPE)
 endfunction()
 
-set(MATERIAL_SRCS)
-generate_mat(ubershader lit fade)
-generate_mat(ubershader lit opaque)
-generate_mat(ubershader lit masked)
-generate_mat(ubershader specularGlossiness fade)
-generate_mat(ubershader specularGlossiness opaque)
-generate_mat(ubershader specularGlossiness masked)
-generate_mat(ubershader unlit fade)
-generate_mat(ubershader unlit opaque)
-generate_mat(ubershader unlit masked)
-generate_mat(volume lit volume)
-generate_mat(transmission lit transmission)
-generate_mat(sheen lit sheen)
+function(generate_ubershader_custom NAME)
+    configure_file(materials/${NAME}.mat.in "${RESOURCE_DIR}/${NAME}.mat")
+    configure_file(materials/${NAME}.spec.in "${RESOURCE_DIR}/${NAME}.spec")
+    set(MATERIAL_NAMES ${MATERIAL_NAMES} ${NAME} PARENT_SCOPE)
+endfunction()
 
-set(RESOURCE_BINS)
-foreach (input_path ${MATERIAL_SRCS})
-    get_filename_component(basename "${input_path}" NAME_WE)
-    set(output_path "${RESOURCE_DIR}/${basename}.filamat")
+# Generate or copy mat / spec files and build a list of material names.
+# The first material becomes the default material in the ubershader archive.
+
+set(MATERIAL_NAMES)
+generate_ubershader_base(lit opaque)
+generate_ubershader_base(lit fade)
+generate_ubershader_base(lit masked)
+generate_ubershader_base(specularGlossiness fade)
+generate_ubershader_base(specularGlossiness opaque)
+generate_ubershader_base(specularGlossiness masked)
+generate_ubershader_base(unlit fade)
+generate_ubershader_base(unlit opaque)
+generate_ubershader_base(unlit masked)
+generate_ubershader_custom(volume)
+generate_ubershader_custom(transmission)
+generate_ubershader_custom(sheen)
+
+# Iterate over MATERIAL_NAMES and call matc for each material.
+
+set(UBERZ_INPUTS)
+foreach (NAME ${MATERIAL_NAMES})
     add_custom_command(
-            OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${input_path}
-            MAIN_DEPENDENCY ${input_path}
-            DEPENDS matc
-            COMMENT "Compiling material ${input_path} to ${output_path}"
+            OUTPUT "${NAME}.filamat"
+            COMMAND matc ${MATC_BASE_FLAGS} -o "${NAME}.filamat" "${NAME}.mat"
+            DEPENDS matc "${RESOURCE_DIR}/${NAME}.mat"
+            WORKING_DIRECTORY ${RESOURCE_DIR}
+            COMMENT "Compiling material ${NAME}"
     )
-    list(APPEND RESOURCE_BINS ${output_path})
 endforeach()
+
+# Create the ubershader archive by invoking the uberz tool.
+
+set(UBERZ_INPUTS)
+foreach (NAME ${MATERIAL_NAMES})
+    list(APPEND UBERZ_INPUTS "${RESOURCE_DIR}/${NAME}.filamat")
+    list(APPEND UBERZ_INPUTS "${RESOURCE_DIR}/${NAME}.spec")
+endforeach()
+
+add_custom_command(
+    OUTPUT "full.uberz"
+    COMMAND uberz -o "full.uberz" ${MATERIAL_NAMES}
+    DEPENDS uberz ${UBERZ_INPUTS}
+    WORKING_DIRECTORY ${RESOURCE_DIR}
+    COMMENT "Building ubershader archive")
+
+set(RESOURCE_BINS "${RESOURCE_DIR}/full.uberz")
 
 # ==================================================================================================
 # Build resources library
@@ -113,63 +139,11 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
-# Build "lite" resources library, which contains only a few materials
-# ==================================================================================================
-
-set(LITE_DIR ${CMAKE_CURRENT_BINARY_DIR}/lite)
-
-function(generate_lite_mat BLENDING)
-    set(DOUBLESIDED false)
-    set(TRANSPARENCY default)
-    set(SHADINGMODEL lit)
-    set(GENERATED_MAT "${LITE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
-    configure_file(materials/gltflite.mat.in ${GENERATED_MAT})
-    set(MATERIAL_SRCS ${MATERIAL_SRCS} ${GENERATED_MAT} PARENT_SCOPE)
-endfunction()
-
-set(MATERIAL_SRCS)
-generate_lite_mat(fade)
-generate_lite_mat(opaque)
-
-foreach (input_path ${MATERIAL_SRCS})
-    get_filename_component(basename "${input_path}" NAME_WE)
-    set(output_path "${LITE_DIR}/${basename}.filamat")
-    add_custom_command(
-            OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${input_path}
-            MAIN_DEPENDENCY ${input_path}
-            DEPENDS matc
-            COMMENT "Compiling material ${input_path} to ${output_path}"
-    )
-endforeach()
-
-set(RESOURCE_BINS
-    "${LITE_DIR}/lit_opaque.filamat"
-    "${LITE_DIR}/lit_fade.filamat")
-
-get_resgen_vars(${LITE_DIR} gltfresources_lite)
-
-add_custom_command(
-        OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${RESOURCE_BINS}
-        DEPENDS resgen ${RESOURCE_BINS}
-)
-
-if (DEFINED RESGEN_SOURCE_FLAGS)
-    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
-endif()
-
-set(DUMMY_SRC "${LITE_DIR}/dummy.c")
-add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
-
-add_library(gltfio_resources_lite ${DUMMY_SRC} ${RESGEN_SOURCE})
-
-# ==================================================================================================
 # Build the "core" library (no filamat)
 # ==================================================================================================
 
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
-link_libraries(math utils filament cgltf stb ktxreader geometry gltfio_resources tsl trie)
+link_libraries(math utils filament cgltf stb ktxreader geometry gltfio_resources tsl trie uberzlib)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
@@ -200,16 +174,15 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Installation
     # ==================================================================================================
-    install(TARGETS ${TARGET} gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS ${TARGET} gltfio_core gltfio_resources ARCHIVE DESTINATION lib/${DIST_DIR})
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
 else()
 
-    install(TARGETS gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS gltfio_core gltfio_resources ARCHIVE DESTINATION lib/${DIST_DIR})
     # The Image.h header is only needed within Filament and does not need to be distributed.
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio
         DESTINATION include
         PATTERN "Image.h" EXCLUDE)
     install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
-    install(FILES ${LITE_DIR}/gltfresources_lite.h DESTINATION include/gltfio/resources)
 
 endif()

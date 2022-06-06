@@ -1,6 +1,6 @@
 name: gltf-viewer
 options:
-    bundleIdPrefix: google.filament
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
 include: ../app-template.yml
 targets:
     gltf-viewer:
@@ -20,7 +20,7 @@ targets:
         settings:
             base:
                 OTHER_LDFLAGS: ["-lgltfio_core", "-lgltfio_resources", "-limage", "-lgeometry", "-lstb", "-lbasis_transcoder",
-                                "-lcamutils", "-ldracodec", "-lviewer", "-lcivetweb", "-lktxreader"]
+                                "-lzstd", "-lcamutils", "-ldracodec", "-lviewer", "-lcivetweb", "-lktxreader", "-luberzlib"]
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources

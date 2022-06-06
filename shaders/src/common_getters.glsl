@@ -69,9 +69,9 @@ highp vec2 uvToRenderTargetUV(highp vec2 uv) {
 
 // TODO: below shouldn't be accessible from post-process materials
 
-#define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x1u
-#define FILAMENT_OBJECT_MORPHING_ENABLED_BIT   0x2u
-#define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x4u
+#define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x100u
+#define FILAMENT_OBJECT_MORPHING_ENABLED_BIT   0x200u
+#define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x400u
 
 /** @public-api */
 highp vec4 getResolution() {

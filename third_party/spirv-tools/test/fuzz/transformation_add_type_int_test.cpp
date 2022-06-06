@@ -87,7 +87,7 @@ TEST(TransformationAddTypeIntTest, IsApplicable) {
       transformation.IsApplicable(context.get(), transformation_context));
 
   // By default SPIR-V does not support 16-bit integers.
-  // Below we add such capability, so the test should now be succesful.
+  // Below we add such capability, so the test should now be successful.
   context.get()->get_feature_mgr()->AddCapability(SpvCapabilityInt16);
   ASSERT_TRUE(TransformationAddTypeInt(7, 16, true)
                   .IsApplicable(context.get(), transformation_context));

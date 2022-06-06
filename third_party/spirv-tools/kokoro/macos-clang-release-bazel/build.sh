@@ -31,14 +31,14 @@ cd external && cd googletest && git reset --hard 1fb1bb23bb8418dc73a5a9a82bbed31
 git clone --depth=1 https://github.com/google/effcee              external/effcee
 git clone --depth=1 https://github.com/google/re2                 external/re2
 
-# Get bazel 0.29.1.
-gsutil cp gs://bazel/0.29.1/release/bazel-0.29.1-darwin-x86_64 .
-chmod +x bazel-0.29.1-darwin-x86_64
+# Get bazel 5.0.0
+gsutil cp gs://bazel/5.0.0/release/bazel-5.0.0-darwin-x86_64 .
+chmod +x bazel-5.0.0-darwin-x86_64
 
 echo $(date): Build everything...
-./bazel-0.29.1-darwin-x86_64 build :all
+./bazel-5.0.0-darwin-x86_64 build :all
 echo $(date): Build completed.
 
 echo $(date): Starting bazel test...
-./bazel-0.29.1-darwin-x86_64 test :all
+./bazel-5.0.0-darwin-x86_64 test :all
 echo $(date): Bazel test completed.

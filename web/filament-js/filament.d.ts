@@ -120,6 +120,10 @@ export class Texture {
     public static Builder(): Texture$Builder;
     public setImage(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
     public setImageCube(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor) : void;
+    public getWidth(engine: Engine, level?: number) : number;
+    public getHeight(engine: Engine, level?: number) : number;
+    public getDepth(engine: Engine, level?: number) : number;
+    public getLevels(engine: Engine) : number;
     public generateMipmaps(engine: Engine) : void;
 }
 
@@ -315,8 +319,6 @@ export class RenderableManager {
     public setGeometryAt(instance: RenderableManager$Instance, primitiveIndex: number,
             type: RenderableManager$PrimitiveType, vertices: VertexBuffer, indices: IndexBuffer,
             offset: number, count: number): void;
-    public setGeometryRangeAt(instance: RenderableManager$Instance, primitiveIndex: number,
-            type: RenderableManager$PrimitiveType, offset: number, count: number): void;
     public setBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number,
             order: number): void;
     public getEnabledAttributesAt(instance: RenderableManager$Instance,
@@ -580,6 +582,9 @@ export class gltfio$FilamentAsset {
     public popRenderable(): Entity;
     public getMaterialInstances(): Vector<MaterialInstance>;
     public getResourceUris(): Vector<string>;
+    public getSkinNames(): Vector<string>;
+    public attachSkin(skinIndex: number, entity: Entity): void;
+    public detachSkin(skinIndex: number, entity: Entity): void;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;
@@ -598,6 +603,7 @@ export class gltfio$FilamentInstance {
 
 export class gltfio$Animator {
     public applyAnimation(index: number): void;
+    public applyCrossFade(previousAnimIndex: number, previousAnimTime: number, alpha: number): void;
     public updateBoneMatrices(): void;
     public resetBoneMatrices(): void;
     public getAnimationCount(): number;
@@ -1088,11 +1094,36 @@ export enum View$BlendMode {
  *
  */
 export interface View$DynamicResolutionOptions {
-    minScale?: float2; // minimum scale factors in x and y
-    maxScale?: float2; // maximum scale factors in x and y
-    sharpness?: number; // sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
-    enabled?: boolean; // enable or disable dynamic resolution
-    homogeneousScaling?: boolean; // set to true to force homogeneous scaling
+    /**
+     * minimum scale factors in x and y
+     */
+    minScale?: float2;
+    /**
+     * maximum scale factors in x and y
+     */
+    maxScale?: float2;
+    /**
+     * sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
+     */
+    sharpness?: number;
+    /**
+     * enable or disable dynamic resolution
+     */
+    enabled?: boolean;
+    /**
+     * set to true to force homogeneous scaling
+     */
+    homogeneousScaling?: boolean;
+    /**
+     * Upscaling quality
+     * LOW:    bilinear filtered blit. Fastest, poor quality
+     * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations
+     * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
+     * ULTRA:  AMD FidelityFX FSR1
+     *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
+     *
+     * The default upscaling quality is set to LOW.
+     */
     quality?: View$QualityLevel;
 }
 
@@ -1136,39 +1167,120 @@ export enum View$BloomOptions$BlendMode {
 export interface View$BloomOptions {
     // JavaScript binding for dirt is not yet supported, must use default value.
     // JavaScript binding for dirtStrength is not yet supported, must use default value.
-    strength?: number; // bloom's strength between 0.0 and 1.0
-    resolution?: number; // resolution of vertical axis (2^levels to 2048)
-    anamorphism?: number; // bloom x/y aspect-ratio (1/32 to 32)
-    levels?: number; // number of blur levels (3 to 11)
-    blendMode?: View$BloomOptions$BlendMode; // how the bloom effect is applied
-    threshold?: boolean; // whether to threshold the source
-    enabled?: boolean; // enable or disable bloom
-    highlight?: number; // limit highlights to this value before bloom [10, +inf]
-    lensFlare?: boolean; // enable screen-space lens flare
-    starburst?: boolean; // enable starburst effect on lens flare
-    chromaticAberration?: number; // amount of chromatic aberration
-    ghostCount?: number; // number of flare "ghosts"
-    ghostSpacing?: number; // spacing of the ghost in screen units [0, 1[
-    ghostThreshold?: number; // hdr threshold for the ghosts
-    haloThickness?: number; // thickness of halo in vertical screen units, 0 to disable
-    haloRadius?: number; // radius of halo in vertical screen units [0, 0.5]
-    haloThreshold?: number; // hdr threshold for the halo
+    /**
+     * bloom's strength between 0.0 and 1.0
+     */
+    strength?: number;
+    /**
+     * resolution of vertical axis (2^levels to 2048)
+     */
+    resolution?: number;
+    /**
+     * bloom x/y aspect-ratio (1/32 to 32)
+     */
+    anamorphism?: number;
+    /**
+     * number of blur levels (3 to 11)
+     */
+    levels?: number;
+    /**
+     * how the bloom effect is applied
+     */
+    blendMode?: View$BloomOptions$BlendMode;
+    /**
+     * whether to threshold the source
+     */
+    threshold?: boolean;
+    /**
+     * enable or disable bloom
+     */
+    enabled?: boolean;
+    /**
+     * limit highlights to this value before bloom [10, +inf]
+     */
+    highlight?: number;
+    /**
+     * enable screen-space lens flare
+     */
+    lensFlare?: boolean;
+    /**
+     * enable starburst effect on lens flare
+     */
+    starburst?: boolean;
+    /**
+     * amount of chromatic aberration
+     */
+    chromaticAberration?: number;
+    /**
+     * number of flare "ghosts"
+     */
+    ghostCount?: number;
+    /**
+     * spacing of the ghost in screen units [0, 1[
+     */
+    ghostSpacing?: number;
+    /**
+     * hdr threshold for the ghosts
+     */
+    ghostThreshold?: number;
+    /**
+     * thickness of halo in vertical screen units, 0 to disable
+     */
+    haloThickness?: number;
+    /**
+     * radius of halo in vertical screen units [0, 0.5]
+     */
+    haloRadius?: number;
+    /**
+     * hdr threshold for the halo
+     */
+    haloThreshold?: number;
 }
 
 /**
  * Options to control fog in the scene
  */
 export interface View$FogOptions {
-    distance?: number; // distance in world units from the camera where the fog starts ( >= 0.0 )
-    maximumOpacity?: number; // fog's maximum opacity between 0 and 1
-    height?: number; // fog's floor in world units
-    heightFalloff?: number; // how fast fog dissipates with altitude
-    color?: float3; // fog's color (linear), see fogColorFromIbl
-    density?: number; // fog's density at altitude given by 'height'
-    inScatteringStart?: number; // distance in world units from the camera where in-scattering starts
-    inScatteringSize?: number; // size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
-    fogColorFromIbl?: boolean; // Fog color will be modulated by the IBL color in the view direction.
-    enabled?: boolean; // enable or disable fog
+    /**
+     * distance in world units from the camera where the fog starts ( >= 0.0 )
+     */
+    distance?: number;
+    /**
+     * fog's maximum opacity between 0 and 1
+     */
+    maximumOpacity?: number;
+    /**
+     * fog's floor in world units
+     */
+    height?: number;
+    /**
+     * how fast fog dissipates with altitude
+     */
+    heightFalloff?: number;
+    /**
+     * fog's color (linear), see fogColorFromIbl
+     */
+    color?: float3;
+    /**
+     * fog's density at altitude given by 'height'
+     */
+    density?: number;
+    /**
+     * distance in world units from the camera where in-scattering starts
+     */
+    inScatteringStart?: number;
+    /**
+     * size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+     */
+    inScatteringSize?: number;
+    /**
+     * Fog color will be modulated by the IBL color in the view direction.
+     */
+    fogColorFromIbl?: boolean;
+    /**
+     * enable or disable fog
+     */
+    enabled?: boolean;
 }
 
 export enum View$DepthOfFieldOptions$Filter {
@@ -1187,15 +1299,64 @@ export enum View$DepthOfFieldOptions$Filter {
  * @see Camera
  */
 export interface View$DepthOfFieldOptions {
-    cocScale?: number; // circle of confusion scale factor (amount of blur)
-    maxApertureDiameter?: number; // maximum aperture diameter in meters (zero to disable rotation)
-    enabled?: boolean; // enable or disable depth of field effect
-    filter?: View$DepthOfFieldOptions$Filter; // filter to use for filling gaps in the kernel
-    nativeResolution?: boolean; // perform DoF processing at native resolution
-    foregroundRingCount?: number; // number of kernel rings for foreground tiles
-    backgroundRingCount?: number; // number of kernel rings for background tiles
-    fastGatherRingCount?: number; // number of kernel rings for fast tiles
+    /**
+     * circle of confusion scale factor (amount of blur)
+     */
+    cocScale?: number;
+    /**
+     * maximum aperture diameter in meters (zero to disable rotation)
+     */
+    maxApertureDiameter?: number;
+    /**
+     * enable or disable depth of field effect
+     */
+    enabled?: boolean;
+    /**
+     * filter to use for filling gaps in the kernel
+     */
+    filter?: View$DepthOfFieldOptions$Filter;
+    /**
+     * perform DoF processing at native resolution
+     */
+    nativeResolution?: boolean;
+    /**
+     * Number of of rings used by the gather kernels. The number of rings affects quality
+     * and performance. The actual number of sample per pixel is defined
+     * as (ringCount * 2 - 1)^2. Here are a few commonly used values:
+     *       3 rings :   25 ( 5x 5 grid)
+     *       4 rings :   49 ( 7x 7 grid)
+     *       5 rings :   81 ( 9x 9 grid)
+     *      17 rings : 1089 (33x33 grid)
+     *
+     * With a maximum circle-of-confusion of 32, it is never necessary to use more than 17 rings.
+     *
+     * Usually all three settings below are set to the same value, however, it is often
+     * acceptable to use a lower ring count for the "fast tiles", which improves performance.
+     * Fast tiles are regions of the screen where every pixels have a similar
+     * circle-of-confusion radius.
+     *
+     * A value of 0 means default, which is 5 on desktop and 3 on mobile.
+     *
+     * @{
+     */
+    foregroundRingCount?: number;
+    /**
+     * number of kernel rings for background tiles
+     */
+    backgroundRingCount?: number;
+    /**
+     * number of kernel rings for fast tiles
+     */
+    fastGatherRingCount?: number;
+    /**
+     * maximum circle-of-confusion in pixels for the foreground, must be in [0, 32] range.
+     * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+     */
     maxForegroundCOC?: number;
+    /**
+     * maximum circle-of-confusion in pixels for the background, must be in [0, 32] range.
+     * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+     */
     maxBackgroundCOC?: number;
 }
 
@@ -1203,11 +1364,26 @@ export interface View$DepthOfFieldOptions {
  * Options to control the vignetting effect.
  */
 export interface View$VignetteOptions {
-    midPoint?: number; // high values restrict the vignette closer to the corners, between 0 and 1
-    roundness?: number; // controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
-    feather?: number; // softening amount of the vignette effect, between 0 and 1
-    color?: float4; // color of the vignette effect, alpha is currently ignored
-    enabled?: boolean; // enables or disables the vignette effect
+    /**
+     * high values restrict the vignette closer to the corners, between 0 and 1
+     */
+    midPoint?: number;
+    /**
+     * controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
+     */
+    roundness?: number;
+    /**
+     * softening amount of the vignette effect, between 0 and 1
+     */
+    feather?: number;
+    /**
+     * color of the vignette effect, alpha is currently ignored
+     */
+    color?: float4;
+    /**
+     * enables or disables the vignette effect
+     */
+    enabled?: boolean;
 }
 
 /**
@@ -1216,6 +1392,15 @@ export interface View$VignetteOptions {
  * @see setRenderQuality, getRenderQuality
  */
 export interface View$RenderQuality {
+    /**
+     * Sets the quality of the HDR color buffer.
+     *
+     * A quality of HIGH or ULTRA means using an RGB16F or RGBA16F color buffer. This means
+     * colors in the LDR range (0..1) have a 10 bit precision. A quality of LOW or MEDIUM means
+     * using an R11G11B10F opaque color buffer or an RGBA16F transparent color buffer. With
+     * R11G11B10F colors in the LDR range have a precision of either 6 bits (red and green
+     * channels) or 5 bits (blue channel).
+     */
     hdrColorBuffer?: View$QualityLevel;
 }
 
@@ -1224,16 +1409,46 @@ export interface View$RenderQuality {
  * Ambient shadows from dominant light
  */
 export interface View$AmbientOcclusionOptions$Ssct {
-    lightConeRad?: number; // full cone angle in radian, between 0 and pi/2
-    shadowDistance?: number; // how far shadows can be cast
-    contactDistanceMax?: number; // max distance for contact
-    intensity?: number; // intensity
-    lightDirection?: float3; // light direction
-    depthBias?: number; // depth bias in world units (mitigate self shadowing)
-    depthSlopeBias?: number; // depth slope bias (mitigate self shadowing)
-    sampleCount?: number; // tracing sample count, between 1 and 255
-    rayCount?: number; // # of rays to trace, between 1 and 255
-    enabled?: boolean; // enables or disables SSCT
+    /**
+     * full cone angle in radian, between 0 and pi/2
+     */
+    lightConeRad?: number;
+    /**
+     * how far shadows can be cast
+     */
+    shadowDistance?: number;
+    /**
+     * max distance for contact
+     */
+    contactDistanceMax?: number;
+    /**
+     * intensity
+     */
+    intensity?: number;
+    /**
+     * light direction
+     */
+    lightDirection?: float3;
+    /**
+     * depth bias in world units (mitigate self shadowing)
+     */
+    depthBias?: number;
+    /**
+     * depth slope bias (mitigate self shadowing)
+     */
+    depthSlopeBias?: number;
+    /**
+     * tracing sample count, between 1 and 255
+     */
+    sampleCount?: number;
+    /**
+     * # of rays to trace, between 1 and 255
+     */
+    rayCount?: number;
+    /**
+     * enables or disables SSCT
+     */
+    enabled?: boolean;
 }
 
 /**
@@ -1241,18 +1456,54 @@ export interface View$AmbientOcclusionOptions$Ssct {
  * @see setAmbientOcclusionOptions()
  */
 export interface View$AmbientOcclusionOptions {
-    radius?: number; // Ambient Occlusion radius in meters, between 0 and ~10.
-    power?: number; // Controls ambient occlusion's contrast. Must be positive.
-    bias?: number; // Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
-    resolution?: number; // How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
-    intensity?: number; // Strength of the Ambient Occlusion effect.
-    bilateralThreshold?: number; // depth distance that constitute an edge for filtering
-    quality?: View$QualityLevel; // affects # of samples used for AO.
-    lowPassFilter?: View$QualityLevel; // affects AO smoothness
-    upsampling?: View$QualityLevel; // affects AO buffer upsampling quality
-    enabled?: boolean; // enables or disables screen-space ambient occlusion
-    bentNormals?: boolean; // enables bent normals computation from AO, and specular AO
-    minHorizonAngleRad?: number; // min angle in radian to consider
+    /**
+     * Ambient Occlusion radius in meters, between 0 and ~10.
+     */
+    radius?: number;
+    /**
+     * Controls ambient occlusion's contrast. Must be positive.
+     */
+    power?: number;
+    /**
+     * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+     */
+    bias?: number;
+    /**
+     * How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
+     */
+    resolution?: number;
+    /**
+     * Strength of the Ambient Occlusion effect.
+     */
+    intensity?: number;
+    /**
+     * depth distance that constitute an edge for filtering
+     */
+    bilateralThreshold?: number;
+    /**
+     * affects # of samples used for AO.
+     */
+    quality?: View$QualityLevel;
+    /**
+     * affects AO smoothness
+     */
+    lowPassFilter?: View$QualityLevel;
+    /**
+     * affects AO buffer upsampling quality
+     */
+    upsampling?: View$QualityLevel;
+    /**
+     * enables or disables screen-space ambient occlusion
+     */
+    enabled?: boolean;
+    /**
+     * enables bent normals computation from AO, and specular AO
+     */
+    bentNormals?: boolean;
+    /**
+     * min angle in radian to consider
+     */
+    minHorizonAngleRad?: number;
     // JavaScript binding for ssct is not yet supported, must use default value.
 }
 
@@ -1261,8 +1512,21 @@ export interface View$AmbientOcclusionOptions {
  * @see setMultiSampleAntiAliasingOptions()
  */
 export interface View$MultiSampleAntiAliasingOptions {
-    enabled?: boolean; // enables or disables msaa
+    /**
+     * enables or disables msaa
+     */
+    enabled?: boolean;
+    /**
+     * sampleCount number of samples to use for multi-sampled anti-aliasing.\n
+     *              0: treated as 1
+     *              1: no anti-aliasing
+     *              n: sample count. Effective sample could be different depending on the
+     *                 GPU capabilities.
+     */
     sampleCount?: number;
+    /**
+     * custom resolve improves quality for HDR scenes, but may impact performance.
+     */
     customResolve?: boolean;
 }
 
@@ -1271,9 +1535,18 @@ export interface View$MultiSampleAntiAliasingOptions {
  * @see setTemporalAntiAliasingOptions()
  */
 export interface View$TemporalAntiAliasingOptions {
-    filterWidth?: number; // reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
-    feedback?: number; // history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
-    enabled?: boolean; // enables or disables temporal anti-aliasing
+    /**
+     * reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+     */
+    filterWidth?: number;
+    /**
+     * history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
+     */
+    feedback?: number;
+    /**
+     * enables or disables temporal anti-aliasing
+     */
+    enabled?: boolean;
 }
 
 /**
@@ -1281,10 +1554,22 @@ export interface View$TemporalAntiAliasingOptions {
  * @see setScreenSpaceReflectionsOptions()
  */
 export interface View$ScreenSpaceReflectionsOptions {
-    thickness?: number; // ray thickness, in world units
-    bias?: number; // bias, in world units, to prevent self-intersections
-    maxDistance?: number; // maximum distance, in world units, to raycast
-    stride?: number; // stride, in texels, for samples along the ray.
+    /**
+     * ray thickness, in world units
+     */
+    thickness?: number;
+    /**
+     * bias, in world units, to prevent self-intersections
+     */
+    bias?: number;
+    /**
+     * maximum distance, in world units, to raycast
+     */
+    maxDistance?: number;
+    /**
+     * stride, in texels, for samples along the ray.
+     */
+    stride?: number;
     enabled?: boolean;
 }
 
@@ -1332,9 +1617,24 @@ export enum View$ShadowType {
  * @warning This API is still experimental and subject to change.
  */
 export interface View$VsmShadowOptions {
+    /**
+     * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
+     * than 0, mipmaps will automatically be generated each frame for all lights.
+     *
+     * The number of anisotropic samples = 2 ^ vsmAnisotropy.
+     */
     anisotropy?: number;
+    /**
+     * Whether to generate mipmaps for all VSM shadow maps.
+     */
     mipmapping?: boolean;
+    /**
+     * VSM minimum variance scale, must be positive.
+     */
     minVarianceScale?: number;
+    /**
+     * VSM light bleeding reduction amount, between 0 and 1.
+     */
     lightBleedReduction?: number;
 }
 
@@ -1344,6 +1644,16 @@ export interface View$VsmShadowOptions {
  * @warning This API is still experimental and subject to change.
  */
 export interface View$SoftShadowOptions {
+    /**
+     * Globally scales the penumbra of all DPCF and PCSS shadows
+     * Acceptable values are greater than 0
+     */
     penumbraScale?: number;
+    /**
+     * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+     * This effectively controls the strength of contact hardening effect and is useful for
+     * artistic purposes. Higher values make the shadows become softer faster.
+     * Acceptable values are equal to or greater than 1.
+     */
     penumbraRatioScale?: number;
 }

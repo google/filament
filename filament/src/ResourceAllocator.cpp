@@ -36,6 +36,17 @@ using namespace backend;
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
+ResourceAllocator::AssociativeContainer<K, V, H>::AssociativeContainer() {
+    mContainer.reserve(128);
+}
+
+template<typename K, typename V, typename H>
+UTILS_NOINLINE
+ResourceAllocator::AssociativeContainer<K, V, H>::~AssociativeContainer() noexcept {
+}
+
+template<typename K, typename V, typename H>
+UTILS_NOINLINE
 typename ResourceAllocator::AssociativeContainer<K, V, H>::iterator
 ResourceAllocator::AssociativeContainer<K, V, H>::erase(iterator it) {
     return mContainer.erase(it);

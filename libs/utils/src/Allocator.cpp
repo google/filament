@@ -135,13 +135,15 @@ void TrackingPolicy::HighWatermark::onAlloc(
 }
 
 TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
+    const size_t wm = mHighWaterMark;
     if (mSize > 0) {
-        size_t wm = mHighWaterMark;
         size_t wmpct = wm / (mSize / 100);
         if (wmpct > 80) {
             slog.d << mName << " arena: High watermark "
                    << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
         }
+    } else {
+        slog.d << mName << " arena: High watermark " << wm / 1024 << " KiB" << io::endl;
     }
 }
 

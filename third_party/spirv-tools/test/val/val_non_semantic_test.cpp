@@ -105,7 +105,7 @@ INSTANTIATE_TEST_SUITE_P(OnlyOpExtension, ValidateNonSemanticGenerated,
                                  Values(""), Values(TestResult())));
 
 INSTANTIATE_TEST_SUITE_P(
-    MissingOpExtension, ValidateNonSemanticGenerated,
+    MissingOpExtensionPre1p6, ValidateNonSemanticGenerated,
     Combine(Values(false), Values(true), Values(""), Values(""),
             Values(TestResult(
                 SPV_ERROR_INVALID_DATA,
@@ -188,6 +188,26 @@ OpEntryPoint Vertex %main "main"
   // type so by definition any use of a type in it will be an undefined ID
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("ID 2[%2] has not been defined"));
+}
+
+TEST_F(ValidateNonSemanticString, MissingOpExtensionPost1p6) {
+  const std::string spirv = R"(
+OpCapability Shader
+%extinst = OpExtInstImport "NonSemantic.Testing.Set"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+%void = OpTypeVoid
+%test = OpExtInst %void %extinst 3
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_6);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
 }
 
 }  // namespace

@@ -155,7 +155,7 @@ spv_result_t ArithmeticsPass(ValidationState_t& _, const Instruction* inst) {
           first_vector_num_components = num_components;
         } else if (num_components != first_vector_num_components) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << "Expected operands to have the same number of componenets: "
+                 << "Expected operands to have the same number of components: "
                  << spvOpcodeString(opcode);
         }
       }

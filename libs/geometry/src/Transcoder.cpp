@@ -188,6 +188,20 @@ size_t Transcoder::operator()(float* UTILS_RESTRICT target, void const* UTILS_RE
             }
             return required;
         }
+        case ComponentType::FLOAT: {
+            const uint32_t srcStride =
+                    mConfig.inputStrideBytes ? mConfig.inputStrideBytes : (4 * comp);
+            uint8_t const* srcBytes = (uint8_t const*) source;
+            for (size_t i = 0; i < count; ++i, target += comp, srcBytes += srcStride) {
+                // This will never break alignment rules because the glTF spec stipulates that the
+                // stride must be a multiple of the component size.
+                float const* src = (float const*) srcBytes;
+                for (int n = 0; n < comp; ++n) {
+                    target[n] = src[n];
+                }
+            }
+            return required;
+        }
     }
     return 0;
 }

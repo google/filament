@@ -96,6 +96,7 @@ void morphPosition(inout vec4 p) {
 }
 
 void morphNormal(inout vec3 n) {
+    vec3 baseNormal = n;
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     for (uint i = 0u; i < objectUniforms.morphTargetCount; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -104,7 +105,7 @@ void morphNormal(inout vec3 n) {
             ivec4 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0);
             vec3 normal;
             toTangentFrame(float4(tangent) * (1.0 / 32767.0), normal);
-            n += w * normal;
+            n += w * (normal - baseNormal);
         }
     }
 }
@@ -116,7 +117,7 @@ vec4 getPosition() {
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 
-    if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+    if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
         #if defined(LEGACY_MORPHING)
         pos += morphingUniforms.weights[0] * mesh_custom0;
         pos += morphingUniforms.weights[1] * mesh_custom1;
@@ -127,7 +128,7 @@ vec4 getPosition() {
         #endif
     }
 
-    if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
+    if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
     }
 

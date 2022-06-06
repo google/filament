@@ -103,7 +103,6 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext, const Platform::D
     int attribs[] = {
         WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
         WGL_CONTEXT_MINOR_VERSION_ARB, 1,
-        WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_PROFILE_MASK_ARB,
         0
     };
 

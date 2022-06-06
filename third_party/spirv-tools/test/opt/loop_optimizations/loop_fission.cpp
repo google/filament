@@ -692,7 +692,7 @@ SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
 SinglePassRunAndCheck<LoopFissionPass>(source, expected, true);
 
 // By passing 1 as argument we are using the constructor which makes the
-// critera to split the loop be if the registers in the loop exceede 1. By
+// criteria to split the loop be if the registers in the loop exceede 1. By
 // using this constructor we are also enabling multiple passes (disabled by
 // default).
 SinglePassRunAndCheck<LoopFissionPass>(source, expected_multiple_passes, true,

@@ -135,7 +135,7 @@ bool PrivateToLocalPass::MoveVariable(Instruction* variable,
   // Place the variable at the start of the first basic block.
   context()->AnalyzeUses(variable);
   context()->set_instr_block(variable, &*function->begin());
-  function->begin()->begin()->InsertBefore(move(var));
+  function->begin()->begin()->InsertBefore(std::move(var));
 
   // Update uses where the type may have changed.
   return UpdateUses(variable);

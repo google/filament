@@ -206,8 +206,8 @@ OpFunctionEnd
 //
 //   Compute shader
 //   Geometry shader
-//   Tesselation control shader
-//   Tesselation eval shader
+//   Tessellation control shader
+//   Tessellation eval shader
 //   Vertex shader
 
 }  // namespace

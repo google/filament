@@ -30,7 +30,8 @@ namespace filament {
 using HeapAllocatorArena = utils::Arena<
         utils::HeapAllocator,
         utils::LockingPolicy::Mutex,
-        utils::TrackingPolicy::DebugAndHighWatermark>;
+        utils::TrackingPolicy::DebugAndHighWatermark,
+        utils::AreaPolicy::NullArea>;
 
 using LinearAllocatorArena = utils::Arena<
         utils::LinearAllocator,
@@ -43,7 +44,9 @@ using LinearAllocatorArena = utils::Arena<
 // intrinsically synchronized as it relies on heap allocations (i.e.: malloc/free)
 using HeapAllocatorArena = utils::Arena<
         utils::HeapAllocator,
-        utils::LockingPolicy::NoLock>;
+        utils::LockingPolicy::NoLock,
+        utils::TrackingPolicy::Untracked,
+        utils::AreaPolicy::NullArea>;
 
 using LinearAllocatorArena = utils::Arena<
         utils::LinearAllocator,

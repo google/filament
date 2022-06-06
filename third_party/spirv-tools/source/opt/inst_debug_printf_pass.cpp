@@ -16,6 +16,7 @@
 
 #include "inst_debug_printf_pass.h"
 
+#include "source/util/string_utils.h"
 #include "spirv/unified1/NonSemanticDebugPrintf.h"
 
 namespace spvtools {
@@ -231,10 +232,8 @@ Pass::Status InstDebugPrintfPass::ProcessImpl() {
   bool non_sem_set_seen = false;
   for (auto c_itr = context()->module()->ext_inst_import_begin();
        c_itr != context()->module()->ext_inst_import_end(); ++c_itr) {
-    const char* set_name =
-        reinterpret_cast<const char*>(&c_itr->GetInOperand(0).words[0]);
-    const char* non_sem_str = "NonSemantic.";
-    if (!strncmp(set_name, non_sem_str, strlen(non_sem_str))) {
+    const std::string set_name = c_itr->GetInOperand(0).AsString();
+    if (spvtools::utils::starts_with(set_name, "NonSemantic.")) {
       non_sem_set_seen = true;
       break;
     }
@@ -242,9 +241,8 @@ Pass::Status InstDebugPrintfPass::ProcessImpl() {
   if (!non_sem_set_seen) {
     for (auto c_itr = context()->module()->extension_begin();
          c_itr != context()->module()->extension_end(); ++c_itr) {
-      const char* ext_name =
-          reinterpret_cast<const char*>(&c_itr->GetInOperand(0).words[0]);
-      if (!strcmp(ext_name, "SPV_KHR_non_semantic_info")) {
+      const std::string ext_name = c_itr->GetInOperand(0).AsString();
+      if (ext_name == "SPV_KHR_non_semantic_info") {
         context()->KillInst(&*c_itr);
         break;
       }

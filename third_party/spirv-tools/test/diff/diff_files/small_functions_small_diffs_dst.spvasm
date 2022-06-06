@@ -1,0 +1,92 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %4 "main"
+               OpExecutionMode %4 LocalSize 1 1 1
+               OpSource ESSL 310
+               OpName %4 "main"
+               OpName %6 "f1("
+               OpName %8 "f2("
+               OpName %10 "f3("
+               OpName %12 "f4("
+               OpName %14 "f5("
+               OpName %17 "BufferOut"
+               OpMemberName %17 0 "o"
+               OpName %19 ""
+               OpName %22 "BufferIn"
+               OpMemberName %22 0 "i"
+               OpName %24 ""
+               OpMemberDecorate %17 0 Offset 0
+               OpDecorate %17 BufferBlock
+               OpDecorate %19 DescriptorSet 0
+               OpDecorate %19 Binding 1
+               OpMemberDecorate %22 0 Offset 0
+               OpDecorate %22 Block
+               OpDecorate %24 DescriptorSet 0
+               OpDecorate %24 Binding 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %16 = OpTypeInt 32 0
+         %17 = OpTypeStruct %16
+         %18 = OpTypePointer Uniform %17
+         %19 = OpVariable %18 Uniform
+         %20 = OpTypeInt 32 1
+         %21 = OpConstant %20 0
+         %22 = OpTypeStruct %16
+         %23 = OpTypePointer Uniform %22
+         %24 = OpVariable %23 Uniform
+         %25 = OpTypePointer Uniform %16
+         %31 = OpConstant %20 1
+         %36 = OpConstant %16 2
+          %6 = OpFunction %2 None %3
+          %7 = OpLabel
+         %26 = OpAccessChain %25 %24 %21
+         %27 = OpLoad %16 %26
+         %28 = OpAccessChain %25 %19 %21
+               OpStore %28 %27
+               OpReturn
+               OpFunctionEnd
+         %14 = OpFunction %2 None %3
+         %15 = OpLabel
+         %41 = OpAccessChain %25 %19 %21
+         %42 = OpLoad %16 %41
+         %43 = OpIAdd %16 %42 %36
+         %44 = OpAccessChain %25 %19 %21
+               OpStore %44 %43
+               OpReturn
+               OpFunctionEnd
+          %8 = OpFunction %2 None %3
+          %9 = OpLabel
+         %29 = OpAccessChain %25 %19 %21
+         %30 = OpLoad %16 %29
+         %32 = OpISub %16 %30 %31
+               OpStore %29 %32
+               OpReturn
+               OpFunctionEnd
+         %10 = OpFunction %2 None %3
+         %11 = OpLabel
+         %33 = OpAccessChain %25 %19 %21
+         %34 = OpLoad %16 %33
+         %35 = OpIAdd %16 %34 %31
+               OpStore %33 %35
+               OpReturn
+               OpFunctionEnd
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %45 = OpFunctionCall %2 %6
+         %46 = OpFunctionCall %2 %8
+         %47 = OpFunctionCall %2 %10
+         %48 = OpFunctionCall %2 %12
+         %49 = OpFunctionCall %2 %14
+               OpReturn
+               OpFunctionEnd
+         %12 = OpFunction %2 None %3
+         %13 = OpLabel
+         %37 = OpAccessChain %25 %19 %21
+         %38 = OpLoad %16 %37
+         %39 = OpISub %16 %38 %36
+         %40 = OpAccessChain %25 %19 %21
+               OpStore %40 %39
+               OpReturn
+               OpFunctionEnd
+

@@ -107,8 +107,8 @@ class ResourceAllocator;
 class FEngine : public Engine {
 public:
 
-    inline void* operator new(std::size_t count) noexcept {
-        return utils::aligned_alloc(count * sizeof(FEngine), alignof(FEngine));
+    inline void* operator new(std::size_t size) noexcept {
+        return utils::aligned_alloc(size, alignof(FEngine));
     }
 
     inline void operator delete(void* p) noexcept {

@@ -84,26 +84,26 @@ class BasicBlock {
       type_.set(type);
   }
 
-  /// Sets the immedate dominator of this basic block
+  /// Sets the immediate dominator of this basic block
   ///
   /// @param[in] dom_block The dominator block
   void SetImmediateDominator(BasicBlock* dom_block);
 
-  /// Sets the immedate post dominator of this basic block
+  /// Sets the immediate post dominator of this basic block
   ///
   /// @param[in] pdom_block The post dominator block
   void SetImmediatePostDominator(BasicBlock* pdom_block);
 
-  /// Returns the immedate dominator of this basic block
+  /// Returns the immediate dominator of this basic block
   BasicBlock* immediate_dominator();
 
-  /// Returns the immedate dominator of this basic block
+  /// Returns the immediate dominator of this basic block
   const BasicBlock* immediate_dominator() const;
 
-  /// Returns the immedate post dominator of this basic block
+  /// Returns the immediate post dominator of this basic block
   BasicBlock* immediate_post_dominator();
 
-  /// Returns the immedate post dominator of this basic block
+  /// Returns the immediate post dominator of this basic block
   const BasicBlock* immediate_post_dominator() const;
 
   /// Returns the label instruction for the block, or nullptr if not set.

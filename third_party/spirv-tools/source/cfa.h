@@ -42,7 +42,7 @@ class CFA {
 
   /// Returns true if a block with @p id is found in the @p work_list vector
   ///
-  /// @param[in] work_list  Set of blocks visited in the the depth first
+  /// @param[in] work_list  Set of blocks visited in the depth first
   /// traversal
   ///                       of the CFG
   /// @param[in] id         The ID of the block being checked

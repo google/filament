@@ -228,8 +228,8 @@ spv_result_t ValidateTypeArray(ValidationState_t& _, const Instruction* inst) {
   if (spvIsVulkanEnv(_.context()->target_env) &&
       element_type->opcode() == SpvOpTypeRuntimeArray) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << "OpTypeArray Element Type <id> '" << _.getIdName(element_type_id)
-           << "' is not valid in "
+           << _.VkErrorID(4680) << "OpTypeArray Element Type <id> '"
+           << _.getIdName(element_type_id) << "' is not valid in "
            << spvLogStringForEnv(_.context()->target_env) << " environments.";
   }
 
@@ -298,7 +298,7 @@ spv_result_t ValidateTypeRuntimeArray(ValidationState_t& _,
   if (spvIsVulkanEnv(_.context()->target_env) &&
       element_type->opcode() == SpvOpTypeRuntimeArray) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << "OpTypeRuntimeArray Element Type <id> '"
+           << _.VkErrorID(4680) << "OpTypeRuntimeArray Element Type <id> '"
            << _.getIdName(element_id) << "' is not valid in "
            << spvLogStringForEnv(_.context()->target_env) << " environments.";
   }
@@ -373,7 +373,8 @@ spv_result_t ValidateTypeStruct(ValidationState_t& _, const Instruction* inst) {
           member_type_index == inst->operands().size() - 1;
       if (!is_last_member) {
         return _.diag(SPV_ERROR_INVALID_ID, inst)
-               << "In " << spvLogStringForEnv(_.context()->target_env)
+               << _.VkErrorID(4680) << "In "
+               << spvLogStringForEnv(_.context()->target_env)
                << ", OpTypeRuntimeArray must only be used for the last member "
                   "of an OpTypeStruct";
       }

@@ -70,7 +70,7 @@ TEST(FuzzerUtilMaybeFindBlockTest, BasicTest) {
   ASSERT_TRUE(fuzzerutil::MaybeFindBlock(ir_context, block_id2) != nullptr);
   // Block with id 13 cannot be found.
   ASSERT_FALSE(fuzzerutil::MaybeFindBlock(ir_context, block_id3) != nullptr);
-  // Block with id 8 exisits but don't not of type OpLabel.
+  // Block with id 8 exists but don't not of type OpLabel.
   ASSERT_FALSE(fuzzerutil::MaybeFindBlock(ir_context, block_id4) != nullptr);
 }
 
@@ -965,7 +965,7 @@ TEST(FuzzerutilTest, FuzzerUtilMaybeGetPointerTypeTest) {
   ASSERT_EQ(
       91, fuzzerutil::MaybeGetPointerType(ir_context, 90, input_storage_class));
 
-  // A pointer with id=91 and pointee type 90 exisits, but the type should be
+  // A pointer with id=91 and pointee type 90 exists, but the type should be
   // input.
   ASSERT_EQ(0, fuzzerutil::MaybeGetPointerType(ir_context, 90,
                                                function_storage_class));

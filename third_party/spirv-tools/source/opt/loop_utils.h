@@ -123,7 +123,7 @@ class LoopUtils {
   // Clone the |loop_| and make the new loop branch to the second loop on exit.
   Loop* CloneAndAttachLoopToHeader(LoopCloningResult* cloning_result);
 
-  // Perfom a partial unroll of |loop| by given |factor|. This will copy the
+  // Perform a partial unroll of |loop| by given |factor|. This will copy the
   // body of the loop |factor| times. So a |factor| of one would give a new loop
   // with the original body plus one unrolled copy body.
   bool PartiallyUnroll(size_t factor);
@@ -139,7 +139,7 @@ class LoopUtils {
   // 1. That the loop is in structured order.
   // 2. That the continue block is a branch to the header.
   // 3. That the only phi used in the loop is the induction variable.
-  //  TODO(stephen@codeplay.com): This is a temporary mesure, after the loop is
+  //  TODO(stephen@codeplay.com): This is a temporary measure, after the loop is
   //  converted into LCSAA form and has a single entry and exit we can rewrite
   //  the other phis.
   // 4. That this is an inner most loop, or that loops contained within this

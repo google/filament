@@ -19,6 +19,7 @@
 
 #include "upcast.h"
 
+#include "HwRenderPrimitiveFactory.h"
 #include "UniformBuffer.h"
 
 #include "private/backend/DriverApiForward.h"
@@ -165,9 +166,8 @@ public:
     void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
             PrimitiveType type, FVertexBuffer* vertices, FIndexBuffer* indices,
             size_t offset, size_t count) noexcept;
-    void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            PrimitiveType type, size_t offset, size_t count) noexcept;
     void setBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex, uint16_t blendOrder) noexcept;
+    void setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex, bool enabled) noexcept;
     AttributeBitset getEnabledAttributesAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     inline utils::Slice<FRenderPrimitive> const& getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
     inline utils::Slice<FRenderPrimitive>& getRenderPrimitives(Instance instance, uint8_t level) noexcept;
@@ -176,7 +176,8 @@ public:
 
 private:
     void destroyComponent(Instance ci) noexcept;
-    static void destroyComponentPrimitives(FEngine& engine,
+    static void destroyComponentPrimitives(
+            HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
     static void destroyComponentMorphTargets(FEngine& engine,
             utils::Slice<MorphTargets>& morphTargets) noexcept;
@@ -253,6 +254,7 @@ private:
 
     Sim mManager;
     FEngine& mEngine;
+    HwRenderPrimitiveFactory mHwRenderPrimitiveFactory;
 };
 
 FILAMENT_UPCAST(RenderableManager)

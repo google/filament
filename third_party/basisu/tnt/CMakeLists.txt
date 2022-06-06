@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.19)
 
 set(TRANSCODER_SRC
     ../transcoder/basisu_transcoder.cpp
-    ../zstd/zstd.c
 )
 
 set(ENCODER_SRC
@@ -51,20 +50,30 @@ else()
     set (BASIS_CONFIG ${BASIS_CONFIG} BASISD_SUPPORT_DXT5A=0 BASISD_SUPPORT_DXT1=0)
 endif()
 
-add_executable(basisu ${ENCODER_SRC} ${TRANSCODER_SRC} ../basisu_tool.cpp)
-add_library(basis_encoder ${ENCODER_SRC} ${TRANSCODER_SRC})
+add_library(zstd ../zstd/zstd.c)
+add_library(basis_encoder ${ENCODER_SRC})
 add_library(basis_transcoder ${TRANSCODER_SRC})
 
+target_link_libraries(basis_transcoder zstd)
+target_link_libraries(basis_encoder basis_transcoder)
+
+target_include_directories(zstd PUBLIC ../zstd)
 target_include_directories(basis_encoder PUBLIC ../encoder)
 target_include_directories(basis_transcoder PUBLIC ../transcoder)
 
-target_compile_definitions(basisu PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_encoder PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_transcoder PRIVATE ${BASIS_CONFIG})
 
-if (NOT MSVC AND NOT ANDROID)
-   target_link_libraries(basisu m pthread)
+if (IS_HOST_PLATFORM)
+    add_executable(basisu ../basisu_tool.cpp)
+    target_link_libraries(basisu basis_encoder)
+    target_compile_definitions(basisu PRIVATE ${BASIS_CONFIG})
+    install(TARGETS basisu DESTINATION bin)
+
+    if (NOT MSVC AND NOT ANDROID)
+       target_link_libraries(basisu m pthread)
+    endif()
 endif()
 
-install(TARGETS basisu DESTINATION bin)
 install(TARGETS basis_transcoder ARCHIVE DESTINATION lib/${DIST_DIR})
+install(TARGETS zstd ARCHIVE DESTINATION lib/${DIST_DIR})
