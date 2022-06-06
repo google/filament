@@ -495,7 +495,7 @@ int main(int argc, char** argv) {
         }
 
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
-                createMaterialGenerator(engine) : createUbershaderLoader(engine);
+                createJitShaderProvider(engine) : createUbershaderProvider(engine);
         app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
         app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {

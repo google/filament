@@ -39,7 +39,7 @@ set(SRCS
         src/StbProvider.cpp
         src/TangentsJob.cpp
         src/TangentsJob.h
-        src/UbershaderLoader.cpp
+        src/UbershaderProvider.cpp
         src/Wireframe.cpp
         src/Wireframe.h
         src/upcast.h
@@ -157,7 +157,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Link the core library with additional dependencies to create the "full" library
     # ==================================================================================================
-    add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/MaterialGenerator.cpp)
+    add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/JitShaderProvider.cpp)
     target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
     target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 

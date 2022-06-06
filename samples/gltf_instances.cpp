@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new ViewerGui(engine, scene, view, app.instanceToAnimate);
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
-                createMaterialGenerator(engine) : createUbershaderLoader(engine);
+                createJitShaderProvider(engine) : createUbershaderProvider(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
         if (filename.isEmpty()) {
             app.asset = app.loader->createInstancedAsset(

@@ -122,7 +122,7 @@ void App::setupIbl() {
 }
 
 void App::setupMesh() {
-    app.materialProvider = gltfio::createUbershaderLoader(engine);
+    app.materialProvider = gltfio::createUbershaderProvider(engine);
     app.assetLoader = gltfio::AssetLoader::create({engine, app.materialProvider, nullptr});
 
     // Load the glTF file.
