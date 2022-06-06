@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.23.2
+
 - gltfio: fix morphing for un-packed accessors
 - gltfio: ubershaders are now packaged into flexible archives [⚠️ **API Change**]
 - gltfio: remove poorly maintained lite flavor
@@ -17,11 +19,14 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.23.1
 
-- gltfio: support skinning with bones that do not belong to any scene
-- gltfio: add attachSkin / detachSkin method to FilamentAsset
-- Metal: fix issues seen with dynamic resolution on M1 Macs
-- engine: add a "global" mode for render primitive's `blendOrder`
-- engine: remove `RenderManager::setGeometryAt(index, count)` [⚠️ **API Change**]
+- gltfio: support skinning with bones that do not belong to any scene.
+- gltfio: add `attachSkin` / `detachSkin` method to FilamentAsset.
+- gltfio: ubershader mode: set sheen to `OPAQUE`.
+- Metal: fix issues seen with dynamic resolution on M1 Macs.
+- engine: add a "global" mode for render primitive's `blendOrder`.
+- engine: remove `RenderManager::setGeometryAt(index, count)`. [⚠️ **API Change**]
+- engine: fix overallocation by about 17MB.
+- WebGL: Add JS bindings for Texture class methods.
 
 ## v1.23.0
 
