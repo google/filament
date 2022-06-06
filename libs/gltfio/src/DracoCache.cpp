@@ -30,7 +30,7 @@ using std::vector;
 
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 DracoMesh* DracoCache::findOrCreateMesh(const cgltf_buffer_view* key) {
     auto iter = mCache.find(key);
@@ -222,4 +222,4 @@ bool DracoMesh::getVertexAttributes(uint32_t attributeId, cgltf_accessor* target
 
 #endif
 
-} // namespace gltfio
+} // namespace filament::gltfio

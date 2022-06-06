@@ -20,7 +20,7 @@
 
 #include <algorithm>
 
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 extern "C" JNIEXPORT jint JNICALL

@@ -26,7 +26,7 @@
 #include "common/NioUtils.h"
 
 using namespace filament;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 static void destroy(void*, size_t, void *userData) {

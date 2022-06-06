@@ -61,7 +61,7 @@ App::~App() {
     app.assetLoader->destroyAsset(app.asset);
     app.materialProvider->destroyMaterials();
     delete app.materialProvider;
-    gltfio::AssetLoader::destroy(&app.assetLoader);
+    filament::gltfio::AssetLoader::destroy(&app.assetLoader);
 
     engine->destroy(renderer);
     engine->destroy(scene);
@@ -122,8 +122,8 @@ void App::setupIbl() {
 }
 
 void App::setupMesh() {
-    app.materialProvider = gltfio::createUbershaderProvider(engine);
-    app.assetLoader = gltfio::AssetLoader::create({engine, app.materialProvider, nullptr});
+    app.materialProvider = filament::gltfio::createUbershaderProvider(engine);
+    app.assetLoader = filament::gltfio::AssetLoader::create({engine, app.materialProvider, nullptr});
 
     // Load the glTF file.
     std::ifstream in(resourcePath.concat(utils::Path("DamagedHelmet.glb")), std::ifstream::in);
@@ -137,7 +137,7 @@ void App::setupMesh() {
     }
     app.asset = app.assetLoader->createAssetFromBinary(buffer.data(), static_cast<uint32_t>(size));
 
-    gltfio::ResourceLoader({
+    filament::gltfio::ResourceLoader({
         .engine = engine,
         .normalizeSkinningWeights = true,
         .recomputeBoundingBoxes = false

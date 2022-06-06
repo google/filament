@@ -93,7 +93,7 @@ using namespace emscripten;
 using namespace filament;
 using namespace filamesh;
 using namespace geometry;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace image;
 using namespace ktxreader;
 

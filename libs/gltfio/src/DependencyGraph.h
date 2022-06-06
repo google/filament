@@ -30,7 +30,7 @@ namespace filament {
     class Texture;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 /**
  * Internal graph that enables FilamentAsset to discover "ready-to-render" entities by tracking
@@ -132,6 +132,6 @@ private:
     bool mFinalized = false;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_DEPENDENCY_GRAPH_H

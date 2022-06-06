@@ -32,7 +32,7 @@ namespace filament {
     class Scene;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class Animator;
 class FilamentInstance;
@@ -351,6 +351,6 @@ public:
     /*! \endcond */
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_FILAMENTASSET_H

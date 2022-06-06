@@ -33,7 +33,7 @@ using std::atomic;
 using std::vector;
 using std::unique_ptr;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class Ktx2Provider final : public TextureProvider {
 public:
@@ -250,4 +250,4 @@ TextureProvider* createKtx2Provider(Engine* engine) {
     return new Ktx2Provider(engine);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

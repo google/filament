@@ -30,7 +30,7 @@
 using namespace filament;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 FFilamentAsset::~FFilamentAsset() {
     releaseSourceData();
@@ -461,4 +461,4 @@ void FilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entitie
     upcast(this)->addEntitiesToScene(targetScene, entities, count, sceneFilter);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

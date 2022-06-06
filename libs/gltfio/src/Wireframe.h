@@ -22,7 +22,7 @@
 
 #include <utils/Entity.h>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 

@@ -26,7 +26,7 @@
 #include <array>
 #include <string>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 enum class AlphaMode : uint8_t {
     OPAQUE,
@@ -203,6 +203,6 @@ MaterialProvider* createJitShaderProvider(filament::Engine* engine, bool optimiz
 UTILS_PUBLIC
 MaterialProvider* createUbershaderProvider(filament::Engine* engine);
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_MATERIALPROVIDER_H

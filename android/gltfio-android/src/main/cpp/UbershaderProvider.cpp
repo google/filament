@@ -23,7 +23,7 @@
 #include "MaterialKey.h"
 
 using namespace filament;
-using namespace gltfio;
+using namespace filament::gltfio;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateUbershaderProvider(JNIEnv*, jclass,

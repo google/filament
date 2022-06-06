@@ -7,6 +7,9 @@ A new header is inserted each time a *tag* is created.
 
 - gltfio: fix morphing for un-packed accessors
 - gltfio: ubershaders are now packaged into flexible archives [⚠️ **API Change**]
+- gltfio: namespace now lives under Filament [⚠️ **API Change**]
+- gltfio: UbershaderLoader renamed to UbershaderProvider [⚠️ **API Change**]
+- gltfio: MaterialGenerator renamed to JitShaderProvider [⚠️ **API Change**]
 - gltfio: remove poorly maintained lite flavor
 - engine: disable user scissor while rendering the Shadow Maps (#5607)
 - engine: merge identical backend RenderPrimitives together
