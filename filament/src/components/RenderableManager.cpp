@@ -27,6 +27,8 @@
 #include "details/Material.h"
 
 #include "private/filament/SibGenerator.h"
+#include "filament/RenderableManager.h"
+
 
 #include <backend/DriverEnums.h>
 
@@ -210,9 +212,18 @@ RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, 
     return *this;
 }
 
-RenderableManager::Builder& RenderableManager::Builder::blendOrder(size_t index, uint16_t blendOrder) noexcept {
+RenderableManager::Builder& RenderableManager::Builder::blendOrder(
+        size_t index, uint16_t blendOrder) noexcept {
     if (index < mImpl->mEntries.size()) {
         mImpl->mEntries[index].blendOrder = blendOrder;
+    }
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::globalBlendOrderEnabled(
+        size_t index, bool enabled) noexcept {
+    if (index < mImpl->mEntries.size()) {
+        mImpl->mEntries[index].globalBlendOrderEnabled = enabled;
     }
     return *this;
 }
@@ -535,6 +546,16 @@ void FRenderableManager::setBlendOrderAt(Instance instance, uint8_t level,
     }
 }
 
+void FRenderableManager::setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level,
+        size_t primitiveIndex, bool enabled) noexcept {
+    if (instance) {
+        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        if (primitiveIndex < primitives.size()) {
+            primitives[primitiveIndex].setGlobalBlendOrderEnabled(enabled);
+        }
+    }
+}
+
 AttributeBitset FRenderableManager::getEnabledAttributesAt(
         Instance instance, uint8_t level, size_t primitiveIndex) const noexcept {
     if (instance) {
@@ -554,16 +575,6 @@ void FRenderableManager::setGeometryAt(Instance instance, uint8_t level, size_t 
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].set(mEngine, type, vertices, indices, offset,
                     0, vertices->getVertexCount() - 1, count);
-        }
-    }
-}
-
-void FRenderableManager::setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
-        PrimitiveType type, size_t offset, size_t count) noexcept {
-    if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
-        if (primitiveIndex < primitives.size()) {
-            primitives[primitiveIndex].set(mEngine, type, offset, 0, 0, count);
         }
     }
 }

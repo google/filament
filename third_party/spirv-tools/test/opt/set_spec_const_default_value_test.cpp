@@ -618,7 +618,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"", SpecIdToValueBitPatternMap{}, ""},
         // 1. Empty with non-empty values to set.
         {"", SpecIdToValueBitPatternMap{{1, {100}}, {2, {200}}}, ""},
-        // 2. Baisc bool type.
+        // 2. Basic bool type.
         {
             // code
             "OpDecorate %1 SpecId 100\n"

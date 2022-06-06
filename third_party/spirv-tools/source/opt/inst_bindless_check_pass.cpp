@@ -39,13 +39,6 @@ static const int kSpvTypeImageMS = 4;
 static const int kSpvTypeImageSampled = 5;
 }  // anonymous namespace
 
-// Avoid unused variable warning/error on Linux
-#ifndef NDEBUG
-#define USE_ASSERT(x) assert(x)
-#else
-#define USE_ASSERT(x) ((void)(x))
-#endif
-
 namespace spvtools {
 namespace opt {
 

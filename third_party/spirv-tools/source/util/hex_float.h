@@ -199,7 +199,7 @@ bool operator==(const FloatProxy<T>& first, const FloatProxy<T>& second) {
 // Reads a FloatProxy value as a normal float from a stream.
 template <typename T>
 std::istream& operator>>(std::istream& is, FloatProxy<T>& value) {
-  T float_val;
+  T float_val = static_cast<T>(0.0);
   is >> float_val;
   value = FloatProxy<T>(float_val);
   return is;

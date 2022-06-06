@@ -25,7 +25,7 @@
 
 namespace {
 
-const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_5;
+const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
 
 void print_usage(const char* program) {
   std::string target_env_list = spvTargetEnvList(16, 80);
@@ -49,15 +49,18 @@ Options (in lexicographical order):
   --create-library
                Link the binaries into a library, keeping all exported symbols.
   -h, --help
-                  Print this help.
+               Print this help.
   --target-env <env>
-               Set the target environment. Without this flag the target
-               environment defaults to spv1.5. <env> must be one of
-               {%s}
+               Set the environment used for interpreting the inputs. Without
+               this option the environment defaults to spv1.6. <env> must be
+               one of {%s}.
+               NOTE: The SPIR-V version used by the linked binary module
+               depends only on the version of the inputs, and is not affected
+               by this option.
   --verify-ids
                Verify that IDs in the resulting modules are truly unique.
   --version
-               Display linker version information
+               Display linker version information.
 )",
       program, program, target_env_list.c_str());
 }
@@ -160,10 +163,11 @@ int main(int argc, char** argv) {
 
   std::vector<uint32_t> linkingResult;
   spv_result_t status = Link(context, contents, &linkingResult, options);
+  if (status != SPV_SUCCESS && status != SPV_WARNING) return 1;
 
   if (!WriteFile<uint32_t>(outFile, "wb", linkingResult.data(),
                            linkingResult.size()))
     return 1;
 
-  return status == SPV_SUCCESS ? 0 : 1;
+  return 0;
 }

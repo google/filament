@@ -719,7 +719,7 @@ bool Loop::FindNumberOfIterations(const Instruction* induction,
     step_value = -step_value;
   }
 
-  // Find the inital value of the loop and make sure it is a constant integer.
+  // Find the initial value of the loop and make sure it is a constant integer.
   int64_t init_value = 0;
   if (!GetInductionInitValue(induction, &init_value)) return false;
 
@@ -751,9 +751,13 @@ bool Loop::FindNumberOfIterations(const Instruction* induction,
 // We retrieve the number of iterations using the following formula, diff /
 // |step_value| where diff is calculated differently according to the
 // |condition| and uses the |condition_value| and |init_value|. If diff /
-// |step_value| is NOT cleanly divisable then we add one to the sum.
+// |step_value| is NOT cleanly divisible then we add one to the sum.
 int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
                             int64_t init_value, int64_t step_value) const {
+  if (step_value == 0) {
+    return 0;
+  }
+
   int64_t diff = 0;
 
   switch (condition) {
@@ -795,7 +799,7 @@ int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
       // If the condition is not met to begin with the loop will never iterate.
       if (!(init_value >= condition_value)) return 0;
 
-      // We subract one to make it the same as SpvOpGreaterThan as it is
+      // We subtract one to make it the same as SpvOpGreaterThan as it is
       // functionally equivalent.
       diff = init_value - (condition_value - 1);
 

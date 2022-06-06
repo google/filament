@@ -223,12 +223,14 @@ TEST_F(OpTypeForwardPointerTest, ValidStorageClass) {
 
 TEST_F(OpTypeForwardPointerTest, MissingType) {
   EXPECT_THAT(CompileFailure("OpTypeForwardPointer"),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpTypeForwardPointer instruction, but "
+                 "found the end of the stream."));
 }
 
 TEST_F(OpTypeForwardPointerTest, MissingClass) {
   EXPECT_THAT(CompileFailure("OpTypeForwardPointer %pt"),
-              Eq("Expected operand, found end of stream."));
+              Eq("Expected operand for OpTypeForwardPointer instruction, but "
+                 "found the end of the stream."));
 }
 
 TEST_F(OpTypeForwardPointerTest, WrongClass) {
@@ -252,7 +254,8 @@ TEST_F(OpSizeOfTest, ArgumentCount) {
       Eq("Expected <result-id> at the beginning of an instruction, found "
          "'OpSizeOf'."));
   EXPECT_THAT(CompileFailure("%res = OpSizeOf OpNop", SPV_ENV_UNIVERSAL_1_1),
-              Eq("Expected operand, found next instruction instead."));
+              Eq("Expected operand for OpSizeOf instruction, but found the "
+                 "next instruction instead."));
   EXPECT_THAT(
       CompiledInstructions("%1 = OpSizeOf %2 %3", SPV_ENV_UNIVERSAL_1_1),
       Eq(MakeInstruction(SpvOpSizeOf, {1, 2, 3})));

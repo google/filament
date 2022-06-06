@@ -40,7 +40,7 @@ class LoopFusion {
   // That means:
   //   * they both have one induction variable
   //   * they have the same upper and lower bounds
-  //     - same inital value
+  //     - same initial value
   //     - same condition
   //   * they have the same update step
   //   * they are adjacent, with |loop_0| appearing before |loop_1|

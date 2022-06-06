@@ -62,12 +62,6 @@ TEST(InstructionTest, CreateWithOpcodeAndNoOperands) {
   EXPECT_EQ(inst.end(), inst.begin());
 }
 
-TEST(InstructionTest, OperandAsCString) {
-  Operand::OperandData abcde{0x64636261, 0x65};
-  Operand operand(SPV_OPERAND_TYPE_LITERAL_STRING, std::move(abcde));
-  EXPECT_STREQ("abcde", operand.AsCString());
-}
-
 TEST(InstructionTest, OperandAsString) {
   Operand::OperandData abcde{0x64636261, 0x65};
   Operand operand(SPV_OPERAND_TYPE_LITERAL_STRING, std::move(abcde));

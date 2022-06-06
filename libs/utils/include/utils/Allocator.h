@@ -162,7 +162,7 @@ public:
     }
 
     void free(void* p, size_t) noexcept {
-        free(p);
+        this->free(p);
     }
 
     ~HeapAllocator() noexcept = default;

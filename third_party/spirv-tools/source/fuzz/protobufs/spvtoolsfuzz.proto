@@ -1961,10 +1961,10 @@ message TransformationReplaceBooleanConstantWithConstantBinary {
   // A descriptor for the boolean constant id we would like to replace
   IdUseDescriptor id_use_descriptor = 1;
 
-  // Id for the constant to be used on the LHS of the comparision
+  // Id for the constant to be used on the LHS of the comparison
   uint32 lhs_id = 2;
 
-  // Id for the constant to be used on the RHS of the comparision
+  // Id for the constant to be used on the RHS of the comparison
   uint32 rhs_id = 3;
 
   // Opcode for binary operator
@@ -2403,7 +2403,7 @@ message TransformationWrapVectorSynonym {
   // va = vector(..., a, ...)
   // vb = vector(..., b, ...)
   //
-  // where a and b are in the same position i in each of their correponding vector
+  // where a and b are in the same position i in each of their corresponding vector
   // and a is synonymous with va[i] and b is synonymous with vb[i].
   //
   // The transformation then add an instruction vc = va op vb where c is synonymous

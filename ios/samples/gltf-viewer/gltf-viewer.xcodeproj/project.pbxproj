@@ -123,7 +123,7 @@
 				};
 			};
 			buildConfigurationList = 90327DE42AE5DF12C4BD2113 /* Build configuration list for PBXProject "gltf-viewer" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 10.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -426,6 +426,7 @@
 					"-lgeometry",
 					"-lstb",
 					"-lbasis_transcoder",
+					"-lzstd",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",
@@ -480,6 +481,7 @@
 					"-lgeometry",
 					"-lstb",
 					"-lbasis_transcoder",
+					"-lzstd",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",
@@ -596,6 +598,7 @@
 					"-lgeometry",
 					"-lstb",
 					"-lbasis_transcoder",
+					"-lzstd",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",
@@ -650,6 +653,7 @@
 					"-lgeometry",
 					"-lstb",
 					"-lbasis_transcoder",
+					"-lzstd",
 					"-lcamutils",
 					"-ldracodec",
 					"-lviewer",

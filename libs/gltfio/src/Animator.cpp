@@ -330,10 +330,10 @@ void Animator::updateBoneMatrices() {
     auto transformManager = mImpl->transformManager;
 
     auto update = [=](const SkinVector& skins, BoneVector& boneVector) {
-        for (const auto& skin : skins) {
+        for (const Skin& skin : skins) {
             size_t njoints = skin.joints.size();
             boneVector.resize(njoints);
-            for (const auto& entity : skin.targets) {
+            for (Entity entity : skin.targets) {
                 auto renderable = renderableManager->getInstance(entity);
                 if (!renderable) {
                     continue;

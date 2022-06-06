@@ -833,6 +833,93 @@ TEST_F(DescriptorScalarReplacementTest, MemberDecorationForResourceStruct) {
   SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
 }
 
+TEST_F(DescriptorScalarReplacementTest, DecorateStringForReflect) {
+  // Check that an OpDecorateString instruction is correctly cloned to new
+  // variable.
+
+  const std::string shader = R"(
+; CHECK: OpName %g_testTextures_0_ "g_testTextures[0]"
+; CHECK: OpDecorate %g_testTextures_0_ DescriptorSet 0
+; CHECK: OpDecorate %g_testTextures_0_ Binding 0
+; CHECK: OpDecorateString %g_testTextures_0_ UserTypeGOOGLE "texture2d"
+               OpCapability Shader
+               OpExtension "SPV_GOOGLE_hlsl_functionality1"
+               OpExtension "SPV_GOOGLE_user_type"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragCoord %out_var_SV_Target
+               OpExecutionMode %main OriginUpperLeft
+               OpSource HLSL 600
+               OpName %type_2d_image "type.2d.image"
+               OpName %g_testTextures "g_testTextures"
+               OpName %out_var_SV_Target "out.var.SV_Target"
+               OpName %main "main"
+               OpName %param_var_vPixelPos "param.var.vPixelPos"
+               OpName %src_main "src.main"
+               OpName %vPixelPos "vPixelPos"
+               OpName %bb_entry "bb.entry"
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorateString %gl_FragCoord UserSemantic "SV_Position"
+               OpDecorateString %out_var_SV_Target UserSemantic "SV_Target"
+               OpDecorate %out_var_SV_Target Location 0
+               OpDecorate %g_testTextures DescriptorSet 0
+               OpDecorate %g_testTextures Binding 0
+               OpDecorateString %g_testTextures UserTypeGOOGLE "texture2d"
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+     %uint_2 = OpConstant %uint 2
+      %float = OpTypeFloat 32
+%type_2d_image = OpTypeImage %float 2D 2 0 0 1 Unknown
+%_arr_type_2d_image_uint_2 = OpTypeArray %type_2d_image %uint_2
+%_ptr_UniformConstant__arr_type_2d_image_uint_2 = OpTypePointer UniformConstant %_arr_type_2d_image_uint_2
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+         %25 = OpTypeFunction %v4float %_ptr_Function_v4float
+    %v2float = OpTypeVector %float 2
+     %v3uint = OpTypeVector %uint 3
+      %v3int = OpTypeVector %int 3
+      %v2int = OpTypeVector %int 2
+%_ptr_UniformConstant_type_2d_image = OpTypePointer UniformConstant %type_2d_image
+%g_testTextures = OpVariable %_ptr_UniformConstant__arr_type_2d_image_uint_2 UniformConstant
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %18
+         %19 = OpLabel
+%param_var_vPixelPos = OpVariable %_ptr_Function_v4float Function
+         %22 = OpLoad %v4float %gl_FragCoord
+               OpStore %param_var_vPixelPos %22
+         %23 = OpFunctionCall %v4float %src_main %param_var_vPixelPos
+               OpStore %out_var_SV_Target %23
+               OpReturn
+               OpFunctionEnd
+   %src_main = OpFunction %v4float None %25
+  %vPixelPos = OpFunctionParameter %_ptr_Function_v4float
+   %bb_entry = OpLabel
+         %28 = OpLoad %v4float %vPixelPos
+         %30 = OpVectorShuffle %v2float %28 %28 0 1
+         %31 = OpCompositeExtract %float %30 0
+         %32 = OpCompositeExtract %float %30 1
+         %33 = OpConvertFToU %uint %31
+         %34 = OpConvertFToU %uint %32
+         %36 = OpCompositeConstruct %v3uint %33 %34 %uint_0
+         %38 = OpBitcast %v3int %36
+         %40 = OpVectorShuffle %v2int %38 %38 0 1
+         %41 = OpCompositeExtract %int %38 2
+         %43 = OpAccessChain %_ptr_UniformConstant_type_2d_image %g_testTextures %int_0
+         %44 = OpLoad %type_2d_image %43
+         %45 = OpImageFetch %v4float %44 %40 Lod %41
+               OpReturnValue %45
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

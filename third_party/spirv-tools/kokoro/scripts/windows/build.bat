@@ -22,7 +22,7 @@ set BUILD_TYPE=%1
 set VS_VERSION=%2
 
 :: Force usage of python 3.6
-set PATH=C:\python36;"C:\Program Files\CMake\bin";%PATH%
+set PATH=C:\python36;"C:\Program Files\cmake-3.23.1-windows-x86_64\bin";%PATH%
 
 cd %SRC%
 git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers external/spirv-headers

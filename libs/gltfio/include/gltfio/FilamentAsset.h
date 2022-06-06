@@ -239,6 +239,21 @@ public:
     const Entity* getJointsAt(size_t skinIndex) const noexcept;
 
     /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    void attachSkin(size_t skinIndex, Entity target) noexcept;
+
+    /**
+     * Detaches the given skin from the given node.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    void detachSkin(size_t skinIndex, Entity target) noexcept;
+
+    /**
      * Gets the morph target name at the given index in the given entity.
      */
     const char* getMorphTargetNameAt(Entity entity, size_t targetIndex) const noexcept;

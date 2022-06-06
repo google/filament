@@ -147,11 +147,11 @@ class InstBindlessCheckPass : public InstrumentPass {
   uint32_t GenLastByteIdx(RefAnalysis* ref, InstructionBuilder* builder);
 
   // Clone original image computation starting at |image_id| into |builder|.
-  // This may generate more than one instruction if neccessary.
+  // This may generate more than one instruction if necessary.
   uint32_t CloneOriginalImage(uint32_t image_id, InstructionBuilder* builder);
 
   // Clone original original reference encapsulated by |ref| into |builder|.
-  // This may generate more than one instruction if neccessary.
+  // This may generate more than one instruction if necessary.
   uint32_t CloneOriginalReference(RefAnalysis* ref,
                                   InstructionBuilder* builder);
 

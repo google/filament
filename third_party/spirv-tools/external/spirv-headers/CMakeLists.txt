@@ -49,11 +49,9 @@ add_custom_target(install-headers
     COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv
         $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/include/spirv)
 
-# Filament specific changes
 option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples" ON)
 
 option(SPIRV_HEADERS_SKIP_INSTALL "Skip install" ON)
-# End Filament specific changes
 
 if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})
   set(SPIRV_HEADERS_ENABLE_EXAMPLES ON)
@@ -89,9 +87,14 @@ if (SPIRV_HEADERS_ENABLE_INSTALL)
     set(namespace "${PROJECT_NAME}::")
 
     include(CMakePackageConfigHelpers)
+
+    if (NOT CMAKE_VERSION VERSION_LESS 3.14)
+        set(arch_independent_str ARCH_INDEPENDENT)
+    endif()
     write_basic_package_version_file(
         "${version_config}"
         COMPATIBILITY SameMajorVersion
+        ${arch_independent_str}
     )
 
     configure_package_config_file(

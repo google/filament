@@ -378,7 +378,7 @@ TEST_F(CodeSinkTest, MoveReadOnlyLoadWithSync) {
        %uint = OpTypeInt 32 0
      %uint_0 = OpConstant %uint 0
      %uint_4 = OpConstant %uint 4
-%mem_semantics = OpConstant %uint 0x42 ; Uniform memeory arquire
+%mem_semantics = OpConstant %uint 0x42 ; Uniform memory arquire
 %_arr_uint_uint_4 = OpTypeArray %uint %uint_4
 %_ptr_Uniform_uint = OpTypePointer Uniform %uint
 %_ptr_Uniform__arr_uint_uint_4 = OpTypePointer Uniform %_arr_uint_uint_4
@@ -419,7 +419,7 @@ TEST_F(CodeSinkTest, DontMoveBecauseOfSync) {
        %uint = OpTypeInt 32 0
      %uint_0 = OpConstant %uint 0
      %uint_4 = OpConstant %uint 4
-%mem_semantics = OpConstant %uint 0x42 ; Uniform memeory arquire
+%mem_semantics = OpConstant %uint 0x42 ; Uniform memory arquire
 %_arr_uint_uint_4 = OpTypeStruct %uint
 %_ptr_Uniform_uint = OpTypePointer Uniform %uint
 %_ptr_Uniform__arr_uint_uint_4 = OpTypePointer Uniform %_arr_uint_uint_4
@@ -460,7 +460,7 @@ TEST_F(CodeSinkTest, DontMoveBecauseOfAtomicWithSync) {
        %uint = OpTypeInt 32 0
      %uint_0 = OpConstant %uint 0
      %uint_4 = OpConstant %uint 4
-%mem_semantics = OpConstant %uint 0x42 ; Uniform memeory arquire
+%mem_semantics = OpConstant %uint 0x42 ; Uniform memory arquire
 %_arr_uint_uint_4 = OpTypeStruct %uint
 %_ptr_Uniform_uint = OpTypePointer Uniform %uint
 %_ptr_Uniform__arr_uint_uint_4 = OpTypePointer Uniform %_arr_uint_uint_4

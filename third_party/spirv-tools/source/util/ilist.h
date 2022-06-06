@@ -59,7 +59,7 @@ class IntrusiveList {
   // Moves the contents of the given list to the list being constructed.
   IntrusiveList(IntrusiveList&&);
 
-  // Destorys the list.  Note that the elements of the list will not be deleted,
+  // Destroys the list.  Note that the elements of the list will not be deleted,
   // but they will be removed from the list.
   virtual ~IntrusiveList();
 
@@ -348,6 +348,7 @@ void IntrusiveList<NodeType>::Check(NodeType* start) {
     p = p->next_node_;
   } while (p != start);
   assert(sentinel_count == 1 && "List should have exactly 1 sentinel node.");
+  (void)sentinel_count;
 
   p = start;
   do {

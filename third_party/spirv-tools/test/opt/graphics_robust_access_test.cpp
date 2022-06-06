@@ -1242,7 +1242,7 @@ TEST_F(GraphicsRobustAccessTest, ACArrayRTArrayStructVectorElem) {
        ; CHECK-DAG: %int_9 = OpConstant %int 9
        ; CHECK-DAG: %[[intmax:\w+]] = OpConstant %int 2147483647
        ; CHECK: OpLabel
-       ; This access chain is manufatured only so we can compute the array length.
+       ; This access chain is manufactured only so we can compute the array length.
        ; Note that the %int_9 is already clamped
        ; CHECK: %[[ssbo_base:\w+]] = )" << ac
             << R"( %[[ssbo_p]] %var %int_9

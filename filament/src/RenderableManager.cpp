@@ -102,6 +102,11 @@ void RenderableManager::setBlendOrderAt(Instance instance, size_t primitiveIndex
     upcast(this)->setBlendOrderAt(instance, 0, primitiveIndex, order);
 }
 
+void RenderableManager::setGlobalBlendOrderEnabledAt(RenderableManager::Instance instance,
+        size_t primitiveIndex, bool enabled) noexcept {
+    upcast(this)->setGlobalBlendOrderEnabledAt(instance, 0, primitiveIndex, enabled);
+}
+
 AttributeBitset RenderableManager::getEnabledAttributesAt(Instance instance, size_t primitiveIndex) const noexcept {
     return upcast(this)->getEnabledAttributesAt(instance, 0, primitiveIndex);
 }
@@ -111,11 +116,6 @@ void RenderableManager::setGeometryAt(Instance instance, size_t primitiveIndex,
         size_t offset, size_t count) noexcept {
     upcast(this)->setGeometryAt(instance, 0, primitiveIndex,
             type, upcast(vertices), upcast(indices), offset, count);
-}
-
-void RenderableManager::setGeometryAt(RenderableManager::Instance instance, size_t primitiveIndex,
-        RenderableManager::PrimitiveType type, size_t offset, size_t count) noexcept {
-    upcast(this)->setGeometryAt(instance, 0, primitiveIndex, type, offset, count);
 }
 
 void RenderableManager::setBones(Instance instance,

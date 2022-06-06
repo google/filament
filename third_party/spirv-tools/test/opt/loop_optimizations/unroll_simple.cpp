@@ -886,7 +886,7 @@ OpFunctionEnd
   LoopUnroller loop_unroller;
   SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
   // By unrolling by a factor that doesn't divide evenly into the number of loop
-  // iterations we perfom an additional transform when partially unrolling to
+  // iterations we perform an additional transform when partially unrolling to
   // account for the remainder.
   SinglePassRunAndCheck<PartialUnrollerTestPass<3>>(text, output, false);
 }
@@ -3118,7 +3118,7 @@ OpFunctionEnd
 
 /*
 Generated from following GLSL with latch block artificially inserted to be
-seperate from continue.
+separate from continue.
 #version 430
 void main(void) {
     float x[10];
@@ -3787,6 +3787,40 @@ TEST_F(PassClassTest, PartialUnrollWithPhiReferencesPhi) {
   LoopUnroller loop_unroller;
   SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
   SinglePassRunAndMatch<PartialUnrollerTestPass<2>>(text, true);
+}
+
+TEST_F(PassClassTest, DontUnrollInfiteLoop) {
+  // This is an infinite loop that because the step is 0.  We want to make sure
+  // the unroller does not try to unroll it.
+  const std::string text = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%int_50 = OpConstant %int 50
+%bool = OpTypeBool
+%int_0_0 = OpConstant %int 0
+%2 = OpFunction %void None %4
+%10 = OpLabel
+OpBranch %11
+%11 = OpLabel
+%12 = OpPhi %int %int_0 %10 %13 %14
+%15 = OpSLessThan %bool %12 %int_50
+OpLoopMerge %16 %14 Unroll
+OpBranchConditional %15 %14 %16
+%14 = OpLabel
+%13 = OpIAdd %int %12 %int_0_0
+OpBranch %11
+%16 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<LoopUnroller>(text, text, false);
 }
 
 }  // namespace

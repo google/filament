@@ -33,7 +33,7 @@ namespace opt {
 
 class LoopFissionPass : public Pass {
  public:
-  // Fuction used to determine if a given loop should be split. Takes register
+  // Function used to determine if a given loop should be split. Takes register
   // pressure region for that loop as a parameter and returns true if the loop
   // should be split.
   using FissionCriteriaFunction =

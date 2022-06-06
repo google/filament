@@ -31,13 +31,6 @@ namespace {
 // Input Operand Indices
 static const int kSpvVariableStorageClassInIdx = 0;
 
-// Avoid unused variable warning/error on Linux
-#ifndef NDEBUG
-#define USE_ASSERT(x) assert(x)
-#else
-#define USE_ASSERT(x) ((void)(x))
-#endif
-
 // Folding rule function which attempts to replace |op(OpLoad(a),...)|
 // by |op(a,...)|, where |op| is one of the GLSLstd450 InterpolateAt*
 // instructions. Returns true if replaced, false otherwise.

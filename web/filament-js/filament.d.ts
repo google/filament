@@ -120,6 +120,10 @@ export class Texture {
     public static Builder(): Texture$Builder;
     public setImage(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
     public setImageCube(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor) : void;
+    public getWidth(engine: Engine, level?: number) : number;
+    public getHeight(engine: Engine, level?: number) : number;
+    public getDepth(engine: Engine, level?: number) : number;
+    public getLevels(engine: Engine) : number;
     public generateMipmaps(engine: Engine) : void;
 }
 
@@ -315,8 +319,6 @@ export class RenderableManager {
     public setGeometryAt(instance: RenderableManager$Instance, primitiveIndex: number,
             type: RenderableManager$PrimitiveType, vertices: VertexBuffer, indices: IndexBuffer,
             offset: number, count: number): void;
-    public setGeometryRangeAt(instance: RenderableManager$Instance, primitiveIndex: number,
-            type: RenderableManager$PrimitiveType, offset: number, count: number): void;
     public setBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number,
             order: number): void;
     public getEnabledAttributesAt(instance: RenderableManager$Instance,
@@ -580,6 +582,9 @@ export class gltfio$FilamentAsset {
     public popRenderable(): Entity;
     public getMaterialInstances(): Vector<MaterialInstance>;
     public getResourceUris(): Vector<string>;
+    public getSkinNames(): Vector<string>;
+    public attachSkin(skinIndex: number, entity: Entity): void;
+    public detachSkin(skinIndex: number, entity: Entity): void;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;

@@ -191,7 +191,9 @@ public class RenderableManager {
         }
 
         /**
-         * Sets an ordering index for blended primitives that all live at the same Z value.
+         * Sets the drawing order for blended primitives. The drawing order is either global or
+         * local (default) to this Renderable. In either case, the Renderable priority takes
+         * precedence.
          *
          * @param index the primitive of interest
          * @param blendOrder draw order number (0 by default). Only the lowest 15 bits are used.
@@ -200,6 +202,18 @@ public class RenderableManager {
         public Builder blendOrder(@IntRange(from = 0) int index,
                 @IntRange(from = 0, to = 32767) int blendOrder) {
             nBuilderBlendOrder(mNativeBuilder, index, blendOrder);
+            return this;
+        }
+
+       /**
+         * Sets whether the blend order is global or local to this Renderable (by default).
+         *
+         * @param index the primitive of interest
+         * @param enabled true for global, false for local blend ordering.
+         */
+        @NonNull
+        public Builder globalBlendOrderEnabled(@IntRange(from = 0) int index, boolean enabled) {
+            nBuilderGlobalBlendOrderEnabled(mNativeBuilder, index, enabled);
             return this;
         }
 
@@ -792,18 +806,9 @@ public class RenderableManager {
                 0, indices.getIndexCount());
     }
 
-    /**
-     * Changes the geometry for the given primitive.
-     *
-     * @see Builder#geometry Builder.geometry
-     */
-    public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
-            @NonNull PrimitiveType type, @IntRange(from = 0) int offset, @IntRange(from = 0) int count) {
-        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), offset, count);
-    }
-
-    /**
-     * Changes the ordering index for blended primitives that all live at the same Z value.
+     /**
+     * Changes the drawing order for blended primitives. The drawing order is either global or
+     * local (default) to this Renderable. In either case, the Renderable priority takes precedence.
      *
      * @see Builder#blendOrder
      *
@@ -814,6 +819,20 @@ public class RenderableManager {
     public void setBlendOrderAt(@EntityInstance int instance, @IntRange(from = 0) int primitiveIndex,
             @IntRange(from = 0, to = 65535) int blendOrder) {
         nSetBlendOrderAt(mNativeObject, instance, primitiveIndex, blendOrder);
+    }
+
+    /**
+     * Changes whether the blend order is global or local to this Renderable (by default).
+     *
+     * @see Builder#globalBlendOrderEnabled
+     *
+     * @param instance the renderable of interest
+     * @param primitiveIndex the primitive of interest
+     * @param enabled true for global, false for local blend ordering.
+     */
+    public void setGlobalBlendOrderEnabledAt(@EntityInstance int instance, @IntRange(from = 0) int primitiveIndex,
+            boolean enabled) {
+        nSetGlobalBlendOrderEnabledAt(mNativeObject, instance, primitiveIndex, enabled);
     }
 
     /**
@@ -853,6 +872,7 @@ public class RenderableManager {
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int minIndex, int maxIndex, int count);
     private static native void nBuilderMaterial(long nativeBuilder, int index, long nativeMaterialInstance);
     private static native void nBuilderBlendOrder(long nativeBuilder, int index, int blendOrder);
+    private static native void nBuilderGlobalBlendOrderEnabled(long nativeBuilder, int index, boolean enabled);
     private static native void nBuilderBoundingBox(long nativeBuilder, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nBuilderLayerMask(long nativeBuilder, int select, int value);
     private static native void nBuilderPriority(long nativeBuilder, int priority);
@@ -891,7 +911,7 @@ public class RenderableManager {
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex, long nativeMaterialInstance);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
-    private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);
+    private static native void nSetGlobalBlendOrderEnabledAt(long nativeRenderableManager, int i, int primitiveIndex, boolean enabled);
     private static native int nGetEnabledAttributesAt(long nativeRenderableManager, int i, int primitiveIndex);
 }

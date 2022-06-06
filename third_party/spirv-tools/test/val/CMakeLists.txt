@@ -45,6 +45,7 @@ add_spvtools_unittest(TARGET val_abcde
        val_extension_spv_khr_integer_dot_product.cpp
        val_extension_spv_khr_bit_instructions.cpp
        val_extension_spv_khr_terminate_invocation.cpp
+       val_extension_spv_khr_subgroup_rotate.cpp
        val_ext_inst_test.cpp
        val_ext_inst_debug_test.cpp
        ${VAL_TEST_COMMON_SRCS}

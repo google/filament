@@ -120,6 +120,14 @@ Java_com_google_android_filament_RenderableManager_nBuilderBlendOrder(JNIEnv*, j
     builder->blendOrder((size_t) index, (uint16_t) blendOrder);
 }
 
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderGlobalBlendOrderEnabled(JNIEnv*, jclass,
+        jlong nativeBuilder, jint index, jboolean enabled) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->globalBlendOrderEnabled((size_t) index, (bool) enabled);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderBoundingBox(JNIEnv*, jclass,
         jlong nativeBuilder, jfloat cx, jfloat cy, jfloat cz, jfloat ex, jfloat ey, jfloat ez) {
@@ -423,20 +431,19 @@ Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJJII(JNIE
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIII(JNIEnv*, jclass,
-        jlong nativeRenderableManager, jint i, jint primitiveIndex, jint primitiveType, jint offset,
-        jint count) {
-    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
-            (RenderableManager::PrimitiveType) primitiveType, (size_t) offset, (size_t) count);
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetBlendOrderAt(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jint primitiveIndex, jint blendOrder) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     rm->setBlendOrderAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
             (uint16_t) blendOrder);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetGlobalBlendOrderEnabledAt(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint primitiveIndex, jboolean enabled) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setGlobalBlendOrderEnabledAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
+            (bool) enabled);
 }
 
 extern "C" JNIEXPORT jint JNICALL

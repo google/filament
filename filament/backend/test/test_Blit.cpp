@@ -876,6 +876,8 @@ TEST_F(BackendTest, BlitRegion) {
     constexpr int kDstTexHeight = 384;
     constexpr auto kDstTexFormat = TextureFormat::RGBA8;
     constexpr int kNumLevels = 3;
+    constexpr int kSrcLevel = 1;
+    constexpr int kDstLevel = 0;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
     auto swapChain = api.createSwapChainHeadless(256, 256, 0);
@@ -894,23 +896,12 @@ TEST_F(BackendTest, BlitRegion) {
         SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
 
-    // Create a RenderTarget for each texture's miplevel.
-    Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
-    Handle<HwRenderTarget> dstRenderTargets[kNumLevels];
-    for (uint8_t level = 0; level < kNumLevels; level++) {
-        srcRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, { srcTexture, level, 0 }, {}, {});
-        dstRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                kDstTexWidth >> level, kDstTexHeight >> level, 1, { dstTexture, level, 0 }, {}, {});
-    }
-
     // Blit one-quarter of src level 1 to dst level 0.
-    const int srcLevel = 1;
     Viewport srcRect = {
-        .left = (kSrcTexWidth >> srcLevel) / 2,
-        .bottom = (kSrcTexHeight >> srcLevel) / 2,
-        .width = (kSrcTexWidth >> srcLevel) / 2,
-        .height = (kSrcTexHeight >> srcLevel) / 2,
+        .left = 0,
+        .bottom = 0,
+        .width = (kSrcTexWidth >> kSrcLevel) / 2,
+        .height = (kSrcTexHeight >> kSrcLevel) / 2,
     };
     Viewport dstRect = {
         .left = 10,
@@ -919,9 +910,18 @@ TEST_F(BackendTest, BlitRegion) {
         .height = kDstTexHeight - 10,
     };
 
-    api.blit(TargetBufferFlags::COLOR0, dstRenderTargets[0],
-            dstRect, srcRenderTargets[srcLevel],
-            srcRect, SamplerMagFilter::LINEAR);
+    // Create a RenderTarget for each texture's miplevel.
+    // We purposely set the render target width and height to smaller than the texture, to check
+    // that this case is handled correctly.
+    Handle<HwRenderTarget> srcRenderTarget =
+            api.createRenderTarget(TargetBufferFlags::COLOR, srcRect.width,
+                    srcRect.height, 1, {srcTexture, kSrcLevel, 0}, {}, {});
+    Handle<HwRenderTarget> dstRenderTarget =
+            api.createRenderTarget(TargetBufferFlags::COLOR, kDstTexWidth >> kDstLevel,
+                    kDstTexHeight >> kDstLevel, 1, {dstTexture, kDstLevel, 0}, {}, {});
+
+    api.blit(TargetBufferFlags::COLOR0, dstRenderTarget, dstRect, srcRenderTarget, srcRect,
+            SamplerMagFilter::LINEAR);
 
     // Push through an empty frame to allow the texture to upload and the blit to execute.
     api.beginFrame(0, 0);
@@ -931,7 +931,7 @@ TEST_F(BackendTest, BlitRegion) {
     // Grab a screenshot.
     ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegion.png" };
     api.beginFrame(0, 0);
-    dumpScreenshot(api, dstRenderTargets[0], &params);
+    dumpScreenshot(api, dstRenderTarget, &params);
     api.commit(swapChain);
     api.endFrame(0);
 
@@ -940,12 +940,23 @@ TEST_F(BackendTest, BlitRegion) {
     executeCommands();
     getDriver().purge();
 
+    // Check if the image matches perfectly to our golden run.
+    //
+    // TODO: for some reason, this test has very, very slight (as in one pixel) differences between
+    // OpenGL and Metal. So disable golden checking for now.
+    // Use the compare tool from ImageMagick to see visual differences:
+    // compare -verbose -metric mae BlitRegion_Metal.png BlitRegion_OpenGL.png difference.png
+    //
+    // const uint32_t expected = 0x74fa34ed;
+    // printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
+    // EXPECT_TRUE(params.pixelHashResult == expected);
+
     // Cleanup.
     api.destroyTexture(srcTexture);
     api.destroyTexture(dstTexture);
     api.destroySwapChain(swapChain);
-    for (auto rt : srcRenderTargets)  api.destroyRenderTarget(rt);
-    for (auto rt : dstRenderTargets)  api.destroyRenderTarget(rt);
+    api.destroyRenderTarget(srcRenderTarget);
+    api.destroyRenderTarget(dstRenderTarget);
     executeCommands();
 }
 

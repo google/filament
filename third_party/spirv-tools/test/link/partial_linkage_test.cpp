@@ -26,6 +26,9 @@ using PartialLinkage = spvtest::LinkerTest;
 TEST_F(PartialLinkage, Allowed) {
   const std::string body1 = R"(
 OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
 OpDecorate %1 LinkageAttributes "foo" Import
 OpDecorate %2 LinkageAttributes "bar" Import
 %3 = OpTypeFloat 32
@@ -34,6 +37,9 @@ OpDecorate %2 LinkageAttributes "bar" Import
 )";
   const std::string body2 = R"(
 OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
 OpDecorate %1 LinkageAttributes "bar" Export
 %2 = OpTypeFloat 32
 %3 = OpConstant %2 3.1415
@@ -44,9 +50,13 @@ OpDecorate %1 LinkageAttributes "bar" Export
   LinkerOptions linker_options;
   linker_options.SetAllowPartialLinkage(true);
   ASSERT_EQ(SPV_SUCCESS,
-            AssembleAndLink({body1, body2}, &linked_binary, linker_options));
+            AssembleAndLink({body1, body2}, &linked_binary, linker_options))
+      << GetErrorMessage();
 
   const std::string expected_res = R"(OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
 OpModuleProcessed "Linked by SPIR-V Tools Linker"
 OpDecorate %1 LinkageAttributes "foo" Import
 %2 = OpTypeFloat 32
@@ -64,6 +74,9 @@ OpDecorate %1 LinkageAttributes "foo" Import
 TEST_F(PartialLinkage, Disallowed) {
   const std::string body1 = R"(
 OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
 OpDecorate %1 LinkageAttributes "foo" Import
 OpDecorate %2 LinkageAttributes "bar" Import
 %3 = OpTypeFloat 32
@@ -72,6 +85,9 @@ OpDecorate %2 LinkageAttributes "bar" Import
 )";
   const std::string body2 = R"(
 OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
 OpDecorate %1 LinkageAttributes "bar" Export
 %2 = OpTypeFloat 32
 %3 = OpConstant %2 3.1415

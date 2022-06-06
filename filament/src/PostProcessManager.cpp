@@ -1118,8 +1118,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 commitAndRender(hwTempRT, separableGaussianBlur, driver);
 
                 // vertical pass
-                auto width = outDesc.width;
-                auto height = outDesc.height;
+                UTILS_UNUSED_IN_RELEASE auto width = outDesc.width;
+                UTILS_UNUSED_IN_RELEASE auto height = outDesc.height;
                 assert_invariant(width == hwOutRT.params.viewport.width);
                 assert_invariant(height == hwOutRT.params.viewport.height);
 

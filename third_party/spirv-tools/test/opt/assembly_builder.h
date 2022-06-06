@@ -70,7 +70,7 @@ class AssemblyBuilder {
   static const uint32_t SPEC_ID_BASE = 200;
 
  public:
-  // Initalize a minimal SPIR-V assembly code as the template. The minimal
+  // Initialize a minimal SPIR-V assembly code as the template. The minimal
   // module contains an empty main function and some predefined names for the
   // main function.
   AssemblyBuilder()
@@ -102,7 +102,7 @@ class AssemblyBuilder {
     });
   }
 
-  // Appends OpName instructions to this builder. Instrcution strings that do
+  // Appends OpName instructions to this builder. Instruction strings that do
   // not start with 'OpName ' will be skipped. Returns the references of this
   // assembly builder.
   AssemblyBuilder& AppendNames(const std::vector<std::string>& vec_asm_code) {

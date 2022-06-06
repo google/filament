@@ -70,7 +70,7 @@ spv_result_t CheckIdDefinitionDominateUse(ValidationState_t& _);
 ///
 /// This function will iterate over all instructions and check for any required
 /// predecessor and/or successor instructions. e.g. SpvOpPhi must only be
-/// preceeded by SpvOpLabel, SpvOpPhi, or SpvOpLine.
+/// preceded by SpvOpLabel, SpvOpPhi, or SpvOpLine.
 ///
 /// @param[in] _ the validation state of the module
 ///

@@ -408,10 +408,10 @@ void ViewerGui::setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnim
         assert_invariant(mAnimator && "Call loadResources or asyncBeginLoad before setAsset.");
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
-        auto& tcm = mEngine->getRenderableManager();
+        auto& rcm = mEngine->getRenderableManager();
         for (size_t i = 0, n = asset->getRenderableEntityCount(); i < n; i++) {
-            auto ri = tcm.getInstance(asset->getRenderableEntities()[i]);
-            tcm.setScreenSpaceContactShadows(ri, true);
+            auto ri = rcm.getInstance(asset->getRenderableEntities()[i]);
+            rcm.setScreenSpaceContactShadows(ri, true);
         }
     }
 }

@@ -257,6 +257,16 @@ public:
             return texture ? texture.pixelFormat : MTLPixelFormatInvalid;
         }
 
+        MTLRegion getRegionFromClientRect(Viewport rect) {
+            // Convert the Filament rect into Metal texture coordinates, taking into account Metal's
+            // inverted texture space and the mip level. Note that the underlying Texture could be
+            // larger than the RenderTarget. Metal's texture coordinates have (0, 0) at the top-left
+            // of the texture, but Filament's coordinates have (0, 0) at bottom-left.
+            const auto mipheight = texture.height >> level;
+            return MTLRegionMake2D((NSUInteger)rect.left,
+                    mipheight - (NSUInteger)rect.bottom - rect.height, rect.width, rect.height);
+        }
+
         explicit operator bool() const {
             return texture != nil;
         }

@@ -1613,7 +1613,7 @@ OpBranch %7
 %11 = OpLogicalOr %bool %true %false
 OpBranch %7
 %7 = OpLabel
-; This phi is in a block preceeding the merge %14!
+; This phi is in a block preceding the merge %14!
 %8 = OpPhi %bool %10 %5 %11 %6
 OpBranch %14
 %14 = OpLabel

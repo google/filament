@@ -919,6 +919,10 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             (RenderableBuilder* builder, size_t index, uint16_t order), {
         return &builder->blendOrder(index, order); })
 
+    .BUILDER_FUNCTION("globalBlendOrderEnabled", RenderableBuilder,
+            (RenderableBuilder* builder, size_t index, bool enabled), {
+        return &builder->globalBlendOrderEnabled(index, enabled); })
+
     .BUILDER_FUNCTION("lightChannel", RenderableBuilder,
             (RenderableBuilder* builder, unsigned int channel, bool enable), {
         return &builder->lightChannel(channel, enable); })
@@ -971,7 +975,7 @@ class_<RenderableManager>("RenderableManager")
         }
         self->setBones(instance, bones.data(), bones.size(), offset);
     }), allow_raw_pointers())
-    
+
     .function("setMorphWeights", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, emscripten::val weights), {
         auto nfloats = weights["length"].as<size_t>();
@@ -996,13 +1000,9 @@ class_<RenderableManager>("RenderableManager")
         self->setGeometryAt(instance, primitiveIndex, type, vertices, indices, offset, count);
     }), allow_raw_pointers())
 
-    .function("setGeometryRangeAt", EMBIND_LAMBDA(void, (RenderableManager* self,
-            RenderableManager::Instance instance, size_t primitiveIndex,
-            RenderableManager::PrimitiveType type, size_t offset, size_t count), {
-        self->setGeometryAt(instance, primitiveIndex, type, offset, count);
-    }), allow_raw_pointers())
-
     .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
+
+    .function("setGlobalBlendOrderEnabledAt", &RenderableManager::setGlobalBlendOrderEnabledAt)
 
     .function("getEnabledAttributesAt", EMBIND_LAMBDA(uint32_t, (RenderableManager* self,
             RenderableManager::Instance instance, size_t primitiveIndex), {
@@ -1289,6 +1289,22 @@ class_<Texture>("Texture")
         uint32_t faceSize = pbd.pbd->size / 6;
         Texture::FaceOffsets offsets(faceSize);
         self->setImage(*engine, level, std::move(*pbd.pbd), offsets);
+    }), allow_raw_pointers())
+    .function("_getWidth", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine, uint8_t level), {
+        return self->getWidth(level);
+    }), allow_raw_pointers())
+    .function("_getHeight", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine, uint8_t level), {
+        return self->getHeight(level);
+    }), allow_raw_pointers())
+    .function("_getDepth", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine, uint8_t level), {
+        return self->getDepth(level);
+    }), allow_raw_pointers())
+    .function("_getLevels", EMBIND_LAMBDA(size_t, (Texture* self,
+            Engine* engine), {
+        return self->getLevels();
     }), allow_raw_pointers());
 
 class_<TexBuilder>("Texture$Builder")
@@ -1786,6 +1802,17 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         }
         return retval;
     }), allow_raw_pointers())
+
+    .function("getSkinNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
+        std::vector<std::string> names(self->getSkinCount());
+        for (size_t i = 0; i < names.size(); ++i) {
+            names[i] = self->getSkinNameAt(i);
+        }
+        return names;
+    }), allow_raw_pointers())
+
+    .function("attachSkin", &FilamentAsset::attachSkin)
+    .function("detachSkin", &FilamentAsset::detachSkin)
 
     .function("getBoundingBox", &FilamentAsset::getBoundingBox)
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
