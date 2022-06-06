@@ -31,7 +31,7 @@ import androidx.annotation.Size;
  * <p>This class is used by {@link AssetLoader} to create Filament materials.
  * Client applications do not need to call methods on it.</p>
  */
-public class UbershaderLoader implements MaterialProvider {
+public class UbershaderProvider implements MaterialProvider {
     private static final VertexBuffer.VertexAttribute[] sVertexAttributesValues =
             VertexBuffer.VertexAttribute.values();
 
@@ -42,16 +42,16 @@ public class UbershaderLoader implements MaterialProvider {
      *
      * @param engine the engine used to create materials
      */
-    public UbershaderLoader(Engine engine) {
+    public UbershaderProvider(Engine engine) {
         long nativeEngine = engine.getNativeObject();
-        mNativeObject = nCreateUbershaderLoader(nativeEngine);
+        mNativeObject = nCreateUbershaderProvider(nativeEngine);
     }
 
     /**
      * Frees memory associated with the native material provider.
      * */
     public void destroy() {
-        nDestroyUbershaderLoader(mNativeObject);
+        nDestroyUbershaderProvider(mNativeObject);
         mNativeObject = 0;
     }
 
@@ -92,8 +92,8 @@ public class UbershaderLoader implements MaterialProvider {
         return mNativeObject;
     }
 
-    private static native long nCreateUbershaderLoader(long nativeEngine);
-    private static native void nDestroyUbershaderLoader(long nativeProvider);
+    private static native long nCreateUbershaderProvider(long nativeEngine);
+    private static native void nDestroyUbershaderProvider(long nativeProvider);
     private static native void nDestroyMaterials(long nativeProvider);
     private static native long nCreateMaterialInstance(long nativeProvider,
             MaterialKey config, int[] uvmap, String label);

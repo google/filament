@@ -71,7 +71,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/StbProvider.cpp
         ${GLTFIO_DIR}/src/TangentsJob.cpp
         ${GLTFIO_DIR}/src/TangentsJob.h
-        ${GLTFIO_DIR}/src/UbershaderLoader.cpp
+        ${GLTFIO_DIR}/src/UbershaderProvider.cpp
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
         ${GLTFIO_DIR}/src/upcast.h
@@ -82,7 +82,7 @@ set(GLTFIO_SRCS
         src/main/cpp/FilamentInstance.cpp
         src/main/cpp/MaterialKey.cpp
         src/main/cpp/MaterialKey.h
-        src/main/cpp/UbershaderLoader.cpp
+        src/main/cpp/UbershaderProvider.cpp
         src/main/cpp/ResourceLoader.cpp
 
         ${FILAMENT_DIR}/include/gltfio/resources/gltfresources.h
