@@ -23,7 +23,7 @@ class View;
 class Renderer;
 };
 
-namespace gltfio {
+namespace filament::gltfio {
 class Animator;
 class FilamentAsset;
 };
@@ -56,8 +56,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly) filament::View* view;
 @property(nonatomic, readonly) filament::Renderer* renderer;
 
-@property(nonatomic, readonly) gltfio::FilamentAsset* _Nullable asset;
-@property(nonatomic, readonly) gltfio::Animator* _Nullable animator;
+@property(nonatomic, readonly) filament::gltfio::FilamentAsset* _Nullable asset;
+@property(nonatomic, readonly) filament::gltfio::Animator* _Nullable animator;
 
 @property(nonatomic, readwrite) float cameraFocalLength;
 

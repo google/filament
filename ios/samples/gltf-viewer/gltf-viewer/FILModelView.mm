@@ -47,7 +47,7 @@
 
 using namespace filament;
 using namespace utils;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace camutils;
 
 const double kNearPlane = 0.05;   // 5 cm

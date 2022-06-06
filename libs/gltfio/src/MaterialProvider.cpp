@@ -18,7 +18,7 @@
 
 #include <string>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
     return
@@ -182,4 +182,4 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${volumeThickness}", volumeThicknessUV);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

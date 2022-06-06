@@ -26,7 +26,7 @@
 
 using namespace filamat;
 using namespace filament;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 namespace {
@@ -557,10 +557,10 @@ MaterialInstance* JitShaderProvider::createMaterialInstance(MaterialKey* config,
 
 } // anonymous namespace
 
-namespace gltfio {
+namespace filament::gltfio {
 
 MaterialProvider* createJitShaderProvider(filament::Engine* engine, bool optimizeShaders) {
     return new JitShaderProvider(engine, optimizeShaders);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

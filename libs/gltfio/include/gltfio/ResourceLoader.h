@@ -27,7 +27,7 @@ namespace filament {
     class Engine;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 class AssetPool;
@@ -169,7 +169,7 @@ private:
     Impl* pImpl;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_RESOURCELOADER_H
 

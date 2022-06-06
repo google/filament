@@ -33,7 +33,7 @@ using std::atomic;
 using std::vector;
 using std::unique_ptr;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class StbProvider final : public TextureProvider {
 public:
@@ -258,4 +258,4 @@ TextureProvider* createStbProvider(Engine* engine) {
     return new StbProvider(engine);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

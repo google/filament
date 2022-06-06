@@ -37,7 +37,7 @@ using namespace utils;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 

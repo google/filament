@@ -31,7 +31,7 @@
 using namespace filament;
 using namespace filament::math;
 using namespace filament::uberz;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 #if !defined(NDEBUG)
@@ -284,13 +284,13 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
 
 } // anonymous namespace
 
-namespace gltfio {
+namespace filament::gltfio {
 
 MaterialProvider* createUbershaderProvider(filament::Engine* engine) {
     return new UbershaderProvider(engine);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 
 #if !defined(NDEBUG)

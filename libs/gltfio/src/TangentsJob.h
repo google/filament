@@ -25,7 +25,7 @@ class MorphTargetBuffer;
 
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 /**
  * Internal helper that examines a cgltf primitive and generates data suitable for Filament's
@@ -69,4 +69,4 @@ struct TangentsJob {
     static void run(Params* params);
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio

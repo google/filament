@@ -49,7 +49,7 @@ using namespace filament;
 using namespace filament::math;
 using namespace filament::viewer;
 
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 enum MaterialSource {

@@ -38,7 +38,7 @@ namespace filament {
     class MaterialInstance;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 class Animator;
@@ -91,6 +91,6 @@ struct FFilamentInstance : public FilamentInstance {
 
 FILAMENT_UPCAST(FilamentInstance)
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_FFILAMENTINSTANCE_H

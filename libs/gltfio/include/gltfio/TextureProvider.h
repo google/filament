@@ -27,7 +27,7 @@ namespace filament {
     class Texture;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 /**
  * TextureProvider is an interface that allows clients to implement their own texture decoding
@@ -175,6 +175,6 @@ TextureProvider* createStbProvider(filament::Engine* engine);
  */
 TextureProvider* createKtx2Provider(filament::Engine* engine);
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_TEXTUREPROVIDER_H

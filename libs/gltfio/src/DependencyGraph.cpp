@@ -19,7 +19,7 @@
 using namespace filament;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 size_t DependencyGraph::popRenderables(Entity* result, size_t count) noexcept {
     if (result == nullptr) {
@@ -136,4 +136,4 @@ DependencyGraph::TextureNode* DependencyGraph::getStatus(Texture* texture) {
     return iter->second.get();
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

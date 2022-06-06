@@ -22,10 +22,12 @@
 
 class MaterialKeyHelper {
 public:
+    using MaterialKey = filament::gltfio::MaterialKey;
+
     static MaterialKeyHelper& get();
 
-    void copy(JNIEnv* env, gltfio::MaterialKey& dst, jobject src);
-    void copy(JNIEnv* env, jobject dst, const gltfio::MaterialKey& src);
+    void copy(JNIEnv* env, MaterialKey& dst, jobject src);
+    void copy(JNIEnv* env, jobject dst, const MaterialKey& src);
 
     void init(JNIEnv* env); // called only from the Java static class constructor
 

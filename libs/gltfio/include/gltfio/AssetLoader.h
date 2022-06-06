@@ -34,7 +34,7 @@ namespace utils {
 /**
  * Loader and pipeline for glTF 2.0 assets.
  */
-namespace gltfio {
+namespace filament::gltfio {
 
 class NodeManager;
 
@@ -246,6 +246,6 @@ public:
     /*! \endcond */
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_ASSETLOADER_H
