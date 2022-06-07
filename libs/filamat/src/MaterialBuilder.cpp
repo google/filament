@@ -440,7 +440,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         if (param.isSampler()) {
             sbb.add(param.name, param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add(param.name, param.size, param.uniformType, param.precision);
+            ibb.add(param.name, param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses belong to the "MaterialParams" block.
@@ -452,16 +452,16 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     }
 
     if (mSpecularAntiAliasing) {
-        ibb.add("_specularAntiAliasingVariance", 1, UniformType::FLOAT);
-        ibb.add("_specularAntiAliasingThreshold", 1, UniformType::FLOAT);
+        ibb.add("_specularAntiAliasingVariance", UniformType::FLOAT);
+        ibb.add("_specularAntiAliasingThreshold", UniformType::FLOAT);
     }
 
     if (mBlendingMode == BlendingMode::MASKED) {
-        ibb.add("_maskThreshold", 1, UniformType::FLOAT);
+        ibb.add("_maskThreshold", UniformType::FLOAT);
     }
 
     if (mDoubleSidedCapability) {
-        ibb.add("_doubleSided", 1, UniformType::BOOL);
+        ibb.add("_doubleSided", UniformType::BOOL);
     }
 
     mRequiredAttributes.set(filament::VertexAttribute::POSITION);
