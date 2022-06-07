@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-#include <uberz/ArchiveCache.h>
+#include "ArchiveCache.h"
 
+#include <uberz/ReadableArchive.h>
 #include <utils/memalign.h>
 
 #include <zstd.h>
 
 using namespace utils;
+using namespace filament::uberz;
 
-namespace filament::uberz {
+namespace filament::gltfio {
 
 
 // Set this to a certain spec index to find out why it was deemed unsuitable.
@@ -145,4 +147,4 @@ ArchiveCache::~ArchiveCache() {
     free(mArchive);
 }
 
-} // namespace filament::uberz
+} // namespace filament::gltfio

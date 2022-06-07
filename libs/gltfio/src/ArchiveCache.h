@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UBERZ_ARCHIVE_CACHE_H
-#define UBERZ_ARCHIVE_CACHE_H
+#ifndef GLTFIO_ARCHIVE_CACHE_H
+#define GLTFIO_ARCHIVE_CACHE_H
 
 #include <filament/Engine.h>
 #include <filament/Material.h>
@@ -27,7 +27,7 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
-namespace filament::uberz {
+namespace filament::gltfio {
 
     struct ArchiveRequirements;
 
@@ -35,28 +35,28 @@ namespace filament::uberz {
     // set of requirements. Used by gltfio; users do not need to access this class directly.
     class ArchiveCache {
     public:
-        ArchiveCache(filament::Engine& engine) : mEngine(engine) {}
+        ArchiveCache(Engine& engine) : mEngine(engine) {}
         ~ArchiveCache();
 
         void load(const void* archiveData, uint64_t archiveByteCount);
-        filament::Material* getMaterial(const ArchiveRequirements& requirements);
-        filament::Material* getDefaultMaterial();
-        const filament::Material* const* getMaterials() const noexcept { return mMaterials.data(); }
+        Material* getMaterial(const ArchiveRequirements& requirements);
+        Material* getDefaultMaterial();
+        const Material* const* getMaterials() const noexcept { return mMaterials.data(); }
         size_t getMaterialsCount() const noexcept { return mMaterials.size(); }
         void destroyMaterials();
 
     private:
-        filament::Engine& mEngine;
-        utils::FixedCapacityVector<filament::Material*> mMaterials;
-        struct ReadableArchive* mArchive = nullptr;
+        Engine& mEngine;
+        utils::FixedCapacityVector<Material*> mMaterials;
+        uberz::ReadableArchive* mArchive = nullptr;
     };
 
     struct ArchiveRequirements {
-        filament::Shading shadingModel;
-        filament::BlendingMode blendingMode;
+        Shading shadingModel;
+        BlendingMode blendingMode;
         tsl::robin_map<utils::CString, bool, utils::CString::Hasher> features;
     };
 
 } // namespace filament::uberz
 
-#endif // UBERZ_ARCHIVE_CACHE_H
+#endif // GLTFIO_ARCHIVE_CACHE_H

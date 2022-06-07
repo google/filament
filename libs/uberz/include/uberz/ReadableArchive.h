@@ -46,12 +46,12 @@ struct ReadableArchive {
     };
 };
 
-static constexpr filament::Shading INVALID_SHADING_MODEL = (filament::Shading) 0xff;
-static constexpr filament::BlendingMode INVALID_BLENDING = (filament::BlendingMode) 0xff;
+static constexpr Shading INVALID_SHADING_MODEL = (Shading) 0xff;
+static constexpr BlendingMode INVALID_BLENDING = (BlendingMode) 0xff;
 
 struct ArchiveSpec {
-    filament::Shading shadingModel;
-    filament::BlendingMode blendingMode;
+    Shading shadingModel;
+    BlendingMode blendingMode;
     uint16_t flagsCount;
     uint32_t packageByteCount;
     union {

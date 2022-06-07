@@ -20,6 +20,8 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/ArchiveCache.cpp
+        src/ArchiveCache.h
         src/Animator.cpp
         src/AssetLoader.cpp
         src/DependencyGraph.cpp
@@ -179,10 +181,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 else()
 
     install(TARGETS gltfio_core gltfio_resources ARCHIVE DESTINATION lib/${DIST_DIR})
-    # The Image.h header is only needed within Filament and does not need to be distributed.
-    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio
-        DESTINATION include
-        PATTERN "Image.h" EXCLUDE)
+    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
     install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
 
 endif()
