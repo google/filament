@@ -471,7 +471,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
         info.isSampler = false;
         info.isSubpass = false;
         info.type = uniformInfo.type;
-        info.count = uniformInfo.size;
+        info.count = std::max(1u, uniformInfo.size);
         info.precision = uniformInfo.precision;
     }
 

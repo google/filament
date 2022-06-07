@@ -329,7 +329,9 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
-        builder.add(fieldName, fieldSize, UniformInterfaceBlock::Type(fieldType),
+        // a size of 1 means not an array
+        builder.add(fieldName, fieldSize == 1 ? 0 : fieldSize,
+                UniformInterfaceBlock::Type(fieldType),
                 UniformInterfaceBlock::Precision(fieldPrecision));
     }
 
