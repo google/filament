@@ -55,11 +55,11 @@ public:
      *   0     = reserved, must be zero
      *
      *   DEPTH command
-     *   |   6  | 2| 2|1| 3 | 2|       16       |               32               |
-     *   +------+--+--+-+---+--+----------------+--------------------------------+
-     *   |000000|01|00|0|ppp|00|0000000000000000|          distanceBits          |
-     *   +------+--+--+-+---+-------------------+--------------------------------+
-     *   | correctness      |     optimizations (truncation allowed)             |
+     *   |   6  | 2| 2|1| 3 | 2|  6   |   10     |               32               |
+     *   +------+--+--+-+---+--+------+----------+--------------------------------+
+     *   |000000|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
+     *   +------+--+--+-+---+--+------+----------+--------------------------------+
+     *   | correctness      |      optimizations (truncation allowed)             |
      *
      *
      *   COLOR command
@@ -102,9 +102,6 @@ public:
      *   +-----------------------------------------------------------------------+
      */
     using CommandKey = uint64_t;
-
-    static constexpr uint64_t DISTANCE_BITS_MASK            = 0xFFFFFFFFllu;
-    static constexpr unsigned DISTANCE_BITS_SHIFT           = 0;
 
     static constexpr uint64_t BLEND_ORDER_MASK              = 0xFFFEllu;
     static constexpr unsigned BLEND_ORDER_SHIFT             = 1;
