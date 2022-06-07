@@ -52,6 +52,8 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/TextureProvider.h
         ${GLTFIO_DIR}/include/gltfio/math.h
 
+        ${GLTFIO_DIR}/src/ArchiveCache.cpp
+        ${GLTFIO_DIR}/src/ArchiveCache.h
         ${GLTFIO_DIR}/src/Animator.cpp
         ${GLTFIO_DIR}/src/AssetLoader.cpp
         ${GLTFIO_DIR}/src/DependencyGraph.cpp
@@ -96,6 +98,7 @@ set(GLTFIO_INCLUDE_DIRS
         ${FILAMENT_DIR}/include/gltfio/resources
         ../../filament/backend/include
         ../../libs/gltfio/include
+        ../../third_party/basisu/zstd
         ../../third_party/cgltf
         ../../third_party/robin-map
         ../../third_party/hat-trie

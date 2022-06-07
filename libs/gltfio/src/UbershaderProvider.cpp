@@ -24,7 +24,7 @@
 
 #include <utils/Log.h>
 
-#include <uberz/ArchiveCache.h>
+#include "ArchiveCache.h"
 
 #include "gltfresources.h"
 
