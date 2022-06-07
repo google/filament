@@ -110,7 +110,7 @@ endforeach()
 
 add_custom_command(
     OUTPUT "full.uberz"
-    COMMAND uberz -o "full.uberz" ${MATERIAL_NAMES}
+    COMMAND uberz -v -o "full.uberz" ${MATERIAL_NAMES}
     DEPENDS uberz ${UBERZ_INPUTS}
     WORKING_DIRECTORY ${RESOURCE_DIR}
     COMMENT "Building ubershader archive")
