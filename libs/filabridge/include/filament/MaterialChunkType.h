@@ -72,6 +72,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialColorWrite = charTo64bitNum("MAT_CWRIT"),
     MaterialDepthWrite = charTo64bitNum("MAT_DWRIT"),
     MaterialDepthTest = charTo64bitNum("MAT_DTEST"),
+    MaterialInstanced = charTo64bitNum("MAT_INSTA"),
     MaterialCullingMode = charTo64bitNum("MAT_CUMO"),
 
     MaterialHasCustomDepthShader =charTo64bitNum("MAT_CSDP"),

@@ -13,6 +13,8 @@ LAYOUT_LOCATION(6) SHADING_INTERPOLATION VARYING mediump vec4 vertex_worldTangen
 
 LAYOUT_LOCATION(7) VARYING highp vec4 vertex_position;
 
+LAYOUT_LOCATION(8) flat VARYING highp int instance_index;
+
 #if defined(HAS_ATTRIBUTE_COLOR)
 LAYOUT_LOCATION(9) VARYING mediump vec4 vertex_color;
 #endif

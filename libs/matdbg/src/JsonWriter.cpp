@@ -103,6 +103,7 @@ static bool printMaterial(ostream& json, const ChunkContainer& container) {
     printChunk<bool, bool>(json, container, MaterialColorWrite, "color_write");
     printChunk<bool, bool>(json, container, MaterialDepthWrite, "depth_write");
     printChunk<bool, bool>(json, container, MaterialDepthTest, "depth_test");
+    printChunk<bool, bool>(json, container, MaterialInstanced, "instanced");
     printChunk<bool, bool>(json, container, MaterialDoubleSided, "double_sided");
     printChunk<CullingMode, uint8_t>(json, container, MaterialCullingMode, "culling");
     printChunk<TransparencyMode, uint8_t>(json, container, MaterialTransparencyMode, "transparency");

@@ -306,6 +306,11 @@ MaterialBuilder& MaterialBuilder::depthCulling(bool enable) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::instanced(bool enable) noexcept {
+    mInstanced = enable;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::doubleSided(bool doubleSided) noexcept {
     mDoubleSided = doubleSided;
     mDoubleSidedCapability = true;
@@ -489,6 +494,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.quality = mShaderQuality;
     info.hasCustomSurfaceShading = mCustomSurfaceShading;
     info.useLegacyMorphing = mUseLegacyMorphing;
+    info.instanced = mInstanced;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -1050,6 +1056,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<bool>(ChunkType::MaterialColorWrite, mColorWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
+    container.addSimpleChild<bool>(ChunkType::MaterialInstanced, mInstanced);
     container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
 
     uint64_t properties = 0;

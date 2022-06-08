@@ -1119,6 +1119,27 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: instanced
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Allows a material to access the instance index (i.e.: **`gl_InstanceIndex`**) of instanced
+     primitives using `getInstanceIndex()` in the material's shader code. Never use
+     **`gl_InstanceIndex`** directly. This is typically used with
+     `RenderableManager::Builder::instances()`. `getInstanceIndex()` is available in both the
+     vertex and fragment shader.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    instanced : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### Vertex and attributes: requires
 
 Type
