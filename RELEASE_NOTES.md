@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
+
 ## v1.23.2
 
 - gltfio: fix morphing for un-packed accessors

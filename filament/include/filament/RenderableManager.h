@@ -375,7 +375,8 @@ public:
          * the maximum number of instances allowed is 65535. 0 is invalid.
          * All instances are culled using the same bounding box, so care must be taken to make
          * sure all instances render inside the specified bounding box.
-         * The material can use getInstanceIndex() in the vertex shader to get the instance index and
+         * The material must set its `instanced` parameter to `true` in order to use
+         * getInstanceIndex() in the vertex or fragment shader to get the instance index and
          * possibly adjust the position or transform.
          *
          * @param instanceCount the number of instances silently clamped between 1 and 65535.

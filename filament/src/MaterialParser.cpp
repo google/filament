@@ -181,6 +181,10 @@ bool MaterialParser::getDepthTest(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthTest, value);
 }
 
+bool MaterialParser::getInstanced(bool* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialInstanced, value);
+}
+
 bool MaterialParser::getCullingMode(CullingMode* value) const noexcept {
     static_assert(sizeof(CullingMode) == sizeof(uint8_t),
             "CullingMode expected size is wrong");

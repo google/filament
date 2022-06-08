@@ -122,6 +122,7 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
     printChunk<bool, bool>(text, container, MaterialColorWrite, "Color write: ");
     printChunk<bool, bool>(text, container, MaterialDepthWrite, "Depth write: ");
     printChunk<bool, bool>(text, container, MaterialDepthTest, "Depth test: ");
+    printChunk<bool, bool>(text, container, MaterialInstanced, "Instanced: ");
     printChunk<bool, bool>(text, container, MaterialDoubleSided, "Double sided: ");
     printChunk<CullingMode, uint8_t>(text, container, MaterialCullingMode, "Culling: ");
     printChunk<TransparencyMode, uint8_t>(text, container, MaterialTransparencyMode, "Transparency: ");

@@ -179,6 +179,12 @@ void main() {
     vertex_worldPosition.w = depth;
 #endif
 
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    instance_index = gl_InstanceIndex;
+#else
+    instance_index = gl_InstanceID;
+#endif
+
     // this must happen before we compensate for vulkan below
     vertex_position = gl_Position;
 
