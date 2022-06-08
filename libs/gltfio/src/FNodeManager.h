@@ -26,7 +26,7 @@
 #include <utils/Entity.h>
 #include <utils/Slice.h>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class UTILS_PRIVATE FNodeManager : public NodeManager {
 public:
@@ -134,6 +134,6 @@ private:
 
 FILAMENT_UPCAST(NodeManager)
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_FNODEMANAGER_H

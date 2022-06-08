@@ -63,7 +63,7 @@ using filament::geometry::ComponentType;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using BufferTextureCache = tsl::robin_map<const void*, Texture*>;
 using FilepathTextureCache = tsl::robin_map<std::string, Texture*>;
@@ -1075,4 +1075,4 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     asset->mBoundingBox = assetBounds;
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

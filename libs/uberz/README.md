@@ -77,7 +77,7 @@ blending mode in certain ubershader materials (e.g. materials that support `KHR_
 These materials should simply omit the `BlendingMode` line from the spec.
 
 If any feature flag is missing from the spec, it implicitly has the value of `unsupported`. For an
-up-to-date list of recognized feature flags, look at the source for `UbershaderLoader::getMaterial`.
+up-to-date list of recognized feature flags, look at the source for `UbershaderProvider::getMaterial`.
 
 If a particular feature flag is set to `required` for a particular material, then the glTF loader
 will bind that material to a given glTF mesh only if that feature is enabled in the mesh.

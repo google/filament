@@ -23,31 +23,31 @@
 #include "MaterialKey.h"
 
 using namespace filament;
-using namespace gltfio;
+using namespace filament::gltfio;
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_UbershaderLoader_nCreateUbershaderLoader(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateUbershaderProvider(JNIEnv*, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) createUbershaderLoader(engine);
+    return (jlong) createUbershaderProvider(engine);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_UbershaderLoader_nDestroyUbershaderLoader(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyUbershaderProvider(JNIEnv*, jclass,
         jlong nativeProvider) {
     auto provider = (MaterialProvider*) nativeProvider;
     delete provider;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_UbershaderLoader_nDestroyMaterials(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyMaterials(JNIEnv*, jclass,
         jlong nativeProvider) {
     auto provider = (MaterialProvider*) nativeProvider;
     provider->destroyMaterials();
 }
 
 extern "C" JNIEXPORT long JNICALL
-Java_com_google_android_filament_gltfio_UbershaderLoader_nCreateMaterialInstance(JNIEnv* env, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateMaterialInstance(JNIEnv* env, jclass,
         jlong nativeProvider, jobject materialKey, jintArray uvmap, jstring label) {
     MaterialKey nativeKey = {};
 
@@ -80,14 +80,14 @@ Java_com_google_android_filament_gltfio_UbershaderLoader_nCreateMaterialInstance
 }
 
 extern "C" JNIEXPORT int JNICALL
-Java_com_google_android_filament_gltfio_UbershaderLoader_nGetMaterialCount(JNIEnv*, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterialCount(JNIEnv*, jclass,
         jlong nativeProvider) {
     auto provider = (MaterialProvider*) nativeProvider;
     return provider->getMaterialsCount();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_UbershaderLoader_nGetMaterials(JNIEnv* env, jclass,
+Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterials(JNIEnv* env, jclass,
         jlong nativeProvider, jlongArray result) {
     auto provider = (MaterialProvider *) nativeProvider;
     auto materials = provider->getMaterials();

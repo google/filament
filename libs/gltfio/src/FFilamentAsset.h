@@ -62,7 +62,7 @@ namespace utils {
     class EntityManager;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class Animator;
 class Wireframe;
@@ -331,6 +331,6 @@ struct FFilamentAsset : public FilamentAsset {
 
 FILAMENT_UPCAST(FilamentAsset)
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_FFILAMENTASSET_H

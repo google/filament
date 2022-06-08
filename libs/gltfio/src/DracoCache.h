@@ -27,7 +27,7 @@
 #define GLTFIO_DRACO_SUPPORTED 0
 #endif
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class DracoMesh;
 
@@ -66,6 +66,6 @@ private:
     std::unique_ptr<struct DracoMeshDetails> mDetails;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_DRACO_CACHE_H

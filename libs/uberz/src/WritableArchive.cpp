@@ -97,18 +97,18 @@ static string_view readShadingModel(string_view cursor, Shading* shading) {
 }
 
 static string_view readSymbol(string_view cursor, char symbol)  {
-    return { cursor.data(), cursor[0] == symbol ? 1ul : 0ul };
+    return { cursor.data(), (!cursor.empty() && cursor[0] == symbol) ? 1ul : 0ul };
 }
 
 static string_view readIdentifier(string_view cursor)  {
     size_t i = 0;
-    while (isAlphaNumeric(cursor[i])) i++;
+    while (i < cursor.size() && isAlphaNumeric(cursor[i])) i++;
     return { cursor.data(), i };
 }
 
 static string_view readWhitespace(string_view cursor) {
     size_t i = 0;
-    while (isWhitespace(cursor[i])) i++;
+    while (i < cursor.size() && isWhitespace(cursor[i])) i++;
     return { cursor.data(), i };
 }
 
@@ -202,7 +202,7 @@ void WritableArchive::addSpecLine(string_view line) {
         advanceCursorByToken();
     };
 
-    if (cursor[0] == 0 || cursor[0] == '#') {
+    if (cursor.empty() || cursor[0] == '#') {
         ++mLineNumber;
         return;
     }
@@ -217,7 +217,7 @@ void WritableArchive::addSpecLine(string_view line) {
         parseFeatureFlag();
     }
 
-    if (cursor[0] != 0) {
+    if (!cursor.empty()) {
         emitSyntaxError("unexpected trailing character");
     }
 

@@ -215,11 +215,6 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
 
         driver.popGroupMarker();
     }
-
-    // NOTE: in the past we tried to make this flush conditional (b2cdf9f), but this
-    // was problematic on certain devices. b/232224942
-    driver.flush();
-
     driver.popGroupMarker();
 }
 

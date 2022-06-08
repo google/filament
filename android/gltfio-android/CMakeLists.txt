@@ -52,6 +52,8 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/TextureProvider.h
         ${GLTFIO_DIR}/include/gltfio/math.h
 
+        ${GLTFIO_DIR}/src/ArchiveCache.cpp
+        ${GLTFIO_DIR}/src/ArchiveCache.h
         ${GLTFIO_DIR}/src/Animator.cpp
         ${GLTFIO_DIR}/src/AssetLoader.cpp
         ${GLTFIO_DIR}/src/DependencyGraph.cpp
@@ -71,7 +73,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/StbProvider.cpp
         ${GLTFIO_DIR}/src/TangentsJob.cpp
         ${GLTFIO_DIR}/src/TangentsJob.h
-        ${GLTFIO_DIR}/src/UbershaderLoader.cpp
+        ${GLTFIO_DIR}/src/UbershaderProvider.cpp
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
         ${GLTFIO_DIR}/src/upcast.h
@@ -82,7 +84,7 @@ set(GLTFIO_SRCS
         src/main/cpp/FilamentInstance.cpp
         src/main/cpp/MaterialKey.cpp
         src/main/cpp/MaterialKey.h
-        src/main/cpp/UbershaderLoader.cpp
+        src/main/cpp/UbershaderProvider.cpp
         src/main/cpp/ResourceLoader.cpp
 
         ${FILAMENT_DIR}/include/gltfio/resources/gltfresources.h
@@ -96,6 +98,7 @@ set(GLTFIO_INCLUDE_DIRS
         ${FILAMENT_DIR}/include/gltfio/resources
         ../../filament/backend/include
         ../../libs/gltfio/include
+        ../../third_party/basisu/zstd
         ../../third_party/cgltf
         ../../third_party/robin-map
         ../../third_party/hat-trie

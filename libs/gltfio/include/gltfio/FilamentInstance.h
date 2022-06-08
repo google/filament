@@ -20,7 +20,7 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class Animator;
 class FilamentAsset;
@@ -76,6 +76,6 @@ public:
     Animator* getAnimator() noexcept;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_FILAMENTINSTANCE_H

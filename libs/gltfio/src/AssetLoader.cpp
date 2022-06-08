@@ -59,7 +59,7 @@ using namespace filament;
 using namespace filament::math;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using SceneMask = NodeManager::SceneMask;
 
@@ -1456,4 +1456,4 @@ MaterialProvider& AssetLoader::getMaterialProvider() noexcept {
     return upcast(this)->mMaterials;
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

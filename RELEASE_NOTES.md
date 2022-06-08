@@ -5,23 +5,33 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.23.2
+
 - gltfio: fix morphing for un-packed accessors
 - gltfio: ubershaders are now packaged into flexible archives [⚠️ **API Change**]
+- gltfio: namespace now lives under Filament [⚠️ **API Change**]
+- gltfio: UbershaderLoader renamed to UbershaderProvider [⚠️ **API Change**]
+- gltfio: MaterialGenerator renamed to JitShaderProvider [⚠️ **API Change**]
 - gltfio: remove poorly maintained lite flavor
 - engine: disable user scissor while rendering the Shadow Maps (#5607)
 - engine: merge identical backend RenderPrimitives together
 - engine: improve ResourceAllocator performance a bit by reserving 128 cache entries
 - utils: remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
 - backend: fix WGL context attributes
+- backend: workaround broken GLES timer query on some Mali-Gxx old drivers
+- backend: revert c049a1 & reenable b2cdf9 ("don't issue a flush systematically after framegraph's execute")
 - Metal: Fix potential invalid shaders when using gltfio in Ubershader mode. [⚠️ **Recompile Materials to get the fix**]
 
 ## v1.23.1
 
-- gltfio: support skinning with bones that do not belong to any scene
-- gltfio: add attachSkin / detachSkin method to FilamentAsset
-- Metal: fix issues seen with dynamic resolution on M1 Macs
-- engine: add a "global" mode for render primitive's `blendOrder`
-- engine: remove `RenderManager::setGeometryAt(index, count)` [⚠️ **API Change**]
+- gltfio: support skinning with bones that do not belong to any scene.
+- gltfio: add `attachSkin` / `detachSkin` method to FilamentAsset.
+- gltfio: ubershader mode: set sheen to `OPAQUE`.
+- Metal: fix issues seen with dynamic resolution on M1 Macs.
+- engine: add a "global" mode for render primitive's `blendOrder`.
+- engine: remove `RenderManager::setGeometryAt(index, count)`. [⚠️ **API Change**]
+- engine: fix overallocation by about 17MB.
+- WebGL: Add JS bindings for Texture class methods.
 
 ## v1.23.0
 

@@ -42,7 +42,7 @@ using namespace filament::math;
 using namespace std;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using TimeValues = map<float, size_t>;
 using SourceValues = vector<float>;
@@ -558,4 +558,4 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
     transformManager->setTransform(node, xform);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

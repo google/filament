@@ -192,6 +192,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
+    mViewRenderedCount = 0;
 
     { // scope for frame id trace
         char buf[64];
@@ -420,9 +421,13 @@ void FRenderer::render(FView const* view) {
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
-        // NOTE: in the past we tried to kick the GPU here with a flush (b2cdf9f), but this
-        // was problematic on certain devices. b/232224942
+        if (mViewRenderedCount) {
+            // this is a good place to kick the GPU, since we've rendered a View before
+            // and we're about to render another one.
+            mEngine.getDriverApi().flush();
+        }
         renderInternal(view);
+        mViewRenderedCount++;
     }
 }
 

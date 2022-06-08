@@ -75,18 +75,12 @@ private:
     };
 
 
-    // the std::set<T> node size is sizeof(std::set<T>::node_type) + sizeof(T), aligned.
-    // we need this value for our pool allocator. On clang 64 bits this is 56 bytes.
-    using DummySetAllocator = utils::STLAllocator<Entry, utils::Arena<
-            utils::PoolAllocator<8>, utils::LockingPolicy::NoLock>>;
-    using DummySetNode = std::pair<std::set<Entry, std::less<>, DummySetAllocator>::node_type, Entry>;
-
     // Size of the arena used for the "set" part of the bimap
     static constexpr size_t SET_ARENA_SIZE = 4 * 1024 * 1024;
 
     // Arena for the set<>, using a pool allocator inside a heap area.
     using Arena = utils::Arena<
-            utils::PoolAllocator<sizeof(DummySetNode)>,
+            utils::PoolAllocator<64>,   // this seems to work with clang and msvc
             utils::LockingPolicy::NoLock,
 #ifndef NDEBUG
             utils::TrackingPolicy::HighWatermark,

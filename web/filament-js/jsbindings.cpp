@@ -93,7 +93,7 @@ using namespace emscripten;
 using namespace filament;
 using namespace filamesh;
 using namespace geometry;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace image;
 using namespace ktxreader;
 
@@ -1838,7 +1838,7 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
 
 // These little wrappers exist to get around RTTI requirements in embind.
 
-struct UbershaderLoader {
+struct UbershaderProvider {
     MaterialProvider* provider;
     void destroyMaterials() { provider->destroyMaterials(); }
 };
@@ -1846,11 +1846,11 @@ struct UbershaderLoader {
 struct StbProvider { TextureProvider* provider; };
 struct Ktx2Provider { TextureProvider* provider; };
 
-class_<UbershaderLoader>("gltfio$UbershaderLoader")
-    .constructor(EMBIND_LAMBDA(UbershaderLoader, (Engine* engine), {
-        return UbershaderLoader { createUbershaderLoader(engine) };
+class_<UbershaderProvider>("gltfio$UbershaderProvider")
+    .constructor(EMBIND_LAMBDA(UbershaderProvider, (Engine* engine), {
+        return UbershaderProvider { createUbershaderProvider(engine) };
     }))
-    .function("destroyMaterials", &UbershaderLoader::destroyMaterials);
+    .function("destroyMaterials", &UbershaderProvider::destroyMaterials);
 
 class_<StbProvider>("gltfio$StbProvider")
     .constructor(EMBIND_LAMBDA(StbProvider, (Engine* engine), {
@@ -1864,7 +1864,7 @@ class_<Ktx2Provider>("gltfio$Ktx2Provider")
 
 class_<AssetLoader>("gltfio$AssetLoader")
 
-    .constructor(EMBIND_LAMBDA(AssetLoader*, (Engine* engine, UbershaderLoader materials), {
+    .constructor(EMBIND_LAMBDA(AssetLoader*, (Engine* engine, UbershaderProvider materials), {
         auto names = new utils::NameComponentManager(utils::EntityManager::get());
         return AssetLoader::create({ engine, materials.provider, names });
     }), allow_raw_pointers())
