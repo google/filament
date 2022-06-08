@@ -35,7 +35,7 @@ using namespace filament::gltfio;
 using namespace utils;
 
 #if !defined(NDEBUG)
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::uberz::ArchiveRequirements& reqs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const ArchiveRequirements& reqs);
 #endif
 
 namespace {
@@ -319,6 +319,7 @@ const char* toString(BlendingMode blendingMode) noexcept {
     }
 }
 
+#if !defined(NDEBUG)
 io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs) {
     out << "    ShadingModel = " << toString(reqs.shadingModel) << '\n'
         << "    BlendingMode = " << toString(reqs.blendingMode) << '\n';
@@ -327,5 +328,6 @@ io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs) {
     }
     return out;
 }
+#endif
 
 #endif
