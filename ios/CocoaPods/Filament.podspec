@@ -54,7 +54,7 @@ Pod::Spec.new do |spec|
     ss.vendored_libraries =
       "lib/universal/libgltfio_core.a",
       "lib/universal/libdracodec.a",
-      "lib/universal/libgltfio_resources.a",
+      "lib/universal/libuberarchive.a",
       "lib/universal/libstb.a"
     ss.header_dir = "gltfio"
     ss.dependency "Filament/filament"

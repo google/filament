@@ -17,6 +17,7 @@
 #include <jni.h>
 
 #include <gltfio/MaterialProvider.h>
+#include <gltfio/materials/uberarchive.h>
 
 #include <utils/debug.h>
 
@@ -29,7 +30,7 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateUbershaderProvider(JNIEnv*, jclass,
         jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) createUbershaderProvider(engine);
+    return (jlong) createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
 }
 
 extern "C" JNIEXPORT void JNICALL
