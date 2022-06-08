@@ -149,13 +149,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
     static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
             .name(PerRenderableUib::_name)
-            .add("worldFromModelMatrix",       UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("worldFromModelNormalMatrix", UniformInterfaceBlock::Type::MAT3, Precision::HIGH)
-            .add("morphTargetCount", UniformInterfaceBlock::Type::UINT)
-            .add("flagsChannels", UniformInterfaceBlock::Type::UINT)
-            .add("objectId", UniformInterfaceBlock::Type::UINT)
-            .add("userData", UniformInterfaceBlock::Type::FLOAT)
-            .add("reserved", 8, UniformInterfaceBlock::Type::FLOAT4)
+            .add("data", 1, "PerRenderableData", sizeof(PerRenderableData))
             .build();
     return uib;
 }
