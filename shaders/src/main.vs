@@ -35,7 +35,7 @@ void main() {
         toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent.xyz);
 
         #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
-        if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+        if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
             #if defined(LEGACY_MORPHING)
             vec3 normal0, normal1, normal2, normal3;
             toTangentFrame(mesh_custom4, normal0);
@@ -53,7 +53,7 @@ void main() {
             #endif
         }
 
-        if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
+        if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
             skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
             skinNormal(vertex_worldTangent.xyz, mesh_bone_indices, mesh_bone_weights);
         }
@@ -63,15 +63,15 @@ void main() {
         // because we ensure the worldFromModelNormalMatrix pre-scales the normal such that
         // all its components are < 1.0. This prevents the bitangent to exceed the range of fp16
         // in the fragment shader, where we renormalize after interpolation
-        vertex_worldTangent.xyz = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent.xyz;
+        vertex_worldTangent.xyz = getWorldFromModelNormalMatrix() * vertex_worldTangent.xyz;
         vertex_worldTangent.w = mesh_tangents.w;
-        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+        material.worldNormal = getWorldFromModelNormalMatrix() * material.worldNormal;
     #else // MATERIAL_NEEDS_TBN
         // Without anisotropy or normal mapping we only need the normal vector
         toTangentFrame(mesh_tangents, material.worldNormal);
 
         #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
-        if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+        if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
             #if defined(LEGACY_MORPHING)
             vec3 normal0, normal1, normal2, normal3;
             toTangentFrame(mesh_custom4, normal0);
@@ -89,12 +89,12 @@ void main() {
             #endif
         }
 
-        if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
+        if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
             skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
         }
         #endif
 
-        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+        material.worldNormal = getWorldFromModelNormalMatrix() * material.worldNormal;
 
     #endif // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL || MATERIAL_HAS_CLEAR_COAT_NORMAL
 #endif // HAS_ATTRIBUTE_TANGENTS

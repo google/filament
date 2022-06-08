@@ -637,7 +637,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
             }
 
             pipeline.program = ma->getProgram(info.materialVariant);
-            size_t offset = info.index * sizeof(PerRenderableUib);
+            size_t offset = info.index * sizeof(PerRenderableData);
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
                     uboHandle, offset, sizeof(PerRenderableUib));
 
