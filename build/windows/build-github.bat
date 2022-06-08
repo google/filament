@@ -118,12 +118,12 @@ cmake ..\.. ^
 :: Attempt to fix "error C1060: compiler is out of heap space" seen on CI.
 :: Some resource libraries require significant heap space to compile, so first compile them serially.
 @echo on
-cmake --build . --parallel 1 --target filagui --config %config% || exit /b
-cmake --build . --parallel 1 --target gltfio_resources --config %config% || exit /b
-cmake --build . --parallel 1 --target gltf-resources --config %config% || exit /b
-cmake --build . --parallel 1 --target filamentapp-resources --config %config% || exit /b
-cmake --build . --parallel 1 --target sample-resources --config %config% || exit /b
-cmake --build . --parallel 1 --target suzanne-resources --config %config% || exit /b
+cmake --build . --target gltfio_resources --config %config% || exit /b
+cmake --build . --target gltf-resources --config %config% || exit /b
+cmake --build . --target filamentapp-resources --config %config% || exit /b
+cmake --build . --target filagui --config %config% || exit /b
+cmake --build . --target sample-resources --config %config% || exit /b
+cmake --build . --target suzanne-resources --config %config% || exit /b
 
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
 @echo off
