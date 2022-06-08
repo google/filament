@@ -18,7 +18,13 @@ mat4 getLightFromWorldMatrix() {
 }
 
 PerRenderableData getObjectUniforms() {
+#if defined(MATERIAL_HAS_INSTANCES)
+    // the material manages instancing, all instances share the same uniform block.
     return objectUniforms.data[0];
+#else
+    // automatic instancing was used, each instance has its own uniform block.
+    return objectUniforms.data[instance_index];
+#endif
 }
 
 /** @public-api */

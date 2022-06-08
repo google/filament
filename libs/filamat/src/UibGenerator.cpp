@@ -149,7 +149,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
     static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
             .name(PerRenderableUib::_name)
-            .add("data", 1, "PerRenderableData", sizeof(PerRenderableData))
+            .add("data", 64, "PerRenderableData", sizeof(PerRenderableData))
             .build();
     return uib;
 }
