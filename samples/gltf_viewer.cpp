@@ -57,7 +57,8 @@
 #include <iostream>
 #include <string>
 
-#include "generated/resources/gltf_viewer.h"
+#include "generated/resources/gltf_demo.h"
+#include "materials/uberarchive.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -67,8 +68,8 @@ using namespace filament::gltfio;
 using namespace utils;
 
 enum MaterialSource {
-    GENERATE_SHADERS,
-    LOAD_UBERSHADERS,
+    JITSHADER,
+    UBERSHADER,
 };
 
 struct App {
@@ -82,7 +83,7 @@ struct App {
     NameComponentManager* names;
 
     MaterialProvider* materials;
-    MaterialSource materialSource = GENERATE_SHADERS;
+    MaterialSource materialSource = JITSHADER;
 
     gltfio::ResourceLoader* resourceLoader = nullptr;
     gltfio::TextureProvider* stbDecoder = nullptr;
@@ -219,7 +220,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->config.iblDirectory = arg;
                 break;
             case 'u':
-                app->materialSource = LOAD_UBERSHADERS;
+                app->materialSource = UBERSHADER;
                 break;
             case 's':
                 app->actualSize = true;
@@ -267,7 +268,7 @@ static bool loadSettings(const char* filename, Settings* out) {
 static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     auto& em = EntityManager::get();
     Material* shadowMaterial = Material::Builder()
-            .package(GLTF_VIEWER_GROUNDSHADOW_DATA, GLTF_VIEWER_GROUNDSHADOW_SIZE)
+            .package(GLTF_DEMO_GROUNDSHADOW_DATA, GLTF_DEMO_GROUNDSHADOW_SIZE)
             .build(*engine);
     auto& viewerOptions = app.viewer->getSettings().viewer;
     shadowMaterial->setDefaultParameter("strength", viewerOptions.groundShadowStrength);
@@ -494,14 +495,15 @@ int main(int argc, char** argv) {
             }
         }
 
-        app.materials = (app.materialSource == GENERATE_SHADERS) ?
-                createJitShaderProvider(engine) : createUbershaderProvider(engine);
+        app.materials = (app.materialSource == JITSHADER) ? createJitShaderProvider(engine) :
+                createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+
         app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
         app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {
             app.asset = app.assetLoader->createAssetFromBinary(
-                    GLTF_VIEWER_DAMAGEDHELMET_DATA,
-                    GLTF_VIEWER_DAMAGEDHELMET_SIZE);
+                    GLTF_DEMO_DAMAGEDHELMET_DATA,
+                    GLTF_DEMO_DAMAGEDHELMET_SIZE);
         } else {
             loadAsset(filename);
         }

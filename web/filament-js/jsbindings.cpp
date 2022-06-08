@@ -68,6 +68,8 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
 
+#include <materials/uberarchive.h>
+
 #include <ktxreader/Ktx1Reader.h>
 #include <ktxreader/Ktx2Reader.h>
 
@@ -1848,7 +1850,8 @@ struct Ktx2Provider { TextureProvider* provider; };
 
 class_<UbershaderProvider>("gltfio$UbershaderProvider")
     .constructor(EMBIND_LAMBDA(UbershaderProvider, (Engine* engine), {
-        return UbershaderProvider { createUbershaderProvider(engine) };
+        return UbershaderProvider { createUbershaderProvider(engine,
+                UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE) };
     }))
     .function("destroyMaterials", &UbershaderProvider::destroyMaterials);
 

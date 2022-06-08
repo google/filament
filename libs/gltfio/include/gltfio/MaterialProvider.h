@@ -196,12 +196,11 @@ MaterialProvider* createJitShaderProvider(filament::Engine* engine, bool optimiz
  *
  * @return New material provider that can quickly load a material from a cache.
  *
- * Requires \c libgltfio_resources to be linked in.
- *
  * @see createJitShaderProvider
  */
 UTILS_PUBLIC
-MaterialProvider* createUbershaderProvider(filament::Engine* engine);
+MaterialProvider* createUbershaderProvider(filament::Engine* engine, const void* archive,
+        size_t archiveByteCount);
 
 } // namespace filament::gltfio
 
