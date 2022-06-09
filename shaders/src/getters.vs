@@ -40,15 +40,6 @@ int getVertexIndex() {
 #endif
 }
 
-/** @public-api */
-int getInstanceIndex() {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    return gl_InstanceIndex;
-#else
-    return gl_InstanceID;
-#endif
-}
-
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
 
