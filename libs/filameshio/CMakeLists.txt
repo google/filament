@@ -27,6 +27,12 @@ target_link_libraries(${TARGET}
     PUBLIC filament # Public only because the filamesh API needs Box.h
 )
 
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set_target_properties(${TARGET} PROPERTIES
+                          C_VISIBILITY_PRESET default
+                          CXX_VISIBILITY_PRESET default)
+endif()
+
 # ==================================================================================================
 # Installation
 # ==================================================================================================

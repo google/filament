@@ -219,6 +219,12 @@ include_directories(${GENERATION_ROOT})
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set_target_properties(${TARGET} PROPERTIES
+                          C_VISIBILITY_PRESET default
+                          CXX_VISIBILITY_PRESET default)
+endif()
+
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
@@ -324,7 +330,7 @@ if (MSVC)
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
-else()
+elseif(APPLE)
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
@@ -332,6 +338,11 @@ else()
         #        -fslp-vectorize-aggressive
         -fvisibility-inlines-hidden
         -fstrict-vtable-pointers
+    )
+    set(OPTIMIZATION_FLAGS
+        -ffast-math
+        -ffp-contract=fast
+        -fvisibility-inlines-hidden
     )
 endif()
 
@@ -341,13 +352,19 @@ set(LINUX_LINKER_OPTIMIZATION_FLAGS
 
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
-else()
+elseif(APPLE)
     set(FILAMENT_WARNINGS
             -Wall -Wextra -Wno-unused-parameter
             -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
             -Wgnu-conditional-omitted-operand
             -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
             -Wover-aligned
+    )
+else()
+    set(FILAMENT_WARNINGS
+            -Wall -Wextra -Wno-unused-parameter
+            -Wextra-semi -Wdeprecated -Wundef
+            -Wnon-virtual-dtor -Wimplicit-fallthrough
     )
 endif()
 

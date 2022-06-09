@@ -108,7 +108,7 @@ if (MSVC)
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
-else()
+elseif(APPLE)
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
@@ -116,6 +116,12 @@ else()
         #        -fslp-vectorize-aggressive
         -fvisibility-inlines-hidden
         -fstrict-vtable-pointers
+    )
+else()
+    set(OPTIMIZATION_FLAGS
+        -ffast-math
+        -ffp-contract=fast
+        -fvisibility-inlines-hidden
     )
 endif()
 

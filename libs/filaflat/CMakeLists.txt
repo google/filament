@@ -24,6 +24,12 @@ add_library(${TARGET} ${HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set_target_properties(${TARGET} PROPERTIES
+                          C_VISIBILITY_PRESET default
+                          CXX_VISIBILITY_PRESET default)
+endif()
+
 target_link_libraries(${TARGET} filabridge utils)
 
 if (FILAMENT_SUPPORTS_VULKAN)

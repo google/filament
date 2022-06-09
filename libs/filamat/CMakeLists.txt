@@ -94,6 +94,12 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} shaders filabridge utils smol-v)
 
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set_target_properties(${TARGET} PROPERTIES
+                          C_VISIBILITY_PRESET default
+                          CXX_VISIBILITY_PRESET default)
+endif()
+
 # Filamat Lite
 add_library(filamat_lite STATIC ${HDRS} ${LITE_PRIVATE_HDRS} ${LITE_SRCS})
 target_include_directories(filamat_lite PUBLIC ${PUBLIC_HDR_DIR})

@@ -24,6 +24,12 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set_target_properties(${TARGET} PROPERTIES
+                          C_VISIBILITY_PRESET default
+                          CXX_VISIBILITY_PRESET default)
+endif()
+
 target_link_libraries(${TARGET} PUBLIC math utils)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})

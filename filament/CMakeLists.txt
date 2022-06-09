@@ -558,7 +558,7 @@ if (MSVC)
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
-else()
+elseif(APPLE)
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
@@ -566,6 +566,12 @@ else()
         #        -fslp-vectorize-aggressive
         -fvisibility-inlines-hidden
         -fstrict-vtable-pointers
+    )
+else()
+    set(OPTIMIZATION_FLAGS
+    -ffast-math
+    -ffp-contract=fast
+    -fvisibility-inlines-hidden
     )
 endif()
 
@@ -578,13 +584,19 @@ set(LINUX_COMPILER_FLAGS
 
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
-else()
+elseif(APPLE)
     set(FILAMENT_WARNINGS
             -Wall -Wextra -Wno-unused-parameter
             -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
             -Wgnu-conditional-omitted-operand
             -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
             -Wover-aligned
+    )
+else()
+    set(FILAMENT_WARNINGS
+            -Wall -Wextra -Wno-unused-parameter
+            -Wextra-semi -Wdeprecated -Wundef
+            -Wnon-virtual-dtor -Wimplicit-fallthrough
     )
 endif()
 

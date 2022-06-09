@@ -6,7 +6,9 @@
 #include <utils/Log.h>
 
 #include <ostream>
-
+#if defined(__GNUC__)
+#include <string.h>
+#endif
 #include "jsonParseUtils.h"
 
 using namespace utils;
