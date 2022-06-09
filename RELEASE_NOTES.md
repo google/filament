@@ -16,6 +16,7 @@ A new header is inserted each time a *tag* is created.
 - engine: disable user scissor while rendering the Shadow Maps (#5607)
 - engine: merge identical backend RenderPrimitives together
 - engine: improve ResourceAllocator performance a bit by reserving 128 cache entries
+- engine: Add optional memory configuration parameters to Engine initialization
 - utils: remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
 - backend: fix WGL context attributes
 - backend: workaround broken GLES timer query on some Mali-Gxx old drivers
