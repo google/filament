@@ -98,6 +98,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     elseif (LINUX)
         if (FILAMENT_SUPPORTS_X11)
             list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
+        elseif (FILAMENT_SUPPORTS_EGL)
+            list(APPEND SRCS src/opengl/platforms/PlatformEGLOpenGL.cpp)
         endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
@@ -304,6 +306,9 @@ endif()
 
 if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
+    if(FILAMENT_SUPPORTS_EGL)
+       target_link_libraries(${TARGET} PUBLIC EGL)
+    endif()
 endif()
 
 # ==================================================================================================
