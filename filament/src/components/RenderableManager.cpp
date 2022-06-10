@@ -382,7 +382,7 @@ void FRenderableManager::create(
                 // large block of bones.
                 bones = Bones{
                         .handle = driver.createBufferObject(
-                                CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
+                                sizeof(PerRenderableBoneUib),
                                 BufferObjectBinding::UNIFORM,
                                 backend::BufferUsage::DYNAMIC),
                         .count = (uint16_t)boneCount,
@@ -398,10 +398,10 @@ void FRenderableManager::create(
                                 builder->mUserBoneMatrices, boneCount, 0);
                     } else {
                         // initialize the bones to identity
-                        auto* out = driver.allocatePod<PerRenderableUibBone>(boneCount);
+                        auto* out = driver.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
                         std::uninitialized_fill_n(out, boneCount, FSkinningBuffer::makeBone({}));
                         driver.updateBufferObject(bones.handle, {
-                                out, boneCount * sizeof(PerRenderableUibBone) }, 0);
+                                out, boneCount * sizeof(PerRenderableBoneUib::BoneData) }, 0);
                     }
                 }
             }
@@ -623,9 +623,8 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
             "Enable skinning buffer mode to use this API");
 
     ASSERT_PRECONDITION(
-            count + offset < skinningBuffer->getBoneCount(),
-            "SkinningBuffer overflow (size=%u, count=%u, offset=%u)",
-            skinningBuffer->getBoneCount(), count, offset);
+            count <= CONFIG_MAX_BONE_COUNT,
+            "SkinningBuffer larger than 256 (count=%u)", count);
 
     // According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
     // Buffer Object Bindings:
@@ -634,11 +633,13 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
     //     than the minimum required size of the uniform block (the value of
     //     UNIFORM_BLOCK_DATA_SIZE).
     //
-    // So we round-up the "window" of bones set to match UNIFORM_BLOCK_DATA_SIZE, the SkinningBuffer
-    // should always contain enough date for this to work.
 
-    count = FSkinningBuffer::getPhysicalBoneCount(count);
-    assert_invariant(count + offset < skinningBuffer->getBoneCount());
+    count = CONFIG_MAX_BONE_COUNT;
+
+    ASSERT_PRECONDITION(
+            count + offset <= skinningBuffer->getBoneCount(),
+            "SkinningBuffer overflow (size=%u, count=%u, offset=%u)",
+            skinningBuffer->getBoneCount(), count, offset);
 
     bones.handle = skinningBuffer->getHwHandle();
     bones.count = uint16_t(count);
