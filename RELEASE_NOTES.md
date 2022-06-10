@@ -9,6 +9,8 @@ A new header is inserted each time a *tag* is created.
 - gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
 - gltfio: Fix morphing with sparse accessors.
 - engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
+- picking is now exposed to JavaScript
+- gltf_viewer: Exercise picking functionality.
 
 ## v1.23.2
 
