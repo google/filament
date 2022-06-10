@@ -606,6 +606,21 @@ class_<Renderer>("Renderer")
 /// A view is associated with a particular [Scene], [Camera], and viewport.
 /// See also the [Engine] methods `createView` and `destroyView`.
 class_<View>("View")
+
+    .function("pick", EMBIND_LAMBDA(void, (View* self, uint32_t x, uint32_t y, val cb), {
+        self->pick(x, y, [cb](const View::PickingQueryResult& result) {
+            EM_ASM_ARGS({
+                const fn = Emval.toValue($0);
+                fn({
+                    "renderable": Emval.toValue($1),
+                    "depth": $2,
+                    "fragCoords": [$3, $4, $5],
+                });
+            }, cb.as_handle(), val(result.renderable).as_handle(), result.depth,
+                result.fragCoords.x, result.fragCoords.y, result.fragCoords.z);
+        });
+    }), allow_raw_pointers())
+
     .function("setScene", &View::setScene, allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
     .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())

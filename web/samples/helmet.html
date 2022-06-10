@@ -10,7 +10,7 @@ html, body { height: 100%; }
 body       { margin: 0; overflow: hidden; }
 #container { position: relative; height: 100%; }
 canvas     { position: absolute; width: 100%; height: 100%; }
-#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:white; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:white; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -42,6 +42,15 @@ class App {
         const engine = this.engine = Filament.Engine.create(this.canvas);
         const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
+
+        canvas.addEventListener('pointerdown', evt => {
+            const x = evt.clientX;
+            const y = this.canvas.getBoundingClientRect().height - 1 - evt.clientY;
+            const dpr = window.devicePixelRatio;
+            this.view.pick(x * dpr, y * dpr, (results) => {
+                document.getElementById('messages').innerText = this.asset.getName(results.renderable);
+            });
+        });
 
         const indirectLight = this.ibl = engine.createIblFromKtx1(ibl_url);
         this.scene.setIndirectLight(indirectLight);
@@ -87,8 +96,8 @@ class App {
         const onDone = () => {
             this.allowRefresh = true;
 
-            // Hide the HUD.
-            messages.remove();
+            // Clear the progress indication messages.
+            messages.innerText = "";
         };
         asset.loadResources(onDone, onFetched);
 
