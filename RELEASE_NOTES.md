@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
 - gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
 - gltfio: Fix morphing with sparse accessors.
+- picking is now exposed to JavaScript
 
 ## v1.23.2
 
