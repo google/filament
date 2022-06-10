@@ -64,7 +64,7 @@ constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 14;
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
 
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
-// We store 64 bytes per bone.
+// We store 64 bytes per bone. Must be a power-of-two.
 constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 
 // The maximum number of morph target count.
