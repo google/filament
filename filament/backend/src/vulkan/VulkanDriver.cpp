@@ -889,6 +889,24 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
     scheduleDestroy(std::move(bd));
 }
 
+void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
+        BufferDescriptor&& bd, uint32_t byteOffset) {
+    auto bo = handle_cast<VulkanBufferObject*>(boh);
+    // TODO: implement unsynchronized version
+    bo->buffer.loadFromCpu(mContext, mStagePool, bd.buffer, byteOffset, bd.size);
+    mDisposer.acquire(bo);
+    scheduleDestroy(std::move(bd));
+}
+
+void VulkanDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+    // TODO: implement resetBufferObject(). This is equivalent to calling
+    // destroyBufferObject() followed by createBufferObject() keeping the same handle.
+    // It is actually okay to keep a no-op implementation, the intention here is to "orphan" the
+    // buffer (and possibly return it to a pool) and allocate a new one (or get it from a pool),
+    // so that no further synchronization with the GPU is needed.
+    // This is only useful if updateBufferObjectUnsynchronized() is implemented unsynchronizedly.
+}
+
 void VulkanDriver::update2DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {

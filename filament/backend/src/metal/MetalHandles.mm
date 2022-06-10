@@ -273,6 +273,10 @@ void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffse
     buffer.copyIntoBuffer(data, size, byteOffset);
 }
 
+void MetalBufferObject::updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset) {
+    buffer.copyIntoBufferUnsynchronized(data, size, byteOffset);
+}
+
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
     : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes), buffers(bufferCount, nullptr) {}
