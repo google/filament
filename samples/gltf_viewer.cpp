@@ -105,6 +105,7 @@ struct App {
 
     ColorGrading* colorGrading = nullptr;
 
+    std::string notificationText;
     std::string messageBoxText;
     std::string settingsFile;
     std::string batchFile;
@@ -354,6 +355,16 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
+static void onClick(App& app, View* view, ImVec2 pos) {
+    view->pick(pos.x, pos.y, [&app](View::PickingQueryResult const& result){
+        if (const char* name = app.asset->getName(result.renderable); name) {
+            app.notificationText = name;
+        } else {
+            app.notificationText.clear();
+        }
+    });
+}
+
 int main(int argc, char** argv) {
     App app;
 
@@ -516,6 +527,24 @@ int main(int argc, char** argv) {
         app.viewer->setUiCallback([&app, scene, view, engine] () {
             auto& automation = *app.automationEngine;
 
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                ImVec2 pos = ImGui::GetMousePos();
+                pos.x -= app.viewer->getSidebarWidth();
+                pos.x *= ImGui::GetIO().DisplayFramebufferScale.x;
+                pos.y *= ImGui::GetIO().DisplayFramebufferScale.y;
+                if (pos.x > 0) {
+                    pos.y = view->getViewport().height - 1 - pos.y;
+                    onClick(app, view, pos);
+                }
+            }
+
+            const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
+
+            if (!app.notificationText.empty()) {
+                ImGui::TextColored(yellow, "Picked %s", app.notificationText.c_str());
+                ImGui::Spacing();
+            }
+
             float progress = app.resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
                 ImGui::ProgressBar(progress);
@@ -531,7 +560,6 @@ int main(int argc, char** argv) {
             if (ImGui::CollapsingHeader("Automation", flags)) {
                 ImGui::Indent();
 
-                const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
                 if (automation.isRunning()) {
                     ImGui::TextColored(yellow, "Test case %zu / %zu",
                             automation.currentTest(), automation.testCount());
