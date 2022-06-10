@@ -21,8 +21,6 @@
 
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
-// NOTE: We only need Renderer.h here because the definition of some FRenderer methods are here
-#include "details/Renderer.h"
 #include "details/View.h"
 
 #include <private/filament/UibStructs.h>
@@ -186,7 +184,127 @@ void RenderPass::sortCommands() noexcept {
             });
 
     resize(uint32_t(last - mCommandBegin));
+
+    instanceify();
 }
+
+void RenderPass::instanceify() noexcept {
+    SYSTRACE_NAME("instanceify");
+
+    // instanceify works by scanning the **sorted** command stream, looking for repeat draw
+    // commands. When one is found, it is replaced by an instanced command.
+    // A "repeat" draw is one that ends-up using the same draw parameters and state.
+    // Currently, this relies somewhat on luck that "repeat draws" are found consecutively,
+    // we could improve this by including some or all of these "repeat" parameters in the
+    // sorting key (e.g. raster state, primitive handle, etc...), the key could even use a small
+    // hash of those parameters.
+
+    UTILS_UNUSED_IN_RELEASE uint32_t drawCallsSavedCount = 0;
+
+    Command* curr = mCommandBegin;
+    Command* const last = mCommandEnd;
+
+    Command* firstSentinel = nullptr;
+    PerRenderableData const* uboData = nullptr;
+    PerRenderableData* stagingBuffer = nullptr;
+    uint32_t stagingBufferSize = 0;
+    uint32_t instancedPrimitiveOffset = 0;
+
+    // TODO: for the case of instancing we could actually use 128 instead of 64 instances
+    constexpr size_t maxInstanceCount = sizeof(PerRenderableUib) / sizeof(PerRenderableData);
+    static_assert(maxInstanceCount == 64); // just to make sure we don't change by accident
+
+    while (curr != last) {
+
+        // we can't have nice things! No more than maxInstanceCount due to UBO size limits
+        Command const* const e = std::find_if_not(curr, std::min(last, last + maxInstanceCount),
+                [lhs = *curr](Command const& rhs) {
+            // primitives must be identical to be instanced. Currently, instancing doesn't support
+            // skinning/morphing.
+            return  lhs.primitive.mi                == rhs.primitive.mi                 &&
+                    lhs.primitive.primitiveHandle   == rhs.primitive.primitiveHandle    &&
+                    lhs.primitive.rasterState       == rhs.primitive.rasterState        &&
+                    lhs.primitive.skinningHandle    == rhs.primitive.skinningHandle     &&
+                    lhs.primitive.skinningOffset    == rhs.primitive.skinningOffset     &&
+                    lhs.primitive.morphWeightBuffer == rhs.primitive.morphWeightBuffer  &&
+                    lhs.primitive.morphTargetBuffer == rhs.primitive.morphTargetBuffer;
+        });
+
+        uint32_t instanceCount = e - curr;
+        assert_invariant(instanceCount > 0);
+
+        if (UTILS_UNLIKELY(instanceCount > 1)) {
+            drawCallsSavedCount += instanceCount - 1;
+
+            // allocate our staging buffer only if needed
+            if (UTILS_UNLIKELY(!stagingBuffer)) {
+                // TODO: use stream inline buffer for small sizes
+                // TODO: use a pool for larger heap buffers
+                // buffer large enough for all instances data
+                stagingBufferSize = sizeof(PerRenderableData) * (last - curr);
+                stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
+                uboData = mRenderableSoa->data<FScene::UBO>();
+            }
+
+            // copy the ubo data to a staging buffer
+            assert_invariant(instancedPrimitiveOffset + instanceCount
+                             <= stagingBufferSize / sizeof(PerRenderableData));
+            for (uint32_t i = 0; i < instanceCount; i++) {
+                stagingBuffer[instancedPrimitiveOffset + i] = uboData[curr[i].primitive.index];
+            }
+
+            // make the first command instanced
+            curr[0].primitive.instanceCount = instanceCount;
+            curr[0].primitive.index = instancedPrimitiveOffset;
+            instancedPrimitiveOffset += instanceCount;
+
+            // cancel commands that are now instances
+            firstSentinel = !firstSentinel ? curr : firstSentinel;
+            for (uint32_t i = 1; i < instanceCount; i++) {
+                curr[i].key = uint64_t(Pass::SENTINEL);
+            }
+        }
+
+        curr = const_cast<Command*>(e);
+    }
+
+    if (UTILS_UNLIKELY(firstSentinel)) {
+#ifndef NDEBUG
+        // TODO: remove this eventually
+        slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
+               << mCommandEnd - mCommandBegin << io::endl;
+#endif
+
+        // we have instanced primitives
+        DriverApi& driver = mEngine.getDriverApi();
+
+        // TODO: maybe use a pool? so we can reuse the buffer.
+        // create a ubo to hold the instanced primitive data
+        mInstancedUboHandle = driver.createBufferObject(
+                sizeof(PerRenderableData) * instancedPrimitiveOffset + sizeof(PerRenderableUib),
+                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
+
+        // copy our instanced ubo data
+        driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
+                stagingBuffer, sizeof(PerRenderableData) * instancedPrimitiveOffset,
+                +[](void* buffer, size_t size, void* user) {
+                    ::free(buffer);
+                }
+        }, 0);
+
+        stagingBuffer = nullptr;
+
+        // remove all the canceled commands
+        auto lastCommand = std::remove_if(firstSentinel, mCommandEnd, [](auto const& command) {
+            return command.key == uint64_t(Pass::SENTINEL);
+        });
+
+        resize(uint32_t(lastCommand - mCommandBegin));
+    }
+
+    assert_invariant(stagingBuffer == nullptr);
+}
+
 
 /* static */
 UTILS_ALWAYS_INLINE // this function exists only to make the code more readable. we want it inlined.
@@ -601,7 +719,6 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
         Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
-        uint32_t uboDataIndex = std::numeric_limits<uint32_t>::max();
         auto customCommands = mCustomCommands.data();
 
         first--;
@@ -639,12 +756,12 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
 
             pipeline.program = ma->getProgram(info.materialVariant);
 
-            if (uboDataIndex != info.index) {
-                uboDataIndex = info.index;
-                driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
-                        uboHandle, uboDataIndex * sizeof(PerRenderableData),
-                        sizeof(PerRenderableUib));
-            }
+            // bind per-renderable uniform block. there is no need to attempt to skip this command
+            // because the backends already do this.
+            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
+                    (info.instanceCount > 1) ? mInstancedUboHandle : uboHandle,
+                    info.index * sizeof(PerRenderableData),
+                    sizeof(PerRenderableUib));
 
             if (UTILS_UNLIKELY(info.skinningHandle)) {
                 // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
@@ -669,13 +786,20 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
             driver.draw(pipeline, info.primitiveHandle, info.instanceCount);
         }
     }
+
+    if (mInstancedUboHandle) {
+        driver.destroyBufferObject(mInstancedUboHandle);
+    }
+
 }
 
 // ------------------------------------------------------------------------------------------------
 
 RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
         : mEngine(pass->mEngine), mBegin(b), mEnd(e),
-          mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
+          mCustomCommands(pass->mCustomCommands),
+          mUboHandle(pass->mUboHandle),
+          mInstancedUboHandle(pass->mInstancedUboHandle),
           mPolygonOffset(pass->mPolygonOffset),
           mScissor(pass->mScissor),
           mPolygonOffsetOverride(pass->mPolygonOffsetOverride),
