@@ -550,12 +550,12 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         scene->prepareVisibleRenderables(merged);
 
         // update those UBOs
-        const size_t size = merged.size() * sizeof(PerRenderableUib);
+        const size_t size = merged.size() * sizeof(PerRenderableData);
         if (size) {
             if (mRenderableUBOSize < size) {
                 // allocate 1/3 extra, with a minimum of 16 objects
                 const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
-                mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
+                mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableData));
                 driver.destroyBufferObject(mRenderableUbh);
                 mRenderableUbh = driver.createBufferObject(mRenderableUBOSize,
                         BufferObjectBinding::UNIFORM, BufferUsage::STREAM);

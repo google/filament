@@ -47,9 +47,23 @@ UniformInterfaceBlock::Builder::name(utils::CString interfaceBlockName) {
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
+        utils::CString uniformName, UniformInterfaceBlock::Type type,
+        UniformInterfaceBlock::Precision precision) {
+    mEntries.emplace_back(std::move(uniformName), 0u, type, precision);
+    return *this;
+}
+
+UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
         utils::CString uniformName, size_t size, UniformInterfaceBlock::Type type,
         UniformInterfaceBlock::Precision precision) {
     mEntries.emplace_back(std::move(uniformName), (uint32_t)size, type, precision);
+    return *this;
+}
+
+UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
+        utils::CString uniformName,
+        utils::CString structName, size_t stride) {
+    mEntries.emplace_back(std::move(uniformName), 0u, std::move(structName), stride);
     return *this;
 }
 
@@ -59,7 +73,6 @@ UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
     mEntries.emplace_back(std::move(uniformName), (uint32_t)size, std::move(structName), stride);
     return *this;
 }
-
 
 UniformInterfaceBlock UniformInterfaceBlock::Builder::build() {
     return UniformInterfaceBlock(*this);
@@ -85,7 +98,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
     for (auto const& e : builder.mEntries) {
         size_t alignment = baseAlignmentForType(e.type);
         uint8_t stride = strideForType(e.type, e.stride);
-        if (e.size > 1) { // this is an array
+        if (e.size > 0) { // this is an array
             // round the alignment up to that of a float4
             alignment = (alignment + 3) & ~3;
             stride = (stride + uint8_t(3)) & ~uint8_t(3);
@@ -102,7 +115,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
         infoMap[info.name.c_str()] = i;
 
         // advance offset to next slot
-        offset += stride * e.size;
+        offset += stride * std::max(1u, e.size);
         ++i;
     }
 

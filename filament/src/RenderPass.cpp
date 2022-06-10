@@ -394,7 +394,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key = uint64_t(Pass::DEPTH);
             cmdDepth.key |= uint64_t(CustomCommand::PASS);
             cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
-            cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
+            cmdDepth.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
             cmdDepth.primitive.instanceCount = soaInstanceCount[i];
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
@@ -501,8 +501,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // in each buckets. We use the top 10 bits of the distance, which
                     // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
                     cmdColor.key &= ~Z_BUCKET_MASK;
-                    cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK,
-                            Z_BUCKET_SHIFT);
+                    cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
 
                     curr->key = uint64_t(Pass::SENTINEL);
                     ++curr;
@@ -520,6 +519,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 const BlendingMode blendingMode = ma->getBlendingMode();
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
+
+                cmdDepth.key |= mi->getSortingKey(); // already all set-up for direct or'ing
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
@@ -604,6 +605,8 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
 
         first--;
         while (++first != last) {
+            assert_invariant(first->key != uint64_t(Pass::SENTINEL));
+
             /*
              * Be careful when changing code below, this is the hot inner-loop
              */
@@ -634,7 +637,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
             }
 
             pipeline.program = ma->getProgram(info.materialVariant);
-            size_t offset = info.index * sizeof(PerRenderableUib);
+            size_t offset = info.index * sizeof(PerRenderableData);
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
                     uboHandle, offset, sizeof(PerRenderableUib));
 

@@ -139,3 +139,7 @@ highp vec4 getCascadeLightSpacePosition(uint cascade) {
 }
 
 #endif
+
+PerRenderableData getObjectUniforms() {
+    return objectUniforms.data[0];
+}
