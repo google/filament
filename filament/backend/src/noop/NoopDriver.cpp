@@ -195,6 +195,14 @@ void NoopDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor
     scheduleDestroy(std::move(p));
 }
 
+void NoopDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
+        uint32_t byteOffset) {
+    scheduleDestroy(std::move(p));
+}
+
+void NoopDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+}
+
 void NoopDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
 }
