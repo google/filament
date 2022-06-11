@@ -190,6 +190,8 @@ void RenderPassNode::resolve() noexcept {
                     rt.descriptor.clearFlags & rt.targetBufferFlags);
         }
 
+        assert_invariant(minWidth == maxWidth);
+        assert_invariant(minHeight == maxHeight);
         assert_invariant(any(rt.targetBufferFlags));
 
         // of all attachments size matches there are no ambiguity about the RT size.
