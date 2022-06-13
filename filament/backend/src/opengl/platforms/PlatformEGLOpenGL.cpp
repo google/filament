@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ using namespace utils;
 namespace filament {
 using namespace backend;
 
-// The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
 namespace glext {
 extern PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
 extern PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR;
@@ -54,8 +53,8 @@ backend::Driver* PlatformEGLOpenGL::createDriver(void* sharedContext) noexcept {
         slog.e << "eglBindAPI EGL_OPENGL_API failed" << io::endl;
         return nullptr;
     }
-    int bingBlueGL = bluegl::bind();
-    if (UTILS_UNLIKELY(bingBlueGL != 0)) {
+    int bindBlueGL = bluegl::bind();
+    if (UTILS_UNLIKELY(bindBlueGL != 0)) {
         slog.e << "bluegl bind failed" << io::endl;
         return nullptr;
     }
@@ -67,7 +66,7 @@ backend::Driver* PlatformEGLOpenGL::createDriver(void* sharedContext) noexcept {
     EGLint major, minor;
     EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);
 
-    if(!initialized) {
+    if (!initialized) {
       EGLDeviceEXT eglDevice;
       EGLint numDevices;
 
@@ -186,7 +185,6 @@ backend::Driver* PlatformEGLOpenGL::createDriver(void* sharedContext) noexcept {
 
     initializeGlExtensions();
 
-    // this is needed with older emulators/API levels on Android
     clearGlError();
 
     // success!!

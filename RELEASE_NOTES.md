@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
 - picking is now exposed to JavaScript
 - gltf_viewer: Exercise picking functionality.
+- backend: added support for EGL on linux (headless)
 
 ## v1.23.2
 
