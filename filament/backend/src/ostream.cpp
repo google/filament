@@ -96,7 +96,6 @@ io::ostream& operator<<(io::ostream& out, BufferUsage usage) {
     switch (usage) {
         CASE(BufferUsage, STATIC)
         CASE(BufferUsage, DYNAMIC)
-        CASE(BufferUsage, STREAM)
     }
     return out;
 }

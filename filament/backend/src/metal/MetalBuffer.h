@@ -42,7 +42,8 @@ public:
      * Update the buffer with data inside src. Potentially allocates a new buffer allocation to hold
      * the bytes which will be released when the current frame is finished.
      */
-    void copyIntoBuffer(void* src, size_t size, size_t byteOffset = 0);
+    void copyIntoBuffer(void* src, size_t size, size_t byteOffset);
+    void copyIntoBufferUnsynchronized(void* src, size_t size, size_t byteOffset);
 
     /**
      * Denotes that this buffer is used for a draw call ensuring that its allocation remains valid
@@ -56,12 +57,6 @@ public:
      *
      */
     id<MTLBuffer> getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept;
-
-    /**
-     * Returns the offset into the buffer returned by getGpuBufferForDraw. This is always 0 for
-     * non-STREAM buffers.
-     */
-    size_t getGpuBufferStreamOffset() noexcept { return mCurrentStreamStart; }
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
@@ -84,13 +79,9 @@ private:
 
     BufferUsage mUsage;
     size_t mBufferSize = 0;
-    size_t mCurrentStreamStart = 0;
-    size_t mCurrentStreamEnd = 0;
     const MetalBufferPoolEntry* mBufferPoolEntry = nullptr;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;
-
-    void copyIntoStreamBuffer(void* src, size_t size);
 };
 
 } // namespace backend

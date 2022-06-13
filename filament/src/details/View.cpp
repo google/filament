@@ -558,7 +558,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
                 mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableData));
                 driver.destroyBufferObject(mRenderableUbh);
                 mRenderableUbh = driver.createBufferObject(mRenderableUBOSize,
-                        BufferObjectBinding::UNIFORM, BufferUsage::STREAM);
+                        BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
             } else {
                 // TODO: should we shrink the underlying UBO at some point?
             }

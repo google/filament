@@ -282,7 +282,8 @@ void FScene::updateUBOs(
     }
 
     // update the UBO
-    driver.updateBufferObject(renderableUbh, {
+    driver.resetBufferObject(renderableUbh);
+    driver.updateBufferObjectUnsynchronized(renderableUbh, {
             buffer, count * sizeof(PerRenderableData),
             +[](void* p, size_t s, void* user) {
                 if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
