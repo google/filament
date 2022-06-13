@@ -196,6 +196,8 @@ struct PerRenderableData {
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
 
+    math::float4 reserved[8];
+
     static uint32_t packFlagsChannels(
             bool skinning, bool morphing, bool contactShadows, uint8_t channels) noexcept {
         return (skinning       ? 0x100 : 0) |
@@ -204,17 +206,16 @@ struct PerRenderableData {
                channels;
     }
 };
-static_assert(sizeof(PerRenderableData) == 128,
-        "sizeof(PerRenderableData) must be 128 bytes");
+static_assert(sizeof(PerRenderableData) == 256,
+        "sizeof(PerRenderableData) must be 256 bytes");
 
 struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "ObjectUniforms" };
-    PerRenderableData data;
-    math::float4 reserved[8];
+    PerRenderableData data[1];
 };
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
-static_assert(sizeof(PerRenderableUib) == 256,
-        "sizeof(PerRenderableUib) must be 256 bytes");
+static_assert(sizeof(PerRenderableUib) <= 16384,
+        "PerRenderableUib exceeds max UBO size");
 
 // ------------------------------------------------------------------------------------------------
 // MARK: -
@@ -260,7 +261,7 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
 };
 static_assert(sizeof(ShadowUib) <= 16384,
-        "ShadowUib exceed max UBO size");
+        "ShadowUib exceeds max UBO size");
 
 // ------------------------------------------------------------------------------------------------
 // MARK: -
@@ -277,7 +278,7 @@ static_assert(sizeof(FroxelRecordUib) == 16384,
 // MARK: -
 
 // This is not the UBO proper, but just an element of a bone array.
-struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
+struct PerRenderableBoneUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "BonesUniforms" };
     struct alignas(16) BoneData {
         // bone transform, last row assumed [0,0,0,1]
@@ -285,9 +286,9 @@ struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
         // 8 first cofactor matrix of transform's upper left
         math::uint4 cof;
     };
-    BoneData bone;
+    BoneData bones[CONFIG_MAX_BONE_COUNT];
 };
-static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
+static_assert(sizeof(PerRenderableBoneUib) <= 16384,
         "PerRenderableUibBone exceed max UBO size");
 
 // ------------------------------------------------------------------------------------------------

@@ -33,6 +33,7 @@ namespace filament {
 /**
  * SkinningBuffer is used to hold skinning data (bones). It is a simple wraper around
  * a structured UBO.
+ * @see RenderableManager::setSkinningBuffer
  */
 class UTILS_PUBLIC SkinningBuffer : public FilamentAPI {
     struct BuilderDetails;
@@ -93,6 +94,7 @@ public:
      * @param transforms pointer to at least count Bone
      * @param count number of Bone elements in transforms
      * @param offset offset in elements (not bytes) in the SkinningBuffer (not in transforms)
+     * @see RenderableManager::setSkinningBuffer
      */
     void setBones(Engine& engine, RenderableManager::Bone const* transforms,
             size_t count, size_t offset = 0);
@@ -103,6 +105,7 @@ public:
      * @param transforms pointer to at least count mat4f
      * @param count number of mat4f elements in transforms
      * @param offset offset in elements (not bytes) in the SkinningBuffer (not in transforms)
+     * @see RenderableManager::setSkinningBuffer
      */
     void setBones(Engine& engine, math::mat4f const* transforms,
             size_t count, size_t offset = 0);

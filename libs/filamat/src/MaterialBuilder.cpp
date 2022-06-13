@@ -306,6 +306,11 @@ MaterialBuilder& MaterialBuilder::depthCulling(bool enable) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::instanced(bool enable) noexcept {
+    mInstanced = enable;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::doubleSided(bool doubleSided) noexcept {
     mDoubleSided = doubleSided;
     mDoubleSidedCapability = true;
@@ -435,7 +440,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         if (param.isSampler()) {
             sbb.add(param.name, param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add(param.name, param.size, param.uniformType, param.precision);
+            ibb.add(param.name, param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses belong to the "MaterialParams" block.
@@ -447,16 +452,16 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     }
 
     if (mSpecularAntiAliasing) {
-        ibb.add("_specularAntiAliasingVariance", 1, UniformType::FLOAT);
-        ibb.add("_specularAntiAliasingThreshold", 1, UniformType::FLOAT);
+        ibb.add("_specularAntiAliasingVariance", UniformType::FLOAT);
+        ibb.add("_specularAntiAliasingThreshold", UniformType::FLOAT);
     }
 
     if (mBlendingMode == BlendingMode::MASKED) {
-        ibb.add("_maskThreshold", 1, UniformType::FLOAT);
+        ibb.add("_maskThreshold", UniformType::FLOAT);
     }
 
     if (mDoubleSidedCapability) {
-        ibb.add("_doubleSided", 1, UniformType::BOOL);
+        ibb.add("_doubleSided", UniformType::BOOL);
     }
 
     mRequiredAttributes.set(filament::VertexAttribute::POSITION);
@@ -489,6 +494,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.quality = mShaderQuality;
     info.hasCustomSurfaceShading = mCustomSurfaceShading;
     info.useLegacyMorphing = mUseLegacyMorphing;
+    info.instanced = mInstanced;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -1050,6 +1056,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<bool>(ChunkType::MaterialColorWrite, mColorWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
+    container.addSimpleChild<bool>(ChunkType::MaterialInstanced, mInstanced);
     container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
 
     uint64_t properties = 0;

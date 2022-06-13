@@ -265,27 +265,27 @@ void FScene::updateUBOs(
     // don't allocate more than 16 KiB directly into the render stream
     static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
     const size_t count = visibleRenderables.size();
-    PerRenderableUib* buffer = [&]{
+    PerRenderableData* buffer = [&]{
         if (count >= MAX_STREAM_ALLOCATION_COUNT) {
             // use the heap allocator
-            return (PerRenderableUib*)mBufferPoolAllocator.get(count * sizeof(PerRenderableUib));
+            return (PerRenderableData*)mBufferPoolAllocator.get(count * sizeof(PerRenderableData));
         } else {
             // allocate space into the command stream directly
-            return driver.allocatePod<PerRenderableUib>(count);
+            return driver.allocatePod<PerRenderableData>(count);
         }
     }();
 
     // copy our data into the UBO for each visible renderable
     PerRenderableData const* const uboData = mRenderableData.data<UBO>();
     for (uint32_t i : visibleRenderables) {
-        buffer[i].data = uboData[i];
+        buffer[i] = uboData[i];
     }
 
     // update the UBO
     driver.updateBufferObject(renderableUbh, {
-            buffer, count * sizeof(PerRenderableUib),
+            buffer, count * sizeof(PerRenderableData),
             +[](void* p, size_t s, void* user) {
-                if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableUib)) {
+                if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
                     FScene* const that = static_cast<FScene*>(user);
                     that->mBufferPoolAllocator.put(p);
                 }

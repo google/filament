@@ -5,10 +5,17 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
+- gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
+- gltfio: Fix morphing with sparse accessors.
+- engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
+- picking is now exposed to JavaScript
+- gltf_viewer: Exercise picking functionality.
+
 ## v1.23.2
 
 - gltfio: fix morphing for un-packed accessors
-- gltfio: ubershaders are now packaged into flexible archives [⚠️ **API Change**]
+- gltfio: ubershaders are now packaged into flexible archives
 - gltfio: namespace now lives under Filament [⚠️ **API Change**]
 - gltfio: UbershaderLoader renamed to UbershaderProvider [⚠️ **API Change**]
 - gltfio: MaterialGenerator renamed to JitShaderProvider [⚠️ **API Change**]

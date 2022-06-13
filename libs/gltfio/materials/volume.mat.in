@@ -104,7 +104,7 @@ fragment {
         material.metallic = materialParams.metallicFactor;
         material.transmission = materialParams.transmissionFactor;
         material.absorption = materialParams.volumeAbsorption;
-        material.thickness = materialParams.volumeThicknessFactor * objectUniforms.userData;
+        material.thickness = materialParams.volumeThicknessFactor * getObjectUniforms().userData;
         material.ior = materialParams.ior;
 
         material.emissive = vec4(materialParams.emissiveStrength *

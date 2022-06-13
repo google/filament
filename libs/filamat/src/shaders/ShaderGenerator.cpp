@@ -395,6 +395,8 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
             filament::Variant::isSSRVariant(variant));
 
     // material defines
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_INSTANCES", material.instanced);
+
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY",
             material.hasDoubleSidedCapability);
     switch (material.blendingMode) {

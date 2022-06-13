@@ -75,6 +75,7 @@ public:
     bool getTransparencyMode(TransparencyMode* value) const noexcept;
     bool getColorWrite(bool* value) const noexcept;
     bool getDepthTest(bool* value) const noexcept;
+    bool getInstanced(bool* value) const noexcept;
     bool getInterpolation(Interpolation* value) const noexcept;
     bool getVertexDomain(VertexDomain* value) const noexcept;
     bool getMaterialDomain(MaterialDomain* domain) const noexcept;

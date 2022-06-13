@@ -181,6 +181,10 @@ bool MaterialParser::getDepthTest(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthTest, value);
 }
 
+bool MaterialParser::getInstanced(bool* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialInstanced, value);
+}
+
 bool MaterialParser::getCullingMode(CullingMode* value) const noexcept {
     static_assert(sizeof(CullingMode) == sizeof(uint8_t),
             "CullingMode expected size is wrong");
@@ -325,7 +329,9 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
-        builder.add(fieldName, fieldSize, UniformInterfaceBlock::Type(fieldType),
+        // a size of 1 means not an array
+        builder.add(fieldName, fieldSize == 1 ? 0 : fieldSize,
+                UniformInterfaceBlock::Type(fieldType),
                 UniformInterfaceBlock::Precision(fieldPrecision));
     }
 

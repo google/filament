@@ -47,7 +47,7 @@ void main() {
     // enable for full EVSM (needed for large blurs). RGBA16F needed.
     //fragColor.zw = computeDepthMomentsVSM(-1.0/depth);
 #elif defined(VARIANT_HAS_PICKING)
-    outPicking.x = objectUniforms.objectId;
+    outPicking.x = getObjectUniforms().objectId;
     outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
 #else
     // that's it
