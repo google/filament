@@ -53,7 +53,7 @@
         #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
             #include "vulkan/PlatformVkLinuxX11.h"
         #endif
-    #elif defined(FILAMENT_SUPPORTS_EGL)
+    #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
         #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
             #include "opengl/platforms/PlatformEGLOpenGL.h"
         #endif
@@ -161,7 +161,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
         #elif defined(__linux__)
             #if defined(FILAMENT_SUPPORTS_X11)
                 return new PlatformGLX();
-            #elif defined(FILAMENT_SUPPORTS_EGL)
+            #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
                 return new PlatformEGLOpenGL();
             #endif
         #elif defined(WIN32)

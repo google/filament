@@ -18,7 +18,7 @@
 #include <dlfcn.h>
 #include <string.h>
 
-#ifdef FILAMENT_SUPPORTS_EGL
+#ifdef FILAMENT_SUPPORTS_EGL_ON_LINUX
 #include <EGL/egl.h>
 #endif
 
@@ -30,7 +30,7 @@ struct Driver {
 } g_driver = {nullptr, nullptr};
 
 bool initBinder() {
-#ifdef FILAMENT_SUPPORTS_EGL
+#ifdef FILAMENT_SUPPORTS_EGL_ON_LINUX
     return true;
 #endif
     const char* library_name = "libGL.so.1";
@@ -47,7 +47,7 @@ bool initBinder() {
 }
 
 void* loadFunction(const char* name) {
-#ifdef FILAMENT_SUPPORTS_EGL
+#ifdef FILAMENT_SUPPORTS_EGL_ON_LINUX
   return (void *)eglGetProcAddress(name);
 #else
   return (void*) g_driver.glXGetProcAddress((const GLubyte*) name);
@@ -55,7 +55,7 @@ void* loadFunction(const char* name) {
 }
 
 void shutdownBinder() {
-#ifdef FILAMENT_SUPPORTS_EGL
+#ifdef FILAMENT_SUPPORTS_EGL_ON_LINUX
     return;
 #endif
     dlclose(g_driver.library);
