@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_OPENGL_H
-#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_OPENGL_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_HEADLESS_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_HEADLESS_H
 
 #include "PlatformEGL.h"
 
 namespace filament {
 
-class PlatformEGLOpenGL final : public PlatformEGL {
+class PlatformEGLHeadless final : public PlatformEGL {
 public:
 
-    PlatformEGLOpenGL() noexcept;
+    PlatformEGLHeadless() noexcept;
 
     backend::Driver* createDriver(void* sharedContext) noexcept final;
 
@@ -46,4 +46,4 @@ public:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_OPENGL_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_HEADLESS_H

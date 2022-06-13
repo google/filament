@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "PlatformEGLOpenGL.h"
+#include "PlatformEGLHeadless.h"
 
 #include "opengl/OpenGLDriver.h"
 #include "opengl/OpenGLContext.h"
@@ -43,11 +43,11 @@ using namespace glext;
 
 // ---------------------------------------------------------------------------------------------
 
-PlatformEGLOpenGL::PlatformEGLOpenGL() noexcept
+PlatformEGLHeadless::PlatformEGLHeadless() noexcept
         : PlatformEGL() {
 }
 
-backend::Driver* PlatformEGLOpenGL::createDriver(void* sharedContext) noexcept {
+backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext) noexcept {
     EGLBoolean bindAPI = eglBindAPI(EGL_OPENGL_API);
     if (UTILS_UNLIKELY(!bindAPI)) {
         slog.e << "eglBindAPI EGL_OPENGL_API failed" << io::endl;
