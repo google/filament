@@ -2601,7 +2601,15 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         PixelBufferDescriptor& p = *pUserBuffer;
         auto& gl = mContext;
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-        void* vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,  p.size, GL_MAP_READ_BIT);
+        void* vaddr = nullptr;
+        std::unique_ptr<uint8_t> clientBuffer;
+#if defined(__EMSCRIPTEN__)
+        clientBuffer.reset(new uint8_t(p.size));
+        glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, p.size, clientBuffer.get());
+        vaddr = clientBuffer.get();
+#else
+        vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,  p.size, GL_MAP_READ_BIT);
+#endif
         if (vaddr) {
             // now we need to flip the buffer vertically to match our API
             size_t stride = p.stride ? p.stride : width;
@@ -2616,7 +2624,9 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
                 head += bpr;
                 tail -= bpr;
             }
+#if !defined(__EMSCRIPTEN__)
             glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+#endif
         }
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
         glDeleteBuffers(1, &pbo);
