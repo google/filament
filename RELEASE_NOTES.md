@@ -7,14 +7,14 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.23.2
 
-- gltfio: fix morphing for un-packed accessors
-- gltfio: ubershaders are now packaged into flexible archives
-- gltfio: remove poorly maintained lite flavor
-- engine: disable user scissor while rendering the Shadow Maps (#5607)
-- engine: merge identical backend RenderPrimitives together
-- engine: improve ResourceAllocator performance a bit by reserving 128 cache entries
-- utils: remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
-- backend: fix WGL context attributes
+- gltfio: Fix morphing for un-packed accessors.
+- gltfio: Ubershaders are now packaged into flexible archives.
+- gltfio: Remove poorly maintained lite flavor.
+- engine: Disable user scissor while rendering the Shadow Maps.
+- engine: Merge identical backend `RenderPrimitives` together.
+- engine: Improve `ResourceAllocator` performance a bit by reserving 128 cache entries.
+- utils: Remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
+- backend: Fix WGL context attributes.
 - Metal: Fix potential invalid shaders when using gltfio in Ubershader mode. [⚠️ **Recompile Materials to get the fix**]
 
 ## v1.23.1
