@@ -278,7 +278,7 @@ static_assert(sizeof(FroxelRecordUib) == 16384,
 // MARK: -
 
 // This is not the UBO proper, but just an element of a bone array.
-struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
+struct PerRenderableBoneUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "BonesUniforms" };
     struct alignas(16) BoneData {
         // bone transform, last row assumed [0,0,0,1]
@@ -286,9 +286,9 @@ struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
         // 8 first cofactor matrix of transform's upper left
         math::uint4 cof;
     };
-    BoneData bone;
+    BoneData bones[CONFIG_MAX_BONE_COUNT];
 };
-static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
+static_assert(sizeof(PerRenderableBoneUib) <= 16384,
         "PerRenderableUibBone exceed max UBO size");
 
 // ------------------------------------------------------------------------------------------------

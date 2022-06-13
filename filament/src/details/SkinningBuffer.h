@@ -18,10 +18,10 @@
 #define TNT_FILAMENT_DETAILS_SKINNINGBUFFER_H
 
 #include "upcast.h"
-
 #include <filament/SkinningBuffer.h>
 
 #include "private/filament/EngineEnums.h"
+#include "private/filament/UibStructs.h"
 
 #include <backend/Handle.h>
 
@@ -31,8 +31,6 @@
 class FilamentTest_Bones_Test;
 
 namespace filament {
-
-struct PerRenderableUibBone;
 
 class FEngine;
 class FRenderableManager;
@@ -48,7 +46,9 @@ public:
     void setBones(FEngine& engine, math::mat4f const* transforms, size_t count, size_t offset);
     size_t getBoneCount() const noexcept { return mBoneCount; }
 
+    // round count to the size of the UBO in the shader
     static size_t getPhysicalBoneCount(size_t count) noexcept {
+        static_assert((CONFIG_MAX_BONE_COUNT & (CONFIG_MAX_BONE_COUNT - 1)) == 0);
         return (count + CONFIG_MAX_BONE_COUNT - 1) & ~(CONFIG_MAX_BONE_COUNT - 1);
     }
 
@@ -63,7 +63,7 @@ private:
     static void setBones(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
             math::mat4f const* transforms, size_t boneCount, size_t offset) noexcept;
 
-    static PerRenderableUibBone makeBone(math::mat4f transform) noexcept;
+    static PerRenderableBoneUib::BoneData makeBone(math::mat4f transform) noexcept;
 
     backend::Handle<backend::HwBufferObject> getHwHandle() const noexcept {
         return mHandle;

@@ -642,11 +642,11 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
                     uboHandle, offset, sizeof(PerRenderableUib));
 
             if (UTILS_UNLIKELY(info.skinningHandle)) {
-                // note: we can't bind less than CONFIG_MAX_BONE_COUNT due to glsl limitations
+                // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
                 driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE_BONES,
                         info.skinningHandle,
-                        info.skinningOffset * sizeof(PerRenderableUibBone),
-                        CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
+                        info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
+                        sizeof(PerRenderableBoneUib));
                 // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
                 driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
