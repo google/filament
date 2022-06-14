@@ -1,7 +1,7 @@
 /**
  * cgltf_write - a single-file glTF 2.0 writer written in C99.
  *
- * Version: 1.11
+ * Version: 1.12
  *
  * Website: https://github.com/jkuhlmann/cgltf
  *
@@ -85,6 +85,8 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 #define CGLTF_EXTENSION_FLAG_MATERIALS_VOLUME       (1 << 11)
 #define CGLTF_EXTENSION_FLAG_TEXTURE_BASISU        (1 << 12)
 #define CGLTF_EXTENSION_FLAG_MATERIALS_EMISSIVE_STRENGTH (1 << 13)
+#define CGLTF_EXTENSION_FLAG_MESH_GPU_INSTANCING (1 << 14)
+#define CGLTF_EXTENSION_FLAG_MATERIALS_IRIDESCENCE (1 << 15)
 
 typedef struct {
 	char* buffer;
@@ -509,6 +511,7 @@ static void cgltf_write_mesh(cgltf_write_context* context, const cgltf_mesh* mes
 	{
 		cgltf_write_floatarrayprop(context, "weights", mesh->weights, mesh->weights_count);
 	}
+
 	cgltf_write_extras(context, &mesh->extras);
 	cgltf_write_line(context, "}");
 }
@@ -545,7 +548,7 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 	{
 		cgltf_write_floatprop(context, "alphaCutoff", material->alpha_cutoff, 0.5f);
 	}
-	cgltf_write_boolprop_optional(context, "doubleSided", material->double_sided, false);
+	cgltf_write_boolprop_optional(context, "doubleSided", (bool)material->double_sided, false);
 	// cgltf_write_boolprop_optional(context, "unlit", material->unlit, false);
 
 	if (material->unlit)
@@ -593,6 +596,11 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 		context->extension_flags |= CGLTF_EXTENSION_FLAG_MATERIALS_EMISSIVE_STRENGTH;
 	}
 
+	if (material->has_iridescence)
+	{
+		context->extension_flags |= CGLTF_EXTENSION_FLAG_MATERIALS_IRIDESCENCE;
+	}
+
 	if (material->has_pbr_metallic_roughness)
 	{
 		const cgltf_pbr_metallic_roughness* params = &material->pbr_metallic_roughness;
@@ -609,7 +617,7 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 		cgltf_write_line(context, "}");
 	}
 
-	if (material->unlit || material->has_pbr_specular_glossiness || material->has_clearcoat || material->has_ior || material->has_specular || material->has_transmission || material->has_sheen || material->has_volume || material->has_emissive_strength)
+	if (material->unlit || material->has_pbr_specular_glossiness || material->has_clearcoat || material->has_ior || material->has_specular || material->has_transmission || material->has_sheen || material->has_volume || material->has_emissive_strength || material->has_iridescence)
 	{
 		cgltf_write_line(context, "\"extensions\": {");
 		if (material->has_clearcoat)
@@ -708,6 +716,18 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 			cgltf_write_floatprop(context, "emissiveStrength", params->emissive_strength, 1.f);
 			cgltf_write_line(context, "}");
 		}
+		if (material->has_iridescence)
+		{
+			cgltf_write_line(context, "\"KHR_materials_iridescence\": {");
+			const cgltf_iridescence* params = &material->iridescence;
+			cgltf_write_floatprop(context, "iridescenceFactor", params->iridescence_factor, 0.f);
+			CGLTF_WRITE_TEXTURE_INFO("iridescenceTexture", params->iridescence_texture);
+			cgltf_write_floatprop(context, "iridescenceIor", params->iridescence_ior, 1.3f);
+			cgltf_write_floatprop(context, "iridescenceThicknessMinimum", params->iridescence_thickness_min, 100.f);
+			cgltf_write_floatprop(context, "iridescenceThicknessMaximum", params->iridescence_thickness_max, 400.f);
+			CGLTF_WRITE_TEXTURE_INFO("iridescenceThicknessTexture", params->iridescence_thickness_texture);
+			cgltf_write_line(context, "}");
+		}
 		cgltf_write_line(context, "}");
 	}
 
@@ -779,7 +799,7 @@ static const char* cgltf_write_str_path_type(cgltf_animation_path_type path_type
 		return "scale";
 	case cgltf_animation_path_type_weights:
 		return "weights";
-	case cgltf_animation_path_type_invalid:
+	default:
 		break;
 	}
 	return "invalid";
@@ -795,6 +815,8 @@ static const char* cgltf_write_str_interpolation_type(cgltf_interpolation_type i
 		return "STEP";
 	case cgltf_interpolation_type_cubic_spline:
 		return "CUBICSPLINE";
+	default:
+		break;
 	}
 	return "invalid";
 }
@@ -897,15 +919,41 @@ static void cgltf_write_node(cgltf_write_context* context, const cgltf_node* nod
 		CGLTF_WRITE_IDXPROP("skin", node->skin, context->data->skins);
 	}
 
+	bool has_extension = node->light || (node->has_mesh_gpu_instancing && node->mesh_gpu_instancing.attributes_count > 0);
+	if(has_extension)
+		cgltf_write_line(context, "\"extensions\": {");
+
 	if (node->light)
 	{
 		context->extension_flags |= CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL;
-		cgltf_write_line(context, "\"extensions\": {");
 		cgltf_write_line(context, "\"KHR_lights_punctual\": {");
 		CGLTF_WRITE_IDXPROP("light", node->light, context->data->lights);
 		cgltf_write_line(context, "}");
+	}
+
+	if (node->has_mesh_gpu_instancing && node->mesh_gpu_instancing.attributes_count > 0)
+	{
+		context->extension_flags |= CGLTF_EXTENSION_FLAG_MESH_GPU_INSTANCING;
+		context->required_extension_flags |= CGLTF_EXTENSION_FLAG_MESH_GPU_INSTANCING;
+
+		cgltf_write_line(context, "\"EXT_mesh_gpu_instancing\": {");
+		{
+			CGLTF_WRITE_IDXPROP("bufferView", node->mesh_gpu_instancing.buffer_view, context->data->buffer_views);
+			cgltf_write_line(context, "\"attributes\": {");
+			{
+				for (cgltf_size i = 0; i < node->mesh_gpu_instancing.attributes_count; ++i)
+				{
+					const cgltf_attribute* attr = node->mesh_gpu_instancing.attributes + i;
+					CGLTF_WRITE_IDXPROP(attr->name, attr->data, context->data->accessors);
+				}
+			}
+			cgltf_write_line(context, "}");
+		}
 		cgltf_write_line(context, "}");
 	}
+
+	if (has_extension)
+		cgltf_write_line(context, "}");
 
 	if (node->weights_count > 0)
 	{
@@ -938,7 +986,7 @@ static void cgltf_write_accessor(cgltf_write_context* context, const cgltf_acces
 	cgltf_write_intprop(context, "componentType", cgltf_int_from_component_type(accessor->component_type), 0);
 	cgltf_write_strprop(context, "type", cgltf_str_from_type(accessor->type));
 	cgltf_size dim = cgltf_dim_from_type(accessor->type);
-	cgltf_write_boolprop_optional(context, "normalized", accessor->normalized, false);
+	cgltf_write_boolprop_optional(context, "normalized", (bool)accessor->normalized, false);
 	cgltf_write_sizeprop(context, "byteOffset", (int)accessor->offset, 0);
 	cgltf_write_intprop(context, "count", (int)accessor->count, -1);
 	if (accessor->has_min)
@@ -1112,6 +1160,12 @@ static void cgltf_write_extensions(cgltf_write_context* context, uint32_t extens
 	}
 	if (extension_flags & CGLTF_EXTENSION_FLAG_MATERIALS_EMISSIVE_STRENGTH) {
 		cgltf_write_stritem(context, "KHR_materials_emissive_strength");
+	}
+	if (extension_flags & CGLTF_EXTENSION_FLAG_MATERIALS_IRIDESCENCE) {
+		cgltf_write_stritem(context, "KHR_materials_iridescence");
+	}
+	if (extension_flags & CGLTF_EXTENSION_FLAG_MESH_GPU_INSTANCING) {
+		cgltf_write_stritem(context, "EXT_mesh_gpu_instancing");
 	}
 }
 
