@@ -7,6 +7,12 @@
  */
 
 void main() {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    instance_index = gl_InstanceIndex;
+#else
+    instance_index = gl_InstanceID;
+#endif
+
     // Initialize the inputs to sensible default values, see material_inputs.vs
 #if defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 
@@ -177,12 +183,6 @@ void main() {
     depth = frameUniforms.vsmExponent * (depth * 2.0 - 1.0);
 
     vertex_worldPosition.w = depth;
-#endif
-
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    instance_index = gl_InstanceIndex;
-#else
-    instance_index = gl_InstanceID;
 #endif
 
     // this must happen before we compensate for vulkan below
