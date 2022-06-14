@@ -832,7 +832,7 @@ struct RasterState {
     using StencilOperation = backend::StencilOperation;
 
     RasterState() noexcept { // NOLINT
-        static_assert(sizeof(RasterState) == sizeof(uint64_t),
+        static_assert(sizeof(RasterState) == 2 * sizeof(uint64_t),
                 "RasterState size not what was intended");
         culling = CullingMode::BACK;
         blendEquationRGB = BlendEquation::ADD;
@@ -841,14 +841,21 @@ struct RasterState {
         blendFunctionSrcAlpha = BlendFunction::ONE;
         blendFunctionDstRGB = BlendFunction::ZERO;
         blendFunctionDstAlpha = BlendFunction::ZERO;
-        stencilFunc = StencilFunction::A;
-        stencilOpStencilFail = StencilOperation::KEEP;
-        stencilOpDepthFail = StencilOperation::KEEP;
-        stencilOpDepthStencilPass = StencilOperation::KEEP;
+
+        stencilFrontFunc = StencilFunction::A;
+        stencilOpStencilFrontFail = StencilOperation::KEEP;
+        stencilOpDepthFrontFail = StencilOperation::KEEP;
+        stencilOpDepthStencilFrontPass = StencilOperation::KEEP;
+        stencilBackFunc = StencilFunction::A;
+        stencilOpStencilBackFail = StencilOperation::KEEP;
+        stencilOpDepthBackFail = StencilOperation::KEEP;
+        stencilOpDepthStencilBackPass = StencilOperation::KEEP;
+        stencilWriteMask = 0xFF;
+        stencilReadMask = 0xFF;
     }
 
-    bool operator == (RasterState rhs) const noexcept { return u == rhs.u; }
-    bool operator != (RasterState rhs) const noexcept { return u != rhs.u; }
+    bool operator == (RasterState rhs) const noexcept { return u == rhs.u && v == rhs.v; }
+    bool operator != (RasterState rhs) const noexcept { return u != rhs.u && v != rhs.v; }
 
     void disableBlending() noexcept {
         blendEquationRGB = BlendEquation::ADD;
@@ -868,6 +875,12 @@ struct RasterState {
                  blendFunctionSrcAlpha == BlendFunction::ONE &&
                  blendFunctionDstRGB == BlendFunction::ZERO &&
                  blendFunctionDstAlpha == BlendFunction::ZERO);
+    }
+
+    bool hasStencil() const noexcept {
+        return !(stencilFrontFunc == RasterState::StencilFunction::A &&
+                stencilBackFunc == RasterState::StencilFunction::A &&
+                !stencilWrite);
     }
 
     union {
@@ -904,25 +917,35 @@ struct RasterState {
             bool inverseFrontFaces                      : 1;        // 31
 
             //! Whether stencil-buffer writes are enabled
-            bool stencilWrite                           : 1;        // 32
+            bool stencilWrite                                   : 1;        // 32
+            uint8_t stencilWriteMask                            : 8;        // 40
+            uint8_t stencilReadMask                             : 8;        // 48
             //! Stencil reference value
-            uint8_t stencilRef                          : 8;        // 40
+            uint8_t stencilRef                                  : 8;        // 56
             //! Stencil test function
-            StencilFunction stencilFunc                 : 3;        // 43
+            StencilFunction stencilFrontFunc                    : 3;        // 59
             //! Stencil operation when stencil test fails
-            StencilOperation stencilOpStencilFail       : 3;        // 46
-            //! padding, must be 0
-            uint8_t padding0                            : 2;        // 48
+            StencilOperation stencilOpStencilFrontFail          : 3;        // 62
+
+
             //! Stencil operation when stencil test passes but depth test fails
-            StencilOperation stencilOpDepthFail         : 3;        // 51
+            StencilOperation stencilOpDepthFrontFail            : 3;        // 65
             //! Stencil operation when both stencil and depth test pass
-            StencilOperation stencilOpDepthStencilPass  : 3;        // 54
-            //! padding, must be 0
-            uint8_t padding1                            : 2;        // 56
-            //! padding, must be 0
-            uint8_t padding2                            : 8;        // 64
+            StencilOperation stencilOpDepthStencilFrontPass     : 3;        // 68
+            StencilFunction stencilBackFunc                     : 3;        // 71
+            //! Stencil operation when stencil test fails
+            StencilOperation stencilOpStencilBackFail           : 3;        // 74
+            //! Stencil operation when stencil test passes but depth test fails
+            StencilOperation stencilOpDepthBackFail             : 3;        // 77
+            //! Stencil operation when both stencil and depth test pass
+            StencilOperation stencilOpDepthStencilBackPass      : 3;        // 80
+            // Note: There are lots of unused bits here, but we need to keep the size to be 2 * sizeof(uint64_t)
         };
-        uint64_t u = 0;
+        struct {
+            uint64_t u = 0;
+            uint64_t v = 0;
+        };
+
     };
 };
 
