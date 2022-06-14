@@ -19,6 +19,8 @@
 
 #include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
 
+#pragma clang diagnostic ignored "-Wc++98-compat-extra-semi"
+
 #include "vk_mem_alloc.h"
 
 #endif // TNT_FILAMENT_BACKEND_VULKANMEMORY_H
