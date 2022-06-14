@@ -14,6 +14,7 @@ A new header is inserted each time a *tag* is created.
 - gltf_viewer: Exercise picking functionality.
 - OpenGL: add WebGL support for ReadPixels
 - Vulkan: add assert and error message for OOM (debug builds)
+- Vulkan: fix crash with picking and 2-component ReadPixels.
 
 ## v1.23.2
 
