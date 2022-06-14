@@ -1076,12 +1076,17 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     rt->gl.samples = samples;
     rt->targets = targets;
 
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<uint32_t>::max()};
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
+
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
         GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
         const size_t maxDrawBuffers = getMaxDrawBuffers();
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
-                rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
+                auto t = rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
+                tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+                tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
@@ -1094,7 +1099,9 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     bool specialCased = false;
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
         assert_invariant(!stencil.handle || stencil.handle == depth.handle);
-        rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+        auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+        tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+        tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
         if (any(rt->gl.depth->usage & TextureUsage::SAMPLEABLE) ||
             (!depth.handle && !stencil.handle)) {
             // special case: depth & stencil requested, and both provided as the same texture
@@ -1106,14 +1113,22 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     if (!specialCased) {
         if (any(targets & TargetBufferFlags::DEPTH)) {
-            rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+            auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+            tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+            tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
             framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
-            rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
+            auto t = rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
+            tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+            tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
             framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
         }
     }
+
+    // Verify that all attachments have the same dimensions.
+    assert_invariant(any(targets & TargetBufferFlags::ALL));
+    assert_invariant(tmin == tmax);
 
     CHECK_GL_ERROR(utils::slog.e)
 }
