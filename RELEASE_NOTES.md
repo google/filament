@@ -13,6 +13,7 @@ A new header is inserted each time a *tag* is created.
 - picking is now exposed to JavaScript
 - gltf_viewer: Exercise picking functionality.
 - OpenGL: add WebGL support for ReadPixels
+- Vulkan: add assert and error message for OOM (debug builds)
 
 ## v1.23.2
 
