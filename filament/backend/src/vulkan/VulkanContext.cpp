@@ -116,20 +116,15 @@ void VulkanContext::selectPhysicalDevice() {
         for (uint32_t k = 0; k < extensionCount; ++k) {
             if (!strcmp(extensions[k].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
                 supportsSwapchain = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
                 debugMarkersSupported = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
                 portabilitySubsetSupported = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
                 maintenanceSupported[0] = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME)) {
                 maintenanceSupported[1] = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME)) {
                 maintenanceSupported[2] = true;
             }
         }
@@ -240,8 +235,7 @@ void VulkanContext::createLogicalDevice() {
         deviceCreateInfo.pNext = &portability;
     }
 
-    VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC,
-            &device);
+    VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error.");
     vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0,
             &graphicsQueue);
