@@ -539,6 +539,10 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
         MRT color, TargetBufferInfo depth, TargetBufferInfo stencil) {
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<uint32_t>::max()};
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
+    UTILS_UNUSED_IN_RELEASE size_t attachmentCount = 0;
+
     VulkanAttachment colorTargets[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (color[i].handle) {
@@ -548,7 +552,9 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 .layer = color[i].layer,
             };
             UTILS_UNUSED_IN_RELEASE VkExtent2D extent = colorTargets[i].getExtent2D();
-            assert_invariant(extent.width >= width && extent.height >= height);
+            tmin = { std::min(tmin.x, extent.width), std::min(tmin.y, extent.height) };
+            tmax = { std::max(tmax.x, extent.width), std::max(tmax.y, extent.height) };
+            attachmentCount++;
         }
     }
 
@@ -560,7 +566,9 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             .layer = depth.layer,
         };
         UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[0].getExtent2D();
-        assert_invariant(extent.width >= width && extent.height >= height);
+        tmin = { std::min(tmin.x, extent.width), std::min(tmin.y, extent.height) };
+        tmax = { std::max(tmax.x, extent.width), std::max(tmax.y, extent.height) };
+        attachmentCount++;
     }
 
     if (stencil.handle) {
@@ -570,8 +578,16 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             .layer = stencil.layer,
         };
         UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[1].getExtent2D();
-        assert_invariant(extent.width >= width && extent.height >= height);
+        tmin = { std::min(tmin.x, extent.width), std::min(tmin.y, extent.height) };
+        tmax = { std::max(tmax.x, extent.width), std::max(tmax.y, extent.height) };
+        attachmentCount++;
     }
+
+    // All attachments must have the same dimensions, which must be greater than or equal to the
+    // render target dimensions.
+    assert_invariant(attachmentCount > 0);
+    assert_invariant(tmin == tmax);
+    assert_invariant(tmin.x >= width && tmin.y >= height);
 
     auto renderTarget = construct<VulkanRenderTarget>(rth, mContext,
             width, height, samples, colorTargets, depthStencil, mStagePool);
@@ -1623,8 +1639,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
     srcPixels += subResourceLayout.offset;
 
-    if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), srcPixels,
-            subResourceLayout.rowPitch, width, height, swizzle, false)) {
+    if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), getComponentCount(srcFormat),
+                srcPixels, subResourceLayout.rowPitch, width, height, swizzle)) {
         utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
     }
 

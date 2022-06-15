@@ -45,6 +45,7 @@ VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
+uint32_t getComponentCount(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
 VkImageViewType getImageViewType(SamplerType target);
 VkImageLayout getDefaultImageLayout(TextureUsage usage);
