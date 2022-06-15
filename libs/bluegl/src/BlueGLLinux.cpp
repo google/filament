@@ -40,7 +40,7 @@ bool initBinder() {
 }
 
 void* loadFunction(const char* name) {
-  return (void*) g_driver.glXGetProcAddress((const GLubyte*) name);
+    return (void*) g_driver.glXGetProcAddress((const GLubyte*) name);
 }
 
 void shutdownBinder() {
