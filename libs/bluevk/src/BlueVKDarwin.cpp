@@ -15,41 +15,31 @@
  * limitations under the License.
  */
 
-#include <utils/Path.h>
+#include <utils/Panic.h>
 
 #include <dlfcn.h>
 
-using utils::Path;
-
 namespace bluevk {
-
-#ifdef IOS
-static const char* VKLIBRARY_PATH = "Frameworks/libMoltenVK.dylib";
-#else
-static const char* VKLIBRARY_PATH = "libvulkan.1.dylib";
-#endif
 
 static void* module = nullptr;
 
 bool loadLibrary() {
 
 #ifndef FILAMENT_VKLIBRARY_PATH
-    const Path dylibPath = VKLIBRARY_PATH;
-
-    // Provide a value for VK_ICD_FILENAMES only if it has not already been set.
-    const char* icd = getenv("VK_ICD_FILENAMES");
-    if (icd == nullptr) {
-        const Path jsonPath = "/usr/local/share/vulkan/icd.d/MoltenVK_icd.json";
-        setenv("VK_ICD_FILENAMES", jsonPath.c_str(), 1);
-    }
+#ifdef IOS
+    const char* dylibPath = "Frameworks/libMoltenVK.dylib";
+#else
+    const char* dylibPath = "libvulkan.1.dylib";
+#endif
 #else
     const Path dylibPath = FILAMENT_VKLIBRARY_PATH;
 #endif
 
-    module = dlopen(dylibPath.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (module == nullptr) {
-        printf("%s\n", dlerror());
-    }
+    module = dlopen(dylibPath, RTLD_NOW | RTLD_LOCAL);
+    ASSERT_POSTCONDITION(module != nullptr,
+            "BlueVK is unable to load entry points: %s.\n"
+            "Install the LunarG SDK with 'System Global Installation' and reboot.\n",
+            dlerror());
     return module != nullptr;
 }
 
