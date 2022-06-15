@@ -35,6 +35,8 @@ public:
 private:
     ShaderModel getShaderModel() const noexcept final;
 
+    uint64_t nextFakeHandle = 1;
+
     /*
      * Driver interface
      */
@@ -50,7 +52,7 @@ private:
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
     RetType methodName##S() noexcept override { \
-        return RetType((RetType::HandleId)0xDEAD0000); } \
+        return RetType((RetType::HandleId)nextFakeHandle++); } \
     UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl) { }
 
 #include "private/backend/DriverAPI.inc"
