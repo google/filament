@@ -2,7 +2,8 @@
 
 ## Debugging Vulkan on macOS
 
-See "Enabling Validation" in `third_party/moltenvk/README.md`.
+Install the LunarG SDK and allow the installer to include "System Global Components", which should
+be enabled by default.
 
 ## Debugging Vulkan on Linux
 

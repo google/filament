@@ -276,7 +276,10 @@ public:
     ~RenderPass() noexcept;
 
     // if non-null, overrides the material's polygon offset
-    void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
+    void overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept;
+
+    // if non-null, overrides the material's scissor
+    void overrideScissor(backend::Viewport const* scissor) noexcept;
 
     // specifies the geometry to generate commands for
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
@@ -330,7 +333,9 @@ public:
         const CustomCommandVector mCustomCommands;
         const backend::Handle<backend::HwBufferObject> mUboHandle;
         const backend::PolygonOffset mPolygonOffset;
-        const bool mPolygonOffsetOverride;
+        const backend::Viewport mScissor;
+        const bool mPolygonOffsetOverride : 1;
+        const bool mScissorOverride : 1;
 
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
 
@@ -430,8 +435,14 @@ private:
     // whether to override the polygon offset setting
     bool mPolygonOffsetOverride = false;
 
+    // whether to override the polygon offset setting
+    bool mScissorOverride = false;
+
     // value of the override
     backend::PolygonOffset mPolygonOffset{};
+
+    // value of scissor override
+    backend::Viewport mScissor{};
 
     // a vector for our custom commands
     mutable Executor::CustomCommandVector mCustomCommands;

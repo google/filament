@@ -138,7 +138,7 @@
 				};
 			};
 			buildConfigurationList = C7514DDCFDA3C5F803E239F9 /* Build configuration list for PBXProject "hello-gltf" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 10.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -330,6 +330,8 @@
 					"-ldracodec",
 					"-lktxreader",
 					"-lstb",
+					"-lzstd",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-gltf";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -380,6 +382,8 @@
 					"-ldracodec",
 					"-lktxreader",
 					"-lstb",
+					"-lzstd",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-gltf";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -602,6 +606,8 @@
 					"-ldracodec",
 					"-lktxreader",
 					"-lstb",
+					"-lzstd",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-gltf";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -652,6 +658,8 @@
 					"-ldracodec",
 					"-lktxreader",
 					"-lstb",
+					"-lzstd",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-gltf";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";

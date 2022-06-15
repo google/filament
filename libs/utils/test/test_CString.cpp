@@ -36,7 +36,7 @@ TEST(StaticString, hash) {
     EXPECT_NE(a.getHash(), c.getHash());
     EXPECT_NE(b.getHash(), c.getHash());
 
-    std::hash<StaticString> ha;
+    StaticString::Hasher ha;
     EXPECT_EQ(ha(a), a.getHash());
 }
 

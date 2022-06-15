@@ -5,6 +5,18 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.23.2
+
+- gltfio: Fix morphing for un-packed accessors.
+- gltfio: Ubershaders are now packaged into flexible archives.
+- gltfio: Remove poorly maintained lite flavor.
+- engine: Disable user scissor while rendering the Shadow Maps.
+- engine: Merge identical backend `RenderPrimitives` together.
+- engine: Improve `ResourceAllocator` performance a bit by reserving 128 cache entries.
+- utils: Remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
+- backend: Fix WGL context attributes.
+- Metal: Fix potential invalid shaders when using gltfio in Ubershader mode. [⚠️ **Recompile Materials to get the fix**]
+
 ## v1.23.1
 
 - gltfio: support skinning with bones that do not belong to any scene.

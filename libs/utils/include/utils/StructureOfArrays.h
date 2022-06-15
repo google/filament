@@ -19,7 +19,6 @@
 
 #include <array>        // note: this is safe, see how std::array is used below (inline / private)
 #include <cstddef>
-#include <functional>
 #include <utility>
 
 #include <stddef.h>

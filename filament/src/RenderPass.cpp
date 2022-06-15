@@ -81,9 +81,15 @@ void RenderPass::setCamera(const CameraInfo& camera) noexcept {
     mCameraForwardVector = camera.getForwardVector();
 }
 
-void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept {
+void RenderPass::overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept {
     if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
         mPolygonOffset = *polygonOffset;
+    }
+}
+
+void RenderPass::overrideScissor(backend::Viewport const* scissor) noexcept {
+    if ((mScissorOverride = (scissor != nullptr))) {
+        mScissor = *scissor;
     }
 }
 
@@ -580,10 +586,16 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
 
-        PolygonOffset dummyPolyOffset;
-        PipelineState pipeline{ .polygonOffset = mPolygonOffset };
-        PolygonOffset* const pPipelinePolygonOffset =
-                mPolygonOffsetOverride ? &dummyPolyOffset : &pipeline.polygonOffset;
+        PipelineState pipeline{
+                .polygonOffset = mPolygonOffset,
+                .scissor = mScissor
+        }, dummyPipeline;
+
+        auto* const pPipelinePolygonOffset =
+                mPolygonOffsetOverride ? &dummyPipeline.polygonOffset : &pipeline.polygonOffset;
+
+        auto* const pScissor =
+                mScissorOverride ? &dummyPipeline.scissor : &pipeline.scissor;
 
         Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
@@ -616,7 +628,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
                 // this is always taken the first time
                 mi = info.mi;
                 ma = mi->getMaterial();
-                pipeline.scissor = mi->getScissor();
+                *pScissor = mi->getScissor();
                 *pPipelinePolygonOffset = mi->getPolygonOffset();
                 mi->use(driver);
             }
@@ -657,7 +669,9 @@ RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command
         : mEngine(pass->mEngine), mBegin(b), mEnd(e),
           mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
           mPolygonOffset(pass->mPolygonOffset),
-          mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {
+          mScissor(pass->mScissor),
+          mPolygonOffsetOverride(pass->mPolygonOffsetOverride),
+          mScissorOverride(pass->mScissorOverride) {
     assert_invariant(b >= pass->begin());
     assert_invariant(e <= pass->end());
 }

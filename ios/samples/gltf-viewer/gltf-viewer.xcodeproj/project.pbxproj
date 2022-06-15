@@ -432,6 +432,7 @@
 					"-lviewer",
 					"-lcivetweb",
 					"-lktxreader",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -487,6 +488,7 @@
 					"-lviewer",
 					"-lcivetweb",
 					"-lktxreader",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -604,6 +606,7 @@
 					"-lviewer",
 					"-lcivetweb",
 					"-lktxreader",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -659,6 +662,7 @@
 					"-lviewer",
 					"-lcivetweb",
 					"-lktxreader",
+					"-luberzlib",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.gltf-viewer";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";

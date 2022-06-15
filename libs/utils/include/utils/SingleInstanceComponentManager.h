@@ -256,7 +256,7 @@ protected:
 
 private:
     // maps an entity to an instance index
-    tsl::robin_map<Entity, Instance> mInstanceMap;
+    tsl::robin_map<Entity, Instance, Entity::Hasher> mInstanceMap;
     default_random_engine mRng;
 };
 

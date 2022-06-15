@@ -120,7 +120,6 @@ cmake ..\.. ^
 @echo on
 cmake --build . --target filagui --config %config% || exit /b
 cmake --build . --target gltfio_resources --config %config% || exit /b
-cmake --build . --target gltfio_resources_lite --config %config% || exit /b
 cmake --build . --target gltf-resources --config %config% || exit /b
 cmake --build . --target filamentapp-resources --config %config% || exit /b
 cmake --build . --target sample-resources --config %config% || exit /b

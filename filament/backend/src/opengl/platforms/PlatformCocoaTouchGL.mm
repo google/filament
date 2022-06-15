@@ -42,6 +42,7 @@ using namespace backend;
 struct PlatformCocoaTouchGLImpl {
     EAGLContext* mGLContext = nullptr;
     CAEAGLLayer* mCurrentGlLayer = nullptr;
+    std::vector<CAEAGLLayer*> mHeadlessGlLayers;
     CGRect mCurrentGlLayerRect;
     GLuint mDefaultFramebuffer = 0;
     GLuint mDefaultColorbuffer = 0;
@@ -108,11 +109,28 @@ Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, u
 }
 
 Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
-    // TODO: implement headless SwapChain
-    return nullptr;
+    CAEAGLLayer* glLayer = [CAEAGLLayer layer];
+    glLayer.frame = CGRectMake(0, 0, width, height);
+
+    // adding the pointer to the array retains the CAEAGLLayer
+    pImpl->mHeadlessGlLayers.push_back(glLayer);
+  
+    return (__bridge SwapChain*) glLayer;
 }
 
 void PlatformCocoaTouchGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    CAEAGLLayer* glLayer = (__bridge CAEAGLLayer*) swapChain;
+
+    if (pImpl->mCurrentGlLayer == glLayer) {
+        pImpl->mCurrentGlLayer = nullptr;
+    }
+  
+    auto& v = pImpl->mHeadlessGlLayers;
+    auto it = std::find(v.begin(), v.end(), glLayer);
+    if(it != v.end()) {
+        // removing the pointer from the array releases the CAEAGLLayer
+        v.erase(it);
+    }
 }
 
 void PlatformCocoaTouchGL::createDefaultRenderTarget(uint32_t& framebuffer, uint32_t& colorbuffer,

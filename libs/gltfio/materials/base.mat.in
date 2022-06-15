@@ -1,5 +1,5 @@
 material {
-    name : ubershader_${SHADINGMODEL}_${BLENDING},
+    name : base_${SHADINGMODEL}_${BLENDING},
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
     blending : ${BLENDING},
@@ -63,7 +63,15 @@ material {
 
         // Reflectance
         { type : float, name : reflectance }
+
+        ${CUSTOM_PARAMS}
     ],
+}
+
+vertex {
+  void materialVertex(inout MaterialVertexInputs material) {
+      ${CUSTOM_VERTEX}
+    }
 }
 
 fragment {
@@ -164,5 +172,7 @@ fragment {
                 material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
             }
         #endif
+
+        ${CUSTOM_FRAGMENT}
     }
 }

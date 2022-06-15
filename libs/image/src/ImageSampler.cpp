@@ -364,7 +364,7 @@ uint32_t getMipmapCount(const LinearImage& source) {
 Filter filterFromString(const char* rawname) {
     using namespace utils;
     using std::unordered_map;
-    static const unordered_map<StaticString, Filter> map = {
+    static const unordered_map<StaticString, Filter, StaticString::Hasher> map = {
         { "BOX", Filter::BOX},
         { "NEAREST", Filter::NEAREST},
         { "HERMITE", Filter::HERMITE},

@@ -457,6 +457,12 @@ private:
     void* mEnd = nullptr;
 };
 
+class NullArea {
+public:
+    void* data() const noexcept { return nullptr; }
+    size_t size() const noexcept { return 0; }
+};
+
 } // namespace AreaPolicy
 
 // ------------------------------------------------------------------------------------------------
