@@ -89,6 +89,17 @@ RenderPrimitiveHandle HwRenderPrimitiveFactory::create(DriverApi& driver,
         // create the backend object
         auto handle = driver.createRenderPrimitive(vbh, ibh,
                 type, offset, minIndex, maxIndex, count);
+
+        // First, check if the handle is already in our set. This shouldn't normally happen, except
+        // when the driver always returns the same handle for render primitives (such as the
+        // NoopDriver).
+        auto pos = mMap.find(handle.getId());
+        if (UTILS_UNLIKELY(pos != mMap.end())) {
+            auto ipos = pos->second;
+            ipos->refs++;
+            return ipos->handle;
+        }
+
         // insert key/handle in our set with a refcount of 1
         // IMPORTANT: std::set<> doesn't invalidate iterators in insert/erase
         auto [ipos, _] = mSet.insert({ key, handle, 1 });
