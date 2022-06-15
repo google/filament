@@ -215,12 +215,12 @@ public:
         return boolish ? value : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 48 bytes
+    struct PrimitiveInfo { // 56 bytes
         union {
             FMaterialInstance const* mi;
             uint64_t padding = {}; // ensures mi is 8 bytes on all archs
         };                                                              // 8 bytes
-        backend::RasterState rasterState;                               // 8 bytes
+        backend::RasterState rasterState;                               // 16 bytes
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
@@ -231,11 +231,11 @@ public:
         Variant materialVariant;                                        // 1 byte
         uint8_t reserved[5] = {};                                       // 5 bytes
     };
-    static_assert(sizeof(PrimitiveInfo) == 48);
+    static_assert(sizeof(PrimitiveInfo) == 56);
 
-    struct alignas(8) Command {     // 64 bytes
+    struct alignas(8) Command {     // 72 bytes
         CommandKey key = 0;         //  8 bytes
-        PrimitiveInfo primitive;    // 48 bytes
+        PrimitiveInfo primitive;    // 56 bytes
         uint64_t reserved = 0;      //  8 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
@@ -244,7 +244,7 @@ public:
             return ptr;
         }
     };
-    static_assert(sizeof(Command) == 64);
+    static_assert(sizeof(Command) == 72);
     static_assert(std::is_trivially_destructible_v<Command>,
             "Command isn't trivially destructible");
 
