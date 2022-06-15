@@ -115,7 +115,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     for  (const auto& extProps : availableExts) {
         if (!strcmp(extProps.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
             mContext.debugUtilsSupported = true;
-            break;
+        } else if (!strcmp(extProps.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+            mContext.portabilityEnumerationSupported = true;
         }
     }
 
@@ -184,18 +185,21 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     uint32_t enabledExtensionCount = 0;
 
     // Request all cross-platform extensions.
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_surface";
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_get_physical_device_properties2";
+    ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_SURFACE_EXTENSION_NAME;
+    ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
 #if VK_ENABLE_VALIDATION
 #if defined(__ANDROID__)
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
+    ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 #endif
     if (validationFeaturesSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_validation_features";
+        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
     }
 #endif
     if (mContext.debugUtilsSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
+        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    }
+    if (mContext.portabilityEnumerationSupported) {
+        ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
     }
 
     // Request platform-specific extensions.
@@ -212,6 +216,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
     instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
+    if (mContext.portabilityEnumerationSupported) {
+        instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
 
     VkValidationFeaturesEXT features = {};
     VkValidationFeatureEnableEXT enables[] = {
