@@ -211,7 +211,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.apiVersion = VK_MAKE_VERSION(VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
+    appInfo.apiVersion = VK_MAKE_API_VERSION(0,
+            VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
@@ -234,6 +235,11 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     }
 
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &mContext.instance);
+#ifndef NDEBUG
+    if (result != VK_SUCCESS) {
+        utils::slog.e << "Unable to create instance: " << result << utils::io::endl;
+    }
+#endif
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance.");
     bluevk::bindInstance(mContext.instance);
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback =
