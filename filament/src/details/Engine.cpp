@@ -135,27 +135,6 @@ void FEngine::createAsync(CreateCallback callback, void* user,
     callbackThread.detach();
 }
 
-Engine::Config FEngine::validateConfig(const Config* config) noexcept
-{
-    constexpr uint32_t ARENA_COMMANDS_DELTA = 1;    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
-    constexpr uint32_t NUM_FRAMES_OVERLAP = 3;      // Number of potential concurrent frames in flight
-
-    Config validConfig;
-    if (!config)
-    {
-        return validConfig;
-    }
-
-    validConfig.minCommandBufferSizeMB = std::max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, config->minCommandBufferSizeMB);
-    validConfig.minCommandBufferSizeMB = std::max(config->perFrameCommandsSizeMB, validConfig.minCommandBufferSizeMB);                   // As a rule of thumb use the same value as perFrameCommandsMB
-    validConfig.commandBufferSizeMB = std::max(config->commandBufferSizeMB, validConfig.minCommandBufferSizeMB * NUM_FRAMES_OVERLAP);
-    validConfig.perFrameCommandsSizeMB = std::max((uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, config->minCommandBufferSizeMB);
-    validConfig.perRenderPassArenaSizeMB = std::max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, config->perRenderPassArenaSizeMB);
-    validConfig.perRenderPassArenaSizeMB = std::max(validConfig.perRenderPassArenaSizeMB, validConfig.perFrameCommandsSizeMB + ARENA_COMMANDS_DELTA);    // Enforce pre-render-pass arena rule-of-thumb
-    validConfig.driverHandleArenaSizeMB = config->driverHandleArenaSizeMB;      // This value gets validated during driver creation, so pass it through
-    return validConfig;
-}
-
 FEngine* FEngine::getEngine(void* token) {
 
     FEngine* instance = static_cast<FEngine*>(token);
@@ -180,6 +159,27 @@ FEngine* FEngine::getEngine(void* token) {
 }
 
 #endif
+
+Engine::Config FEngine::validateConfig(const Config* config) noexcept
+{
+    constexpr uint32_t ARENA_COMMANDS_DELTA = 1;    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
+    constexpr uint32_t NUM_FRAMES_OVERLAP = 3;      // Number of potential concurrent frames in flight
+
+    Config validConfig;
+    if (!config)
+    {
+        return validConfig;
+    }
+
+    validConfig.minCommandBufferSizeMB = std::max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, config->minCommandBufferSizeMB);
+    validConfig.minCommandBufferSizeMB = std::max(config->perFrameCommandsSizeMB, validConfig.minCommandBufferSizeMB);                   // As a rule of thumb use the same value as perFrameCommandsMB
+    validConfig.commandBufferSizeMB = std::max(config->commandBufferSizeMB, validConfig.minCommandBufferSizeMB * NUM_FRAMES_OVERLAP);
+    validConfig.perFrameCommandsSizeMB = std::max((uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, config->minCommandBufferSizeMB);
+    validConfig.perRenderPassArenaSizeMB = std::max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, config->perRenderPassArenaSizeMB);
+    validConfig.perRenderPassArenaSizeMB = std::max(validConfig.perRenderPassArenaSizeMB, validConfig.perFrameCommandsSizeMB + ARENA_COMMANDS_DELTA);    // Enforce pre-render-pass arena rule-of-thumb
+    validConfig.driverHandleArenaSizeMB = config->driverHandleArenaSizeMB;      // This value gets validated during driver creation, so pass it through
+    return validConfig;
+}
 
 // these must be static because only a pointer is copied to the render stream
 // Note that these coordinates are specified in OpenGL clip space. Other backends can transform
