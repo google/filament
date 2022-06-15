@@ -710,6 +710,22 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
     scheduleDestroy(std::move(data));
 }
 
+void MetalDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
+        BufferDescriptor&& data, uint32_t byteOffset) {
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    bo->updateBufferUnsynchronized(data.buffer, data.size, byteOffset);
+    scheduleDestroy(std::move(data));
+}
+
+void MetalDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+    // TODO: implement resetBufferObject(). This is equivalent to calling
+    // destroyBufferObject() followed by createBufferObject() keeping the same handle.
+    // It is actually okay to keep a no-op implementation, the intention here is to "orphan" the
+    // buffer (and possibly return it to a pool) and allocate a new one (or get it from a pool),
+    // so that no further synchronization with the GPU is needed.
+    // This is only useful if updateBufferObjectUnsynchronized() is implemented unsynchronizedly.
+}
+
 void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto* vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
@@ -1379,12 +1395,11 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
     id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw(cmdBuffer);
-    size_t offset = indexBuffer->buffer.getGpuBufferStreamOffset();
     [mContext->currentRenderPassEncoder drawIndexedPrimitives:getMetalPrimitiveType(primitive->type)
                                                    indexCount:primitive->count
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
-                                            indexBufferOffset:primitive->offset + offset
+                                            indexBufferOffset:primitive->offset
                                                 instanceCount:instanceCount];
 }
 

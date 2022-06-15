@@ -1078,12 +1078,17 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     rt->gl.samples = samples;
     rt->targets = targets;
 
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<uint32_t>::max()};
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
+
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
         GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
         const size_t maxDrawBuffers = getMaxDrawBuffers();
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
-                rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
+                auto t = rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
+                tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+                tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
@@ -1096,7 +1101,9 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     bool specialCased = false;
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
         assert_invariant(!stencil.handle || stencil.handle == depth.handle);
-        rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+        auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+        tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+        tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
         if (any(rt->gl.depth->usage & TextureUsage::SAMPLEABLE) ||
             (!depth.handle && !stencil.handle)) {
             // special case: depth & stencil requested, and both provided as the same texture
@@ -1108,14 +1115,22 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     if (!specialCased) {
         if (any(targets & TargetBufferFlags::DEPTH)) {
-            rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+            auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+            tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+            tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
             framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
-            rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
+            auto t = rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
+            tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
+            tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
             framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
         }
     }
+
+    // Verify that all attachments have the same dimensions.
+    assert_invariant(any(targets & TargetBufferFlags::ALL));
+    assert_invariant(tmin == tmax);
 
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -1649,22 +1664,17 @@ void OpenGLDriver::updateBufferObject(
 
     assert_invariant(bd.size + byteOffset <= bo->byteCount);
 
-    if (bo->gl.binding == GL_UNIFORM_BUFFER) {
-        // TODO: use updateBuffer() for all types of buffer? Make sure GL supports that.
-        updateBuffer(bo, bd, byteOffset, (uint32_t)gl.gets.uniform_buffer_offset_alignment);
+    if (bo->gl.binding == GL_ARRAY_BUFFER) {
+        gl.bindVertexArray(nullptr);
+    }
+    gl.bindBuffer(bo->gl.binding, bo->gl.id);
+    if (byteOffset == 0 && bd.size == bo->byteCount) {
+        // it looks like it's generally faster (or not worse) to use glBufferData()
+        glBufferData(bo->gl.binding, bd.size, bd.buffer, getBufferUsage(bo->usage));
     } else {
-        if (bo->gl.binding == GL_ARRAY_BUFFER) {
-            gl.bindVertexArray(nullptr);
-        }
-        gl.bindBuffer(bo->gl.binding, bo->gl.id);
-        if (byteOffset == 0 && bd.size == bo->byteCount) {
-            // it looks like it's generally faster (or not worse) to use glBufferData()
-            glBufferData(bo->gl.binding, bd.size, bd.buffer, getBufferUsage(bo->usage));
-        } else {
-            // glBufferSubData() could be catastrophically inefficient if several are
-            // issued during the same frame. Currently, we're not doing that though.
-            glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
-        }
+        // glBufferSubData() could be catastrophically inefficient if several are
+        // issued during the same frame. Currently, we're not doing that though.
+        glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
     }
 
     scheduleDestroy(std::move(bd));
@@ -1672,73 +1682,58 @@ void OpenGLDriver::updateBufferObject(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::updateBuffer(GLBufferObject* buffer, BufferDescriptor const& p,
-        uint32_t byteOffset, uint32_t alignment) noexcept {
-    assert_invariant(buffer->byteCount >= p.size);
-    assert_invariant(buffer->gl.id);
+void OpenGLDriver::updateBufferObjectUnsynchronized(
+        Handle<HwBufferObject> boh, BufferDescriptor&& bd, uint32_t byteOffset) {
+    DEBUG_MARKER()
 
-    auto& gl = mContext;
-    gl.bindBuffer(buffer->gl.binding, buffer->gl.id);
-    if (buffer->usage == BufferUsage::STREAM) {
+    if constexpr (!HAS_MAPBUFFERS) {
+        updateBufferObject(boh, std::move(bd), byteOffset);
+    } else {
+        GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
 
-        // in streaming mode it's meaningless to have an offset specified
-        assert_invariant(byteOffset == 0);
+        assert_invariant(bo->gl.id);
+        assert_invariant(bd.size + byteOffset <= bo->byteCount);
 
-        buffer->size = (uint32_t)p.size;
-
-        // If MapBufferRange is supported, then attempt to use that instead of BufferSubData, which
-        // can be quite inefficient on some platforms. Note that WebGL does not support
-        // MapBufferRange, but we still allow STREAM semantics for the web platform.
-        if (HAS_MAPBUFFERS) {
-            uint32_t offset = buffer->base + buffer->size;
-            offset = (offset + (alignment - 1u)) & ~(alignment - 1u);
-
-            if (offset + p.size > buffer->byteCount) {
-                // if we've reached the end of the buffer, we orphan it and allocate a new one.
-                // this is assuming the driver actually does that as opposed to stalling. This is
-                // the case for Mali and Adreno -- we could use fences instead.
-                offset = 0;
-                glBufferData(buffer->gl.binding, buffer->byteCount, nullptr, getBufferUsage(buffer->usage));
-            }
-    retry:
-            void* vaddr = glMapBufferRange(buffer->gl.binding, offset, p.size,
+        if (bo->gl.binding != GL_UNIFORM_BUFFER) {
+            // TODO: use updateBuffer() for all types of buffer? Make sure GL supports that.
+            updateBufferObject(boh, std::move(bd), byteOffset);
+        } else {
+            auto& gl = mContext;
+            gl.bindBuffer(bo->gl.binding, bo->gl.id);
+retry:
+            void* const vaddr = glMapBufferRange(bo->gl.binding, byteOffset, bd.size,
                     GL_MAP_WRITE_BIT |
                     GL_MAP_INVALIDATE_RANGE_BIT |
                     GL_MAP_UNSYNCHRONIZED_BIT);
-            if (vaddr) {
-                memcpy(vaddr, p.buffer, p.size);
-                if (glUnmapBuffer(buffer->gl.binding) == GL_FALSE) {
+            if (UTILS_LIKELY(vaddr)) {
+                memcpy(vaddr, bd.buffer, bd.size);
+                if (UTILS_UNLIKELY(glUnmapBuffer(bo->gl.binding) == GL_FALSE)) {
                     // According to the spec, UnmapBuffer can return FALSE in rare conditions (e.g.
-                    // during a screen mode change). Note that is not a GL error, and we can handle
+                    // during a screen mode change). Note that this is not a GL error, and we can handle
                     // it by simply making a second attempt.
                     goto retry; // NOLINT(cppcoreguidelines-avoid-goto,hicpp-avoid-goto)
                 }
             } else {
                 // handle mapping error, revert to glBufferSubData()
-                glBufferSubData(buffer->gl.binding, offset, p.size, p.buffer);
+                glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
             }
-            buffer->base = offset;
+        }
 
-            CHECK_GL_ERROR(utils::slog.e)
-        } else {
-            // In stream mode we're allowed to allocate a whole new buffer
-            glBufferData(buffer->gl.binding, p.size, p.buffer, getBufferUsage(buffer->usage));
-        }
-    } else {
-        if (byteOffset == 0 && p.size == buffer->byteCount) {
-            // it looks like it's generally faster (or not worse) to use glBufferData()
-            glBufferData(buffer->gl.binding, buffer->byteCount, p.buffer,
-                    getBufferUsage(buffer->usage));
-        } else {
-            // glBufferSubData() could be catastrophically inefficient if several are
-            // issued during the same frame. Currently, we're not doing that though.
-            glBufferSubData(buffer->gl.binding, byteOffset, p.size, p.buffer);
-        }
+        scheduleDestroy(std::move(bd));
     }
-
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+    DEBUG_MARKER()
+
+    auto& gl = mContext;
+    GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
+    assert_invariant(bo->gl.id);
+
+    gl.bindBuffer(bo->gl.binding, bo->gl.id);
+    glBufferData(bo->gl.binding, bo->byteCount, nullptr, getBufferUsage(bo->usage));
+}
 
 void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
@@ -2469,7 +2464,6 @@ void OpenGLDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh)
     auto& gl = mContext;
     GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
     assert_invariant(ub->gl.binding == GL_UNIFORM_BUFFER);
-    assert_invariant(ub->base == 0);
     gl.bindBufferRange(ub->gl.binding, GLuint(index), ub->gl.id, 0, ub->byteCount);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2481,8 +2475,8 @@ void OpenGLDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject>
 
     GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
     assert_invariant(ub->gl.binding == GL_UNIFORM_BUFFER);
-    assert_invariant(ub->base + offset + size <= ub->byteCount);
-    gl.bindBufferRange(ub->gl.binding, GLuint(index), ub->gl.id, ub->base + offset, size);
+    assert_invariant(offset + size <= ub->byteCount);
+    gl.bindBufferRange(ub->gl.binding, GLuint(index), ub->gl.id, offset, size);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -2624,7 +2618,15 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         PixelBufferDescriptor& p = *pUserBuffer;
         auto& gl = mContext;
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-        void* vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,  p.size, GL_MAP_READ_BIT);
+        void* vaddr = nullptr;
+        std::unique_ptr<uint8_t> clientBuffer;
+#if defined(__EMSCRIPTEN__)
+        clientBuffer.reset(new uint8_t(p.size));
+        glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, p.size, clientBuffer.get());
+        vaddr = clientBuffer.get();
+#else
+        vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,  p.size, GL_MAP_READ_BIT);
+#endif
         if (vaddr) {
             // now we need to flip the buffer vertically to match our API
             size_t stride = p.stride ? p.stride : width;
@@ -2639,7 +2641,9 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
                 head += bpr;
                 tail -= bpr;
             }
+#if !defined(__EMSCRIPTEN__)
             glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+#endif
         }
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
         glDeleteBuffers(1, &pbo);

@@ -3,7 +3,7 @@ project(vkmemalloc)
 
 set(TARGET vkmemalloc)
 
-set(PUBLIC_HDR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+set(PUBLIC_HDR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 set(PUBLIC_HDRS ${PUBLIC_HDR_DIR}/vk_mem_alloc.h)
 

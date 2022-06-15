@@ -601,6 +601,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
         Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
+        uint32_t uboDataIndex = std::numeric_limits<uint32_t>::max();
         auto customCommands = mCustomCommands.data();
 
         first--;
@@ -637,9 +638,13 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
             }
 
             pipeline.program = ma->getProgram(info.materialVariant);
-            size_t offset = info.index * sizeof(PerRenderableData);
-            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
-                    uboHandle, offset, sizeof(PerRenderableUib));
+
+            if (uboDataIndex != info.index) {
+                uboDataIndex = info.index;
+                driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
+                        uboHandle, uboDataIndex * sizeof(PerRenderableData),
+                        sizeof(PerRenderableUib));
+            }
 
             if (UTILS_UNLIKELY(info.skinningHandle)) {
                 // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations

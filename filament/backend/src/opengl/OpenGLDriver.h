@@ -79,8 +79,6 @@ public:
             GLuint id = 0;
             GLenum binding = 0;
         } gl;
-        uint32_t base = 0;
-        uint32_t size = 0;
         BufferUsage usage = {};
     };
 
@@ -357,8 +355,6 @@ private:
     OpenGLPlatform& mPlatform;
 
     void updateStreamAcquired(GLTexture* t, DriverApi* driver) noexcept;
-    void updateBuffer(GLBufferObject* buffer, BufferDescriptor const& p,
-            uint32_t byteOffset, uint32_t alignment = 16) noexcept;
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 
     void setExternalTexture(GLTexture* t, void* image);
