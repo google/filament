@@ -24,7 +24,11 @@ elseif (APPLE AND NOT IOS)
     set(SRCS ${SRCS} src/BlueGLDarwin.cpp)
     set(SRCS ${SRCS} src/BlueGLCoreDarwinUniversalImpl.S)
 elseif(LINUX)
-    set(SRCS ${SRCS} src/BlueGLLinux.cpp)
+    if(FILAMENT_SUPPORTS_EGL_ON_LINUX)
+        set(SRCS ${SRCS} src/BlueGLLinuxEGL.cpp)
+    else()
+        set(SRCS ${SRCS} src/BlueGLLinux.cpp)
+    endif()
     set(SRCS ${SRCS} src/BlueGLCoreLinuxUniversalImpl.S)
 else()
     message(FATAL_ERROR "Platform not supported. BlueGL supports Windows, Linux, and MacOS X.")
@@ -53,9 +57,6 @@ add_executable(test_${TARGET}
 
 if (LINUX)
     target_link_libraries(test_${TARGET} PUBLIC dl)
-    if (EGL)
-      target_link_libraries(test_${TARGET} PUBLIC EGL)
-    endif()
 endif()
 
 # and we're linking against the libraries below, importing their public headers

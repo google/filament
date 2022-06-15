@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,26 +21,26 @@
 namespace bluegl {
 
 struct Driver {
-    void* (*glXGetProcAddress)(const GLubyte*);
+    void* (*eglGetProcAddress)(const GLubyte*);
     void* library;
 } g_driver = {nullptr, nullptr};
 
 bool initBinder() {
-    const char* library_name = "libGL.so.1";
+    const char* library_name = "libEGL.so.1";
     g_driver.library = dlopen(library_name, RTLD_GLOBAL | RTLD_NOW);
 
     if (!g_driver.library) {
         return false;
     }
 
-    g_driver.glXGetProcAddress = (void *(*)(const GLubyte *))
-            dlsym(g_driver.library, "glXGetProcAddressARB");
+    g_driver.eglGetProcAddress = (void *(*)(const GLubyte *))
+            dlsym(g_driver.library, "eglGetProcAddress");
 
-    return g_driver.glXGetProcAddress;
+    return g_driver.eglGetProcAddress;
 }
 
 void* loadFunction(const char* name) {
-  return (void*) g_driver.glXGetProcAddress((const GLubyte*) name);
+  return (void*) g_driver.eglGetProcAddress((const GLubyte*) name);
 }
 
 void shutdownBinder() {
