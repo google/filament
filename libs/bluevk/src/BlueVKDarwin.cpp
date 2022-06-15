@@ -24,15 +24,10 @@ namespace bluevk {
 static void* module = nullptr;
 
 bool loadLibrary() {
-
-#ifndef FILAMENT_VKLIBRARY_PATH
-#ifdef IOS
-    const char* dylibPath = "Frameworks/libMoltenVK.dylib";
+#ifdef FILAMENT_VKLIBRARY_PATH
+    const char* dylibPath = FILAMENT_VKLIBRARY_PATH;
 #else
     const char* dylibPath = "libvulkan.1.dylib";
-#endif
-#else
-    const Path dylibPath = FILAMENT_VKLIBRARY_PATH;
 #endif
 
     module = dlopen(dylibPath, RTLD_NOW | RTLD_LOCAL);
