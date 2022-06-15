@@ -257,12 +257,34 @@ using PipelineStateCache = StateCache<MetalPipelineState, id<MTLRenderPipelineSt
 
 struct DepthStencilState {
     MTLCompareFunction compareFunction = MTLCompareFunctionAlways;      // 8 bytes
-    bool depthWriteEnabled = false;                                     // 1 byte
-    char padding[7] = { 0 };                                            // 7 bytes
+    MTLCompareFunction      stencilFrontCompareFunction;                // 8 byte
+    MTLStencilOperation     stencilFrontFail;                           // 8 byte
+    MTLStencilOperation     depthFrontFail;                             // 8 byte
+    MTLStencilOperation     stencilFrontPass;                           // 8 byte
+    MTLCompareFunction      stencilBackCompareFunction;                 // 8 byte
+    MTLStencilOperation     stencilBackFail;                            // 8 byte
+    MTLStencilOperation     depthBackFail;                              // 8 byte
+    MTLStencilOperation     stencilBackPass;                            // 8 byte
+    bool depthWriteEnabled  = false;                                    // 1 byte
+    bool stencilTestEnabled = false;                                    // 1 byte
+    uint8_t                 stencilReadMask;                            // 1 byte
+    uint8_t                 stencilWriteMask;                           // 1 byte
+    char padding[4] = { 0 };                                            // 4 bytes
 
     bool operator==(const DepthStencilState& rhs) const noexcept {
         return this->compareFunction == rhs.compareFunction &&
-               this->depthWriteEnabled == rhs.depthWriteEnabled;
+               this->depthWriteEnabled == rhs.depthWriteEnabled &&
+               this->stencilTestEnabled == rhs.stencilTestEnabled &&
+               this->stencilReadMask == rhs.stencilReadMask &&
+               this->stencilWriteMask == rhs.stencilWriteMask &&
+               this->stencilFrontCompareFunction == rhs.stencilFrontCompareFunction &&
+               this->stencilFrontFail == rhs.stencilFrontFail &&
+               this->depthFrontFail == rhs.depthFrontFail &&
+               this->stencilFrontPass == rhs.stencilFrontPass &&
+               this->stencilBackCompareFunction == rhs.stencilBackCompareFunction &&
+               this->stencilBackFail == rhs.stencilBackFail &&
+               this->depthBackFail == rhs.depthBackFail &&
+               this->stencilBackPass == rhs.stencilBackPass;
     }
 
     bool operator!=(const DepthStencilState& rhs) const noexcept {
@@ -272,7 +294,7 @@ struct DepthStencilState {
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(DepthStencilState) == 16, "DepthStencilState unexpected size.");
+static_assert(sizeof(DepthStencilState) == 80, "DepthStencilState unexpected size.");
 
 struct DepthStateCreator {
     id<MTLDepthStencilState> operator()(id<MTLDevice> device, const DepthStencilState& state)
