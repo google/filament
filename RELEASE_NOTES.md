@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - engine: add support for automatic instancing. Must be enabled with `Engine::setAutomaticInstancingEnabled(bool)`
+- Vulkan: smol-v blobs are now 8-byte aligned within the filamat archive. [⚠️ **Recompile Materials**]
 
 ## v1.23.3
 
