@@ -11,6 +11,7 @@ A new header is inserted each time a *tag* is created.
 - backend: added support for EGL on linux (headless)
 - uberz tool: add --append and --template arguments.
 - matc tool: add --template argument.
+- engine: add support for automatic instancing. Must be enabled with `Engine::setAutomaticInstancingEnabled(bool)`
 
 ## v1.24.0
 

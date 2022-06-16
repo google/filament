@@ -887,6 +887,8 @@ void ViewerGui::updateUserInterface() {
             updateRootTransform();
         }
 
+        ImGui::Checkbox("Automatic instancing", &mSettings.viewer.autoInstancingEnabled);
+
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 

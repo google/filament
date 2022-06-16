@@ -432,6 +432,12 @@ class_<Engine>("Engine")
         return Engine::create();
     }, allow_raw_pointers())
 
+    .function("enableAccurateTranslations", &Engine::enableAccurateTranslations)
+
+    .function("setAutomaticInstancingEnabled", &Engine::setAutomaticInstancingEnabled)
+
+    .function("isAutomaticInstancingEnabled", &Engine::isAutomaticInstancingEnabled)
+
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({
             const handle = window.filament_contextHandle;
