@@ -144,7 +144,7 @@ void ArchiveCache::destroyMaterials() {
 ArchiveCache::~ArchiveCache() {
     assert_invariant(mMaterials.size() == 0 &&
         "Please call destroyMaterials explicitly to ensure correct destruction order");
-    free(mArchive);
+    utils::aligned_free(mArchive);
 }
 
 } // namespace filament::gltfio

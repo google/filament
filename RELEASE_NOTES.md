@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - Vulkan: smol-v blobs are now 8-byte aligned within the filamat archive. [⚠️ **Recompile Materials**]
 - backend: added support for EGL on linux (headless)
+- uberz tool: add --append and --template arguments.
 
 ## v1.23.3
 
