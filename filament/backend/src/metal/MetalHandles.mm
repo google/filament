@@ -870,9 +870,17 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         }
     }
 
-    // Verify that all attachments have the same dimensions.
+    // Verify that all attachments have the same non-zero dimensions.
     assert_invariant(attachmentCount > 0);
     assert_invariant(tmin == tmax);
+    assert_invariant(tmin.x > 0 && tmin.y > 0);
+
+    // The render target dimensions must be less than or equal to the attachment size.
+    assert_invariant(width <= tmin.x && height <= tmin.y);
+
+    // Store the height of all attachments. We'll use this when converting from Filament's
+    // coordinate system to Metal's.
+    attachmentHeight = tmin.y;
 }
 
 void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor,
@@ -1011,6 +1019,17 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
     return [device newTextureWithDescriptor:descriptor];
+}
+
+uint32_t MetalRenderTarget::getAttachmentHeight() noexcept {
+    if (defaultRenderTarget) {
+        // The default render target always has a color attachment.
+        auto colorAttachment = getDrawColorAttachment(0);
+        assert_invariant(colorAttachment);
+        return colorAttachment.getTexture().height;
+    }
+    assert_invariant(attachmentHeight > 0);
+    return attachmentHeight;
 }
 
 MetalFence::MetalFence(MetalContext& context) : context(context), value(context.signalId++) { }
