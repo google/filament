@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (C) 2018 The Android Open Source Project
+# Copyright (C) 2022 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import argparse
 import os
 import re
 import xml.etree.ElementTree as etree
-import urllib2
+import urllib.request
 from collections import OrderedDict
 from collections import namedtuple
 from datetime import datetime
@@ -194,7 +194,7 @@ def isAncestor(types, name, base):
     return isAncestor(types, parent, base)
 
 def consumeXML(spec):
-    print 'Consuming XML...'
+    print('Consuming XML...')
 
     # First build a list of function groups. Function groups are things like
     # "VK_API_VERSION_1_1" or "VK_NV_external_memory_win32".
@@ -263,7 +263,7 @@ def consumeXML(spec):
             types[name] = type
         if type.get('category') == 'enum':
             enum_types.append(type.get('name'))
-    print '{} enums'.format(len(enum_types))
+    print('{} enums'.format(len(enum_types)))
 
     # Look at all enumerants.
     enum_vals = OrderedDict()
@@ -277,7 +277,7 @@ def consumeXML(spec):
 
         # Special handling for single-bit flags
         if enums.get('type') == 'bitmask':
-            print 'FLAGS ' + name
+            print('FLAGS ' + name)
             flag_vals[name] = []
             for val in enums:
                 # Skip over comments
@@ -288,47 +288,41 @@ def consumeXML(spec):
                 elif val.get('bitpos'):
                     value = 1 << int(val.get('bitpos'))
                 value = '0x%08x' % value
-                print '\t' + value + ' ' + val.get('name')
+                print('\t' + value + ' ' + val.get('name'))
                 flag_vals[name].append((val.get('name'), value))
             continue
 
-        print name
+        print(name)
         enum_vals[name] = []
         for val in enums:
             # Skip over comments
             if val.tag != 'enum': continue
             # Skip over intermingled single-bit flags
             if not val.get('value'): continue
-            print '\t' + val.get('value') + ' ' + val.get('name')
+            print('\t' + val.get('value') + ' ' + val.get('name'))
             enum_vals[name].append(val.get('name'))
 
     # Finally, build the VkFunction objects.
     function_groups = OrderedDict()
     for (group, cmdnames) in command_groups.items():
         function_group = function_groups.setdefault(group, OrderedDict())
-        if len(cmdnames):
-            print '\n' + group
         for name in sorted(cmdnames):
-            print '\t' + name,
             cmd = commands[name]
             type = cmd.findtext('param[1]/type')
             if name == 'vkGetDeviceProcAddr':
                 type = 'VkInstance'
             if isAncestor(types, type, 'VkDevice'):
                 ftype = 'device'
-                print ' (D)'
             elif isAncestor(types, type, 'VkInstance'):
                 ftype = 'instance'
-                print ' (I)'
             elif type != '':
                 ftype = 'loader'
-                print ' (L)'
             function_group[name] = VkFunction(name = name, type = ftype, group = group)
     return function_groups, enum_vals, flag_vals
 
 def produceHeader(function_groups, enum_vals, flag_vals, output_dir):
     fullpath = os.path.join(output_dir, 'bluevk/BlueVK.h')
-    print '\nProducing header %s...' % fullpath
+    print('\nProducing header %s...' % fullpath)
     enum_decls = []
     decls = []
     for (enum_name, vals) in enum_vals.items():
@@ -349,7 +343,7 @@ def produceHeader(function_groups, enum_vals, flag_vals, output_dir):
 
 def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
     fullpath = os.path.join(output_dir, 'BlueVK.cpp')
-    print '\nProducing source %s...' % fullpath
+    print('\nProducing source %s...' % fullpath)
     enum_defs = []
     loader_functions = []
     instance_functions = []
@@ -432,7 +426,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--specpath', help='Vulkan XML specification')
     args = parser.parse_args()
 
-    spec = open(args.specpath, 'r') if args.specpath else urllib2.urlopen(VK_XML_URL)
+    spec = open(args.specpath, 'r') if args.specpath else urllib.request.urlopen(VK_XML_URL)
     spec_tree = etree.parse(spec)
     function_groups, enum_vals, flag_vals = consumeXML(spec_tree)
 
