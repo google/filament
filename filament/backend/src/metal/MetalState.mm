@@ -99,6 +99,25 @@ id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
     MTLDepthStencilDescriptor* depthStencilDescriptor = [MTLDepthStencilDescriptor new];
     depthStencilDescriptor.depthCompareFunction = state.compareFunction;
     depthStencilDescriptor.depthWriteEnabled = state.depthWriteEnabled;
+
+    if (state.stencilTestEnabled) {
+        depthStencilDescriptor.backFaceStencil.stencilCompareFunction       = state.stencilBackCompareFunction;
+        depthStencilDescriptor.backFaceStencil.depthFailureOperation        = state.depthBackFail;
+        depthStencilDescriptor.backFaceStencil.stencilFailureOperation      = state.stencilBackFail;
+        depthStencilDescriptor.backFaceStencil.depthStencilPassOperation    = state.stencilBackPass;
+        depthStencilDescriptor.backFaceStencil.readMask                     = state.stencilReadMask;
+        depthStencilDescriptor.backFaceStencil.writeMask                    = state.stencilWriteMask;
+        depthStencilDescriptor.frontFaceStencil.stencilCompareFunction      = state.stencilFrontCompareFunction;
+        depthStencilDescriptor.frontFaceStencil.depthFailureOperation       = state.depthFrontFail;
+        depthStencilDescriptor.frontFaceStencil.stencilFailureOperation     = state.stencilFrontFail;
+        depthStencilDescriptor.frontFaceStencil.depthStencilPassOperation   = state.stencilFrontPass;
+        depthStencilDescriptor.frontFaceStencil.readMask                    = state.stencilReadMask;
+        depthStencilDescriptor.frontFaceStencil.writeMask                   = state.stencilWriteMask;
+    } else {
+        depthStencilDescriptor.backFaceStencil = nil;
+        depthStencilDescriptor.frontFaceStencil = nil;
+    }
+    
     return [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
 }
 
