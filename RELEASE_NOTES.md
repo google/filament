@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Vulkan: smol-v blobs are now 8-byte aligned within the filamat archive. [⚠️ **Recompile Materials**]
+
 ## v1.23.3
 
 - materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
