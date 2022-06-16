@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- backend: added support for EGL on linux (headless)
+
 ## v1.23.3
 
 - materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
@@ -14,7 +16,6 @@ A new header is inserted each time a *tag* is created.
 - engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
 - picking is now exposed to JavaScript
 - gltf_viewer: Exercise picking functionality.
-- backend: added support for EGL on linux (headless)
 - OpenGL: add WebGL support for ReadPixels
 - Vulkan: add assert and error message for OOM (debug builds)
 - Vulkan: fix crash with picking and 2-component ReadPixels.
