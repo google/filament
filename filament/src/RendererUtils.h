@@ -62,6 +62,8 @@ public:
         float ssrLodOffset;
         // Contact shadow enabled?
         bool hasContactShadows;
+        // Screen space reflections enabled
+        bool hasScreenSpaceReflectionsOrRefractions;
     };
 
     static FrameGraphId<FrameGraphTexture> colorPass(
