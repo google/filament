@@ -330,13 +330,20 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     ASSERT_POSTCONDITION(!depth.handle || any(targetBufferFlags & TargetBufferFlags::DEPTH),
             "The DEPTH flag was specified, but no depth texture provided.");
 
+    MetalRenderTarget::Attachment stencilAttachment = {};
+    if (stencil.handle) {
+        auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
+        ASSERT_PRECONDITION(stencilTexture->texture,
+                            "Stencil texture passed to render target has no texture allocation.");
+        stencilTexture->updateLodRange(stencil.level);
+        stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
+    }
+    
     construct_handle<MetalRenderTarget>(rth, mContext, width, height, samples,
-            colorAttachments, depthAttachment);
+            colorAttachments, depthAttachment, stencilAttachment);
 
-    ASSERT_POSTCONDITION(
-            !stencil.handle &&
-            !(targetBufferFlags & TargetBufferFlags::STENCIL),
-            "Stencil buffer not supported.");
+    ASSERT_POSTCONDITION(!stencil.handle || any(targetBufferFlags & TargetBufferFlags::STENCIL),
+            "The STENCIL flag was specified, but no stencil texture provided.");
 }
 
 void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
