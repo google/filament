@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- engine: add support for automatic instancing. Must be enabled with `Engine::setAutomaticInstancingEnabled(bool)`
+
 ## v1.23.3
 
 - materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`

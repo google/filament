@@ -350,6 +350,14 @@ public:
         getDriver().purge();
     }
 
+    void setAutomaticInstancingEnabled(bool enable) noexcept {
+        mAutomaticInstancingEnabled = enable;
+    }
+
+    bool isAutomaticInstancingEnabled() const noexcept {
+        return mAutomaticInstancingEnabled;
+    }
+
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
@@ -382,6 +390,7 @@ private:
     Backend mBackend;
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;
+    bool mAutomaticInstancingEnabled = false;
     void* mSharedGLContext = nullptr;
     backend::Handle<backend::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;

@@ -186,7 +186,9 @@ void RenderPass::sortCommands() noexcept {
 
     resize(uint32_t(last - mCommandBegin));
 
-    instanceify();
+    if (mEngine.isAutomaticInstancingEnabled()) {
+        instanceify();
+    }
 }
 
 void RenderPass::instanceify() noexcept {

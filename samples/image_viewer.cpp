@@ -292,6 +292,7 @@ int main(int argc, char** argv) {
         app.engine = engine;
         app.viewer = new ViewerGui(engine, scene, view, 410);
         app.viewer->getSettings().viewer.autoScaleEnabled = false;
+        app.viewer->getSettings().viewer.autoInstancingEnabled = true;
         app.viewer->getSettings().view.bloom.enabled = false;
         app.viewer->getSettings().view.ssao.enabled = false;
         app.viewer->getSettings().view.dithering = Dithering::NONE;
