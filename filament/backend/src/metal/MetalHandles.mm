@@ -184,6 +184,41 @@ id<MTLTexture> MetalSwapChain::acquireDepthTexture() {
     return depthTexture;
 }
 
+//TODO merge into acquireDepthTexture()?
+id<MTLTexture> MetalSwapChain::acquireStencilTexture() {
+    if (stencilTexture) {
+        // If the surface size has changed, we'll need to allocate a new stencil texture.
+        if (stencilTexture.width != getSurfaceWidth() ||
+            stencilTexture.height != getSurfaceHeight()) {
+            stencilTexture = nil;
+        } else {
+            return stencilTexture;
+        }
+    }
+
+    const MTLPixelFormat stencilFormat =
+#if defined(IOS)
+            MTLPixelFormatDepth32Float_Stencil8;
+#else
+    context.device.depth24Stencil8PixelFormatSupported ?
+            MTLPixelFormatDepth24Unorm_Stencil8 : MTLPixelFormatDepth32Float_Stencil8;
+#endif
+
+    const NSUInteger width = getSurfaceWidth();
+    const NSUInteger height = getSurfaceHeight();
+    MTLTextureDescriptor* descriptor =
+            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:stencilFormat
+                                                               width:width
+                                                              height:height
+                                                           mipmapped:NO];
+    descriptor.usage = MTLTextureUsageRenderTarget;
+    descriptor.resourceOptions = MTLResourceStorageModePrivate;
+
+    stencilTexture = [context.device newTextureWithDescriptor:descriptor];
+
+    return stencilTexture;
+}
+
 void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
     frameScheduledCallback = callback;
     frameScheduledUserData = user;
@@ -808,7 +843,8 @@ void MetalTexture::updateLodRange(uint32_t level) {
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment) :
+        uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment,
+        Attachment stencilAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (!colorAttachments[i]) {
@@ -847,6 +883,11 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
                         depth.metalTexture->width, depth.metalTexture->height, samples);
             }
         }
+    }
+            
+    if (stencilAttachment) {
+        stencil = stencilAttachment;
+        //FIXME param check 
     }
 }
 
@@ -922,6 +963,15 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
         }
     }
+    
+    Attachment stencilAttachment = getStencilAttachment();
+    descriptor.stencilAttachment.texture = stencilAttachment.getTexture();
+    descriptor.stencilAttachment.level = stencilAttachment.level;
+    descriptor.stencilAttachment.slice = stencilAttachment.layer;
+    descriptor.stencilAttachment.loadAction = getLoadAction(params, TargetBufferFlags::STENCIL);
+    descriptor.stencilAttachment.storeAction = getStoreAction(params, TargetBufferFlags::STENCIL);
+    descriptor.stencilAttachment.clearStencil = params.clearStencil;
+    //FIXME handle MSAA for stencil?
 }
 
 MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t index) {
@@ -948,6 +998,14 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     Attachment result = depth;
     if (defaultRenderTarget) {
         result.texture = context->currentDrawSwapChain->acquireDepthTexture();
+    }
+    return result;
+}
+
+MetalRenderTarget::Attachment MetalRenderTarget::getStencilAttachment() {
+    Attachment result = stencil;
+    if (defaultRenderTarget) {
+        result.texture = context->currentDrawSwapChain->acquireStencilTexture();
     }
     return result;
 }
