@@ -289,6 +289,19 @@ constexpr inline MTLBlendFactor getMetalBlendFactor(BlendFunction function) noex
     }
 }
 
+constexpr inline MTLStencilOperation getMetalStencilOperation(StencilOperation operation) noexcept {
+    switch (operation) {
+        case StencilOperation::KEEP: return MTLStencilOperationKeep;
+        case StencilOperation::ZERO: return MTLStencilOperationZero;
+        case StencilOperation::REPLACE: return MTLStencilOperationReplace;
+        case StencilOperation::INCR: return MTLStencilOperationIncrementClamp;
+        case StencilOperation::INCR_WRAP: return MTLStencilOperationIncrementWrap;
+        case StencilOperation::DECR: return MTLStencilOperationDecrementClamp;
+        case StencilOperation::DECR_WRAP: return MTLStencilOperationDecrementWrap;
+        case StencilOperation::INVERT: return MTLStencilOperationInvert;
+    }
+}
+
 constexpr inline MTLCullMode getMetalCullMode(CullingMode cullMode) noexcept {
     switch (cullMode) {
         case CullingMode::NONE: return MTLCullModeNone;
