@@ -47,6 +47,12 @@ public:
         return (mCursor + size) > mEnd;
     }
 
+    void skipAlignmentPadding() {
+        const uint8_t padSize = (8 - (intptr_t(mCursor) % 8)) % 8;
+        mCursor += padSize;
+        assert_invariant(0 == (intptr_t(mCursor) % 8));
+    }
+
     bool read(bool* b) noexcept {
         if (willOverflow(1)) {
             return false;
