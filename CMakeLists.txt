@@ -23,6 +23,8 @@ option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
 
 option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
 
+option(FILAMENT_SUPPORTS_EGL_ON_LINUX "Use EGL for OpenGL in Linux builds" OFF)
+
 option(FILAMENT_SUPPORTS_WAYLAND "Include Wayland support in Linux builds" OFF)
 
 option(FILAMENT_SKIP_SDL2 "Skip dependencies of SDL2, and SDL2" OFF)
@@ -102,6 +104,9 @@ endif()
 if (LINUX)
     if (FILAMENT_SUPPORTS_WAYLAND)
         add_definitions(-DFILAMENT_SUPPORTS_WAYLAND)
+        set(FILAMENT_SUPPORTS_X11 FALSE)
+    elseif (FILAMENT_SUPPORTS_EGL_ON_LINUX)
+        add_definitions(-DFILAMENT_SUPPORTS_EGL_ON_LINUX)
         set(FILAMENT_SUPPORTS_X11 FALSE)
     else ()
         if (FILAMENT_SUPPORTS_XCB)
@@ -273,6 +278,10 @@ endif()
 
 if (FILAMENT_USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
+endif()
+
+if (FILAMENT_SUPPORTS_EGL_ON_LINUX)
+  set(EGL TRUE)
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
