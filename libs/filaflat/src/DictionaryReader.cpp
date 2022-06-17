@@ -46,7 +46,6 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
         // For now, 1 is the only acceptable compression scheme.
         assert(compressionScheme == 1);
 
-
         uint32_t blobCount;
         if (!unflattener.read(&blobCount)) {
             return false;
