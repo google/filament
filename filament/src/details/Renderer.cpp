@@ -743,7 +743,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // So here we set the parameters for the structure pass and SSAO passes which
                 // are always done first. The SSR pass will also use these parameters which
                 // is wrong if it doesn't run at the same resolution as SSAO.
-                // preapreViewport() is called again during the color pass, which resets the
+                // prepareViewport() is called again during the color pass, which resets the
                 // values correctly for the Color pass, however, this will be again wrong
                 // for passes that come after the Color pass, such as DoF.
                 //
