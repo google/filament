@@ -715,7 +715,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .clearFlags = clearFlags,
             .clearColor = clearColor,
             .ssrLodOffset = 0.0f,
-            .hasContactShadows = scene.hasContactShadows()
+            .hasContactShadows = scene.hasContactShadows(),
+            // at this point we don't know if we have refraction, but that's handled later
+            .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled
     };
 
     /*
