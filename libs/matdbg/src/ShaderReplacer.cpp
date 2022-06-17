@@ -88,7 +88,7 @@ private:
 class BlobIndex {
 public:
     // Consumes a chunk and builds the blob list.
-    void addDataBlobs(const uint8_t* chunkContent, size_t size);
+    void addDataBlobs(const uint8_t* chunkContent, size_t size, streampos ptr);
 
     // Consumes a chunk and builds the shader records.
     void addShaderRecords(const uint8_t* chunkContent, size_t size);
@@ -206,8 +206,6 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
 
 bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
             ShaderType stage, const char* source, size_t sourceLength) {
-    filaflat::ChunkContainer const& cc = mOriginalPackage;
-
     assert_invariant(mMaterialTag == ChunkType::MaterialSpirv);
 
     const EShLanguage shLang = stage == VERTEX ? EShLangVertex : EShLangFragment;
@@ -250,6 +248,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     slog.i << "Success re-generating SPIR-V. (" << sourceLength << " bytes)" << io::endl;
 
     // Clone all chunks except Dictionary* and Material*.
+    filaflat::ChunkContainer const& cc = mOriginalPackage;
     stringstream sstream(string((const char*) cc.getData(), cc.getSize()));
     stringstream tstream;
     BlobIndex shaderIndex;
@@ -260,10 +259,11 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
         while (sstream) {
             sstream.read((char*) &type, sizeof(type));
             sstream.read((char*) &size, sizeof(size));
+            streampos pos = sstream.tellg();
             content.resize(size);
             sstream.read((char*) content.data(), size);
             if (ChunkType(type) == mDictionaryTag) {
-                shaderIndex.addDataBlobs(content.data(), size);
+                shaderIndex.addDataBlobs(content.data(), size, pos);
                 continue;
             }
             if (ChunkType(type) == mMaterialTag) {
@@ -472,17 +472,23 @@ void ShaderIndex::encodeShadersToIndices() {
     }
 }
 
-void BlobIndex::addDataBlobs(const uint8_t* chunkContent, size_t size) {
-    const uint32_t compression = *((const uint32_t*) chunkContent);
-    chunkContent += 4;
-    const uint32_t blobCount = *((const uint32_t*) chunkContent);
-    chunkContent += 4;
-    mDataBlobs.resize(blobCount);
+void BlobIndex::addDataBlobs(const uint8_t* chunkContent, size_t size, streampos pos) {
     const uint8_t* ptr = chunkContent;
+    const uint32_t compression = *((const uint32_t*) ptr);
+    ptr += 4;
+    const uint32_t blobCount = *((const uint32_t*) ptr);
+    ptr += 4;
+    mDataBlobs.resize(blobCount);
     for (uint32_t i = 0; i < blobCount; i++) {
+        // Skip alignment padding.
+        ptr += (8 - (intptr_t(pos + ptr - chunkContent) % 8)) % 8;
+
+        // Read byte count, advance cursor, and allocate buffer.
         const uint64_t byteCount = *((const uint64_t*) ptr);
         ptr += sizeof(uint64_t);
         mDataBlobs[i].resize(byteCount);
+
+        // Copy the buffer and advance the cursor.
         memcpy(mDataBlobs[i].data(), ptr, byteCount);
         ptr += byteCount;
     }
@@ -502,23 +508,28 @@ void BlobIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
 }
 
 void BlobIndex::writeBlobsChunk(ChunkType tag, ostream& stream) const {
-    // First perform a prepass to compute chunk size.
+    const uint64_t type = tag;
     uint32_t size = sizeof(uint32_t) + sizeof(uint32_t);
+
+    // First perform a prepass to compute chunk size.
+    streampos offset = stream.tellp() + streampos(sizeof(type) + sizeof(size));
     for (const auto& blob : mDataBlobs) {
+        size += (8 - ((size + offset) % 8)) % 8;
         size += sizeof(uint64_t);
         size += blob.size();
     }
 
     // Serialize the chunk.
-    const uint64_t type = tag;
     stream.write((char*) &type, sizeof(type));
     stream.write((char*) &size, sizeof(size));
     const uint32_t compression = 1;
     stream.write((char*) &compression, sizeof(compression));
     const uint32_t count = mDataBlobs.size();
     stream.write((char*) &count, sizeof(count));
+    const char padding[8] = {};
     for (const auto& blob : mDataBlobs) {
         const uint64_t byteCount = blob.size();
+        stream.write(padding, (8 - (stream.tellp() % 8)) % 8);
         stream.write((char*) &byteCount, sizeof(byteCount));
         stream.write((char*) blob.data(), blob.size());
     }
