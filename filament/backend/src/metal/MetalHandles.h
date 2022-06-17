@@ -258,16 +258,6 @@ public:
             return texture ? texture.pixelFormat : MTLPixelFormatInvalid;
         }
 
-        MTLRegion getRegionFromClientRect(Viewport rect) {
-            // Convert the Filament rect into Metal texture coordinates, taking into account Metal's
-            // inverted texture space and the mip level. Note that the underlying Texture could be
-            // larger than the RenderTarget. Metal's texture coordinates have (0, 0) at the top-left
-            // of the texture, but Filament's coordinates have (0, 0) at bottom-left.
-            const auto mipheight = texture.height >> level;
-            return MTLRegionMake2D((NSUInteger)rect.left,
-                    mipheight - (NSUInteger)rect.bottom - rect.height, rect.width, rect.height);
-        }
-
         explicit operator bool() const {
             return texture != nil;
         }
@@ -294,6 +284,18 @@ public:
 
     void setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor, const RenderPassParams& params);
 
+    MTLRegion getRegionFromClientRect(Viewport rect) {
+        const uint32_t height = getAttachmentHeight();
+        assert_invariant(height > 0);
+
+        // Convert the Filament rect into Metal texture coordinates, taking into account Metal's
+        // inverted texture space. Note that the underlying Texture could be larger than the
+        // RenderTarget. Metal's texture coordinates have (0, 0) at the top-left of the texture, but
+        // Filament's coordinates have (0, 0) at bottom-left.
+        return MTLRegionMake2D((NSUInteger)rect.left,
+                height - (NSUInteger)rect.bottom - rect.height, rect.width, rect.height);
+    }
+
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
 
@@ -308,12 +310,15 @@ private:
     static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
             uint32_t width, uint32_t height, uint8_t samples);
 
+    uint32_t getAttachmentHeight() noexcept;
+
     MetalContext* context;
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
 
     Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     Attachment depth = {};
+    uint32_t attachmentHeight = 0;
 };
 
 // MetalFence is used to implement both Fences and Syncs.
