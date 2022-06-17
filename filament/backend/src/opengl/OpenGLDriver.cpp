@@ -1085,8 +1085,10 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
                 auto t = rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
-                tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
-                tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
+                const auto twidth = std::max(1u, t->width >> color[i].level);
+                const auto theight = std::max(1u, t->height >> color[i].level);
+                tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
+                tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
@@ -1100,8 +1102,10 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
         assert_invariant(!stencil.handle || stencil.handle == depth.handle);
         auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
-        tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
-        tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
+        const auto twidth = std::max(1u, t->width >> depth.level);
+        const auto theight = std::max(1u, t->height >> depth.level);
+        tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
+        tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
         if (any(rt->gl.depth->usage & TextureUsage::SAMPLEABLE) ||
             (!depth.handle && !stencil.handle)) {
             // special case: depth & stencil requested, and both provided as the same texture
@@ -1114,14 +1118,18 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     if (!specialCased) {
         if (any(targets & TargetBufferFlags::DEPTH)) {
             auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
-            tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
-            tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
+            const auto twidth = std::max(1u, t->width >> depth.level);
+            const auto theight = std::max(1u, t->height >> depth.level);
+            tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
+            tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
             framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
             auto t = rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
-            tmin = { std::min(tmin.x, t->width), std::min(tmin.y, t->height) };
-            tmax = { std::max(tmax.x, t->width), std::max(tmax.y, t->height) };
+            const auto twidth = std::max(1u, t->width >> stencil.level);
+            const auto theight = std::max(1u, t->height >> stencil.level);
+            tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
+            tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
             framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
         }
     }
