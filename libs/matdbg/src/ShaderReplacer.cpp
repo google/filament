@@ -482,6 +482,12 @@ void BlobIndex::addDataBlobs(const uint8_t* chunkContent, size_t size) {
     for (uint32_t i = 0; i < blobCount; i++) {
         const uint64_t byteCount = *((const uint64_t*) ptr);
         ptr += sizeof(uint64_t);
+
+        // Skip alignment padding.
+        const uint8_t padSize = (8 - (intptr_t(ptr) % 8)) % 8;
+        ptr += padSize;
+        assert_invariant(0 == (intptr_t(ptr) % 8));
+
         mDataBlobs[i].resize(byteCount);
         memcpy(mDataBlobs[i].data(), ptr, byteCount);
         ptr += byteCount;
@@ -506,6 +512,7 @@ void BlobIndex::writeBlobsChunk(ChunkType tag, ostream& stream) const {
     uint32_t size = sizeof(uint32_t) + sizeof(uint32_t);
     for (const auto& blob : mDataBlobs) {
         size += sizeof(uint64_t);
+        size += (8 - (size % 8)) % 8;
         size += blob.size();
     }
 
@@ -517,9 +524,11 @@ void BlobIndex::writeBlobsChunk(ChunkType tag, ostream& stream) const {
     stream.write((char*) &compression, sizeof(compression));
     const uint32_t count = mDataBlobs.size();
     stream.write((char*) &count, sizeof(count));
+    const char padding[8] = {};
     for (const auto& blob : mDataBlobs) {
         const uint64_t byteCount = blob.size();
         stream.write((char*) &byteCount, sizeof(byteCount));
+        stream.write(padding, (8 - (stream.tellp() % 8)) % 8);
         stream.write((char*) blob.data(), blob.size());
     }
 }
