@@ -1230,7 +1230,7 @@ void OpenGLDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (rph) {
         auto& gl = mContext;
         GLRenderPrimitive const* rp = handle_cast<const GLRenderPrimitive*>(rph);
-        gl.deleteVextexArrays(1, &rp->gl.vao);
+        gl.deleteVertexArrays(1, &rp->gl.vao);
         destruct(rph, rp);
     }
 }
