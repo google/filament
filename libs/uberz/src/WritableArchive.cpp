@@ -306,8 +306,18 @@ FixedCapacityVector<uint8_t> WritableArchive::serialize() const {
     assert_invariant(writeCursor - outputBuf.data() == outputBuf.size());
 
     FixedCapacityVector<uint8_t> compressedBuf(ZSTD_compressBound(outputBuf.size()));
+
+    // Maximum zstd compression is slow, but that's okay since uberz is invoked during the build,
+    // not at run time.  However in debug builds it is debilitatingly slow, and we're fine with
+    // larger archives, so we use minimum compression.
+#ifdef NDEBUG
+    const int compressionLevel = ZSTD_maxCLevel();
+#else
+    const int compressionLevel = ZSTD_minCLevel();
+#endif
+
     size_t zstdResult = ZSTD_compress(compressedBuf.data(), compressedBuf.size(), outputBuf.data(),
-            outputBuf.size(), ZSTD_maxCLevel());
+            outputBuf.size(), compressionLevel);
     if (ZSTD_isError(zstdResult)) {
         PANIC_POSTCONDITION("Error during archive compression: %s", ZSTD_getErrorName(zstdResult));
     }
