@@ -326,4 +326,19 @@ FixedCapacityVector<uint8_t> WritableArchive::serialize() const {
     return compressedBuf;
 }
 
+void WritableArchive::setShadingModel(Shading sm) {
+    assert_invariant(mMaterialIndex > -1);
+    mMaterials[mMaterialIndex].shadingModel = sm;
+}
+
+void WritableArchive::setBlendingModel(BlendingMode bm) {
+    assert_invariant(mMaterialIndex > -1);
+    mMaterials[mMaterialIndex].blendingMode = bm;
+}
+
+void WritableArchive::setFeatureFlag(const char* key, ArchiveFeature value) {
+    assert_invariant(mMaterialIndex > -1);
+    mMaterials[mMaterialIndex].flags[CString(key)] = value;
+}
+
 } // namespace filament::uberz

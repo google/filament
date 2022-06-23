@@ -61,21 +61,45 @@ set(DOUBLESIDED false)
 set(TRANSPARENCY default)
 
 set(UBERZ_OUTPUT_PATH "${RESOURCE_DIR}/default.uberz")
-set(UBERZ_INPUT_PATHS)
-set(UBERZ_INPUT_NAMES)
 
 function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
     set(DEST "${RESOURCE_DIR}/${NAME}")
     configure_file(materials/${SRC}.mat.in "${DEST}.mat")
-    configure_file(materials/${SRC}.spec.in "${DEST}.spec")
-    set(UBERZ_INPUT_PATHS ${UBERZ_INPUT_PATHS} "${DEST}.filamat" "${DEST}.spec" PARENT_SCOPE)
-    set(UBERZ_INPUT_NAMES ${UBERZ_INPUT_NAMES} ${NAME} PARENT_SCOPE)
+    configure_file(materials/${SRC}.spec.in "${DEST}.spec" COPYONLY)
     add_custom_command(
             OUTPUT "${NAME}.filamat"
             COMMAND matc ${MATC_BASE_FLAGS} -o "${NAME}.filamat" "${NAME}.mat"
             DEPENDS matc "${DEST}.mat"
             WORKING_DIRECTORY ${RESOURCE_DIR}
             COMMENT "Compiling material ${NAME}")
+
+    set(UBERZ_ARGS
+        -o ${UBERZ_OUTPUT_PATH}
+        -TDOUBLESIDED=false
+        -TTRANSPARENCY=default
+        -TSHADINGMODEL=${SHADINGMODEL}
+        -TBLENDING=${BLENDING})
+
+    # Invoke uberz to consume foo.spec + foo.filamat and produce default.uberz
+    # The first time this is invoked, it omits the --append argument.
+    if (NOT APPEND_UBERSHADERS)
+        set(APPEND_UBERSHADERS ON PARENT_SCOPE)
+        add_custom_command(
+            OUTPUT ${UBERZ_OUTPUT_PATH}
+            COMMAND uberz ${UBERZ_ARGS} ${NAME}
+            DEPENDS uberz ${DEST}.filamat ${DEST}.spec
+            WORKING_DIRECTORY ${RESOURCE_DIR}
+            COMMENT "Creating ubershader archive")
+    else()
+        add_custom_command(
+            OUTPUT ${UBERZ_OUTPUT_PATH}
+            COMMAND uberz --append ${UBERZ_ARGS} ${NAME}
+            DEPENDS uberz ${DEST}.filamat ${DEST}.spec
+            WORKING_DIRECTORY ${RESOURCE_DIR}
+            APPEND
+            COMMENT "Appending to ubershader archive")
+    endif()
+
 endfunction()
 
 # NOTE: The default ubershader material is defined as the first material in the list below.
@@ -92,17 +116,6 @@ build_ubershader(unlit_masked              base            unlit masked)
 build_ubershader(volume                    volume          _ _)
 build_ubershader(transmission              transmission    _ _)
 build_ubershader(sheen                     sheen           _ _)
-
-# ==================================================================================================
-# Create a target for the ubershader archive that invokes the uberz tool.
-# ==================================================================================================
-
-add_custom_command(
-    OUTPUT ${UBERZ_OUTPUT_PATH}
-    COMMAND uberz -o ${UBERZ_OUTPUT_PATH} ${UBERZ_INPUT_NAMES}
-    DEPENDS uberz ${UBERZ_INPUT_PATHS}
-    WORKING_DIRECTORY ${RESOURCE_DIR}
-    COMMENT "Building ubershader archive")
 
 add_custom_target(uberz_file DEPENDS ${UBERZ_OUTPUT_PATH})
 
