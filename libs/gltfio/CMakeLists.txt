@@ -64,21 +64,26 @@ set(UBERZ_OUTPUT_PATH "${RESOURCE_DIR}/default.uberz")
 
 function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
     set(DEST "${RESOURCE_DIR}/${NAME}")
-    configure_file(materials/${SRC}.mat.in "${DEST}.mat")
+    configure_file(materials/${SRC}.mat.in "${DEST}.mat" COPYONLY)
     configure_file(materials/${SRC}.spec.in "${DEST}.spec" COPYONLY)
-    add_custom_command(
-            OUTPUT "${NAME}.filamat"
-            COMMAND matc ${MATC_BASE_FLAGS} -o "${NAME}.filamat" "${NAME}.mat"
-            DEPENDS matc "${DEST}.mat"
-            WORKING_DIRECTORY ${RESOURCE_DIR}
-            COMMENT "Compiling material ${NAME}")
 
-    set(UBERZ_ARGS
-        -o ${UBERZ_OUTPUT_PATH}
+    set(TEMPLATE_ARGS
+        -TCUSTOM_PARAMS="// no custom params"
+        -TCUSTOM_VERTEX="// no custom vertex"
+        -TCUSTOM_FRAGMENT="// no custom fragment"
         -TDOUBLESIDED=false
         -TTRANSPARENCY=default
         -TSHADINGMODEL=${SHADINGMODEL}
         -TBLENDING=${BLENDING})
+
+    add_custom_command(
+        OUTPUT "${NAME}.filamat"
+        COMMAND matc ${MATC_BASE_FLAGS} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
+        DEPENDS matc "${DEST}.mat"
+        WORKING_DIRECTORY ${RESOURCE_DIR}
+        COMMENT "Compiling material ${NAME}")
+
+    set(UBERZ_ARGS -o ${UBERZ_OUTPUT_PATH} ${TEMPLATE_ARGS})
 
     # Invoke uberz to consume foo.spec + foo.filamat and produce default.uberz
     # The first time this is invoked, it omits the --append argument.

@@ -74,12 +74,12 @@ public:
     }
 
     std::unique_ptr<const char[]> read() noexcept override {
-        auto mMaterialBuffer = std::unique_ptr<const char[]>(new char[mFilesize]);
-        if (!mFile.read(const_cast<char*>(mMaterialBuffer.get()), mFilesize)) {
+        auto buffer = std::make_unique<char[]>(mFilesize);
+        if (!mFile.read(buffer.get(), mFilesize)) {
             std::cerr << "Unable to read material source file '" << mPath << "'" << std::endl;
             return nullptr;
         }
-         return mMaterialBuffer;
+        return std::unique_ptr<const char[]>(buffer.release());
     }
 
     bool close() noexcept override {
