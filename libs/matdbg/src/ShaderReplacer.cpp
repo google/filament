@@ -113,10 +113,10 @@ private:
         uint32_t blobIndex;
     };
 
-    using SpirvBlob = vector<unsigned int>;
+    using SmolvBlob = vector<uint8_t>;
 
     vector<ShaderRecord> mShaderRecords;
-    vector<SpirvBlob> mDataBlobs;
+    vector<SmolvBlob> mDataBlobs;
 };
 
 ShaderReplacer::ShaderReplacer(Backend backend, const void* data, size_t size) :
