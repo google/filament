@@ -59,6 +59,7 @@ Pod::Spec.new do |spec|
     ss.header_dir = "gltfio"
     ss.dependency "Filament/filament"
     ss.dependency "Filament/ktxreader"
+    ss.dependency "Filament/uberz"
   end
 
   spec.subspec "camutils" do |ss|
@@ -119,5 +120,17 @@ Pod::Spec.new do |spec|
         "lib/universal/libcivetweb.a"
     ss.dependency "Filament/filament"
     ss.dependency "Filament/gltfio_core"
+  end
+
+  spec.subspec "uberz" do |ss|
+    ss.source_files = "include/uberz/*.h"
+    ss.header_mappings_dir = "include"
+    ss.vendored_libraries =
+        "lib/universal/libuberzlib.a",
+        "lib/universal/libzstd.a"
+    ss.header_dir = "uberz"
+    ss.dependency "Filament/filamat"
+    ss.dependency "Filament/tsl"
+    ss.dependency "Filament/utils"
   end
 end
