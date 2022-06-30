@@ -13,6 +13,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.23.3
 
 - ImGuiHelper: add support for Y flip.
+- Metal: ignore `MTLTexture` formatting when importing external textures.
 - materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
 - gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
 - gltfio: Fix morphing with sparse accessors.
