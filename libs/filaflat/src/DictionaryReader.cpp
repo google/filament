@@ -16,7 +16,7 @@
 
 #include <filaflat/DictionaryReader.h>
 
-#include <filaflat/BlobDictionary.h>
+#include <filaflat/ChunkContainer.h>
 #include <filaflat/Unflattener.h>
 
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
@@ -68,11 +68,11 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
             if (spirvSize == 0) {
                 return false;
             }
-            BlobDictionary::Blob spirv(spirvSize);
+            ShaderContent spirv(spirvSize);
             if (!smolv::Decode(compressed, compressedSize, spirv.data(), spirvSize)) {
                 return false;
             }
-            dictionary.addBlob(std::move(spirv));
+            dictionary.emplace_back(std::move(spirv));
 #else
             return false;
 #endif
@@ -93,7 +93,8 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
             }
             // BlobDictionary hold binary chunks and does not care if the data holds text, it is
             // therefore crucial to include the trailing null.
-            dictionary.addBlob(str, strlen(str) + 1);
+            dictionary.emplace_back(strlen(str) + 1);
+            memcpy(dictionary.back().data(), str, dictionary.back().size());
         }
         return true;
     }

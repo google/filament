@@ -22,9 +22,14 @@
 
 #include <filament/MaterialChunkType.h>
 
+#include <utils/FixedCapacityVector.h>
+
 #include <tsl/robin_map.h>
 
 namespace filaflat {
+
+using ShaderContent = utils::FixedCapacityVector<uint8_t>;
+using BlobDictionary = utils::FixedCapacityVector<ShaderContent>;
 
 class Unflattener;
 

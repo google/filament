@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_MATERIALPARSER_H
 #define TNT_FILAMENT_MATERIALPARSER_H
 
-#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
 
@@ -33,7 +32,6 @@
 
 namespace filaflat {
 class ChunkContainer;
-class ShaderBuilder;
 class Unflattener;
 }
 
@@ -93,7 +91,7 @@ public:
     bool getSpecularAntiAliasingVariance(float* value) const noexcept;
     bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
 
-    bool getShader(filaflat::ShaderBuilder& shader, backend::ShaderModel shaderModel,
+    bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
             Variant variant, backend::ShaderType stage) noexcept;
 
 private:

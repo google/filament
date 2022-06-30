@@ -21,8 +21,6 @@
 
 namespace filaflat {
 
-class BlobDictionary;
-
 struct DictionaryReader {
     static bool unflatten(ChunkContainer const& container,
             ChunkContainer::Type dictionaryTag,

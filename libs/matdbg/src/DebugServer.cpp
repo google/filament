@@ -300,11 +300,11 @@ public:
             }
 
             const auto& item = info[shaderIndex];
-            filaflat::ShaderBuilder builder;
-            extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
+            filaflat::ShaderContent content;
+            extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
             mg_printf(conn, kSuccessHeader.c_str(), "application/txt");
-            mg_write(conn, builder.data(), builder.size() - 1);
+            mg_write(conn, content.data(), content.size() - 1);
             return true;
         }
 
@@ -314,7 +314,7 @@ public:
                 return error(__LINE__);
             }
 
-            filaflat::ShaderBuilder builder;
+            filaflat::ShaderContent content;
             FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialSpirv));
             if (!getVkShaderInfo(package, info.data())) {
                 return error(__LINE__);
@@ -326,15 +326,15 @@ public:
             }
 
             const auto& item = info[shaderIndex];
-            extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
+            extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
             if (language == spirv) {
-                spirvToAsm(conn, (const uint32_t*) builder.data(), builder.size());
+                spirvToAsm(conn, (const uint32_t*) content.data(), content.size());
                 return true;
             }
 
             if (language == glsl) {
-                spirvToGlsl(conn, (const uint32_t*) builder.data(), builder.size());
+                spirvToGlsl(conn, (const uint32_t*) content.data(), content.size());
                 return true;
             }
 
@@ -347,7 +347,7 @@ public:
                 return error(__LINE__);
             }
 
-            filaflat::ShaderBuilder builder;
+            filaflat::ShaderContent content;
             FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialMetal));
             if (!getMetalShaderInfo(package, info.data())) {
                 return error(__LINE__);
@@ -359,11 +359,11 @@ public:
             }
 
             const auto& item = info[shaderIndex];
-            extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
+            extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
             if (language == msl) {
                 mg_printf(conn, kSuccessHeader.c_str(), "application/txt");
-                mg_write(conn, builder.data(), builder.size() - 1);
+                mg_write(conn, content.data(), content.size() - 1);
                 return true;
             }
 
