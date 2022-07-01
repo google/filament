@@ -1,3 +1,59 @@
+# 3.0.1 (2022-05-26)
+
+- Fixes in defragmentation algorithm.
+- Fixes in GpuMemDumpVis.py regarding image height calculation.
+- Other bug fixes, optimizations, and improvements in the code and documentation.
+
+# 3.0.0 (2022-03-25)
+
+It has been a long time since the previous official release, so hopefully everyone has been using the latest code from "master" branch, which is always maintained in a good state, not the old version. For completeness, here is the list of changes since v2.3.0. The major version number has changed, so there are some compatibility-breaking changes, but the basic API stays the same and is mostly backward-compatible.
+
+Major features added (some compatibility-breaking):
+
+- Added new API for selecting preferred memory type: flags `VMA_MEMORY_USAGE_AUTO`, `VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE`, `VMA_MEMORY_USAGE_AUTO_PREFER_HOST`, `VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT`, `VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT`, `VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT`. Old values like `VMA_MEMORY_USAGE_GPU_ONLY` still work as before, for backward compatibility, but are not recommended.
+- Added new defragmentation API and algorithm, replacing the old one. See structure `VmaDefragmentationInfo`, `VmaDefragmentationMove`, `VmaDefragmentationPassMoveInfo`, `VmaDefragmentationStats`, function `vmaBeginDefragmentation`, `vmaEndDefragmentation`, `vmaBeginDefragmentationPass`, `vmaEndDefragmentationPass`.
+- Redesigned API for statistics, replacing the old one. See structures: `VmaStatistics`, `VmaDetailedStatistics`, `VmaTotalStatistics`. `VmaBudget`, functions: `vmaGetHeapBudgets`, `vmaCalculateStatistics`, `vmaGetPoolStatistics`, `vmaCalculatePoolStatistics`, `vmaGetVirtualBlockStatistics`, `vmaCalculateVirtualBlockStatistics`.
+- Added "Virtual allocator" feature - possibility to use core allocation algorithms for allocation of custom memory, not necessarily Vulkan device memory. See functions like `vmaCreateVirtualBlock`, `vmaDestroyVirtualBlock` and many more.
+- `VmaAllocation` now keeps both `void* pUserData` and `char* pName`. Added function `vmaSetAllocationName`, member `VmaAllocationInfo::pName`. Flag `VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT` is now deprecated.
+- Clarified and cleaned up various ways of importing Vulkan functions. See macros `VMA_STATIC_VULKAN_FUNCTIONS`, `VMA_DYNAMIC_VULKAN_FUNCTIONS`, structure `VmaVulkanFunctions`. Added members `VmaVulkanFunctions::vkGetInstanceProcAddr`, `vkGetDeviceProcAddr`, which are now required when using `VMA_DYNAMIC_VULKAN_FUNCTIONS`.
+
+Removed (compatibility-breaking):
+
+- Removed whole "lost allocations" feature. Removed from the interface: `VMA_ALLOCATION_CREATE_CAN_BECOME_LOST_BIT`, `VMA_ALLOCATION_CREATE_CAN_MAKE_OTHER_LOST_BIT`, `vmaCreateLostAllocation`, `vmaMakePoolAllocationsLost`, `vmaTouchAllocation`, `VmaAllocatorCreateInfo::frameInUseCount`, `VmaPoolCreateInfo::frameInUseCount`.
+- Removed whole "record & replay" feature. Removed from the API: `VmaAllocatorCreateInfo::pRecordSettings`, `VmaRecordSettings`, `VmaRecordFlagBits`, `VmaRecordFlags`. Removed VmaReplay application.
+- Removed "buddy" algorithm - removed flag `VMA_POOL_CREATE_BUDDY_ALGORITHM_BIT`.
+
+Minor but compatibility-breaking changes:
+
+- Changes in `ALLOCATION_CREATE_STRATEGY` flags. Removed flags: `VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT`, `VMA_ALLOCATION_CREATE_STRATEGY_WORST_FIT_BIT`, `VMA_VIRTUAL_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT`, which were aliases to other existing flags.
+- Added a member `void* pUserData` to `VmaDeviceMemoryCallbacks`. Updated `PFN_vmaAllocateDeviceMemoryFunction`, `PFN_vmaFreeDeviceMemoryFunction` to use the new `pUserData` member.
+- Removed function `vmaResizeAllocation` that was already deprecated.
+
+Other major changes:
+
+- Added new features to custom pools: support for dedicated allocations, new member `VmaPoolCreateInfo::pMemoryAllocateNext`, `minAllocationAlignment`.
+- Added support for Vulkan 1.2, 1.3.
+- Added support for VK_KHR_buffer_device_address extension - flag `VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT`.
+- Added support for VK_EXT_memory_priority extension - flag `VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT`, members `VmaAllocationCreateInfo::priority`, `VmaPoolCreateInfo::priority`.
+- Added support for VK_AMD_device_coherent_memory extension - flag `VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT`.
+- Added member `VmaAllocatorCreateInfo::pTypeExternalMemoryHandleTypes`.
+- Added function `vmaGetAllocatorInfo`, structure `VmaAllocatorInfo`.
+- Added functions `vmaFlushAllocations`, `vmaInvalidateAllocations` for multiple allocations at once.
+- Added flag `VMA_ALLOCATION_CREATE_CAN_ALIAS_BIT`.
+- Added function `vmaCreateBufferWithAlignment`.
+- Added convenience function `vmaGetAllocationMemoryProperties`.
+- Added convenience functions: `vmaCreateAliasingBuffer`, `vmaCreateAliasingImage`.
+
+Other minor changes:
+
+- Implemented Two-Level Segregated Fit (TLSF) allocation algorithm, replacing previous default one. It is much faster, especially when freeing many allocations at once or when `bufferImageGranularity` is large.
+- Renamed debug macro `VMA_DEBUG_ALIGNMENT` to `VMA_MIN_ALIGNMENT`.
+- Added CMake support - CMakeLists.txt files. Removed Premake support.
+- Changed `vmaInvalidateAllocation` and `vmaFlushAllocation` to return `VkResult`.
+- Added nullability annotations for Clang: `VMA_NULLABLE`, `VMA_NOT_NULL`, `VMA_NULLABLE_NON_DISPATCHABLE`, `VMA_NOT_NULL_NON_DISPATCHABLE`, `VMA_LEN_IF_NOT_NULL`.
+- JSON dump format has changed.
+- Countless fixes and improvements, including performance optimizations, compatibility with various platforms and compilers, documentation.
+
 # 2.3.0 (2019-12-04)
 
 Major release after a year of development in "master" branch and feature branches. Notable new features: supporting Vulkan 1.1, supporting query for memory budget.

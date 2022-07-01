@@ -27,7 +27,7 @@ namespace filament {
     class Engine;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 class AssetPool;
@@ -161,7 +161,6 @@ public:
 
 private:
     bool loadResources(FFilamentAsset* asset, bool async);
-    void applySparseData(FFilamentAsset* asset) const;
     void normalizeSkinningWeights(FFilamentAsset* asset) const;
     void updateBoundingBoxes(FFilamentAsset* asset) const;
     AssetPool* mPool;
@@ -169,7 +168,7 @@ private:
     Impl* pImpl;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_RESOURCELOADER_H
 

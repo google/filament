@@ -36,7 +36,7 @@ using namespace filament::math;
 using utils::Entity;
 using utils::EntityManager;
 
-namespace gltfio {
+namespace filament::gltfio {
     class AssetLoader;
     class MaterialProvider;
     class FilamentAsset;
@@ -80,9 +80,9 @@ private:
         Skybox* skybox = nullptr;
         Entity sun;
 
-        gltfio::AssetLoader* assetLoader;
-        gltfio::MaterialProvider* materialProvider;
-        gltfio::FilamentAsset* asset;
+        filament::gltfio::AssetLoader* assetLoader;
+        filament::gltfio::MaterialProvider* materialProvider;
+        filament::gltfio::FilamentAsset* asset;
     } app;
 
     CameraManipulator cameraManipulator;

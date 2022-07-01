@@ -378,7 +378,7 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     if (Variant(variant).hasSkinningOrMorphing()) {
-        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableUibBone::_name);
+        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableBoneUib::_name);
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_MORPHING, PerRenderableMorphingUib::_name);
     }
 
@@ -471,7 +471,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
         info.isSampler = false;
         info.isSubpass = false;
         info.type = uniformInfo.type;
-        info.count = uniformInfo.size;
+        info.count = std::max(1u, uniformInfo.size);
         info.precision = uniformInfo.precision;
     }
 

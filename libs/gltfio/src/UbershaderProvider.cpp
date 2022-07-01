@@ -24,28 +24,26 @@
 
 #include <utils/Log.h>
 
-#include <uberz/ArchiveCache.h>
-
-#include "gltfresources.h"
+#include "ArchiveCache.h"
 
 using namespace filament;
 using namespace filament::math;
 using namespace filament::uberz;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 #if !defined(NDEBUG)
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::uberz::ArchiveRequirements& reqs);
+io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs);
 #endif
 
 namespace {
 
 using CullingMode = MaterialInstance::CullingMode;
 
-class UbershaderLoader : public MaterialProvider {
+class UbershaderProvider : public MaterialProvider {
 public:
-    UbershaderLoader(filament::Engine* engine);
-    ~UbershaderLoader() {}
+    UbershaderProvider(Engine* engine, const void* archive, size_t archiveByteCount);
+    ~UbershaderProvider() {}
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label, const char* extras) override;
@@ -73,7 +71,8 @@ public:
     Engine* mEngine;
 };
 
-UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine), mMaterials(*engine) {
+UbershaderProvider::UbershaderProvider(Engine* engine, const void* archive, size_t archiveByteCount)
+        : mEngine(engine), mMaterials(*engine) {
     unsigned char texels[4] = {};
     mDummyTexture = Texture::Builder()
             .width(1).height(1)
@@ -82,23 +81,23 @@ UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine), mMaterials
     Texture::PixelBufferDescriptor pbd(texels, sizeof(texels), Texture::Format::RGBA,
             Texture::Type::UBYTE);
     mDummyTexture->setImage(*mEngine, 0, std::move(pbd));
-    mMaterials.load((void*) GLTFRESOURCES_FULL_DATA, GLTFRESOURCES_FULL_SIZE);
+    mMaterials.load(archive, archiveByteCount);
 }
 
-size_t UbershaderLoader::getMaterialsCount() const noexcept {
+size_t UbershaderProvider::getMaterialsCount() const noexcept {
     return mMaterials.getMaterialsCount();
 }
 
-const Material* const* UbershaderLoader::getMaterials() const noexcept {
+const Material* const* UbershaderProvider::getMaterials() const noexcept {
     return mMaterials.getMaterials();
 }
 
-void UbershaderLoader::destroyMaterials() {
+void UbershaderProvider::destroyMaterials() {
     mMaterials.destroyMaterials();
     mEngine->destroy(mDummyTexture);
 }
 
-Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
+Material* UbershaderProvider::getMaterial(const MaterialKey& config) const {
     const Shading shading = config.unlit ? Shading::UNLIT :
             (config.useSpecularGlossiness ? Shading::SPECULAR_GLOSSINESS : Shading::LIT);
 
@@ -141,7 +140,7 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
     return nullptr;
 }
 
-MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
+MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
         const char* label, const char* extras) {
     // Diagnostics are not supported with LOAD_UBERSHADERS, please use GENERATE_SHADERS instead.
     if (config->enableDiagnostics) {
@@ -284,13 +283,14 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
 
 } // anonymous namespace
 
-namespace gltfio {
+namespace filament::gltfio {
 
-MaterialProvider* createUbershaderLoader(filament::Engine* engine) {
-    return new UbershaderLoader(engine);
+MaterialProvider* createUbershaderProvider(Engine* engine, const void* archive,
+        size_t archiveByteCount) {
+    return new UbershaderProvider(engine, archive, archiveByteCount);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 
 #if !defined(NDEBUG)
@@ -319,6 +319,7 @@ const char* toString(BlendingMode blendingMode) noexcept {
     }
 }
 
+#if !defined(NDEBUG)
 io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs) {
     out << "    ShadingModel = " << toString(reqs.shadingModel) << '\n'
         << "    BlendingMode = " << toString(reqs.blendingMode) << '\n';
@@ -327,5 +328,6 @@ io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs) {
     }
     return out;
 }
+#endif
 
 #endif

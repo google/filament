@@ -29,6 +29,9 @@ export function getSupportedFormatSuffix(desired: string): void;
 export function init(assets: string[], onready?: (() => void) | null): void;
 export function fetch(assets: string[], onDone?: (() => void) | null, onFetched?: ((name: string) => void) | null): void;
 export function clearAssetCache(): void;
+export function vectorToArray<T>(vector: Vector<T>): T[];
+export function fitIntoUnitCube(box: Aabb): mat4;
+export function multiplyMatrices(a: mat4, b: mat4): mat4;
 
 export const assets: {[url: string]: Uint8Array};
 
@@ -55,9 +58,16 @@ export interface Vector<T> {
     get(i: number): T;
 }
 
-export function vectorToArray<T>(vector: Vector<T>): T[];
-
 export class SwapChain {}
+
+export interface PickingQueryResult {
+    renderable: number;
+    depth: number;
+    fragCoords: number[];
+}
+
+export type PickCallback = (result: PickingQueryResult) => void;
+
 export class ColorGrading {
     public static Builder(): ColorGrading$Builder;
 }
@@ -93,9 +103,6 @@ export interface LightManager$ShadowOptions {
     stepCount?: number;
     maxShadowDistance?: number;
 }
-
-export function fitIntoUnitCube(box: Aabb): mat4;
-export function multiplyMatrices(a: mat4, b: mat4): mat4;
 
 // Clients should use the [PixelBuffer/CompressedPixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 export class driver$PixelBufferDescriptor {
@@ -464,6 +471,7 @@ export class RenderTarget {
 }
 
 export class View {
+    public pick(x: number, y: number, cb: PickCallback): void;
     public setCamera(camera: Camera): void;
     public setColorGrading(colorGrading: ColorGrading): void;
     public setScene(scene: Scene): void;

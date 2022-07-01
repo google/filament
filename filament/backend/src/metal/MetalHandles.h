@@ -117,6 +117,7 @@ public:
     MetalBufferObject(MetalContext& context, BufferUsage usage, uint32_t byteCount);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
+    void updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
 
     // Tracks which uniform buffers this buffer object is bound into.

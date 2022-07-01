@@ -36,7 +36,7 @@ namespace utils {
 
 class UTILS_PUBLIC EntityManager {
 public:
-    // Get the global EntityManager. Is is recommended to cache this value.
+    // Get the global EntityManager. It is recommended to cache this value.
     // Thread Safe.
     static EntityManager& get() noexcept;
 

@@ -720,6 +720,6 @@ GLuint OpenGLContext::getQuery(GLenum target) const noexcept {
             return 0;
     }
 }
-} // namesapce filament
+} // namespace filament
 
 #endif //TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H

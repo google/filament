@@ -20,7 +20,7 @@
 
 #include "MaterialKey.h"
 
-using namespace gltfio;
+using namespace filament::gltfio;
 
 MaterialKeyHelper& MaterialKeyHelper::get() {
     static MaterialKeyHelper helper;

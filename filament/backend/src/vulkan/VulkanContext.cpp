@@ -267,6 +267,10 @@ void VulkanContext::createLogicalDevice() {
     timestamps_lock.unlock();
 
     const VmaVulkanFunctions funcs {
+#if VMA_DYNAMIC_VULKAN_FUNCTIONS
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+#else
         .vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
         .vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
         .vkAllocateMemory = vkAllocateMemory,
@@ -286,6 +290,7 @@ void VulkanContext::createLogicalDevice() {
         .vkCmdCopyBuffer = vkCmdCopyBuffer,
         .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
         .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
+#endif
     };
     const VmaAllocatorCreateInfo allocatorInfo {
         .physicalDevice = physicalDevice,

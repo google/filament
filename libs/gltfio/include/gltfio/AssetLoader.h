@@ -34,7 +34,7 @@ namespace utils {
 /**
  * Loader and pipeline for glTF 2.0 assets.
  */
-namespace gltfio {
+namespace filament::gltfio {
 
 class NodeManager;
 
@@ -49,7 +49,7 @@ struct AssetConfiguration {
 
     //! Controls whether the loader uses filamat to generate materials on the fly, or loads a small
     //! set of precompiled ubershader materials. Deleting the MaterialProvider is the client's
-    //! responsibility. See createMaterialGenerator() and createUbershaderLoader().
+    //! responsibility. See createJitShaderProvider() and createUbershaderProvider().
     MaterialProvider* materials;
 
     //! Optional manager for associating string names with entities in the transform hierarchy.
@@ -86,7 +86,7 @@ struct AssetConfiguration {
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * auto engine = Engine::create();
- * auto materials = createMaterialGenerator(engine);
+ * auto materials = createJitShaderProvider(engine);
  * auto decoder = createStbProvider(engine);
  * auto loader = AssetLoader::create({engine, materials});
  *
@@ -246,6 +246,6 @@ public:
     /*! \endcond */
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_ASSETLOADER_H

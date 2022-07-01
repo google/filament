@@ -57,18 +57,19 @@
 #include <iostream>
 #include <string>
 
-#include "generated/resources/gltf_viewer.h"
+#include "generated/resources/gltf_demo.h"
+#include "materials/uberarchive.h"
 
 using namespace filament;
 using namespace filament::math;
 using namespace filament::viewer;
 
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 enum MaterialSource {
-    GENERATE_SHADERS,
-    LOAD_UBERSHADERS,
+    JITSHADER,
+    UBERSHADER,
 };
 
 struct App {
@@ -82,7 +83,7 @@ struct App {
     NameComponentManager* names;
 
     MaterialProvider* materials;
-    MaterialSource materialSource = GENERATE_SHADERS;
+    MaterialSource materialSource = JITSHADER;
 
     gltfio::ResourceLoader* resourceLoader = nullptr;
     gltfio::TextureProvider* stbDecoder = nullptr;
@@ -104,6 +105,7 @@ struct App {
 
     ColorGrading* colorGrading = nullptr;
 
+    std::string notificationText;
     std::string messageBoxText;
     std::string settingsFile;
     std::string batchFile;
@@ -219,7 +221,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->config.iblDirectory = arg;
                 break;
             case 'u':
-                app->materialSource = LOAD_UBERSHADERS;
+                app->materialSource = UBERSHADER;
                 break;
             case 's':
                 app->actualSize = true;
@@ -267,7 +269,7 @@ static bool loadSettings(const char* filename, Settings* out) {
 static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     auto& em = EntityManager::get();
     Material* shadowMaterial = Material::Builder()
-            .package(GLTF_VIEWER_GROUNDSHADOW_DATA, GLTF_VIEWER_GROUNDSHADOW_SIZE)
+            .package(GLTF_DEMO_GROUNDSHADOW_DATA, GLTF_DEMO_GROUNDSHADOW_SIZE)
             .build(*engine);
     auto& viewerOptions = app.viewer->getSettings().viewer;
     shadowMaterial->setDefaultParameter("strength", viewerOptions.groundShadowStrength);
@@ -351,6 +353,16 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundVertexBuffer = vertexBuffer;
     app.scene.groundIndexBuffer = indexBuffer;
     app.scene.groundMaterial = shadowMaterial;
+}
+
+static void onClick(App& app, View* view, ImVec2 pos) {
+    view->pick(pos.x, pos.y, [&app](View::PickingQueryResult const& result){
+        if (const char* name = app.asset->getName(result.renderable); name) {
+            app.notificationText = name;
+        } else {
+            app.notificationText.clear();
+        }
+    });
 }
 
 int main(int argc, char** argv) {
@@ -494,14 +506,15 @@ int main(int argc, char** argv) {
             }
         }
 
-        app.materials = (app.materialSource == GENERATE_SHADERS) ?
-                createMaterialGenerator(engine) : createUbershaderLoader(engine);
+        app.materials = (app.materialSource == JITSHADER) ? createJitShaderProvider(engine) :
+                createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+
         app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
         app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {
             app.asset = app.assetLoader->createAssetFromBinary(
-                    GLTF_VIEWER_DAMAGEDHELMET_DATA,
-                    GLTF_VIEWER_DAMAGEDHELMET_SIZE);
+                    GLTF_DEMO_DAMAGEDHELMET_DATA,
+                    GLTF_DEMO_DAMAGEDHELMET_SIZE);
         } else {
             loadAsset(filename);
         }
@@ -513,6 +526,24 @@ int main(int argc, char** argv) {
 
         app.viewer->setUiCallback([&app, scene, view, engine] () {
             auto& automation = *app.automationEngine;
+
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                ImVec2 pos = ImGui::GetMousePos();
+                pos.x -= app.viewer->getSidebarWidth();
+                pos.x *= ImGui::GetIO().DisplayFramebufferScale.x;
+                pos.y *= ImGui::GetIO().DisplayFramebufferScale.y;
+                if (pos.x > 0) {
+                    pos.y = view->getViewport().height - 1 - pos.y;
+                    onClick(app, view, pos);
+                }
+            }
+
+            const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
+
+            if (!app.notificationText.empty()) {
+                ImGui::TextColored(yellow, "Picked %s", app.notificationText.c_str());
+                ImGui::Spacing();
+            }
 
             float progress = app.resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
@@ -529,7 +560,6 @@ int main(int argc, char** argv) {
             if (ImGui::CollapsingHeader("Automation", flags)) {
                 ImGui::Indent();
 
-                const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
                 if (automation.isRunning()) {
                     ImGui::TextColored(yellow, "Test case %zu / %zu",
                             automation.currentTest(), automation.testCount());

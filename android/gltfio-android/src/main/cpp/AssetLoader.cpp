@@ -30,7 +30,7 @@
 #include "MaterialKey.h"
 
 using namespace filament;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 class JavaMaterialProvider : public MaterialProvider {

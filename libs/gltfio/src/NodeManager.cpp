@@ -22,7 +22,7 @@
 
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using Instance = NodeManager::Instance;
 
@@ -80,4 +80,4 @@ bitset32 NodeManager::getSceneMembership(Instance ci) const noexcept {
     return upcast(this)->getSceneMembership(ci);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

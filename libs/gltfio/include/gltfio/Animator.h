@@ -20,7 +20,7 @@
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 struct FFilamentInstance;
@@ -114,6 +114,6 @@ private:
     AnimatorImpl* mImpl;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_ANIMATOR_H

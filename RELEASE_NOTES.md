@@ -5,6 +5,26 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.24.0
+
+- ImGuiHelper: add support for Y flip.
+- Metal: ignore `MTLTexture` formatting when importing external textures.
+- materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
+- gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
+- gltfio: Fix morphing with sparse accessors.
+- gltfio: Fix models that use signed integers for morphing.
+- engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
+- picking is now exposed to JavaScript
+- gltf_viewer: Exercise picking functionality.
+- OpenGL: add WebGL support for ReadPixels
+- Vulkan: add assert and error message for OOM (debug builds)
+- Vulkan: fix crash with picking and 2-component ReadPixels.
+- backend: workaround broken GLES timer query on some Mali-Gxx old drivers
+- backend: revert c049a1 & reenable b2cdf9 ("don't issue a flush systematically after framegraph's execute")
+- gltfio: namespace now lives under Filament [⚠️ **API Change**]
+- gltfio: UbershaderLoader renamed to UbershaderProvider [⚠️ **API Change**]
+- gltfio: MaterialGenerator renamed to JitShaderProvider [⚠️ **API Change**]
+
 ## v1.23.2
 
 - gltfio: Fix morphing for un-packed accessors.

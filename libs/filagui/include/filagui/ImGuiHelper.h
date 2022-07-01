@@ -53,7 +53,8 @@ public:
     ~ImGuiHelper();
 
     // Informs ImGui of the current display size, as well as a scaling factor when scissoring.
-    void setDisplaySize(int width, int height, float scaleX = 1.0f, float scaleY = 1.0f);
+    void setDisplaySize(int width, int height, float scaleX = 1.0f,
+            float scaleY = 1.0f, bool flipVertical = false);
 
     // High-level utility method that takes a callback for creating all ImGui windows and widgets.
     // Clients are responsible for rendering the View. This should be called on every frame,
@@ -93,6 +94,7 @@ public:
       bool mHasSynced = false;
       ImGuiContext* mImGuiContext;
       filament::TextureSampler mSampler;
+      bool mFlipVertical = false;
 };
 
 } // namespace filagui

@@ -115,6 +115,13 @@
 
 #endif
 
+// This is an odd duck function that exists in WebGL 2.0 but not in OpenGL ES.
+#if defined(__EMSCRIPTEN__)
+extern "C" {
+void glGetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, void *data);
+}
+#endif
+
 #if (!defined(GL_ES_VERSION_2_0) && !defined(GL_VERSION_4_1))
 #error "Minimum header version must be OpenGL ES 2.0 or OpenGL 4.1"
 #endif

@@ -45,8 +45,8 @@ namespace filagui {
 
 #include "generated/resources/filagui_resources.h"
 
-ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath, 
-        ImGuiContext *imGuiContext) 
+ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath,
+        ImGuiContext *imGuiContext)
         : mEngine(engine), mView(view), mScene(engine->createScene()),
         mImGuiContext(imGuiContext ? imGuiContext : ImGui::CreateContext()) {
     ImGuiIO& io = ImGui::GetIO();
@@ -137,16 +137,20 @@ ImGuiHelper::~ImGuiHelper() {
     mImGuiContext = nullptr;
 }
 
-void ImGuiHelper::setDisplaySize(int width, int height, float scaleX, float scaleY) {
+void ImGuiHelper::setDisplaySize(int width, int height, float scaleX, float scaleY,
+        bool flipVertical) {
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(width, height);
     io.DisplayFramebufferScale.x = scaleX;
     io.DisplayFramebufferScale.y = scaleY;
-    mCamera->setProjection(Camera::Projection::ORTHO,
-            0.0, double(width),
-            double(height), 0.0,
-            0.0, 1.0);
-}
+    mFlipVertical = flipVertical;
+    if (flipVertical) {
+        mCamera->setProjection(Camera::Projection::ORTHO, 0.0, double(width),
+                0.0, double(height), 0.0, 1.0);
+    } else {
+        mCamera->setProjection(Camera::Projection::ORTHO, 0.0, double(width),
+                double(height), 0.0, 0.0, 1.0);
+    }}
 
 void ImGuiHelper::render(float timeStepInSeconds, Callback imguiCommands) {
     ImGui::SetCurrentContext(mImGuiContext);
@@ -213,12 +217,15 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                 pcmd.UserCallback(cmds, &pcmd);
             } else {
                 MaterialInstance* materialInstance = mMaterialInstances[primIndex];
-                materialInstance->setScissor( pcmd.ClipRect.x, fbheight - pcmd.ClipRect.w,
+                materialInstance->setScissor(
+                        pcmd.ClipRect.x,
+                        mFlipVertical ? pcmd.ClipRect.y :  (fbheight - pcmd.ClipRect.w),
                         (uint16_t) (pcmd.ClipRect.z - pcmd.ClipRect.x),
                         (uint16_t) (pcmd.ClipRect.w - pcmd.ClipRect.y));
                 if (pcmd.TextureId) {
                     TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
-                    materialInstance->setParameter("albedo", (Texture const*)pcmd.TextureId, sampler);
+                    materialInstance->setParameter("albedo",
+                            (Texture const*)pcmd.TextureId, sampler);
                 } else {
                     materialInstance->setParameter("albedo", mTexture, mSampler);
                 }

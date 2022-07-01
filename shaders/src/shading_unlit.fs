@@ -54,7 +54,7 @@ vec4 evaluateMaterial(const MaterialInputs material) {
         visibility = shadow(true, light_shadowMap, layer, 0u, cascade);
     }
     if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
-        if ((objectUniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
+        if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
             visibility *= (1.0 - screenSpaceContactShadow(frameUniforms.lightDirection));
         }
     }

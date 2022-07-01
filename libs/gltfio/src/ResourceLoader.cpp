@@ -63,7 +63,7 @@ using filament::geometry::ComponentType;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using BufferTextureCache = tsl::robin_map<const void*, Texture*>;
 using FilepathTextureCache = tsl::robin_map<std::string, Texture*>;
@@ -184,21 +184,12 @@ static ComponentType getComponentType(const cgltf_accessor* accessor) {
     }
 }
 
-static void convertToFloats(float* dest, const cgltf_accessor* accessor) {
-    const uint32_t dim = cgltf_num_components(accessor->type);
-    const size_t floatsSize = accessor->count * sizeof(float) * dim;
-    Transcoder transcode({
-        .componentType = getComponentType(accessor),
-        .normalized = bool(accessor->normalized),
-        .componentCount = dim,
-        .inputStrideBytes = uint32_t(accessor->stride)
-    });
-    auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
-    const uint8_t* source = computeBindingOffset(accessor) + bufferData;
-    transcode(dest, source, accessor->count);
-}
-
-static bool requiresConversion(cgltf_type type, cgltf_component_type ctype) {
+static bool requiresConversion(const cgltf_accessor* accessor) {
+    if (UTILS_UNLIKELY(accessor->is_sparse)) {
+        return true;
+    }
+    const cgltf_type type = accessor->type;
+    const cgltf_component_type ctype = accessor->component_type;
     filament::VertexBuffer::AttributeType permitted;
     filament::VertexBuffer::AttributeType actual;
     bool supported = getElementType(type, ctype, &permitted, &actual);
@@ -206,7 +197,7 @@ static bool requiresConversion(cgltf_type type, cgltf_component_type ctype) {
 }
 
 static bool requiresPacking(const cgltf_accessor* accessor) {
-    if (requiresConversion(accessor->type, accessor->component_type)) {
+    if (requiresConversion(accessor)) {
         return true;
     }
     const size_t dim = cgltf_num_components(accessor->type);
@@ -491,14 +482,14 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         const uint8_t* data = computeBindingOffset(accessor) + bufferData;
         const uint32_t size = computeBindingSize(accessor);
         if (slot.vertexBuffer) {
-            if (requiresConversion(accessor->type, accessor->component_type)) {
-                const size_t dim = cgltf_num_components(accessor->type);
-                const size_t floatsSize = accessor->count * sizeof(float) * dim;
-                float* floatsData = (float*) malloc(floatsSize);
-                convertToFloats(floatsData, accessor);
-                BufferObject* bo = BufferObject::Builder().size(floatsSize).build(engine);
+            if (requiresConversion(accessor)) {
+                const size_t floatsCount = accessor->count * cgltf_num_components(accessor->type);
+                const size_t floatsByteCount = sizeof(float) * floatsCount;
+                float* floatsData = (float*) malloc(floatsByteCount);
+                cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
+                BufferObject* bo = BufferObject::Builder().size(floatsByteCount).build(engine);
                 asset->mBufferObjects.push_back(bo);
-                bo->setBuffer(engine, BufferDescriptor(floatsData, floatsSize, FREE_CALLBACK));
+                bo->setBuffer(engine, BufferDescriptor(floatsData, floatsByteCount, FREE_CALLBACK));
                 slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
                 continue;
             }
@@ -527,10 +518,10 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         assert(slot.morphTargetBuffer);
 
         if (requiresPacking(accessor)) {
-            const size_t dim = cgltf_num_components(accessor->type);
-            const size_t floatsSize = accessor->count * sizeof(float) * dim;
-            float* floatsData = (float*) malloc(floatsSize);
-            convertToFloats(floatsData, accessor);
+            const size_t floatsCount = accessor->count * cgltf_num_components(accessor->type);
+            const size_t floatsByteCount = sizeof(float) * floatsCount;
+            float* floatsData = (float*) malloc(floatsByteCount);
+            cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
             if (accessor->type == cgltf_type_vec3) {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
                         (const float3*) floatsData, slot.morphTargetBuffer->getVertexCount());
@@ -551,9 +542,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
                     (const float4*) data, slot.morphTargetBuffer->getVertexCount());
         }
     }
-
-    // Apply sparse data modifications to base arrays, then upload the result.
-    applySparseData(asset);
 
     // Compute surface orientation quaternions if necessary. This is similar to sparse data in that
     // we need to generate the contents of a GPU buffer by processing one or more CPU buffer(s).
@@ -854,23 +842,6 @@ ResourceLoader::Impl::~Impl() {
     }
 }
 
-void ResourceLoader::applySparseData(FFilamentAsset* asset) const {
-    for (auto slot : asset->mBufferSlots) {
-        const cgltf_accessor* accessor = slot.accessor;
-        if (!accessor->is_sparse) {
-            continue;
-        }
-        cgltf_size numFloats = accessor->count * cgltf_num_components(accessor->type);
-        cgltf_size numBytes = sizeof(float) * numFloats;
-        float* generated = (float*) malloc(numBytes);
-        cgltf_accessor_unpack_floats(accessor, generated, numFloats);
-        BufferObject* bo = BufferObject::Builder().size(numBytes).build(*asset->mEngine);
-        asset->mBufferObjects.push_back(bo);
-        bo->setBuffer(*pImpl->mEngine, BufferDescriptor(generated, numBytes, FREE_CALLBACK));
-        slot.vertexBuffer->setBufferObjectAt(*pImpl->mEngine, slot.bufferIndex, bo);
-    }
-}
-
 void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
     auto normalize = [](cgltf_accessor* data) {
         if (data->type != cgltf_type_vec4 || data->component_type != cgltf_component_type_r_32f) {
@@ -1075,4 +1046,4 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     asset->mBoundingBox = assetBounds;
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

@@ -20,6 +20,8 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/ArchiveCache.cpp
+        src/ArchiveCache.h
         src/Animator.cpp
         src/AssetLoader.cpp
         src/DependencyGraph.cpp
@@ -39,7 +41,7 @@ set(SRCS
         src/StbProvider.cpp
         src/TangentsJob.cpp
         src/TangentsJob.h
-        src/UbershaderLoader.cpp
+        src/UbershaderProvider.cpp
         src/Wireframe.cpp
         src/Wireframe.h
         src/upcast.h
@@ -100,7 +102,9 @@ foreach (NAME ${MATERIAL_NAMES})
     )
 endforeach()
 
-# Create the ubershader archive by invoking the uberz tool.
+# ==================================================================================================
+# Create a target for the ubershader archive that invokes the uberz tool.
+# ==================================================================================================
 
 set(UBERZ_INPUTS)
 foreach (NAME ${MATERIAL_NAMES})
@@ -108,25 +112,27 @@ foreach (NAME ${MATERIAL_NAMES})
     list(APPEND UBERZ_INPUTS "${RESOURCE_DIR}/${NAME}.spec")
 endforeach()
 
+set(UBERZ_FILE_PATH "${RESOURCE_DIR}/default.uberz")
+
 add_custom_command(
-    OUTPUT "full.uberz"
-    COMMAND uberz -o "full.uberz" ${MATERIAL_NAMES}
+    OUTPUT ${UBERZ_FILE_PATH}
+    COMMAND uberz -o ${UBERZ_FILE_PATH} ${MATERIAL_NAMES}
     DEPENDS uberz ${UBERZ_INPUTS}
     WORKING_DIRECTORY ${RESOURCE_DIR}
     COMMENT "Building ubershader archive")
 
-set(RESOURCE_BINS "${RESOURCE_DIR}/full.uberz")
+add_custom_target(uberz_file DEPENDS ${UBERZ_FILE_PATH})
 
 # ==================================================================================================
-# Build resources library
+# Build a resgen library for the ubershader archive.
 # ==================================================================================================
 
-get_resgen_vars(${RESOURCE_DIR} gltfresources)
+get_resgen_vars("${RESOURCE_DIR}/materials" uberarchive)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${RESOURCE_BINS}
-        DEPENDS resgen ${RESOURCE_BINS}
+        COMMAND resgen ${RESGEN_FLAGS} ${UBERZ_FILE_PATH}
+        DEPENDS resgen ${UBERZ_FILE_PATH}
 )
 
 if (DEFINED RESGEN_SOURCE_FLAGS)
@@ -136,14 +142,15 @@ endif()
 set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
-add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+add_library(uberarchive ${DUMMY_SRC} ${RESGEN_SOURCE})
+target_include_directories(uberarchive PUBLIC ${RESOURCE_DIR})
 
 # ==================================================================================================
 # Build the "core" library (no filamat)
 # ==================================================================================================
 
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
-link_libraries(math utils filament cgltf stb ktxreader geometry gltfio_resources tsl trie uberzlib)
+link_libraries(math utils filament cgltf stb ktxreader geometry tsl trie uberzlib)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
@@ -157,7 +164,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Link the core library with additional dependencies to create the "full" library
     # ==================================================================================================
-    add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/MaterialGenerator.cpp)
+    add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/JitShaderProvider.cpp)
     target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
     target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
@@ -171,18 +178,14 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
         target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
     endif()
 
-    # ==================================================================================================
-    # Installation
-    # ==================================================================================================
-    install(TARGETS ${TARGET} gltfio_core gltfio_resources ARCHIVE DESTINATION lib/${DIST_DIR})
-    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
-else()
-
-    install(TARGETS gltfio_core gltfio_resources ARCHIVE DESTINATION lib/${DIST_DIR})
-    # The Image.h header is only needed within Filament and does not need to be distributed.
-    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio
-        DESTINATION include
-        PATTERN "Image.h" EXCLUDE)
-    install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
+    install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
 
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+
+install(TARGETS gltfio_core uberarchive ARCHIVE DESTINATION lib/${DIST_DIR})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+install(FILES ${RESOURCE_DIR}/materials/uberarchive.h DESTINATION include/gltfio/materials)

@@ -58,26 +58,16 @@ public:
         }
     }
 
-    // Converts a 4-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
+    // Converts a n-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
     template<typename dstComponentType, typename srcComponentType>
     static void reshapeImage(uint8_t* dest, const uint8_t* src,  size_t srcBytesPerRow,
-            size_t dstBytesPerRow, size_t dstChannelCount, size_t height, bool swizzle, bool flip) {
-        const size_t srcChannelCount = 4;
+            size_t srcChannelCount, size_t dstBytesPerRow, size_t dstChannelCount,
+            size_t width, size_t height, bool swizzle) {
         const dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
         const srcComponentType srcMaxValue = getMaxValue<srcComponentType>();
-        const size_t width = (srcBytesPerRow / sizeof(srcComponentType)) / srcChannelCount;
         const size_t minChannelCount = filament::math::min(srcChannelCount, dstChannelCount);
         assert_invariant(minChannelCount <= 4);
         const int inds[4] = {swizzle ? 2 : 0, 1, swizzle ? 0 : 2, 3};
-
-        int srcStride;
-        if (flip) {
-            src += srcBytesPerRow * (height - 1);
-            srcStride = -srcBytesPerRow;
-        } else {
-            srcStride = srcBytesPerRow;
-        }
-
         for (size_t row = 0; row < height; ++row) {
             const srcComponentType* in = (const srcComponentType*) src;
             dstComponentType* out = (dstComponentType*) dest;
@@ -97,15 +87,15 @@ public:
                 in += srcChannelCount;
                 out += dstChannelCount;
             }
-            src += srcStride;
+            src += srcBytesPerRow;
             dest += dstBytesPerRow;
         }
     }
 
-    // Converts a 4-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
+    // Converts a n-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
     static bool reshapeImage(PixelBufferDescriptor* dst, PixelDataType srcType,
-            const uint8_t* srcBytes, int srcBytesPerRow, int width, int height, bool swizzle,
-            bool flip) {
+            uint32_t srcChannelCount,  const uint8_t* srcBytes, int srcBytesPerRow, int width,
+            int height, bool swizzle) {
         size_t dstChannelCount;
         switch (dst->format) {
             case PixelDataFormat::R_INTEGER: dstChannelCount = 1; break;
@@ -118,8 +108,9 @@ public:
             case PixelDataFormat::RGBA: dstChannelCount = 4; break;
             default: return false;
         }
-        void (*reshaper)(uint8_t*, const uint8_t*, size_t, size_t, size_t, size_t, bool, bool)
-                = nullptr;
+        void (*reshaper)(uint8_t* dest, const uint8_t* src, size_t srcBytesPerRow,
+                size_t srcChannelCount, size_t dstBytesPerRow, size_t dstChannelCount,
+                size_t width, size_t height, bool swizzle) = nullptr;
         constexpr auto UBYTE = PixelDataType::UBYTE, FLOAT = PixelDataType::FLOAT,
                 UINT = PixelDataType::UINT, INT = PixelDataType::INT;
         switch (dst->type) {
@@ -165,11 +156,10 @@ public:
         uint8_t* dstBytes = (uint8_t*) dst->buffer;
         const int dstBytesPerRow = PixelBufferDescriptor::computeDataSize(dst->format, dst->type,
                 dst->stride ? dst->stride : width, 1, dst->alignment);
-        reshaper(dstBytes, srcBytes, srcBytesPerRow, dstBytesPerRow, dstChannelCount, height,
-                swizzle, flip);
+        reshaper(dstBytes, srcBytes, srcBytesPerRow, srcChannelCount, dstBytesPerRow,
+                dstChannelCount, width, height, swizzle);
         return true;
     }
-
 };
 
 template<> inline float getMaxValue() { return 1.0f; }

@@ -8,14 +8,12 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
-    include/uberz/ArchiveCache.h
     include/uberz/ArchiveEnums.h
     include/uberz/ReadableArchive.h
     include/uberz/WritableArchive.h
 )
 
 set(SRCS
-    src/ArchiveCache.cpp
     src/ReadableArchive.cpp
     src/WritableArchive.cpp
 )
@@ -27,7 +25,7 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC math utils filabridge filament zstd)
+target_link_libraries(${TARGET} PUBLIC math utils filabridge zstd)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 

@@ -23,7 +23,7 @@
 #include <math/mat4.h>
 #include <math/TVecHelpers.h>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 template <typename T>
 UTILS_PUBLIC T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const T& tang1, float t) {
@@ -121,6 +121,6 @@ inline filament::math::mat3f matrixFromUvTransform(const float offset[2], float 
     return filament::math::mat3f(sx * c, sx * s, tx, -sy * s, sy * c, ty, 0.0f, 0.0f, 1.0f);
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_MATH_H

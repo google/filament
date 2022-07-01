@@ -42,7 +42,7 @@ using namespace filament::math;
 using namespace std;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using TimeValues = map<float, size_t>;
 using SourceValues = vector<float>;
@@ -122,6 +122,8 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
         case cgltf_interpolation_type_cubic_spline:
             dst.interpolation = Sampler::CUBIC;
             break;
+        case cgltf_interpolation_type_max_enum:
+            break;
     }
 }
 
@@ -139,6 +141,7 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
         case cgltf_animation_path_type_weights:
             dst.transformType = Channel::WEIGHTS;
             break;
+        case cgltf_animation_path_type_max_enum:
         case cgltf_animation_path_type_invalid:
             GLTFIO_WARN("Unsupported channel path.");
             break;
@@ -558,4 +561,4 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
     transformManager->setTransform(node, xform);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

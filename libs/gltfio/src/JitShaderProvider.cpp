@@ -26,15 +26,15 @@
 
 using namespace filamat;
 using namespace filament;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 namespace {
 
-class MaterialGenerator : public MaterialProvider {
+class JitShaderProvider : public MaterialProvider {
 public:
-    explicit MaterialGenerator(Engine* engine, bool optimizeShaders);
-    ~MaterialGenerator() override;
+    explicit JitShaderProvider(Engine* engine, bool optimizeShaders);
+    ~JitShaderProvider() override;
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label, const char* extras) override;
@@ -54,24 +54,24 @@ public:
     const bool mOptimizeShaders;
 };
 
-MaterialGenerator::MaterialGenerator(Engine* engine, bool optimizeShaders) : mEngine(engine),
+JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders) : mEngine(engine),
         mOptimizeShaders(optimizeShaders) {
     MaterialBuilder::init();
 }
 
-MaterialGenerator::~MaterialGenerator() {
+JitShaderProvider::~JitShaderProvider() {
     MaterialBuilder::shutdown();
 }
 
-size_t MaterialGenerator::getMaterialsCount() const noexcept {
+size_t JitShaderProvider::getMaterialsCount() const noexcept {
     return mMaterials.size();
 }
 
-const Material* const* MaterialGenerator::getMaterials() const noexcept {
+const Material* const* JitShaderProvider::getMaterials() const noexcept {
     return mMaterials.data();
 }
 
-void MaterialGenerator::destroyMaterials() {
+void JitShaderProvider::destroyMaterials() {
     for (auto& iter : mCache) {
         mEngine->destroy(iter.second);
     }
@@ -285,7 +285,7 @@ std::string shaderFromKey(const MaterialKey& config) {
 
                 // TODO: Provided by Filament, but this should really be provided/computed by gltfio
                 // TODO: This scale is per renderable and should include the scale of the mesh node
-                float scale = objectUniforms.userData;
+                float scale = getObjectUniforms().userData;
                 material.thickness = materialParams.volumeThicknessFactor * scale;
             )SHADER";
 
@@ -536,7 +536,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
 }
 
-MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
+MaterialInstance* JitShaderProvider::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
         const char* label, const char* extras) {
     constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
@@ -557,10 +557,10 @@ MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config,
 
 } // anonymous namespace
 
-namespace gltfio {
+namespace filament::gltfio {
 
-MaterialProvider* createMaterialGenerator(filament::Engine* engine, bool optimizeShaders) {
-    return new MaterialGenerator(engine, optimizeShaders);
+MaterialProvider* createJitShaderProvider(filament::Engine* engine, bool optimizeShaders) {
+    return new JitShaderProvider(engine, optimizeShaders);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio
