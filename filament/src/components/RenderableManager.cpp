@@ -404,6 +404,13 @@ void FRenderableManager::create(
                                 out, boneCount * sizeof(PerRenderableBoneUib::BoneData) }, 0);
                     }
                 }
+                else
+                {
+                    auto* initBone = driver.allocatePod<PerRenderableBoneUib>(1);
+                    std::uninitialized_fill_n(initBone, 1, PerRenderableBoneUib{});
+                    driver.updateBufferObject(bones.handle, {
+                            initBone, sizeof(PerRenderableBoneUib) }, 0);
+                }
             }
         }
 
