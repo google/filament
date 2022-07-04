@@ -477,7 +477,7 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
     }
 }
 
-void OpenGLContext::deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept {
+void OpenGLContext::deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept {
     glDeleteVertexArrays(1, arrays);
     // binding of a bound VAO is reset to 0
     for (GLsizei i = 0; i < n; ++i) {

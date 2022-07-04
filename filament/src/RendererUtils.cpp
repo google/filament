@@ -64,9 +64,11 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 data.depth = blackboard.get<FrameGraphTexture>("depth");
 
                 // Screen-space reflection or refractions
-                data.ssr = blackboard.get<FrameGraphTexture>("ssr");
-                if (data.ssr) {
-                    data.ssr = builder.sample(data.ssr);
+                if (config.hasScreenSpaceReflectionsOrRefractions) {
+                    data.ssr = blackboard.get<FrameGraphTexture>("ssr");
+                    if (data.ssr) {
+                        data.ssr = builder.sample(data.ssr);
+                    }
                 }
 
                 if (config.hasContactShadows) {
@@ -161,21 +163,21 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
 
                 // set samplers and uniforms
                 view.prepareSSAO(data.ssao ?
-                                 resources.getTexture(data.ssao) : engine.getOneTextureArray());
+                        resources.getTexture(data.ssao) : engine.getOneTextureArray());
 
                 view.prepareShadowMap();
 
                 // set shadow sampler
                 view.prepareShadow(data.shadows ?
-                                   resources.getTexture(data.shadows) : engine.getOneTextureArray());
+                        resources.getTexture(data.shadows) : engine.getOneTextureArray());
 
                 // set structure sampler
                 view.prepareStructure(data.structure ?
-                                      resources.getTexture(data.structure) : engine.getOneTexture());
+                        resources.getTexture(data.structure) : engine.getOneTexture());
 
                 // set screen-space reflections and screen-space refractions
                 TextureHandle ssr = data.ssr ?
-                                    resources.getTexture(data.ssr) : engine.getOneTextureArray();
+                        resources.getTexture(data.ssr) : engine.getOneTextureArray();
 
                 view.prepareSSR(ssr, config.ssrLodOffset,
                         view.getScreenSpaceReflectionsOptions());
@@ -250,6 +252,8 @@ FrameGraphId<FrameGraphTexture> RendererUtils::refractionPass(
         input.clear();
         blackboard.remove("color");
         blackboard.remove("depth");
+
+        config.hasScreenSpaceReflectionsOrRefractions = true;
 
         input = RendererUtils::colorPass(fg, "Color Pass (opaque)", engine, view, {
                         // When rendering the opaques, we need to conserve the sample buffer,

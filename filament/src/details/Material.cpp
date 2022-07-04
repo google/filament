@@ -417,7 +417,7 @@ Program FMaterial::getProgramBuilderWithVariants(
      * Vertex shader
      */
 
-    filaflat::ShaderBuilder& vsBuilder = mEngine.getVertexShaderBuilder();
+    ShaderContent& vsBuilder = mEngine.getVertexShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(vsBuilder, sm,
             vertexVariant, ShaderType::VERTEX);
@@ -431,7 +431,7 @@ Program FMaterial::getProgramBuilderWithVariants(
      * Fragment shader
      */
 
-    filaflat::ShaderBuilder& fsBuilder = mEngine.getFragmentShaderBuilder();
+    ShaderContent& fsBuilder = mEngine.getFragmentShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(fsBuilder, sm,
             fragmentVariant, ShaderType::FRAGMENT);

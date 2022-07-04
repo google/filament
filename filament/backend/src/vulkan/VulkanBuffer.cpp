@@ -37,7 +37,7 @@ VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         .usage = usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT
     };
 
-    VmaAllocationCreateInfo allocInfo { .pool = context.vmaPoolGPU };
+    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer(context.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
 }
 

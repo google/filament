@@ -5,6 +5,17 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.25.0
+
+- Vulkan: smol-v blobs are now 8-byte aligned within the filamat archive. [⚠️ **Recompile Materials**]
+- backend: added support for EGL on linux (headless)
+- uberz tool: add --append and --template arguments.
+- matc tool: add --template argument.
+
+## v1.24.0
+
+- ImGuiHelper: add support for Y flip.
+- Metal: ignore `MTLTexture` formatting when importing external textures.
 - materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
 - gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
 - gltfio: Fix morphing with sparse accessors.
@@ -17,22 +28,22 @@ A new header is inserted each time a *tag* is created.
 - OpenGL: add WebGL support for ReadPixels
 - Vulkan: add assert and error message for OOM (debug builds)
 - Vulkan: fix crash with picking and 2-component ReadPixels.
-
-## v1.23.2
-
-- gltfio: fix morphing for un-packed accessors
-- gltfio: ubershaders are now packaged into flexible archives
+- backend: workaround broken GLES timer query on some Mali-Gxx old drivers
+- backend: revert c049a1 & reenable b2cdf9 ("don't issue a flush systematically after framegraph's execute")
 - gltfio: namespace now lives under Filament [⚠️ **API Change**]
 - gltfio: UbershaderLoader renamed to UbershaderProvider [⚠️ **API Change**]
 - gltfio: MaterialGenerator renamed to JitShaderProvider [⚠️ **API Change**]
-- gltfio: remove poorly maintained lite flavor
-- engine: disable user scissor while rendering the Shadow Maps (#5607)
-- engine: merge identical backend RenderPrimitives together
-- engine: improve ResourceAllocator performance a bit by reserving 128 cache entries
-- utils: remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
-- backend: fix WGL context attributes
-- backend: workaround broken GLES timer query on some Mali-Gxx old drivers
-- backend: revert c049a1 & reenable b2cdf9 ("don't issue a flush systematically after framegraph's execute")
+
+## v1.23.2
+
+- gltfio: Fix morphing for un-packed accessors.
+- gltfio: Ubershaders are now packaged into flexible archives.
+- gltfio: Remove poorly maintained lite flavor.
+- engine: Disable user scissor while rendering the Shadow Maps.
+- engine: Merge identical backend `RenderPrimitives` together.
+- engine: Improve `ResourceAllocator` performance a bit by reserving 128 cache entries.
+- utils: Remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
+- backend: Fix WGL context attributes.
 - Metal: Fix potential invalid shaders when using gltfio in Ubershader mode. [⚠️ **Recompile Materials to get the fix**]
 
 ## v1.23.1

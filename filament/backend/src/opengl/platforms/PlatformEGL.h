@@ -64,6 +64,7 @@ public:
 
 protected:
     static void logEglError(const char* name) noexcept;
+    static void clearGlError() noexcept;
 
     EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept;
     void initializeGlExtensions() noexcept;

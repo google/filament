@@ -125,6 +125,18 @@ public:
         mCursor += 4;
     }
 
+    // This writes 0 to 7 (inclusive) zeroes, and the subsequent write is guaranteed to be on a
+    // 8-byte boundary. Note that the reader must perform a similar calculation to figure out
+    // how many bytes to skip.
+    void writeAlignmentPadding() {
+        const intptr_t offset = mCursor - mStart;
+        const uint8_t padSize = (8 - (offset % 8)) % 8;
+        for (uint8_t i = 0; i < padSize; i++) {
+            writeUint8(0);
+        }
+        assert_invariant(0 == ((mCursor - mStart) % 8));
+    }
+
     uint32_t writeSize() {
         assert(mSizePlaceholders.size() > 0);
 

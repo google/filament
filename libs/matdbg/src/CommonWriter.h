@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/DictionaryReader.h>
 #include <filaflat/MaterialChunk.h>
-#include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
 
 #include <filament/MaterialChunkType.h>

@@ -28,7 +28,6 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
-#include <utils/trap.h>
 
 #ifndef NDEBUG
 #include <set>
@@ -53,7 +52,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
         int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         utils::slog.e << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
-        utils::debug_trap();
     } else {
         utils::slog.w << "VULKAN WARNING: (" << pLayerPrefix << ") "
                 << pMessage << utils::io::endl;
@@ -68,7 +66,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") "
                 << cbdata->pMessage << utils::io::endl;
-        utils::debug_trap();
     } else {
         // TODO: emit best practices warnings about aggressive pipeline barriers.
         if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT") || strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
@@ -118,7 +115,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     for  (const auto& extProps : availableExts) {
         if (!strcmp(extProps.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
             mContext.debugUtilsSupported = true;
-            break;
+        } else if (!strcmp(extProps.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+            mContext.portabilityEnumerationSupported = true;
         }
     }
 
@@ -187,18 +185,21 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     uint32_t enabledExtensionCount = 0;
 
     // Request all cross-platform extensions.
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_surface";
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_get_physical_device_properties2";
+    ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_SURFACE_EXTENSION_NAME;
+    ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
 #if VK_ENABLE_VALIDATION
 #if defined(__ANDROID__)
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
+    ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 #endif
     if (validationFeaturesSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_validation_features";
+        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
     }
 #endif
     if (mContext.debugUtilsSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
+        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    }
+    if (mContext.portabilityEnumerationSupported) {
+        ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
     }
 
     // Request platform-specific extensions.
@@ -210,11 +211,15 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.apiVersion = VK_MAKE_VERSION(VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
+    appInfo.apiVersion = VK_MAKE_API_VERSION(0,
+            VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
     instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
+    if (mContext.portabilityEnumerationSupported) {
+        instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
 
     VkValidationFeaturesEXT features = {};
     VkValidationFeatureEnableEXT enables[] = {
@@ -230,6 +235,11 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     }
 
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &mContext.instance);
+#ifndef NDEBUG
+    if (result != VK_SUCCESS) {
+        utils::slog.e << "Unable to create instance: " << result << utils::io::endl;
+    }
+#endif
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance.");
     bluevk::bindInstance(mContext.instance);
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback =
@@ -337,8 +347,6 @@ void VulkanDriver::terminate() {
     mFramebufferCache.reset();
     mSamplerCache.reset();
 
-    vmaDestroyPool(mContext.allocator, mContext.vmaPoolGPU);
-    vmaDestroyPool(mContext.allocator, mContext.vmaPoolCPU);
     vmaDestroyAllocator(mContext.allocator);
 
     vkDestroyQueryPool(mContext.device, mContext.timestamps.pool, VKALLOC);
@@ -1903,7 +1911,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     const uint32_t indexCount = prim.count;
     const uint32_t firstIndex = prim.offset / prim.indexBuffer->elementSize;
     const int32_t vertexOffset = 0;
-    const uint32_t firstInstId = 1;
+    const uint32_t firstInstId = 0;
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
 }
 
@@ -1958,7 +1966,6 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
         inRenderPass = false;
     } else if (inRenderPass && OUTSIDE_COMMANDS.find(command) != OUTSIDE_COMMANDS.end()) {
         utils::slog.e << command.c_str() << " issued inside a render pass." << utils::io::endl;
-        utils::debug_trap();
     }
 #endif
 }
