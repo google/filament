@@ -293,7 +293,8 @@ public:
         // RenderTarget. Metal's texture coordinates have (0, 0) at the top-left of the texture, but
         // Filament's coordinates have (0, 0) at bottom-left.
         return MTLRegionMake2D((NSUInteger)rect.left,
-                height - (NSUInteger)rect.bottom - rect.height, rect.width, rect.height);
+                std::max(height - (int64_t) rect.bottom - rect.height, (int64_t) 0),
+                rect.width, rect.height);
     }
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }

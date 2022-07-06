@@ -116,7 +116,6 @@ struct MetalContext {
 
     std::stack<const char*> groupMarkers;
 
-    int32_t currentRenderTargetHeight;
     MTLViewport currentViewport;
 
 #if defined(FILAMENT_METAL_PROFILING)

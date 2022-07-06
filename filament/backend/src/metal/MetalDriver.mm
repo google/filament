@@ -852,7 +852,6 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     };
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
 
-    mContext->currentRenderTargetHeight = renderTargetHeight;
     mContext->currentViewport = metalViewport;
 
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
@@ -1240,13 +1239,13 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     }
 
     // Set scissor-rectangle.
-    const int32_t renderTargetHeight = mContext->currentRenderTargetHeight;
+    MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
     const MTLViewport& viewport = mContext->currentViewport;
 
-    const int32_t left   = std::max(static_cast<int32_t>(viewport.originX                  ), ps.scissor.left   );
-    const int32_t right  = std::min(static_cast<int32_t>(viewport.originX + viewport.width ), ps.scissor.right());
-    const int32_t top    = std::max(static_cast<int32_t>(viewport.originY                  ), renderTargetHeight - ps.scissor.top() );
-    const int32_t bottom = std::min(static_cast<int32_t>(viewport.originY + viewport.height), renderTargetHeight - ps.scissor.bottom);
+    const auto left   = std::fmax(viewport.originX                  , scissor.origin.x   );
+    const auto right  = std::fmin(viewport.originX + viewport.width , scissor.origin.x + scissor.size.width );
+    const auto top    = std::fmax(viewport.originY                  , scissor.origin.y );
+    const auto bottom = std::fmin(viewport.originY + viewport.height, scissor.origin.y + scissor.size.height );
 
     MTLScissorRect scissorRect = {
         .x      = static_cast<NSUInteger>(left),
