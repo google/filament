@@ -103,7 +103,7 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
         if (!DictionaryReader::unflatten(cc, mImpl.mDictionaryTag, mImpl.mBlobDictionary)) {
             return ParseResult::ERROR_OTHER;
         }
-        if (!mImpl.mMaterialChunk.readIndex(mImpl.mMaterialTag)) {
+        if (!mImpl.mMaterialChunk.initialize(mImpl.mMaterialTag)) {
             return ParseResult::ERROR_OTHER;
         }
     }
