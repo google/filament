@@ -22,8 +22,7 @@
 
 #include <utils/Log.h>
 
-#include <tsl/robin_map.h>
-
+#include <map>
 #include <sstream>
 
 #include <GlslangToSpv.h>
@@ -40,9 +39,12 @@ using namespace backend;
 using namespace filaflat;
 using namespace filamat;
 using namespace glslang;
-using namespace std;
-using namespace tsl;
 using namespace utils;
+
+using std::ostream;
+using std::stringstream;
+using std::streampos;
+using std::vector;
 
 // Tiny database of shader text that can import / export MaterialTextChunk and DictionaryTextChunk.
 class ShaderIndex {
@@ -72,7 +74,7 @@ private:
         uint8_t stage;
         uint32_t offset;
         vector<uint16_t> lineIndices;
-        string decodedShaderText;
+        std::string decodedShaderText;
         uint32_t stringLength;
     };
 
@@ -80,7 +82,7 @@ private:
     void encodeShadersToIndices();
 
     vector<ShaderRecord> mShaderRecords;
-    vector<string> mStringLines;
+    vector<std::string> mStringLines;
 };
 
 // Tiny database of data blobs that can import / export MaterialSpirvChunk and DictionarySpirvChunk.
@@ -159,7 +161,7 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
     }
 
     // Clone all chunks except Dictionary* and Material*.
-    stringstream sstream(string((const char*) cc.getData(), cc.getSize()));
+    stringstream sstream(std::string((const char*) cc.getData(), cc.getSize()));
     stringstream tstream;
     ShaderIndex shaderIndex;
     {
@@ -249,7 +251,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
 
     // Clone all chunks except Dictionary* and Material*.
     filaflat::ChunkContainer const& cc = mOriginalPackage;
-    stringstream sstream(string((const char*) cc.getData(), cc.getSize()));
+    stringstream sstream(std::string((const char*) cc.getData(), cc.getSize()));
     stringstream tstream;
     BlobIndex shaderIndex;
     {
@@ -308,13 +310,13 @@ void ShaderIndex::addStringLines(const uint8_t* chunkContent, size_t size) {
     mStringLines.resize(count);
     const uint8_t* ptr = chunkContent + 4;
     for (uint32_t i = 0; i < count; i++) {
-        mStringLines[i] = string((const char*) ptr);
+        mStringLines[i] = std::string((const char*) ptr);
         ptr += mStringLines[i].length() + 1;
     }
 }
 
 void ShaderIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
-    stringstream stream(string((const char*) chunkContent, size));
+    stringstream stream(std::string((const char*) chunkContent, size));
     uint64_t recordCount;
     stream.read((char*) &recordCount, sizeof(recordCount));
     mShaderRecords.resize(recordCount);
@@ -407,21 +409,27 @@ void ShaderIndex::replaceShader(backend::ShaderModel shaderModel, Variant varian
 
 void ShaderIndex::decodeShadersFromIndices() {
     for (auto& record : mShaderRecords) {
-        record.decodedShaderText.clear();
+        size_t len = 0;
         for (uint16_t index : record.lineIndices) {
             if (index >= mStringLines.size()) {
                 slog.e << "Internal chunk decoding error." << io::endl;
                 return;
             }
-            record.decodedShaderText += mStringLines[index] + "\n";
+            len += mStringLines[index].size() + 1;
+        }
+        record.decodedShaderText.clear();
+        record.decodedShaderText.reserve(len);
+        for (uint16_t index : record.lineIndices) {
+            record.decodedShaderText += mStringLines[index];
+            record.decodedShaderText += '\n';
         }
     }
 }
 
 void ShaderIndex::encodeShadersToIndices() {
-    robin_map<string, uint16_t> table;
+    std::map<std::string_view, uint16_t> table;
     for (size_t i = 0; i < mStringLines.size(); i++) {
-        table[mStringLines[i]] = uint16_t(i);
+        table.emplace(mStringLines[i], uint16_t(i));
     }
 
     uint32_t offset = sizeof(uint64_t);
@@ -453,7 +461,7 @@ void ShaderIndex::encodeShadersToIndices() {
                 slog.e << "Internal chunk encoding error." << io::endl;
                 return;
             }
-            string newLine(start, pos, len);
+            std::string_view newLine(start + pos, len);
             auto iter = table.find(newLine);
             if (iter == table.end()) {
                 size_t index = mStringLines.size();
@@ -462,8 +470,8 @@ void ShaderIndex::encodeShadersToIndices() {
                     return;
                 }
                 record.lineIndices.push_back(index);
-                table[newLine] = index;
-                mStringLines.push_back(newLine);
+                table.emplace(newLine, index);
+                mStringLines.emplace_back(newLine);
                 continue;
             }
             record.lineIndices.push_back(iter->second);
@@ -495,7 +503,7 @@ void BlobIndex::addDataBlobs(const uint8_t* chunkContent, size_t size, streampos
 }
 
 void BlobIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
-    stringstream stream(string((const char*) chunkContent, size));
+    stringstream stream(std::string((const char*) chunkContent, size));
     uint64_t recordCount;
     stream.read((char*) &recordCount, sizeof(recordCount));
     mShaderRecords.resize(recordCount);
