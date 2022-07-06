@@ -21,15 +21,14 @@
 namespace filamat {
 
 size_t BlobDictionary::addBlob(const std::vector<uint32_t>& vblob) noexcept {
-    std::string blob((char*) vblob.data(), vblob.size() * 4);
+    std::string_view blob((char*) vblob.data(), vblob.size() * 4);
     auto iter = mBlobIndices.find(blob);
     if (iter != mBlobIndices.end()) {
         return iter->second;
     }
-    mBlobIndices[blob] = mBlobs.size();
-    size_t size = blob.size();
-    mBlobs.push_back(std::move(blob));
-    mStorageSize += size;
+    mBlobIndices.emplace(blob, mBlobs.size());
+    mBlobs.emplace_back(blob);
+    mStorageSize += blob.size();
     return mBlobs.size() - 1;
 }
 

@@ -19,7 +19,7 @@
 
 #include <cassert>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <vector>
 
 namespace filamat {
@@ -54,7 +54,10 @@ public:
     }
 
 private:
-    std::unordered_map<std::string, size_t> mBlobIndices;
+
+    // Use an ordered map with a transparent comparator to allow lookups using
+    // std::string_view without need for construction of a std::string object.
+    std::map<std::string, size_t, std::less<>> mBlobIndices;
     std::vector<std::string> mBlobs;
     size_t mStorageSize;
 };
