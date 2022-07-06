@@ -61,7 +61,7 @@ ShaderExtractor::ShaderExtractor(Backend backend, const void* data, size_t size)
 
 bool ShaderExtractor::parse() noexcept {
     if (mChunkContainer.parse()) {
-        return mMaterialChunk.readIndex(mMaterialTag);
+        return mMaterialChunk.initialize(mMaterialTag);
     }
     return false;
 }
