@@ -400,7 +400,7 @@ public class Camera {
     }
 
     /**
-     * Sets the camera's view matrix.
+     * Sets the camera's model matrix.
      * <p>
      * Helper method to set the camera's entity transform component.
      * Remember that the Camera "looks" towards its -z axis.
@@ -412,29 +412,29 @@ public class Camera {
      *          engine.getTransformManager().getInstance(camera->getEntity()), viewMatrix);
      * </pre>
      *
-     * @param viewMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.
+     * @param modelMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.
      */
-    public void setModelMatrix(@NonNull @Size(min = 16) float[] viewMatrix) {
-        Asserts.assertMat4fIn(viewMatrix);
-        nSetModelMatrix(getNativeObject(), viewMatrix);
+    public void setModelMatrix(@NonNull @Size(min = 16) float[] modelMatrix) {
+        Asserts.assertMat4fIn(modelMatrix);
+        nSetModelMatrix(getNativeObject(), modelMatrix);
     }
 
     /**
-     * Sets the camera's view matrix.
+     * Sets the camera's model matrix.
      * <p>
      * Helper method to set the camera's entity transform component.
      * Remember that the Camera "looks" towards its -z axis.
      * <p>
      *
-     * @param viewMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.
+     * @param modelMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.
      */
-    public void setModelMatrix(@NonNull @Size(min = 16) double[] viewMatrix) {
-        Asserts.assertMat4In(viewMatrix);
-        nSetModelMatrixFp64(getNativeObject(), viewMatrix);
+    public void setModelMatrix(@NonNull @Size(min = 16) double[] modelMatrix) {
+        Asserts.assertMat4In(modelMatrix);
+        nSetModelMatrixFp64(getNativeObject(), modelMatrix);
     }
 
     /**
-     * Sets the camera's view matrix.
+     * Sets the camera's model matrix.
      *
      * @param eyeX      x-axis position of the camera in world space
      * @param eyeY      y-axis position of the camera in world space
@@ -549,10 +549,10 @@ public class Camera {
     /**
      * Retrieves the camera's view matrix. The view matrix is the inverse of the model matrix.
      *
-     * @param out A 16-float array where the model view will be stored, or null in which
+     * @param out A 16-float array where the view matrix will be stored, or null in which
      *            case a new array is allocated.
      *
-     * @return A 16-float array containing the camera's view as a column-major matrix.
+     * @return A 16-float array containing the camera's column-major view matrix.
      */
     @NonNull @Size(min = 16)
     public float[] getViewMatrix(@Nullable @Size(min = 16) float[] out) {
@@ -567,7 +567,7 @@ public class Camera {
      * @param out A 16-double array where the model view will be stored, or null in which
      *            case a new array is allocated.
      *
-     * @return A 16-double array containing the camera's view as a column-major matrix.
+     * @return A 16-double array containing the camera's column-major view matrix.
      */
     @NonNull @Size(min = 16)
     public double[] getViewMatrix(@Nullable @Size(min = 16) double[] out) {
