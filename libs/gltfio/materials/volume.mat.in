@@ -1,10 +1,10 @@
 material {
-    name : volume_${SHADINGMODEL}_${BLENDING},
+    name : volume_ubershader,
     requires : [ uv0, uv1, color ],
-    shadingModel : ${SHADINGMODEL},
+    shadingModel : lit,
     blending : masked,
-    doubleSided : ${DOUBLESIDED},
-    transparency : ${TRANSPARENCY},
+    doubleSided : false,
+    transparency : default,
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
@@ -60,7 +60,16 @@ material {
 
         // IOR
         { type : float, name : ior }
+
+
+        ${CUSTOM_PARAMS}
     ],
+}
+
+vertex {
+  void materialVertex(inout MaterialVertexInputs material) {
+      ${CUSTOM_VERTEX}
+    }
 }
 
 fragment {
@@ -95,7 +104,7 @@ fragment {
         material.metallic = materialParams.metallicFactor;
         material.transmission = materialParams.transmissionFactor;
         material.absorption = materialParams.volumeAbsorption;
-        material.thickness = materialParams.volumeThicknessFactor * objectUniforms.userData;
+        material.thickness = materialParams.volumeThicknessFactor * getObjectUniforms().userData;
         material.ior = materialParams.ior;
 
         material.emissive = vec4(materialParams.emissiveStrength *
@@ -132,5 +141,7 @@ fragment {
             uv = (vec3(uv, 1.0) * materialParams.emissiveUvMatrix).xy;
             material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
         }
+
+        ${CUSTOM_FRAGMENT}
     }
 }

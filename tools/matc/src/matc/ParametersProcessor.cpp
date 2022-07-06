@@ -513,6 +513,11 @@ static bool processDepthWrite(MaterialBuilder& builder, const JsonishValue& valu
     return true;
 }
 
+static bool processInstanced(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.instanced(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processDepthCull(MaterialBuilder& builder, const JsonishValue& value) {
     builder.depthCulling(value.toJsonBool()->getBool());
     return true;
@@ -749,6 +754,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["culling"]                       = { &processCulling, Type::STRING };
     mParameters["colorWrite"]                    = { &processColorWrite, Type::BOOL };
     mParameters["depthWrite"]                    = { &processDepthWrite, Type::BOOL };
+    mParameters["instanced"]                     = { &processInstanced, Type::BOOL };
     mParameters["depthCulling"]                  = { &processDepthCull, Type::BOOL };
     mParameters["doubleSided"]                   = { &processDoubleSided, Type::BOOL };
     mParameters["transparency"]                  = { &processTransparencyMode, Type::STRING };

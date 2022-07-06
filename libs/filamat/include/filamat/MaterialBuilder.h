@@ -388,6 +388,9 @@ public:
     //! Enable / disable depth based culling (enabled by default, material instances can override).
     MaterialBuilder& depthCulling(bool enable) noexcept;
 
+    //! Enable / disable instanced primitives (disabled by default).
+    MaterialBuilder& instanced(bool enable) noexcept;
+
     /**
      * Double-sided materials don't cull faces, equivalent to culling(CullingMode::NONE).
      * doubleSided() overrides culling() if called.
@@ -731,6 +734,7 @@ private:
     bool mDoubleSidedCapability = false;
     bool mColorWrite = true;
     bool mDepthTest = true;
+    bool mInstanced = true;
     bool mDepthWrite = true;
     bool mDepthWriteSet = false;
 

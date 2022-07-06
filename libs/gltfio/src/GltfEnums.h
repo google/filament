@@ -133,6 +133,7 @@ inline bool getPrimitiveType(cgltf_primitive_type in,
             return true;
         case cgltf_primitive_type_line_loop:
         case cgltf_primitive_type_triangle_fan:
+        case cgltf_primitive_type_max_enum:
             return false;
     }
     return false;

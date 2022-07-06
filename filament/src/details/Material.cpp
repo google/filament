@@ -378,7 +378,7 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     if (Variant(variant).hasSkinningOrMorphing()) {
-        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableUibBone::_name);
+        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableBoneUib::_name);
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_MORPHING, PerRenderableMorphingUib::_name);
     }
 
@@ -417,7 +417,7 @@ Program FMaterial::getProgramBuilderWithVariants(
      * Vertex shader
      */
 
-    filaflat::ShaderBuilder& vsBuilder = mEngine.getVertexShaderBuilder();
+    ShaderContent& vsBuilder = mEngine.getVertexShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(vsBuilder, sm,
             vertexVariant, ShaderType::VERTEX);
@@ -431,7 +431,7 @@ Program FMaterial::getProgramBuilderWithVariants(
      * Fragment shader
      */
 
-    filaflat::ShaderBuilder& fsBuilder = mEngine.getFragmentShaderBuilder();
+    ShaderContent& fsBuilder = mEngine.getFragmentShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(fsBuilder, sm,
             fragmentVariant, ShaderType::FRAGMENT);
@@ -471,7 +471,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
         info.isSampler = false;
         info.isSubpass = false;
         info.type = uniformInfo.type;
-        info.count = uniformInfo.size;
+        info.count = std::max(1u, uniformInfo.size);
         info.precision = uniformInfo.precision;
     }
 

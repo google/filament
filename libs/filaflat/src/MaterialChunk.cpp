@@ -15,9 +15,7 @@
  */
 
 #include <filaflat/MaterialChunk.h>
-#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
-#include <filaflat/ShaderBuilder.h>
 
 #include <utils/Log.h>
 
@@ -85,12 +83,10 @@ bool MaterialChunk::readIndex(filamat::ChunkType materialTag) {
 }
 
 bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary const& dictionary,
-        ShaderBuilder& shaderBuilder, uint8_t shaderModel, filament::Variant variant, uint8_t ps) {
+        ShaderContent& shaderContent, uint8_t shaderModel, filament::Variant variant, uint8_t ps) {
     if (mBase == nullptr) {
         return false;
     }
-
-    shaderBuilder.reset();
 
     // Jump and read
     uint32_t key = makeKey(shaderModel, variant, ps);
@@ -112,14 +108,15 @@ bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary const&
         return false;
     }
 
-    // Add an extra char for the null terminator.
-    shaderBuilder.announce(shaderSize + 1);
-
     // Read how many lines there are.
     uint32_t lineCount = 0;
     if (!unflattener.read(&lineCount)){
         return false;
     }
+
+    shaderContent.reserve(shaderSize);
+    shaderContent.resize(shaderSize);
+    size_t cursor = 0;
 
     // Read all lines.
     for(int32_t i = 0 ; i < lineCount; i++) {
@@ -127,20 +124,24 @@ bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary const&
         if (!unflattener.read(&lineIndex)) {
             return false;
         }
-        const char* string = dictionary.getString(lineIndex);
-        shaderBuilder.append(string, strlen(string));
-        shaderBuilder.append("\n", 1);
+        const auto& content = dictionary[lineIndex];
+
+        // Replace null with newline.
+        memcpy(&shaderContent[cursor], content.data(), content.size() - 1);
+        cursor += content.size() - 1;
+        shaderContent[cursor++] = '\n';
     }
 
     // Write the terminating null character.
-    shaderBuilder.append("", 1);
+    shaderContent[cursor++] = 0;
+    assert_invariant(cursor == shaderSize);
 
     return true;
 }
 
 
 bool MaterialChunk::getSpirvShader(BlobDictionary const& dictionary,
-        ShaderBuilder& shaderBuilder, uint8_t shaderModel, filament::Variant variant, uint8_t stage) {
+        ShaderContent& shaderContent, uint8_t shaderModel, filament::Variant variant, uint8_t stage) {
 
     if (mBase == nullptr) {
         return false;
@@ -152,24 +153,18 @@ bool MaterialChunk::getSpirvShader(BlobDictionary const& dictionary,
         return false;
     }
 
-    size_t index = pos->second;
-    size_t shaderSize;
-    const char* shaderContent = dictionary.getBlob(index, &shaderSize);
-
-    shaderBuilder.reset();
-    shaderBuilder.announce(shaderSize);
-    shaderBuilder.append(shaderContent, shaderSize);
+    shaderContent = dictionary[pos->second];
     return true;
 }
 
-bool MaterialChunk::getShader(ShaderBuilder& shaderBuilder,
+bool MaterialChunk::getShader(ShaderContent& shaderContent,
         BlobDictionary const& dictionary, uint8_t shaderModel, filament::Variant variant, uint8_t stage) {
     switch (mMaterialTag) {
         case filamat::ChunkType::MaterialGlsl:
         case filamat::ChunkType::MaterialMetal:
-            return getTextShader(mUnflattener, dictionary, shaderBuilder, shaderModel, variant, stage);
+            return getTextShader(mUnflattener, dictionary, shaderContent, shaderModel, variant, stage);
         case filamat::ChunkType::MaterialSpirv:
-            return getSpirvShader(dictionary, shaderBuilder, shaderModel, variant, stage);
+            return getSpirvShader(dictionary, shaderContent, shaderModel, variant, stage);
         default:
             return false;
     }

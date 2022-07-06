@@ -17,10 +17,8 @@
 
 #include "MaterialParser.h"
 
-#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
-#include <filaflat/ShaderBuilder.h>
 #include <filaflat/DictionaryReader.h>
 #include <filaflat/Unflattener.h>
 
@@ -181,6 +179,10 @@ bool MaterialParser::getDepthTest(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthTest, value);
 }
 
+bool MaterialParser::getInstanced(bool* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialInstanced, value);
+}
+
 bool MaterialParser::getCullingMode(CullingMode* value) const noexcept {
     static_assert(sizeof(CullingMode) == sizeof(uint8_t),
             "CullingMode expected size is wrong");
@@ -276,7 +278,7 @@ bool MaterialParser::getReflectionMode(ReflectionMode* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialReflectionMode, (uint8_t*)value);
 }
 
-bool MaterialParser::getShader(ShaderBuilder& shader,
+bool MaterialParser::getShader(ShaderContent& shader,
         ShaderModel shaderModel, Variant variant, ShaderType stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,
             mImpl.mBlobDictionary, (uint8_t)shaderModel, variant, stage);
@@ -325,7 +327,9 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
-        builder.add(fieldName, fieldSize, UniformInterfaceBlock::Type(fieldType),
+        // a size of 1 means not an array
+        builder.add(fieldName, fieldSize == 1 ? 0 : fieldSize,
+                UniformInterfaceBlock::Type(fieldType),
                 UniformInterfaceBlock::Precision(fieldPrecision));
     }
 

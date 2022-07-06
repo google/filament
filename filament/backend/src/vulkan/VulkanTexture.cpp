@@ -229,6 +229,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     // Otherwise, use vkCmdCopyBufferToImage.
     void* mapped = nullptr;
     VulkanStage const* stage = mStagePool.acquireStage(hostData->size);
+    assert_invariant(stage->memory);
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
     memcpy(mapped, hostData->buffer, hostData->size);
     vmaUnmapMemory(mContext.allocator, stage->memory);

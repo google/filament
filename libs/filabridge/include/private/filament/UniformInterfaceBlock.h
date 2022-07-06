@@ -55,11 +55,19 @@ public:
         // Give a name to this uniform interface block
         Builder& name(utils::CString interfaceBlockName);
 
-        // Add a uniform
+        // Add a uniform field
+        Builder& add(utils::CString uniformName,
+                Type type, Precision precision = Precision::DEFAULT);
+
+        // Add a uniform array
         Builder& add(utils::CString uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT);
 
-        // Add a known struct
+        // Add a known struct field
+        Builder& add(utils::CString uniformName,
+                utils::CString structName, size_t stride);
+
+        // Add a known struct array
         Builder& add(utils::CString uniformName, size_t size,
                 utils::CString structName, size_t stride);
 
@@ -82,16 +90,16 @@ public:
     };
 
     struct UniformInfo {
-        utils::CString name;// name of this uniform
-        uint16_t offset;    // offset in "uint32_t" of this uniform in the buffer
-        uint8_t stride;     // stride in "uint32_t" to the next element
-        Type type;          // type of this uniform
-        uint32_t size;      // size of the array in elements, or 1 if not an array
-        Precision precision;// precision of this uniform
-        utils::CString structName;// name of this uniform structure if type is STRUCT
+        utils::CString name;        // name of this uniform
+        uint16_t offset;            // offset in "uint32_t" of this uniform in the buffer
+        uint8_t stride;             // stride in "uint32_t" to the next element
+        Type type;                  // type of this uniform
+        uint32_t size;              // size of the array in elements, or 0 if not an array
+        Precision precision;        // precision of this uniform
+        utils::CString structName;  // name of this uniform structure if type is STRUCT
         // returns offset in bytes of this uniform (at index if an array)
         inline size_t getBufferOffset(size_t index = 0) const {
-            assert(index < size);
+            assert_invariant(index < std::max(1u, size));
             return (offset + stride * index) * sizeof(uint32_t);
         }
     };

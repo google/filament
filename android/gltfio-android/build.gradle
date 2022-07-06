@@ -6,16 +6,6 @@ android {
         full {
             dimension "functionality"
         }
-
-        lite {
-            dimension "functionality"
-
-            externalNativeBuild {
-                cmake {
-                    arguments.add("-DGLTFIO_LITE=ON")
-                }
-            }
-        }
     }
     packagingOptions {
         // No need to package up the following shared libs, which arise as a side effect of our
@@ -42,11 +32,6 @@ afterEvaluate { project ->
             fullRelease(MavenPublication) {
                 artifactId = POM_ARTIFACT_ID_FULL
                 from components.fullRelease
-            }
-
-            liteRelease(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID_LITE
-                from components.liteRelease
             }
         }
     }

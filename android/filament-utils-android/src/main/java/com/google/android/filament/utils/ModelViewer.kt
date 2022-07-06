@@ -114,7 +114,7 @@ class ModelViewer(
         view.scene = scene
         view.camera = camera
 
-        materialProvider = UbershaderLoader(engine)
+        materialProvider = UbershaderProvider(engine)
         assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
         resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes, ignoreBindTransform)
 

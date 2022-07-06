@@ -192,6 +192,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point<steady_clock> appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
+    mViewRenderedCount = 0;
 
     { // scope for frame id trace
         char buf[64];
@@ -420,9 +421,13 @@ void FRenderer::render(FView const* view) {
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
-        // NOTE: in the past we tried to kick the GPU here with a flush (b2cdf9f), but this
-        // was problematic on certain devices. b/232224942
+        if (mViewRenderedCount) {
+            // this is a good place to kick the GPU, since we've rendered a View before
+            // and we're about to render another one.
+            mEngine.getDriverApi().flush();
+        }
         renderInternal(view);
+        mViewRenderedCount++;
     }
 }
 
@@ -710,7 +715,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .clearFlags = clearFlags,
             .clearColor = clearColor,
             .ssrLodOffset = 0.0f,
-            .hasContactShadows = scene.hasContactShadows()
+            .hasContactShadows = scene.hasContactShadows(),
+            // at this point we don't know if we have refraction, but that's handled later
+            .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled
     };
 
     /*
@@ -738,7 +745,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // So here we set the parameters for the structure pass and SSAO passes which
                 // are always done first. The SSR pass will also use these parameters which
                 // is wrong if it doesn't run at the same resolution as SSAO.
-                // preapreViewport() is called again during the color pass, which resets the
+                // prepareViewport() is called again during the color pass, which resets the
                 // values correctly for the Color pass, however, this will be again wrong
                 // for passes that come after the Color pass, such as DoF.
                 //

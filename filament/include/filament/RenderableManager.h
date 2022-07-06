@@ -375,7 +375,8 @@ public:
          * the maximum number of instances allowed is 65535. 0 is invalid.
          * All instances are culled using the same bounding box, so care must be taken to make
          * sure all instances render inside the specified bounding box.
-         * The material can use getInstanceIndex() in the vertex shader to get the instance index and
+         * The material must set its `instanced` parameter to `true` in order to use
+         * getInstanceIndex() in the vertex or fragment shader to get the instance index and
          * possibly adjust the position or transform.
          *
          * @param instanceCount the number of instances silently clamped between 1 and 65535.
@@ -520,7 +521,15 @@ public:
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0); //!< \overload
 
     /**
-     * Associates a SkinningBuffer to a renderable instance
+     * Associates a region of a SkinningBuffer to a renderable instance
+     *
+     * Note: due to hardware limitations offset + 256 must be smaller or equal to
+     *       skinningBuffer->getBoneCount()
+     *
+     * @param instance          Instance of the component obtained from getInstance().
+     * @param skinningBuffer    skinning buffer to associate to the instance
+     * @param count             Size of the region in bones, must be smaller or equal to 256.
+     * @param offset            Start offset of the region in bones
      */
     void setSkinningBuffer(Instance instance, SkinningBuffer* skinningBuffer,
             size_t count, size_t offset);
@@ -534,7 +543,7 @@ public:
      * @param instance Instance of the component obtained from getInstance().
      * @param weights Pointer to morph target weights to be update.
      * @param count Number of morph target weights.
-     * @param offset Index of the first first morph target weight to set at instance.
+     * @param offset Index of the first morph target weight to set at instance.
      */
     void setMorphWeights(Instance instance,
             float const* weights, size_t count, size_t offset = 0);

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2019 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ extern VkCommandBuffer g_hTemporaryCommandBuffer;
 
 void BeginSingleTimeCommands();
 void EndSingleTimeCommands();
-void SaveAllocatorStatsToFile(const wchar_t* filePath);
+void SaveAllocatorStatsToFile(const wchar_t* filePath, bool detailed = true);
 void LoadShader(std::vector<char>& out, const char* fileName);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -146,8 +146,8 @@ void BaseImage::UploadContent()
     srcBufCreateInfo.size = 4 * m_CreateInfo.extent.width * m_CreateInfo.extent.height;
 
     VmaAllocationCreateInfo srcBufAllocCreateInfo = {};
-    srcBufAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-    srcBufAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    srcBufAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    srcBufAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
     VkBuffer srcBuf = nullptr;
     VmaAllocation srcBufAlloc = nullptr;
@@ -261,8 +261,8 @@ void BaseImage::ValidateContent(RandomNumberGenerator& rand)
     dstBufCreateInfo.size = valueCount * sizeof(uint32_t) * 3;
 
     VmaAllocationCreateInfo dstBufAllocCreateInfo = {};
-    dstBufAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-    dstBufAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
+    dstBufAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    dstBufAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
     VkBuffer dstBuf = nullptr;
     VmaAllocation dstBufAlloc = nullptr;
@@ -438,7 +438,7 @@ void TraditionalImage::Init(RandomNumberGenerator& rand)
     FillImageCreateInfo(rand);
 
     VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
     // Default BEST_FIT is clearly better.
     //allocCreateInfo.flags |= VMA_ALLOCATION_CREATE_STRATEGY_WORST_FIT_BIT;
     
@@ -484,7 +484,7 @@ void SparseBindingImage::Init(RandomNumberGenerator& rand)
     const uint32_t pageCount = (uint32_t)ceil_div<VkDeviceSize>(imageMemReq.size, pageSize);
 
     VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    allocCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     VkMemoryRequirements pageMemReq = imageMemReq;
     pageMemReq.size = pageSize;
@@ -532,6 +532,8 @@ SparseBindingImage::~SparseBindingImage()
 
 void TestSparseBinding()
 {
+    wprintf(L"TESTING SPARSE BINDING:\n");
+
     struct ImageInfo
     {
         std::unique_ptr<BaseImage> image;
@@ -545,7 +547,7 @@ void TestSparseBinding()
 
     RandomNumberGenerator rand(4652467);
 
-    for(uint32_t i = 0; i < frameCount; ++i)
+    for(uint32_t frameIndex = 0; frameIndex < frameCount; ++frameIndex)
     {
         // Bump frame index.
         ++g_FrameIndex;
@@ -560,11 +562,11 @@ void TestSparseBinding()
         images.push_back(std::move(imageInfo));
 
         // Delete all images that expired.
-        for(size_t i = images.size(); i--; )
+        for(size_t imageIndex = images.size(); imageIndex--; )
         {
-            if(g_FrameIndex >= images[i].endFrame)
+            if(g_FrameIndex >= images[imageIndex].endFrame)
             {
-                images.erase(images.begin() + i);
+                images.erase(images.begin() + imageIndex);
             }
         }
     }
@@ -588,6 +590,8 @@ void TestSparseBinding()
 
     // Free remaining images.
     images.clear();
+
+    wprintf(L"Done.\n");
 }
 
 #endif // #ifdef _WIN32

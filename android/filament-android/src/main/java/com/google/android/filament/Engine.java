@@ -593,8 +593,11 @@ public class Engine {
     }
 
     /**
-     * Destroys an <code>entity</code> and all its components.
+     * Destroys all Filament-known components from this <code>entity</code>.
      * <p>
+     * This method destroys Filament components only, not the <code>entity</code> itself. To destroy
+     * the <code>entity</code> use <code>EntityManager#destroy</code>.
+     *
      * It is recommended to destroy components individually before destroying their
      * <code>entity</code>, this gives more control as to when the destruction really happens.
      * Otherwise, orphaned components are garbage collected, which can happen at a later time.

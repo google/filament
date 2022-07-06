@@ -28,6 +28,9 @@
 #include <utils/trap.h>
 #include <utils/debug.h>
 
+#include <math/vec2.h>
+#include <math/scalar.h>
+
 #include <math.h>
 
 namespace filament {
@@ -271,6 +274,10 @@ MetalBufferObject::MetalBufferObject(MetalContext& context, BufferUsage usage, u
 
 void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
     buffer.copyIntoBuffer(data, size, byteOffset);
+}
+
+void MetalBufferObject::updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset) {
+    buffer.copyIntoBufferUnsynchronized(data, size, byteOffset);
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
@@ -806,6 +813,10 @@ void MetalTexture::updateLodRange(uint32_t level) {
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
         uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<size_t>::max()};
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
+    UTILS_UNUSED_IN_RELEASE size_t attachmentCount = 0;
+
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (!colorAttachments[i]) {
             continue;
@@ -815,6 +826,13 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         ASSERT_PRECONDITION(color[i].getSampleCount() <= samples,
                 "MetalRenderTarget was initialized with a MSAA COLOR%d texture, but sample count is %d.",
                 i, samples);
+
+        auto t = color[i].metalTexture;
+        const auto twidth = std::max(1u, t->width >> color[i].level);
+        const auto theight = std::max(1u, t->height >> color[i].level);
+        tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
+        tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
+        attachmentCount++;
 
         // If we were given a single-sampled texture but the samples parameter is > 1, we create
         // a multisampled sidecar texture and do a resolve automatically.
@@ -834,6 +852,13 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
                 "MetalRenderTarget was initialized with a MSAA DEPTH texture, but sample count is %d.",
                 samples);
 
+        auto t = depth.metalTexture;
+        const auto twidth = std::max(1u, t->width >> depth.level);
+        const auto theight = std::max(1u, t->height >> depth.level);
+        tmin = { math::min(tmin.x, twidth), math::min(tmin.y, theight) };
+        tmax = { math::max(tmax.x, twidth), math::max(tmax.y, theight) };
+        attachmentCount++;
+
         // If we were given a single-sampled texture but the samples parameter is > 1, we create
         // a multisampled sidecar texture and do a resolve automatically.
         if (samples > 1 && depth.getSampleCount() == 1) {
@@ -844,6 +869,18 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
             }
         }
     }
+
+    // Verify that all attachments have the same non-zero dimensions.
+    assert_invariant(attachmentCount > 0);
+    assert_invariant(tmin == tmax);
+    assert_invariant(tmin.x > 0 && tmin.y > 0);
+
+    // The render target dimensions must be less than or equal to the attachment size.
+    assert_invariant(width <= tmin.x && height <= tmin.y);
+
+    // Store the height of all attachments. We'll use this when converting from Filament's
+    // coordinate system to Metal's.
+    attachmentHeight = tmin.y;
 }
 
 void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor,
@@ -982,6 +1019,17 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
     return [device newTextureWithDescriptor:descriptor];
+}
+
+uint32_t MetalRenderTarget::getAttachmentHeight() noexcept {
+    if (defaultRenderTarget) {
+        // The default render target always has a color attachment.
+        auto colorAttachment = getDrawColorAttachment(0);
+        assert_invariant(colorAttachment);
+        return colorAttachment.getTexture().height;
+    }
+    assert_invariant(attachmentHeight > 0);
+    return attachmentHeight;
 }
 
 MetalFence::MetalFence(MetalContext& context) : context(context), value(context.signalId++) { }

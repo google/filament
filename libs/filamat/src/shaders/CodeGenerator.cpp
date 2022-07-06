@@ -334,7 +334,7 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType shader
         out << "    " << precision;
         if (precision[0] != '\0') out << " ";
         out << type << " " << info.name.c_str();
-        if (info.size > 1) {
+        if (info.size > 0) {
             out << "[" << info.size << "]";
         }
         out << ";\n";

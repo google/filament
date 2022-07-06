@@ -1,3 +1,18 @@
+//------------------------------------------------------------------------------
+// Instance access
+//------------------------------------------------------------------------------
+
+#if defined(MATERIAL_HAS_INSTANCES)
+/** @public-api */
+int getInstanceIndex() {
+    return instance_index;
+}
+#endif
+
+//------------------------------------------------------------------------------
+// Attributes access
+//------------------------------------------------------------------------------
+
 #if defined(HAS_ATTRIBUTE_COLOR)
 /** @public-api */
 vec4 getColor() {
@@ -124,3 +139,7 @@ highp vec4 getCascadeLightSpacePosition(uint cascade) {
 }
 
 #endif
+
+PerRenderableData getObjectUniforms() {
+    return objectUniforms.data[0];
+}

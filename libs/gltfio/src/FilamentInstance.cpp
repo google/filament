@@ -24,7 +24,7 @@
 using namespace filament;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 Animator* FFilamentInstance::getAnimator() const noexcept {
     assert_invariant(animator);
@@ -98,4 +98,4 @@ Animator* FilamentInstance::getAnimator() noexcept {
     return upcast(this)->getAnimator();
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

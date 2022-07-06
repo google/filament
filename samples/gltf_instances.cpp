@@ -43,18 +43,19 @@
 
 #include <math/mat4.h>
 
-#include "generated/resources/gltf_viewer.h"
+#include "generated/resources/gltf_demo.h"
+#include "materials/uberarchive.h"
 
 using namespace filament;
 using namespace filament::math;
 using namespace filament::viewer;
 
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 enum MaterialSource {
-    GENERATE_SHADERS,
-    LOAD_UBERSHADERS,
+    JITSHADER,
+    UBERSHADER,
 };
 
 struct App {
@@ -65,7 +66,7 @@ struct App {
     FilamentAsset* asset = nullptr;
     NameComponentManager* names;
     MaterialProvider* materials;
-    MaterialSource materialSource = GENERATE_SHADERS;
+    MaterialSource materialSource = JITSHADER;
     ResourceLoader* resourceLoader = nullptr;
     gltfio::TextureProvider* stbDecoder = nullptr;
     gltfio::TextureProvider* ktxDecoder = nullptr;
@@ -143,7 +144,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->config.iblDirectory = arg;
                 break;
             case 'u':
-                app->materialSource = LOAD_UBERSHADERS;
+                app->materialSource = UBERSHADER;
                 break;
         }
     }
@@ -251,12 +252,14 @@ int main(int argc, char** argv) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new ViewerGui(engine, scene, view, app.instanceToAnimate);
-        app.materials = (app.materialSource == GENERATE_SHADERS) ?
-                createMaterialGenerator(engine) : createUbershaderLoader(engine);
+
+        app.materials = (app.materialSource == JITSHADER) ? createJitShaderProvider(engine) :
+                createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+
         app.loader = AssetLoader::create({engine, app.materials, app.names });
         if (filename.isEmpty()) {
             app.asset = app.loader->createInstancedAsset(
-                    GLTF_VIEWER_DAMAGEDHELMET_DATA, GLTF_VIEWER_DAMAGEDHELMET_SIZE,
+                    GLTF_DEMO_DAMAGEDHELMET_DATA, GLTF_DEMO_DAMAGEDHELMET_SIZE,
                     app.instances.data(), app.instances.size());
         } else {
             loadAsset(filename);

@@ -220,7 +220,7 @@ Filament.loadClassExtensions = function() {
     /// Clients should create only one asset loader for the lifetime of their app, this prevents
     /// memory leaks and duplication of Material objects.
     Filament.Engine.prototype.createAssetLoader = function() {
-        const materials = new Filament.gltfio$UbershaderLoader(this);
+        const materials = new Filament.gltfio$UbershaderProvider(this);
         return new Filament.gltfio$AssetLoader(this, materials);
     };
 

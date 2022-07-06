@@ -20,7 +20,7 @@
 
 #include <geometry/SurfaceOrientation.h>
 
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace filament;
 using namespace filament::math;
 

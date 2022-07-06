@@ -128,7 +128,6 @@ inline constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept
 enum class BufferUsage : uint8_t {
     STATIC,      //!< content modified once, used many times
     DYNAMIC,     //!< content modified frequently, used many times
-    STREAM,      //!< content invalidated and modified frequently, used many times
 };
 
 /**

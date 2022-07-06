@@ -20,7 +20,7 @@
 
 using namespace filament;
 using namespace filament::math;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 extern "C" JNIEXPORT void JNICALL

@@ -39,6 +39,7 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
+#include <gltfio/materials/uberarchive.h>
 
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
@@ -47,7 +48,7 @@
 
 using namespace filament;
 using namespace utils;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace camutils;
 
 const double kNearPlane = 0.05;   // 5 cm
@@ -126,7 +127,8 @@ const float kSensitivity = 100.0f;
 
     _swapChain = _engine->createSwapChain((__bridge void*)self.layer);
 
-    _materialProvider = createUbershaderLoader(_engine);
+    _materialProvider = createUbershaderProvider(_engine,
+            UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
     EntityManager& em = EntityManager::get();
     NameComponentManager* ncm = new NameComponentManager(em);
     _assetLoader = AssetLoader::create({_engine, _materialProvider, ncm, &em});

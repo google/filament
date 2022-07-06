@@ -59,7 +59,7 @@ using namespace filament;
 using namespace filament::math;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using SceneMask = NodeManager::SceneMask;
 
@@ -917,8 +917,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 const cgltf_accessor* accessor = attribute.data;
                 const cgltf_attribute_type atype = attribute.type;
                 if (atype == cgltf_attribute_type_position) {
-                    // All position attributes must have the same data type.
-                    assert_invariant(!previous || previous->component_type == accessor->component_type);
+                    // All position attributes must have the same number of components.
                     assert_invariant(!previous || previous->type == accessor->type);
                     previous = accessor;
                     BufferSlot slot = { accessor };
@@ -1135,6 +1134,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             break;
         case cgltf_alpha_mode_blend:
             matkey.alphaMode = AlphaMode::BLEND;
+            break;
+        case cgltf_alpha_mode_max_enum:
             break;
     }
 
@@ -1395,6 +1396,7 @@ bool FAssetLoader::primitiveHasVertexColor(const cgltf_primitive* inPrim) const 
 
 LightManager::Type FAssetLoader::getLightType(const cgltf_light_type light) {
     switch (light) {
+        case cgltf_light_type_max_enum:
         case cgltf_light_type_invalid:
         case cgltf_light_type_directional:
             return LightManager::Type::DIRECTIONAL;
@@ -1456,4 +1458,4 @@ MaterialProvider& AssetLoader::getMaterialProvider() noexcept {
     return upcast(this)->mMaterials;
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio

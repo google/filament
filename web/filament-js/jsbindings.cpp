@@ -68,6 +68,8 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
 
+#include <materials/uberarchive.h>
+
 #include <ktxreader/Ktx1Reader.h>
 #include <ktxreader/Ktx2Reader.h>
 
@@ -93,7 +95,7 @@ using namespace emscripten;
 using namespace filament;
 using namespace filamesh;
 using namespace geometry;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace image;
 using namespace ktxreader;
 
@@ -604,6 +606,21 @@ class_<Renderer>("Renderer")
 /// A view is associated with a particular [Scene], [Camera], and viewport.
 /// See also the [Engine] methods `createView` and `destroyView`.
 class_<View>("View")
+
+    .function("pick", EMBIND_LAMBDA(void, (View* self, uint32_t x, uint32_t y, val cb), {
+        self->pick(x, y, [cb](const View::PickingQueryResult& result) {
+            EM_ASM_ARGS({
+                const fn = Emval.toValue($0);
+                fn({
+                    "renderable": Emval.toValue($1),
+                    "depth": $2,
+                    "fragCoords": [$3, $4, $5],
+                });
+            }, cb.as_handle(), val(result.renderable).as_handle(), result.depth,
+                result.fragCoords.x, result.fragCoords.y, result.fragCoords.z);
+        });
+    }), allow_raw_pointers())
+
     .function("setScene", &View::setScene, allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
     .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())
@@ -1838,7 +1855,7 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
 
 // These little wrappers exist to get around RTTI requirements in embind.
 
-struct UbershaderLoader {
+struct UbershaderProvider {
     MaterialProvider* provider;
     void destroyMaterials() { provider->destroyMaterials(); }
 };
@@ -1846,11 +1863,12 @@ struct UbershaderLoader {
 struct StbProvider { TextureProvider* provider; };
 struct Ktx2Provider { TextureProvider* provider; };
 
-class_<UbershaderLoader>("gltfio$UbershaderLoader")
-    .constructor(EMBIND_LAMBDA(UbershaderLoader, (Engine* engine), {
-        return UbershaderLoader { createUbershaderLoader(engine) };
+class_<UbershaderProvider>("gltfio$UbershaderProvider")
+    .constructor(EMBIND_LAMBDA(UbershaderProvider, (Engine* engine), {
+        return UbershaderProvider { createUbershaderProvider(engine,
+                UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE) };
     }))
-    .function("destroyMaterials", &UbershaderLoader::destroyMaterials);
+    .function("destroyMaterials", &UbershaderProvider::destroyMaterials);
 
 class_<StbProvider>("gltfio$StbProvider")
     .constructor(EMBIND_LAMBDA(StbProvider, (Engine* engine), {
@@ -1864,7 +1882,7 @@ class_<Ktx2Provider>("gltfio$Ktx2Provider")
 
 class_<AssetLoader>("gltfio$AssetLoader")
 
-    .constructor(EMBIND_LAMBDA(AssetLoader*, (Engine* engine, UbershaderLoader materials), {
+    .constructor(EMBIND_LAMBDA(AssetLoader*, (Engine* engine, UbershaderProvider materials), {
         auto names = new utils::NameComponentManager(utils::EntityManager::get());
         return AssetLoader::create({ engine, materials.provider, names });
     }), allow_raw_pointers())

@@ -42,6 +42,7 @@ void DictionarySpirvChunk::flatten(Flattener& f) {
             utils::slog.e << "Error with SPIRV compression" << utils::io::endl;
         }
 
+        f.writeAlignmentPadding();
         f.writeBlob((const char*) compressed.data(), compressed.size());
     }
 }

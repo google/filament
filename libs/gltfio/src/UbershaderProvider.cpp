@@ -24,25 +24,26 @@
 
 #include <utils/Log.h>
 
-#if GLTFIO_LITE
-#include "gltfresources_lite.h"
-#else
-#include "gltfresources.h"
-#endif
+#include "ArchiveCache.h"
 
 using namespace filament;
 using namespace filament::math;
-using namespace gltfio;
+using namespace filament::uberz;
+using namespace filament::gltfio;
 using namespace utils;
+
+#if !defined(NDEBUG)
+io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs);
+#endif
 
 namespace {
 
 using CullingMode = MaterialInstance::CullingMode;
 
-class UbershaderLoader : public MaterialProvider {
+class UbershaderProvider : public MaterialProvider {
 public:
-    UbershaderLoader(filament::Engine* engine);
-    ~UbershaderLoader() {}
+    UbershaderProvider(Engine* engine, const void* archive, size_t archiveByteCount);
+    ~UbershaderProvider() {}
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label, const char* extras) override;
@@ -64,35 +65,14 @@ public:
 
     Material* getMaterial(const MaterialKey& config) const;
 
-    enum ShadingMode {
-        UNLIT = 0,
-        LIT = 1,
-        SPECULAR_GLOSSINESS = 2,
-    };
-
-    mutable Material* mMaterials[12] = {};
+    mutable ArchiveCache mMaterials;
     Texture* mDummyTexture = nullptr;
 
     Engine* mEngine;
 };
 
-#if GLTFIO_LITE
-
-#define CREATE_MATERIAL(name) Material::Builder() \
-    .package(GLTFRESOURCES_LITE_ ## name ## _DATA, GLTFRESOURCES_LITE_ ## name ## _SIZE) \
-    .build(*mEngine);
-
-#else
-
-#define CREATE_MATERIAL(name) Material::Builder() \
-    .package(GLTFRESOURCES_ ## name ## _DATA, GLTFRESOURCES_ ## name ## _SIZE) \
-    .build(*mEngine);
-
-#endif
-
-#define MATINDEX(shading, alpha, sheen, transmit, volume) (volume ? 11 : (transmit ? 10 : (sheen ? 9 : (int(shading) + 3 * int(alpha)))))
-
-UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
+UbershaderProvider::UbershaderProvider(Engine* engine, const void* archive, size_t archiveByteCount)
+        : mEngine(engine), mMaterials(*engine) {
     unsigned char texels[4] = {};
     mDummyTexture = Texture::Builder()
             .width(1).height(1)
@@ -101,68 +81,66 @@ UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
     Texture::PixelBufferDescriptor pbd(texels, sizeof(texels), Texture::Format::RGBA,
             Texture::Type::UBYTE);
     mDummyTexture->setImage(*mEngine, 0, std::move(pbd));
+    mMaterials.load(archive, archiveByteCount);
 }
 
-size_t UbershaderLoader::getMaterialsCount() const noexcept {
-    return sizeof(mMaterials) / sizeof(mMaterials[0]);
+size_t UbershaderProvider::getMaterialsCount() const noexcept {
+    return mMaterials.getMaterialsCount();
 }
 
-const Material* const* UbershaderLoader::getMaterials() const noexcept {
-    return &mMaterials[0];
+const Material* const* UbershaderProvider::getMaterials() const noexcept {
+    return mMaterials.getMaterials();
 }
 
-void UbershaderLoader::destroyMaterials() {
-    for (auto& material : mMaterials) {
-        mEngine->destroy(material);
-        material = nullptr;
-    }
+void UbershaderProvider::destroyMaterials() {
+    mMaterials.destroyMaterials();
     mEngine->destroy(mDummyTexture);
 }
 
-Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
-    const ShadingMode shading = config.unlit ? UNLIT :
-            (config.useSpecularGlossiness ? SPECULAR_GLOSSINESS : LIT);
-    const int matindex = MATINDEX(shading, config.alphaMode, config.hasSheen, config.hasTransmission, config.hasVolume);
-    if (mMaterials[matindex] != nullptr) {
-        return mMaterials[matindex];
-    }
-    switch (matindex) {
-        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_OPAQUE_DATA)
-        case MATINDEX(LIT, AlphaMode::OPAQUE, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
-        #endif
+Material* UbershaderProvider::getMaterial(const MaterialKey& config) const {
+    const Shading shading = config.unlit ? Shading::UNLIT :
+            (config.useSpecularGlossiness ? Shading::SPECULAR_GLOSSINESS : Shading::LIT);
 
-        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_FADE_DATA)
-        case MATINDEX(LIT, AlphaMode::BLEND, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
-        #endif
+    BlendingMode blending;
+    switch (config.alphaMode) {
+        case AlphaMode::OPAQUE: blending = BlendingMode::OPAQUE; break;
+        case AlphaMode::MASK:   blending = BlendingMode::MASKED; break;
+        case AlphaMode::BLEND:  blending = BlendingMode::FADE; break;
+    }
 
-        #if !GLTFIO_LITE
-        case MATINDEX(LIT, AlphaMode::MASK, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
-        case MATINDEX(UNLIT, AlphaMode::OPAQUE, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_OPAQUE); break;
-        case MATINDEX(UNLIT, AlphaMode::MASK, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_MASKED); break;
-        case MATINDEX(UNLIT, AlphaMode::BLEND, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_FADE); break;
-        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE); break;
-        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED); break;
-        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE); break;
-        case MATINDEX(0, 0, false, true, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_TRANSMISSION); break;
-        case MATINDEX(0, 0, true, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_SHEEN); break;
-        case MATINDEX(0, 0, false, false, true): mMaterials[matindex] = CREATE_MATERIAL(LIT_VOLUME); break;
-        #endif
+    ArchiveRequirements requirements = { shading, blending };
+    requirements.features["Sheen"] = config.hasSheen;
+    requirements.features["Transmission"] = config.hasTransmission;
+    requirements.features["Volume"] = config.hasVolume;
+    requirements.features["Ior"] = config.hasIOR;
+    requirements.features["VertexColors"] = config.hasVertexColors;
+    requirements.features["BaseColorTexture"] = config.hasBaseColorTexture;
+    requirements.features["NormalTexture"] = config.hasNormalTexture;
+    requirements.features["OcclusionTexture"] = config.hasOcclusionTexture;
+    requirements.features["EmissiveTexture"] = config.hasEmissiveTexture;
+    requirements.features["MetallicRoughnessTexture"] = config.hasMetallicRoughnessTexture;
+    requirements.features["ClearCoatTexture"] = config.hasClearCoatTexture;
+    requirements.features["ClearCoatRoughnessTexture"] = config.hasClearCoatRoughnessTexture;
+    requirements.features["ClearCoatNormalTexture"] = config.hasClearCoatNormalTexture;
+    requirements.features["ClearCoat"] = config.hasClearCoat;
+    requirements.features["TextureTransforms"] = config.hasTextureTransforms;
+    requirements.features["TransmissionTexture"] = config.hasTransmissionTexture;
+    requirements.features["SheenColorTexture"] = config.hasSheenColorTexture;
+    requirements.features["SheenRoughnessTexture"] = config.hasSheenRoughnessTexture;
+    requirements.features["VolumeThicknessTexture"] = config.hasVolumeThicknessTexture;
+
+    if (Material* mat = mMaterials.getMaterial(requirements); mat != nullptr) {
+        return mat;
     }
-    if (mMaterials[matindex] == nullptr) {
-        slog.w << "Unsupported glTF material configuration; falling back to LIT_OPAQUE." << io::endl;
-        MaterialKey litOpaque = config;
-        litOpaque.alphaMode = AlphaMode::OPAQUE;
-        litOpaque.hasTransmission = false;
-        litOpaque.hasVolume = false;
-        litOpaque.hasSheen = false;
-        litOpaque.useSpecularGlossiness = false;
-        litOpaque.unlit = false;
-        return getMaterial(litOpaque);
-    }
-    return mMaterials[matindex];
+
+#ifndef NDEBUG
+    slog.w << "Failed to find material with features:\n" << requirements << io::endl;
+#endif
+
+    return nullptr;
 }
 
-MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
+MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
         const char* label, const char* extras) {
     // Diagnostics are not supported with LOAD_UBERSHADERS, please use GENERATE_SHADERS instead.
     if (config->enableDiagnostics) {
@@ -197,6 +175,14 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         return hasTexture ? int(uvmap->at(srcIndex)) - 1 : -1;
     };
     Material* material = getMaterial(*config);
+
+    if (material == nullptr) {
+#ifndef NDEBUG
+        slog.w << "Using fallback material for " << label << "." << io::endl;
+#endif
+        material = mMaterials.getDefaultMaterial();
+    }
+
     MaterialInstance* mi = material->createInstance(label);
     mi->setParameter("baseColorIndex",
             getUvIndex(config->baseColorUV, config->hasBaseColorTexture));
@@ -211,8 +197,6 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setTransparencyMode(config->doubleSided ?
             MaterialInstance::TransparencyMode::TWO_PASSES_TWO_SIDES :
             MaterialInstance::TransparencyMode::DEFAULT);
-
-    #if !GLTFIO_LITE
 
     // Initially, assume that the clear coat texture can be honored.  This is changed to false when
     // running into a sampler count limitation. TODO: check if these constraints can now be relaxed.
@@ -262,17 +246,6 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
                     getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
         }
     }
-    #else
-
-    // In the GLTFIO_LITE configuration we do not support UV matrices, clear coat, sheen, specular
-    // glossiness, or transmission. For more details, see `gltflite.mat.in`. To configure a custom
-    // set of features, create your own MaterialProvider class, perhaps using UbershaderLoader as a
-    // starting point.
-    const bool clearCoatNeedsTexture = false;
-
-    const bool volumeThicknessNeedsTexture = false;
-
-    #endif
 
     TextureSampler sampler;
     mi->setParameter("normalMap", mDummyTexture, sampler);
@@ -310,10 +283,51 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
 
 } // anonymous namespace
 
-namespace gltfio {
+namespace filament::gltfio {
 
-MaterialProvider* createUbershaderLoader(filament::Engine* engine) {
-    return new UbershaderLoader(engine);
+MaterialProvider* createUbershaderProvider(Engine* engine, const void* archive,
+        size_t archiveByteCount) {
+    return new UbershaderProvider(engine, archive, archiveByteCount);
 }
 
-} // namespace gltfio
+} // namespace filament::gltfio
+
+
+#if !defined(NDEBUG)
+
+inline
+const char* toString(Shading shadingModel) noexcept {
+    switch (shadingModel) {
+        case Shading::UNLIT: return "unlit";
+        case Shading::LIT: return "lit";
+        case Shading::SUBSURFACE: return "subsurface";
+        case Shading::CLOTH: return "cloth";
+        case Shading::SPECULAR_GLOSSINESS: return "specularGlossiness";
+    }
+}
+
+inline
+const char* toString(BlendingMode blendingMode) noexcept {
+    switch (blendingMode) {
+        case BlendingMode::OPAQUE: return "opaque";
+        case BlendingMode::TRANSPARENT: return "transparent";
+        case BlendingMode::ADD: return "add";
+        case BlendingMode::MASKED: return "masked";
+        case BlendingMode::FADE: return "fade";
+        case BlendingMode::MULTIPLY: return "multiply";
+        case BlendingMode::SCREEN: return "screen";
+    }
+}
+
+#if !defined(NDEBUG)
+io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs) {
+    out << "    ShadingModel = " << toString(reqs.shadingModel) << '\n'
+        << "    BlendingMode = " << toString(reqs.blendingMode) << '\n';
+    for (const auto& pair : reqs.features) {
+        out << "    " << pair.first.c_str() << " = " << (pair.second ? "true" : "false") << '\n';
+    }
+    return out;
+}
+#endif
+
+#endif

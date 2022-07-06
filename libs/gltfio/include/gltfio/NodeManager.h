@@ -29,7 +29,7 @@ namespace utils {
 class Entity;
 } // namespace utils
 
-namespace gltfio {
+namespace filament::gltfio {
 
 class FNodeManager;
 
@@ -104,7 +104,7 @@ public:
     NodeManager& operator=(NodeManager&&) = delete;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 
 #endif // GLTFIO_NODEMANAGER_H

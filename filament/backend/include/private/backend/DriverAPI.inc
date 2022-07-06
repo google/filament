@@ -325,6 +325,14 @@ DECL_DRIVER_API_N(updateBufferObject,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
+DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
+        backend::BufferObjectHandle, ibh,
+        backend::BufferDescriptor&&, data,
+        uint32_t, byteOffset)
+
+DECL_DRIVER_API_N(resetBufferObject,
+        backend::BufferObjectHandle, ibh)
+
 DECL_DRIVER_API_N(updateSamplerGroup,
         backend::SamplerGroupHandle, ubh,
         backend::SamplerGroup&&, samplerGroup)
