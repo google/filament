@@ -4,6 +4,8 @@ This file contains one line summaries of commits that are worthy of mentioning i
 A new header is inserted each time a *tag* is created.
 
 ## main branch
+ 
+- engine: `Camera::getNear()` and `Camera::getCullingFar()` now return `doubles`
 
 ## v1.25.1
 

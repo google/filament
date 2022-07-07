@@ -549,14 +549,14 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
 
             auto& s = mShadowUb.edit();
-            const float n = shadowMap.getCamera().getNear();
-            const float f = shadowMap.getCamera().getCullingFar();
+            const double n = shadowMap.getCamera().getNear();
+            const double f = shadowMap.getCamera().getCullingFar();
             s.shadows[i].lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             s.shadows[i].direction = direction;
             s.shadows[i].normalBias = normalBias * wsTexelSizeAtOneMeter;
             s.shadows[i].lightFromWorldZ = shadowMap.getLightFromWorldZ();
             s.shadows[i].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
-            s.shadows[i].nearOverFarMinusNear = n / (f - n);
+            s.shadows[i].nearOverFarMinusNear = float(n / (f - n));
             s.shadows[i].bulbRadiusLs =
                     mSoftShadowOptions.penumbraScale * options->shadowBulbRadius / wsTexelSizeAtOneMeter;
 
