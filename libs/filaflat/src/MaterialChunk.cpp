@@ -32,10 +32,10 @@ MaterialChunk::MaterialChunk(ChunkContainer const& container)
 
 MaterialChunk::~MaterialChunk() noexcept = default;
 
-bool MaterialChunk::readIndex(filamat::ChunkType materialTag) {
+bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
 
     if (mBase != nullptr) {
-        // readIndex() should be called only once.
+        // initialize() should be called only once.
         return true;
     }
 

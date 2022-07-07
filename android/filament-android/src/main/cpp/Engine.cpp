@@ -316,3 +316,15 @@ Java_com_google_android_filament_Engine_nGetEntityManager(JNIEnv*, jclass, jlong
     Engine* engine = (Engine*) nativeEngine;
     return (jlong) &engine->getEntityManager();
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nSetAutomaticInstancingEnabled(JNIEnv*, jclass, jlong nativeEngine, jboolean enable) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->setAutomaticInstancingEnabled(enable);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsAutomaticInstancingEnabled(JNIEnv*, jclass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean)engine->isAutomaticInstancingEnabled();
+}

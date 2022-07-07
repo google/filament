@@ -103,6 +103,7 @@ public class AutomationEngine {
         public float cameraFocalLength = 28.0f;
         public float cameraFocusDistance = 0.0f;
         public boolean autoScaleEnabled = true;
+        public boolean autoInstancingEnabled = false;
     }
 
     /**

@@ -69,7 +69,7 @@ public:
 
     void setShift(math::double2 shift) noexcept { mShiftCS = shift * 2.0; }
 
-    const math::double2 getShift() const noexcept { return mShiftCS * 0.5; }
+    math::double2 getShift() const noexcept { return mShiftCS * 0.5; }
 
     // viewing the projection matrix to be used for rendering, contains scaling/shift and possibly
     // other transforms needed by the shaders
@@ -88,28 +88,28 @@ public:
 
     float getCullingFar() const noexcept { return mFar; }
 
-    // sets the camera's view matrix (must be a rigid transform)
+    // sets the camera's model matrix (must be a rigid transform)
     void setModelMatrix(const math::mat4& modelMatrix) noexcept;
     void setModelMatrix(const math::mat4f& modelMatrix) noexcept;
 
-    // sets the camera's view matrix
-    void lookAt(const math::float3& eye, const math::float3& center, const math::float3& up = { 0, 1, 0 })  noexcept;
+    // sets the camera's model matrix
+    void lookAt(const math::float3& eye, const math::float3& center,
+            const math::float3& up = { 0, 1, 0 })  noexcept;
 
-    // returns the view matrix
+    // returns the model matrix
     math::mat4 getModelMatrix() const noexcept;
 
-    // returns the inverse of the view matrix
+    // returns the view matrix (inverse of the model matrix)
     math::mat4 getViewMatrix() const noexcept;
 
-    template <typename T>
+    template<typename T>
     static math::details::TMat44<T> rigidTransformInverse(math::details::TMat44<T> const& v) noexcept {
         // The inverse of a rigid transform can be computed from the transpose
         //  | R T |^-1    | Rt -Rt*T |
         //  | 0 1 |     = |  0   1   |
-
-        const math::details::TMat33<T> rt(transpose(v.upperLeft()));
-        const math::details::TVec3<T> t(rt * v[3].xyz);
-        return math::details::TMat44<T>(rt, -t);
+        const auto rt(transpose(v.upperLeft()));
+        const auto t(rt * v[3].xyz);
+        return { rt, -t };
     }
 
     math::double3 getPosition() const noexcept {
