@@ -140,7 +140,11 @@ private:
     backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
 
     Epoch getUserEpoch() const { return mUserEpoch; }
-    duration getUserTime() const noexcept { return clock::now() - getUserEpoch(); }
+    double getUserTime() const noexcept {
+        duration d = clock::now() - getUserEpoch();
+        // convert the duration (whatever it is) to a duration in seconds encoded as double
+        return std::chrono::duration<double>(d).count();
+    }
 
     void getRenderTarget(FView const& view,
             backend::TargetBufferFlags& outAttachementMask,

@@ -62,7 +62,7 @@ void Renderer::endFrame() {
 }
 
 double Renderer::getUserTime() const {
-    return upcast(this)->getUserTime().count();
+    return upcast(this)->getUserTime();
 }
 
 void Renderer::resetUserTime() {

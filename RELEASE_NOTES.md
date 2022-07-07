@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - engine: `Camera::getNear()` and `Camera::getCullingFar()` now return `doubles`
 
 - Metal: implement scissor support.
+- engine: `Renderer::getUserTime()` now returns seconds as documented (#5722) [⚠️ **API Fix**]
 
 ## v1.25.1
 
