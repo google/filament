@@ -58,13 +58,13 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
 
     // If the given font path is invalid, ImGui will silently fall back to proggy, which is a
     // tiny "pixel art" texture that is compiled into the library.
-    if (!fontPath.isEmpty()) {
+    if (fontPath.isFile()) {
         io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
     }
     createAtlasTexture(engine);
 
     // For proggy, switch to NEAREST for pixel-perfect text.
-    if (fontPath.isEmpty() && !imGuiContext) {
+    if (!fontPath.isFile() && !imGuiContext) {
         mSampler = TextureSampler(MinFilter::NEAREST, MagFilter::NEAREST);
         mMaterial->setDefaultParameter("albedo", mTexture, mSampler);
     }

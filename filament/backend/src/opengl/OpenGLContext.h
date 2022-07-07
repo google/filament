@@ -114,7 +114,7 @@ public:
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
 
     void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
-    void deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept;
+    void deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept;
 
     // glGet*() values
     struct {

@@ -13,7 +13,6 @@ set(SRCS
         src/ChunkContainer.cpp
         src/DictionaryReader.cpp
         src/MaterialChunk.cpp
-        src/ShaderBuilder.cpp
         src/Unflattener.cpp)
 
 # ==================================================================================================

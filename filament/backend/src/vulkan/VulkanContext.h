@@ -82,6 +82,7 @@ struct VulkanContext {
     bool debugMarkersSupported = false;
     bool debugUtilsSupported = false;
     bool portabilitySubsetSupported = false;
+    bool portabilityEnumerationSupported = false;
     bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
     VulkanSwapChain* currentSwapChain;
@@ -90,8 +91,6 @@ struct VulkanContext {
     VkViewport viewport;
     VkFormat finalDepthFormat;
     VmaAllocator allocator;
-    VmaPool vmaPoolGPU;
-    VmaPool vmaPoolCPU;
     VulkanTexture* emptyTexture = nullptr;
     VulkanCommands* commands = nullptr;
     std::string currentDebugMarker;

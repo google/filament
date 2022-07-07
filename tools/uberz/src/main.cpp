@@ -22,17 +22,27 @@
 #include <iostream>
 #include <string>
 
-#include <utils/FixedCapacityVector.h>
+#include <tsl/robin_map.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/memalign.h>
+
+#include <uberz/ReadableArchive.h>
 #include <uberz/WritableArchive.h>
+
+#include <zstd.h>
 
 using namespace std;
 using namespace utils;
 using namespace filament::uberz;
 
+using StringMap = tsl::robin_map<std::string, std::string>;
+
 static std::string g_outputFile = "materials.uberz";
+static bool g_appendMode = false;
 static bool g_quietMode = false;
 static bool g_verboseMode = false;
+static StringMap g_templateMap;
 
 static const char* USAGE = R"TXT(
 UBERZ aggregates and compresses a set of filamat files into a single archive file. It includes
@@ -49,6 +59,8 @@ pair of filamat/spec files corresponds to a material in the generated archive.
 For more information on the format of the spec file, see the gltfio README.
 
 Options:
+   --append, -a
+       Enable append mode
    --help, -h
        Print this message
    --license, -L
@@ -57,6 +69,8 @@ Options:
        Specify a custom filename.
     --quiet, -q
         Suppress console output
+    --template <macro>=<string>, -T<macro>=<string>
+        Replaces ${MACRO} with specified string before parsing spec file
 )TXT";
 
 static void printUsage(const char* name) {
@@ -80,14 +94,32 @@ static void license() {
         std::cout << *p++ << std::endl;
 }
 
+// Parses a string with the form KEY=VALUE and inserts the key-value pair into the given map.
+// If only a key is specified, then the given default value is used.
+static void insertMapEntry(std::string assignment, StringMap& map, std::string defaultValue) {
+    const char* const start = assignment.c_str();
+    const char* cursor = start;
+    const char* end = cursor + assignment.length();
+    while (cursor < end && *cursor != '=') {
+        cursor++;
+    }
+    if (UTILS_UNLIKELY(cursor == end)) {
+        map.emplace(std::string(start, cursor - start), defaultValue);
+    } else if (UTILS_LIKELY(cursor != start && cursor + 1 < end)) {
+        map.emplace(std::string(start, cursor - start), cursor + 1);
+    }
+}
+
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLqvo:";
+    static constexpr const char* OPTSTR = "ahLqvo:T:";
     static const struct option OPTIONS[] = {
-            { "help",    no_argument,       0, 'h' },
-            { "license", no_argument,       0, 'L' },
-            { "quiet",   no_argument,       0, 'q' },
-            { "verbose", no_argument,       0, 'v' },
-            { "output",  required_argument, 0, 'o' },
+            { "append",   no_argument,       0, 'a' },
+            { "help",     no_argument,       0, 'h' },
+            { "license",  no_argument,       0, 'L' },
+            { "quiet",    no_argument,       0, 'q' },
+            { "verbose",  no_argument,       0, 'v' },
+            { "output",   required_argument, 0, 'o' },
+            { "template", required_argument, 0, 'T' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -98,6 +130,9 @@ static int handleArguments(int argc, char* argv[]) {
         std::string arg(optarg ? optarg : "");
         switch (opt) {
             default:
+            case 'a':
+                g_appendMode = true;
+                break;
             case 'h':
                 printUsage(argv[0]);
                 exit(0);
@@ -106,6 +141,9 @@ static int handleArguments(int argc, char* argv[]) {
                 exit(0);
             case 'o':
                 g_outputFile = optarg;
+                break;
+            case 'T':
+                insertMapEntry(optarg, g_templateMap, "missing");
                 break;
             case 'q':
                 g_quietMode = true;
@@ -126,13 +164,55 @@ static size_t getFileSize(const char* filename) {
 
 int main(int argc, char* argv[]) {
     const int optionIndex = handleArguments(argc, argv);
-    const int numArgs = argc - optionIndex;
-    if (numArgs < 1) {
+    const size_t additionalMaterialsCount = argc - optionIndex;
+    if (additionalMaterialsCount < 1) {
         printUsage(argv[0]);
         return 1;
     }
 
-    WritableArchive archive(argc - optionIndex);
+    size_t existingMaterialsCount = 0;
+    ReadableArchive* existingArchive = nullptr;
+
+    // In append mode, the first step is to consume the output file.
+    if (g_appendMode) {
+        const size_t archiveSize = getFileSize(g_outputFile.c_str());
+        FixedCapacityVector<uint8_t> archiveBuffer(archiveSize);
+        uint8_t* archiveData = archiveBuffer.data();
+        std::ifstream in(g_outputFile.c_str(), std::ifstream::in | std::ifstream::binary);
+        if (!in.read((char*) archiveData, archiveSize)) {
+            cerr << "Unable to consume " << g_outputFile << endl;
+            exit(1);
+        }
+        const uint64_t decompSize = ZSTD_getFrameContentSize(archiveData, archiveSize);
+        if (decompSize == ZSTD_CONTENTSIZE_UNKNOWN || decompSize == ZSTD_CONTENTSIZE_ERROR) {
+            PANIC_POSTCONDITION("Decompression error.");
+        }
+        uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
+        ZSTD_decompress(basePointer, decompSize, archiveData, archiveSize);
+        existingArchive = (ReadableArchive*) basePointer;
+        convertOffsetsToPointers(existingArchive);
+        existingMaterialsCount = existingArchive->specsCount;
+    }
+
+    WritableArchive outputArchive(existingMaterialsCount + additionalMaterialsCount);
+
+    // In append mode, add the existing materials into the new WritableArchive.
+    if (existingArchive) {
+        for (size_t specIndex = 0; specIndex < existingMaterialsCount; ++specIndex) {
+            // We do not know where this material was originally consumed from, so just use
+            // a made-up string (it is only used for error messages).
+            std::string materialName = "mat" + to_string(specIndex);
+            const ArchiveSpec& spec = existingArchive->specs[specIndex];
+            outputArchive.addMaterial(materialName.c_str(), spec.package, spec.packageByteCount);
+            outputArchive.setShadingModel(spec.shadingModel);
+            outputArchive.setBlendingModel(spec.blendingMode);
+            for (uint16_t flagIndex = 0; flagIndex < spec.flagsCount; ++flagIndex) {
+                auto flag = spec.flags[flagIndex];
+                outputArchive.setFeatureFlag(flag.name, flag.value);
+            }
+        }
+        utils::aligned_free(existingArchive);
+    }
 
     for (int argIndex = optionIndex; argIndex < argc; ++argIndex) {
         std::string name(argv[argIndex]);
@@ -158,19 +238,28 @@ int main(int argc, char* argv[]) {
         // This tool is often invoked by CMake, so in verbose mode we print an index to stderr.
         // This allows us to see the spec index associated with each file for diagnostic purposes.
         if (g_verboseMode) {
-            fprintf(stderr, "uberz %2d %s\n", argIndex - optionIndex, filamatPath.getName().c_str());
+            size_t specIndex = existingMaterialsCount + argIndex - optionIndex;
+            fprintf(stderr, "uberz %2zu %s\n", specIndex, filamatPath.getName().c_str());
         }
 
-        archive.addMaterial(name.c_str(), filamatBuffer.data(), filamatSize);
+        outputArchive.addMaterial(name.c_str(), filamatBuffer.data(), filamatSize);
 
         std::string specLine;
         ifstream specStream(specPath.c_str());
         while (std::getline(specStream, specLine)) {
-            archive.addSpecLine(specLine.c_str());
+            for (auto pair : g_templateMap) {
+                auto [from, to] = pair;
+                from = "${" + from + "}";
+                for (size_t pos = specLine.find(from); pos != std::string::npos;
+                        pos = specLine.find(from, pos)) {
+                    specLine.replace(pos, from.length(), to);
+                }
+            }
+            outputArchive.addSpecLine(specLine.c_str());
         }
     }
 
-    FixedCapacityVector<uint8_t> binBuffer = archive.serialize();
+    FixedCapacityVector<uint8_t> binBuffer = outputArchive.serialize();
 
     ofstream binStream(g_outputFile, ios::binary);
     if (!binStream) {
