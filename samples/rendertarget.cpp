@@ -360,7 +360,8 @@ int main(int argc, char** argv) {
         const auto model = camera.getModelMatrix();
         const auto renderingProjection = camera.getProjectionMatrix();
         const auto cullingProjection = camera.getCullingProjectionMatrix();
-        app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection, camera.getNear(), camera.getCullingFar());
+        app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection,
+                camera.getNear(), camera.getCullingFar());
         switch (app.mode) {
             case App::ReflectionMode::RENDERABLES:
                 tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);

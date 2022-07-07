@@ -19,6 +19,7 @@
 #include "Culler.h"
 
 #include <utils/compiler.h>
+#include <utils/Log.h>
 
 using namespace filament::math;
 
@@ -98,3 +99,19 @@ float Frustum::contains(float3 p) const noexcept {
 }
 
 } // namespace filament
+
+#if !defined(NDEBUG)
+
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::Frustum const& frustum) {
+    float4 planes[6];
+    frustum.getNormalizedPlanes(planes);
+    out     << planes[0] << '\n'
+            << planes[1] << '\n'
+            << planes[2] << '\n'
+            << planes[3] << '\n'
+            << planes[4] << '\n'
+            << planes[5] << utils::io::endl;
+    return out;
+}
+
+#endif
