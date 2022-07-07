@@ -1242,6 +1242,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
     const MTLViewport& viewport = mContext->currentViewport;
 
+    // fmax/min are used here to guard against NaN and because the MTLViewport coordinates are doubles.
     const auto left   = std::fmax(viewport.originX                  , scissor.origin.x   );
     const auto right  = std::fmin(viewport.originX + viewport.width , scissor.origin.x + scissor.size.width );
     const auto top    = std::fmax(viewport.originY                  , scissor.origin.y );
