@@ -4,6 +4,7 @@ This file contains one line summaries of commits that are worthy of mentioning i
 A new header is inserted each time a *tag* is created.
 
 ## main branch
+- engine: Fix Adreno gpu crash introduced by gpu morph target change
 
 ## v1.25.0
 
@@ -20,8 +21,6 @@ A new header is inserted each time a *tag* is created.
 - gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
 - gltfio: Fix morphing with sparse accessors.
 - gltfio: Fix models that use signed integers for morphing.
-- gltfio: Fix adreno gpu crash introduced from gpu morph target change
-- engine: Fix adreno gpu crash introduced from gpu morph target change
 - engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
 - picking is now exposed to JavaScript
 - gltf_viewer: Exercise picking functionality.
