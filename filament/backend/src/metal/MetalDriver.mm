@@ -852,6 +852,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     };
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
 
+    mContext->currentViewport = metalViewport;
+
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
     // We must bind certain states for each command encoder, so we dirty the states here to force a
     // rebinding at the first the draw call of this pass.
@@ -1236,8 +1238,24 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
                                                    clamp:0.0];
     }
 
-    // FIXME: implement take ps.scissor into account
-    //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
+    // Set scissor-rectangle.
+    MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
+    const MTLViewport& viewport = mContext->currentViewport;
+
+    // fmax/min are used here to guard against NaN and because the MTLViewport coordinates are doubles.
+    const auto left   = std::fmax(viewport.originX                  , scissor.origin.x   );
+    const auto right  = std::fmin(viewport.originX + viewport.width , scissor.origin.x + scissor.size.width );
+    const auto top    = std::fmax(viewport.originY                  , scissor.origin.y );
+    const auto bottom = std::fmin(viewport.originY + viewport.height, scissor.origin.y + scissor.size.height );
+
+    MTLScissorRect scissorRect = {
+        .x      = static_cast<NSUInteger>(left),
+        .y      = static_cast<NSUInteger>(top ),
+        .width  = static_cast<NSUInteger>(right  - left),
+        .height = static_cast<NSUInteger>(bottom - top )
+    };
+
+    [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
 
     // Bind uniform buffers.
     MetalBuffer* uniformsToBind[Program::BINDING_COUNT] = { nil };

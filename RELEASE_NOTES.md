@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Metal: implement scissor support.
+
 ## v1.25.1
 
 - engine: add support for automatic instancing. Must be enabled with `Engine::setAutomaticInstancingEnabled(bool)`
