@@ -22,8 +22,7 @@
 
 #include <utils/Log.h>
 
-#include <tsl/robin_map.h>
-
+#include <map>
 #include <sstream>
 
 #include <GlslangToSpv.h>
@@ -33,31 +32,25 @@
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
 
-namespace filament {
-namespace matdbg {
+namespace filament::matdbg {
 
 using namespace backend;
 using namespace filaflat;
 using namespace filamat;
 using namespace glslang;
-using namespace std;
-using namespace tsl;
 using namespace utils;
+
+using std::ostream;
+using std::stringstream;
+using std::streampos;
+using std::vector;
 
 // Tiny database of shader text that can import / export MaterialTextChunk and DictionaryTextChunk.
 class ShaderIndex {
 public:
-    // Consumes a chunk and builds the string list.
-    void addStringLines(const uint8_t* chunkContent, size_t size);
+    ShaderIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkContainer& cc);
 
-    // Consumes a chunk and builds the shader records.
-    void addShaderRecords(const uint8_t* chunkContent, size_t size);
-
-    // Produces a chunk holding the string list.
-    void writeLinesChunk(ChunkType tag, ostream& stream) const;
-
-    // Produces a chunk holding the shader records.
-    void writeShadersChunk(ChunkType tag, ostream& stream) const;
+    void writeChunks(ostream& stream) const;
 
     // Replaces the specified shader text with new content.
     void replaceShader(backend::ShaderModel shaderModel, Variant variant,
@@ -72,32 +65,23 @@ private:
         uint8_t stage;
         uint32_t offset;
         vector<uint16_t> lineIndices;
-        string decodedShaderText;
+        std::string decodedShaderText;
         uint32_t stringLength;
     };
 
-    void decodeShadersFromIndices();
-    void encodeShadersToIndices();
-
+    const ChunkType mDictTag;
+    const ChunkType mMatTag;
     vector<ShaderRecord> mShaderRecords;
-    vector<string> mStringLines;
+    vector<std::string> mStringLines;
 };
 
 // Tiny database of data blobs that can import / export MaterialSpirvChunk and DictionarySpirvChunk.
 // The blobs are stored *after* they have been compressed by SMOL-V.
 class BlobIndex {
 public:
-    // Consumes a chunk and builds the blob list.
-    void addDataBlobs(const uint8_t* chunkContent, size_t size, streampos ptr);
+    BlobIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkContainer& cc);
 
-    // Consumes a chunk and builds the shader records.
-    void addShaderRecords(const uint8_t* chunkContent, size_t size);
-
-    // Produces a chunk holding the blob list.
-    void writeBlobsChunk(ChunkType tag, ostream& stream) const;
-
-    // Produces a chunk holding the shader records.
-    void writeShadersChunk(ChunkType tag, ostream& stream) const;
+    void writeChunks(ostream& stream) const;
 
     // Replaces the specified shader with new content.
     void replaceShader(backend::ShaderModel shaderModel, Variant variant,
@@ -113,10 +97,10 @@ private:
         uint32_t blobIndex;
     };
 
-    using SmolvBlob = vector<uint8_t>;
-
+    const ChunkType mDictTag;
+    const ChunkType mMatTag;
     vector<ShaderRecord> mShaderRecords;
-    vector<SmolvBlob> mDataBlobs;
+    BlobDictionary mDataBlobs;
 };
 
 ShaderReplacer::ShaderReplacer(Backend backend, const void* data, size_t size) :
@@ -159,9 +143,9 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
     }
 
     // Clone all chunks except Dictionary* and Material*.
-    stringstream sstream(string((const char*) cc.getData(), cc.getSize()));
+    stringstream sstream(std::string((const char*) cc.getData(), cc.getSize()));
     stringstream tstream;
-    ShaderIndex shaderIndex;
+
     {
         uint64_t type;
         uint32_t size;
@@ -171,12 +155,7 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
             sstream.read((char*) &size, sizeof(size));
             content.resize(size);
             sstream.read((char*) content.data(), size);
-            if (ChunkType(type) == mDictionaryTag) {
-                shaderIndex.addStringLines(content.data(), size);
-                continue;
-            }
-            if (ChunkType(type) == mMaterialTag) {
-                shaderIndex.addShaderRecords(content.data(), size);
+            if (ChunkType(type) == mDictionaryTag|| ChunkType(type) == mMaterialTag) {
                 continue;
             }
             tstream.write((char*) &type, sizeof(type));
@@ -186,10 +165,10 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
     }
 
     // Append the new chunks for Dictionary* and Material*.
+    ShaderIndex shaderIndex(mDictionaryTag, mMaterialTag, cc);
     if (!shaderIndex.isEmpty()) {
         shaderIndex.replaceShader(shaderModel, variant, stage, sourceString, stringLength);
-        shaderIndex.writeLinesChunk(mDictionaryTag, tstream);
-        shaderIndex.writeShadersChunk(mMaterialTag, tstream);
+        shaderIndex.writeChunks(tstream);
     }
 
     // Copy the new package from the stringstream into a ChunkContainer.
@@ -249,9 +228,9 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
 
     // Clone all chunks except Dictionary* and Material*.
     filaflat::ChunkContainer const& cc = mOriginalPackage;
-    stringstream sstream(string((const char*) cc.getData(), cc.getSize()));
+    stringstream sstream(std::string((const char*) cc.getData(), cc.getSize()));
     stringstream tstream;
-    BlobIndex shaderIndex;
+
     {
         uint64_t type;
         uint32_t size;
@@ -262,12 +241,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
             streampos pos = sstream.tellg();
             content.resize(size);
             sstream.read((char*) content.data(), size);
-            if (ChunkType(type) == mDictionaryTag) {
-                shaderIndex.addDataBlobs(content.data(), size, pos);
-                continue;
-            }
-            if (ChunkType(type) == mMaterialTag) {
-                shaderIndex.addShaderRecords(content.data(), size);
+            if (ChunkType(type) == mDictionaryTag || ChunkType(type) == mMaterialTag) {
                 continue;
             }
             tstream.write((char*) &type, sizeof(type));
@@ -277,10 +251,10 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     }
 
     // Append the new chunks for Dictionary* and Material*.
+    BlobIndex shaderIndex(mDictionaryTag, mMaterialTag, cc);
     if (!shaderIndex.isEmpty()) {
         shaderIndex.replaceShader(shaderModel, variant, stage, source, sourceLength);
-        shaderIndex.writeBlobsChunk(mDictionaryTag, tstream);
-        shaderIndex.writeShadersChunk(mMaterialTag, tstream);
+        shaderIndex.writeChunks(tstream);
     }
 
     // Copy the new package from the stringstream into a ChunkContainer.
@@ -303,18 +277,19 @@ size_t ShaderReplacer::getEditedSize() const {
     return mEditedPackage->getSize();
 }
 
-void ShaderIndex::addStringLines(const uint8_t* chunkContent, size_t size) {
-    uint32_t count = *((const uint32_t*) chunkContent);
+ShaderIndex::ShaderIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkContainer& cc) :
+        mDictTag(dictTag), mMatTag(matTag) {
+    uint32_t count = *((const uint32_t*) cc.getChunkStart(dictTag));
     mStringLines.resize(count);
-    const uint8_t* ptr = chunkContent + 4;
+    const uint8_t* ptr = cc.getChunkStart(dictTag) + 4;
     for (uint32_t i = 0; i < count; i++) {
-        mStringLines[i] = string((const char*) ptr);
+        mStringLines[i] = std::string((const char*) ptr);
         ptr += mStringLines[i].length() + 1;
     }
-}
 
-void ShaderIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
-    stringstream stream(string((const char*) chunkContent, size));
+    const uint8_t* chunkContent = cc.getChunkStart(matTag);
+    const size_t size = cc.getChunkEnd(matTag) - chunkContent;
+    stringstream stream(std::string((const char*) chunkContent, size));
     uint64_t recordCount;
     stream.read((char*) &recordCount, sizeof(recordCount));
     mShaderRecords.resize(recordCount);
@@ -339,15 +314,15 @@ void ShaderIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
     }
 }
 
-void ShaderIndex::writeLinesChunk(ChunkType tag, ostream& stream) const {
-    // First perform a prepass to compute chunk size.
+void ShaderIndex::writeChunks(ostream& stream) const {
+    // Perform a prepass to compute dict chunk size.
     uint32_t size = sizeof(uint32_t);
     for (const auto& stringLine : mStringLines) {
         size += stringLine.length() + 1;
     }
 
-    // Serialize the chunk.
-    uint64_t type = tag;
+    // Serialize the dict chunk.
+    uint64_t type = mDictTag;
     stream.write((char*) &type, sizeof(type));
     stream.write((char*) &size, sizeof(size));
     uint32_t count = mStringLines.size();
@@ -355,11 +330,9 @@ void ShaderIndex::writeLinesChunk(ChunkType tag, ostream& stream) const {
     for (const auto& stringLine : mStringLines) {
         stream.write(stringLine.c_str(), stringLine.length() + 1);
     }
-}
 
-void ShaderIndex::writeShadersChunk(ChunkType tag, ostream& stream) const {
-    // First perform a prepass to compute chunk size.
-    uint32_t size = sizeof(uint64_t);
+    // Perform a prepass to compute mat chunk size.
+    size = sizeof(uint64_t);
     for (const auto& record : mShaderRecords) {
         size += sizeof(ShaderRecord::model);
         size += sizeof(ShaderRecord::variant);
@@ -372,8 +345,8 @@ void ShaderIndex::writeShadersChunk(ChunkType tag, ostream& stream) const {
         size += record.lineIndices.size() * sizeof(uint16_t);
     }
 
-    // Serialize the chunk.
-    uint64_t type = tag;
+    // Serialize the mat chunk.
+    type = mMatTag;
     stream.write((char*) &type, sizeof(type));
     stream.write((char*) &size, sizeof(size));
     uint64_t recordCount = mShaderRecords.size();
@@ -394,7 +367,25 @@ void ShaderIndex::writeShadersChunk(ChunkType tag, ostream& stream) const {
 
 void ShaderIndex::replaceShader(backend::ShaderModel shaderModel, Variant variant,
             backend::ShaderType stage, const char* source, size_t sourceLength) {
-    decodeShadersFromIndices();
+    // First, deref the indices to create monolithic strings for each shader.
+    for (auto& record : mShaderRecords) {
+        size_t len = 0;
+        for (uint16_t index : record.lineIndices) {
+            if (index >= mStringLines.size()) {
+                slog.e << "Internal chunk decoding error." << io::endl;
+                return;
+            }
+            len += mStringLines[index].size() + 1;
+        }
+        record.decodedShaderText.clear();
+        record.decodedShaderText.reserve(len);
+        for (uint16_t index : record.lineIndices) {
+            record.decodedShaderText += mStringLines[index];
+            record.decodedShaderText += '\n';
+        }
+    }
+
+    // Replace the string of interest.
     const uint8_t model = (uint8_t) shaderModel;
     for (auto& record : mShaderRecords) {
         if (record.model == model && record.variant == variant && record.stage == stage) {
@@ -402,26 +393,11 @@ void ShaderIndex::replaceShader(backend::ShaderModel shaderModel, Variant varian
             break;
         }
     }
-    encodeShadersToIndices();
-}
 
-void ShaderIndex::decodeShadersFromIndices() {
-    for (auto& record : mShaderRecords) {
-        record.decodedShaderText.clear();
-        for (uint16_t index : record.lineIndices) {
-            if (index >= mStringLines.size()) {
-                slog.e << "Internal chunk decoding error." << io::endl;
-                return;
-            }
-            record.decodedShaderText += mStringLines[index] + "\n";
-        }
-    }
-}
-
-void ShaderIndex::encodeShadersToIndices() {
-    robin_map<string, uint16_t> table;
+    // Finally, re-encode the shaders into indices as a form of compression.
+    std::map<std::string_view, uint16_t> table;
     for (size_t i = 0; i < mStringLines.size(); i++) {
-        table[mStringLines[i]] = uint16_t(i);
+        table.emplace(mStringLines[i], uint16_t(i));
     }
 
     uint32_t offset = sizeof(uint64_t);
@@ -453,7 +429,7 @@ void ShaderIndex::encodeShadersToIndices() {
                 slog.e << "Internal chunk encoding error." << io::endl;
                 return;
             }
-            string newLine(start, pos, len);
+            std::string_view newLine(start + pos, len);
             auto iter = table.find(newLine);
             if (iter == table.end()) {
                 size_t index = mStringLines.size();
@@ -462,8 +438,8 @@ void ShaderIndex::encodeShadersToIndices() {
                     return;
                 }
                 record.lineIndices.push_back(index);
-                table[newLine] = index;
-                mStringLines.push_back(newLine);
+                table.emplace(newLine, index);
+                mStringLines.emplace_back(newLine);
                 continue;
             }
             record.lineIndices.push_back(iter->second);
@@ -472,30 +448,33 @@ void ShaderIndex::encodeShadersToIndices() {
     }
 }
 
-void BlobIndex::addDataBlobs(const uint8_t* chunkContent, size_t size, streampos pos) {
-    const uint8_t* ptr = chunkContent;
+BlobIndex::BlobIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkContainer& cc) :
+        mDictTag(dictTag), mMatTag(matTag) {
+    const uint8_t* ptr = cc.getChunkStart(dictTag);
     const uint32_t compression = *((const uint32_t*) ptr);
     ptr += 4;
     const uint32_t blobCount = *((const uint32_t*) ptr);
     ptr += 4;
+    mDataBlobs.reserve(blobCount);
     mDataBlobs.resize(blobCount);
     for (uint32_t i = 0; i < blobCount; i++) {
         // Skip alignment padding.
-        ptr += (8 - (intptr_t(pos + ptr - chunkContent) % 8)) % 8;
+        ptr += (8 - (intptr_t(ptr) % 8)) % 8;
 
         // Read byte count, advance cursor, and allocate buffer.
         const uint64_t byteCount = *((const uint64_t*) ptr);
         ptr += sizeof(uint64_t);
+        mDataBlobs[i].reserve(byteCount);
         mDataBlobs[i].resize(byteCount);
 
         // Copy the buffer and advance the cursor.
         memcpy(mDataBlobs[i].data(), ptr, byteCount);
         ptr += byteCount;
     }
-}
 
-void BlobIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
-    stringstream stream(string((const char*) chunkContent, size));
+    const uint8_t* chunkContent = cc.getChunkStart(matTag);
+    const size_t size = cc.getChunkEnd(matTag) - chunkContent;
+    stringstream stream(std::string((const char*) chunkContent, size));
     uint64_t recordCount;
     stream.read((char*) &recordCount, sizeof(recordCount));
     mShaderRecords.resize(recordCount);
@@ -507,11 +486,11 @@ void BlobIndex::addShaderRecords(const uint8_t* chunkContent, size_t size) {
     }
 }
 
-void BlobIndex::writeBlobsChunk(ChunkType tag, ostream& stream) const {
-    const uint64_t type = tag;
+void BlobIndex::writeChunks(ostream& stream) const {
+    uint64_t type = mDictTag;
     uint32_t size = sizeof(uint32_t) + sizeof(uint32_t);
 
-    // First perform a prepass to compute chunk size.
+    // Perform a prepass to compute dict chunk size.
     streampos offset = stream.tellp() + streampos(sizeof(type) + sizeof(size));
     for (const auto& blob : mDataBlobs) {
         size += (8 - ((size + offset) % 8)) % 8;
@@ -519,7 +498,7 @@ void BlobIndex::writeBlobsChunk(ChunkType tag, ostream& stream) const {
         size += blob.size();
     }
 
-    // Serialize the chunk.
+    // Serialize the dict chunk.
     stream.write((char*) &type, sizeof(type));
     stream.write((char*) &size, sizeof(size));
     const uint32_t compression = 1;
@@ -533,11 +512,9 @@ void BlobIndex::writeBlobsChunk(ChunkType tag, ostream& stream) const {
         stream.write((char*) &byteCount, sizeof(byteCount));
         stream.write((char*) blob.data(), blob.size());
     }
-}
 
-void BlobIndex::writeShadersChunk(ChunkType tag, ostream& stream) const {
-    // First perform a prepass to compute chunk size.
-    uint32_t size = sizeof(uint64_t);
+    // Perform a prepass to compute mat chunk size.
+    size = sizeof(uint64_t);
     for (const auto& record : mShaderRecords) {
         size += sizeof(ShaderRecord::model);
         size += sizeof(ShaderRecord::variant);
@@ -546,7 +523,7 @@ void BlobIndex::writeShadersChunk(ChunkType tag, ostream& stream) const {
     }
 
     // Serialize the chunk.
-    uint64_t type = tag;
+    type = mMatTag;
     stream.write((char*) &type, sizeof(type));
     stream.write((char*) &size, sizeof(size));
     const uint64_t recordCount = mShaderRecords.size();
@@ -570,6 +547,7 @@ void BlobIndex::replaceShader(ShaderModel shaderModel, Variant variant,
     for (auto& record : mShaderRecords) {
         if (record.model == model && record.variant == variant && record.stage == stage) {
             auto& blob = mDataBlobs[record.blobIndex];
+            blob.reserve(compressed.size());
             blob.resize(compressed.size());
             memcpy(blob.data(), compressed.data(), compressed.size());
             break;
@@ -577,5 +555,4 @@ void BlobIndex::replaceShader(ShaderModel shaderModel, Variant variant,
     }
 }
 
-} // namespace matdbg
-} // namespace filament
+} // namespace filament::matdbg
