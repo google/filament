@@ -399,12 +399,18 @@ extern PFN_vkCreateHeadlessSurfaceEXT vkCreateHeadlessSurfaceEXT;
 #if defined(VK_EXT_host_query_reset)
 extern PFN_vkResetQueryPoolEXT vkResetQueryPoolEXT;
 #endif // defined(VK_EXT_host_query_reset)
+#if defined(VK_EXT_image_compression_control)
+extern PFN_vkGetImageSubresourceLayout2EXT vkGetImageSubresourceLayout2EXT;
+#endif // defined(VK_EXT_image_compression_control)
 #if defined(VK_EXT_image_drm_format_modifier)
 extern PFN_vkGetImageDrmFormatModifierPropertiesEXT vkGetImageDrmFormatModifierPropertiesEXT;
 #endif // defined(VK_EXT_image_drm_format_modifier)
 #if defined(VK_EXT_line_rasterization)
 extern PFN_vkCmdSetLineStippleEXT vkCmdSetLineStippleEXT;
 #endif // defined(VK_EXT_line_rasterization)
+#if defined(VK_EXT_metal_objects)
+extern PFN_vkExportMetalObjectsEXT vkExportMetalObjectsEXT;
+#endif // defined(VK_EXT_metal_objects)
 #if defined(VK_EXT_metal_surface)
 extern PFN_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 #endif // defined(VK_EXT_metal_surface)
@@ -415,6 +421,9 @@ extern PFN_vkCmdDrawMultiIndexedEXT vkCmdDrawMultiIndexedEXT;
 #if defined(VK_EXT_pageable_device_local_memory)
 extern PFN_vkSetDeviceMemoryPriorityEXT vkSetDeviceMemoryPriorityEXT;
 #endif // defined(VK_EXT_pageable_device_local_memory)
+#if defined(VK_EXT_pipeline_properties)
+extern PFN_vkGetPipelinePropertiesEXT vkGetPipelinePropertiesEXT;
+#endif // defined(VK_EXT_pipeline_properties)
 #if defined(VK_EXT_private_data)
 extern PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
 extern PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
@@ -661,6 +670,9 @@ extern PFN_vkWaitForPresentKHR vkWaitForPresentKHR;
 #if defined(VK_KHR_push_descriptor)
 extern PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
 #endif // defined(VK_KHR_push_descriptor)
+#if (defined(VK_KHR_ray_tracing_maintenance1) && defined(VK_KHR_ray_tracing_pipeline))
+extern PFN_vkCmdTraceRaysIndirect2KHR vkCmdTraceRaysIndirect2KHR;
+#endif // (defined(VK_KHR_ray_tracing_maintenance1) && defined(VK_KHR_ray_tracing_pipeline))
 #if defined(VK_KHR_ray_tracing_pipeline)
 extern PFN_vkCmdSetRayTracingPipelineStackSizeKHR vkCmdSetRayTracingPipelineStackSizeKHR;
 extern PFN_vkCmdTraceRaysIndirectKHR vkCmdTraceRaysIndirectKHR;
@@ -953,6 +965,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkLineRasterizatio
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingRateCombinerOpKHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingRateNV& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingRateTypeNV& value);
+utils::io::ostream& operator<<(utils::io::ostream& out, const VkSubpassMergeStatusEXT& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkProvokingVertexModeEXT& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkAccelerationStructureMotionInstanceTypeNV& value);
 #endif

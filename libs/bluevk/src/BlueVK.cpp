@@ -550,12 +550,18 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
 #if defined(VK_EXT_host_query_reset)
     vkResetQueryPoolEXT = (PFN_vkResetQueryPoolEXT) loadcb(context, "vkResetQueryPoolEXT");
 #endif // defined(VK_EXT_host_query_reset)
+#if defined(VK_EXT_image_compression_control)
+    vkGetImageSubresourceLayout2EXT = (PFN_vkGetImageSubresourceLayout2EXT) loadcb(context, "vkGetImageSubresourceLayout2EXT");
+#endif // defined(VK_EXT_image_compression_control)
 #if defined(VK_EXT_image_drm_format_modifier)
     vkGetImageDrmFormatModifierPropertiesEXT = (PFN_vkGetImageDrmFormatModifierPropertiesEXT) loadcb(context, "vkGetImageDrmFormatModifierPropertiesEXT");
 #endif // defined(VK_EXT_image_drm_format_modifier)
 #if defined(VK_EXT_line_rasterization)
     vkCmdSetLineStippleEXT = (PFN_vkCmdSetLineStippleEXT) loadcb(context, "vkCmdSetLineStippleEXT");
 #endif // defined(VK_EXT_line_rasterization)
+#if defined(VK_EXT_metal_objects)
+    vkExportMetalObjectsEXT = (PFN_vkExportMetalObjectsEXT) loadcb(context, "vkExportMetalObjectsEXT");
+#endif // defined(VK_EXT_metal_objects)
 #if defined(VK_EXT_multi_draw)
     vkCmdDrawMultiEXT = (PFN_vkCmdDrawMultiEXT) loadcb(context, "vkCmdDrawMultiEXT");
     vkCmdDrawMultiIndexedEXT = (PFN_vkCmdDrawMultiIndexedEXT) loadcb(context, "vkCmdDrawMultiIndexedEXT");
@@ -563,6 +569,9 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
 #if defined(VK_EXT_pageable_device_local_memory)
     vkSetDeviceMemoryPriorityEXT = (PFN_vkSetDeviceMemoryPriorityEXT) loadcb(context, "vkSetDeviceMemoryPriorityEXT");
 #endif // defined(VK_EXT_pageable_device_local_memory)
+#if defined(VK_EXT_pipeline_properties)
+    vkGetPipelinePropertiesEXT = (PFN_vkGetPipelinePropertiesEXT) loadcb(context, "vkGetPipelinePropertiesEXT");
+#endif // defined(VK_EXT_pipeline_properties)
 #if defined(VK_EXT_private_data)
     vkCreatePrivateDataSlotEXT = (PFN_vkCreatePrivateDataSlotEXT) loadcb(context, "vkCreatePrivateDataSlotEXT");
     vkDestroyPrivateDataSlotEXT = (PFN_vkDestroyPrivateDataSlotEXT) loadcb(context, "vkDestroyPrivateDataSlotEXT");
@@ -753,6 +762,9 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
 #if defined(VK_KHR_push_descriptor)
     vkCmdPushDescriptorSetKHR = (PFN_vkCmdPushDescriptorSetKHR) loadcb(context, "vkCmdPushDescriptorSetKHR");
 #endif // defined(VK_KHR_push_descriptor)
+#if (defined(VK_KHR_ray_tracing_maintenance1) && defined(VK_KHR_ray_tracing_pipeline))
+    vkCmdTraceRaysIndirect2KHR = (PFN_vkCmdTraceRaysIndirect2KHR) loadcb(context, "vkCmdTraceRaysIndirect2KHR");
+#endif // (defined(VK_KHR_ray_tracing_maintenance1) && defined(VK_KHR_ray_tracing_pipeline))
 #if defined(VK_KHR_ray_tracing_pipeline)
     vkCmdSetRayTracingPipelineStackSizeKHR = (PFN_vkCmdSetRayTracingPipelineStackSizeKHR) loadcb(context, "vkCmdSetRayTracingPipelineStackSizeKHR");
     vkCmdTraceRaysIndirectKHR = (PFN_vkCmdTraceRaysIndirectKHR) loadcb(context, "vkCmdTraceRaysIndirectKHR");
@@ -1244,12 +1256,18 @@ PFN_vkCreateHeadlessSurfaceEXT vkCreateHeadlessSurfaceEXT;
 #if defined(VK_EXT_host_query_reset)
 PFN_vkResetQueryPoolEXT vkResetQueryPoolEXT;
 #endif // defined(VK_EXT_host_query_reset)
+#if defined(VK_EXT_image_compression_control)
+PFN_vkGetImageSubresourceLayout2EXT vkGetImageSubresourceLayout2EXT;
+#endif // defined(VK_EXT_image_compression_control)
 #if defined(VK_EXT_image_drm_format_modifier)
 PFN_vkGetImageDrmFormatModifierPropertiesEXT vkGetImageDrmFormatModifierPropertiesEXT;
 #endif // defined(VK_EXT_image_drm_format_modifier)
 #if defined(VK_EXT_line_rasterization)
 PFN_vkCmdSetLineStippleEXT vkCmdSetLineStippleEXT;
 #endif // defined(VK_EXT_line_rasterization)
+#if defined(VK_EXT_metal_objects)
+PFN_vkExportMetalObjectsEXT vkExportMetalObjectsEXT;
+#endif // defined(VK_EXT_metal_objects)
 #if defined(VK_EXT_metal_surface)
 PFN_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 #endif // defined(VK_EXT_metal_surface)
@@ -1260,6 +1278,9 @@ PFN_vkCmdDrawMultiIndexedEXT vkCmdDrawMultiIndexedEXT;
 #if defined(VK_EXT_pageable_device_local_memory)
 PFN_vkSetDeviceMemoryPriorityEXT vkSetDeviceMemoryPriorityEXT;
 #endif // defined(VK_EXT_pageable_device_local_memory)
+#if defined(VK_EXT_pipeline_properties)
+PFN_vkGetPipelinePropertiesEXT vkGetPipelinePropertiesEXT;
+#endif // defined(VK_EXT_pipeline_properties)
 #if defined(VK_EXT_private_data)
 PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
 PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
@@ -1506,6 +1527,9 @@ PFN_vkWaitForPresentKHR vkWaitForPresentKHR;
 #if defined(VK_KHR_push_descriptor)
 PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
 #endif // defined(VK_KHR_push_descriptor)
+#if (defined(VK_KHR_ray_tracing_maintenance1) && defined(VK_KHR_ray_tracing_pipeline))
+PFN_vkCmdTraceRaysIndirect2KHR vkCmdTraceRaysIndirect2KHR;
+#endif // (defined(VK_KHR_ray_tracing_maintenance1) && defined(VK_KHR_ray_tracing_pipeline))
 #if defined(VK_KHR_ray_tracing_pipeline)
 PFN_vkCmdSetRayTracingPipelineStackSizeKHR vkCmdSetRayTracingPipelineStackSizeKHR;
 PFN_vkCmdTraceRaysIndirectKHR vkCmdTraceRaysIndirectKHR;
@@ -2994,6 +3018,26 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingR
     switch (value) {
         case VK_FRAGMENT_SHADING_RATE_TYPE_FRAGMENT_SIZE_NV: out << "VK_FRAGMENT_SHADING_RATE_TYPE_FRAGMENT_SIZE_NV"; break;
         case VK_FRAGMENT_SHADING_RATE_TYPE_ENUMS_NV: out << "VK_FRAGMENT_SHADING_RATE_TYPE_ENUMS_NV"; break;
+        default: out << "UNKNOWN"; break;
+    }
+    return out;
+}
+utils::io::ostream& operator<<(utils::io::ostream& out, const VkSubpassMergeStatusEXT& value) {
+    switch (value) {
+        case VK_SUBPASS_MERGE_STATUS_MERGED_EXT: out << "VK_SUBPASS_MERGE_STATUS_MERGED_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_DISALLOWED_EXT: out << "VK_SUBPASS_MERGE_STATUS_DISALLOWED_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_SIDE_EFFECTS_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_SIDE_EFFECTS_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_SAMPLES_MISMATCH_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_SAMPLES_MISMATCH_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_VIEWS_MISMATCH_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_VIEWS_MISMATCH_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_ALIASING_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_ALIASING_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_DEPENDENCIES_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_DEPENDENCIES_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_INCOMPATIBLE_INPUT_ATTACHMENT_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_INCOMPATIBLE_INPUT_ATTACHMENT_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_TOO_MANY_ATTACHMENTS_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_TOO_MANY_ATTACHMENTS_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_INSUFFICIENT_STORAGE_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_INSUFFICIENT_STORAGE_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_DEPTH_STENCIL_COUNT_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_DEPTH_STENCIL_COUNT_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_RESOLVE_ATTACHMENT_REUSE_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_RESOLVE_ATTACHMENT_REUSE_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_SINGLE_SUBPASS_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_SINGLE_SUBPASS_EXT"; break;
+        case VK_SUBPASS_MERGE_STATUS_NOT_MERGED_UNSPECIFIED_EXT: out << "VK_SUBPASS_MERGE_STATUS_NOT_MERGED_UNSPECIFIED_EXT"; break;
         default: out << "UNKNOWN"; break;
     }
     return out;

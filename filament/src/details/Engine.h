@@ -68,8 +68,6 @@ using MaterialKey = uint32_t;
 } // namespace filament
 #endif
 
-#include <filaflat/ShaderBuilder.h>
-
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 #include <utils/JobSystem.h>
@@ -324,12 +322,14 @@ public:
     void prepare();
     void gc();
 
-    filaflat::ShaderBuilder& getVertexShaderBuilder() const noexcept {
-        return mVertexShaderBuilder;
+    using ShaderContent = utils::FixedCapacityVector<uint8_t>;
+
+    ShaderContent& getVertexShaderContent() const noexcept {
+        return mVertexShaderContent;
     }
 
-    filaflat::ShaderBuilder& getFragmentShaderBuilder() const noexcept {
-        return mFragmentShaderBuilder;
+    ShaderContent& getFragmentShaderContent() const noexcept {
+        return mFragmentShaderContent;
     }
 
     FDebugRegistry& getDebugRegistry() noexcept {
@@ -453,8 +453,8 @@ private:
 
     mutable utils::CountDownLatch mDriverBarrier;
 
-    mutable filaflat::ShaderBuilder mVertexShaderBuilder;
-    mutable filaflat::ShaderBuilder mFragmentShaderBuilder;
+    mutable ShaderContent mVertexShaderContent;
+    mutable ShaderContent mFragmentShaderContent;
     FDebugRegistry mDebugRegistry;
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;

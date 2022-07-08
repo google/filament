@@ -333,6 +333,7 @@ These chunks have the following layout.
     [u32] Compression
     [u32] Blob count
     for each blob:
+        [u8 ...] Alignment padding
         [u64] Byte count
         [u8 u8 u8 ...]
 

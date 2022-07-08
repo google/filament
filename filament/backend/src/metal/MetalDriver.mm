@@ -262,10 +262,6 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     ASSERT_PRECONDITION(metalTexture.mipmapLevelCount == levels,
             "Imported id<MTLTexture> levels (%d) != Filament texture levels (%d)",
             metalTexture.mipmapLevelCount, levels);
-    MTLPixelFormat filamentMetalFormat = getMetalFormat(mContext, format);
-    ASSERT_PRECONDITION(metalTexture.pixelFormat == filamentMetalFormat,
-            "Imported id<MTLTexture> format (%d) != Filament texture format (%d)",
-            metalTexture.pixelFormat, filamentMetalFormat);
     MTLTextureType filamentMetalType = getMetalType(target);
     ASSERT_PRECONDITION(metalTexture.textureType == filamentMetalType,
             "Imported id<MTLTexture> type (%d) != Filament texture type (%d)",
@@ -847,18 +843,14 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                                    encoding:NSUTF8StringEncoding];
     }
 
-    // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
-    NSInteger renderTargetHeight =
-            mContext->currentRenderTarget->isDefaultRenderTarget() ?
-            mContext->currentReadSwapChain->getSurfaceHeight() : mContext->currentRenderTarget->height;
+    MTLRegion mvp = renderTarget->getRegionFromClientRect(params.viewport);
     MTLViewport metalViewport {
-            .originX = static_cast<double>(params.viewport.left),
-            .originY = renderTargetHeight - static_cast<double>(params.viewport.bottom) -
-                       static_cast<double>(params.viewport.height),
-            .width = static_cast<double>(params.viewport.width),
-            .height = static_cast<double>(params.viewport.height),
-            .znear = static_cast<double>(params.depthRange.near),
-            .zfar = static_cast<double>(params.depthRange.far)
+        .originX = static_cast<double>(mvp.origin.x),
+        .originY = static_cast<double>(mvp.origin.y),
+        .width = static_cast<double>(mvp.size.width),
+        .height = static_cast<double>(mvp.size.height),
+        .znear = static_cast<double>(params.depthRange.near),
+        .zfar = static_cast<double>(params.depthRange.far)
     };
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
 
@@ -1111,8 +1103,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 
             MetalBlitter::BlitArgs args;
             args.filter = filter;
-            args.source.region = srcColorAttachment.getRegionFromClientRect(srcRect);
-            args.destination.region = dstColorAttachment.getRegionFromClientRect(dstRect);
+            args.source.region = srcTarget->getRegionFromClientRect(srcRect);
+            args.destination.region = dstTarget->getRegionFromClientRect(dstRect);
             args.source.color = srcColorAttachment.getTexture();
             args.destination.color = dstColorAttachment.getTexture();
             args.source.level = srcColorAttachment.level;
@@ -1134,8 +1126,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 
             MetalBlitter::BlitArgs args;
             args.filter = filter;
-            args.source.region = srcDepthAttachment.getRegionFromClientRect(srcRect);
-            args.destination.region = dstDepthAttachment.getRegionFromClientRect(dstRect);
+            args.source.region = srcTarget->getRegionFromClientRect(srcRect);
+            args.destination.region = dstTarget->getRegionFromClientRect(dstRect);
             args.source.depth = srcDepthAttachment.getTexture();
             args.destination.depth = dstDepthAttachment.getTexture();
             args.source.level = srcDepthAttachment.level;

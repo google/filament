@@ -60,68 +60,69 @@ endif()
 set(DOUBLESIDED false)
 set(TRANSPARENCY default)
 
-function(generate_ubershader_base SHADINGMODEL BLENDING)
-    configure_file(materials/base.mat.in "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
-    configure_file(materials/base.spec.in "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.spec")
-    set(MATERIAL_NAMES ${MATERIAL_NAMES} "${SHADINGMODEL}_${BLENDING}" PARENT_SCOPE)
-endfunction()
+set(UBERZ_OUTPUT_PATH "${RESOURCE_DIR}/default.uberz")
 
-function(generate_ubershader_custom NAME)
-    configure_file(materials/${NAME}.mat.in "${RESOURCE_DIR}/${NAME}.mat")
-    configure_file(materials/${NAME}.spec.in "${RESOURCE_DIR}/${NAME}.spec")
-    set(MATERIAL_NAMES ${MATERIAL_NAMES} ${NAME} PARENT_SCOPE)
-endfunction()
+function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
+    set(DEST "${RESOURCE_DIR}/${NAME}")
+    configure_file(materials/${SRC}.mat.in "${DEST}.mat" COPYONLY)
+    configure_file(materials/${SRC}.spec.in "${DEST}.spec" COPYONLY)
 
-# Generate or copy mat / spec files and build a list of material names.
-# The first material becomes the default material in the ubershader archive.
+    set(TEMPLATE_ARGS
+        -TCUSTOM_PARAMS="// no custom params"
+        -TCUSTOM_VERTEX="// no custom vertex"
+        -TCUSTOM_FRAGMENT="// no custom fragment"
+        -TDOUBLESIDED=false
+        -TTRANSPARENCY=default
+        -TSHADINGMODEL=${SHADINGMODEL}
+        -TBLENDING=${BLENDING})
 
-set(MATERIAL_NAMES)
-generate_ubershader_base(lit opaque)
-generate_ubershader_base(lit fade)
-generate_ubershader_base(lit masked)
-generate_ubershader_base(specularGlossiness fade)
-generate_ubershader_base(specularGlossiness opaque)
-generate_ubershader_base(specularGlossiness masked)
-generate_ubershader_base(unlit fade)
-generate_ubershader_base(unlit opaque)
-generate_ubershader_base(unlit masked)
-generate_ubershader_custom(volume)
-generate_ubershader_custom(transmission)
-generate_ubershader_custom(sheen)
-
-# Iterate over MATERIAL_NAMES and call matc for each material.
-
-set(UBERZ_INPUTS)
-foreach (NAME ${MATERIAL_NAMES})
     add_custom_command(
-            OUTPUT "${NAME}.filamat"
-            COMMAND matc ${MATC_BASE_FLAGS} -o "${NAME}.filamat" "${NAME}.mat"
-            DEPENDS matc "${RESOURCE_DIR}/${NAME}.mat"
+        OUTPUT "${NAME}.filamat"
+        COMMAND matc ${MATC_BASE_FLAGS} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
+        DEPENDS matc "${DEST}.mat"
+        WORKING_DIRECTORY ${RESOURCE_DIR}
+        COMMENT "Compiling material ${NAME}")
+
+    set(UBERZ_ARGS -o ${UBERZ_OUTPUT_PATH} ${TEMPLATE_ARGS})
+
+    # Invoke uberz to consume foo.spec + foo.filamat and produce default.uberz
+    # The first time this is invoked, it omits the --append argument.
+    if (NOT APPEND_UBERSHADERS)
+        set(APPEND_UBERSHADERS ON PARENT_SCOPE)
+        add_custom_command(
+            OUTPUT ${UBERZ_OUTPUT_PATH}
+            COMMAND uberz ${UBERZ_ARGS} ${NAME}
+            DEPENDS uberz ${DEST}.filamat ${DEST}.spec
             WORKING_DIRECTORY ${RESOURCE_DIR}
-            COMMENT "Compiling material ${NAME}"
-    )
-endforeach()
+            COMMENT "Creating ubershader archive")
+    else()
+        add_custom_command(
+            OUTPUT ${UBERZ_OUTPUT_PATH}
+            COMMAND uberz --append ${UBERZ_ARGS} ${NAME}
+            DEPENDS uberz ${DEST}.filamat ${DEST}.spec
+            WORKING_DIRECTORY ${RESOURCE_DIR}
+            APPEND
+            COMMENT "Appending to ubershader archive")
+    endif()
 
-# ==================================================================================================
-# Create a target for the ubershader archive that invokes the uberz tool.
-# ==================================================================================================
+endfunction()
 
-set(UBERZ_INPUTS)
-foreach (NAME ${MATERIAL_NAMES})
-    list(APPEND UBERZ_INPUTS "${RESOURCE_DIR}/${NAME}.filamat")
-    list(APPEND UBERZ_INPUTS "${RESOURCE_DIR}/${NAME}.spec")
-endforeach()
+# NOTE: The default ubershader material is defined as the first material in the list below.
 
-set(UBERZ_FILE_PATH "${RESOURCE_DIR}/default.uberz")
+build_ubershader(lit_opaque                base            lit opaque)
+build_ubershader(lit_fade                  base            lit fade)
+build_ubershader(lit_masked                base            lit masked)
+build_ubershader(specularGlossiness_fade   base            specularGlossiness fade)
+build_ubershader(specularGlossiness_opaque base            specularGlossiness opaque)
+build_ubershader(specularGlossiness_masked base            specularGlossiness masked)
+build_ubershader(unlit_fade                base            unlit fade)
+build_ubershader(unlit_opaque              base            unlit opaque)
+build_ubershader(unlit_masked              base            unlit masked)
+build_ubershader(volume                    volume          _ _)
+build_ubershader(transmission              transmission    _ _)
+build_ubershader(sheen                     sheen           _ _)
 
-add_custom_command(
-    OUTPUT ${UBERZ_FILE_PATH}
-    COMMAND uberz -o ${UBERZ_FILE_PATH} ${MATERIAL_NAMES}
-    DEPENDS uberz ${UBERZ_INPUTS}
-    WORKING_DIRECTORY ${RESOURCE_DIR}
-    COMMENT "Building ubershader archive")
-
-add_custom_target(uberz_file DEPENDS ${UBERZ_FILE_PATH})
+add_custom_target(uberz_file DEPENDS ${UBERZ_OUTPUT_PATH})
 
 # ==================================================================================================
 # Build a resgen library for the ubershader archive.
@@ -131,8 +132,8 @@ get_resgen_vars("${RESOURCE_DIR}/materials" uberarchive)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${UBERZ_FILE_PATH}
-        DEPENDS resgen ${UBERZ_FILE_PATH}
+        COMMAND resgen ${RESGEN_FLAGS} ${UBERZ_OUTPUT_PATH}
+        DEPENDS resgen ${UBERZ_OUTPUT_PATH}
 )
 
 if (DEFINED RESGEN_SOURCE_FLAGS)
