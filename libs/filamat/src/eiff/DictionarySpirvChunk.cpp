@@ -21,7 +21,7 @@
 namespace filamat {
 
 DictionarySpirvChunk::DictionarySpirvChunk(BlobDictionary&& dictionary, bool stripDebugInfo) :
-        Chunk(ChunkType::DictionarySpirv), mDictionary(dictionary), mStripDebugInfo(stripDebugInfo) {
+        Chunk(ChunkType::DictionarySpirv), mDictionary(std::move(dictionary)), mStripDebugInfo(stripDebugInfo) {
 }
 
 void DictionarySpirvChunk::flatten(Flattener& f) {
@@ -36,7 +36,7 @@ void DictionarySpirvChunk::flatten(Flattener& f) {
 
     f.writeUint32(mDictionary.getBlobCount());
     for (size_t i = 0 ; i < mDictionary.getBlobCount() ; i++) {
-        const std::string& spirv = mDictionary.getBlob(i);
+        std::string_view spirv = mDictionary.getBlob(i);
         smolv::ByteArray compressed;
         if (!smolv::Encode(spirv.data(), spirv.size(), compressed, flags)) {
             utils::slog.e << "Error with SPIRV compression" << utils::io::endl;
