@@ -109,6 +109,8 @@ public:
     inline void endQuery(GLenum target) noexcept;
     inline GLuint getQuery(GLenum target) const noexcept;
 
+    inline const char* getRenderer() const noexcept;
+
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
@@ -720,6 +722,11 @@ GLuint OpenGLContext::getQuery(GLenum target) const noexcept {
             return 0;
     }
 }
+
+const char* OpenGLContext::getRenderer() const noexcept {
+    return state.renderer;
+}
+
 } // namespace filament
 
 #endif //TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H

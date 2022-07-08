@@ -605,12 +605,6 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         }
         mRenderableManager.setMorphWeights(renderable, weights.data(), size);
     }
-    else
-    {
-        const float initWeights[1]={0};
-        RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
-        mRenderableManager.setMorphWeights(renderable, initWeights, 1);
-    }
 
     ++mResult->mRenderableCount;
 }

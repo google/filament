@@ -404,12 +404,14 @@ void FRenderableManager::create(
                                 out, boneCount * sizeof(PerRenderableBoneUib::BoneData) }, 0);
                     }
                 }
-                else
-                {
-                    auto* initBone = driver.allocatePod<PerRenderableBoneUib>(1);
-                    std::uninitialized_fill_n(initBone, 1, PerRenderableBoneUib{});
-                    driver.updateBufferObject(bones.handle, {
-                            initBone, sizeof(PerRenderableBoneUib) }, 0);
+                else{
+                    // When boneCount is 0, do an initialization for the bones uniform array to avoid crash on adreno gpu.
+                    if (driver.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH)) {
+                        auto *initBones = driver.allocatePod<PerRenderableBoneUib::BoneData>(1);
+                        std::uninitialized_fill_n(initBones, 1, FSkinningBuffer::makeBone({}));
+                        driver.updateBufferObject(bones.handle, {
+                                initBones, sizeof(PerRenderableBoneUib::BoneData) }, 0);
+                    }
                 }
             }
         }
@@ -442,6 +444,12 @@ void FRenderableManager::create(
                 }
                 morphTargets[i] = { upcast(morphing.buffer), (uint32_t)morphing.offset,
                                     (uint32_t)morphing.count };
+            }
+            
+            // When targetCount equal 0, boneCount>0 in this case, do an initialization for the morphWeights uniform array to avoid crash on adreno gpu.
+            if (targetCount == 0 && driver.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH)) {
+                float initWeights[1] = {0};
+                setMorphWeights(ci, initWeights, 1, 0);
             }
         }
     }

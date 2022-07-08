@@ -1573,6 +1573,9 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.split_easu;
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             return mContext.bugs.allow_read_only_ancillary_feedback_loop;
+        case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
+            return (strstr(
+            mContext.getRenderer(), "Adreno") != NULL);
     }
     return false;
 }
