@@ -181,7 +181,7 @@ void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, si
                 free(c->name);
                 free(c);
             }, (void*)c);
-    getDriverApi().readPixels(rt, 0, 0, 512, 512, std::move(pbd));
+    getDriverApi().readPixels(rt, 0, 0, width, height, std::move(pbd));
 }
 
 class Environment : public ::testing::Environment {

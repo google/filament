@@ -395,6 +395,7 @@ if (APPLE)
         test/test_LoadImage.cpp
         test/test_RenderExternalImage.cpp
         test/test_StencilBuffer.cpp
+        test/test_Scissor.cpp
         )
 
     target_link_libraries(backend_test PRIVATE
