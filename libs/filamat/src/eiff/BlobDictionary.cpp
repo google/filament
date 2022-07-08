@@ -28,7 +28,6 @@ size_t BlobDictionary::addBlob(const std::vector<uint32_t>& vblob) noexcept {
     }
     mBlobIndices.emplace(blob, mBlobs.size());
     mBlobs.emplace_back(blob);
-    mStorageSize += blob.size();
     return mBlobs.size() - 1;
 }
 
