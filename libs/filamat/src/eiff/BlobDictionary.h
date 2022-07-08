@@ -24,24 +24,14 @@
 
 namespace filamat {
 
-// Establish a blob <-> id mapping. Note that std::string may binary data with null characters.
+// Establish a blob <-> id mapping. Note that std::string may have binary data with null characters.
 class BlobDictionary {
 public:
-    BlobDictionary() : mStorageSize(0) {
-    }
-
-    ~BlobDictionary() = default;
-
     // Adds a blob if it's not already a duplicate and returns its index.
     size_t addBlob(const std::vector<uint32_t>& blob) noexcept;
 
     size_t getBlobCount() const noexcept {
         return mBlobs.size();
-    }
-
-    // Returns the total storage size, assuming that each blob is prefixed with a 64-bit size.
-    size_t getSize() const noexcept {
-        return mStorageSize + 8 * getBlobCount();
     }
 
     bool isEmpty() const noexcept {
@@ -59,7 +49,6 @@ private:
     // std::string_view without need for construction of a std::string object.
     std::map<std::string, size_t, std::less<>> mBlobIndices;
     std::vector<std::string> mBlobs;
-    size_t mStorageSize;
 };
 
 } // namespace filamat

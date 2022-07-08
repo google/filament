@@ -20,9 +20,6 @@
 
 namespace filamat {
 
-    LineDictionary::LineDictionary() : mStorageSize(0){
-}
-
 const std::string& LineDictionary::getString(size_t index) const noexcept {
     assert(index < mStrings.size());
     return mStrings[index];
@@ -70,7 +67,6 @@ void LineDictionary::addLine(const std::string&& line) noexcept {
     mLineIndices[line] = mStrings.size();
     size_t size = line.size();
     mStrings.push_back(std::move(line));
-    mStorageSize += size + 1;
 }
 
 } // namespace filamat

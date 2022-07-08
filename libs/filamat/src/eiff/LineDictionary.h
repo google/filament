@@ -27,15 +27,8 @@ namespace filamat {
 // and each line encoded into a 16 bit id.
 class LineDictionary {
 public:
-    LineDictionary();
-    ~LineDictionary() = default;
-
     void addText(const std::string& text) noexcept;
     size_t getLineCount() const;
-
-    constexpr size_t getSize() const noexcept {
-        return mStorageSize;
-    }
 
     bool isEmpty() const noexcept {
         return mStrings.empty();
@@ -49,7 +42,6 @@ private:
 
     std::unordered_map<std::string, size_t> mLineIndices;
     std::vector<std::string> mStrings;
-    size_t mStorageSize = 0;
 };
 
 } // namespace filamat
