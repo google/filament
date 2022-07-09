@@ -428,6 +428,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOp
              i = parse(tokens, i + 1, jsonChunk, &out->cameraFocalLength);
         } else if (compare(tok, jsonChunk, "cameraFocusDistance") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->cameraFocusDistance);
+        } else if (compare(tok, jsonChunk, "autoInstancingEnabled") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->autoInstancingEnabled);
         } else if (compare(tok, jsonChunk, "autoScaleEnabled") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->autoScaleEnabled);
         } else {
@@ -744,6 +746,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
         << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
         << "\"cameraFocalLength\": " << (in.cameraFocalLength) << ",\n"
         << "\"cameraFocusDistance\": " << (in.cameraFocusDistance) << ",\n"
+        << "\"autoInstancingEnabled\": " << to_string(in.autoInstancingEnabled) << ",\n"
         << "\"autoScaleEnabled\": " << to_string(in.autoScaleEnabled) << "\n"
         << "}";
 }

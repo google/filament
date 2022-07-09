@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMAT_MATERIAL_CHUNK_H
 #define TNT_FILAMAT_MATERIAL_CHUNK_H
 
-
 #include <filament/MaterialChunkType.h>
 
 #include <filaflat/ChunkContainer.h>
@@ -35,7 +34,7 @@ public:
     ~MaterialChunk() noexcept;
 
     // call this once after container.parse() has been called
-    bool readIndex(filamat::ChunkType materialTag);
+    bool initialize(filamat::ChunkType materialTag);
 
     // call this as many times as needed
     bool getShader(ShaderContent& shaderContent,

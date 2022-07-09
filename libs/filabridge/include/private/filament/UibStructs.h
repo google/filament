@@ -211,7 +211,7 @@ static_assert(sizeof(PerRenderableData) == 256,
 
 struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "ObjectUniforms" };
-    PerRenderableData data[1];
+    PerRenderableData data[64];
 };
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
 static_assert(sizeof(PerRenderableUib) <= 16384,

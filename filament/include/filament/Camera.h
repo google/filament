@@ -313,26 +313,26 @@ public:
     //! Returns the frustum's far plane used for culling
     float getCullingFar() const noexcept;
 
-    /** Sets the camera's view matrix.
+    /** Sets the camera's model matrix.
      *
      * Helper method to set the camera's entity transform component.
      * It has the same effect as calling:
      *
      * ~~~~~~~~~~~{.cpp}
      *  engine.getTransformManager().setTransform(
-     *          engine.getTransformManager().getInstance(camera->getEntity()), view);
+     *          engine.getTransformManager().getInstance(camera->getEntity()), model);
      * ~~~~~~~~~~~
      *
-     * @param view The camera position and orientation provided as a rigid transform matrix.
+     * @param model The camera position and orientation provided as a rigid transform matrix.
      *
      * @note The Camera "looks" towards its -z axis
      *
-     * @warning \p view must be a rigid transform
+     * @warning \p model must be a rigid transform
      */
-    void setModelMatrix(const math::mat4& view) noexcept;
-    void setModelMatrix(const math::mat4f& view) noexcept; //!< \overload
+    void setModelMatrix(const math::mat4& model) noexcept;
+    void setModelMatrix(const math::mat4f& model) noexcept; //!< @overload
 
-    /** Sets the camera's view matrix
+    /** Sets the camera's model matrix
      *
      * @param eye       The position of the camera in world space.
      * @param center    The point in world space the camera is looking at.
@@ -342,7 +342,7 @@ public:
                 const math::float3& center,
                 const math::float3& up) noexcept;
 
-    /** Sets the camera's view matrix, assuming up is along the y axis
+    /** Sets the camera's model matrix, assuming up is along the y axis
      *
      * @param eye       The position of the camera in world space.
      * @param center    The point in world space the camera is looking at.
