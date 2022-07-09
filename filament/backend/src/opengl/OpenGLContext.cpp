@@ -99,6 +99,9 @@ OpenGLContext::OpenGLContext() noexcept {
             // early exit condition is flattened in EASU code
             bugs.split_easu = true;
 
+            // initialize the non used uniform array for adreno drivers.
+            bugs.enable_initialize_non_used_uniform_array = true;
+
             int maj, min, driverMajor, driverMinor;
             int c = sscanf(state.version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
                     &maj, &min, &driverMajor, &driverMinor);
@@ -178,6 +181,9 @@ OpenGLContext::OpenGLContext() noexcept {
             // early exit condition is flattened in EASU code
             // (that should be regardless of ANGLE, but we should double check)
             bugs.split_easu = true;
+
+            // double check like split_easu above
+            bugs.enable_initialize_non_used_uniform_array = true;
         }
         // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
     }

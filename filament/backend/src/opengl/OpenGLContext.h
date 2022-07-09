@@ -109,8 +109,6 @@ public:
     inline void endQuery(GLenum target) noexcept;
     inline GLuint getQuery(GLenum target) const noexcept;
 
-    inline const char* getRenderer() const noexcept;
-
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
@@ -207,6 +205,9 @@ public:
         // view that this is generally forbidden. However, this restriction is lifted on desktop
         // GL and Vulkan and probably Metal.
         bool allow_read_only_ancillary_feedback_loop = false;
+
+        // Some Adreno drivers would crash gl draw when there's uninitialized uniform array exists, even when the code using that uniform array is not called. it's needed to do an initialization to avoid it.
+        bool enable_initialize_non_used_uniform_array = false;
     } bugs;
 
     // state getters -- as needed.
@@ -258,6 +259,9 @@ private:
                     ""},
             {   bugs.allow_read_only_ancillary_feedback_loop,
                     "allow_read_only_ancillary_feedback_loop",
+                    ""},
+            {   bugs.enable_initialize_non_used_uniform_array,
+                    "enable_initialize_non_used_uniform_array",
                     ""},
     }};
 
@@ -721,10 +725,6 @@ GLuint OpenGLContext::getQuery(GLenum target) const noexcept {
         default:
             return 0;
     }
-}
-
-const char* OpenGLContext::getRenderer() const noexcept {
-    return state.renderer;
 }
 
 } // namespace filament
