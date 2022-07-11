@@ -253,9 +253,9 @@ size_t Animator::getAnimationCount() const {
 
 void Animator::applyAnimation(size_t animationIndex, float time) const {
     const Animation& anim = mImpl->animations[animationIndex];
-    TransformManager* transformManager = mImpl->transformManager;
-    RenderableManager* renderableManager = mImpl->renderableManager;
     time = fmod(time, anim.duration);
+    TransformManager& transformManager = *mImpl->transformManager;
+    transformManager.openLocalTransformTransaction();
     for (const auto& channel : anim.channels) {
         const Sampler* sampler = channel.sourceData;
         if (sampler->times.size() < 2) {
@@ -296,6 +296,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
 
         mImpl->applyAnimation(channel, t, prevIndex, nextIndex);
     }
+    transformManager.commitLocalTransformTransaction();
 }
 
 void Animator::resetBoneMatrices() {
