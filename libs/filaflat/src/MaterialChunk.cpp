@@ -21,9 +21,16 @@
 
 namespace filaflat {
 
-static inline uint32_t makeKey(uint8_t shaderModel, filament::Variant variant, uint8_t type) noexcept {
+static inline uint32_t makeKey(uint8_t shaderModel, filament::Variant variant, uint8_t stage) noexcept {
     static_assert(sizeof(variant.key) * 8 <= 8);
-    return (shaderModel << 16) | (type << 8) | variant.key;
+    return (shaderModel << 16) | (stage << 8) | variant.key;
+}
+
+void MaterialChunk::decodeKey(uint32_t key, uint8_t* model, filament::Variant::type_t* variant,
+        uint8_t* stage) {
+    *variant = key & 0xff;
+    *stage = (key >> 8) & 0xff;
+    *model = (key >> 16) & 0xff;
 }
 
 MaterialChunk::MaterialChunk(ChunkContainer const& container)
@@ -138,7 +145,6 @@ bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary const&
 
     return true;
 }
-
 
 bool MaterialChunk::getSpirvShader(BlobDictionary const& dictionary,
         ShaderContent& shaderContent, uint8_t shaderModel, filament::Variant variant, uint8_t stage) {

@@ -48,6 +48,7 @@ void compressShader(std::string_view src, Flattener &f, const LineDictionary& di
         size_t index = dictionary.getIndex(newLine);
         if (index > UINT16_MAX) {
             slog.e << "Dictionary returned line index > UINT16_MAX" << io::endl;
+            assert(false);
             continue;
         }
 

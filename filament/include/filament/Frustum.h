@@ -115,7 +115,13 @@ private:
     math::float4 mPlanes[6];
 };
 
-
 } // namespace filament
+
+#if !defined(NDEBUG)
+namespace utils::io {
+class ostream;
+} // namespace utils::io
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::Frustum const& frustum);
+#endif
 
 #endif // TNT_FILAMENT_FRUSTUM_H

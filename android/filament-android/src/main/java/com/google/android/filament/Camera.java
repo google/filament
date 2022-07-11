@@ -456,7 +456,7 @@ public class Camera {
      * @return Distance to the near plane
      */
     public float getNear() {
-        return nGetNear(getNativeObject());
+        return (float)nGetNear(getNativeObject());
     }
 
     /**
@@ -464,7 +464,7 @@ public class Camera {
      * @return Distance to the far plane
      */
     public float getCullingFar() {
-        return nGetCullingFar(getNativeObject());
+        return (float)nGetCullingFar(getNativeObject());
     }
 
     /**
@@ -787,8 +787,8 @@ public class Camera {
     private static native void nSetModelMatrix(long nativeCamera, float[] in);
     private static native void nSetModelMatrixFp64(long nativeCamera, double[] in);
     private static native void nLookAt(long nativeCamera, double eyeX, double eyeY, double eyeZ, double centerX, double centerY, double centerZ, double upX, double upY, double upZ);
-    private static native float nGetNear(long nativeCamera);
-    private static native float nGetCullingFar(long nativeCamera);
+    private static native double nGetNear(long nativeCamera);
+    private static native double nGetCullingFar(long nativeCamera);
     private static native void nGetProjectionMatrix(long nativeCamera, double[] out);
     private static native void nGetCullingProjectionMatrix(long nativeCamera, double[] out);
     private static native void nGetScaling(long nativeCamera, double[] out);

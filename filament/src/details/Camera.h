@@ -48,15 +48,15 @@ public:
     // sets the projection matrix
     void setProjection(Projection projection,
                        double left, double right, double bottom, double top,
-                       double near, double far) noexcept;
+                       double near, double far);
 
     // sets the projection matrix
     void setProjection(double fovInDegrees, double aspect, double near, double far,
-                       Fov direction = Fov::VERTICAL) noexcept;
+                       Fov direction = Fov::VERTICAL);
 
     // sets the projection matrix
     void setLensProjection(double focalLengthInMillimeters,
-            double aspect, double near, double far) noexcept;
+            double aspect, double near, double far);
 
     // Sets a custom projection matrix (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
@@ -84,9 +84,9 @@ public:
     // culling projection matrix set by the user
     math::mat4 getUserCullingProjectionMatrix() const noexcept { return mProjectionForCulling; }
 
-    float getNear() const noexcept { return mNear; }
+    double getNear() const noexcept { return mNear; }
 
-    float getCullingFar() const noexcept { return mFar; }
+    double getCullingFar() const noexcept { return mFar; }
 
     // sets the camera's model matrix (must be a rigid transform)
     void setModelMatrix(const math::mat4& modelMatrix) noexcept;
@@ -192,8 +192,8 @@ private:
     math::double2 mScalingCS = { 1.0 };    // additional scaling applied to projection
     math::double2 mShiftCS = { 0.0 };      // additional translation applied to projection
 
-    float mNear{};
-    float mFar{};
+    double mNear{};
+    double mFar{};
     // exposure settings
     float mAperture = 16.0f;
     float mShutterSpeed = 1.0f / 125.0f;

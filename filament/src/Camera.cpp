@@ -68,17 +68,17 @@ mat4 Camera::inverseProjection(const mat4 & p) noexcept {
 }
 
 void Camera::setProjection(Camera::Projection projection, double left, double right, double bottom,
-        double top, double near, double far) noexcept {
+        double top, double near, double far) {
     upcast(this)->setProjection(projection, left, right, bottom, top, near, far);
 }
 
 void Camera::setProjection(double fovInDegrees, double aspect, double near, double far,
-        Camera::Fov direction) noexcept {
+        Camera::Fov direction) {
     upcast(this)->setProjection(fovInDegrees, aspect, near, far, direction);
 }
 
 void Camera::setLensProjection(double focalLengthInMillimeters,
-        double aspect, double near, double far) noexcept {
+        double aspect, double near, double far) {
     upcast(this)->setLensProjection(focalLengthInMillimeters, aspect, near, far);
 }
 
@@ -115,11 +115,11 @@ double2 Camera::getShift() const noexcept {
     return upcast(this)->getShift();
 }
 
-float Camera::getNear() const noexcept {
+double Camera::getNear() const noexcept {
     return upcast(this)->getNear();
 }
 
-float Camera::getCullingFar() const noexcept {
+double Camera::getCullingFar() const noexcept {
     return upcast(this)->getCullingFar();
 }
 
