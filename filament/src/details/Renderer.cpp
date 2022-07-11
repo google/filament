@@ -554,8 +554,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // But, this a no-op in common resolutions, in particular in 720p.
         // The origin of rendering is not modified, the padding is added to the right/top.
         //
-        // TODO: use this feature to implement guard-bands
-        //
         // TODO: Should we enable when we don't have post-processing?
         //       Without post-processing, we usually draw directly into
         //       the SwapChain, and we might want to keep it this way.
