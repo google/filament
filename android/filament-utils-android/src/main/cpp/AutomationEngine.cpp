@@ -169,6 +169,7 @@ Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv
     const jfieldID cameraFocalLength = env->GetFieldID(klass, "cameraFocalLength", "F");
     const jfieldID cameraFocusDistance = env->GetFieldID(klass, "cameraFocusDistance", "F");
     const jfieldID autoScaleEnabled = env->GetFieldID(klass, "autoScaleEnabled", "Z");
+    const jfieldID autoInstancingEnabled = env->GetFieldID(klass, "autoInstancingEnabled", "Z");
 
     env->SetFloatField(result, cameraAperture, options.cameraAperture);
     env->SetFloatField(result, cameraSpeed, options.cameraSpeed);
@@ -179,6 +180,7 @@ Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv
     env->SetFloatField(result, cameraFocalLength, options.cameraFocalLength);
     env->SetFloatField(result, cameraFocusDistance, options.cameraFocusDistance);
     env->SetBooleanField(result, autoScaleEnabled, options.autoScaleEnabled);
+    env->SetBooleanField(result, autoInstancingEnabled, options.autoInstancingEnabled);
 }
 
 extern "C" JNIEXPORT jlong JNICALL

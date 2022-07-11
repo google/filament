@@ -258,6 +258,44 @@ public class Engine {
         return sBackendValues[(int) nGetBackend(getNativeObject())];
     }
 
+    /**
+     * Helper to enable accurate translations.
+     * If you need this Engine to handle a very large world space, one way to achieve this
+     * automatically is to enable accurate translations in the TransformManager. This helper
+     * provides a convenient way of doing that.
+     * This is typically called once just after creating the Engine.
+     */
+    public void enableAccurateTranslations() {
+        getTransformManager().setAccurateTranslationsEnabled(true);
+    }
+
+    /**
+     * Enables or disables automatic instancing of render primitives. Instancing of render primitive
+     * can greatly reduce CPU overhead but requires the instanced primitives to be identical
+     * (i.e. use the same geometry) and use the same MaterialInstance. If it is known that the
+     * scene doesn't contain any identical primitives, automatic instancing can have some
+     * overhead and it is then best to disable it.
+     *
+     * Disabled by default.
+     *
+     * @param enable true to enable, false to disable automatic instancing.
+     *
+     * @see RenderableManager
+     * @see MaterialInstance
+     */
+    public void setAutomaticInstancingEnabled(boolean enable) {
+        nSetAutomaticInstancingEnabled(getNativeObject(), enable);
+    }
+
+    /**
+     * @return true if automatic instancing is enabled, false otherwise.
+     * @see setAutomaticInstancingEnabled
+     */
+    public boolean isAutomaticInstancingEnabled() {
+        return nIsAutomaticInstancingEnabled(getNativeObject());
+    }
+
+
     // SwapChain
 
     /**
@@ -593,8 +631,11 @@ public class Engine {
     }
 
     /**
-     * Destroys an <code>entity</code> and all its components.
+     * Destroys all Filament-known components from this <code>entity</code>.
      * <p>
+     * This method destroys Filament components only, not the <code>entity</code> itself. To destroy
+     * the <code>entity</code> use <code>EntityManager#destroy</code>.
+     *
      * It is recommended to destroy components individually before destroying their
      * <code>entity</code>, this gives more control as to when the destruction really happens.
      * Otherwise, orphaned components are garbage collected, which can happen at a later time.
@@ -717,4 +758,6 @@ public class Engine {
     private static native long nGetRenderableManager(long nativeEngine);
     private static native long nGetJobSystem(long nativeEngine);
     private static native long nGetEntityManager(long nativeEngine);
+    private static native void nSetAutomaticInstancingEnabled(long nativeEngine, boolean enable);
+    private static native boolean nIsAutomaticInstancingEnabled(long nativeEngine);
 }

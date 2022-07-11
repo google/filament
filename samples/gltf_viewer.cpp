@@ -729,6 +729,8 @@ int main(int argc, char** argv) {
         rcm.setLayerMask(instance,
                 0xff, viewerOptions.groundPlaneEnabled ? 0xff : 0x00);
 
+        engine->setAutomaticInstancingEnabled(viewerOptions.autoInstancingEnabled);
+
         // Note that this focal length might be different from the slider value because the
         // automation engine applies Camera::computeEffectiveFocalLength when DoF is enabled.
         FilamentApp::get().getCameraFocalLength() = viewerOptions.cameraFocalLength;
