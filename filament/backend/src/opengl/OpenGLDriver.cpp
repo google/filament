@@ -1946,7 +1946,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
         return;
     }
 
-    // TODO: maybe assert that the CompressedPixelDataType is the same than the internalFormat
+    // TODO: maybe assert that the CompressedPixelDataType is the same as the internalFormat
 
     GLsizei imageSize = GLsizei(p.imageSize);
 

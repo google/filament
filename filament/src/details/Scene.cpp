@@ -455,7 +455,7 @@ bool FScene::hasContactShadows() const noexcept {
     }
 
     // find out if at least one light has contact-shadow enabled
-    // TODO: we could cache the the result of this Loop in the LightManager
+    // TODO: we could cache the result of this Loop in the LightManager
     auto& lcm = mEngine.getLightManager();
     const auto *pFirst = mLightData.begin<LIGHT_INSTANCE>();
     const auto *pLast = mLightData.end<LIGHT_INSTANCE>();
