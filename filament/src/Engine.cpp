@@ -31,6 +31,8 @@
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
 #include "details/View.h"
+#include "filament/Engine.h"
+
 
 #include <backend/DriverEnums.h>
 
@@ -249,6 +251,14 @@ DebugRegistry& Engine::getDebugRegistry() noexcept {
 
 void Engine::pumpMessageQueues() {
     upcast(this)->pumpMessageQueues();
+}
+
+void Engine::setAutomaticInstancingEnabled(bool enable) noexcept {
+    upcast(this)->setAutomaticInstancingEnabled(enable);
+}
+
+bool Engine::isAutomaticInstancingEnabled() const noexcept {
+    return upcast(this)->isAutomaticInstancingEnabled();
 }
 
 } // namespace filament

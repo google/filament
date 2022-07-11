@@ -395,6 +395,28 @@ public:
     void enableAccurateTranslations() noexcept;
 
     /**
+     * Enables or disables automatic instancing of render primitives. Instancing of render
+     * primitives can greatly reduce CPU overhead but requires the instanced primitives to be
+     * identical (i.e. use the same geometry) and use the same MaterialInstance. If it is known
+     * that the scene doesn't contain any identical primitives, automatic instancing can have some
+     * overhead and it is then best to disable it.
+     *
+     * Disabled by default.
+     *
+     * @param enable true to enable, false to disable automatic instancing.
+     *
+     * @see RenderableManager
+     * @see MaterialInstance
+     */
+    void setAutomaticInstancingEnabled(bool enable) noexcept;
+
+    /**
+     * @return true if automatic instancing is enabled, false otherwise.
+     * @see setAutomaticInstancingEnabled
+     */
+    bool isAutomaticInstancingEnabled() const noexcept;
+
+    /**
      * Creates a SwapChain from the given Operating System's native window handle.
      *
      * @param nativeWindow An opaque native window handle. e.g.: on Android this is an

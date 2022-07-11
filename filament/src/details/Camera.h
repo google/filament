@@ -48,15 +48,15 @@ public:
     // sets the projection matrix
     void setProjection(Projection projection,
                        double left, double right, double bottom, double top,
-                       double near, double far) noexcept;
+                       double near, double far);
 
     // sets the projection matrix
     void setProjection(double fovInDegrees, double aspect, double near, double far,
-                       Fov direction = Fov::VERTICAL) noexcept;
+                       Fov direction = Fov::VERTICAL);
 
     // sets the projection matrix
     void setLensProjection(double focalLengthInMillimeters,
-            double aspect, double near, double far) noexcept;
+            double aspect, double near, double far);
 
     // Sets a custom projection matrix (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
@@ -69,7 +69,7 @@ public:
 
     void setShift(math::double2 shift) noexcept { mShiftCS = shift * 2.0; }
 
-    const math::double2 getShift() const noexcept { return mShiftCS * 0.5; }
+    math::double2 getShift() const noexcept { return mShiftCS * 0.5; }
 
     // viewing the projection matrix to be used for rendering, contains scaling/shift and possibly
     // other transforms needed by the shaders
@@ -84,32 +84,32 @@ public:
     // culling projection matrix set by the user
     math::mat4 getUserCullingProjectionMatrix() const noexcept { return mProjectionForCulling; }
 
-    float getNear() const noexcept { return mNear; }
+    double getNear() const noexcept { return mNear; }
 
-    float getCullingFar() const noexcept { return mFar; }
+    double getCullingFar() const noexcept { return mFar; }
 
-    // sets the camera's view matrix (must be a rigid transform)
+    // sets the camera's model matrix (must be a rigid transform)
     void setModelMatrix(const math::mat4& modelMatrix) noexcept;
     void setModelMatrix(const math::mat4f& modelMatrix) noexcept;
 
-    // sets the camera's view matrix
-    void lookAt(const math::float3& eye, const math::float3& center, const math::float3& up = { 0, 1, 0 })  noexcept;
+    // sets the camera's model matrix
+    void lookAt(const math::float3& eye, const math::float3& center,
+            const math::float3& up = { 0, 1, 0 })  noexcept;
 
-    // returns the view matrix
+    // returns the model matrix
     math::mat4 getModelMatrix() const noexcept;
 
-    // returns the inverse of the view matrix
+    // returns the view matrix (inverse of the model matrix)
     math::mat4 getViewMatrix() const noexcept;
 
-    template <typename T>
+    template<typename T>
     static math::details::TMat44<T> rigidTransformInverse(math::details::TMat44<T> const& v) noexcept {
         // The inverse of a rigid transform can be computed from the transpose
         //  | R T |^-1    | Rt -Rt*T |
         //  | 0 1 |     = |  0   1   |
-
-        const math::details::TMat33<T> rt(transpose(v.upperLeft()));
-        const math::details::TVec3<T> t(rt * v[3].xyz);
-        return math::details::TMat44<T>(rt, -t);
+        const auto rt(transpose(v.upperLeft()));
+        const auto t(rt * v[3].xyz);
+        return { rt, -t };
     }
 
     math::double3 getPosition() const noexcept {
@@ -192,8 +192,8 @@ private:
     math::double2 mScalingCS = { 1.0 };    // additional scaling applied to projection
     math::double2 mShiftCS = { 0.0 };      // additional translation applied to projection
 
-    float mNear{};
-    float mFar{};
+    double mNear{};
+    double mFar{};
     // exposure settings
     float mAperture = 16.0f;
     float mShutterSpeed = 1.0f / 125.0f;

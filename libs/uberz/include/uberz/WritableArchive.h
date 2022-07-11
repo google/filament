@@ -31,13 +31,18 @@ namespace filament::uberz {
 
 // Precompiled set of materials bundled with a list of features flags that each material supports.
 // This is the writeable counterpart to ReadableArchive.
-// Used by gltfio; users do not need to access this class directly.
+// Users do not need to access this class directly, they should go through gltfio.
 class WritableArchive {
 public:
     WritableArchive(size_t materialCount) : mMaterials(materialCount) {}
     void addMaterial(const char* name, const uint8_t* package, size_t packageSize);
     void addSpecLine(std::string_view line);
     utils::FixedCapacityVector<uint8_t> serialize() const;
+
+    // Low-level alternatives to addSpecLine that do not involve parsing:
+    void setShadingModel(Shading sm);
+    void setBlendingModel(BlendingMode bm);
+    void setFeatureFlag(const char* key, ArchiveFeature value);
 
 private:
     size_t mLineNumber = 1;
@@ -46,8 +51,8 @@ private:
     struct Material {
         utils::CString name;
         utils::FixedCapacityVector<uint8_t> package;
-        filament::Shading shadingModel;
-        filament::BlendingMode blendingMode;
+        Shading shadingModel;
+        BlendingMode blendingMode;
         tsl::robin_map<utils::CString, ArchiveFeature, utils::CString::Hasher> flags;
     };
 

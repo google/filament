@@ -98,6 +98,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     elseif (LINUX)
         if (FILAMENT_SUPPORTS_X11)
             list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
+        elseif (FILAMENT_SUPPORTS_EGL_ON_LINUX)
+            list(APPEND SRCS src/opengl/platforms/PlatformEGLHeadless.cpp)
         endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
@@ -304,6 +306,9 @@ endif()
 
 if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
+    if(FILAMENT_SUPPORTS_EGL_ON_LINUX)
+       target_link_libraries(${TARGET} PUBLIC EGL)
+    endif()
 endif()
 
 # ==================================================================================================
@@ -390,6 +395,7 @@ if (APPLE)
         test/test_LoadImage.cpp
         test/test_RenderExternalImage.cpp
         test/test_StencilBuffer.cpp
+        test/test_Scissor.cpp
         )
 
     target_link_libraries(backend_test PRIVATE

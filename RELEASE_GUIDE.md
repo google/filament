@@ -138,3 +138,34 @@ git push origin main
 ```
 git push origin -u rc/$NEXT_RELEASE
 ```
+
+## 11. Rebuild the GitHub release (if failed).
+
+Sometimes the GitHub release job will fail. In this case, you can manually re-run the release job.
+
+### Remove any assets uploaded to the release (if needed).
+
+For example, if rebuilding the Mac release, ensure that the `filament-<version>-mac.tgz` artifact
+is removed from the release assets.
+
+### Update the release branch (if needed).
+
+If you need to add one or more new commits to the release, perform the following:
+
+First, push the new commit(s) to the `release` branch.
+
+Then, with the release branch checked out with the new commit(s), run
+
+```
+git tag -f -a <release tagname>
+git push origin -f <release tagname>
+```
+
+This will update and force push the tag.
+
+### Re-run the GitHub release workflow
+
+Navigate to [Filament's release
+workflow](https://github.com/google/filament/actions/workflows/release.yml). Hit the _Run workflow_
+dropdown. Modify _Platform to build_ and _Release tag to build_, then hit _Run workflow_. This will
+initiate a new release run.

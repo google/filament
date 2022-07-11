@@ -68,8 +68,6 @@ using MaterialKey = uint32_t;
 } // namespace filament
 #endif
 
-#include <filaflat/ShaderBuilder.h>
-
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 #include <utils/JobSystem.h>
@@ -321,12 +319,14 @@ public:
     void prepare();
     void gc();
 
-    filaflat::ShaderBuilder& getVertexShaderBuilder() const noexcept {
-        return mVertexShaderBuilder;
+    using ShaderContent = utils::FixedCapacityVector<uint8_t>;
+
+    ShaderContent& getVertexShaderContent() const noexcept {
+        return mVertexShaderContent;
     }
 
-    filaflat::ShaderBuilder& getFragmentShaderBuilder() const noexcept {
-        return mFragmentShaderBuilder;
+    ShaderContent& getFragmentShaderContent() const noexcept {
+        return mFragmentShaderContent;
     }
 
     FDebugRegistry& getDebugRegistry() noexcept {
@@ -345,6 +345,14 @@ public:
 
     void pumpMessageQueues() const {
         getDriver().purge();
+    }
+
+    void setAutomaticInstancingEnabled(bool enable) noexcept {
+        mAutomaticInstancingEnabled = enable;
+    }
+
+    bool isAutomaticInstancingEnabled() const noexcept {
+        return mAutomaticInstancingEnabled;
     }
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
@@ -387,6 +395,7 @@ private:
     Backend mBackend;
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;
+    bool mAutomaticInstancingEnabled = false;
     void* mSharedGLContext = nullptr;
     backend::Handle<backend::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;
@@ -458,8 +467,8 @@ private:
 
     mutable utils::CountDownLatch mDriverBarrier;
 
-    mutable filaflat::ShaderBuilder mVertexShaderBuilder;
-    mutable filaflat::ShaderBuilder mFragmentShaderBuilder;
+    mutable ShaderContent mVertexShaderContent;
+    mutable ShaderContent mFragmentShaderContent;
     FDebugRegistry mDebugRegistry;
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;

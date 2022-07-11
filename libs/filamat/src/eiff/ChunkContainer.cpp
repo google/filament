@@ -31,7 +31,6 @@ size_t ChunkContainer::flatten(Flattener& f) const {
         f.writeSizePlaceholder();
         chunk->flatten(f);
         uint32_t size = f.writeSize();
-        chunk->setFlattenedSize(size);
     }
     return f.getBytesWritten();
 }

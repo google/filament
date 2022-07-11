@@ -264,10 +264,6 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     ASSERT_PRECONDITION(metalTexture.mipmapLevelCount == levels,
             "Imported id<MTLTexture> levels (%d) != Filament texture levels (%d)",
             metalTexture.mipmapLevelCount, levels);
-    MTLPixelFormat filamentMetalFormat = getMetalFormat(mContext, format);
-    ASSERT_PRECONDITION(metalTexture.pixelFormat == filamentMetalFormat,
-            "Imported id<MTLTexture> format (%d) != Filament texture format (%d)",
-            metalTexture.pixelFormat, filamentMetalFormat);
     MTLTextureType filamentMetalType = getMetalType(target);
     ASSERT_PRECONDITION(metalTexture.textureType == filamentMetalType,
             "Imported id<MTLTexture> type (%d) != Filament texture type (%d)",
@@ -847,20 +843,18 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                                    encoding:NSUTF8StringEncoding];
     }
 
-    // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
-    NSInteger renderTargetHeight =
-            mContext->currentRenderTarget->isDefaultRenderTarget() ?
-            mContext->currentReadSwapChain->getSurfaceHeight() : mContext->currentRenderTarget->height;
+    MTLRegion mvp = renderTarget->getRegionFromClientRect(params.viewport);
     MTLViewport metalViewport {
-            .originX = static_cast<double>(params.viewport.left),
-            .originY = renderTargetHeight - static_cast<double>(params.viewport.bottom) -
-                       static_cast<double>(params.viewport.height),
-            .width = static_cast<double>(params.viewport.width),
-            .height = static_cast<double>(params.viewport.height),
-            .znear = static_cast<double>(params.depthRange.near),
-            .zfar = static_cast<double>(params.depthRange.far)
+        .originX = static_cast<double>(mvp.origin.x),
+        .originY = static_cast<double>(mvp.origin.y),
+        .width = static_cast<double>(mvp.size.width),
+        .height = static_cast<double>(mvp.size.height),
+        .znear = static_cast<double>(params.depthRange.near),
+        .zfar = static_cast<double>(params.depthRange.far)
     };
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
+
+    mContext->currentViewport = metalViewport;
 
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
     // We must bind certain states for each command encoder, so we dirty the states here to force a
@@ -1111,8 +1105,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 
             MetalBlitter::BlitArgs args;
             args.filter = filter;
-            args.source.region = srcColorAttachment.getRegionFromClientRect(srcRect);
-            args.destination.region = dstColorAttachment.getRegionFromClientRect(dstRect);
+            args.source.region = srcTarget->getRegionFromClientRect(srcRect);
+            args.destination.region = dstTarget->getRegionFromClientRect(dstRect);
             args.source.color = srcColorAttachment.getTexture();
             args.destination.color = dstColorAttachment.getTexture();
             args.source.level = srcColorAttachment.level;
@@ -1134,8 +1128,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 
             MetalBlitter::BlitArgs args;
             args.filter = filter;
-            args.source.region = srcDepthAttachment.getRegionFromClientRect(srcRect);
-            args.destination.region = dstDepthAttachment.getRegionFromClientRect(dstRect);
+            args.source.region = srcTarget->getRegionFromClientRect(srcRect);
+            args.destination.region = dstTarget->getRegionFromClientRect(dstRect);
             args.source.depth = srcDepthAttachment.getTexture();
             args.destination.depth = dstDepthAttachment.getTexture();
             args.source.level = srcDepthAttachment.level;
@@ -1246,8 +1240,24 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
                                                    clamp:0.0];
     }
 
-    // FIXME: implement take ps.scissor into account
-    //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
+    // Set scissor-rectangle.
+    MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
+    const MTLViewport& viewport = mContext->currentViewport;
+
+    // fmax/min are used here to guard against NaN and because the MTLViewport coordinates are doubles.
+    const auto left   = std::fmax(viewport.originX                  , scissor.origin.x   );
+    const auto right  = std::fmin(viewport.originX + viewport.width , scissor.origin.x + scissor.size.width );
+    const auto top    = std::fmax(viewport.originY                  , scissor.origin.y );
+    const auto bottom = std::fmin(viewport.originY + viewport.height, scissor.origin.y + scissor.size.height );
+
+    MTLScissorRect scissorRect = {
+        .x      = static_cast<NSUInteger>(left),
+        .y      = static_cast<NSUInteger>(top ),
+        .width  = static_cast<NSUInteger>(right  - left),
+        .height = static_cast<NSUInteger>(bottom - top )
+    };
+
+    [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
 
     // Bind uniform buffers.
     MetalBuffer* uniformsToBind[Program::BINDING_COUNT] = { nil };

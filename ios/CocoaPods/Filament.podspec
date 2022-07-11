@@ -1,12 +1,12 @@
 Pod::Spec.new do |spec|
   spec.name = "Filament"
-  spec.version = "1.23.1"
+  spec.version = "1.25.0"
   spec.license = { :type => "Apache 2.0", :file => "LICENSE" }
   spec.homepage = "https://google.github.io/filament"
   spec.authors = "Google LLC."
   spec.summary = "Filament is a real-time physically based rendering engine for Android, iOS, Windows, Linux, macOS, and WASM/WebGL."
   spec.platform = :ios, "11.0"
-  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.23.1/filament-v1.23.1-ios.tgz" }
+  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.25.0/filament-v1.25.0-ios.tgz" }
 
   # Fix linking error with Xcode 12; we do not yet support the simulator on Apple silicon.
   spec.pod_target_xcconfig = {
@@ -59,6 +59,7 @@ Pod::Spec.new do |spec|
     ss.header_dir = "gltfio"
     ss.dependency "Filament/filament"
     ss.dependency "Filament/ktxreader"
+    ss.dependency "Filament/uberz"
   end
 
   spec.subspec "camutils" do |ss|
@@ -119,5 +120,17 @@ Pod::Spec.new do |spec|
         "lib/universal/libcivetweb.a"
     ss.dependency "Filament/filament"
     ss.dependency "Filament/gltfio_core"
+  end
+
+  spec.subspec "uberz" do |ss|
+    ss.source_files = "include/uberz/*.h"
+    ss.header_mappings_dir = "include"
+    ss.vendored_libraries =
+        "lib/universal/libuberzlib.a",
+        "lib/universal/libzstd.a"
+    ss.header_dir = "uberz"
+    ss.dependency "Filament/filamat"
+    ss.dependency "Filament/tsl"
+    ss.dependency "Filament/utils"
   end
 end

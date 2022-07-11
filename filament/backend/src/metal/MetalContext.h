@@ -116,6 +116,8 @@ struct MetalContext {
 
     std::stack<const char*> groupMarkers;
 
+    MTLViewport currentViewport;
+
 #if defined(FILAMENT_METAL_PROFILING)
     // Logging and profiling.
     os_log_t log;

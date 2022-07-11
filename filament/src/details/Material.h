@@ -28,8 +28,6 @@
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 
-#include <filaflat/ShaderBuilder.h>
-
 #include <utils/compiler.h>
 
 #include <atomic>

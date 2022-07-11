@@ -16,11 +16,9 @@
 
 #include <matdbg/ShaderExtractor.h>
 
-#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/DictionaryReader.h>
 #include <filaflat/MaterialChunk.h>
-#include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
 
 #include <filament/MaterialChunkType.h>
@@ -63,7 +61,7 @@ ShaderExtractor::ShaderExtractor(Backend backend, const void* data, size_t size)
 
 bool ShaderExtractor::parse() noexcept {
     if (mChunkContainer.parse()) {
-        return mMaterialChunk.readIndex(mMaterialTag);
+        return mMaterialChunk.initialize(mMaterialTag);
     }
     return false;
 }
@@ -73,7 +71,7 @@ bool ShaderExtractor::getDictionary(BlobDictionary& dictionary) noexcept {
 }
 
 bool ShaderExtractor::getShader(ShaderModel shaderModel,
-        Variant variant, ShaderType stage, ShaderBuilder& shader) noexcept {
+        Variant variant, ShaderType stage, ShaderContent& shader) noexcept {
 
     ChunkContainer const& cc = mChunkContainer;
     if (!cc.hasChunk(mMaterialTag) || !cc.hasChunk(mDictionaryTag)) {

@@ -18,7 +18,6 @@
 
 #include <utils/Path.h>
 
-#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 
 #include <matdbg/DebugServer.h>
@@ -404,7 +403,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
     }
 
     if (config.printGLSL || config.printSPIRV || config.printMetal) {
-        filaflat::ShaderBuilder builder;
+        filaflat::ShaderContent content;
         std::vector<ShaderInfo> info;
 
         if (config.printGLSL) {
@@ -425,10 +424,10 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             const auto& item = info[config.shaderIndex];
-            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
+            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
             // Casted to char* to print as a string rather than hex value.
-            std::cout << (const char*) builder.data();
+            std::cout << (const char*) content.data();
 
             return true;
         }
@@ -451,12 +450,12 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             const auto& item = info[config.shaderIndex];
-            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
+            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
             // Build std::vector<uint32_t> since that's what the Khronos libraries consume.
-            uint32_t const* words = reinterpret_cast<uint32_t const*>(builder.data());
-            assert(0 == (builder.size() % 4));
-            const std::vector<uint32_t> spirv(words, words + builder.size() / 4);
+            uint32_t const* words = reinterpret_cast<uint32_t const*>(content.data());
+            assert(0 == (content.size() % 4));
+            const std::vector<uint32_t> spirv(words, words + content.size() / 4);
 
             if (config.transpile) {
                 transpileSpirv(spirv);
@@ -487,8 +486,8 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             const auto& item = info[config.shaderIndex];
-            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
-            std::cout << (const char*) builder.data();
+            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
+            std::cout << (const char*) content.data();
 
             return true;
         }
@@ -512,7 +511,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
         }
 
         for (size_t i = 0; i < dictionary.size(); i++) {
-            std::cout << dictionary.getString(i) << std::endl;
+            std::cout << (const char*)dictionary[i].data() << std::endl;
         }
 
         return true;

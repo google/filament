@@ -68,7 +68,7 @@ void PlatformEGL::logEglError(const char* name) noexcept {
     slog.e << name << " failed with " << err << io::endl;
 }
 
-static void clearGlError() noexcept {
+void PlatformEGL::clearGlError() noexcept {
     // clear GL error that may have been set by previous calls
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {

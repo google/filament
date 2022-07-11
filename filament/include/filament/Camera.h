@@ -98,7 +98,7 @@ namespace filament {
  * The *near* plane distance greatly affects the depth-buffer resolution.
  *
  * Example: Precision at 1m, 10m, 100m and 1Km for various near distances assuming a 32-bit float
- * depth-buffer
+ * depth-buffer:
  *
  *    near (m)  |   1 m  |   10 m  |  100 m   |  1 Km
  *  -----------:|:------:|:-------:|:--------:|:--------:
@@ -107,10 +107,30 @@ namespace filament {
  *      0.1     | 3.6e-7 |  7.0e-5 |  0.0072  |   0.43
  *      1.0     |    0   |  3.8e-6 |  0.0007  |   0.07
  *
- *
  *  As can be seen in the table above, the depth-buffer precision drops rapidly with the
  *  distance to the camera.
+ *
  * Make sure to pick the highest *near* plane distance possible.
+ *
+ * On Vulkan and Metal platforms (or OpenGL platforms supporting either EXT_clip_control or
+ * ARB_clip_control extensions), the depth-buffer precision is much less dependent on the *near*
+ * plane value:
+ *
+ *    near (m)  |   1 m  |   10 m  |  100 m   |  1 Km
+ *  -----------:|:------:|:-------:|:--------:|:--------:
+ *      0.001   | 1.2e-7 |  9.5e-7 |  7.6e-6  |  6.1e-5
+ *      0.01    | 1.2e-7 |  9.5e-7 |  7.6e-6  |  6.1e-5
+ *      0.1     | 5.9e-8 |  9.5e-7 |  1.5e-5  |  1.2e-4
+ *      1.0     |    0   |  9.5e-7 |  7.6e-6  |  1.8e-4
+ *
+ *
+ * Choosing the *far* plane distance
+ * =================================
+ *
+ * The far plane distance is always set internally to infinity for rendering, however it is used for
+ * culling and shadowing calculations. It is important to keep a reasonable ratio between
+ * the near and far plane distances. Typically a ratio in the range 1:100 to 1:100000 is
+ * commanded. Larger values may causes rendering artifacts or trigger assertions in debug builds.
  *
  *
  * Exposure
@@ -167,14 +187,12 @@ public:
      *                  Precondition: \p far > near for PROJECTION::PERSPECTIVE or
      *                                \p far != near for PROJECTION::ORTHO
      *
-     * @attention these parameters are silently modified to meet the preconditions above.
-     *
      * @see Projection, Frustum
      */
     void setProjection(Projection projection,
             double left, double right,
             double bottom, double top,
-            double near, double far) noexcept;
+            double near, double far);
 
     /** Sets the projection matrix from the field-of-view.
      *
@@ -187,7 +205,7 @@ public:
      * @see Fov.
      */
     void setProjection(double fovInDegrees, double aspect, double near, double far,
-                       Fov direction = Fov::VERTICAL) noexcept;
+                       Fov direction = Fov::VERTICAL);
 
     /** Sets the projection matrix from the focal length.
      *
@@ -197,7 +215,7 @@ public:
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
     void setLensProjection(double focalLengthInMillimeters,
-            double aspect, double near, double far) noexcept;
+            double aspect, double near, double far);
 
     /** Sets a custom projection matrix.
      *
@@ -308,31 +326,31 @@ public:
 
 
     //! Returns the frustum's near plane
-    float getNear() const noexcept;
+    double getNear() const noexcept;
 
     //! Returns the frustum's far plane used for culling
-    float getCullingFar() const noexcept;
+    double getCullingFar() const noexcept;
 
-    /** Sets the camera's view matrix.
+    /** Sets the camera's model matrix.
      *
      * Helper method to set the camera's entity transform component.
      * It has the same effect as calling:
      *
      * ~~~~~~~~~~~{.cpp}
      *  engine.getTransformManager().setTransform(
-     *          engine.getTransformManager().getInstance(camera->getEntity()), view);
+     *          engine.getTransformManager().getInstance(camera->getEntity()), model);
      * ~~~~~~~~~~~
      *
-     * @param view The camera position and orientation provided as a rigid transform matrix.
+     * @param model The camera position and orientation provided as a rigid transform matrix.
      *
      * @note The Camera "looks" towards its -z axis
      *
-     * @warning \p view must be a rigid transform
+     * @warning \p model must be a rigid transform
      */
-    void setModelMatrix(const math::mat4& view) noexcept;
-    void setModelMatrix(const math::mat4f& view) noexcept; //!< \overload
+    void setModelMatrix(const math::mat4& model) noexcept;
+    void setModelMatrix(const math::mat4f& model) noexcept; //!< @overload
 
-    /** Sets the camera's view matrix
+    /** Sets the camera's model matrix
      *
      * @param eye       The position of the camera in world space.
      * @param center    The point in world space the camera is looking at.
@@ -342,7 +360,7 @@ public:
                 const math::float3& center,
                 const math::float3& up) noexcept;
 
-    /** Sets the camera's view matrix, assuming up is along the y axis
+    /** Sets the camera's model matrix, assuming up is along the y axis
      *
      * @param eye       The position of the camera in world space.
      * @param center    The point in world space the camera is looking at.
