@@ -6,8 +6,8 @@ A new header is inserted each time a *tag* is created.
 ## main branch
  
 - engine: `Camera::getNear()` and `Camera::getCullingFar()` now return `doubles`
-
 - Metal: implement scissor support.
+- engine: Add optional memory configuration parameters to Engine initialization
 
 ## v1.25.1
 
@@ -31,7 +31,6 @@ A new header is inserted each time a *tag* is created.
 - engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
 - picking is now exposed to JavaScript
 - gltf_viewer: Exercise picking functionality.
-- engine: Add optional memory configuration parameters to Engine initialization
 - OpenGL: add WebGL support for ReadPixels
 - Vulkan: add assert and error message for OOM (debug builds)
 - Vulkan: fix crash with picking and 2-component ReadPixels.
