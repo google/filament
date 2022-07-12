@@ -368,7 +368,7 @@ public:
     size_t getRequestedDriverHandleArenaSize() const noexcept   { return mRequestedDriverHandleArenaSize; }
 
 private:
-    static Config validateConfig(const Config* config) noexcept;
+    static Config validateConfig(const Config* pConfig) noexcept;
 
     FEngine(Backend backend, Platform* platform, const Config& config, void* sharedGLContext);
     void init();
