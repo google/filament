@@ -677,6 +677,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
             return false;
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             return true;
+        case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
+            return false;
     }
     return false;
 }

@@ -878,6 +878,8 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             return deviceProperties.vendorID == 0x5143; // Qualcomm
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             return true;
+        case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
+            return false;
     }
     return false;
 }

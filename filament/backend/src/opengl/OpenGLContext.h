@@ -205,6 +205,9 @@ public:
         // view that this is generally forbidden. However, this restriction is lifted on desktop
         // GL and Vulkan and probably Metal.
         bool allow_read_only_ancillary_feedback_loop = false;
+
+        // Some Adreno drivers would crash gl draw when there's uninitialized uniform array exists, even when the code using that uniform array is not called. it's needed to do an initialization to avoid it.
+        bool enable_initialize_non_used_uniform_array = false;
     } bugs;
 
     // state getters -- as needed.
@@ -256,6 +259,9 @@ private:
                     ""},
             {   bugs.allow_read_only_ancillary_feedback_loop,
                     "allow_read_only_ancillary_feedback_loop",
+                    ""},
+            {   bugs.enable_initialize_non_used_uniform_array,
+                    "enable_initialize_non_used_uniform_array",
                     ""},
     }};
 
@@ -720,6 +726,7 @@ GLuint OpenGLContext::getQuery(GLenum target) const noexcept {
             return 0;
     }
 }
+
 } // namespace filament
 
 #endif //TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H
