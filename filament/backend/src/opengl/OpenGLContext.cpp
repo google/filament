@@ -181,9 +181,6 @@ OpenGLContext::OpenGLContext() noexcept {
             // early exit condition is flattened in EASU code
             // (that should be regardless of ANGLE, but we should double check)
             bugs.split_easu = true;
-
-            // double check like split_easu above
-            bugs.enable_initialize_non_used_uniform_array = true;
         }
         // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
     }
