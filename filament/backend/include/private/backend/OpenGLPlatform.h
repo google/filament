@@ -33,7 +33,7 @@ protected:
      * Derived classes can use this to instantiate the default OpenGLDriver backend.
      * This is typically called from your implementation of createDriver()
      */
-    static Driver* createDefaultDriver(OpenGLPlatform* platform, void* sharedContext);
+    static Driver* createDefaultDriver(OpenGLPlatform* platform, void* sharedContext, const DriverConfig& driverConfig);
 
 public:
     ~OpenGLPlatform() noexcept override;

@@ -138,7 +138,7 @@ PlatformCocoaGL::~PlatformCocoaGL() noexcept {
     delete pImpl;
 }
 
-Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
+Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     // NSOpenGLPFAColorSize: when unspecified, a format that matches the screen is preferred
     NSOpenGLPixelFormatAttribute pixelFormatAttributes[] = {
             NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
@@ -160,7 +160,7 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-    return OpenGLDriverFactory::create(this, sharedContext);
+    return OpenGLDriverFactory::create(this, sharedContext, driverConfig);
 }
 
 void PlatformCocoaGL::terminate() noexcept {

@@ -124,19 +124,16 @@ public:
     static constexpr size_t CONFIG_FROXEL_SLICE_COUNT      = 16;
     static constexpr bool   CONFIG_IBL_USE_IRRADIANCE_MAP  = false;
 
-    static constexpr size_t CONFIG_PER_RENDER_PASS_ARENA_SIZE   = filament::CONFIG_PER_RENDER_PASS_ARENA_SIZE;
-    static constexpr size_t CONFIG_PER_FRAME_COMMANDS_SIZE      = filament::CONFIG_PER_FRAME_COMMANDS_SIZE;
-    static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE     = filament::CONFIG_MIN_COMMAND_BUFFERS_SIZE;
-    static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE         = filament::CONFIG_COMMAND_BUFFERS_SIZE;
-
 public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const Config* config = nullptr);
 
 #if UTILS_HAS_THREADING
     static void createAsync(CreateCallback callback, void* user,
             Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const Config* config = nullptr);
 
     static FEngine* getEngine(void* token);
 #endif
@@ -364,8 +361,16 @@ public:
     backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
     backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
 
+    size_t getMinCommandBufferSize() const noexcept     { return mMinCommandBufferSize; }
+    size_t getCommandBufferSize() const noexcept        { return mCommandBufferSize; }
+    size_t getPerFrameCommandsSize() const noexcept     { return mPerFrameCommandsSize; }
+    size_t getPerRenderPassArenaSize() const noexcept   { return mPerRenderPassArenaSize; }
+    size_t getRequestedDriverHandleArenaSize() const noexcept   { return mRequestedDriverHandleArenaSize; }
+
 private:
-    FEngine(Backend backend, Platform* platform, void* sharedGLContext);
+    static Config validateConfig(const Config* config) noexcept;
+
+    FEngine(Backend backend, Platform* platform, const Config& config, void* sharedGLContext);
     void init();
     void shutdown();
 
@@ -473,6 +478,13 @@ private:
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     std::thread::id mMainThreadId{};
+
+    // Creation parameters
+    size_t mMinCommandBufferSize;           // minimum size of command buffer (in bytes)
+    size_t mCommandBufferSize;              // size of command buffer (in bytes)
+    size_t mPerFrameCommandsSize;           // size of the high-level draw commands buffer (in bytes)
+    size_t mPerRenderPassArenaSize;         // size of the per-pass arena buffer (in bytes)
+    size_t mRequestedDriverHandleArenaSize; // requested size of driver handle arena (in bytes). Driver will validate and clam
 
 public:
     // these are the debug properties used by FDebug. They're accessed directly by modules who need them.

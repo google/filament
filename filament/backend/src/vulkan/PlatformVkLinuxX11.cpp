@@ -50,7 +50,7 @@ struct X11Functions {
     void* library = nullptr;
 } g_x11;
 
-Driver* PlatformVkLinuxX11::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkLinuxX11::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = {
 #ifdef FILAMENT_SUPPORTS_XCB
@@ -61,7 +61,7 @@ Driver* PlatformVkLinuxX11::createDriver(void* const sharedContext) noexcept {
 #endif
     };
     return VulkanDriverFactory::create(this, requiredInstanceExtensions,
-            sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
+            sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]), driverConfig);
 }
 
 void* PlatformVkLinuxX11::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {

@@ -32,7 +32,7 @@ public:
     PlatformCocoaTouchGL();
     ~PlatformCocoaTouchGL() noexcept final;
 
-    Driver* createDriver(void* sharedGLContext) noexcept override;
+    Driver* createDriver(void* sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept override;
     void terminate() noexcept final;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;

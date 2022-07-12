@@ -37,6 +37,10 @@ public:
         uintptr_t image = 0;
     };
 
+    struct DriverConfig {
+        size_t handleArenaSize = 0; // size of handle arena in bytes. Setting to 0 indicates default value is to be used. Driver clamps to valid values.
+    };
+
     virtual ~Platform() noexcept;
 
     /**
@@ -53,10 +57,12 @@ public:
      * @param sharedContext an optional shared context. This is not meaningful with all graphic
      *                      APIs and platforms.
      *                      For EGL platforms, this is an EGLContext.
+     * 
+     * @param driverConfig  specifies driver initialization parameters
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual backend::Driver* createDriver(void* sharedContext) noexcept = 0;
+    virtual backend::Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept = 0;
 
     /**
      * Processes the platform's event queue when called from its primary event-handling thread.
