@@ -36,6 +36,9 @@ using namespace filament::math;
 
 namespace filament {
 
+// TODO: This should be a quality setting on View or LightManager
+static constexpr bool CONFIG_IBL_USE_IRRADIANCE_MAP = false;
+
 // ------------------------------------------------------------------------------------------------
 
 struct IndirectLight::BuilderDetails {
@@ -188,13 +191,13 @@ FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept
         mIrradianceTexture = upcast(builder->mIrradianceMap);
     } else {
         // TODO: if needed, generate the irradiance map, this is an engine config
-        if (FEngine::CONFIG_IBL_USE_IRRADIANCE_MAP) {
+        if (CONFIG_IBL_USE_IRRADIANCE_MAP) {
         }
     }
 }
 
 void FIndirectLight::terminate(FEngine& engine) {
-    if (FEngine::CONFIG_IBL_USE_IRRADIANCE_MAP) {
+    if (CONFIG_IBL_USE_IRRADIANCE_MAP) {
         FEngine::DriverApi& driver = engine.getDriverApi();
         driver.destroyTexture(getIrradianceHwHandle());
     }

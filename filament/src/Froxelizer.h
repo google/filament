@@ -248,8 +248,8 @@ private:
     math::float4 mParamsZ = {};
     math::uint3 mParamsF = {};
     float mNear = 0.0f;        // camera near
-    float mZLightFar = FEngine::CONFIG_Z_LIGHT_FAR;
-    float mZLightNear = FEngine::CONFIG_Z_LIGHT_NEAR;  // light near (first slice)
+    float mZLightNear;
+    float mZLightFar;
 
     // track if we need to update our internal state before froxelizing
     uint8_t mDirtyFlags = 0;
