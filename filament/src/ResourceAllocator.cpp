@@ -90,7 +90,7 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
         size += size / 3;
     }
     // TODO: this is not taking into account the potential sidecar MS buffer
-    //  but we have not way to know about its existence at this point.
+    //  but we have no way to know about its existence at this point.
     return size;
 }
 

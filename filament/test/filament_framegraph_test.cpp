@@ -72,7 +72,7 @@ protected:
     Backend backend = Backend::NOOP;
     CircularBuffer buffer = CircularBuffer{ 8192 };
     DefaultPlatform* platform = DefaultPlatform::create(&backend);
-    CommandStream driverApi = CommandStream{ *platform->createDriver(nullptr), buffer };
+    CommandStream driverApi = CommandStream{ *platform->createDriver(nullptr, {}), buffer };
     MockResourceAllocator resourceAllocator;
     FrameGraph fg{resourceAllocator};
 };
