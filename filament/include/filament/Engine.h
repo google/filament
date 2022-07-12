@@ -55,24 +55,20 @@ class RenderableManager;
 class TransformManager;
 
 #ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
-// Froxelization needs about 1 MiB. Command buffer needs about 1 MiB.
 #    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 3
 #endif
 
 #ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
-// size of the high-level draw commands buffer (comes from the per-render pass allocator)
 #    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 2
 #endif
 
 #ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
-// size of a command-stream buffer (comes from mmap -- not the per-engine arena)
 #    define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
 #endif
 
 #ifndef FILAMENT_COMMAND_BUFFER_SIZE_IN_MB
 #    define FILAMENT_COMMAND_BUFFER_SIZE_IN_MB (FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3)
 #endif
-
 
 /**
  * Engine is filament's main entry-point.
@@ -177,31 +173,72 @@ public:
      * Config is used to define the memory footprint used by the engine, such as the
      * command buffer size. Config can be used to customize engine requirements based 
      * on the applications needs.
-     * 
-     * minCommandBufferSizeMB       Minimum size in MiB of the low-level command buffer. If this is too small, the engine might have to stall to wait for more space to become available, this situation is logged.
-     * 
-     * commandBufferSizeMB          Size in MiB of the low-level command buffer. If this buffer is too small the program might terminate or rendering errors might occur.
-     *
-     *                              Should always be 3 * minCommandBufferSizeMB so that up to 3 frames can
-     *                              be batched-up at once.
-     *
-     *                              Defaults to FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB.
-     *
-     * perFrameCommandsSizeMB       Size in MiB of the per-frame high level command buffer. It is allocated from
-     the 'per-render-pass arena' below. This buffer is related to the number of draw calls within a frame. If this size is too small, the program will abort on debug builds and have undefined behavior otherwise.
-     *
-     * perRenderPassArenaSizeMB     Size in MiB of the per-render-pass Arena.  This is the main arena used for allocations when preparing a frame. e.g.: Froxel data and high-level commands are allocated from this arena. If this size is too small, the program will abort on debug builds and have undefined behavior otherwise.
-     *
-     * driverHandleArenaSizeMB      Size in MiB of the backend's handle arena. Backends will fallback to slower heap based allocations when running out of space and log this condition.
-     *
-     *                              If 0, then the default value for the given platform is used.
      */
     struct Config {
-        uint32_t minCommandBufferSizeMB     = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB;      // minimum size of command buffer in MB
-        uint32_t commandBufferSizeMB        = FILAMENT_COMMAND_BUFFER_SIZE_IN_MB;           // size of command buffer in MB
-        uint32_t perFrameCommandsSizeMB     = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;       // size of the high-level draw commands buffer in MB
-        uint32_t perRenderPassArenaSizeMB   = FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB;    // size of the per-pass arena buffer in MB
-        uint32_t driverHandleArenaSizeMB    = 0;    // size of the driver's handle memory pool in MB (If 0, use platform defaults)
+        /**
+         * Size in MiB of the low-level command buffer arena.
+         *
+         * Each new command buffer is allocated from here. If this buffer is too small the program
+         * might terminate or rendering errors might occur.
+         *
+         * This is typically set to minCommandBufferSizeMB * 3, so that up to 3 frames can be
+         * batched-up at once.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t commandBufferSizeMB = FILAMENT_COMMAND_BUFFER_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the per-frame high level command buffer arena.
+         *
+         * This is the main arena used for allocations when preparing a frame.
+         * e.g.: Froxel data and high-level commands are allocated from this arena.
+         *
+         * If this size is too small, the program will abort on debug builds and have undefined
+         * behavior otherwise.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t perRenderPassArenaSizeMB = FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the backend's handle arena.
+         *
+         * Backends will fallback to slower heap-based allocations when running out of space and
+         * log this condition.
+         *
+         * If 0, then the default value for the given platform is used
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t driverHandleArenaSizeMB = 0;
+
+
+        /**
+         * Minimum size in MiB of a low-level command buffer.
+         *
+         * This is how much space is guaranteed to be available for low-level commands when a new
+         * buffer is allocated. If this is too small, the engine might have to stall to wait for
+         * more space to become available, this situation is logged.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t minCommandBufferSizeMB = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB;
+
+        /**
+         * Size in MiB of the per-frame high level command buffer.
+         *
+         * This buffer is related to the number of draw calls achievable within a frame, if it is
+         * too small, the program will abort on debug builds and have undefined behavior otherwise.
+         *
+         * It is allocated from the 'per-render-pass arena' above. Make sure that at least 1 MiB is
+         * left in the per-render-pass arena when deciding the size of this buffer.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t perFrameCommandsSizeMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;
     };
 
     /**

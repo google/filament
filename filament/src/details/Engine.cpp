@@ -160,25 +160,46 @@ FEngine* FEngine::getEngine(void* token) {
 
 #endif
 
-Engine::Config FEngine::validateConfig(const Config* config) noexcept
+Engine::Config FEngine::validateConfig(const Config* const pConfig) noexcept
 {
-    constexpr uint32_t ARENA_COMMANDS_DELTA = 1;    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
-    constexpr uint32_t NUM_FRAMES_OVERLAP = 3;      // Number of potential concurrent frames in flight
+    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
+    constexpr uint32_t COMMAND_ARENA_OVERHEAD = 1;
+    constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
 
-    Config validConfig;
-    if (!config)
-    {
-        return validConfig;
+    Config config;
+    if (!pConfig) {
+        return config;
     }
 
-    validConfig.minCommandBufferSizeMB = std::max((uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, config->minCommandBufferSizeMB);
-    validConfig.minCommandBufferSizeMB = std::max(config->perFrameCommandsSizeMB, validConfig.minCommandBufferSizeMB);                   // As a rule of thumb use the same value as perFrameCommandsMB
-    validConfig.commandBufferSizeMB = std::max(config->commandBufferSizeMB, validConfig.minCommandBufferSizeMB * NUM_FRAMES_OVERLAP);
-    validConfig.perFrameCommandsSizeMB = std::max((uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, config->minCommandBufferSizeMB);
-    validConfig.perRenderPassArenaSizeMB = std::max((uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB, config->perRenderPassArenaSizeMB);
-    validConfig.perRenderPassArenaSizeMB = std::max(validConfig.perRenderPassArenaSizeMB, validConfig.perFrameCommandsSizeMB + ARENA_COMMANDS_DELTA);    // Enforce pre-render-pass arena rule-of-thumb
-    validConfig.driverHandleArenaSizeMB = config->driverHandleArenaSizeMB;      // This value gets validated during driver creation, so pass it through
-    return validConfig;
+    // make sure to copy all the fields
+    config = *pConfig;
+
+    // Use at least the defaults set by the build system
+    config.minCommandBufferSizeMB = std::max(
+            config.minCommandBufferSizeMB,
+            (uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB);
+
+    config.perFrameCommandsSizeMB = std::max(
+            config.perFrameCommandsSizeMB,
+            (uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB);
+
+    config.perRenderPassArenaSizeMB = std::max(
+            config.perRenderPassArenaSizeMB,
+            (uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB);
+
+    config.commandBufferSizeMB = std::max(
+            config.commandBufferSizeMB,
+            config.minCommandBufferSizeMB * CONCURRENT_FRAME_COUNT);
+
+    // Enforce pre-render-pass arena rule-of-thumb
+    config.perRenderPassArenaSizeMB = std::max(
+            config.perRenderPassArenaSizeMB,
+            config.perFrameCommandsSizeMB + COMMAND_ARENA_OVERHEAD);
+
+    // This value gets validated during driver creation, so pass it through
+    config.driverHandleArenaSizeMB = config.driverHandleArenaSizeMB;
+
+    return config;
 }
 
 // these must be static because only a pointer is copied to the render stream
