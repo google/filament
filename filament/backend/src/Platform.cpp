@@ -82,6 +82,7 @@ filament::backend::DefaultPlatform* createDefaultMetalPlatform();
 #include "noop/PlatformNoop.h"
 
 namespace filament {
+
 namespace backend {
 
 // this generates the vtable in this translation unit

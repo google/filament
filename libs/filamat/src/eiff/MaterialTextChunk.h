@@ -35,15 +35,14 @@ public:
 private:
     void flatten(Flattener& f) override;
 
-    const char* getShaderText(size_t entryIndex) const noexcept;
     void writeEntryAttributes(size_t entryIndex, Flattener& f) const noexcept;
 
     // Structure to keep track of duplicates.
-    struct ShaderAttribute{
+    struct ShaderMapping {
         bool isDup = false;
         size_t dupOfIndex = 0;
     };
-    std::vector<ShaderAttribute> mDuplicateMap;
+    std::vector<ShaderMapping> mDuplicateMap;
 
     const std::vector<TextEntry> mEntries;
     const LineDictionary& mDictionary;

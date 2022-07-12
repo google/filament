@@ -491,11 +491,22 @@ template<typename T>
 constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near, T far) noexcept {
     TMat44<T> m;
     m[0][0] = (2 * near) / (right - left);
+    // 0
+    // 0
+    // 0
+
+    // 0
     m[1][1] = (2 * near) / (top - bottom);
+    // 0
+    // 0
+
     m[2][0] = (right + left) / (right - left);
     m[2][1] = (top + bottom) / (top - bottom);
     m[2][2] = -(far + near) / (far - near);
     m[2][3] = -1;
+
+    // 0
+    // 0
     m[3][2] = -(2 * far * near) / (far - near);
     m[3][3] = 0;
     return m;

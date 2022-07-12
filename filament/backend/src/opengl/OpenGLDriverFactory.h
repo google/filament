@@ -24,7 +24,7 @@ class Driver;
 
 class OpenGLDriverFactory {
 public:
-    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext) noexcept;
+    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept;
 };
 
 } // namespace filament::backend

@@ -4,9 +4,15 @@ This file contains one line summaries of commits that are worthy of mentioning i
 A new header is inserted each time a *tag* is created.
 
 ## main branch
-- engine: Fix Adreno gpu crash introduced by gpu morph target change
+- engine: Fix Adreno gpu crash introduced by gpu morph target change 
+- engine: Add optional memory configuration parameters to Engine initialization
 
+
+## v1.25.2
+
+- engine: `Camera::getNear()` and `Camera::getCullingFar()` now return `doubles`
 - Metal: implement scissor support.
+- engine: `Renderer::getUserTime()` now returns seconds as documented (#5722) [⚠️ **API Fix**]
 
 ## v1.25.1
 
