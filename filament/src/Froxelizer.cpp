@@ -44,6 +44,11 @@ namespace filament {
 
 using namespace backend;
 
+// TODO: these should come from a configuration object on View or Camera
+static constexpr size_t FROXEL_SLICE_COUNT = 16;
+static constexpr float FROXEL_FIRST_SLICE_DEPTH = 5;
+static constexpr float FROXEL_LAST_SLICE_DISTANCE = 100;
+
 // The Froxel buffer is set to FROXEL_BUFFER_WIDTH x n
 // With n limited by the supported texture dimension, which is guaranteed to be at least 2048
 // in all version of GLES.
@@ -63,7 +68,7 @@ constexpr size_t RECORD_BUFFER_ENTRY_COUNT  = RECORD_BUFFER_WIDTH * RECORD_BUFFE
 constexpr size_t PER_FROXELDATA_ARENA_SIZE = sizeof(float4) *
                                                  (FROXEL_BUFFER_ENTRY_COUNT_MAX +
                                                   FROXEL_BUFFER_ENTRY_COUNT_MAX + 3 +
-                                                  FEngine::CONFIG_FROXEL_SLICE_COUNT / 4 + 1);
+                                                  FROXEL_SLICE_COUNT / 4 + 1);
 
 
 // number of lights processed by one group (e.g. 32)
@@ -80,8 +85,10 @@ static_assert(RECORD_BUFFER_ENTRY_COUNT <= 65536,
         "RecordBuffer cannot be larger than 65536 entries");
 
 Froxelizer::Froxelizer(FEngine& engine)
-        : mArena("froxel", PER_FROXELDATA_ARENA_SIZE) {
-
+        : mArena("froxel", PER_FROXELDATA_ARENA_SIZE),
+          mZLightNear(FROXEL_FIRST_SLICE_DEPTH),
+          mZLightFar(FROXEL_LAST_SLICE_DISTANCE)
+{
     DriverApi& driverApi = engine.getDriverApi();
 
     static_assert(std::is_same_v<RecordBufferType, uint8_t>,
@@ -200,7 +207,7 @@ void Froxelizer::computeFroxelLayout(
 
     // calculate froxel dimension from FROXEL_BUFFER_ENTRY_COUNT_MAX and viewport
     // - Start from the maximum number of froxels we can use in the x-y plane
-    size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
+    size_t froxelSliceCount = FROXEL_SLICE_COUNT;
     size_t froxelPlaneCount = FROXEL_BUFFER_ENTRY_COUNT_MAX / froxelSliceCount;
     // - compute the number of square froxels we need in width and height, rounded down
     //   solving: |  froxelCountX * froxelCountY == froxelPlaneCount
