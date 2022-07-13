@@ -1633,6 +1633,10 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     return false;
 }
 
+FeatureLevel OpenGLDriver::getFeatureLevel() {
+    return mContext.getFeatureLevel();
+}
+
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
            // z-coordinate of virtual and physical clip-space is in [-w, 0]

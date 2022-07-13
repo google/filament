@@ -695,7 +695,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     ++mCurrentTime;
 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
-    // buffer is undefined." Therefore we need to clear all bindings at this time.
+    // buffer is undefined." Therefore, we need to clear all bindings at this time.
     mBoundPipeline = {};
     mBoundLayout = {};
     mBoundDescriptor = {};

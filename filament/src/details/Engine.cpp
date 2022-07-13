@@ -264,6 +264,8 @@ void FEngine::init() {
 
     DriverApi& driverApi = getDriverApi();
 
+    slog.i << "FEngine feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
+
     mResourceAllocator = new ResourceAllocator(driverApi);
 
     mFullScreenTriangleVb = upcast(VertexBuffer::Builder()
@@ -588,7 +590,7 @@ int FEngine::loop() {
         mPlatform = DefaultPlatform::create(&mBackend);
         mOwnPlatform = true;
         const char* const backend = backendToString(mBackend);
-        slog.d << "FEngine resolved backend: " << backend << io::endl;
+        slog.i << "FEngine resolved backend: " << backend << io::endl;
         if (mPlatform == nullptr) {
             slog.e << "Selected backend not supported in this build." << io::endl;
             mDriverBarrier.latch();
