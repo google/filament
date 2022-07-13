@@ -58,7 +58,6 @@ using namespace filament;
 using namespace filament::math;
 using namespace utils;
 
-using filament::geometry::Transcoder;
 using filament::geometry::ComponentType;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
@@ -167,20 +166,6 @@ void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dst
 static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         dst[i] = src[i];
-    }
-}
-
-static ComponentType getComponentType(const cgltf_accessor* accessor) {
-    switch (accessor->component_type) {
-        case cgltf_component_type_r_8: return ComponentType::BYTE;
-        case cgltf_component_type_r_8u: return ComponentType::UBYTE;
-        case cgltf_component_type_r_16: return ComponentType::SHORT;
-        case cgltf_component_type_r_16u: return ComponentType::USHORT;
-        case cgltf_component_type_r_32f: return ComponentType::FLOAT;
-        case cgltf_component_type_r_32u:
-        default:
-            assert_invariant(false);
-            return {};
     }
 }
 
@@ -780,7 +765,6 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         if (UTILS_UNLIKELY(!mesh || !mesh->weights_count)) {
             continue;
         }
-        cgltf_primitive const* prims = mesh->primitives;
         for (cgltf_size pindex = 0, pcount = mesh->primitives_count; pindex < pcount; ++pindex) {
             const cgltf_primitive& prim = mesh->primitives[pindex];
             const auto& gltfioPrim = asset->mMeshCache.at(mesh)[pindex];
@@ -790,7 +774,6 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
                 bool hasNormals = false;
                 for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
                     const cgltf_attribute& attribute = target.attributes[aindex];
-                    const cgltf_accessor* accessor = attribute.data;
                     const cgltf_attribute_type atype = attribute.type;
                     if (atype != cgltf_attribute_type_tangent) {
                         continue;

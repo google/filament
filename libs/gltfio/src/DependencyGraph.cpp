@@ -53,7 +53,7 @@ void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
 // objects. Find all non-textured entities and immediately add mark them as ready.
 void DependencyGraph::finalize() {
     assert(!mFinalized);
-    for (auto pair : mMaterialToEntity) {
+    for (const auto& pair : mMaterialToEntity) {
         auto mi = pair.first;
         if (mMaterialToTexture.find(mi) == mMaterialToTexture.end()) {
             markAsReady(mi);
@@ -64,7 +64,7 @@ void DependencyGraph::finalize() {
 
 void DependencyGraph::refinalize() {
     assert(mFinalized);
-    for (auto pair : mMaterialToEntity) {
+    for (const auto& pair : mMaterialToEntity) {
         auto material = pair.first;
         if (mMaterialToTexture.find(material) == mMaterialToTexture.end()) {
             markAsReady(material);
@@ -85,7 +85,7 @@ void DependencyGraph::checkReadiness(Material* material) {
 
     // Check this material's texture parameters, there are 5 in the worst case.
     bool materialIsReady = true;
-    for (auto pair : status.params) {
+    for (const auto& pair : status.params) {
         assert(pair.second && "Parameter-to-Texture edge is missing.");
         if (!pair.second->ready) {
             materialIsReady = false;
