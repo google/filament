@@ -19,7 +19,7 @@
 
 #include <filament/Box.h>
 #include <filament/Engine.h>
-#include <filament/MaterialEnums.h>
+#include <filament/VertexBuffer.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 

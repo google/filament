@@ -23,6 +23,8 @@
 #include <math/mat4.h>
 #include <math/TVecHelpers.h>
 
+#include <utils/compiler.h>
+
 namespace filament::gltfio {
 
 template <typename T>

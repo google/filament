@@ -68,11 +68,11 @@ public:
     mutable ArchiveCache mMaterials;
     Texture* mDummyTexture = nullptr;
 
-    Engine* mEngine;
+    Engine* const mEngine;
 };
 
 UbershaderProvider::UbershaderProvider(Engine* engine, const void* archive, size_t archiveByteCount)
-        : mEngine(engine), mMaterials(*engine) {
+        : mMaterials(*engine), mEngine(engine) {
     unsigned char texels[4] = {};
     mDummyTexture = Texture::Builder()
             .width(1).height(1)

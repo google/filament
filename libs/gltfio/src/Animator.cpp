@@ -21,7 +21,7 @@
 #include "FFilamentInstance.h"
 #include "upcast.h"
 
-#include <filament/MaterialEnums.h>
+#include <filament/VertexBuffer.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 

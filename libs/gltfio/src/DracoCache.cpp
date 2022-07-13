@@ -22,11 +22,15 @@
 
 #include <utils/Log.h>
 
+#if GLTFIO_DRACO_SUPPORTED
+
 #include <memory>
 #include <vector>
 
 using std::unique_ptr;
 using std::vector;
+
+#endif
 
 using namespace utils;
 
