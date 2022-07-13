@@ -88,7 +88,6 @@ private:
 
 Texture* Ktx2Provider::pushTexture(const uint8_t* data, size_t byteCount,
             const char* mimeType, FlagBits flags) {
-    using InternalFormat = Texture::InternalFormat;
     using TransferFunction = ktxreader::Ktx2Reader::TransferFunction;
     const FlagBits sRGB = FlagBits(Flags::sRGB);
 
@@ -159,7 +158,7 @@ void Ktx2Provider::updateQueue() {
         if (item->state != QueueItemState::TRANSCODING) {
             continue;
         }
-        Texture* texture = item->async->getTexture();
+        item->async->getTexture();
         const TranscoderState state = item->transcoderState.load();
         if (state != TranscoderState::NOT_STARTED) {
             if (item->job) {

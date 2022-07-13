@@ -19,7 +19,7 @@
 
 #include <gltfio/FilamentAsset.h>
 
-#include <backend/BufferDescriptor.h>
+#include <filament/VertexBuffer.h>
 
 #include <utils/compiler.h>
 
