@@ -365,7 +365,7 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
     [encoder setViewport:viewport];
 
     DepthStencilState depthStencilState {
-        .compareFunction = MTLCompareFunctionAlways,
+        .depthCompare = MTLCompareFunctionAlways,
         .depthWriteEnabled = blitDepth
     };
     id<MTLDepthStencilState> depthStencil =

@@ -811,7 +811,8 @@ void MetalTexture::updateLodRange(uint32_t level) {
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment) :
+        uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
+        Attachment depthAttachment, Attachment stencilAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
     UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<size_t>::max()};
     UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
@@ -868,6 +869,12 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
                         depth.metalTexture->width, depth.metalTexture->height, samples);
             }
         }
+    }
+
+    if (stencilAttachment) {
+        stencil = stencilAttachment;
+
+        // TODO: stencil MSAA
     }
 
     // Verify that all attachments have the same non-zero dimensions.
@@ -927,12 +934,14 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 
     Attachment depthAttachment = getDepthAttachment();
-    descriptor.depthAttachment.texture = depthAttachment.getTexture();
-    descriptor.depthAttachment.level = depthAttachment.level;
-    descriptor.depthAttachment.slice = depthAttachment.layer;
-    descriptor.depthAttachment.loadAction = getLoadAction(params, TargetBufferFlags::DEPTH);
-    descriptor.depthAttachment.storeAction = getStoreAction(params, TargetBufferFlags::DEPTH);
-    descriptor.depthAttachment.clearDepth = params.clearDepth;
+    if (depthAttachment) {
+        descriptor.depthAttachment.texture = depthAttachment.getTexture();
+        descriptor.depthAttachment.level = depthAttachment.level;
+        descriptor.depthAttachment.slice = depthAttachment.layer;
+        descriptor.depthAttachment.loadAction = getLoadAction(params, TargetBufferFlags::DEPTH);
+        descriptor.depthAttachment.storeAction = getStoreAction(params, TargetBufferFlags::DEPTH);
+        descriptor.depthAttachment.clearDepth = params.clearDepth;
+    }
 
     const bool automaticResolve = samples > 1 && depthAttachment.getSampleCount() == 1;
     if (automaticResolve) {
@@ -954,6 +963,16 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
             descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
         }
+    }
+
+    Attachment stencilAttachment = getStencilAttachment();
+    if (stencilAttachment) {
+        descriptor.stencilAttachment.texture = stencilAttachment.getTexture();
+        descriptor.stencilAttachment.level = stencilAttachment.level;
+        descriptor.stencilAttachment.slice = stencilAttachment.layer;
+        descriptor.stencilAttachment.loadAction = getLoadAction(params, TargetBufferFlags::STENCIL);
+        descriptor.stencilAttachment.storeAction = getStoreAction(params, TargetBufferFlags::STENCIL);
+        descriptor.stencilAttachment.clearStencil = params.clearStencil;
     }
 }
 
@@ -981,6 +1000,14 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     Attachment result = depth;
     if (defaultRenderTarget) {
         result.texture = context->currentDrawSwapChain->acquireDepthTexture();
+    }
+    return result;
+}
+
+MetalRenderTarget::Attachment MetalRenderTarget::getStencilAttachment() {
+    Attachment result = stencil;
+    if (defaultRenderTarget) {
+        // TODO: do we want the default SwapChain to have a default stencil buffer?
     }
     return result;
 }

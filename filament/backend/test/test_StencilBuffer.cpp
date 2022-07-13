@@ -60,20 +60,27 @@ namespace test {
 // 3. Enable a "== 0" stencil test and enable color writes.
 // 4. Render a larger triangle to the SwapChain.
 // 5. The larger triangle should have a "hole" in the middle.
-TEST_F(BackendTest, StencilBuffer) {
-    auto& api = getDriverApi();
+class BasicStencilBufferTest : public BackendTest {
+public:
 
-    // The test is executed within this block scope to force destructors to run before
-    // executeCommands().
-    {
+    Handle<HwSwapChain> swapChain;
+    ProgramHandle program;
+
+    void SetUp() override {
+        auto& api = getDriverApi();
+
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
+        swapChain = createSwapChain();
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
         Program p = shaderGen.getProgram();
-        ProgramHandle program = api.createProgram(std::move(p));
+        program = api.createProgram(std::move(p));
+    }
+
+    void RunTest(Handle<HwRenderTarget> renderTarget) {
+        auto& api = getDriverApi();
 
         // We'll be using a triangle as geometry.
         TrianglePrimitive smallTriangle(api);
@@ -84,15 +91,6 @@ TEST_F(BackendTest, StencilBuffer) {
         };
         smallTriangle.updateVertices(vertices);
         TrianglePrimitive triangle(api);
-
-        // Create two textures: a color and a stencil, and an associated RenderTarget.
-        auto colorTexture = getDriverApi().createTexture(SamplerType::SAMPLER_2D, 1,
-                TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
-        auto stencilTexture = getDriverApi().createTexture(SamplerType::SAMPLER_2D, 1,
-                TextureFormat::STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT);
-        auto renderTarget = getDriverApi().createRenderTarget(
-                TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1,
-                {{colorTexture}}, {}, {{stencilTexture}});
 
         // Step 1: Clear the stencil buffer to all zeroes and the color buffer to blue.
         // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
@@ -131,20 +129,64 @@ TEST_F(BackendTest, StencilBuffer) {
         api.draw(ps, triangle.getRenderPrimitive(), 1);
         api.endRenderPass();
 
-        readPixelsAndAssertHash("StencilBuffer", 512, 512, renderTarget, 0x3B1AEF0F, true);
-
         api.commit(swapChain);
         api.endFrame(0);
+    }
 
+    void TearDown() override {
+        auto& api = getDriverApi();
         api.destroyProgram(program);
         api.destroySwapChain(swapChain);
-        api.destroyTexture(colorTexture);
-        api.destroyTexture(stencilTexture);
-        api.destroyRenderTarget(renderTarget);
+        flushAndWait();
     }
+};
+
+TEST_F(BasicStencilBufferTest, StencilBuffer) {
+    auto& api = getDriverApi();
+
+    // Create two textures: a color and a stencil, and an associated RenderTarget.
+    auto colorTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
+    auto stencilTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT);
+    auto renderTarget = getDriverApi().createRenderTarget(
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1,
+            {{colorTexture}}, {}, {{stencilTexture}});
+
+    RunTest(renderTarget);
+
+    readPixelsAndAssertHash("StencilBuffer", 512, 512, renderTarget, 0x3B1AEF0F, true);
 
     flushAndWait();
     getDriver().purge();
+
+    api.destroyTexture(colorTexture);
+    api.destroyTexture(stencilTexture);
+    api.destroyRenderTarget(renderTarget);
+}
+
+TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
+    auto& api = getDriverApi();
+
+    // Create two textures: a color and a stencil, and an associated RenderTarget.
+    auto colorTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
+    auto depthStencilTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::DEPTH24_STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT);
+    auto renderTarget = getDriverApi().createRenderTarget(
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1,
+            {{colorTexture}}, {depthStencilTexture}, {{depthStencilTexture}});
+
+    RunTest(renderTarget);
+
+    readPixelsAndAssertHash("DepthAndStencilBuffer", 512, 512, renderTarget, 0x3B1AEF0F, true);
+
+    flushAndWait();
+    getDriver().purge();
+
+    api.destroyTexture(colorTexture);
+    api.destroyTexture(depthStencilTexture);
+    api.destroyRenderTarget(renderTarget);
 }
 
 } // namespace test
