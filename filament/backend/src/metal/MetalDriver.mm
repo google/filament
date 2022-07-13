@@ -336,6 +336,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         stencilTexture->updateLodRange(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
+    ASSERT_POSTCONDITION(!stencil.handle || any(targetBufferFlags & TargetBufferFlags::STENCIL),
+            "The STENCIL flag was specified, but no stencil texture provided.");
 
     construct_handle<MetalRenderTarget>(rth, mContext, width, height, samples,
             colorAttachments, depthAttachment, stencilAttachment);
