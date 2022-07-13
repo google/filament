@@ -874,6 +874,8 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
     if (stencilAttachment) {
         stencil = stencilAttachment;
 
+        attachmentCount++;
+
         // TODO: stencil MSAA
     }
 
