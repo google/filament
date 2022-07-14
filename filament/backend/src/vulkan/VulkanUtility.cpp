@@ -607,6 +607,8 @@ VkImageViewType getImageViewType(SamplerType target) {
             return VK_IMAGE_VIEW_TYPE_CUBE;
         case SamplerType::SAMPLER_2D_ARRAY:
             return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
         case  SamplerType::SAMPLER_3D:
             return VK_IMAGE_VIEW_TYPE_3D;
         default:

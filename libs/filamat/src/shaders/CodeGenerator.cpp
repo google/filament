@@ -776,6 +776,13 @@ char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat fo
             // are created via VK_ANDROID_external_memory_android_hardware_buffer, but they are
             // backed by VkImage just like a normal texture, and sampled from normally.
             return (mTargetLanguage == TargetLanguage::SPIRV) ? "sampler2D" : "samplerExternalOES";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            switch (format) {
+                case SamplerFormat::INT:    return "isamplerCubeArray";
+                case SamplerFormat::UINT:   return "usamplerCubeArray";
+                case SamplerFormat::FLOAT:  return "samplerCubeArray";
+                case SamplerFormat::SHADOW: return "samplerCubeArrayShadow";
+            }
     }
 }
 

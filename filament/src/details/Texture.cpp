@@ -160,6 +160,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
         case SamplerType::SAMPLER_2D_ARRAY:
         case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_EXTERNAL:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             maxLevelCount = FTexture::maxLevelCount(mWidth, mHeight);
             break;
         case SamplerType::SAMPLER_3D:
@@ -218,6 +219,8 @@ void FTexture::setImage(FEngine& engine, size_t level,
                 return true;
             case SamplerType::SAMPLER_EXTERNAL:
                 return false;
+            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+                return false; // feature level 2
         }
     };
 
@@ -276,6 +279,9 @@ void FTexture::setImage(FEngine& engine, size_t level,
         case SamplerType::SAMPLER_CUBEMAP:
             textureDepthOrLayers = 6;
             break;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            textureDepthOrLayers = mDepth * 6;
+            break;
     }
 
     if (!ASSERT_POSTCONDITION_NON_FATAL(zoffset + depth <= textureDepthOrLayers,
@@ -303,6 +309,7 @@ void FTexture::setImage(FEngine& engine, size_t level,
             case SamplerType::SAMPLER_2D:
             case SamplerType::SAMPLER_3D:
             case SamplerType::SAMPLER_2D_ARRAY:
+            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             case SamplerType::SAMPLER_EXTERNAL:
                 return false;
         }
@@ -440,6 +447,12 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         case SamplerType::SAMPLER_2D_ARRAY:
             UTILS_NOUNROLL
             for (uint16_t layer = 0, c = mDepth; layer < c; ++layer) {
+                generateMipsForLayer({ .layer = layer });
+            }
+            break;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            UTILS_NOUNROLL
+            for (uint16_t layer = 0, c = mDepth * 6; layer < c; ++layer) {
                 generateMipsForLayer({ .layer = layer });
             }
             break;

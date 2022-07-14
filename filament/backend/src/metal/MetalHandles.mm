@@ -433,36 +433,27 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
 
     const BOOL mipmapped = levels > 1;
     const BOOL multisampled = samples > 1;
-    const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
 
 #if defined(IOS)
+    const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
     ASSERT_PRECONDITION(!textureArray || !multisampled,
             "iOS does not support multisampled texture arrays.");
 #endif
 
-    const auto get2DTextureType = [](bool isArray, bool isMultisampled) {
-        uint8_t value = 0;
-        if (isMultisampled) {
-            value |= 0b10u;
+    const auto get2DTextureType = [](SamplerType target, bool isMultisampled) {
+        if (!isMultisampled) {
+            return getMetalType(target);
         }
-        if (isArray) {
-            value |= 0b01u;
-        }
-        switch (value) {
-            default:
-            case 0b00:
-                return MTLTextureType2D;
-            case 0b01:
-                return MTLTextureType2DArray;
-            case 0b10:
+        switch (target) {
+            case SamplerType::SAMPLER_2D:
                 return MTLTextureType2DMultisample;
-            case 0b11:
 #if !defined(IOS)
+            case SamplerType::SAMPLER_2D_ARRAY:
                 return MTLTextureType2DMultisampleArray;
-#else
-                // should not get here
-                return MTLTextureType2DArray;
 #endif
+            default:
+                // should not get here
+                return getMetalType(target);
         }
     };
 
@@ -472,7 +463,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         case SamplerType::SAMPLER_2D_ARRAY:
             descriptor = [MTLTextureDescriptor new];
             descriptor.pixelFormat = devicePixelFormat;
-            descriptor.textureType = get2DTextureType(textureArray, multisampled);
+            descriptor.textureType = get2DTextureType(target, multisampled);
             descriptor.width = width;
             descriptor.height = height;
             descriptor.arrayLength = depth;
@@ -484,11 +475,13 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;
         case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             ASSERT_POSTCONDITION(!multisampled, "Multisampled cubemap faces not supported.");
             ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
             descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:devicePixelFormat
                                                                                size:width
                                                                           mipmapped:mipmapped];
+            descriptor.arrayLength = depth;
             descriptor.mipmapLevelCount = levels;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
@@ -642,6 +635,7 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
         }
 
         case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
         case SamplerType::SAMPLER_2D_ARRAY: {
             // Metal uses 'slice' (not z offset) to index into individual layers of a texture array.
             const uint32_t slice = region.origin.z;

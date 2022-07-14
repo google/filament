@@ -346,7 +346,7 @@ private:
                 GLuint sampler = 0;
                 struct {
                     GLuint texture_id = 0;
-                } targets[6];  // this must match getIndexForTextureTarget()
+                } targets[7];  // this must match getIndexForTextureTarget()
             } units[MAX_TEXTURE_UNIT_COUNT];
         } textures;
 
@@ -399,13 +399,15 @@ private:
 constexpr size_t OpenGLContext::getIndexForTextureTarget(GLuint target) noexcept {
     // this must match state.textures[].targets[]
     switch (target) {
-        case GL_TEXTURE_2D:             return 0;
-        case GL_TEXTURE_2D_ARRAY:       return 1;
-        case GL_TEXTURE_CUBE_MAP:       return 2;
-        case GL_TEXTURE_2D_MULTISAMPLE: return 3;
-        case GL_TEXTURE_EXTERNAL_OES:   return 4;
-        case GL_TEXTURE_3D:             return 5;
-        default:                        return 0;
+        case GL_TEXTURE_2D:                     return 0;
+        case GL_TEXTURE_2D_ARRAY:               return 1;
+        case GL_TEXTURE_CUBE_MAP:               return 2;
+        case GL_TEXTURE_2D_MULTISAMPLE:         return 3;
+        case GL_TEXTURE_EXTERNAL_OES:           return 4;
+        case GL_TEXTURE_3D:                     return 5;
+        case GL_TEXTURE_CUBE_MAP_ARRAY:         return 6;
+        default:
+            return 0;
     }
 }
 
