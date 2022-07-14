@@ -118,16 +118,10 @@ public:
     using Epoch = clock::time_point;
     using duration = clock::duration;
 
-    // TODO: these should come from a configuration object
-    static constexpr float  CONFIG_Z_LIGHT_NEAR            = 5;
-    static constexpr float  CONFIG_Z_LIGHT_FAR             = 100;
-    static constexpr size_t CONFIG_FROXEL_SLICE_COUNT      = 16;
-    static constexpr bool   CONFIG_IBL_USE_IRRADIANCE_MAP  = false;
-
 public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
             Platform* platform = nullptr, void* sharedGLContext = nullptr,
-            const Config* config = nullptr);
+            const Config* pConfig = nullptr);
 
 #if UTILS_HAS_THREADING
     static void createAsync(CreateCallback callback, void* user,
@@ -361,11 +355,13 @@ public:
     backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
     backend::Handle<backend::HwTexture> getOneIntegerTextureArray() const { return mDummyOneIntegerTextureArray; }
 
-    size_t getMinCommandBufferSize() const noexcept     { return mMinCommandBufferSize; }
-    size_t getCommandBufferSize() const noexcept        { return mCommandBufferSize; }
-    size_t getPerFrameCommandsSize() const noexcept     { return mPerFrameCommandsSize; }
-    size_t getPerRenderPassArenaSize() const noexcept   { return mPerRenderPassArenaSize; }
-    size_t getRequestedDriverHandleArenaSize() const noexcept   { return mRequestedDriverHandleArenaSize; }
+    static constexpr const size_t MiB = 1024u * 1024u;
+    size_t getMinCommandBufferSize() const noexcept { return mConfig.minCommandBufferSizeMB * MiB; }
+    size_t getCommandBufferSize() const noexcept { return mConfig.commandBufferSizeMB * MiB; }
+    size_t getPerFrameCommandsSize() const noexcept { return mConfig.perFrameCommandsSizeMB * MiB; }
+    size_t getPerRenderPassArenaSize() const noexcept { return mConfig.perRenderPassArenaSizeMB * MiB; }
+    size_t getRequestedDriverHandleArenaSize() const noexcept { return mConfig.driverHandleArenaSizeMB * MiB; }
+    Config const& getConfig() const noexcept { return mConfig; }
 
 private:
     static Config validateConfig(const Config* pConfig) noexcept;
@@ -480,11 +476,7 @@ private:
     std::thread::id mMainThreadId{};
 
     // Creation parameters
-    size_t mMinCommandBufferSize;           // minimum size of command buffer (in bytes)
-    size_t mCommandBufferSize;              // size of command buffer (in bytes)
-    size_t mPerFrameCommandsSize;           // size of the high-level draw commands buffer (in bytes)
-    size_t mPerRenderPassArenaSize;         // size of the per-pass arena buffer (in bytes)
-    size_t mRequestedDriverHandleArenaSize; // requested size of driver handle arena (in bytes). Driver will validate and clam
+    Config mConfig;
 
 public:
     // these are the debug properties used by FDebug. They're accessed directly by modules who need them.

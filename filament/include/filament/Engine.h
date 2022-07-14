@@ -227,6 +227,7 @@ public:
          */
         uint32_t minCommandBufferSizeMB = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB;
 
+
         /**
          * Size in MiB of the per-frame high level command buffer.
          *

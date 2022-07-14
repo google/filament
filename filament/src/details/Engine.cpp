@@ -62,12 +62,13 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
-FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext, const Config *config) {
+FEngine* FEngine::create(Backend backend, Platform* platform,
+        void* sharedGLContext, const Config *pConfig) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
-    Config validConfig = validateConfig(config);
-    FEngine* instance = new FEngine(backend, platform, validConfig, sharedGLContext);
+    const Config config{ validateConfig(pConfig) };
+    FEngine* instance = new FEngine(backend, platform, config, sharedGLContext);
 
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
@@ -224,24 +225,18 @@ FEngine::FEngine(Backend backend, Platform* platform, const Config& config, void
         mTransformManager(),
         mLightManager(*this),
         mCameraManager(*this),
-        mCommandBufferQueue(config.minCommandBufferSizeMB * 1024 * 1024, config.commandBufferSizeMB * 1024 * 1024),
-        mPerRenderPassAllocator("FEngine::mPerRenderPassAllocator", config.perRenderPassArenaSizeMB * 1024 * 1024),
+        mCommandBufferQueue(config.minCommandBufferSizeMB * MiB, config.commandBufferSizeMB * MiB),
+        mPerRenderPassAllocator("FEngine::mPerRenderPassAllocator", config.perRenderPassArenaSizeMB * MiB),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
         mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
-        mMainThreadId(ThreadUtils::getThreadId())
+        mMainThreadId(ThreadUtils::getThreadId()),
+        mConfig(config)
 {
     // we're assuming we're on the main thread here.
     // (it may not be the case)
     mJobSystem.adopt();
-
-    constexpr size_t MiB = 1024U * 1024U;
-    mMinCommandBufferSize = config.minCommandBufferSizeMB * MiB;
-    mCommandBufferSize = config.commandBufferSizeMB * MiB;
-    mPerFrameCommandsSize = config.perFrameCommandsSizeMB * MiB;
-    mPerRenderPassArenaSize = config.perRenderPassArenaSizeMB * MiB;
-    mRequestedDriverHandleArenaSize = config.driverHandleArenaSizeMB * MiB;
 
     slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
@@ -411,7 +406,7 @@ void FEngine::shutdown() {
 #ifndef NDEBUG
     // print out some statistics about this run
     size_t wm = mCommandBufferQueue.getHighWatermark();
-    size_t wmpct = wm / (mCommandBufferSize / 100);
+    size_t wmpct = wm / (getCommandBufferSize() / 100);
     slog.d << "CircularBuffer: High watermark "
            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
 #endif
