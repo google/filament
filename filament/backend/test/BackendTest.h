@@ -53,7 +53,8 @@ protected:
 
     void renderTriangle(filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
             filament::backend::Handle<filament::backend::HwSwapChain> swapChain,
-            filament::backend::Handle<filament::backend::HwProgram> program);
+            filament::backend::Handle<filament::backend::HwProgram> program,
+            bool clear = false);
 
     void readPixelsAndAssertHash(const char* testName, size_t width, size_t height,
             filament::backend::Handle<filament::backend::HwRenderTarget> rt, uint32_t expectedHash,

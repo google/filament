@@ -31,8 +31,15 @@ layout(location = 0) in vec4 mesh_position;
 
 layout(location = 0) out uvec4 indices;
 
+uniform Params {
+    highp vec4 padding[4];  // offset of 64 bytes
+
+    highp vec4 color;
+    highp vec4 offset;
+} params;
+
 void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
+    gl_Position = vec4(mesh_position.xy + params.offset.xy, 0.0, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
@@ -47,13 +54,12 @@ layout(location = 0) out vec4 fragColor;
 uniform Params {
     highp vec4 padding[4];  // offset of 64 bytes
 
-    highp float red;
-    highp float green;
-    highp float blue;
+    highp vec4 color;
+    highp vec4 offset;
 } params;
 
 void main() {
-    fragColor = vec4(params.red, params.green, params.blue, 1.0f);
+    fragColor = vec4(params.color.rgb, 1.0f);
 }
 
 )");
@@ -150,12 +156,17 @@ TEST_F(BackendTest, VertexBufferUpdate) {
     executeCommands();
 }
 
+// In the shader, these MaterialParams are offset by 64 bytes into the uniform buffer to test buffer
+// updates with offset.
 struct MaterialParams {
-    float red;
-    float green;
-    float blue;
+    math::float4 color;
+    math::float4 offset;
 };
 
+static_assert(sizeof(MaterialParams) == 8 * sizeof(float));
+
+// This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
+// buffer object is partially updated.
 TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = createSwapChain();
@@ -168,16 +179,23 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     auto program = getDriverApi().createProgram(std::move(p));
 
     // Create a uniform buffer.
+    // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
+    // GPU buffer, which is more interesting to test.
     auto ubuffer = getDriverApi().createBufferObject(sizeof(MaterialParams) + 64,
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
     getDriverApi().bindUniformBuffer(0, ubuffer);
 
-    // Upload uniforms.
+    // Create a render target.
+    auto colorTexture = getDriverApi().createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
+    auto renderTarget = getDriverApi().createRenderTarget(
+            TargetBufferFlags::COLOR0, 512, 512, 1, {{colorTexture}}, {}, {});
+
+    // Upload uniforms for the first triangle.
     {
         MaterialParams params {
-            .red = 1.0f,
-            .green = 0.0f,
-            .blue = 0.5f
+            .color = { 1.0f, 0.0f, 0.5f, 1.0f },
+            .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
         };
         MaterialParams* tmp = new MaterialParams(params);
         auto cb = [](void* buffer, size_t size, void* user) {
@@ -188,12 +206,29 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
         getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64);
     }
 
-    auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+    renderTriangle(renderTarget, swapChain, program);
 
-    renderTriangle(defaultRenderTarget, swapChain, program);
+    // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
+    // color.b, color.a, offset.x, and offset.y.
+    {
+        MaterialParams params {
+                .color = { 1.0f, 0.0f, 1.0f, 1.0f },
+                .offset = { 0.5f, 0.5f, 0.0f, 0.0f }
+        };
+        MaterialParams* tmp = new MaterialParams(params);
+        auto cb = [](void* buffer, size_t size, void* user) {
+            MaterialParams* sp = (MaterialParams*) ((char*)buffer - offsetof(MaterialParams, color.b));
+            delete sp;
+        };
+        BufferDescriptor bd((char*)tmp + offsetof(MaterialParams, color.b), sizeof(float) * 4, cb);
+        getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64 + offsetof(MaterialParams, color.b));
+    }
 
-    static const uint32_t expectedHash = 2000773999;
-    readPixelsAndAssertHash("BufferObjectUpdateWithOffset", 512, 512, defaultRenderTarget, expectedHash);
+    renderTriangle(renderTarget, swapChain, program);
+
+    static const uint32_t expectedHash = 2818443875;
+    readPixelsAndAssertHash(
+            "BufferObjectUpdateWithOffset", 512, 512, renderTarget, expectedHash, true);
 
     getDriverApi().flush();
     getDriverApi().commit(swapChain);
@@ -201,7 +236,9 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
 
     getDriverApi().destroyProgram(program);
     getDriverApi().destroySwapChain(swapChain);
-    getDriverApi().destroyRenderTarget(defaultRenderTarget);
+    getDriverApi().destroyBufferObject(ubuffer);
+    getDriverApi().destroyRenderTarget(renderTarget);
+    getDriverApi().destroyTexture(colorTexture);
 
     // This ensures all driver commands have finished before exiting the test.
     getDriverApi().finish();
