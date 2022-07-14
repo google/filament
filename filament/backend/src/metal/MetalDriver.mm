@@ -303,13 +303,12 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{}};
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        const auto& buffer = color[i];
-        if (!buffer.handle) {
-            ASSERT_POSTCONDITION(none(targetBufferFlags & getTargetBufferFlagsAt(i)),
-                    "The COLOR%u flag was specified, but no color texture provided.", i);
+        if (none(targetBufferFlags & getTargetBufferFlagsAt(i))) {
             continue;
         }
-
+        const auto& buffer = color[i];
+        ASSERT_PRECONDITION(buffer.handle,
+                "The COLOR%u flag was specified, but invalid color handle provided.", i);
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         ASSERT_PRECONDITION(colorTexture->texture,
                 "Color texture passed to render target has no texture allocation");
@@ -318,26 +317,26 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     }
 
     MetalRenderTarget::Attachment depthAttachment = {};
-    if (depth.handle) {
+    if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
+        ASSERT_PRECONDITION(depth.handle,
+                "The DEPTH flag was specified, but invalid depth handle provided.");
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         ASSERT_PRECONDITION(depthTexture->texture,
                 "Depth texture passed to render target has no texture allocation.");
         depthTexture->updateLodRange(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
-    ASSERT_POSTCONDITION(!depth.handle || any(targetBufferFlags & TargetBufferFlags::DEPTH),
-            "The DEPTH flag was specified, but no depth texture provided.");
 
     MetalRenderTarget::Attachment stencilAttachment = {};
-    if (stencil.handle) {
+    if (any(targetBufferFlags & TargetBufferFlags::STENCIL)) {
+        ASSERT_PRECONDITION(stencil.handle,
+                "The STENCIL flag was specified, but invalid stencil handle provided.");
         auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
         ASSERT_PRECONDITION(stencilTexture->texture,
                 "Stencil texture passed to render target has no texture allocation.");
         stencilTexture->updateLodRange(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
-    ASSERT_POSTCONDITION(!stencil.handle || any(targetBufferFlags & TargetBufferFlags::STENCIL),
-            "The STENCIL flag was specified, but no stencil texture provided.");
 
     construct_handle<MetalRenderTarget>(rth, mContext, width, height, samples,
             colorAttachments, depthAttachment, stencilAttachment);
