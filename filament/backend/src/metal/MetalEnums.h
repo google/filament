@@ -260,6 +260,8 @@ constexpr inline MTLTextureType getMetalType(SamplerType target) {
             return MTLTextureTypeCube;
         case SamplerType::SAMPLER_3D:
             return MTLTextureType3D;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return MTLTextureTypeCubeArray;
     }
 }
 

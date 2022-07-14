@@ -117,6 +117,7 @@ io::ostream& operator<<(io::ostream& out, SamplerType type) {
         CASE(SamplerType, SAMPLER_2D_ARRAY)
         CASE(SamplerType, SAMPLER_3D)
         CASE(SamplerType, SAMPLER_CUBEMAP)
+        CASE(SamplerType, SAMPLER_CUBEMAP_ARRAY)
         CASE(SamplerType, SAMPLER_EXTERNAL)
     }
     return out;

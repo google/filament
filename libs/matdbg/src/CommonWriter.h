@@ -192,6 +192,7 @@ const char* toString(backend::SamplerType type) noexcept {
         case backend::SamplerType::SAMPLER_2D_ARRAY: return "sampler2DArray";
         case backend::SamplerType::SAMPLER_CUBEMAP: return "samplerCubemap";
         case backend::SamplerType::SAMPLER_EXTERNAL: return "samplerExternal";
+        case backend::SamplerType::SAMPLER_CUBEMAP_ARRAY: return "samplerCubeArray";
     }
 }
 

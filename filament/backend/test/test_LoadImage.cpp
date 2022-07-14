@@ -218,6 +218,8 @@ static const char* getSamplerTypeName(SamplerType samplerType) {
             return "samplerCube";
         case SamplerType::SAMPLER_3D:
             return "sampler3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "samplerCubeArray";
     }
 }
 
