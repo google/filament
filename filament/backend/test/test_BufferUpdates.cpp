@@ -71,6 +71,14 @@ namespace test {
 using namespace filament;
 using namespace filament::backend;
 
+// In the shader, these MaterialParams are offset by 64 bytes into the uniform buffer to test buffer
+// updates with offset.
+struct MaterialParams {
+    math::float4 color;
+    math::float4 offset;
+};
+static_assert(sizeof(MaterialParams) == 8 * sizeof(float));
+
 TEST_F(BackendTest, VertexBufferUpdate) {
     const bool largeBuffers = false;
 
@@ -110,13 +118,34 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
+        // Create a uniform buffer.
+        // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
+        // GPU buffer, which is more interesting to test.
+        auto ubuffer = getDriverApi().createBufferObject(sizeof(MaterialParams) + 64,
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+        getDriverApi().bindUniformBuffer(0, ubuffer);
+
         getDriverApi().startCapture(0);
+
+        // Upload uniforms.
+        {
+            MaterialParams params {
+                    .color = { 1.0f, 1.0f, 1.0f, 1.0f },
+                    .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
+            };
+            auto* tmp = new MaterialParams(params);
+            auto cb = [](void* buffer, size_t size, void* user) {
+                auto* sp = (MaterialParams*) buffer;
+                delete sp;
+            };
+            BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
+            getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64);
+        }
 
         getDriverApi().makeCurrent(swapChain, swapChain);
         getDriverApi().beginFrame(0, 0);
 
         // Draw 10 triangles, updating the vertex buffer / index buffer each time.
-        getDriverApi().beginRenderPass(defaultRenderTarget, params);
         size_t triangleIndex = 0;
         for (float i = -1.0f; i < 1.0f; i += 0.2f) {
             const float low = i, high = i + 0.2;
@@ -126,21 +155,28 @@ TEST_F(BackendTest, VertexBufferUpdate) {
             if (updateIndices) {
                 if (triangleIndex % 2 == 0) {
                     // Upload each index separately, to test offsets.
-                    const short i[3] {0, 1, 2};
+                    const TrianglePrimitive::index_type i[3] {0, 1, 2};
                     triangle.updateIndices(i + 0, 1, 0);
                     triangle.updateIndices(i + 1, 1, 1);
                     triangle.updateIndices(i + 2, 1, 2);
                 } else {
                     // This effectively hides this triangle.
-                    const short i[3] {0, 0, 0};
+                    const TrianglePrimitive::index_type i[3] {0, 0, 0};
                     triangle.updateIndices(i);
                 }
             }
+
+            if (triangleIndex > 0) {
+                params.flags.clear = TargetBufferFlags::NONE;
+                params.flags.discardStart = TargetBufferFlags::NONE;
+            }
+
+            getDriverApi().beginRenderPass(defaultRenderTarget, params);
             getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+            getDriverApi().endRenderPass();
 
             triangleIndex++;
         }
-        getDriverApi().endRenderPass();
 
         getDriverApi().flush();
         getDriverApi().commit(swapChain);
@@ -155,15 +191,6 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 
     executeCommands();
 }
-
-// In the shader, these MaterialParams are offset by 64 bytes into the uniform buffer to test buffer
-// updates with offset.
-struct MaterialParams {
-    math::float4 color;
-    math::float4 offset;
-};
-
-static_assert(sizeof(MaterialParams) == 8 * sizeof(float));
 
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
 // buffer object is partially updated.
@@ -197,16 +224,16 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
             .color = { 1.0f, 0.0f, 0.5f, 1.0f },
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
         };
-        MaterialParams* tmp = new MaterialParams(params);
+        auto* tmp = new MaterialParams(params);
         auto cb = [](void* buffer, size_t size, void* user) {
-            MaterialParams* sp = (MaterialParams*) buffer;
+            auto* sp = (MaterialParams*) buffer;
             delete sp;
         };
         BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
         getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64);
     }
 
-    renderTriangle(renderTarget, swapChain, program);
+    renderTriangle(renderTarget, swapChain, program, true);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
     // color.b, color.a, offset.x, and offset.y.
@@ -215,9 +242,9 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
                 .color = { 1.0f, 0.0f, 1.0f, 1.0f },
                 .offset = { 0.5f, 0.5f, 0.0f, 0.0f }
         };
-        MaterialParams* tmp = new MaterialParams(params);
+        auto* tmp = new MaterialParams(params);
         auto cb = [](void* buffer, size_t size, void* user) {
-            MaterialParams* sp = (MaterialParams*) ((char*)buffer - offsetof(MaterialParams, color.b));
+            auto* sp = (MaterialParams*) ((char*)buffer - offsetof(MaterialParams, color.b));
             delete sp;
         };
         BufferDescriptor bd((char*)tmp + offsetof(MaterialParams, color.b), sizeof(float) * 4, cb);
@@ -226,7 +253,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
 
     renderTriangle(renderTarget, swapChain, program);
 
-    static const uint32_t expectedHash = 2818443875;
+    static const uint32_t expectedHash = 91322442;
     readPixelsAndAssertHash(
             "BufferObjectUpdateWithOffset", 512, 512, renderTarget, expectedHash, true);
 
