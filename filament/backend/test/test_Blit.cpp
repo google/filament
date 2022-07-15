@@ -176,7 +176,6 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 
     // Draw a circle on a yellow background.
     uint32_t* texels = (uint32_t*) buffer0;
-    FaceOffsets offsets;
     for (int face = 0; face < 6; face++) {
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
@@ -187,12 +186,11 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
                 texels[row * width + col] = toUintColor(float4(color, 1.0f));
             }
         }
-        offsets[face] = face * width * height * 4;
-        texels += offsets[face] / 4;
+        texels += face * width * height;
     }
 
     // Upload to the GPU.
-    dapi.updateCubeImage(texture, level, std::move(pb), offsets);
+    dapi.update3DImage(texture, level, 0, 0, 0, width, height, 6, std::move(pb));
 }
 
 TEST_F(BackendTest, CubemapMinify) {

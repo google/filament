@@ -198,12 +198,11 @@ struct MetalTexture : public HwTexture {
     ~MetalTexture();
 
     void loadImage(uint32_t level, MTLRegion region, PixelBufferDescriptor& p) noexcept;
-    void loadCubeImage(const FaceOffsets& faceOffsets, int miplevel, PixelBufferDescriptor& p);
     void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
-            PixelBufferDescriptor& data) noexcept;
-    void loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor& data,
+            PixelBufferDescriptor const& data) noexcept;
+    void loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor const& data,
             const PixelBufferShape& shape);
-    void loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor& data,
+    void loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor const& data,
             const PixelBufferShape& shape);
     void updateLodRange(uint32_t level);
 

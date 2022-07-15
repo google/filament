@@ -337,15 +337,6 @@ DECL_DRIVER_API_N(updateSamplerGroup,
         backend::SamplerGroupHandle, ubh,
         backend::SamplerGroup&&, samplerGroup)
 
-DECL_DRIVER_API_N(update2DImage,
-        backend::TextureHandle, th,
-        uint32_t, level,
-        uint32_t, xoffset,
-        uint32_t, yoffset,
-        uint32_t, width,
-        uint32_t, height,
-        backend::PixelBufferDescriptor&&, data)
-
 DECL_DRIVER_API_N(setMinMaxLevels,
         backend::TextureHandle, th,
         uint32_t, minLevel,
@@ -361,12 +352,6 @@ DECL_DRIVER_API_N(update3DImage,
         uint32_t, height,
         uint32_t, depth,
         backend::PixelBufferDescriptor&&, data)
-
-DECL_DRIVER_API_N(updateCubeImage,
-        backend::TextureHandle, th,
-        uint32_t, level,
-        backend::PixelBufferDescriptor&&, data,
-        backend::FaceOffsets, faceOffsets)
 
 DECL_DRIVER_API_N(generateMipmaps,
         backend::TextureHandle, th)

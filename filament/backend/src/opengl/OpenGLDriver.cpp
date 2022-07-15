@@ -1753,21 +1753,6 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     *sb->sb = std::move(samplerGroup); // NOLINT(performance-move-const-arg)
 }
 
-void OpenGLDriver::update2DImage(Handle<HwTexture> th,
-        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& data) {
-    DEBUG_MARKER()
-
-    GLTexture* t = handle_cast<GLTexture *>(th);
-    if (data.type == PixelDataType::COMPRESSED) {
-        setCompressedTextureData(t,
-                level, xoffset, yoffset, 0, width, height, 1, std::move(data), nullptr);
-    } else {
-        setTextureData(t,
-                level, xoffset, yoffset, 0, width, height, 1, std::move(data), nullptr);
-    }
-}
-
 void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
     DEBUG_MARKER()
     auto& gl = mContext;
@@ -1795,24 +1780,10 @@ void OpenGLDriver::update3DImage(Handle<HwTexture> th,
     GLTexture* t = handle_cast<GLTexture *>(th);
     if (data.type == PixelDataType::COMPRESSED) {
         setCompressedTextureData(t,
-                level, xoffset, yoffset, zoffset, width, height, depth, std::move(data), nullptr);
+                level, xoffset, yoffset, zoffset, width, height, depth, std::move(data));
     } else {
         setTextureData(t,
-                level, xoffset, yoffset, zoffset, width, height, depth, std::move(data), nullptr);
-    }
-}
-
-void OpenGLDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
-        PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
-    DEBUG_MARKER()
-
-    GLTexture* t = handle_cast<GLTexture *>(th);
-    auto width = std::max(1u, t->width >> level);
-    auto height = std::max(1u, t->height >> level);
-    if (data.type == PixelDataType::COMPRESSED) {
-        setCompressedTextureData(t, level, 0, 0, 0, width, height, 0, std::move(data), &faceOffsets);
-    } else {
-        setTextureData(t, level, 0, 0, 0, width, height, 0, std::move(data), &faceOffsets);
+                level, xoffset, yoffset, zoffset, width, height, depth, std::move(data));
     }
 }
 
@@ -1842,11 +1813,10 @@ bool OpenGLDriver::canGenerateMipmaps() {
     return true;
 }
 
-void OpenGLDriver::setTextureData(GLTexture* t,
-        uint32_t level,
+void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
+        PixelBufferDescriptor&& p) {
     auto& gl = mContext;
 
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
@@ -1861,10 +1831,10 @@ void OpenGLDriver::setTextureData(GLTexture* t,
     GLenum glFormat = getFormat(p.format);
     GLenum glType = getType(p.type);
 
-    gl.pixelStore(GL_UNPACK_ROW_LENGTH, p.stride);
-    gl.pixelStore(GL_UNPACK_ALIGNMENT, p.alignment);
-    gl.pixelStore(GL_UNPACK_SKIP_PIXELS, p.left);
-    gl.pixelStore(GL_UNPACK_SKIP_ROWS, p.top);
+    gl.pixelStore(GL_UNPACK_ROW_LENGTH, GLint(p.stride));
+    gl.pixelStore(GL_UNPACK_ALIGNMENT, GLint(p.alignment));
+    gl.pixelStore(GL_UNPACK_SKIP_PIXELS, GLint(p.left));
+    gl.pixelStore(GL_UNPACK_SKIP_ROWS, GLint(p.top));
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
@@ -1878,7 +1848,7 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             assert_invariant(t->gl.target == GL_TEXTURE_2D);
             glTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
-                    width, height, glFormat, glType, p.buffer);
+                    GLsizei(width), GLsizei(height), glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_3D:
             assert_invariant(zoffset + depth <= std::max(1u, t->depth >> level));
@@ -1887,7 +1857,7 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             assert_invariant(t->gl.target == GL_TEXTURE_3D);
             glTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                    width, height, depth, glFormat, glType, p.buffer);
+                    GLsizei(width), GLsizei(height), GLsizei(depth), glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
             assert_invariant(zoffset + depth <= t->depth);
@@ -1897,19 +1867,25 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             assert_invariant(t->gl.target == GL_TEXTURE_2D_ARRAY);
             glTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                    width, height, depth, glFormat, glType, p.buffer);
+                    GLsizei(width), GLsizei(height), GLsizei(depth), glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert_invariant(t->gl.target == GL_TEXTURE_CUBE_MAP);
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            FaceOffsets const& offsets = *faceOffsets;
+
+            assert_invariant(width == height);
+            const size_t faceSize = PixelBufferDescriptor::computeDataSize(
+                    p.format, p.type, p.stride ? p.stride : width, height, p.alignment);
+
+            assert_invariant(zoffset + depth <= 6);
+
             UTILS_NOUNROLL
-            for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(face);
-                glTexSubImage2D(target, GLint(level), 0, 0,
-                        width, height, glFormat, glType,
-                        static_cast<uint8_t const*>(p.buffer) + offsets[face]);
+            for (size_t face = 0; face < depth; face++) {
+                GLenum target = getCubemapTarget(zoffset + face);
+                glTexSubImage2D(target, GLint(level), GLint(xoffset), GLint(yoffset),
+                        GLsizei(width), GLsizei(height), glFormat, glType,
+                        static_cast<uint8_t const*>(p.buffer) + faceSize * face);
             }
             break;
         }
@@ -1932,10 +1908,10 @@ void OpenGLDriver::setTextureData(GLTexture* t,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
+void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
+        PixelBufferDescriptor&& p) {
     auto& gl = mContext;
 
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
@@ -1966,7 +1942,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             assert_invariant(t->gl.target == GL_TEXTURE_2D);
             glCompressedTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
-                    width, height, t->gl.internalFormat, imageSize, p.buffer);
+                    GLsizei(width), GLsizei(height),
+                    t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_3D:
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
@@ -1974,26 +1951,31 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             assert_invariant(t->gl.target == GL_TEXTURE_3D);
             glCompressedTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                    width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
+                    GLsizei(width), GLsizei(height), GLsizei(depth),
+                    t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
             assert_invariant(t->gl.target == GL_TEXTURE_2D_ARRAY);
             glCompressedTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                    width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
+                    GLsizei(width), GLsizei(height), GLsizei(depth),
+                    t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
-            assert_invariant(faceOffsets);
             assert_invariant(t->gl.target == GL_TEXTURE_CUBE_MAP);
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            FaceOffsets const& offsets = *faceOffsets;
+
+            assert_invariant(width == height);
+            const size_t faceSize = PixelBufferDescriptor::computeDataSize(
+                    p.format, p.type, p.stride ? p.stride : width, height, p.alignment);
+
             UTILS_NOUNROLL
-            for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(face);
-                glCompressedTexSubImage2D(target, GLint(level), 0, 0,
-                        width, height, t->gl.internalFormat,
-                        imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
+            for (size_t face = 0; face < depth; face++) {
+                GLenum target = getCubemapTarget(zoffset + face);
+                glCompressedTexSubImage2D(target, GLint(level), GLint(xoffset), GLint(yoffset),
+                        GLsizei(width), GLsizei(height), t->gl.internalFormat,
+                        imageSize, static_cast<uint8_t const*>(p.buffer) + faceSize * face);
             }
             break;
         }

@@ -401,16 +401,6 @@ io::ostream& operator<<(io::ostream& out, const AttributeArray& type) {
     return out << "AttributeArray[" << type.max_size() << "]{}";
 }
 
-io::ostream& operator<<(io::ostream& out, const FaceOffsets& type) {
-    return out << "FaceOffsets{"
-    << type[0] << ", "
-    << type[1] << ", "
-    << type[2] << ", "
-    << type[3] << ", "
-    << type[4] << ", "
-    << type[5] << "}";
-}
-
 io::ostream& operator<<(io::ostream& out, const RasterState& rs) {
     // TODO: implement decoding of enums
     return out << "RasterState{"

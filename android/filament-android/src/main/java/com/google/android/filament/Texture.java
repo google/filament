@@ -912,7 +912,7 @@ public class Texture {
     public void setImage(@NonNull Engine engine,
             @IntRange(from = 0) int level,
             @NonNull PixelBufferDescriptor buffer) {
-        setImage(engine, level, 0, 0, getWidth(level), getHeight(level), buffer);
+        setImage(engine, level, 0, 0, 0, getWidth(level), getHeight(level), 1, buffer);
     }
 
 
@@ -947,25 +947,7 @@ public class Texture {
             @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
             @IntRange(from = 0) int width, @IntRange(from = 0) int height,
             @NonNull PixelBufferDescriptor buffer) {
-        int result;
-        if (buffer.type == COMPRESSED) {
-            result = nSetImageCompressed(getNativeObject(), engine.getNativeObject(), level,
-                    xoffset, yoffset, width, height,
-                    buffer.storage, buffer.storage.remaining(),
-                    buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
-                    buffer.compressedSizeInBytes, buffer.compressedFormat.ordinal(),
-                    buffer.handler, buffer.callback);
-        } else {
-            result = nSetImage(getNativeObject(), engine.getNativeObject(), level,
-                    xoffset, yoffset, width, height,
-                    buffer.storage, buffer.storage.remaining(),
-                    buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
-                    buffer.stride, buffer.format.ordinal(),
-                    buffer.handler, buffer.callback);
-        }
-        if (result < 0) {
-            throw new BufferOverflowException();
-        }
+        setImage(engine, level, xoffset, yoffset, 0, width, height, 1, buffer);
     }
 
     /**
@@ -1046,7 +1028,9 @@ public class Texture {
      *
      * @see Builder#sampler
      * @see PixelBufferDescriptor
+     * @deprecated use {@link #setImage(Engine, int, int, int, int, int, int, int, PixelBufferDescriptor)}
      */
+     @Deprecated
     public void setImage(@NonNull Engine engine, @IntRange(from = 0) int level,
             @NonNull PixelBufferDescriptor buffer,
             @NonNull @Size(min = 6) int[] faceOffsetsInBytes) {
@@ -1257,18 +1241,6 @@ public class Texture {
     private static native int nGetLevels(long nativeTexture);
     private static native int nGetTarget(long nativeTexture);
     private static native int nGetInternalFormat(long nativeTexture);
-
-    private static native int nSetImage(long nativeTexture, long nativeEngine,
-            int level, int xoffset, int yoffset, int width, int height,
-            Buffer storage, int remaining, int left, int top, int type, int alignment,
-            int stride, int format,
-            Object handler, Runnable callback);
-
-    private static native int nSetImageCompressed(long nativeTexture, long nativeEngine,
-            int level, int xoffset, int yoffset, int width, int height,
-            Buffer storage, int remaining, int left, int top, int type, int alignment,
-            int compressedSizeInBytes, int compressedFormat,
-            Object handler, Runnable callback);
 
     private static native int nSetImage3D(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth,
