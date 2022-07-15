@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- WebGL: upgraded the JS bindings to work with emsdk 3.1.15
+
 ## v1.25.4
 
 - backend: streamline texture upload APIs [⚠️ **API Change**]
