@@ -266,33 +266,15 @@ void PostProcessManager::init() noexcept {
     mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::R8, 1, 256, 1, 1, TextureUsage::DEFAULT);
 
-    PixelBufferDescriptor dataOne(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
-    PixelBufferDescriptor dataOneArray(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
-    PixelBufferDescriptor dataZero(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     PixelBufferDescriptor dataStarburst(driver.allocate(256), 256, PixelDataFormat::R, PixelDataType::UBYTE);
-    *static_cast<uint32_t *>(dataOne.buffer) = 0xFFFFFFFF;
-    *static_cast<uint32_t *>(dataOneArray.buffer) = 0xFFFFFFFF;
-    *static_cast<uint32_t *>(dataZero.buffer) = 0;
     std::generate_n((uint8_t*)dataStarburst.buffer, 256,
             [&dist = mUniformDistribution, &gen = mEngine.getRandomEngine()]() {
         float r = 0.5f + 0.5f * dist(gen);
         return uint8_t(r * 255.0f);
     });
 
-    driver.update2DImage(engine.getOneTexture(),
-            0, 0, 0, 1, 1,
-            std::move(dataOne));
-
-    driver.update3DImage(engine.getOneTextureArray(),
-            0, 0, 0, 0, 1, 1, 1,
-            std::move(dataOneArray));
-
-    driver.update2DImage(engine.getZeroTexture(),
-            0, 0, 0, 1, 1,
-            std::move(dataZero));
-
-    driver.update2DImage(mStarburstTexture,
-            0, 0, 0, 256, 1,
+    driver.update3DImage(mStarburstTexture,
+            0, 0, 0, 0, 256, 1, 1,
             std::move(dataStarburst));
 }
 

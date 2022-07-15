@@ -345,38 +345,29 @@ void FEngine::init() {
     mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
-    mDummyOneIntegerTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
-            TextureFormat::RGBA8I, 1, 1, 1, 1, TextureUsage::DEFAULT);
-
     mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
 
     // initialize the dummy textures so that their contents are not undefined
 
-    using PixelBufferDescriptor = Texture::PixelBufferDescriptor;
-
-    static const uint32_t zeroes = 0;
+    static const uint32_t zeroes[6] = {0};
     static const uint32_t ones = 0xffffffff;
-    static const uint32_t signedOnes = 0x7f7f7f7f;
 
-    mDefaultIblTexture->setImage(*this, 0,
-            PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE), {});
+    driverApi.update3DImage(mDefaultIblTexture->getHwHandle(), 0, 0, 0, 0, 1, 1, 6,
+            { zeroes, sizeof(zeroes), Texture::Format::RGBA, Texture::Type::UBYTE });
 
-    driverApi.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1,
-            PixelBufferDescriptor(&ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
+    driverApi.update3DImage(mDummyOneTexture, 0, 0, 0, 0, 1, 1, 1,
+            { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
-            PixelBufferDescriptor(&ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
-
-    driverApi.update3DImage(mDummyOneIntegerTextureArray, 0, 0, 0, 0, 1, 1, 1,
-            PixelBufferDescriptor(&signedOnes, 4, Texture::Format::RGBA_INTEGER, Texture::Type::BYTE));
+            { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
-            PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
+            { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
-            PixelBufferDescriptor(&zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE));
+            { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
     mDefaultRenderTarget = driverApi.createDefaultRenderTarget();
 
@@ -467,7 +458,6 @@ void FEngine::shutdown() {
 
     driver.destroyTexture(mDummyOneTexture);
     driver.destroyTexture(mDummyOneTextureArray);
-    driver.destroyTexture(mDummyOneIntegerTextureArray);
     driver.destroyTexture(mDummyZeroTexture);
     driver.destroyTexture(mDummyZeroTextureArray);
 

@@ -168,7 +168,7 @@ TEST_F(BackendTest, FeedbackLoops) {
          }
         auto cb = [](void* buffer, size_t size, void* user) { free(buffer); };
         PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
-        api.update2DImage(texture, 0, 0, 0, kTexWidth, kTexHeight, std::move(pb));
+        api.update3DImage(texture, 0, 0, 0, 0, kTexWidth, kTexHeight, 1, std::move(pb));
 
         for (int frame = 0; frame < kNumFrames; frame++) {
 

@@ -189,69 +189,6 @@ Java_com_google_android_filament_Texture_nGetInternalFormat(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nSetImage(JNIEnv* env, jclass, jlong nativeTexture,
-        jlong nativeEngine, jint level, jint xoffset, jint yoffset, jint width, jint height,
-        jobject storage,  jint remaining,
-        jint left, jint top, jint type, jint alignment,
-        jint stride, jint format,
-        jobject handler, jobject runnable) {
-    Texture* texture = (Texture*) nativeTexture;
-    Engine* engine = (Engine*) nativeEngine;
-
-    size_t sizeInBytes = getTextureDataSize(texture, (size_t) level, (Texture::Format) format,
-            (Texture::Type) type, (size_t) stride, (size_t) height, (size_t) alignment);
-
-    AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
-
-    void *buffer = nioBuffer.getData();
-    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
-
-    Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
-
-    texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
-            (uint32_t) width, (uint32_t) height, std::move(desc));
-
-    return 0;
-}
-
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass,
-        jlong nativeTexture, jlong nativeEngine, jint level, jint xoffset, jint yoffset,
-        jint width, jint height, jobject storage,  jint remaining,
-        jint, jint, jint, jint, jint compressedSizeInBytes, jint compressedFormat,
-        jobject handler, jobject runnable) {
-    Texture *texture = (Texture *) nativeTexture;
-    Engine *engine = (Engine *) nativeEngine;
-
-    size_t sizeInBytes = (size_t) compressedSizeInBytes;
-
-    AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
-
-    void *buffer = nioBuffer.getData();
-    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
-
-    Texture::PixelBufferDescriptor desc(buffer, sizeInBytes,
-            (backend::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
-
-    texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
-            (uint32_t) width, (uint32_t) height, std::move(desc));
-
-    return 0;
-}
-
-extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Texture_nSetImage3D(JNIEnv* env, jclass, jlong nativeTexture,
         jlong nativeEngine, jint level,
         jint xoffset, jint yoffset, jint zoffset,
@@ -353,7 +290,10 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
             (uint32_t) stride,
             callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     texture->setImage(*engine, (size_t) level, std::move(desc), faceOffsets);
+#pragma clang diagnostic pop
 
     return 0;
 }
@@ -388,7 +328,10 @@ Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env,
             (backend::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
             callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     texture->setImage(*engine, (size_t) level, std::move(desc), faceOffsets);
+#pragma clang diagnostic pop
 
     return 0;
 }

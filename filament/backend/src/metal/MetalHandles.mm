@@ -641,6 +641,7 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
             break;
         }
 
+        case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_2D_ARRAY: {
             // Metal uses 'slice' (not z offset) to index into individual layers of a texture array.
             const uint32_t slice = region.origin.z;
@@ -659,7 +660,6 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
             break;
         }
 
-        case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_EXTERNAL: {
             assert_invariant(false);
         }
@@ -668,26 +668,8 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
     updateLodRange(level);
 }
 
-void MetalTexture::loadCubeImage(const FaceOffsets& faceOffsets, int miplevel,
-        PixelBufferDescriptor& p) {
-    PixelBufferDescriptor* data = &p;
-    PixelBufferDescriptor reshapedData;
-    if(reshape(p, reshapedData)) {
-        data = &reshapedData;
-    }
-
-    const NSUInteger faceWidth = width >> miplevel;
-
-    for (NSUInteger slice = 0; slice < 6; slice++) {
-        FaceOffsets::size_type faceOffset = faceOffsets.offsets[slice];
-        loadSlice(miplevel, MTLRegionMake2D(0, 0, faceWidth, faceWidth), faceOffset, slice, *data);
-    }
-
-    updateLodRange((uint32_t) miplevel);
-}
-
 void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
-        PixelBufferDescriptor& data) noexcept {
+        PixelBufferDescriptor const& data) noexcept {
     const PixelBufferShape shape = PixelBufferShape::compute(data, format, region.size, byteOffset);
 
     ASSERT_PRECONDITION(data.size >= shape.totalBytes,
@@ -722,7 +704,7 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
 }
 
 void MetalTexture::loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion region,
-        PixelBufferDescriptor& data, const PixelBufferShape& shape) {
+        PixelBufferDescriptor const& data, const PixelBufferShape& shape) {
     const size_t stagingBufferSize = shape.totalBytes;
     auto entry = context.bufferPool->acquireBuffer(stagingBufferSize);
     memcpy(entry->buffer.contents,
@@ -750,7 +732,7 @@ void MetalTexture::loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion 
 }
 
 void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region,
-        PixelBufferDescriptor& data, const PixelBufferShape& shape) {
+        PixelBufferDescriptor const& data, const PixelBufferShape& shape) {
     MTLPixelFormat stagingPixelFormat = getMetalFormat(data.format, data.type);
     MTLTextureDescriptor* descriptor = [MTLTextureDescriptor new];
     descriptor.textureType = region.size.depth == 1 ? MTLTextureType2D : MTLTextureType3D;

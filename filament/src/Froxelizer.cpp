@@ -502,8 +502,8 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 
 void Froxelizer::commit(backend::DriverApi& driverApi) {
     // send data to GPU
-    driverApi.update2DImage(mFroxelTexture, 0, 0, 0,
-            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT,{
+    driverApi.update3DImage(mFroxelTexture, 0, 0, 0, 0,
+            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT, 1, {
                     mFroxelBufferUser.begin(), mFroxelBufferUser.sizeInBytes(),
                     PixelBufferDescriptor::PixelDataFormat::RG_INTEGER,
                     PixelBufferDescriptor::PixelDataType::USHORT });

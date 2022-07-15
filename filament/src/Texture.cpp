@@ -46,18 +46,6 @@ Texture::InternalFormat Texture::getFormat() const noexcept {
 }
 
 void Texture::setImage(Engine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer) const {
-    upcast(this)->setImage(upcast(engine), level, std::move(buffer));
-}
-
-void Texture::setImage(Engine& engine,
-        size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& buffer) const {
-    upcast(this)->setImage(upcast(engine),
-            level, xoffset, yoffset, width, height, std::move(buffer));
-}
-
-void Texture::setImage(Engine& engine, size_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& buffer) const {
