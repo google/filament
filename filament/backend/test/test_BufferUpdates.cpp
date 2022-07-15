@@ -233,7 +233,14 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
         getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64);
     }
 
-    renderTriangle(renderTarget, swapChain, program, true);
+    RenderPassParams params = {};
+    params.flags.clear = TargetBufferFlags::COLOR;
+    params.clearColor = {0.f, 0.f, 1.f, 1.f};
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+    params.viewport.height = 512;
+    params.viewport.width = 512;
+    renderTriangle(renderTarget, swapChain, program, params);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
     // color.b, color.a, offset.x, and offset.y.
@@ -251,7 +258,9 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
         getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64 + offsetof(MaterialParams, color.b));
     }
 
-    renderTriangle(renderTarget, swapChain, program);
+    params.flags.clear = TargetBufferFlags::NONE;
+    params.flags.discardStart = TargetBufferFlags::NONE;
+    renderTriangle(renderTarget, swapChain, program, params);
 
     static const uint32_t expectedHash = 91322442;
     readPixelsAndAssertHash(

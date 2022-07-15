@@ -109,20 +109,26 @@ void BackendTest::fullViewport(Viewport& viewport) {
     viewport.height = view.height;
 }
 
-void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
-        Handle<HwSwapChain> swapChain, Handle<HwProgram> program, bool clear) {
-    auto& api = getDriverApi();
-
-    TrianglePrimitive triangle(api);
-
+void BackendTest::renderTriangle(
+        filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
+        filament::backend::Handle<filament::backend::HwSwapChain> swapChain,
+        filament::backend::Handle<filament::backend::HwProgram> program) {
     RenderPassParams params = {};
     fullViewport(params);
-    params.flags.clear = clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE;
+    params.flags.clear = TargetBufferFlags::COLOR;
     params.clearColor = {0.f, 0.f, 1.f, 1.f};
-    params.flags.discardStart = clear ? TargetBufferFlags::ALL : TargetBufferFlags::NONE;
+    params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
     params.viewport.width = 512;
+    renderTriangle(renderTarget, swapChain, program, params);
+}
+
+void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
+        Handle<HwSwapChain> swapChain, Handle<HwProgram> program, const RenderPassParams& params) {
+    auto& api = getDriverApi();
+
+    TrianglePrimitive triangle(api);
 
     api.makeCurrent(swapChain, swapChain);
 
