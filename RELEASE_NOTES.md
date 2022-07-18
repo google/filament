@@ -4,9 +4,11 @@ This file contains one line summaries of commits that are worthy of mentioning i
 A new header is inserted each time a *tag* is created.
 
 ## main branch
-- engine: Fix Adreno gpu crash introduced by gpu morph target change 
-- engine: Add optional memory configuration parameters to Engine initialization
 
+## v1.25.3
+
+- engine: Fix Adreno gpu crash introduced by gpu morph target change
+- engine: Add optional memory configuration parameters to Engine initialization
 
 ## v1.25.2
 
