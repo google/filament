@@ -84,13 +84,13 @@ Java_com_google_android_filament_Camera_nLookAt(JNIEnv*, jclass, jlong nativeCam
     camera->lookAt({eye_x, eye_y, eye_z}, {center_x, center_y, center_z}, {up_x, up_y, up_z});
 }
 
-extern "C" JNIEXPORT jfloat JNICALL
+extern "C" JNIEXPORT jdouble JNICALL
 Java_com_google_android_filament_Camera_nGetNear(JNIEnv*, jclass, jlong nativeCamera) {
     Camera *camera = (Camera *) nativeCamera;
     return camera->getNear();
 }
 
-extern "C" JNIEXPORT jfloat JNICALL
+extern "C" JNIEXPORT jdouble JNICALL
 Java_com_google_android_filament_Camera_nGetCullingFar(JNIEnv*, jclass,
         jlong nativeCamera) {
     Camera *camera = (Camera *) nativeCamera;

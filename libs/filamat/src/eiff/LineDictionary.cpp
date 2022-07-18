@@ -16,33 +16,25 @@
 
 #include "LineDictionary.h"
 
-#include <assert.h>
-
 namespace filamat {
 
-    LineDictionary::LineDictionary() : mStorageSize(0){
-}
-
-const std::string& LineDictionary::getString(size_t index) const noexcept {
-    assert(index < mStrings.size());
-    return mStrings[index];
+std::string_view LineDictionary::getString(size_t index) const noexcept {
+    return *mStrings[index];
 }
 
 size_t LineDictionary::getLineCount() const {
     return mStrings.size();
 }
 
-size_t LineDictionary::getIndex(const std::string& s) const noexcept {
-    if (mLineIndices.find(s) == mLineIndices.end()) {
-        return SIZE_MAX;
+size_t LineDictionary::getIndex(std::string_view s) const noexcept {
+    if (auto iter = mLineIndices.find(s); iter != mLineIndices.end()) {
+        return iter->second;
     }
-    return mLineIndices.at(s);
+    return SIZE_MAX;
 }
 
 void LineDictionary::addText(const std::string& line) noexcept {
     const char* s = line.c_str();
-
-    assert(s != nullptr);
 
     size_t cur = 0;
     size_t pos = 0;
@@ -66,11 +58,8 @@ void LineDictionary::addLine(const std::string&& line) noexcept {
     if (mLineIndices.find(line) != mLineIndices.end()) {
         return;
     }
-
-    mLineIndices[line] = mStrings.size();
-    size_t size = line.size();
-    mStrings.push_back(std::move(line));
-    mStorageSize += size + 1;
+    mStrings.emplace_back(std::make_unique<std::string>(line));
+    mLineIndices.emplace(*mStrings.back(), mStrings.size() - 1);
 }
 
 } // namespace filamat

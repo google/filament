@@ -5,6 +5,12 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.25.2
+
+- engine: `Camera::getNear()` and `Camera::getCullingFar()` now return `doubles`
+- Metal: implement scissor support.
+- engine: `Renderer::getUserTime()` now returns seconds as documented (#5722) [⚠️ **API Fix**]
+
 ## v1.25.1
 
 - engine: add support for automatic instancing. Must be enabled with `Engine::setAutomaticInstancingEnabled(bool)`
