@@ -16,9 +16,7 @@
 
 #include "MetalBuffer.h"
 
-#include <utils/Panic.h>
-
-#include <array>
+#include "MetalContext.h"
 
 namespace filament {
 namespace backend {
@@ -27,24 +25,20 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, 
         : mBufferSize(size), mContext(context) {
     // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
     // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
-    if (size <= 4 * 1024) {
-        if (usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
-            mBufferPoolEntry = nullptr;
-            mCpuBuffer = malloc(size);
-        }
-    }
+   if (size <= 4 * 1024 && usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
+       mBuffer = nil;
+       mCpuBuffer = malloc(size);
+       return;
+   }
 
-    mUsage = usage;
+    // Otherwise, we allocate a private GPU buffer.
+    mBuffer = [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate];
+    ASSERT_POSTCONDITION(mBuffer, "Could not allocate Metal buffer of size %zu.", size);
 }
 
 MetalBuffer::~MetalBuffer() {
     if (mCpuBuffer) {
         free(mCpuBuffer);
-    }
-    // This buffer is being destroyed. If we have a buffer pool entry, release it as it is no longer
-    // needed.
-    if (mBufferPoolEntry) {
-        mContext.bufferPool->releaseBuffer(mBufferPoolEntry);
     }
 }
 
@@ -53,7 +47,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
         return;
     }
     ASSERT_PRECONDITION(size + byteOffset <= mBufferSize,
-            "Attempting to copy %d bytes into a buffer of size %d at offset %d",
+            "Attempting to copy %zu bytes into a buffer of size %zu at offset %zu",
             size, mBufferSize, byteOffset);
 
     // Either copy into the Metal buffer or into our cpu buffer.
@@ -62,14 +56,26 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
         return;
     }
 
-    // We're about to acquire a new buffer to hold the new contents. If we previously had obtained a
-    // buffer we release it, decrementing its reference count, as we no longer needs it.
-    if (mBufferPoolEntry) {
-        mContext.bufferPool->releaseBuffer(mBufferPoolEntry);
-    }
+    // Acquire a staging buffer to hold the contents of this update.
+    MetalBufferPool* bufferPool = mContext.bufferPool;
+    const MetalBufferPoolEntry* const staging = bufferPool->acquireBuffer(size);
+    memcpy(staging->buffer.contents, src, size);
 
-    mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
-    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + byteOffset, src, size);
+    // The blit below requires that byteOffset be a multiple of 4.
+    ASSERT_PRECONDITION(!(byteOffset & 0x3u), "byteOffset must be a multiple of 4");
+
+    // Encode a blit from the staging buffer into the private GPU buffer.
+    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
+    id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+    [blitEncoder copyFromBuffer:staging->buffer
+                   sourceOffset:0
+                       toBuffer:mBuffer
+              destinationOffset:byteOffset
+                           size:size];
+    [blitEncoder endEncoding];
+    [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+        bufferPool->releaseBuffer(staging);
+    }];
 }
 
 void MetalBuffer::copyIntoBufferUnsynchronized(void* src, size_t size, size_t byteOffset) {
@@ -78,31 +84,13 @@ void MetalBuffer::copyIntoBufferUnsynchronized(void* src, size_t size, size_t by
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {
-    if (!mBufferPoolEntry) {
-        // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
-        // separately.
-        if (mCpuBuffer) {
-            return nil;
-        }
-
-        // If there isn't a CPU buffer, it means no data has been loaded into this buffer yet. To
-        // avoid an error, we'll allocate an empty buffer.
-        mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
+    // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
+    // separately.
+    if (mCpuBuffer) {
+        return nil;
     }
-
-    // This buffer is being used in a draw call, so we retain it so it's not released back into the
-    // buffer pool until the frame has finished.
-    auto uniformDeleter = [bufferPool = mContext.bufferPool] (const void* resource) {
-        bufferPool->releaseBuffer((const MetalBufferPoolEntry*) resource);
-    };
-    if (mContext.resourceTracker.trackResource((__bridge void*) cmdBuffer, mBufferPoolEntry,
-            uniformDeleter)) {
-        // We only want to retain the buffer once per command buffer- trackResource will return
-        // true if this is the first time tracking this uniform for this command buffer.
-        mContext.bufferPool->retainBuffer(mBufferPoolEntry);
-    }
-
-    return mBufferPoolEntry->buffer;
+    assert_invariant(mBuffer);
+    return mBuffer;
 }
 
 void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,

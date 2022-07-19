@@ -703,6 +703,8 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateBufferObject must be called outside of a render pass.");
     auto* bo = handle_cast<MetalBufferObject>(boh);
     bo->updateBuffer(data.buffer, data.size, byteOffset);
     scheduleDestroy(std::move(data));
