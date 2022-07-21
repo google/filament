@@ -129,7 +129,9 @@ public:
 private:
     void* end() UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mSize); }
     void* current() UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mCur); }
-    void set_current(void* p) UTILS_RESTRICT noexcept { mCur = uintptr_t(p) - uintptr_t(mBegin); }
+    void set_current(void* p) UTILS_RESTRICT noexcept {
+        mCur = uint32_t(uintptr_t(p) - uintptr_t(mBegin));
+    }
 
     void* mBegin = nullptr;
     uint32_t mSize = 0;
