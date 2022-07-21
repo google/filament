@@ -1061,4 +1061,15 @@ void FEngine::destroy(FEngine* engine) {
     }
 }
 
+Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
+    FEngine::DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
+    return driver.getFeatureLevel();
+}
+
+Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
+    ASSERT_PRECONDITION(featureLevel <= getSupportedFeatureLevel(),
+            "Feature level %u not supported", (unsigned)featureLevel);
+    return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
+}
+
 } // namespace filament

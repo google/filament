@@ -175,6 +175,14 @@ public:
         return mUvFromClipMatrix;
     }
 
+    FeatureLevel getSupportedFeatureLevel() const noexcept;
+
+    FeatureLevel setActiveFeatureLevel(FeatureLevel featureLevel);
+
+    FeatureLevel getActiveFeatureLevel() const noexcept {
+        return mActiveFeatureLevel;
+    }
+
     PostProcessManager const& getPostProcessManager() const noexcept {
         return mPostProcessManager;
     }
@@ -362,6 +370,10 @@ public:
     size_t getRequestedDriverHandleArenaSize() const noexcept { return mConfig.driverHandleArenaSizeMB * MiB; }
     Config const& getConfig() const noexcept { return mConfig; }
 
+    bool hasFeatureLevel(backend::FeatureLevel featureLevel) const noexcept {
+        return featureLevel <= mActiveFeatureLevel;
+    }
+
 private:
     static Config validateConfig(const Config* pConfig) noexcept;
 
@@ -388,6 +400,7 @@ private:
     backend::Handle<backend::HwRenderTarget> mDefaultRenderTarget;
 
     Backend mBackend;
+    FeatureLevel mActiveFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;
     bool mAutomaticInstancingEnabled = false;

@@ -64,7 +64,7 @@ static constexpr size_t CONFIG_BINDING_COUNT = 12;  // This is guaranteed by Ope
  */
 enum class FeatureLevel : uint8_t {
     FEATURE_LEVEL_1 = 1,  //!< OpenGL ES 3.0 features (default)
-    FEATURE_LEVEL_2       //!< OpenGL ES 3.1 features + 31 textures units minimum + cubemap arrays
+    FEATURE_LEVEL_2       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
 };
 
 /**
