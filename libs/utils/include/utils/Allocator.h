@@ -51,7 +51,7 @@ static inline P* align(P* p, size_t alignment) noexcept {
 template <typename P>
 static inline P* align(P* p, size_t alignment, size_t offset) noexcept {
     P* const r = align(add(p, offset), alignment);
-    assert(pointermath::add(r, -offset) >= p);
+    assert(r >= add(p, offset));
     return r;
 }
 
