@@ -34,7 +34,10 @@ namespace filament::uberz {
 // Users do not need to access this class directly, they should go through gltfio.
 class WritableArchive {
 public:
-    WritableArchive(size_t materialCount) : mMaterials(materialCount) {}
+    WritableArchive(size_t materialCount) : mMaterials(uint32_t(materialCount)) {
+        assert(materialCount <= UINT_MAX);
+    }
+
     void addMaterial(const char* name, const uint8_t* package, size_t packageSize);
     void addSpecLine(std::string_view line);
     utils::FixedCapacityVector<uint8_t> serialize() const;
