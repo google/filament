@@ -322,7 +322,7 @@ private:
     }
 
     void construct(iterator first, iterator last, const_reference proto) noexcept {
-        #pragma nounroll
+        UTILS_NOUNROLL
         while (first != last) {
             storage_traits::construct(allocator(), first++, proto);
         }
@@ -330,7 +330,7 @@ private:
 
     // should this be NOINLINE?
     void construct_non_trivial(iterator first, iterator last) noexcept {
-        #pragma nounroll
+        UTILS_NOUNROLL
         while (first != last) {
             storage_traits::construct(allocator(), first++);
         }
@@ -346,7 +346,7 @@ private:
 
     // should this be NOINLINE?
     void destroy_non_trivial(iterator first, iterator last) noexcept {
-        #pragma nounroll
+        UTILS_NOUNROLL
         while (first != last) {
             storage_traits::destroy(allocator(), --last);
         }
