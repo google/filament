@@ -124,12 +124,14 @@ public:
     bool analyzeFragmentShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
             MaterialBuilder::MaterialDomain materialDomain,
-            MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading) const noexcept;
+            MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading,
+            MaterialInfo const& info) const noexcept;
 
     bool analyzeVertexShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
             MaterialBuilder::MaterialDomain materialDomain,
-            MaterialBuilder::TargetApi targetApi) const noexcept;
+            MaterialBuilder::TargetApi targetApi,
+            MaterialInfo const& info) const noexcept;
 
     // Public for unit tests.
     using Property = MaterialBuilder::Property;

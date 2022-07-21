@@ -206,6 +206,7 @@ public:
     using SamplerFormat = filament::backend::SamplerFormat;
     using ParameterPrecision = filament::backend::Precision;
     using CullingMode = filament::backend::CullingMode;
+    using FeatureLevel = filament::backend::FeatureLevel;
 
     enum class VariableQualifier : uint8_t {
         OUT
@@ -359,6 +360,8 @@ public:
 
 
     MaterialBuilder& quality(ShaderQuality quality) noexcept;
+
+    MaterialBuilder& featureLevel(FeatureLevel featureLevel) noexcept;
 
     //! Set the blending mode for this material.
     MaterialBuilder& blending(BlendingMode blending) noexcept;
@@ -654,7 +657,7 @@ private:
     // and vertex shaders in mProperties.
     bool findProperties(filament::backend::ShaderType type,
             MaterialBuilder::PropertyList& p) noexcept;
-    bool runSemanticAnalysis() noexcept;
+    bool runSemanticAnalysis(MaterialInfo const& info) noexcept;
 
     bool checkLiteRequirements() noexcept;
 
@@ -709,6 +712,7 @@ private:
     OutputList mOutputs;
 
     ShaderQuality mShaderQuality = ShaderQuality::DEFAULT;
+    FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
     BlendingMode mPostLightingBlendingMode = BlendingMode::TRANSPARENT;
     CullingMode mCullingMode = CullingMode::BACK;
