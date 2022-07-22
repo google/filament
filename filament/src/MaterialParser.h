@@ -58,6 +58,7 @@ public:
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;
+    bool getFeatureLevel(uint8_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
     bool getUIB(UniformInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
