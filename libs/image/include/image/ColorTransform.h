@@ -209,8 +209,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     using namespace filament::math;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
-    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
-    assert(channels >= 3);
+    assert(image.getChannels() >= 3);
     std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
@@ -231,8 +230,7 @@ inline std::unique_ptr<uint8_t[]> fromLinearToRGB_10_11_11_REV(const LinearImage
     using namespace filament::math;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
-    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
-    assert(channels >= 3);
+    assert(image.getChannels() >= 3);
     std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(uint32_t)]);
     uint8_t* d = dst.get();
     for (size_t y = 0; y < h; ++y) {
