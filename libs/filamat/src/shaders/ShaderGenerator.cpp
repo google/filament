@@ -181,7 +181,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
 
-    cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
+    cg.generateProlog(vs, ShaderType::VERTEX, material);
 
     cg.generateQualityDefine(vs, material.quality);
 
@@ -306,7 +306,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     const bool lit = material.isLit;
 
     io::sstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT, material.hasExternalSamplers);
+    cg.generateProlog(fs, ShaderType::FRAGMENT, material);
 
     cg.generateQualityDefine(fs, material.quality);
 
@@ -525,7 +525,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(
         const filament::Variant::type_t variantKey, SamplerBindingMap const& samplerBindingMap) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream vs;
-    cg.generateProlog(vs, ShaderType::VERTEX, false);
+    cg.generateProlog(vs, ShaderType::VERTEX, material);
 
     cg.generateQualityDefine(vs, material.quality);
 
@@ -566,7 +566,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
         uint8_t variant, const SamplerBindingMap& samplerBindingMap) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT, false);
+    cg.generateProlog(fs, ShaderType::FRAGMENT, material);
 
     cg.generateQualityDefine(fs, material.quality);
 
