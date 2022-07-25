@@ -199,7 +199,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
     uint32_t dim;
     Texture::PixelBufferDescriptor buffer;
     if (loadCubemapLevel(texture, &buffer, &dim, path, level, levelPrefix)) {
-        (*texture)->setImage(mEngine, level, 0, 0, dim, dim, std::move(buffer));
+        (*texture)->setImage(mEngine, level, 0, 0, 0, dim, dim, 6, std::move(buffer));
         return true;
     }
     return false;

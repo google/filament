@@ -1877,9 +1877,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             assert_invariant(width == height);
             const size_t faceSize = PixelBufferDescriptor::computeDataSize(
                     p.format, p.type, p.stride ? p.stride : width, height, p.alignment);
-
             assert_invariant(zoffset + depth <= 6);
-
             UTILS_NOUNROLL
             for (size_t face = 0; face < depth; face++) {
                 GLenum target = getCubemapTarget(zoffset + face);

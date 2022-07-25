@@ -78,7 +78,7 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
             for (uint32_t level = 0; level < nmips; ++level) {
                 ktx.getBlob({ level, 0, 0 }, &data, &size);
                 const uint32_t dim = texture->getWidth(level);
-                texture->setImage(*engine, level, 0, 0, dim, dim, {
+                texture->setImage(*engine, level, 0, 0, 0, dim, dim, 6, {
                         data, size * 6, cdatatype, size, cb, cbuser
                 });
             }
@@ -97,7 +97,7 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
         for (uint32_t level = 0; level < nmips; ++level) {
             ktx.getBlob({ level, 0, 0 }, &data, &size);
             const uint32_t dim = texture->getWidth(level);
-            texture->setImage(*engine, level, 0, 0, dim, dim, {
+            texture->setImage(*engine, level, 0, 0, 0, dim, dim, 6, {
                     data, size * 6, dataformat, datatype, cb, cbuser
             });
         }
