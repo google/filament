@@ -245,11 +245,28 @@ void FTexture::setImage(FEngine& engine, size_t level,
         return;
     }
 
-    // effective level is just how we compute the index/depth based on whether we're an array or a 3D texture
-    const uint8_t effectiveLevel = mTarget == SamplerType::SAMPLER_3D ? level : 0;
-    if (!ASSERT_POSTCONDITION_NON_FATAL(zoffset + depth <= valueForLevel(effectiveLevel, mDepth),
+    uint32_t textureDepthOrLayers;
+    switch (mTarget) {
+        case SamplerType::SAMPLER_EXTERNAL:
+            // can't happen by construction, fallthrough...
+        case SamplerType::SAMPLER_2D:
+            assert_invariant(mDepth == 1);
+            textureDepthOrLayers = mDepth;
+            break;
+        case SamplerType::SAMPLER_3D:
+            textureDepthOrLayers = valueForLevel(level, mDepth);
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            textureDepthOrLayers = mDepth;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            textureDepthOrLayers = 6;
+            break;
+    }
+
+    if (!ASSERT_POSTCONDITION_NON_FATAL(zoffset + depth <= textureDepthOrLayers,
             "zoffset (%u) + depth (%u) > texture depth (%u) at level (%u)",
-            unsigned(zoffset), unsigned(depth), unsigned(valueForLevel(effectiveLevel, mDepth)), unsigned(level))) {
+            unsigned(zoffset), unsigned(depth), textureDepthOrLayers, unsigned(level))) {
         return;
     }
 
