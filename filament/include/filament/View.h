@@ -697,7 +697,7 @@ public:
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
             void* user = pq->storage;
             (*static_cast<T**>(user)->*method)(result);
-        });
+        }, handler);
         query.storage[0] = instance;
     }
 
@@ -720,7 +720,7 @@ public:
             T* that = static_cast<T*>(user);
             (that->*method)(result);
             that->~T();
-        });
+        }, handler);
         new(query.storage) T(std::move(instance));
     }
 
