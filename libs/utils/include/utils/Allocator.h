@@ -167,7 +167,7 @@ public:
 
     ~HeapAllocator() noexcept = default;
 
-    void swap(HeapAllocator& rhs) noexcept { }
+    void swap(HeapAllocator&) noexcept { }
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -487,11 +487,15 @@ namespace TrackingPolicy {
 // default no-op tracker
 struct Untracked {
     Untracked() noexcept = default;
-    Untracked(const char* name, void* base, size_t size) noexcept { }
-    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept { }
-    void onFree(void* p, size_t = 0) noexcept { }
+    Untracked(const char* name, void* base, size_t size) noexcept {
+        (void)name, void(base), (void)size;
+    }
+    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
+        (void)p, (void)size, (void)alignment, (void)extra;
+    }
+    void onFree(void* p, size_t = 0) noexcept { (void)p; }
     void onReset() noexcept { }
-    void onRewind(void* addr) noexcept { }
+    void onRewind(void* addr) noexcept { (void)addr; }
 };
 
 // This just track the max memory usage and logs it in the destructor

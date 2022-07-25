@@ -98,12 +98,12 @@ public:
 
     // stateless allocators are always equal
     template<typename T>
-    bool operator==(const STLAlignedAllocator<T>& rhs) const noexcept {
+    bool operator==(const STLAlignedAllocator<T>&) const noexcept {
         return true;
     }
 
     template<typename T>
-    bool operator!=(const STLAlignedAllocator<T>& rhs) const noexcept {
+    bool operator!=(const STLAlignedAllocator<T>&) const noexcept {
         return false;
     }
 };
