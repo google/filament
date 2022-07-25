@@ -149,11 +149,25 @@ Texture* Texture::Builder::build(Engine& engine) {
 FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mWidth  = static_cast<uint32_t>(builder->mWidth);
     mHeight = static_cast<uint32_t>(builder->mHeight);
+    mDepth  = static_cast<uint32_t>(builder->mDepth);
     mFormat = builder->mFormat;
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
-    mDepth  = static_cast<uint32_t>(builder->mDepth);
-    mLevelCount = std::min(builder->mLevels, FTexture::maxLevelCount(mWidth, mHeight));
+
+    uint8_t maxLevelCount;
+    switch (builder->mTarget) {
+        case SamplerType::SAMPLER_2D:
+        case SamplerType::SAMPLER_2D_ARRAY:
+        case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_EXTERNAL:
+            maxLevelCount = FTexture::maxLevelCount(mWidth, mHeight);
+            break;
+        case SamplerType::SAMPLER_3D:
+            maxLevelCount = FTexture::maxLevelCount(std::max(mWidth, std::max(mHeight, mDepth)));
+            break;
+    }
+
+    mLevelCount = std::min(builder->mLevels, maxLevelCount);
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (UTILS_LIKELY(builder->mImportedId == 0)) {

@@ -43,7 +43,6 @@ public:
     size_t getHeight(size_t level = 0) const noexcept;
     size_t getDepth(size_t level = 0) const noexcept;
     size_t getLevelCount() const noexcept { return mLevelCount; }
-    size_t getMaxLevelCount() const noexcept { return FTexture::maxLevelCount(mWidth, mHeight); }
     Sampler getTarget() const noexcept { return mTarget; }
     InternalFormat getFormat() const noexcept { return mFormat; }
     Usage getUsage() const noexcept { return mUsage; }
@@ -100,12 +99,13 @@ public:
 
     // Returns the max number of levels for a texture of given max dimensions
     static inline uint8_t maxLevelCount(uint32_t maxDimension) noexcept {
-        return std::max(1, std::ilogbf(maxDimension) + 1);
+        return std::max(1, std::ilogbf(float(maxDimension)) + 1);
     }
 
     // Returns the max number of levels for a texture of given dimensions
     static inline uint8_t maxLevelCount(uint32_t width, uint32_t height) noexcept {
-        return std::max(1, std::ilogbf(std::max(width, height)) + 1);
+        uint32_t maxDimension = std::max(width, height);
+        return maxLevelCount(maxDimension);
     }
 
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
