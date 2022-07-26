@@ -32,7 +32,7 @@ public:
     PlatformCocoaGL();
     ~PlatformCocoaGL() noexcept final;
 
-    Driver* createDriver(void* sharedContext) noexcept override;
+    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
     void terminate() noexcept final;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;

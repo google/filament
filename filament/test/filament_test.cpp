@@ -628,7 +628,7 @@ TEST(FilamentTest, FroxelData) {
 
     FEngine* engine = FEngine::create();
 
-    LinearAllocatorArena arena("FRenderer: per-frame allocator", FEngine::CONFIG_PER_RENDER_PASS_ARENA_SIZE);
+    LinearAllocatorArena arena("FRenderer: per-frame allocator", 3 * 1024 * 1024);
     utils::ArenaScope<LinearAllocatorArena> scope(arena);
 
 

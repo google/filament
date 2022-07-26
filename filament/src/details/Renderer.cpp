@@ -104,7 +104,7 @@ FRenderer::~FRenderer() noexcept {
     // to free what we can (it would probably mean something when wrong).
 #ifndef NDEBUG
     size_t wm = getCommandsHighWatermark();
-    size_t wmpct = wm / (CONFIG_PER_FRAME_COMMANDS_SIZE / 100);
+    size_t wmpct = wm / (mEngine.getPerFrameCommandsSize() / 100);
     slog.d << "Renderer: Commands High watermark "
     << wm / 1024 << " KiB (" << wmpct << "%), "
     << wm / sizeof(Command) << " commands, " << sizeof(Command) << " bytes/command"
@@ -554,8 +554,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // But, this a no-op in common resolutions, in particular in 720p.
         // The origin of rendering is not modified, the padding is added to the right/top.
         //
-        // TODO: use this feature to implement guard-bands
-        //
         // TODO: Should we enable when we don't have post-processing?
         //       Without post-processing, we usually draw directly into
         //       the SwapChain, and we might want to keep it this way.
@@ -619,8 +617,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
-    void* const arenaBegin = arena.allocate(FEngine::CONFIG_PER_FRAME_COMMANDS_SIZE, CACHELINE_SIZE);
-    void* const arenaEnd = pointermath::add(arenaBegin, FEngine::CONFIG_PER_FRAME_COMMANDS_SIZE);
+    size_t perFrameCommandsSize = engine.getPerFrameCommandsSize();
+    void* const arenaBegin = arena.allocate(perFrameCommandsSize, CACHELINE_SIZE);
+    void* const arenaEnd = pointermath::add(arenaBegin, perFrameCommandsSize);
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
 
     RenderPass::RenderFlags renderFlags = 0;

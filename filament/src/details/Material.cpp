@@ -539,6 +539,7 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
     FMaterial* material = upcast((Material*) userdata);
+    std::lock_guard<utils::Mutex> lock(material->mActiveProgramsLock);
     *pVariants = material->mActivePrograms;
     material->mActivePrograms.reset();
 }

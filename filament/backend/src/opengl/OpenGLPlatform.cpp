@@ -22,8 +22,8 @@ namespace filament::backend {
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
-Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform, void* sharedContext) {
-    return OpenGLDriverFactory::create(platform, sharedContext);
+Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform, void* sharedContext, const Platform::DriverConfig& driverConfig) {
+    return OpenGLDriverFactory::create(platform, sharedContext, driverConfig);
 }
 
 } // namespace filament::backend

@@ -54,6 +54,22 @@ class LightManager;
 class RenderableManager;
 class TransformManager;
 
+#ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
+#    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 3
+#endif
+
+#ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
+#    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 2
+#endif
+
+#ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
+#    define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
+#endif
+
+#ifndef FILAMENT_COMMAND_BUFFER_SIZE_IN_MB
+#    define FILAMENT_COMMAND_BUFFER_SIZE_IN_MB (FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3)
+#endif
+
 /**
  * Engine is filament's main entry-point.
  *
@@ -151,6 +167,80 @@ class UTILS_PUBLIC Engine {
 public:
     using Platform = backend::Platform;
     using Backend = backend::Backend;
+    using DriverConfig = backend::Platform::DriverConfig;
+
+    /**
+     * Config is used to define the memory footprint used by the engine, such as the
+     * command buffer size. Config can be used to customize engine requirements based 
+     * on the applications needs.
+     */
+    struct Config {
+        /**
+         * Size in MiB of the low-level command buffer arena.
+         *
+         * Each new command buffer is allocated from here. If this buffer is too small the program
+         * might terminate or rendering errors might occur.
+         *
+         * This is typically set to minCommandBufferSizeMB * 3, so that up to 3 frames can be
+         * batched-up at once.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t commandBufferSizeMB = FILAMENT_COMMAND_BUFFER_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the per-frame high level command buffer arena.
+         *
+         * This is the main arena used for allocations when preparing a frame.
+         * e.g.: Froxel data and high-level commands are allocated from this arena.
+         *
+         * If this size is too small, the program will abort on debug builds and have undefined
+         * behavior otherwise.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t perRenderPassArenaSizeMB = FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the backend's handle arena.
+         *
+         * Backends will fallback to slower heap-based allocations when running out of space and
+         * log this condition.
+         *
+         * If 0, then the default value for the given platform is used
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t driverHandleArenaSizeMB = 0;
+
+
+        /**
+         * Minimum size in MiB of a low-level command buffer.
+         *
+         * This is how much space is guaranteed to be available for low-level commands when a new
+         * buffer is allocated. If this is too small, the engine might have to stall to wait for
+         * more space to become available, this situation is logged.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t minCommandBufferSizeMB = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the per-frame high level command buffer.
+         *
+         * This buffer is related to the number of draw calls achievable within a frame, if it is
+         * too small, the program will abort on debug builds and have undefined behavior otherwise.
+         *
+         * It is allocated from the 'per-render-pass arena' above. Make sure that at least 1 MiB is
+         * left in the per-render-pass arena when deciding the size of this buffer.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t perFrameCommandsSizeMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;
+    };
 
     /**
      * Creates an instance of Engine
@@ -175,6 +265,8 @@ public:
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
      *
+     * @param config            A pointer to optional parameters to specify memory size
+     *                          configuration options.  If nullptr, then defaults used.
      *
      * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
      *
@@ -189,7 +281,8 @@ public:
      * This method is thread-safe.
      */
     static Engine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const Config* config = nullptr);
 
 #if UTILS_HAS_THREADING
     /**
@@ -231,10 +324,14 @@ public:
      *                          when creating filament's internal context.
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
+     * 
+     * @param config            A pointer to optional parameters to specify memory size
+     *                          configuration options
      */
     static void createAsync(CreateCallback callback, void* user,
             Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const Config* config = nullptr);
 
     /**
      * Retrieve an Engine* from createAsync(). This must be called from the same thread than

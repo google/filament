@@ -5,6 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.25.3
+
+- engine: Fix Adreno gpu crash introduced by gpu morph target change
+- engine: Add optional memory configuration parameters to Engine initialization
+
 ## v1.25.2
 
 - engine: `Camera::getNear()` and `Camera::getCullingFar()` now return `doubles`

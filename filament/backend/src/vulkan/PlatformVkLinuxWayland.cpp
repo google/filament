@@ -29,13 +29,13 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-Driver* PlatformVkLinuxWayland::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkLinuxWayland::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = {
         "VK_KHR_wayland_surface",
     };
     return VulkanDriverFactory::create(this, requiredInstanceExtensions,
-            sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
+            sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]), driverConfig);
 }
 
 void* PlatformVkLinuxWayland::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {

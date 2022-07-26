@@ -29,7 +29,7 @@ class MetalPlatform : public DefaultPlatform {
 public:
     ~MetalPlatform() override;
 
-    Driver* createDriver(void* sharedContext) noexcept override;
+    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
 
     /**

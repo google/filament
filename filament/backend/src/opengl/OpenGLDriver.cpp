@@ -63,8 +63,8 @@ using namespace utils;
 namespace filament::backend {
 
 Driver* OpenGLDriverFactory::create(
-        OpenGLPlatform* const platform, void* const sharedGLContext) noexcept {
-    return OpenGLDriver::create(platform, sharedGLContext);
+        OpenGLPlatform* const platform, void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+    return OpenGLDriver::create(platform, sharedGLContext, driverConfig);
 }
 
 using namespace GLUtils;
@@ -73,7 +73,7 @@ using namespace GLUtils;
 
 UTILS_NOINLINE
 Driver* OpenGLDriver::create(
-        OpenGLPlatform* const platform, void* const sharedGLContext) noexcept {
+        OpenGLPlatform* const platform, void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
 
@@ -136,7 +136,9 @@ Driver* OpenGLDriver::create(
         }
     }
 
-    OpenGLDriver* const driver = new OpenGLDriver(ec);
+    size_t defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    Platform::DriverConfig validConfig { .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    OpenGLDriver* const driver = new OpenGLDriver(ec, validConfig);
     return driver;
 }
 
@@ -153,8 +155,8 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
-        : mHandleAllocator("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
+OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+        : mHandleAllocator("Handles", driverConfig.handleArenaSize),
           mSamplerMap(32),
           mPlatform(*platform) {
   
@@ -1581,6 +1583,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.split_easu;
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             return mContext.bugs.allow_read_only_ancillary_feedback_loop;
+        case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
+            return mContext.bugs.enable_initialize_non_used_uniform_array;
     }
     return false;
 }
@@ -1944,7 +1948,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
         return;
     }
 
-    // TODO: maybe assert that the CompressedPixelDataType is the same than the internalFormat
+    // TODO: maybe assert that the CompressedPixelDataType is the same as the internalFormat
 
     GLsizei imageSize = GLsizei(p.imageSize);
 

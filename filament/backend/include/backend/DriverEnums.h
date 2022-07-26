@@ -1026,7 +1026,9 @@ enum class Workaround : uint16_t {
     SPLIT_EASU,
     // Backend allows feedback loop with ancillary buffers (depth/stencil) as long as they're read-only for
     // the whole render pass.
-    ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP
+    ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP,
+    // for some uniform arrays, it's needed to do an initialization to avoid crash on adreno gpu
+    ADRENO_UNIFORM_ARRAY_CRASH
 };
 
 } // namespace filament::backend

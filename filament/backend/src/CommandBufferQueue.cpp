@@ -83,9 +83,9 @@ void CommandBufferQueue::flush() noexcept {
     // circular buffer is too small, we corrupted the stream
     ASSERT_POSTCONDITION(used <= mFreeSpace,
             "Backend CommandStream overflow. Commands are corrupted and unrecoverable.\n"
-            "Please increase FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB (currently %u MiB).\n"
+            "Please increase minCommandBufferSizeMB inside the Config passed to Engine::create.\n"
             "Space used at this time: %u bytes",
-            (unsigned)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB, (unsigned)used);
+            (unsigned)used);
 
     // wait until there is enough space in the buffer
     mFreeSpace -= used;

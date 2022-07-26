@@ -40,24 +40,26 @@
 namespace filament {
 namespace backend {
 
-Driver* MetalDriverFactory::create(MetalPlatform* const platform) {
-    return MetalDriver::create(platform);
+Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+    return MetalDriver::create(platform, driverConfig);
 }
 
 UTILS_NOINLINE
-Driver* MetalDriver::create(MetalPlatform* const platform) {
+Driver* MetalDriver::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
     assert_invariant(platform);
-    return new MetalDriver(platform);
+    size_t defaultSize = FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    Platform::DriverConfig validConfig { .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    return new MetalDriver(platform, validConfig);
 }
 
 Dispatcher MetalDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<MetalDriver>::make();
 }
 
-MetalDriver::MetalDriver(MetalPlatform* platform) noexcept
+MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
           mContext(new MetalContext),
-          mHandleAllocator("Handles", FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U) {
+          mHandleAllocator("Handles", driverConfig.handleArenaSize) {
     mContext->driver = this;
 
     mContext->device = mPlatform.createDevice();
@@ -675,6 +677,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
             return false;
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             return true;
+        case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
+            return false;
     }
     return false;
 }

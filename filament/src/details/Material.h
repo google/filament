@@ -29,6 +29,7 @@
 #include <private/filament/Variant.h>
 
 #include <utils/compiler.h>
+#include <utils/Mutex.h>
 
 #include <atomic>
 
@@ -90,7 +91,9 @@ public:
     [[nodiscard]] backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
         assert_invariant(variant.key < VARIANT_COUNT);
+        std::unique_lock<utils::Mutex> lock(mActiveProgramsLock);
         mActivePrograms.set(variant.key);
+        lock.unlock();
 #endif
         assert_invariant(mCachedPrograms[variant.key]);
         return mCachedPrograms[variant.key];
@@ -225,7 +228,7 @@ private:
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
-    // TODO: this should be protected with a mutex
+    mutable utils::Mutex mActiveProgramsLock;
     mutable VariantList mActivePrograms;
 #endif
 
