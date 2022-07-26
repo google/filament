@@ -1744,9 +1744,8 @@ retry:
                 // handle mapping error, revert to glBufferSubData()
                 glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
             }
+            scheduleDestroy(std::move(bd));
         }
-
-        scheduleDestroy(std::move(bd));
     }
     CHECK_GL_ERROR(utils::slog.e)
 }
