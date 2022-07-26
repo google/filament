@@ -125,7 +125,7 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
     SamplerGroup samplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
     samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::POSITIONS, { mPbHandle, {}});
     samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS, { mTbHandle, {}});
-    driver.updateSamplerGroup(mSbHandle, std::move(samplerGroup.toCommandStream()));
+    driver.updateSamplerGroup(mSbHandle, std::move(samplerGroup));
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {

@@ -187,7 +187,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
             samplers.setSampler(0, { texture, sparams });
             auto sgroup = api.createSamplerGroup(samplers.getSize());
-            api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+            api.updateSamplerGroup(sgroup, std::move(samplers));
             auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
                     BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
             api.makeCurrent(swapChain, swapChain);
