@@ -101,7 +101,9 @@ struct VulkanBufferObject : public HwBufferObject {
 };
 
 struct VulkanSamplerGroup : public HwSamplerGroup {
-    VulkanSamplerGroup(uint32_t count) : HwSamplerGroup(count) {}
+    // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
+    std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
+    explicit VulkanSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
