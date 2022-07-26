@@ -356,7 +356,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
         const auto binding = usedBindingPoints[i];
-        HwSamplerGroup const * const hwsb = samplerBindings[binding];
+        OpenGLDriver::GLSamplerGroup const * const hwsb = samplerBindings[binding];
         assert_invariant(hwsb);
 
         SamplerGroup const& sb = *(hwsb->sb);

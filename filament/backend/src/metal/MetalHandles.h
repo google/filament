@@ -228,7 +228,9 @@ struct MetalTexture : public HwTexture {
 };
 
 struct MetalSamplerGroup : public HwSamplerGroup {
-    explicit MetalSamplerGroup(size_t size) : HwSamplerGroup(size) {}
+    // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
+    std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
+    explicit MetalSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
 };
 
 class MetalRenderTarget : public HwRenderTarget {
