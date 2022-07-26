@@ -104,10 +104,10 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     getDriverApi().makeCurrent(swapChain, swapChain);
     getDriverApi().beginFrame(0, 0);
 
-    SamplerGroup mSamplers(1);
-    mSamplers.setSampler(0, { texture, {} });
+    SamplerGroup samplers(1);
+    samplers.setSampler(0, { texture, {} });
     backend::Handle<HwSamplerGroup> samplerGroup = getDriverApi().createSamplerGroup(1);
-    getDriverApi().updateSamplerGroup(samplerGroup, std::move(mSamplers.toCommandStream()));
+    getDriverApi().updateSamplerGroup(samplerGroup, std::move(samplers));
     getDriverApi().bindSamplers(0, samplerGroup);
 
     // Render a triangle.
@@ -220,10 +220,10 @@ TEST_F(BackendTest, RenderExternalImage) {
     getDriverApi().makeCurrent(swapChain, swapChain);
     getDriverApi().beginFrame(0, 0);
 
-    SamplerGroup mSamplers(1);
-    mSamplers.setSampler(0, { texture, {} });
+    SamplerGroup samplers(1);
+    samplers.setSampler(0, { texture, {} });
     backend::Handle<HwSamplerGroup> samplerGroup = getDriverApi().createSamplerGroup(1);
-    getDriverApi().updateSamplerGroup(samplerGroup, std::move(mSamplers.toCommandStream()));
+    getDriverApi().updateSamplerGroup(samplerGroup, std::move(samplers));
     getDriverApi().bindSamplers(0, samplerGroup);
 
     // Render a triangle.

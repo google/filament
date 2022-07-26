@@ -381,7 +381,7 @@ TEST_F(BackendTest, UpdateImage2D) {
         sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
         samplers.setSampler(0, { texture, sparams });
         auto sgroup = api.createSamplerGroup(samplers.getSize());
-        api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+        api.updateSamplerGroup(sgroup, std::move(samplers));
 
         api.bindSamplers(0, sgroup);
 
@@ -467,7 +467,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
     samplers.setSampler(0, { texture, sparams });
     auto sgroup = api.createSamplerGroup(samplers.getSize());
-    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+    api.updateSamplerGroup(sgroup, std::move(samplers));
 
     api.bindSamplers(0, sgroup);
 
@@ -537,7 +537,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
     samplers.setSampler(0, { texture, sparams });
     auto sgroup = api.createSamplerGroup(samplers.getSize());
-    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+    api.updateSamplerGroup(sgroup, std::move(samplers));
 
     api.bindSamplers(0, sgroup);
 
@@ -619,7 +619,7 @@ TEST_F(BackendTest, UpdateImage3D) {
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
     samplers.setSampler(0, { texture, sparams});
     auto sgroup = api.createSamplerGroup(samplers.getSize());
-    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+    api.updateSamplerGroup(sgroup, std::move(samplers));
 
     api.bindSamplers(0, sgroup);
 

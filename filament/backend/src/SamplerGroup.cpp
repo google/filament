@@ -23,33 +23,11 @@ SamplerGroup::SamplerGroup(size_t count) noexcept
         : mBuffer(count) {
 }
 
-SamplerGroup::SamplerGroup(SamplerGroup&& rhs) noexcept
-        : mBuffer(rhs.mBuffer), mDirty(rhs.mDirty) {
-    rhs.clean();
+SamplerGroup::SamplerGroup(const SamplerGroup& rhs) noexcept :
+    mBuffer(rhs.mBuffer), mDirty(true) {
 }
 
-SamplerGroup& SamplerGroup::operator=(SamplerGroup&& rhs) noexcept {
-    if (this != &rhs) {
-        mBuffer = rhs.mBuffer;
-        mDirty = rhs.mDirty;
-        rhs.clean();
-    }
-    return *this;
-}
-
-SamplerGroup& SamplerGroup::toCommandStream() const noexcept {
-    /*
-     * This works because our move ctor preserves the data and cleans the dirty flags.
-     * if we changed the implementation in the future to do a real move, we'd have to change
-     * this method to return SamplerGroup by value, e.g.:
-     *    SamplerGroup copy(*this);
-     *    this->clean();
-     *    return copy;
-     */
-    return const_cast<SamplerGroup&>(*this);
-}
-
-SamplerGroup& SamplerGroup::setSamplers(SamplerGroup const& rhs) noexcept {
+SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept {
     if (this != &rhs) {
         mBuffer = rhs.mBuffer;
         mDirty = true;

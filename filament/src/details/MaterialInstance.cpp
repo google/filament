@@ -58,7 +58,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers.setSamplers(other->getSamplerGroup());
+        mSamplers = other->getSamplerGroup();
         mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
@@ -133,7 +133,8 @@ void FMaterialInstance::commitSlow(DriverApi& driver) const {
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (mSamplers.isDirty()) {
-        driver.updateSamplerGroup(mSbHandle, std::move(mSamplers.toCommandStream()));
+        driver.updateSamplerGroup(mSbHandle, SamplerGroup(mSamplers));
+        mSamplers.clean();
     }
 }
 
