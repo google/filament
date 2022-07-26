@@ -809,7 +809,7 @@ bool MetalDriver::canGenerateMipmaps() {
 void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     auto sb = handle_cast<MetalSamplerGroup>(sbh);
-    *sb->sb = samplerGroup;
+    *sb->sb = std::move(samplerGroup);
 }
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,

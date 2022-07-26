@@ -1038,7 +1038,7 @@ bool VulkanDriver::canGenerateMipmaps() {
 void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     auto* sb = handle_cast<VulkanSamplerGroup*>(sbh);
-    *sb->sb = samplerGroup;
+    *sb->sb = std::move(samplerGroup);
 }
 
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {

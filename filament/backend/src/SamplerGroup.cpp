@@ -16,22 +16,17 @@
 
 #include "private/backend/SamplerGroup.h"
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // create a sampler buffer
 SamplerGroup::SamplerGroup(size_t count) noexcept
         : mBuffer(count) {
 }
 
-SamplerGroup::SamplerGroup(const SamplerGroup& rhs) noexcept = default;
-
 SamplerGroup::SamplerGroup(SamplerGroup&& rhs) noexcept
         : mBuffer(rhs.mBuffer), mDirty(rhs.mDirty) {
     rhs.clean();
 }
-
-SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept = default;
 
 SamplerGroup& SamplerGroup::operator=(SamplerGroup&& rhs) noexcept {
     if (this != &rhs) {
@@ -57,15 +52,18 @@ SamplerGroup& SamplerGroup::toCommandStream() const noexcept {
 SamplerGroup& SamplerGroup::setSamplers(SamplerGroup const& rhs) noexcept {
     if (this != &rhs) {
         mBuffer = rhs.mBuffer;
-        mDirty.setValue((1u << rhs.mBuffer.size()) - 1u);
+        mDirty = true;
     }
     return *this;
 }
 
 void SamplerGroup::setSampler(size_t index, Sampler sampler) noexcept {
     if (UTILS_LIKELY(index < mBuffer.size())) {
-        mBuffer[index] = sampler;
-        mDirty.set(index);
+        if (mBuffer[index].s.u != sampler.s.u || mBuffer[index].t != sampler.t) {
+            // it's a big deal to mutate a sampler group, so we avoid doing it.
+            mBuffer[index] = sampler;
+            mDirty = true;
+        }
     }
 }
 
@@ -75,5 +73,4 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs)
 }
 #endif
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
