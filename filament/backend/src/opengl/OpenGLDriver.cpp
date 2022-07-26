@@ -234,8 +234,8 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::bindSampler(GLuint unit, SamplerParams params) noexcept {
-    mContext.bindSampler(unit, getSampler(params));
+void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
+    mContext.bindSampler(unit, sampler);
 }
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
@@ -1770,8 +1770,64 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     DEBUG_MARKER()
 
-    GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
-    *sb->sb = std::move(samplerGroup); // NOLINT(performance-move-const-arg)
+#if defined(GL_EXT_texture_filter_anisotropic)
+    OpenGLContext& context = getContext();
+    const bool anisotropyWorkaround =
+            context.ext.EXT_texture_filter_anisotropic &&
+            context.bugs.texture_filter_anisotropic_broken_on_sampler;
+#endif
+
+    GLSamplerGroup* const sb = handle_cast<GLSamplerGroup *>(sbh);
+    assert_invariant(sb->textureUnitEntries.size() == samplerGroup.getSize());
+
+    SamplerGroup::Sampler const* const UTILS_RESTRICT pSamplers = samplerGroup.getSamplers();
+    for (size_t i = 0, c = sb->textureUnitEntries.size(); i < c; i++) {
+        GLuint samplerId = 0u;
+        const GLTexture* t = nullptr;
+        if (UTILS_LIKELY(pSamplers[i].t)) {
+            t = handle_cast<const GLTexture*>(pSamplers[i].t);
+            assert_invariant(t);
+
+            SamplerParams params = pSamplers[i].s;
+            if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+                // From OES_EGL_image_external spec:
+                // "The default s and t wrap modes are CLAMP_TO_EDGE and it is an INVALID_ENUM
+                //  error to set the wrap mode to any other value."
+                params.wrapS = SamplerWrapMode::CLAMP_TO_EDGE;
+                params.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
+                params.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
+            }
+            // GLES3.x specification forbids depth textures to be filtered.
+            if (UTILS_UNLIKELY(isDepthFormat(t->format)
+                               && params.compareMode == SamplerCompareMode::NONE
+                               && params.filterMag != SamplerMagFilter::NEAREST
+                               && params.filterMin != SamplerMinFilter::NEAREST
+                               && params.filterMin != SamplerMinFilter::NEAREST_MIPMAP_NEAREST)) {
+                params.filterMag = SamplerMagFilter::NEAREST;
+                params.filterMin = SamplerMinFilter::NEAREST;
+#ifndef NDEBUG
+                slog.w << "SamplerGroup specifies a filtered depth texture, which is not allowed."
+                       << io::endl;
+#endif
+            }
+#if defined(GL_EXT_texture_filter_anisotropic)
+            if (UTILS_UNLIKELY(anisotropyWorkaround)) {
+                // Driver claims to support anisotropic filtering, but it fails when set on
+                // the sampler, we have to set it on the texture instead.
+                // The texture is already bound here.
+                GLfloat anisotropy = float(1u << params.anisotropyLog2);
+                glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                        std::min(context.gets.max_anisotropy, anisotropy));
+            }
+#endif
+            samplerId = getSampler(params);
+        } else {
+            // this happens if the program doesn't use all samplers of a sampler group,
+            // which is not an error.
+        }
+
+        sb->textureUnitEntries[i] = { t, samplerId };
+    }
 }
 
 void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
