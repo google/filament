@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.25.4
+
 - backend: streamline texture upload APIs [⚠️ **API Change**]
 
 ## v1.25.3
