@@ -45,9 +45,9 @@ public:
     // create a sampler group
     explicit SamplerGroup(size_t count) noexcept;
 
-    // can be copied -- this preserves dirty bits
-    SamplerGroup(const SamplerGroup& rhs) noexcept;
-    SamplerGroup& operator=(const SamplerGroup& rhs) noexcept;
+    // can't be copied
+    SamplerGroup(const SamplerGroup& rhs) noexcept = delete;
+    SamplerGroup& operator=(const SamplerGroup& rhs) noexcept = delete;
 
     // and moved -- this cleans rhs's dirty flags
     SamplerGroup(SamplerGroup&& rhs) noexcept;
@@ -69,17 +69,13 @@ public:
     size_t getSize() const noexcept { return mBuffer.size(); }
 
     // return if any samplers has been changed
-    bool isDirty() const noexcept { return mDirty.any(); }
+    bool isDirty() const noexcept { return mDirty; }
 
     // mark the whole group as clean (no modified uniforms)
-    void clean() const noexcept { mDirty.reset(); }
+    void clean() const noexcept { mDirty = false; }
 
     // set sampler at given index
     void setSampler(size_t index, Sampler sampler) noexcept;
-
-    inline void setSampler(size_t index, Handle<HwTexture> t, SamplerParams s)  {
-        setSampler(index, { t, s });
-    }
 
     inline void clearSampler(size_t index)  {
         setSampler(index, {});
@@ -149,7 +145,7 @@ private:
     };
 
     static_vector<Sampler, backend::MAX_SAMPLER_COUNT> mBuffer;    // 128 bytes
-    mutable utils::bitset32 mDirty;
+    mutable bool mDirty = false;
 };
 
 } // namespace filament::backend
