@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_DRIVER_METALDRIVERFACTORY_H
 #define TNT_FILAMENT_DRIVER_METALDRIVERFACTORY_H
 
+#include <backend/Platform.h>
+
 namespace filament {
 namespace backend {
 class MetalPlatform;
