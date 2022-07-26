@@ -97,12 +97,15 @@ public:
         } gl;
     };
 
+    struct GLTexture;
     struct GLSamplerGroup : public HwSamplerGroup {
         using HwSamplerGroup::HwSamplerGroup;
-
-        // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
-        std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
-        explicit GLSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
+        struct Entry {
+            GLTexture const* texture = nullptr;
+            GLuint sampler = 0u;
+        };
+        utils::FixedCapacityVector<Entry> textureUnitEntries;
+        explicit GLSamplerGroup(size_t size) noexcept : textureUnitEntries(size) { }
     };
 
     struct GLRenderPrimitive : public HwRenderPrimitive {
@@ -304,7 +307,7 @@ private:
     /* State tracking GL wrappers... */
 
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
-           void bindSampler(GLuint unit, SamplerParams params) noexcept;
+           void bindSampler(GLuint unit, GLuint sampler) noexcept;
     inline void useProgram(OpenGLProgram* p) noexcept;
 
     enum class ResolveAction { LOAD, STORE };
