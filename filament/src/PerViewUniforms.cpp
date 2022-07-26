@@ -361,8 +361,7 @@ void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
         driver.updateBufferObject(mUniformBufferHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (mSamplers.isDirty()) {
-        driver.updateSamplerGroup(mSamplerGroupHandle, SamplerGroup(mSamplers));
-        mSamplers.clean();
+        driver.updateSamplerGroup(mSamplerGroupHandle, mSamplers.toBufferDescriptor(driver));
     }
 }
 

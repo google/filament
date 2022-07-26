@@ -1036,9 +1036,19 @@ bool VulkanDriver::canGenerateMipmaps() {
 }
 
 void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        SamplerGroup&& samplerGroup) {
+        BufferDescriptor&& data) {
     auto* sb = handle_cast<VulkanSamplerGroup*>(sbh);
+
+    // FIXME: we shouldn't be using SamplerGroup here, instead the backend should create
+    //        a descriptor or any internal data-structure that represents the textures/samplers.
+    //        It's preferable to do as much work as possible here.
+    //        Here, we emulate the older backend API by re-creating a SamplerGroup from the
+    //        passed data.
+    SamplerGroup samplerGroup(data.size / sizeof(SamplerDescriptor));
+    memcpy(samplerGroup.data(), data.buffer, data.size);
     *sb->sb = std::move(samplerGroup);
+
+    scheduleDestroy(std::move(data));
 }
 
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
@@ -1817,7 +1827,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         size_t samplerIdx = 0;
         for (auto& sampler : samplers) {
             size_t bindingPoint = sampler.binding;
-            const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
+            const SamplerDescriptor* boundSampler = sb->data() + samplerIdx;
             samplerIdx++;
 
             // Note that we always use a 2D texture for the fallback texture, which might not be

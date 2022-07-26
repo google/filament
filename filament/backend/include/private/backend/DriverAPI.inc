@@ -335,7 +335,7 @@ DECL_DRIVER_API_N(resetBufferObject,
 
 DECL_DRIVER_API_N(updateSamplerGroup,
         backend::SamplerGroupHandle, ubh,
-        backend::SamplerGroup&&, samplerGroup)
+        backend::BufferDescriptor&&, data)
 
 DECL_DRIVER_API_N(setMinMaxLevels,
         backend::TextureHandle, th,

@@ -17,25 +17,30 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 
+#include "private/backend/DriverApiForward.h"
+
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/SamplerDescriptor.h>
 
 #include <stddef.h>
 
 namespace filament::backend {
 
+class BufferDescriptor;
+
+/*
+ * FIXME: this should eventually be moved into Filament, outside of backend.
+ *        (but it is currently used by metal/vulkan backens)
+ */
+
 class SamplerGroup {
 public:
 
     using SamplerParams = backend::SamplerParams;
-
-    struct Sampler {
-        Handle<HwTexture> t;
-        SamplerParams s{};
-    };
 
     SamplerGroup() noexcept {} // NOLINT
 
@@ -52,8 +57,7 @@ public:
 
     ~SamplerGroup() noexcept = default;
 
-    // pointer to the sampler group
-    Sampler const* getSamplers() const noexcept { return mBuffer.data(); }
+    BufferDescriptor toBufferDescriptor(DriverApi& driver) const noexcept;
 
     // sampler count
     size_t getSize() const noexcept { return mBuffer.size(); }
@@ -67,18 +71,22 @@ public:
     void clean() const noexcept { mDirty = false; }
 
     // set sampler at given index
-    void setSampler(size_t index, Sampler sampler) noexcept;
+    void setSampler(size_t index, backend::SamplerDescriptor sampler) noexcept;
 
     inline void clearSampler(size_t index) {
         setSampler(index, {});
     }
+
+
+    // FIXME: This is now [[deprecated]]. Currently it is only used by the Vulkan/Metal backends.
+    backend::SamplerDescriptor* data() noexcept { return mBuffer.data(); }
 
 private:
 #if !defined(NDEBUG)
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs);
 #endif
 
-    utils::FixedCapacityVector<Sampler> mBuffer;
+    utils::FixedCapacityVector<backend::SamplerDescriptor> mBuffer;
     mutable bool mDirty = false;
 };
 
