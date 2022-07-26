@@ -16,6 +16,10 @@
 
 #include "private/backend/SamplerGroup.h"
 
+#include "private/backend/DriverApi.h"
+
+#include "backend/BufferDescriptor.h"
+
 namespace filament::backend {
 
 // create a sampler buffer
@@ -35,7 +39,7 @@ SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept {
     return *this;
 }
 
-void SamplerGroup::setSampler(size_t index, Sampler sampler) noexcept {
+void SamplerGroup::setSampler(size_t index, SamplerDescriptor sampler) noexcept {
     if (UTILS_LIKELY(index < mBuffer.size())) {
         if (mBuffer[index].s.u != sampler.s.u || mBuffer[index].t != sampler.t) {
             // it's a big deal to mutate a sampler group, so we avoid doing it.
@@ -45,9 +49,18 @@ void SamplerGroup::setSampler(size_t index, Sampler sampler) noexcept {
     }
 }
 
+BufferDescriptor SamplerGroup::toBufferDescriptor(DriverApi& driver) const noexcept {
+    BufferDescriptor p;
+    p.size = mBuffer.size() * sizeof(SamplerDescriptor);
+    p.buffer = driver.allocate(p.size); // TODO: use out-of-line buffer if too large
+    memcpy(p.buffer, static_cast<const void*>(mBuffer.data()), p.size); // inlined
+    clean();
+    return p;
+}
+
 #if !defined(NDEBUG)
 utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs) {
-    return out << "SamplerGroup(data=" << rhs.getSamplers() << ", size=" << rhs.getSize() << ")";
+    return out << "SamplerGroup(size=" << rhs.getSize() << ")";
 }
 #endif
 

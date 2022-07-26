@@ -1763,7 +1763,7 @@ void OpenGLDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 }
 
 void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        SamplerGroup&& samplerGroup) {
+        BufferDescriptor&& data) {
     DEBUG_MARKER()
 
 #if defined(GL_EXT_texture_filter_anisotropic)
@@ -1774,9 +1774,9 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 #endif
 
     GLSamplerGroup* const sb = handle_cast<GLSamplerGroup *>(sbh);
-    assert_invariant(sb->textureUnitEntries.size() == samplerGroup.getSize());
+    assert_invariant(sb->textureUnitEntries.size() == data.size / sizeof(SamplerDescriptor));
 
-    SamplerGroup::Sampler const* const UTILS_RESTRICT pSamplers = samplerGroup.getSamplers();
+    auto const* const pSamplers = (SamplerDescriptor const*)data.buffer;
     for (size_t i = 0, c = sb->textureUnitEntries.size(); i < c; i++) {
         GLuint samplerId = 0u;
         const GLTexture* t = nullptr;
@@ -1824,6 +1824,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 
         sb->textureUnitEntries[i] = { t, samplerId };
     }
+    scheduleDestroy(std::move(data));
 }
 
 void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {

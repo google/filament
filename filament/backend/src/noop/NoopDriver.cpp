@@ -247,7 +247,8 @@ bool NoopDriver::canGenerateMipmaps() {
 }
 
 void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        SamplerGroup&& samplerGroup) {
+        BufferDescriptor&& data) {
+    scheduleDestroy(std::move(data));
 }
 
 void NoopDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {

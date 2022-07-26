@@ -133,8 +133,7 @@ void FMaterialInstance::commitSlow(DriverApi& driver) const {
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (mSamplers.isDirty()) {
-        driver.updateSamplerGroup(mSbHandle, SamplerGroup(mSamplers));
-        mSamplers.clean();
+        driver.updateSamplerGroup(mSbHandle, mSamplers.toBufferDescriptor(driver));
     }
 }
 

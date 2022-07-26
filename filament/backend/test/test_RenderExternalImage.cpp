@@ -107,7 +107,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     SamplerGroup samplers(1);
     samplers.setSampler(0, { texture, {} });
     backend::Handle<HwSamplerGroup> samplerGroup = getDriverApi().createSamplerGroup(1);
-    getDriverApi().updateSamplerGroup(samplerGroup, std::move(samplers));
+    getDriverApi().updateSamplerGroup(samplerGroup, samplers.toBufferDescriptor(getDriverApi()));
     getDriverApi().bindSamplers(0, samplerGroup);
 
     // Render a triangle.
@@ -223,7 +223,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     SamplerGroup samplers(1);
     samplers.setSampler(0, { texture, {} });
     backend::Handle<HwSamplerGroup> samplerGroup = getDriverApi().createSamplerGroup(1);
-    getDriverApi().updateSamplerGroup(samplerGroup, std::move(samplers));
+    getDriverApi().updateSamplerGroup(samplerGroup, samplers.toBufferDescriptor(getDriverApi()));
     getDriverApi().bindSamplers(0, samplerGroup);
 
     // Render a triangle.

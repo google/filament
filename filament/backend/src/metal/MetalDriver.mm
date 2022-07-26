@@ -495,9 +495,9 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
 
     // Unbind this texture from any sampler groups that currently reference it.
     for (auto* metalSamplerGroup : mContext->samplerGroups) {
-        const SamplerGroup::Sampler* samplers = metalSamplerGroup->sb->getSamplers();
+        const SamplerDescriptor* samplers = metalSamplerGroup->sb->data();
         for (size_t i = 0; i < metalSamplerGroup->sb->getSize(); i++) {
-            const SamplerGroup::Sampler* sampler = samplers + i;
+            const SamplerDescriptor* sampler = samplers + i;
             if (sampler->t == th) {
                 metalSamplerGroup->sb->setSampler(i, {{}, {}});
             }
@@ -807,9 +807,19 @@ bool MetalDriver::canGenerateMipmaps() {
 }
 
 void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        SamplerGroup&& samplerGroup) {
+        BufferDescriptor&& data) {
     auto sb = handle_cast<MetalSamplerGroup>(sbh);
+
+    // FIXME: we shouldn't be using SamplerGroup here, instead the backend should create
+    //        a descriptor or any internal data-structure that represents the textures/samplers.
+    //        It's preferable to do as much work as possible here.
+    //        Here, we emulate the older backend API by re-creating a SamplerGroup from the
+    //        passed data.
+    SamplerGroup samplerGroup(data.size / sizeof(SamplerDescriptor));
+    memcpy(samplerGroup.data(), data.buffer, data.size);
     *sb->sb = std::move(samplerGroup);
+
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
@@ -1261,7 +1271,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
 
-    auto getTextureToBind = [this](const SamplerGroup::Sampler* sampler) {
+    auto getTextureToBind = [this](const SamplerDescriptor* sampler) {
         const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
         id<MTLTexture> textureToBind = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
                                                                          : metalTexture->texture;
@@ -1271,7 +1281,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         return textureToBind;
     };
 
-    auto getSamplerToBind = [this](const SamplerGroup::Sampler* sampler) {
+    auto getSamplerToBind = [this](const SamplerDescriptor* sampler) {
         const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
         SamplerState s {
             .samplerParams = sampler->s,
@@ -1286,7 +1296,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     enumerateSamplerGroups(program, ShaderType::VERTEX,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
-                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
+                    const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
         if (binding >= MAX_VERTEX_SAMPLER_COUNT) {
@@ -1324,7 +1334,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     enumerateSamplerGroups(program, ShaderType::FRAGMENT,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
-                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
+                    const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
         if (binding >= MAX_FRAGMENT_SAMPLER_COUNT) {
@@ -1415,7 +1425,7 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void MetalDriver::enumerateSamplerGroups(
         const MetalProgram* program, ShaderType shaderType,
-        const std::function<void(const SamplerGroup::Sampler*, size_t)>& f) {
+        const std::function<void(const SamplerDescriptor*, size_t)>& f) {
     auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ?
             program->vertexSamplerBlockInfo : program->fragmentSamplerBlockInfo;
     auto maxSamplerCount = (shaderType == ShaderType::VERTEX) ?
@@ -1434,7 +1444,7 @@ void MetalDriver::enumerateSamplerGroups(
         }
 
         SamplerGroup* sb = metalSamplerGroup->sb.get();
-        const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + blockInfo.sampler;
+        const SamplerDescriptor* boundSampler = sb->data() + blockInfo.sampler;
 
         if (!boundSampler->t) {
             continue;
