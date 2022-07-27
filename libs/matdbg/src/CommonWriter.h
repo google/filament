@@ -153,9 +153,8 @@ const char* toString(backend::ShaderType stage) noexcept {
 inline
 const char* toString(backend::ShaderModel model) noexcept {
     switch (model) {
-        case backend::ShaderModel::UNKNOWN: return "--";
-        case backend::ShaderModel::GL_ES_30: return "gles30";
-        case backend::ShaderModel::GL_CORE_41: return "gl41";
+        case backend::ShaderModel::MOBILE: return "mobile";
+        case backend::ShaderModel::DESKTOP: return "desktop";
     }
 }
 

@@ -71,12 +71,12 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
     mShaderModels.reset();
 
     if (mPlatform == Platform::MOBILE) {
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_ES_30));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::MOBILE));
     } else if (mPlatform == Platform::DESKTOP) {
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_CORE_41));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::DESKTOP));
     } else if (mPlatform == Platform::ALL) {
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_ES_30));
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_CORE_41));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::MOBILE));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::DESKTOP));
     }
 
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.

@@ -555,9 +555,9 @@ void MetalDriver::terminate() {
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
 #if defined(IOS)
-    return ShaderModel::GL_ES_30;
+    return ShaderModel::MOBILE;
 #else
-    return ShaderModel::GL_CORE_41;
+    return ShaderModel::DESKTOP;
 #endif
 }
 

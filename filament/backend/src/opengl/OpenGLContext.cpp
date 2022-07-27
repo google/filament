@@ -58,7 +58,7 @@ OpenGLContext::OpenGLContext() noexcept {
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         // This works on all versions of GLES
         if (state.major == 3 && state.minor >= 0) {
-            mShaderModel = ShaderModel::GL_ES_30;
+            mShaderModel = ShaderModel::MOBILE;
         }
         if (state.major == 3 && state.minor >= 1) {
             features.multisample_texture = true;
@@ -67,15 +67,13 @@ OpenGLContext::OpenGLContext() noexcept {
     } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // OpenGL version
         if (state.major == 4 && state.minor >= 1) {
-            mShaderModel = ShaderModel::GL_CORE_41;
+            mShaderModel = ShaderModel::DESKTOP;
         }
         features.multisample_texture = true;
         // feedback loops are allowed on GL desktop as long as writes are disabled
         bugs.allow_read_only_ancillary_feedback_loop = true;
         initExtensionsGL();
     }
-
-    assert_invariant(mShaderModel != ShaderModel::UNKNOWN);
 
     /*
      * Figure out which driver bugs we need to workaround

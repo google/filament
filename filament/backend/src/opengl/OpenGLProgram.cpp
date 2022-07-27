@@ -131,8 +131,8 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
                 }
             }
 
-            if (UTILS_UNLIKELY(context.getShaderModel() == ShaderModel::GL_CORE_41 &&
-                !context.ext.ARB_shading_language_packing)) {
+            if (UTILS_UNLIKELY(context.getShaderModel() == ShaderModel::DESKTOP &&
+                               !context.ext.ARB_shading_language_packing)) {
                 // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
                 // MacOS doesn't support GL_ARB_shading_language_packing
                 if (temp.empty()) {

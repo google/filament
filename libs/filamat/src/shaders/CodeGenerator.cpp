@@ -39,11 +39,8 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
 
 io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
         bool hasExternalSamplers) const {
-    assert(mShaderModel != ShaderModel::UNKNOWN);
     switch (mShaderModel) {
-        case ShaderModel::UNKNOWN:
-            break;
-        case ShaderModel::GL_ES_30:
+        case ShaderModel::MOBILE:
             // Vulkan requires version 310 or higher
             if (mTargetLanguage == TargetLanguage::SPIRV) {
                 // Vulkan requires layout locations on ins and outs, which were not supported
@@ -57,7 +54,7 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
             }
             out << "#define TARGET_MOBILE\n";
             break;
-        case ShaderModel::GL_CORE_41:
+        case ShaderModel::DESKTOP:
             if (mTargetLanguage == TargetLanguage::SPIRV) {
                 // Vulkan requires binding specifiers on uniforms and samplers, which were not
                 // supported in the OpenGL 4.1 GLSL profile.
@@ -79,10 +76,10 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     if (mTargetApi == TargetApi::METAL) {
         out << "#define TARGET_METAL_ENVIRONMENT\n";
     }
-    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_ES_30) {
+    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::MOBILE) {
         out << "#define TARGET_GLES_ENVIRONMENT\n";
     }
-    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41) {
+    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) {
         out << "#define TARGET_GL_ENVIRONMENT\n";
     }
 
@@ -97,7 +94,7 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     out << '\n';
     if (mTargetApi == TargetApi::VULKAN ||
         mTargetApi == TargetApi::METAL ||
-        (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41)) {
+        (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP)) {
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
@@ -105,7 +102,7 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
-    if (mShaderModel == ShaderModel::GL_ES_30) {
+    if (mShaderModel == ShaderModel::MOBILE) {
         out << "precision lowp sampler2DArray;\n";
         out << "precision lowp sampler3D;\n";
     }
@@ -120,7 +117,7 @@ Precision CodeGenerator::getDefaultPrecision(ShaderType type) const {
     if (type == ShaderType::VERTEX) {
         return Precision::HIGH;
     } else if (type == ShaderType::FRAGMENT) {
-        if (mShaderModel < ShaderModel::GL_CORE_41) {
+        if (mShaderModel < ShaderModel::DESKTOP) {
             return Precision::MEDIUM;
         } else {
             return Precision::HIGH;
@@ -130,7 +127,7 @@ Precision CodeGenerator::getDefaultPrecision(ShaderType type) const {
 }
 
 Precision CodeGenerator::getDefaultUniformPrecision() const {
-    if (mShaderModel < ShaderModel::GL_CORE_41) {
+    if (mShaderModel < ShaderModel::DESKTOP) {
         return Precision::MEDIUM;
     } else {
         return Precision::HIGH;
@@ -358,7 +355,7 @@ io::sstream& CodeGenerator::generateSamplers(
                         sib.getName().c_str(), info.name.c_str());
 
         auto type = info.type;
-        if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::GL_ES_30) {
+        if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::MOBILE) {
             // we're generating the shader for the desktop, where we assume external textures
             // are not supported, in which case we revert to texture2d
             type = SamplerType::SAMPLER_2D;
@@ -499,8 +496,8 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
         case ShaderQuality::DEFAULT:
             switch (mShaderModel) {
                 default:                        goto quality_normal;
-                case ShaderModel::GL_CORE_41:   goto quality_high;
-                case ShaderModel::GL_ES_30:     goto quality_low;
+                case ShaderModel::DESKTOP:   goto quality_high;
+                case ShaderModel::MOBILE:     goto quality_low;
             }
         case ShaderQuality::LOW:
         quality_low:
