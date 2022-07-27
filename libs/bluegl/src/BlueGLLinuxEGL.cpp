@@ -20,7 +20,7 @@
 namespace bluegl {
 
 struct Driver {
-    void* (*eglGetProcAddress)(const GLubyte*);
+    void* (*eglGetProcAddress)(const char*);
     void* library;
 } g_driver = {nullptr, nullptr};
 
@@ -32,14 +32,14 @@ bool initBinder() {
         return false;
     }
 
-    g_driver.eglGetProcAddress = (void *(*)(const GLubyte *))
+    g_driver.eglGetProcAddress = (void *(*)(const char *))
             dlsym(g_driver.library, "eglGetProcAddress");
 
     return g_driver.eglGetProcAddress;
 }
 
 void* loadFunction(const char* name) {
-  return (void*) g_driver.eglGetProcAddress((const GLubyte*) name);
+  return (void*) g_driver.eglGetProcAddress((const char*) name);
 }
 
 void shutdownBinder() {

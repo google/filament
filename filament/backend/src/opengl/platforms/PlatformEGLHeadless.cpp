@@ -33,11 +33,11 @@ namespace filament {
 using namespace backend;
 
 namespace glext {
-extern PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
-extern PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR;
-extern PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
-extern PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
-extern PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
+UTILS_PRIVATE PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR = {};
+UTILS_PRIVATE PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR = {};
+UTILS_PRIVATE PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR = {};
+UTILS_PRIVATE PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR = {};
+UTILS_PRIVATE PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR = {};
 }
 using namespace glext;
 
@@ -47,7 +47,7 @@ PlatformEGLHeadless::PlatformEGLHeadless() noexcept
         : PlatformEGL() {
 }
 
-backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext) noexcept {
+backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     EGLBoolean bindAPI = eglBindAPI(EGL_OPENGL_API);
     if (UTILS_UNLIKELY(!bindAPI)) {
         slog.e << "eglBindAPI EGL_OPENGL_API failed" << io::endl;
@@ -188,7 +188,7 @@ backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext) noexcept
     clearGlError();
 
     // success!!
-    return OpenGLDriverFactory::create(this, sharedContext);
+    return OpenGLDriverFactory::create(this, sharedContext, driverConfig);
 
 error:
     // if we're here, we've failed
