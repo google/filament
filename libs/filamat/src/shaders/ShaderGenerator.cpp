@@ -293,17 +293,6 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     return vs.c_str();
 }
 
-static bool isMobileTarget(ShaderModel model) {
-    switch (model) {
-        case ShaderModel::UNKNOWN:
-            return false;
-        case ShaderModel::GL_ES_30:
-            return true;
-        case ShaderModel::GL_CORE_41:
-            return false;
-    }
-}
-
 std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, const filament::Variant variant,
@@ -327,7 +316,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     CodeGenerator::generateDefine(fs, "MAX_SHADOW_CASTING_SPOTS", uint32_t(CONFIG_MAX_SHADOW_CASTING_SPOTS));
 
-    auto defaultSpecularAO = isMobileTarget(shaderModel) ?
+    auto defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
             SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
     auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
     CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
@@ -363,10 +352,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         }
     }
 
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_REFLECTIONS", material.reflectionMode == ReflectionMode::SCREEN_SPACE);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_REFLECTIONS",
+            material.reflectionMode == ReflectionMode::SCREEN_SPACE);
 
     bool multiBounceAO = material.multiBounceAOSet ?
-            material.multiBounceAO : !isMobileTarget(shaderModel);
+            material.multiBounceAO : shaderModel == ShaderModel::DESKTOP;
     CodeGenerator::generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);
 
     assert_invariant(filament::Variant::isValid(variant));
@@ -522,7 +512,7 @@ void ShaderGenerator::fixupExternalSamplers(ShaderModel sm,
         std::string& shader, MaterialInfo const& material) noexcept {
     // External samplers are only supported on GL ES at the moment, we must
     // skip the fixup on desktop targets
-    if (material.hasExternalSamplers && sm == ShaderModel::GL_ES_30) {
+    if (material.hasExternalSamplers && sm == ShaderModel::MOBILE) {
         CodeGenerator::fixupExternalSamplers(shader, material.sib);
     }
 }

@@ -322,12 +322,11 @@ bool GLSLTools::findSymbolsUsage(const std::string& functionSignature, TIntermNo
 int GLSLTools::glslangVersionFromShaderModel(ShaderModel model) {
     int version = 110;
     switch (model) {
-        case ShaderModel::UNKNOWN:
-            break;
-        case ShaderModel::GL_ES_30:
+        case ShaderModel::MOBILE:
             version = 100;
             break;
-        case ShaderModel::GL_CORE_41:
+        case ShaderModel::DESKTOP:
+            version = 110;
             break;
     }
     return version;

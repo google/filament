@@ -98,12 +98,11 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
 
 GLSLPostProcessor::~GLSLPostProcessor() = default;
 
-static uint32_t shaderVersionFromModel(ShaderModel model) {
+static uint32_t glslVersionFromShaderModel(ShaderModel model) {
     switch (model) {
-        case ShaderModel::UNKNOWN:
-        case ShaderModel::GL_ES_30:
+        case ShaderModel::MOBILE:
             return 300;
-        case ShaderModel::GL_CORE_41:
+        case ShaderModel::DESKTOP:
             return 410;
     }
 }
@@ -164,19 +163,19 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
     mslCompiler.set_common_options(options);
 
     const CompilerMSL::Options::Platform platform =
-        config.shaderModel == ShaderModel::GL_ES_30 ?
+        config.shaderModel == ShaderModel::MOBILE ?
             CompilerMSL::Options::Platform::iOS : CompilerMSL::Options::Platform::macOS;
 
     CompilerMSL::Options mslOptions = {};
     mslOptions.platform = platform,
-    mslOptions.msl_version = config.shaderModel == ShaderModel::GL_ES_30 ?
+    mslOptions.msl_version = config.shaderModel == ShaderModel::MOBILE ?
         CompilerMSL::Options::make_msl_version(2, 0) : CompilerMSL::Options::make_msl_version(2, 2);
 
     if (config.hasFramebufferFetch) {
         mslOptions.use_framebuffer_fetch_subpasses = true;
         // On macOS, framebuffer fetch is only available starting with MSL 2.3. Filament will only
         // use framebuffer fetch materials on devices that support it.
-        if (config.shaderModel == ShaderModel::GL_CORE_41) {
+        if (config.shaderModel == ShaderModel::DESKTOP) {
             mslOptions.msl_version = CompilerMSL::Options::make_msl_version(2, 3);
         }
     }
@@ -398,8 +397,8 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     // Transpile back to GLSL
     if (internalConfig.glslOutput) {
         CompilerGLSL::Options glslOptions;
-        glslOptions.es = config.shaderModel == ShaderModel::GL_ES_30;
-        glslOptions.version = shaderVersionFromModel(config.shaderModel);
+        glslOptions.es = config.shaderModel == ShaderModel::MOBILE;
+        glslOptions.version = glslVersionFromShaderModel(config.shaderModel);
         glslOptions.enable_420pack_extension = glslOptions.version >= 420;
         glslOptions.fragment.default_float_precision = glslOptions.es ?
                 CompilerGLSL::Options::Precision::Mediump : CompilerGLSL::Options::Precision::Highp;
@@ -469,7 +468,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass());
 
-    if (config.shaderModel != ShaderModel::GL_CORE_41 ||
+    if (config.shaderModel != ShaderModel::DESKTOP ||
             config.targetApi != MaterialBuilder::TargetApi::OPENGL) {
         // this triggers a segfault with AMD OpenGL drivers on MacOS
         // note that Metal also requires this pass in order to correctly generate half-precision MSL
@@ -515,7 +514,7 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass());
 
-    if (config.shaderModel != ShaderModel::GL_CORE_41) {
+    if (config.shaderModel != ShaderModel::DESKTOP) {
         // this triggers a segfault with AMD drivers on MacOS
         optimizer.RegisterPass(CreateMergeReturnPass());
     }

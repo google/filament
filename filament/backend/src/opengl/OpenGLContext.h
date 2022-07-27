@@ -221,7 +221,7 @@ public:
     void resetProgram() noexcept { state.program.use = 0; }
 
 private:
-    ShaderModel mShaderModel = ShaderModel::UNKNOWN;
+    ShaderModel mShaderModel = ShaderModel::MOBILE;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
             {   bugs.disable_glFlush,

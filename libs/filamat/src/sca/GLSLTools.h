@@ -141,7 +141,7 @@ public:
             const std::string& shaderCode,
             MaterialBuilder::PropertyList& properties,
             MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL,
-            ShaderModel model = ShaderModel::GL_CORE_41) const noexcept;
+            ShaderModel model = ShaderModel::DESKTOP) const noexcept;
 
     static int glslangVersionFromShaderModel(filament::backend::ShaderModel model);
 

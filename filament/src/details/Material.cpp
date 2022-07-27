@@ -113,9 +113,8 @@ Material* Material::Builder::build(Engine& engine) {
         materialParser->getName(&name);
         slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
         switch (shaderModel) {
-            case ShaderModel::GL_ES_30: slog.e << "mobile.\n"; break;
-            case ShaderModel::GL_CORE_41: slog.e << "desktop.\n"; break;
-            case ShaderModel::UNKNOWN: /* should never happen */ break;
+            case ShaderModel::MOBILE: slog.e << "mobile.\n"; break;
+            case ShaderModel::DESKTOP: slog.e << "desktop.\n"; break;
         }
         slog.e << "Compiled material contains shader models 0x"
                 << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;

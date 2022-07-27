@@ -41,9 +41,8 @@ using namespace utils;
 
 io::ostream& operator<<(io::ostream& out, ShaderModel model) {
     switch (model) {
-        CASE(ShaderModel, UNKNOWN)
-        CASE(ShaderModel, GL_ES_30)
-        CASE(ShaderModel, GL_CORE_41)
+        CASE(ShaderModel, MOBILE)
+        CASE(ShaderModel, DESKTOP)
     }
     return out;
 }
