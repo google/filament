@@ -14,3 +14,17 @@
 -keepclassmembers class * {
   @com.google.android.filament.proguard.UsedBy* *;
 }
+
+# These classes is loaded via env->FindClass() from Utils.cpp
+# They are in the utils namespace and therefore not covered by previous rules.
+-keep class com.google.android.filament.utils.KTX1Loader
+-keep class com.google.android.filament.utils.HDRLoader
+
+# These native JNI methods are loaded via env->RegisterNatives() from Utils.cpp
+-keepclassmembers class com.google.android.filament.utils.KTX1Loader {
+   native <methods>;
+}
+-keepclassmembers class com.google.android.filament.utils.HDRLoader {
+   native <methods>;
+}
+
