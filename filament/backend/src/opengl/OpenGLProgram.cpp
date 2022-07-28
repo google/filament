@@ -131,15 +131,16 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
                 }
             }
 
-            if (UTILS_UNLIKELY(context.getShaderModel() == ShaderModel::DESKTOP &&
-                               !context.ext.ARB_shading_language_packing)) {
-                // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
-                // MacOS doesn't support GL_ARB_shading_language_packing
-                if (temp.empty()) {
-                    temp = shaderView; // copy string
-                }
+            // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
+            // MacOS doesn't support GL_ARB_shading_language_packing
+            if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
+                if (context.state.major == 4 && context.state.minor == 1 &&
+                        !context.ext.ARB_shading_language_packing) {
+                    if (temp.empty()) {
+                        temp = shaderView; // copy string
+                    }
 
-                std::string unpackHalf2x16{ R"(
+                    std::string unpackHalf2x16{ R"(
 
 // these don't handle denormals, NaNs or inf
 float u16tofp32(highp uint v) {
@@ -175,12 +176,13 @@ highp uint packHalf2x16(vec2 v) {
     return (y << 16) | x;
 }
 )"};
-                // a good point for insertion is just before the first occurrence of an uniform block
-                auto pos = temp.find("layout(std140)");
-                if (pos != std::string_view::npos) {
-                    temp.insert(pos, unpackHalf2x16);
+                    // a good point for insertion is just before the first occurrence of an uniform block
+                    auto pos = temp.find("layout(std140)");
+                    if (pos != std::string_view::npos) {
+                        temp.insert(pos, unpackHalf2x16);
+                    }
+                    shaderView = temp;
                 }
-                shaderView = temp;
             }
 
             GLuint shaderId = glCreateShader(glShaderType);
