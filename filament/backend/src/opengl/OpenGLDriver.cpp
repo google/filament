@@ -1488,7 +1488,13 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool OpenGLDriver::isTextureSwizzleSupported() {
+#if defined(__EMSCRIPTEN__)
+    // WebGL2 doesn't support texture swizzle
+    // see https://registry.khronos.org/webgl/specs/latest/2.0/#5.19
+    return false;
+#else
     return true;
+#endif
 }
 
 bool OpenGLDriver::isTextureFormatMipmappable(TextureFormat format) {
