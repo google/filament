@@ -424,6 +424,7 @@ export class ColorGrading$Builder {
 }
 
 export class IndirectLight {
+    public static Builder(): IndirectLight$Builder;
     public setIntensity(intensity: number): void;
     public getIntensity(): number;
     public setRotation(value: mat3): void;
