@@ -138,6 +138,17 @@ backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext, const Pl
         goto error;
     }
 
+    // fallback to a 24-bit depth buffer
+    if (configsCount == 0) {
+        configAttribs[10] = EGL_DEPTH_SIZE;
+        configAttribs[11] = 24;
+
+        if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount)) {
+            logEglError("eglChooseConfig");
+            goto error;
+        }
+    }
+
     // find a transparent config
     configAttribs[8] = EGL_ALPHA_SIZE;
     configAttribs[9] = 8;
