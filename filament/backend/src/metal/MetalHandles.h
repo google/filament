@@ -279,7 +279,8 @@ public:
     };
 
     MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
-            Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment);
+            Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
+            Attachment depthAttachment, Attachment stencilAttachment);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
 
@@ -304,6 +305,7 @@ public:
     Attachment getDrawColorAttachment(size_t index);
     Attachment getReadColorAttachment(size_t index);
     Attachment getDepthAttachment();
+    Attachment getStencilAttachment();
 
 private:
 
@@ -320,6 +322,7 @@ private:
 
     Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     Attachment depth = {};
+    Attachment stencil = {};
     uint32_t attachmentHeight = 0;
 };
 

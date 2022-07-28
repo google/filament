@@ -303,13 +303,12 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{}};
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        const auto& buffer = color[i];
-        if (!buffer.handle) {
-            ASSERT_POSTCONDITION(none(targetBufferFlags & getTargetBufferFlagsAt(i)),
-                    "The COLOR%u flag was specified, but no color texture provided.", i);
+        if (none(targetBufferFlags & getTargetBufferFlagsAt(i))) {
             continue;
         }
-
+        const auto& buffer = color[i];
+        ASSERT_PRECONDITION(buffer.handle,
+                "The COLOR%u flag was specified, but invalid color handle provided.", i);
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         ASSERT_PRECONDITION(colorTexture->texture,
                 "Color texture passed to render target has no texture allocation");
@@ -318,23 +317,29 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     }
 
     MetalRenderTarget::Attachment depthAttachment = {};
-    if (depth.handle) {
+    if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
+        ASSERT_PRECONDITION(depth.handle,
+                "The DEPTH flag was specified, but invalid depth handle provided.");
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         ASSERT_PRECONDITION(depthTexture->texture,
                 "Depth texture passed to render target has no texture allocation.");
         depthTexture->updateLodRange(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
-    ASSERT_POSTCONDITION(!depth.handle || any(targetBufferFlags & TargetBufferFlags::DEPTH),
-            "The DEPTH flag was specified, but no depth texture provided.");
+
+    MetalRenderTarget::Attachment stencilAttachment = {};
+    if (any(targetBufferFlags & TargetBufferFlags::STENCIL)) {
+        ASSERT_PRECONDITION(stencil.handle,
+                "The STENCIL flag was specified, but invalid stencil handle provided.");
+        auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
+        ASSERT_PRECONDITION(stencilTexture->texture,
+                "Stencil texture passed to render target has no texture allocation.");
+        stencilTexture->updateLodRange(stencil.level);
+        stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
+    }
 
     construct_handle<MetalRenderTarget>(rth, mContext, width, height, samples,
-            colorAttachments, depthAttachment);
-
-    ASSERT_POSTCONDITION(
-            !stencil.handle &&
-            !(targetBufferFlags & TargetBufferFlags::STENCIL),
-            "Stencil buffer not supported.");
+            colorAttachments, depthAttachment, stencilAttachment);
 }
 
 void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
@@ -1167,6 +1172,11 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     if (depthAttachment) {
         depthPixelFormat = depthAttachment.getPixelFormat();
     }
+    MTLPixelFormat stencilPixelFormat = MTLPixelFormatInvalid;
+    const auto& stencilAttachment = mContext->currentRenderTarget->getStencilAttachment();
+    if (stencilAttachment) {
+        stencilPixelFormat = stencilAttachment.getPixelFormat();
+    }
     MetalPipelineState pipelineState {
         .vertexFunction = program->vertexFunction,
         .fragmentFunction = program->fragmentFunction,
@@ -1182,6 +1192,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
             colorPixelFormat[7]
         },
         .depthAttachmentPixelFormat = depthPixelFormat,
+        .stencilAttachmentPixelFormat = stencilPixelFormat,
         .sampleCount = mContext->currentRenderTarget->getSamples(),
         .blendState = BlendState {
             .blendingEnabled = rs.hasBlending(),
@@ -1219,8 +1230,16 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     // Set the depth-stencil state, if a state change is needed.
     DepthStencilState depthState;
     if (depthAttachment) {
-        depthState.compareFunction = getMetalCompareFunction(rs.depthFunc);
+        depthState.depthCompare = getMetalCompareFunction(rs.depthFunc);
         depthState.depthWriteEnabled = rs.depthWrite;
+    }
+    if (stencilAttachment) {
+        depthState.stencilCompare = getMetalCompareFunction(rs.stencilFunc);
+        depthState.stencilOperationDepthStencilPass = getMetalStencilOperation(rs.stencilOpDepthStencilPass);
+        depthState.stencilOperationDepthFail = getMetalStencilOperation(rs.stencilOpDepthFail);
+        depthState.stencilOperationStencilFail = getMetalStencilOperation(rs.stencilOpStencilFail);
+        depthState.stencilWriteEnabled = rs.stencilWrite;
+        [mContext->currentRenderPassEncoder setStencilReferenceValue:rs.stencilRef];
     }
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {

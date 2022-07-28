@@ -215,6 +215,7 @@ struct MetalPipelineState {
     VertexDescription vertexDescription;                                       // 528 bytes
     MTLPixelFormat colorAttachmentPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };  // 64 bytes
     MTLPixelFormat depthAttachmentPixelFormat = MTLPixelFormatInvalid;         // 8 bytes
+    MTLPixelFormat stencilAttachmentPixelFormat = MTLPixelFormatInvalid;       // 8 bytes
     NSUInteger sampleCount = 1;                                                // 8 bytes
     BlendState blendState;                                                     // 56 bytes
     bool colorWrite = true;                                                    // 1 byte
@@ -228,6 +229,7 @@ struct MetalPipelineState {
                 std::equal(this->colorAttachmentPixelFormat, this->colorAttachmentPixelFormat + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT,
                         rhs.colorAttachmentPixelFormat) &&
                 this->depthAttachmentPixelFormat == rhs.depthAttachmentPixelFormat &&
+                this->stencilAttachmentPixelFormat == rhs.stencilAttachmentPixelFormat &&
                 this->sampleCount == rhs.sampleCount &&
                 this->blendState == rhs.blendState &&
                 this->colorWrite == rhs.colorWrite
@@ -241,7 +243,7 @@ struct MetalPipelineState {
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(MetalPipelineState) == 688, "MetalPipelineState unexpected size.");
+static_assert(sizeof(MetalPipelineState) == 696, "MetalPipelineState unexpected size.");
 
 struct PipelineStateCreator {
     id<MTLRenderPipelineState> operator()(id<MTLDevice> device, const MetalPipelineState& state)
@@ -256,13 +258,23 @@ using PipelineStateCache = StateCache<MetalPipelineState, id<MTLRenderPipelineSt
 // Depth-stencil State
 
 struct DepthStencilState {
-    MTLCompareFunction compareFunction = MTLCompareFunctionAlways;      // 8 bytes
-    bool depthWriteEnabled = false;                                     // 1 byte
-    char padding[7] = { 0 };                                            // 7 bytes
+    MTLCompareFunction depthCompare = MTLCompareFunctionAlways;                         // 8 bytes
+    MTLCompareFunction stencilCompare = MTLCompareFunctionAlways;                       // 8 bytes
+    MTLStencilOperation stencilOperationStencilFail = MTLStencilOperationKeep;          // 8 bytes
+    MTLStencilOperation stencilOperationDepthFail = MTLStencilOperationKeep;            // 8 bytes
+    MTLStencilOperation stencilOperationDepthStencilPass = MTLStencilOperationKeep;     // 8 bytes
+    bool depthWriteEnabled = false;                                                     // 1 byte
+    bool stencilWriteEnabled = false;                                                   // 1 byte
+    char padding[6] = { 0 };                                                            // 7 bytes
 
-    bool operator==(const DepthStencilState& rhs) const noexcept {
-        return this->compareFunction == rhs.compareFunction &&
-               this->depthWriteEnabled == rhs.depthWriteEnabled;
+    bool operator==(const DepthStencilState& rhs) const {
+        return depthCompare == rhs.depthCompare &&
+               stencilCompare == rhs.stencilCompare &&
+               stencilOperationStencilFail == rhs.stencilOperationStencilFail &&
+               stencilOperationDepthFail == rhs.stencilOperationDepthFail &&
+               stencilOperationDepthStencilPass == rhs.stencilOperationDepthStencilPass &&
+               depthWriteEnabled == rhs.depthWriteEnabled &&
+               stencilWriteEnabled == rhs.stencilWriteEnabled;
     }
 
     bool operator!=(const DepthStencilState& rhs) const noexcept {
@@ -272,7 +284,7 @@ struct DepthStencilState {
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(DepthStencilState) == 16, "DepthStencilState unexpected size.");
+static_assert(sizeof(DepthStencilState) == 48, "DepthStencilState unexpected size.");
 
 struct DepthStateCreator {
     id<MTLDepthStencilState> operator()(id<MTLDevice> device, const DepthStencilState& state)

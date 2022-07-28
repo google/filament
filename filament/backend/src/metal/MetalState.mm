@@ -79,6 +79,9 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     // Depth attachment
     descriptor.depthAttachmentPixelFormat = state.depthAttachmentPixelFormat;
 
+    // Stencil attachment
+    descriptor.stencilAttachmentPixelFormat = state.stencilAttachmentPixelFormat;
+
     // MSAA
     descriptor.rasterSampleCount = state.sampleCount;
 
@@ -97,8 +100,17 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
 id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
         const DepthStencilState& state) noexcept {
     MTLDepthStencilDescriptor* depthStencilDescriptor = [MTLDepthStencilDescriptor new];
-    depthStencilDescriptor.depthCompareFunction = state.compareFunction;
-    depthStencilDescriptor.depthWriteEnabled = state.depthWriteEnabled;
+    depthStencilDescriptor.depthCompareFunction = state.depthCompare;
+    depthStencilDescriptor.depthWriteEnabled = BOOL(state.depthWriteEnabled);
+    MTLStencilDescriptor* stencilDescriptor = [MTLStencilDescriptor new];
+    stencilDescriptor.stencilCompareFunction = state.stencilCompare;
+    stencilDescriptor.stencilFailureOperation = state.stencilOperationStencilFail;
+    stencilDescriptor.depthFailureOperation = state.stencilOperationDepthFail;
+    stencilDescriptor.depthStencilPassOperation = state.stencilOperationDepthStencilPass;
+    stencilDescriptor.readMask = 0xFFFFFFFF;
+    stencilDescriptor.writeMask = state.stencilWriteEnabled ? 0xFFFFFFFF : 0x0;
+    depthStencilDescriptor.backFaceStencil = stencilDescriptor;
+    depthStencilDescriptor.frontFaceStencil = stencilDescriptor;
     return [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
 }
 
