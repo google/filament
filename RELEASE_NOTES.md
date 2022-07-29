@@ -7,7 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 - WebGL: upgraded the JS bindings to work with emsdk 3.1.15
 - WebGL: added missing IBL builder to TypeScript annotations
-- engine : Fix incorrect precision restoration when computing accurate world translations
+- engine: Fix incorrect precision restoration when computing accurate world translations
+- engine: make `MaterialInstance` public API friendly to `std::string_view` parameters
 
 ## v1.25.4
 

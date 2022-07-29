@@ -37,6 +37,18 @@ class UniformBuffer;
 class UniformInterfaceBlock;
 
 class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
+    template<size_t N>
+    using StringLiteralHelper = const char[N];
+
+    struct StringLiteral {
+        const char* data;
+        size_t size;
+        template<size_t N>
+        StringLiteral(StringLiteralHelper<N> const& s) noexcept // NOLINT(google-explicit-constructor)
+                : data(s), size(N - 1) {
+        }
+    };
+
 public:
     using CullingMode = filament::backend::CullingMode;
     using TransparencyMode = filament::TransparencyMode;
@@ -88,23 +100,51 @@ public:
     /**
      * Set a uniform by name
      *
-     * @param name      Name of the parameter as defined by Material. Cannot be nullptr.
-     * @param value     Value of the parameter to set.
+     * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
+     * @param nameLength    Length in `char` of the name parameter.
+     * @param value         Value of the parameter to set.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
     template<typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(const char* name, T const& value) noexcept;
+    void setParameter(const char* name, size_t nameLength, T const& value);
+
+    /** inline helper to provide the name as a null-terminated string literal */
+    template<typename T, typename = is_supported_parameter_t<T>>
+    inline void setParameter(StringLiteral name, T const& value) {
+        setParameter<T>(name.data, name.size, value);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    template<typename T, typename = is_supported_parameter_t<T>>
+    inline void setParameter(const char* name, T const& value) {
+        setParameter<T>(name, strlen(name), value);
+    }
+
 
     /**
      * Set a uniform array by name
      *
-     * @param name      Name of the parameter array as defined by Material. Cannot be nullptr.
-     * @param values    Array of values to set to the named parameter array.
-     * @param count     Size of the array to set.
+     * @param name          Name of the parameter array as defined by Material. Cannot be nullptr.
+     * @param nameLength    Length in `char` of the name parameter.
+     * @param values        Array of values to set to the named parameter array.
+     * @param count         Size of the array to set.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
     template<typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(const char* name, const T* values, size_t count) noexcept;
+    void setParameter(const char* name, size_t nameLength, const T* values, size_t count);
+
+    /** inline helper to provide the name as a null-terminated string literal */
+    template<typename T, typename = is_supported_parameter_t<T>>
+    inline void setParameter(StringLiteral name, const T* values, size_t count) {
+        setParameter<T>(name.data, name.size, values, count);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    template<typename T, typename = is_supported_parameter_t<T>>
+    inline void setParameter(const char* name, const T* values, size_t count) {
+        setParameter<T>(name, strlen(name), values, count);
+    }
+
 
     /**
      * Set a texture as the named parameter
@@ -112,35 +152,73 @@ public:
      * Note: Depth textures can't be sampled with a linear filter unless the comparison mode is set
      *       to COMPARE_TO_TEXTURE.
      *
-     * @param name      Name of the parameter as defined by Material. Cannot be nullptr.
-     * @param texture   Non nullptr Texture object pointer.
-     * @param sampler   Sampler parameters.
+     * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
+     * @param nameLength    Length in `char` of the name parameter.
+     * @param texture       Non nullptr Texture object pointer.
+     * @param sampler       Sampler parameters.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name,
-            Texture const* texture, TextureSampler const& sampler) noexcept;
+    void setParameter(const char* name, size_t nameLength,
+            Texture const* texture, TextureSampler const& sampler);
+
+    /** inline helper to provide the name as a null-terminated string literal */
+    inline void setParameter(StringLiteral name,
+            Texture const* texture, TextureSampler const& sampler) {
+        setParameter(name.data, name.size, texture, sampler);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    inline void setParameter(const char* name,
+            Texture const* texture, TextureSampler const& sampler) {
+        setParameter(name, strlen(name), texture, sampler);
+    }
+
 
     /**
      * Set an RGB color as the named parameter.
      * A conversion might occur depending on the specified type
      *
-     * @param name      Name of the parameter as defined by Material. Cannot be nullptr.
-     * @param type      Whether the color value is encoded as Linear or sRGB.
-     * @param color     Array of read, green, blue channels values.
+     * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
+     * @param nameLength    Length in `char` of the name parameter.
+     * @param type          Whether the color value is encoded as Linear or sRGB.
+     * @param color         Array of read, green, blue channels values.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name, RgbType type, math::float3 color) noexcept;
+    void setParameter(const char* name, size_t nameLength, RgbType type, math::float3 color);
+
+    /** inline helper to provide the name as a null-terminated string literal */
+    inline void setParameter(StringLiteral name, RgbType type, math::float3 color) {
+        setParameter(name.data, name.size, type, color);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    inline void setParameter(const char* name, RgbType type, math::float3 color) {
+        setParameter(name, strlen(name), type, color);
+    }
+
 
     /**
      * Set an RGBA color as the named parameter.
      * A conversion might occur depending on the specified type
      *
-     * @param name      Name of the parameter as defined by Material. Cannot be nullptr.
-     * @param type      Whether the color value is encoded as Linear or sRGB/A.
-     * @param color     Array of read, green, blue and alpha channels values.
+     * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
+     * @param nameLength    Length in `char` of the name parameter.
+     * @param type          Whether the color value is encoded as Linear or sRGB/A.
+     * @param color         Array of read, green, blue and alpha channels values.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name, RgbaType type, math::float4 color) noexcept;
+    void setParameter(const char* name, size_t nameLength, RgbaType type, math::float4 color);
+
+    /** inline helper to provide the name as a null-terminated string literal */
+    inline void setParameter(StringLiteral name, RgbaType type, math::float4 color) {
+        setParameter(name.data, name.size, type, color);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    inline void setParameter(const char* name, RgbaType type, math::float4 color) {
+        setParameter(name, strlen(name), type, color);
+    }
+
 
     /**
      * Set up a custom scissor rectangle; by default this encompasses the View.

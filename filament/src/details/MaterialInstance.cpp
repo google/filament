@@ -139,14 +139,14 @@ void FMaterialInstance::commitSlow(DriverApi& driver) const {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::setParameter(const char* name,
+void FMaterialInstance::setParameter(std::string_view name,
         backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept {
     size_t index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
     mSamplers.setSampler(index, { texture, params });
 }
 
-void FMaterialInstance::setParameterImpl(const char* name,
-        Texture const* texture, TextureSampler const& sampler) noexcept {
+void FMaterialInstance::setParameterImpl(std::string_view name,
+        Texture const* texture, TextureSampler const& sampler) {
 
 #ifndef NDEBUG
     // Per GLES3.x specification, depth texture can't be filtered unless in compare mode.
@@ -161,8 +161,8 @@ void FMaterialInstance::setParameterImpl(const char* name,
                 minFilter == SamplerMinFilter::NEAREST_MIPMAP_LINEAR) {
                 PANIC_LOG("Depth textures can't be sampled with a linear filter "
                           "unless the comparison mode is set to COMPARE_TO_TEXTURE. "
-                          "(material: \"%s\", parameter: \"%s\")",
-                          getMaterial()->getName().c_str(), name);
+                          "(material: \"%s\", parameter: \"%.*s\")",
+                          getMaterial()->getName().c_str(), name.size(), name.data());
             }
         }
     }

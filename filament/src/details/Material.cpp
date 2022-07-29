@@ -342,7 +342,7 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 
 UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
         utils::StaticString const& name) const noexcept {
-    return mUniformInterfaceBlock.getUniformInfo(name.c_str());
+    return mUniformInterfaceBlock.getUniformInfo({ name.c_str(), name.length() });
 }
 
 void FMaterial::prepareProgramSlow(Variant variant) const noexcept {

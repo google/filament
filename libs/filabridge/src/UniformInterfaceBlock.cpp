@@ -112,7 +112,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
         info = { e.name, offset, stride, e.type, e.size, e.precision, e.structName };
 
         // record this uniform info
-        infoMap[info.name.c_str()] = i;
+        infoMap[{ info.name.data(), info.name.size() }] = i;
 
         // advance offset to next slot
         offset += stride * std::max(1u, e.size);
@@ -123,22 +123,19 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
     mSize = sizeof(uint32_t) * ((offset + 3) & ~3);
 }
 
-ssize_t UniformInterfaceBlock::getUniformOffset(const char* name, size_t index) const {
+ssize_t UniformInterfaceBlock::getUniformOffset(std::string_view name, size_t index) const {
     auto const* info = getUniformInfo(name);
-    if (!info) {
-        return -1;
-    }
-    return info->getBufferOffset(index);
+    assert_invariant(info);
+    return (ssize_t)info->getBufferOffset(index);
 }
 
-UniformInterfaceBlock::UniformInfo const* UniformInterfaceBlock::getUniformInfo(const char* name) const {
-    auto const& pos = mInfoMap.find(name);
-    if (!ASSERT_PRECONDITION_NON_FATAL(pos != mInfoMap.end(), "uniform named \"%s\" not found", name)) {
-        return nullptr;
-    }
+UniformInterfaceBlock::UniformInfo const* UniformInterfaceBlock::getUniformInfo(
+        std::string_view name) const {
+    auto pos = mInfoMap.find(name);
+    ASSERT_PRECONDITION(pos != mInfoMap.end(),
+            "uniform named \"%.*s\" not found", name.size(), name.data());
     return &mUniformsInfoList[pos->second];
 }
-
 
 uint8_t UTILS_NOINLINE UniformInterfaceBlock::baseAlignmentForType(UniformInterfaceBlock::Type type) noexcept {
     switch (type) {
