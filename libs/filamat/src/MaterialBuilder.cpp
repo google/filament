@@ -95,8 +95,9 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
     }
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
-    // The shader model loop starts at 1 to skip ShaderModel::UNKNOWN.
-    for (uint8_t i = 1; i < filament::backend::SHADER_MODEL_COUNT; i++) {
+    static_assert(filament::backend::SHADER_MODEL_COUNT == 2);
+    for (const auto shaderModel : {ShaderModel::MOBILE, ShaderModel::DESKTOP}) {
+        const auto i = static_cast<uint8_t>(shaderModel);
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
