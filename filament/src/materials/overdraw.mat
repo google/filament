@@ -1,0 +1,20 @@
+material {
+    name : overdraw,
+    parameters : [
+        {
+            type : float4,
+            name : color
+        }
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain : postprocess
+}
+
+fragment {
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        postProcess.color.rgb = materialParams.color.rgb;
+    }
+
+}

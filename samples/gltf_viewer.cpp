@@ -53,6 +53,7 @@
 #include <imgui.h>
 #include <filagui/ImGuiExtensions.h>
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -97,6 +98,14 @@ struct App {
         VertexBuffer* groundVertexBuffer;
         IndexBuffer* groundIndexBuffer;
         Material* groundMaterial;
+
+        Material* overdrawMaterial;
+        static constexpr auto OVERDRAW_VISIBILITY_LAYER = 1u;   // overdraw renderables View layer
+        static constexpr auto OVERDRAW_LAYERS = 4u;             // unique overdraw colors
+        std::array<Entity, OVERDRAW_LAYERS> overdrawVisualizer;
+        std::array<MaterialInstance*, OVERDRAW_LAYERS> overdrawMaterialInstances;
+        VertexBuffer* fullScreenTriangleVertexBuffer;
+        IndexBuffer* fullScreenTriangleIndexBuffer;
     } scene;
 
     // zero-initialized so that the first time through is always dirty.
@@ -348,6 +357,80 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
+static constexpr float4 sFullScreenTriangleVertices[3] = {
+        { -1.0f, -1.0f, 1.0f, 1.0f },
+        {  3.0f, -1.0f, 1.0f, 1.0f },
+        { -1.0f,  3.0f, 1.0f, 1.0f }
+};
+
+static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
+
+static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App& app) {
+    Material* material = Material::Builder()
+            .package(GLTF_DEMO_OVERDRAW_DATA, GLTF_DEMO_OVERDRAW_SIZE)
+            .build(*engine);
+
+    const float3 overdrawColors[App::Scene::OVERDRAW_LAYERS] = {
+            {0.0f, 0.0f, 1.0f},     // blue         (overdrawn 1 time)
+            {0.0f, 1.0f, 0.0f},     // green        (overdrawn 2 times)
+            {1.0f, 0.0f, 1.0f},     // magenta      (overdrawn 3 times)
+            {1.0f, 0.0f, 0.0f}      // red          (overdrawn 4+ times)
+    };
+
+    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+        MaterialInstance* matInstance = material->createInstance();
+        // TODO: move this to the material definition.
+        matInstance->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::E);
+        // The stencil value represents the number of times the fragment has been written to.
+        // We want 0-1 writes to be the regular color. Overdraw visualization starts at 2+ writes,
+        // which represents a fragment overdrawn 1 time.
+        matInstance->setStencilReferenceValue(i + 2);
+        matInstance->setParameter("color", overdrawColors[i]);
+        app.scene.overdrawMaterialInstances[i] = matInstance;
+    }
+    auto& lastMi = app.scene.overdrawMaterialInstances[App::Scene::OVERDRAW_LAYERS - 1];
+    // This seems backwards, but it isn't. The comparison function compares:
+    // the reference value (left side) <= stored stencil value (right side)
+    lastMi->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::LE);
+
+    VertexBuffer* vertexBuffer = VertexBuffer::Builder()
+            .vertexCount(3)
+            .bufferCount(1)
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
+            .build(*engine);
+
+    vertexBuffer->setBufferAt(
+            *engine, 0, { sFullScreenTriangleVertices, sizeof(sFullScreenTriangleVertices) });
+
+    IndexBuffer* indexBuffer = IndexBuffer::Builder()
+            .indexCount(3)
+            .bufferType(IndexBuffer::IndexType::USHORT)
+            .build(*engine);
+
+    indexBuffer->setBuffer(*engine,
+            { sFullScreenTriangleIndices, sizeof(sFullScreenTriangleIndices) });
+
+    auto& em = EntityManager::get();
+    const auto& matInstances = app.scene.overdrawMaterialInstances;
+    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+        Entity overdrawEntity = em.create();
+        RenderableManager::Builder(1)
+                .boundingBox({{}, {1.0f, 1.0f, 1.0f}})
+                .material(0, matInstances[i])
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 3)
+                .culling(false)
+                .priority(7u)   // ensure the overdraw primitives are drawn last
+                .layerMask(0xFF, 1u << App::Scene::OVERDRAW_VISIBILITY_LAYER)
+                .build(*engine, overdrawEntity);
+        scene->addEntity(overdrawEntity);
+        app.scene.overdrawVisualizer[i] = overdrawEntity;
+    }
+
+    app.scene.overdrawMaterial = material;
+    app.scene.fullScreenTriangleVertexBuffer = vertexBuffer;
+    app.scene.fullScreenTriangleIndexBuffer = indexBuffer;
+}
+
 static void onClick(App& app, View* view, ImVec2 pos) {
     view->pick(pos.x, pos.y, [&app](View::PickingQueryResult const& result){
         if (const char* name = app.asset->getName(result.renderable); name) {
@@ -444,6 +527,14 @@ int main(int argc, char** argv) {
 
         app.asset->releaseSourceData();
 
+        // Enable stencil writes on all material instances.
+        const size_t matInstanceCount = app.asset->getMaterialInstanceCount();
+        MaterialInstance* const* const instances = app.asset->getMaterialInstances();
+        for (int mi = 0; mi < matInstanceCount; mi++) {
+            instances[mi]->setStencilWrite(true);
+            instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
+        }
+
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
@@ -520,6 +611,7 @@ int main(int argc, char** argv) {
         app.viewer->setAsset(app.asset);
 
         createGroundPlane(engine, scene, app);
+        createOverdrawVisualizerEntities(engine, scene, app);
 
         app.viewer->setUiCallback([&app, scene, view, engine] () {
             auto& automation = *app.automationEngine;
@@ -654,6 +746,13 @@ int main(int argc, char** argv) {
                 if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
                     ImGui::Checkbox("Enable LiSPSM", lispsm);
                 }
+
+                const auto overdrawVisibilityBit = (1u << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                bool visualizeOverdraw = view->getVisibleLayers() & overdrawVisibilityBit;
+                ImGui::Checkbox("Visualize overdraw", &visualizeOverdraw);
+                view->setVisibleLayers(overdrawVisibilityBit,
+                        (uint8_t)visualizeOverdraw << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                view->setStencilBufferEnabled(visualizeOverdraw);
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -677,6 +776,20 @@ int main(int argc, char** argv) {
         engine->destroy(app.scene.groundIndexBuffer);
         engine->destroy(app.scene.groundMaterial);
         engine->destroy(app.colorGrading);
+
+        engine->destroy(app.scene.fullScreenTriangleVertexBuffer);
+        engine->destroy(app.scene.fullScreenTriangleIndexBuffer);
+
+        auto& em = EntityManager::get();
+        for (auto e : app.scene.overdrawVisualizer) {
+            engine->destroy(e);
+            em.destroy(e);
+        }
+
+        for (auto mi : app.scene.overdrawMaterialInstances) {
+            engine->destroy(mi);
+        }
+        engine->destroy(app.scene.overdrawMaterial);
 
         delete app.viewer;
         delete app.materials;
