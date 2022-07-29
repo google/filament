@@ -849,7 +849,7 @@ while getopts ":hacCfijmp:q:uvslwtedk:" opt; do
             ;;
         e)
             EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=ON -DFILAMENT_SKIP_SDL2=ON -DFILAMENT_SKIP_SAMPLES=ON"
-            echo "EGL on Linux support enabled; skipping SLD2."
+            echo "EGL on Linux support enabled; skipping SDL2."
             ;;
         l)
             IOS_BUILD_SIMULATOR=true
