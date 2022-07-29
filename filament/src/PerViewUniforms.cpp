@@ -168,7 +168,7 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,
     const float edgeDistance = 1.0f / options.bilateralThreshold;
     auto& s = mUniforms.edit();
     s.aoSamplingQualityAndEdgeDistance =
-            options.enabled && highQualitySampling ? edgeDistance : 0.0f;
+            options.enabled ? (highQualitySampling ? edgeDistance : 0.0f) : -1.0f;
     s.aoBentNormals = options.enabled && options.bentNormals ? 1.0f : 0.0f;
 }
 

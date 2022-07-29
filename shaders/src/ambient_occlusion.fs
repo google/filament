@@ -25,6 +25,12 @@ struct SSAOInterpolationCache {
 
 float evaluateSSAO(inout SSAOInterpolationCache cache) {
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
+
+    if (frameUniforms.aoSamplingQualityAndEdgeDistance < 0.0) {
+        // SSAO is disabled
+        return 1.0;
+    }
+
     // Upscale the SSAO buffer in real-time, in high quality mode we use a custom bilinear
     // filter. This adds about 2.0ms @ 250MHz on Pixel 4.
 
