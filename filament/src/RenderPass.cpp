@@ -753,6 +753,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
                 ma = mi->getMaterial();
                 *pScissor = mi->getScissor();
                 *pPipelinePolygonOffset = mi->getPolygonOffset();
+                pipeline.stencilState = mi->getStencilState();
                 mi->use(driver);
             }
 
