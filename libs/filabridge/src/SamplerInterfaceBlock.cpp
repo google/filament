@@ -83,17 +83,16 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
         assert_invariant(i == e.offset);
         SamplerInfo& info = samplersInfoList[i++];
         info = e;
-        infoMap[info.name.c_str()] = info.offset; // info.name.c_str() guaranteed constant
+        infoMap[{ info.name.data(), info.name.size() }] = info.offset; // info.name.c_str() guaranteed constant
     }
     assert_invariant(i == samplersInfoList.size());
 }
 
 const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
-        const char* name) const {
-    auto const& pos = mInfoMap.find(name);
-    if (!ASSERT_PRECONDITION_NON_FATAL(pos != mInfoMap.end(), "sampler named \"%s\" not found", name)) {
-        return nullptr;
-    }
+        std::string_view name) const {
+    auto pos = mInfoMap.find(name);
+    ASSERT_PRECONDITION(pos != mInfoMap.end(), "sampler named \"%.*s\" not found",
+            name.size(), name.data());
     return &mSamplersInfoList[pos->second];
 }
 

@@ -122,7 +122,7 @@ public:
 
     const char* getName() const noexcept;
 
-    void setParameter(const char* name,
+    void setParameter(std::string_view name,
             backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept;
 
     using MaterialInstance::setParameter;
@@ -132,19 +132,19 @@ private:
     friend class MaterialInstance;
 
     template<size_t Size>
-    void setParameterUntypedImpl(const char* name, const void* value) noexcept;
+    void setParameterUntypedImpl(std::string_view name, const void* value);
 
     template<size_t Size>
-    void setParameterUntypedImpl(const char* name, const void* value, size_t count) noexcept;
+    void setParameterUntypedImpl(std::string_view name, const void* value, size_t count);
 
     template<typename T>
-    void setParameterImpl(const char* name, T const& value) noexcept;
+    void setParameterImpl(std::string_view name, T const& value);
 
     template<typename T>
-    void setParameterImpl(const char* name, const T* value, size_t count) noexcept;
+    void setParameterImpl(std::string_view name, const T* value, size_t count);
 
-    void setParameterImpl(const char* name,
-            Texture const* texture, TextureSampler const& sampler) noexcept;
+    void setParameterImpl(std::string_view name,
+            Texture const* texture, TextureSampler const& sampler);
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
