@@ -189,4 +189,88 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
     api.destroyRenderTarget(renderTarget);
 }
 
+TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
+    auto& api = getDriverApi();
+
+    // Create two textures: a single-sampled color and a MSAA stencil texture.
+    // We also create two RenderTargets, one for each pass:
+    // Pass 0: Render a triangle only into the MSAA stencil buffer.
+    // Pass 1: Render a triangle into (an auto-created) MSAA color buffer using the stencil test.
+    //         Performs an auto-resolve on the color.
+    auto colorTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE);
+    auto depthStencilTextureMSAA = api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::DEPTH24_STENCIL8, 4, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT);
+    auto renderTarget0 = getDriverApi().createRenderTarget(
+            TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4,
+            {{}}, {depthStencilTextureMSAA}, {depthStencilTextureMSAA});
+    auto renderTarget1 = getDriverApi().createRenderTarget(
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4,
+            {{colorTexture}}, {depthStencilTextureMSAA}, {depthStencilTextureMSAA});
+
+    api.startCapture(0);
+
+    // We'll be using a triangle as geometry.
+    TrianglePrimitive smallTriangle(api);
+    static filament::math::float2 vertices[3] = {
+            { -0.5, -0.5 },
+            {  0.5, -0.5 },
+            { -0.5,  0.5 }
+    };
+    smallTriangle.updateVertices(vertices);
+    TrianglePrimitive triangle(api);
+
+    // Step 1: Clear the stencil buffer to all zeroes.
+    // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
+    RenderPassParams params = {};
+    params.flags.clear = TargetBufferFlags::STENCIL;
+    params.viewport = {0, 0, 512, 512};
+    params.clearStencil = 0u;
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+
+    PipelineState ps = {};
+    ps.program = program;
+    ps.rasterState.colorWrite = false;
+    ps.rasterState.depthWrite = false;
+    ps.rasterState.stencilWrite = true;
+    ps.rasterState.stencilOpDepthStencilPass = StencilOperation::INCR;
+
+    api.makeCurrent(swapChain, swapChain);
+    api.beginFrame(0, 0);
+
+    api.beginRenderPass(renderTarget0, params);
+    api.draw(ps, smallTriangle.getRenderPrimitive(), 1);
+    api.endRenderPass();
+
+    // Step 2: Render a larger triangle with the stencil test enabled.
+    params.flags.clear = TargetBufferFlags::COLOR0;
+    params.flags.discardStart = TargetBufferFlags::COLOR0;
+    params.flags.discardEnd = TargetBufferFlags::STENCIL;
+    params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
+    ps.rasterState.colorWrite = true;
+    ps.rasterState.stencilWrite = false;
+    ps.rasterState.stencilOpDepthStencilPass = StencilOperation::KEEP;
+    ps.rasterState.stencilFunc = RasterState::StencilFunction::E;
+    ps.rasterState.stencilRef = 0u;
+
+    api.beginRenderPass(renderTarget1, params);
+    api.draw(ps, triangle.getRenderPrimitive(), 1);
+    api.endRenderPass();
+
+    api.commit(swapChain);
+    api.stopCapture(0);
+    api.endFrame(0);
+
+    readPixelsAndAssertHash("StencilBufferAutoResolve", 512, 512, renderTarget1, 0xC7E34C43, true);
+
+    flushAndWait();
+    getDriver().purge();
+
+    api.destroyTexture(colorTexture);
+    api.destroyTexture(depthStencilTextureMSAA);
+    api.destroyRenderTarget(renderTarget0);
+    api.destroyRenderTarget(renderTarget1);
+}
+
 } // namespace test

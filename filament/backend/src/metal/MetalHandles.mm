@@ -850,9 +850,26 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
     if (stencilAttachment) {
         stencil = stencilAttachment;
 
+        ASSERT_PRECONDITION(stencil.getSampleCount() <= samples,
+                "MetalRenderTarget was initialized with a MSAA STENCIL texture, but sample count is %d.",
+                samples);
+
+        auto t = stencil.metalTexture;
+        const auto twidth = std::max(1u, t->width >> stencil.level);
+        const auto theight = std::max(1u, t->height >> stencil.level);
+        tmin = { math::min(tmin.x, twidth), math::min(tmin.y, theight) };
+        tmax = { math::max(tmax.x, twidth), math::max(tmax.y, theight) };
         attachmentCount++;
 
-        // TODO: stencil MSAA
+        // If we were given a single-sampled texture but the samples parameter is > 1, we create
+        // a multisampled sidecar texture and do a resolve automatically.
+        if (samples > 1 && stencil.getSampleCount() == 1) {
+            auto& sidecar = stencil.metalTexture->msaaSidecar;
+            if (!sidecar) {
+                sidecar = createMultisampledTexture(context->device, stencil.getPixelFormat(),
+                        stencil.metalTexture->width, stencil.metalTexture->height, samples);
+            }
+        }
     }
 
     // Verify that all attachments have the same non-zero dimensions.
@@ -921,8 +938,8 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.depthAttachment.clearDepth = params.clearDepth;
     }
 
-    const bool automaticResolve = samples > 1 && depthAttachment.getSampleCount() == 1;
-    if (automaticResolve) {
+    const bool depthAutomaticResolve = samples > 1 && depthAttachment.getSampleCount() == 1;
+    if (depthAutomaticResolve) {
         // We're rendering into our temporary MSAA texture and doing an automatic resolve.
         // We should not be attempting to load anything into the MSAA texture.
         assert_invariant(descriptor.depthAttachment.loadAction != MTLLoadActionLoad);
@@ -951,6 +968,28 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.stencilAttachment.loadAction = getLoadAction(params, TargetBufferFlags::STENCIL);
         descriptor.stencilAttachment.storeAction = getStoreAction(params, TargetBufferFlags::STENCIL);
         descriptor.stencilAttachment.clearStencil = params.clearStencil;
+    }
+
+    const bool stencilAutomaticResolve = samples > 1 && stencilAttachment.getSampleCount() == 1;
+    if (stencilAutomaticResolve) {
+        // We're rendering into our temporary MSAA texture and doing an automatic resolve.
+        // We should not be attempting to load anything into the MSAA texture.
+        assert_invariant(descriptor.stencilAttachment.loadAction != MTLLoadActionLoad);
+        assert_invariant(!defaultRenderTarget);
+
+        id<MTLTexture> sidecar = stencilAttachment.getMSAASidecarTexture();
+        assert_invariant(sidecar);
+
+        descriptor.stencilAttachment.texture = sidecar;
+        descriptor.stencilAttachment.level = 0;
+        descriptor.stencilAttachment.slice = 0;
+        const bool discard = any(discardFlags & TargetBufferFlags::STENCIL);
+        if (!discard) {
+            descriptor.stencilAttachment.resolveTexture = stencilAttachment.getTexture();
+            descriptor.stencilAttachment.resolveLevel = stencilAttachment.level;
+            descriptor.stencilAttachment.resolveSlice = stencilAttachment.layer;
+            descriptor.stencilAttachment.storeAction = MTLStoreActionMultisampleResolve;
+        }
     }
 }
 
