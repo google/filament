@@ -20,7 +20,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
-#import <Metal/Metal.h>
+#include <Metal/Metal.h>
 
 namespace filament {
 namespace backend {
