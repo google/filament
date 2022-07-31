@@ -238,7 +238,7 @@ DEFAULT_CONSTRUCTORS(DisplayRangeToneMapper)
 
 float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
     // 16 debug colors + 1 duplicated at the end for easy indexing
-    constexpr float3 debugColors[17] = {
+    float3 debugColors[17] = {
             {0.0,     0.0,     0.0},         // black
             {0.0,     0.0,     0.1647},      // darkest blue
             {0.0,     0.0,     0.3647},      // darker blue
