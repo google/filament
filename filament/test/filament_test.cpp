@@ -66,7 +66,7 @@ static bool vec3eq(float3 a, float3 b) {
 }
 
 TEST(FilamentTest, AabbMath) {
-    constexpr Aabb aabb = {{4, 5, 6}, {12, 14, 11}};
+    Aabb aabb = {{4, 5, 6}, {12, 14, 11}};
 
     const mat4f m(mat3f::rotation(F_PI_2, float3 {0, 0, 1}), float3 {-4, -5, -6});
     const Aabb result = aabb.transform(m);
