@@ -108,7 +108,7 @@ public:
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(backend::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
+    bool prepare(backend::DriverApi& driverApi, ArenaScope& arena, filament::Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
@@ -187,7 +187,7 @@ private:
 
     using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX>;
 
-    inline void setViewport(Viewport const& viewport) noexcept;
+    inline void setViewport(filament::Viewport const& viewport) noexcept;
     inline void setProjection(const math::mat4f& projection, float near, float far) noexcept;
     bool update() noexcept;
 
@@ -213,7 +213,7 @@ private:
 
     static void computeFroxelLayout(
             math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
-            Viewport const& viewport) noexcept;
+            filament::Viewport const& viewport) noexcept;
 
     // internal state dependant on the viewport and needed for froxelizing
     LinearAllocatorArena mArena;                    // ~256 KiB
@@ -244,7 +244,7 @@ private:
     backend::Handle<backend::HwTexture> mFroxelTexture;
 
     // needed for update()
-    Viewport mViewport;
+    filament::Viewport mViewport;
     math::float4 mParamsZ = {};
     math::uint3 mParamsF = {};
     float mNear = 0.0f;        // camera near
