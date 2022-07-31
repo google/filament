@@ -51,9 +51,10 @@
 #include <assimp/postprocess.h>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
-#include <assimp/pbrmaterial.h>
+// #include <assimp/pbrmaterial.h>
+#include <assimp/GltfMaterial.h>
 
-#include <stb_image.h>
+#include <stb/stb_image.h>
 
 #include <backend/DriverEnums.h>
 
@@ -969,7 +970,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     MaterialConfig matConfig;
 
     material->Get(AI_MATKEY_TWOSIDED, matConfig.doubleSided);
-    material->Get(AI_MATKEY_GLTF_UNLIT, matConfig.unlit);
+    material->Get("$mat.gltf.unlit", 0, 0, matConfig.unlit);
 
     aiString alphaMode;
     material->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode);
@@ -982,13 +983,13 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         matConfig.maskThreshold = maskThreshold;
     }
 
-    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
+    material->Get(_AI_MATKEY_TEXTURE_BASE, AI_MATKEY_BASE_COLOR_TEXTURE,
                   matConfig.baseColorUV);
-    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
+    material->Get(_AI_MATKEY_TEXTURE_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
                   matConfig.metallicRoughnessUV);
-    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
-    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_NORMALS, 0, matConfig.normalUV);
-    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
+    material->Get(_AI_MATKEY_TEXTURE_BASE, aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
+    material->Get(_AI_MATKEY_TEXTURE_BASE, aiTextureType_NORMALS, 0, matConfig.normalUV);
+    material->Get(_AI_MATKEY_TEXTURE_BASE, aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
 
     uint64_t configHash = hashMaterialConfig(matConfig);
 
@@ -1019,12 +1020,12 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
             TextureSampler::MagFilter::LINEAR,
             TextureSampler::WrapMode::REPEAT);
 
-    if (material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &baseColorPath,
+    if (material->GetTexture(AI_MATKEY_BASE_COLOR_TEXTURE, &baseColorPath,
             nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
-        material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, minType);
-        material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, magType);
+        material->Get("$tex.mappingfiltermin", AI_MATKEY_BASE_COLOR_TEXTURE, minType);
+        material->Get("$tex.mappingfiltermag", AI_MATKEY_BASE_COLOR_TEXTURE, magType);
 
         setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
                 materialName, dirName, mapMode, "baseColorMap", outMaterials, minType, magType);
@@ -1085,11 +1086,11 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     //If the gltf has texture factors, override the default factor values
-    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, metallicFactor) == AI_SUCCESS) {
+    if (material->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor) == AI_SUCCESS) {
         outMaterials[materialName]->setParameter("metallicFactor", metallicFactor);
     }
 
-    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, roughnessFactor) == AI_SUCCESS) {
+    if (material->Get(AI_MATKEY_METALLIC_FACTOR, roughnessFactor) == AI_SUCCESS) {
         outMaterials[materialName]->setParameter("roughnessFactor", roughnessFactor);
     }
 
@@ -1098,13 +1099,13 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         outMaterials[materialName]->setParameter("emissiveFactor", emissiveFactorCast);
     }
 
-    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, baseColorFactor) == AI_SUCCESS) {
+    if (material->Get(AI_MATKEY_BASE_COLOR, baseColorFactor) == AI_SUCCESS) {
         sRGBColorA baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
         outMaterials[materialName]->setParameter("baseColorFactor", baseColorFactorCast);
     }
 
     aiBool isSpecularGlossiness = false;
-    if (material->Get(AI_MATKEY_GLTF_PBRSPECULARGLOSSINESS, isSpecularGlossiness) == AI_SUCCESS) {
+    if (material->Get(AI_MATKEY_GLOSSINESS_FACTOR, isSpecularGlossiness) == AI_SUCCESS) {
         if (isSpecularGlossiness) {
             std::cout << "Warning: pbrSpecularGlossiness textures are not currently supported" << std::endl;
         }
