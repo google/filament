@@ -25,21 +25,6 @@ TEST(CString, EmptyString) {
     EXPECT_STREQ("", emptyString.c_str_safe());
 }
 
-TEST(StaticString, hash) {
-    StaticString a("Hello World!");
-    StaticString b = StaticString::make("Hello World!");
-    StaticString c("Hello World");
-    StaticString d("Hello World!");
-
-    EXPECT_EQ(a.getHash(), b.getHash());
-    EXPECT_EQ(a.getHash(), d.getHash());
-    EXPECT_NE(a.getHash(), c.getHash());
-    EXPECT_NE(b.getHash(), c.getHash());
-
-    StaticString::Hasher ha;
-    EXPECT_EQ(ha(a), a.getHash());
-}
-
 TEST(CString, Replace) {
     {
         CString str("foo bar baz");

@@ -169,7 +169,7 @@ utils::CString ResourceNode::graphvizify() const noexcept {
 }
 
 utils::CString ResourceNode::graphvizifyEdgeColor() const noexcept {
-    return utils::StaticString{ "darkolivegreen" };
+    return "darkolivegreen";
 }
 
 } // namespace filament

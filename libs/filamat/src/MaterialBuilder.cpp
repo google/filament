@@ -439,9 +439,11 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
         if (param.isSampler()) {
-            sbb.add(param.name, param.samplerType, param.format, param.precision);
+            sbb.add({ param.name.data(), param.name.size() },
+                    param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add(param.name, param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
+            ibb.add({ param.name.data(), param.name.size() },
+                    param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses belong to the "MaterialParams" block.

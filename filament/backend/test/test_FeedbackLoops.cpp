@@ -135,7 +135,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             Program prog = shaderGen.getProgram();
             Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
             prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
-            prog.setUniformBlock(1, utils::CString("params"));
+            prog.setUniformBlock(1, "params");
             program = api.createProgram(std::move(prog));
         }
 

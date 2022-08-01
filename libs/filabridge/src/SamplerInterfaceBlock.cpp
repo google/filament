@@ -31,8 +31,8 @@ SamplerInterfaceBlock::Builder::Builder() = default;
 SamplerInterfaceBlock::Builder::~Builder() noexcept = default;
 
 SamplerInterfaceBlock::Builder&
-SamplerInterfaceBlock::Builder::name(utils::CString interfaceBlockName) {
-    mName = std::move(interfaceBlockName);
+SamplerInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
+    mName = { interfaceBlockName.data(), interfaceBlockName.size() };
     return *this;
 }
 
@@ -43,10 +43,11 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
 }
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        utils::CString samplerName, Type type, Format format,
+        std::string_view samplerName, Type type, Format format,
         Precision precision, bool multisample) noexcept {
     mEntries.push_back({
-            std::move(samplerName), uint8_t(mEntries.size()), type, format, precision, multisample });
+            { samplerName.data(), samplerName.size() },
+            uint8_t(mEntries.size()), type, format, precision, multisample });
     return *this;
 }
 

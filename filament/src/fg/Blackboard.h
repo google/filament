@@ -19,35 +19,33 @@
 
 #include <fg/FrameGraphId.h>
 
-#include <utils/CString.h>
-
+#include <string_view>
 #include <unordered_map>
 
 namespace filament {
 
 class Blackboard {
     using Container = std::unordered_map<
-            utils::StaticString,
-            FrameGraphHandle,
-            utils::StaticString::Hasher>;
+            std::string_view,
+            FrameGraphHandle>;
 
 public:
     Blackboard() noexcept;
     ~Blackboard() noexcept;
 
-    FrameGraphHandle& operator [](utils::StaticString const& name) noexcept;
+    FrameGraphHandle& operator [](std::string_view name) noexcept;
 
-    void put(utils::StaticString const& name, FrameGraphHandle handle) noexcept;
+    void put(std::string_view name, FrameGraphHandle handle) noexcept;
 
     template<typename T>
-    FrameGraphId<T> get(utils::StaticString&& name) const noexcept {
-        return static_cast<FrameGraphId<T>>(getHandle(std::forward<utils::StaticString>(name)));
+    FrameGraphId<T> get(std::string_view&& name) const noexcept {
+        return static_cast<FrameGraphId<T>>(getHandle(std::forward<std::string_view>(name)));
     }
 
-    void remove(utils::StaticString const& name) noexcept;
+    void remove(std::string_view name) noexcept;
 
 private:
-    FrameGraphHandle getHandle(utils::StaticString const& name) const noexcept;
+    FrameGraphHandle getHandle(std::string_view name) const noexcept;
     Container mMap;
 };
 

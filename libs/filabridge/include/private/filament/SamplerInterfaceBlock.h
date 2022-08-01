@@ -62,7 +62,7 @@ public:
         ~Builder() noexcept;
 
         struct ListEntry { // NOLINT(cppcoreguidelines-pro-type-member-init)
-            utils::StaticString name;       // name of this sampler
+            std::string_view name;          // name of this sampler
             Type type;                      // type of this sampler
             Format format;                  // format of this sampler
             Precision precision;            // precision of this sampler
@@ -70,12 +70,12 @@ public:
         };
 
         // Give a name to this sampler interface block
-        Builder& name(utils::CString interfaceBlockName);
+        Builder& name(std::string_view interfaceBlockName);
 
         Builder& stageFlags(backend::ShaderStageFlags stageFlags);
 
         // Add a sampler
-        Builder& add(utils::CString samplerName, Type type, Format format,
+        Builder& add(std::string_view samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
 

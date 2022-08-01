@@ -69,7 +69,7 @@ public:
 
     bool isSampler(const char* name) const noexcept;
 
-    UniformInterfaceBlock::UniformInfo const* reflect(utils::StaticString const& name) const noexcept;
+    UniformInterfaceBlock::UniformInfo const* reflect(std::string_view name) const noexcept;
 
     FMaterialInstance const* getDefaultInstance() const noexcept { return &mDefaultInstance; }
     FMaterialInstance* getDefaultInstance() noexcept { return &mDefaultInstance; }
