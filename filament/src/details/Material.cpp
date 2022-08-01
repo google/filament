@@ -341,8 +341,8 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 }
 
 UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
-        utils::StaticString const& name) const noexcept {
-    return mUniformInterfaceBlock.getUniformInfo({ name.c_str(), name.length() });
+        std::string_view name) const noexcept {
+    return mUniformInterfaceBlock.getUniformInfo(name);
 }
 
 void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
@@ -374,7 +374,8 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
         .setUniformBlock(BindingPoints::LIGHTS, LightsUib::_name)
         .setUniformBlock(BindingPoints::SHADOW, ShadowUib::_name)
         .setUniformBlock(BindingPoints::FROXEL_RECORDS, FroxelRecordUib::_name)
-        .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
+        .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE,
+                { mUniformInterfaceBlock.getName().data(), mUniformInterfaceBlock.getName().size() });
 
     if (Variant(variant).hasSkinningOrMorphing()) {
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableBoneUib::_name);
@@ -397,7 +398,8 @@ void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
 
     Program pb = getProgramBuilderWithVariants(variant, variant, variant);
     pb.setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
-      .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
+      .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE,
+              { mUniformInterfaceBlock.getName().data(), mUniformInterfaceBlock.getName().size() });
 
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 

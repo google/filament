@@ -23,16 +23,6 @@
 
 namespace utils {
 
-int StaticString::compare(const StaticString& rhs) const noexcept {
-    size_type lhs_size = size();
-    size_type rhs_size = rhs.size();
-    if (lhs_size < rhs_size) return -1;
-    if (lhs_size > rhs_size) return 1;
-    return strncmp(data(), rhs.data(), size());
-}
-
-// ------------------------------------------------------------------------------------------------
-
 UTILS_NOINLINE
 CString::CString(const char* cstr, size_t length) {
     if (length && cstr) {

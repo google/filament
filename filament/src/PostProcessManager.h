@@ -317,14 +317,13 @@ private:
     };
 
     using MaterialRegistryMap = tsl::robin_map<
-            utils::StaticString,
-            PostProcessMaterial,
-            utils::StaticString::Hasher>;
+            std::string_view,
+            PostProcessMaterial>;
 
     MaterialRegistryMap mMaterialRegistry;
 
-    void registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size);
-    PostProcessMaterial& getPostProcessMaterial(utils::StaticString name) noexcept;
+    void registerPostProcessMaterial(std::string_view name, uint8_t const* data, int size);
+    PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;
 

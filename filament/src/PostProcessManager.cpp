@@ -186,12 +186,12 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
 PostProcessManager::~PostProcessManager() noexcept = default;
 
 UTILS_NOINLINE
-void PostProcessManager::registerPostProcessMaterial(utils::StaticString name, uint8_t const* data, int size) {
+void PostProcessManager::registerPostProcessMaterial(std::string_view name, uint8_t const* data, int size) {
     mMaterialRegistry.try_emplace(name, mEngine, data, size);
 }
 
 UTILS_NOINLINE
-PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(utils::StaticString name) noexcept {
+PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(std::string_view name) noexcept {
     assert_invariant(mMaterialRegistry.find(name) != mMaterialRegistry.end());
     return mMaterialRegistry[name];
 }
@@ -199,7 +199,7 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 #define MATERIAL(n) MATERIALS_ ## n ## _DATA, MATERIALS_ ## n ## _SIZE
 
 struct MaterialInfo {
-    utils::StaticString name;
+    std::string_view name;
     uint8_t const* data;
     int size;
 };
@@ -1052,25 +1052,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 FGTD const& outDesc = resources.getDescriptor(data.out);
                 FGTD const& tempDesc = resources.getDescriptor(data.temp);
 
-                utils::StaticString materialName;
+                using namespace std::literals;
+                std::string_view materialName;
                 const bool is2dArray = inDesc.type == SamplerType::SAMPLER_2D_ARRAY;
                 switch (backend::getFormatSize(outDesc.format)) {
                     case 1: materialName  = is2dArray ?
-                            utils::StaticString("separableGaussianBlur1L") :
-                            utils::StaticString("separableGaussianBlur1");
-                            break;
+                            "separableGaussianBlur1L"sv : "separableGaussianBlur1"sv;   break;
                     case 2: materialName  = is2dArray ?
-                            utils::StaticString("separableGaussianBlur2L") :
-                            utils::StaticString("separableGaussianBlur2");
-                            break;
+                            "separableGaussianBlur2L"sv : "separableGaussianBlur2"sv;   break;
                     case 3: materialName  = is2dArray ?
-                            utils::StaticString("separableGaussianBlur3L") :
-                            utils::StaticString("separableGaussianBlur3");
-                            break;
+                            "separableGaussianBlur3L"sv : "separableGaussianBlur3"sv;   break;
                     default: materialName = is2dArray ?
-                            utils::StaticString("separableGaussianBlur4L") :
-                            utils::StaticString("separableGaussianBlur4");
-                            break;
+                            "separableGaussianBlur4L"sv : "separableGaussianBlur4"sv;   break;
                 }
 
                 auto const& separableGaussianBlur = getPostProcessMaterial(materialName);
@@ -2740,7 +2733,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                 }
 
                 { // just a scope to not leak local variables
-                    const StaticString blitterNames[4] = {
+                    const std::string_view blitterNames[4] = {
                             "blitLow", "fsr_easu_mobile", "fsr_easu_mobile", "fsr_easu" };
                     unsigned index = std::min(3u, (unsigned)dsrOptions.quality);
                     easuMaterial = &getPostProcessMaterial(blitterNames[index]);

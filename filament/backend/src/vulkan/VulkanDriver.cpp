@@ -126,7 +126,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     bool validationFeaturesSupported = false;
 
 #if VK_ENABLE_VALIDATION
-    const utils::StaticString DESIRED_LAYERS[] = {
+    const std::string_view DESIRED_LAYERS[] = {
         "VK_LAYER_KHRONOS_validation",
 #if FILAMENT_VULKAN_DUMP_API
         "VK_LAYER_LUNARG_api_dump",
@@ -145,9 +145,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
     for (const auto& desired : DESIRED_LAYERS) {
         for (const VkLayerProperties& layer : availableLayers) {
-            const utils::CString availableLayer(layer.layerName);
+            const std::string_view availableLayer(layer.layerName);
             if (availableLayer == desired) {
-                enabledLayers.push_back(desired.c_str());
+                enabledLayers.push_back(desired.data());
             }
         }
     }
@@ -1949,16 +1949,16 @@ void VulkanDriver::refreshSwapChain() {
 void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
     DriverBase::debugCommandBegin(cmds, synchronous, methodName);
 #ifndef NDEBUG
-    static const std::set<utils::StaticString> OUTSIDE_COMMANDS = {
+    static const std::set<std::string_view> OUTSIDE_COMMANDS = {
         "loadUniformBuffer",
         "updateBufferObject",
         "updateIndexBuffer",
         "update3DImage",
     };
-    static const utils::StaticString BEGIN_COMMAND = "beginRenderPass";
-    static const utils::StaticString END_COMMAND = "endRenderPass";
+    static const std::string_view BEGIN_COMMAND = "beginRenderPass";
+    static const std::string_view END_COMMAND = "endRenderPass";
     static bool inRenderPass = false; // for debug only
-    const utils::StaticString command = utils::StaticString::make(methodName, strlen(methodName));
+    const std::string_view command{ methodName };
     if (command == BEGIN_COMMAND) {
         assert_invariant(!inRenderPass);
         inRenderPass = true;
@@ -1966,7 +1966,7 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
         assert_invariant(inRenderPass);
         inRenderPass = false;
     } else if (inRenderPass && OUTSIDE_COMMANDS.find(command) != OUTSIDE_COMMANDS.end()) {
-        utils::slog.e << command.c_str() << " issued inside a render pass." << utils::io::endl;
+        utils::slog.e << command.data() << " issued inside a render pass." << utils::io::endl;
     }
 #endif
 }

@@ -27,6 +27,7 @@
 #include <backend/DriverEnums.h>
 
 #include <array>
+#include <string_view>
 
 namespace filament::backend {
 
@@ -77,7 +78,7 @@ public:
     //       not permitted in glsl. The backend needs a way to associate a uniform block
     //       to a binding point.
     //
-    Program& setUniformBlock(size_t bindingPoint, utils::CString uniformBlockName) noexcept;
+    Program& setUniformBlock(size_t bindingPoint, std::string_view uniformBlockName) noexcept;
 
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
