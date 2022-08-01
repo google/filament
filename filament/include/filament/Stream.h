@@ -92,8 +92,7 @@ public:
      * By default, Stream objects are ACQUIRED and must have external images pushed to them via
      * <pre>Stream::setAcquiredImage</pre>.
      *
-     * To create a NATIVE stream, call one of the <pre>stream</pre> methods
-     * on the builder.
+     * To create a NATIVE stream, call the <pre>stream</pre> method on the builder.
      */
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
