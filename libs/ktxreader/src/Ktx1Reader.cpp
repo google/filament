@@ -76,25 +76,30 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
     if (isCompressed(ktxinfo)) {
         if (ktx.isCubemap()) {
             for (uint32_t level = 0; level < nmips; ++level) {
-                ktx.getBlob({level, 0, 0}, &data, &size);
-                PixelBufferDescriptor pbd(data, size * 6, cdatatype, size, cb, cbuser);
-                texture->setImage(*engine, level, std::move(pbd), Texture::FaceOffsets(size));
+                ktx.getBlob({ level, 0, 0 }, &data, &size);
+                const uint32_t dim = texture->getWidth(level);
+                texture->setImage(*engine, level, 0, 0, 0, dim, dim, 6, {
+                        data, size * 6, cdatatype, size, cb, cbuser
+                });
             }
             return texture;
         }
         for (uint32_t level = 0; level < nmips; ++level) {
-            ktx.getBlob({level, 0, 0}, &data, &size);
-            PixelBufferDescriptor pbd(data, size, cdatatype, size, cb, cbuser);
-            texture->setImage(*engine, level, std::move(pbd));
+            ktx.getBlob({ level, 0, 0 }, &data, &size);
+            texture->setImage(*engine, level, {
+                    data, size, cdatatype, size, cb, cbuser
+            });
         }
         return texture;
     }
 
     if (ktx.isCubemap()) {
         for (uint32_t level = 0; level < nmips; ++level) {
-            ktx.getBlob({level, 0, 0}, &data, &size);
-            PixelBufferDescriptor pbd(data, size * 6, dataformat, datatype, cb, cbuser);
-            texture->setImage(*engine, level, std::move(pbd), Texture::FaceOffsets(size));
+            ktx.getBlob({ level, 0, 0 }, &data, &size);
+            const uint32_t dim = texture->getWidth(level);
+            texture->setImage(*engine, level, 0, 0, 0, dim, dim, 6, {
+                    data, size * 6, dataformat, datatype, cb, cbuser
+            });
         }
         return texture;
     }

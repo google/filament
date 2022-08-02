@@ -91,7 +91,11 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         return nullptr;
     }
 
+#if defined(__ANDROID__) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
+    // PlatofrmEGL is used with and without GLES, but this function is only
+    // meaningful when GLES is used.
     importGLESExtensionsEntryPoints();
+#endif
 
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 

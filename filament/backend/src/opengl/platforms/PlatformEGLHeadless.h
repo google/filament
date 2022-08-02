@@ -19,29 +19,18 @@
 
 #include "PlatformEGL.h"
 
-namespace filament {
+namespace filament::backend {
 
 class PlatformEGLHeadless final : public PlatformEGL {
 public:
 
     PlatformEGLHeadless() noexcept;
 
-    backend::Driver* createDriver(void* sharedContext) noexcept final;
+    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept final;
 
-    int getOSVersion() const noexcept final { return 0; }
 
-    void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept final {}
-
-    Stream* createStream(void* nativeStream) noexcept final { return nullptr; }
-    void destroyStream(Stream* stream) noexcept final {}
-    void attach(Stream* stream, intptr_t tname) noexcept final {}
-    void detach(Stream* stream) noexcept final {}
-    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final {}
-
-    ExternalTexture* createExternalTextureStorage() noexcept final { return nullptr; }
-    void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final {}
-    void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final {}
+    void createExternalImageTexture(void* texture) noexcept final {}
+    void destroyExternalImage(void* texture) noexcept final {}
 };
 
 } // namespace filament

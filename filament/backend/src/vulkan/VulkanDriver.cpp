@@ -937,14 +937,6 @@ void VulkanDriver::resetBufferObject(Handle<HwBufferObject> boh) {
     // This is only useful if updateBufferObjectUnsynchronized() is implemented unsynchronizedly.
 }
 
-void VulkanDriver::update2DImage(Handle<HwTexture> th,
-        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& data) {
-    handle_cast<VulkanTexture*>(th)->updateImage(data, width, height, 1,
-            xoffset, yoffset, 0, level);
-    scheduleDestroy(std::move(data));
-}
-
 void VulkanDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
     handle_cast<VulkanTexture*>(th)->setPrimaryRange(minLevel, maxLevel);
 }
@@ -956,12 +948,6 @@ void VulkanDriver::update3DImage(
         PixelBufferDescriptor&& data) {
     handle_cast<VulkanTexture*>(th)->updateImage(data, width, height, depth,
             xoffset, yoffset, zoffset, level);
-    scheduleDestroy(std::move(data));
-}
-
-void VulkanDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
-        PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
-    handle_cast<VulkanTexture*>(th)->updateCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
 }
 
@@ -1957,8 +1943,7 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
         "loadUniformBuffer",
         "updateBufferObject",
         "updateIndexBuffer",
-        "update2DImage",
-        "updateCubeImage",
+        "update3DImage",
     };
     static const utils::StaticString BEGIN_COMMAND = "beginRenderPass";
     static const utils::StaticString END_COMMAND = "endRenderPass";

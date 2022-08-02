@@ -43,10 +43,6 @@ struct VulkanTexture : public HwTexture {
     void updateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
             uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel);
 
-    // Uploads data into all 6 faces of a cubemap for a given miplevel.
-    void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
-            uint32_t miplevel);
-
     // Returns the primary image view, which is used for shader sampling.
     VkImageView getPrimaryImageView() const { return mCachedImageViews.at(mPrimaryViewRange); }
 

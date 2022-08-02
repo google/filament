@@ -642,50 +642,6 @@ inline constexpr int operator +(TextureCubemapFace rhs) noexcept {
     return int(rhs);
 }
 
-//! Face offsets for all faces of a cubemap
-struct FaceOffsets {
-    using size_type = size_t;
-    union {
-        struct {
-            size_type px;   //!< +x face offset in bytes
-            size_type nx;   //!< -x face offset in bytes
-            size_type py;   //!< +y face offset in bytes
-            size_type ny;   //!< -y face offset in bytes
-            size_type pz;   //!< +z face offset in bytes
-            size_type nz;   //!< -z face offset in bytes
-        };
-        size_type offsets[6];
-    };
-    size_type  operator[](size_t n) const noexcept { return offsets[n]; }
-    size_type& operator[](size_t n) { return offsets[n]; }
-    FaceOffsets() noexcept = default;
-    explicit FaceOffsets(size_type faceSize) noexcept {
-        px = faceSize * 0;
-        nx = faceSize * 1;
-        py = faceSize * 2;
-        ny = faceSize * 3;
-        pz = faceSize * 4;
-        nz = faceSize * 5;
-    }
-    FaceOffsets(const FaceOffsets& rhs) noexcept {
-        px = rhs.px;
-        nx = rhs.nx;
-        py = rhs.py;
-        ny = rhs.ny;
-        pz = rhs.pz;
-        nz = rhs.nz;
-    }
-    FaceOffsets& operator=(const FaceOffsets& rhs) noexcept {
-        px = rhs.px;
-        nx = rhs.nx;
-        py = rhs.py;
-        ny = rhs.ny;
-        pz = rhs.pz;
-        nz = rhs.nz;
-        return *this;
-    }
-};
-
 //! Sampler Wrap mode
 enum class SamplerWrapMode : uint8_t {
     CLAMP_TO_EDGE,      //!< clamp-to-edge. The edge of the texture extends to infinity.
@@ -1063,7 +1019,6 @@ utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Textu
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferObjectBinding binding);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureSwizzle swizzle);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);

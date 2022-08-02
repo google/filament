@@ -205,7 +205,9 @@ VulkanTexture::~VulkanTexture() {
 
 void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
         uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel) {
-    assert_invariant(width <= this->width && height <= this->height && depth <= this->depth);
+    assert_invariant(width <= this->width && height <= this->height);
+    assert_invariant(depth <= this->depth * (target == SamplerType::SAMPLER_CUBEMAP ? 6 : 1));
+
     const PixelBufferDescriptor* hostData = &data;
     PixelBufferDescriptor reshapedData;
 
@@ -260,7 +262,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     };
 
     // Vulkan specifies subregions for 3D textures differently than from 2D arrays.
-    if (target == SamplerType::SAMPLER_2D_ARRAY) {
+    if (target == SamplerType::SAMPLER_2D_ARRAY || target == SamplerType::SAMPLER_CUBEMAP) {
         copyRegion.imageOffset.z = 0;
         copyRegion.imageExtent.depth = 1;
         copyRegion.imageSubresource.baseArrayLayer = zoffset;
@@ -311,52 +313,6 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, VK_FILTER_NEAREST);
 
     transitionLayout(cmdbuffer, range, getDefaultImageLayout(usage));
-}
-
-void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
-        const FaceOffsets& faceOffsets, uint32_t miplevel) {
-    assert_invariant(this->target == SamplerType::SAMPLER_CUBEMAP);
-    const bool reshape = getBytesPerPixel(format) == 3;
-    const void* cpuData = data.buffer;
-    const uint32_t numSrcBytes = data.size;
-    const uint32_t numDstBytes = reshape ? (4 * numSrcBytes / 3) : numSrcBytes;
-
-    // Create and populate the staging buffer.
-    VulkanStage const* stage = mStagePool.acquireStage(numDstBytes);
-    void* mapped;
-    vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    if (reshape) {
-        DataReshaper::reshape<uint8_t, 3, 4>(mapped, cpuData, numSrcBytes);
-    } else {
-        memcpy(mapped, cpuData, numSrcBytes);
-    }
-    vmaUnmapMemory(mContext.allocator, stage->memory);
-    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
-
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-    const uint32_t width = std::max(1u, this->width >> miplevel);
-    const uint32_t height = std::max(1u, this->height >> miplevel);
-
-    const VkImageSubresourceRange range = { getImageAspect(), miplevel, 1, 0, 6 };
-    const VkImageLayout textureLayout = getDefaultImageLayout(usage);
-
-    transitionLayout(cmdbuffer, range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-    VkBufferImageCopy regions[6] = {{}};
-    VkExtent3D extent { width, height, 1 };
-    for (size_t face = 0; face < 6; face++) {
-        auto& region = regions[face];
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.baseArrayLayer = face;
-        region.imageSubresource.layerCount = 1;
-        region.imageSubresource.mipLevel = miplevel;
-        region.imageExtent = extent;
-        region.bufferOffset = faceOffsets.offsets[face];
-    }
-    vkCmdCopyBufferToImage(cmdbuffer, stage->buffer, mTextureImage,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6, regions);
-
-    transitionLayout(cmdbuffer, range, textureLayout);
 }
 
 void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {

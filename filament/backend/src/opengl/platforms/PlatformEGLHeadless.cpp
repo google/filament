@@ -33,11 +33,11 @@ namespace filament {
 using namespace backend;
 
 namespace glext {
-extern PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
-extern PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR;
-extern PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
-extern PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
-extern PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
+UTILS_PRIVATE PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR = {};
+UTILS_PRIVATE PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR = {};
+UTILS_PRIVATE PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR = {};
+UTILS_PRIVATE PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR = {};
+UTILS_PRIVATE PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR = {};
 }
 using namespace glext;
 
@@ -47,7 +47,7 @@ PlatformEGLHeadless::PlatformEGLHeadless() noexcept
         : PlatformEGL() {
 }
 
-backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext) noexcept {
+backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     EGLBoolean bindAPI = eglBindAPI(EGL_OPENGL_API);
     if (UTILS_UNLIKELY(!bindAPI)) {
         slog.e << "eglBindAPI EGL_OPENGL_API failed" << io::endl;
@@ -138,6 +138,17 @@ backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext) noexcept
         goto error;
     }
 
+    // fallback to a 24-bit depth buffer
+    if (configsCount == 0) {
+        configAttribs[10] = EGL_DEPTH_SIZE;
+        configAttribs[11] = 24;
+
+        if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount)) {
+            logEglError("eglChooseConfig");
+            goto error;
+        }
+    }
+
     // find a transparent config
     configAttribs[8] = EGL_ALPHA_SIZE;
     configAttribs[9] = 8;
@@ -188,7 +199,7 @@ backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext) noexcept
     clearGlError();
 
     // success!!
-    return OpenGLDriverFactory::create(this, sharedContext);
+    return OpenGLDriverFactory::create(this, sharedContext, driverConfig);
 
 error:
     // if we're here, we've failed

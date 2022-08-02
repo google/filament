@@ -703,6 +703,8 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateBufferObject must be called outside of a render pass.");
     auto* bo = handle_cast<MetalBufferObject>(boh);
     bo->updateBuffer(data.buffer, data.size, byteOffset);
     scheduleDestroy(std::move(data));
@@ -732,15 +734,6 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
-void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
-        uint32_t yoffset, uint32_t width, uint32_t height, PixelBufferDescriptor&& data) {
-    ASSERT_PRECONDITION(!isInRenderPass(mContext),
-            "update2DImage must be called outside of a render pass.");
-    auto tex = handle_cast<MetalTexture>(th);
-    tex->loadImage(level, MTLRegionMake2D(xoffset, yoffset, width, height), data);
-    scheduleDestroy(std::move(data));
-}
-
 void MetalDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
 }
 
@@ -752,15 +745,6 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
             "update3DImage must be called outside of a render pass.");
     auto tex = handle_cast<MetalTexture>(th);
     tex->loadImage(level, MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
-    scheduleDestroy(std::move(data));
-}
-
-void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
-        PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
-    ASSERT_PRECONDITION(!isInRenderPass(mContext),
-            "updateCubeImage must be called outside of a render pass.");
-    auto tex = handle_cast<MetalTexture>(th);
-    tex->loadCubeImage(faceOffsets, level, data);
     scheduleDestroy(std::move(data));
 }
 
