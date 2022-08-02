@@ -113,16 +113,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
 }
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
-    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mVertexCount > 0, "vertexCount cannot be 0")) {
-        return nullptr;
-    }
-    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount > 0, "bufferCount cannot be 0")) {
-        return nullptr;
-    }
-    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT,
-            "bufferCount cannot be more than %d", MAX_VERTEX_BUFFER_COUNT)) {
-        return nullptr;
-    }
+    ASSERT_PRECONDITION(mImpl->mVertexCount > 0, "vertexCount cannot be 0");
+    ASSERT_PRECONDITION(mImpl->mBufferCount > 0, "bufferCount cannot be 0");
+    ASSERT_PRECONDITION(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT,
+            "bufferCount cannot be more than %d", MAX_VERTEX_BUFFER_COUNT);
 
     // Next we check if any unused buffer slots have been allocated. This helps prevent errors
     // because uploading to an unused slot can trigger undefined behavior in the backend.
@@ -134,10 +128,9 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
             attributedBuffers.set(attributes[j].buffer);
         }
     }
-    if (!ASSERT_PRECONDITION_NON_FATAL(attributedBuffers.count() == mImpl->mBufferCount,
-            "At least one buffer slot was never assigned to an attribute.")) {
-        return nullptr;
-    }
+
+    ASSERT_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount,
+            "At least one buffer slot was never assigned to an attribute.");
 
     return upcast(engine).createVertexBuffer(*this);
 }

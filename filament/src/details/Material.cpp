@@ -53,15 +53,11 @@ static MaterialParser* createParser(Backend backend, const void* data, size_t si
         return materialParser;
     }
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
-                "the material was not built for the %s backend\n", backendToString(backend))) {
-        return nullptr;
-    }
+    ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
+                "the material was not built for the %s backend\n", backendToString(backend));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(materialResult == MaterialParser::ParseResult::SUCCESS,
-                "could not parse the material package")) {
-        return nullptr;
-    }
+    ASSERT_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS,
+                "could not parse the material package");
 
     uint32_t version = 0;
     materialParser->getMaterialVersion(&version);

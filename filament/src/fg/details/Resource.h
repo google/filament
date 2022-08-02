@@ -280,25 +280,21 @@ protected:
     UTILS_NOINLINE
     bool connect(DependencyGraph& graph,
             PassNode* passNode, ResourceNode* resourceNode, FrameGraphTexture::Usage u) override {
-        if (UTILS_UNLIKELY(!assertConnect(u))) {
-            return false;
-        }
+        assertConnect(u);
         return Resource<RESOURCE>::connect(graph, passNode, resourceNode, u);
     }
 
     UTILS_NOINLINE
     bool connect(DependencyGraph& graph,
             ResourceNode* resourceNode, PassNode* passNode, FrameGraphTexture::Usage u) override {
-        if (UTILS_UNLIKELY(!assertConnect(u))) {
-            return false;
-        }
+        assertConnect(u);
         return Resource<RESOURCE>::connect(graph, resourceNode, passNode, u);
     }
 
 private:
     UTILS_NOINLINE
-    bool assertConnect(FrameGraphTexture::Usage u) {
-        return ASSERT_PRECONDITION_NON_FATAL((u & this->usage) == u,
+    void assertConnect(FrameGraphTexture::Usage u) {
+        ASSERT_PRECONDITION((u & this->usage) == u,
                 "Requested usage %s not available on imported resource \"%s\" with usage %s",
                 utils::to_string(u).c_str(), this->name, utils::to_string(this->usage).c_str());
     }
@@ -330,7 +326,7 @@ protected:
     ImportedRenderTarget* asImportedRenderTarget() noexcept override { return this; }
 
 private:
-    bool assertConnect(FrameGraphTexture::Usage u);
+    void assertConnect(FrameGraphTexture::Usage u);
 
     static FrameGraphTexture::Usage usageFromAttachmentsFlags(
             backend::TargetBufferFlags attachments) noexcept;
