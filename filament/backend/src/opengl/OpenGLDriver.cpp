@@ -2891,8 +2891,10 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
     if (any(clearFlags & TargetBufferFlags::DEPTH)) {
         rs.depthWrite = true;
     }
-    // stencil state is not part of the RasterState currently
-    if (any(clearFlags & (TargetBufferFlags::COLOR_ALL | TargetBufferFlags::DEPTH))) {
+    if (any(clearFlags & TargetBufferFlags::STENCIL)) {
+        rs.stencilWrite = true;
+    }
+    if (any(clearFlags)) {
         setRasterState(rs);
     }
 
