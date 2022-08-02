@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.25.5
+
 - WebGL: upgraded the JS bindings to work with emsdk 3.1.15
 - WebGL: added missing IBL builder to TypeScript annotations
 - engine: Fix incorrect precision restoration when computing accurate world translations
