@@ -143,7 +143,7 @@ mat4 Camera::getViewMatrix() const noexcept {
     return upcast(this)->getViewMatrix();
 }
 
-float3 Camera::getPosition() const noexcept {
+double3 Camera::getPosition() const noexcept {
     return upcast(this)->getPosition();
 }
 

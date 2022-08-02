@@ -380,7 +380,7 @@ public:
     math::mat4 getViewMatrix() const noexcept;
 
     //! Returns the camera's position in world space
-    math::float3 getPosition() const noexcept;
+    math::double3 getPosition() const noexcept;
 
     //! Returns the camera's normalized left vector
     math::float3 getLeftVector() const noexcept;
