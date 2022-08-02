@@ -279,20 +279,16 @@ FrameGraphHandle FrameGraph::addSubResourceInternal(FrameGraphHandle parent,
 FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* passNode,
         const std::function<bool(ResourceNode*, VirtualResource*)>& connect) {
 
-    if (!assertValid(handle)) {
-        return {};
-    }
+    assertValid(handle);
 
     VirtualResource* const resource = getResource(handle);
     ResourceNode* const node = getActiveResourceNode(handle);
 
     // Check preconditions
     bool passAlreadyAWriter = node->hasWriteFrom(passNode);
-    if (!ASSERT_PRECONDITION_NON_FATAL(!passAlreadyAWriter,
+    ASSERT_PRECONDITION(!passAlreadyAWriter,
             "Pass \"%s\" already writes to \"%s\"",
-            passNode->getName(), node->getName())) {
-        return {};
-    }
+            passNode->getName(), node->getName());
 
     if (!node->hasWriterPass() && !resource->isImported()) {
         // TODO: we're attempting to read from a resource that was never written and is not
@@ -340,9 +336,8 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
 
 FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* passNode,
         const std::function<bool(ResourceNode*, VirtualResource*)>& connect) {
-    if (!assertValid(handle)) {
-        return {};
-    }
+
+    assertValid(handle);
 
     VirtualResource* const resource = getResource(handle);
     ResourceNode* node = getActiveResourceNode(handle);
@@ -391,13 +386,9 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
 FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle resourceHandle,
         FrameGraphHandle replaceResourceHandle) {
 
-    if (!assertValid(resourceHandle)) {
-        return {};
-    }
+    assertValid(resourceHandle);
 
-    if (!assertValid(replaceResourceHandle)) {
-        return {};
-    }
+    assertValid(replaceResourceHandle);
 
     ResourceSlot& replacedResourceSlot = getResourceSlot(replaceResourceHandle);
     ResourceNode* const replacedResourceNode = getActiveResourceNode(replaceResourceHandle);
@@ -456,8 +447,8 @@ bool FrameGraph::isValid(FrameGraphHandle handle) const {
     return true;
 }
 
-bool FrameGraph::assertValid(FrameGraphHandle handle) const {
-    return ASSERT_PRECONDITION_NON_FATAL(isValid(handle),
+void FrameGraph::assertValid(FrameGraphHandle handle) const {
+    ASSERT_PRECONDITION(isValid(handle),
             "Resource handle is invalid or uninitialized {id=%u, version=%u}",
             (int)handle.index, (int)handle.version);
 }

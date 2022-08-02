@@ -460,7 +460,7 @@ private:
     FrameGraphHandle forwardResourceInternal(FrameGraphHandle resourceHandle,
             FrameGraphHandle replaceResourceHandle);
 
-    bool assertValid(FrameGraphHandle handle) const;
+    void assertValid(FrameGraphHandle handle) const;
 
     template<typename RESOURCE>
     FrameGraphId<RESOURCE> create(char const* name,

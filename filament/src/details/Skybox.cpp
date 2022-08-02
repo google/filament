@@ -78,10 +78,8 @@ Skybox::Builder& Skybox::Builder::showSun(bool show) noexcept {
 Skybox* Skybox::Builder::build(Engine& engine) {
     FTexture* cubemap = upcast(mImpl->mEnvironmentMap);
 
-    if (!ASSERT_PRECONDITION_NON_FATAL(!cubemap || cubemap->isCubemap(),
-            "environment maps must be a cubemap")) {
-        return nullptr;
-    }
+    ASSERT_PRECONDITION(!cubemap || cubemap->isCubemap(),
+            "environment maps must be a cubemap");
 
     return upcast(engine).createSkybox(*this);
 }

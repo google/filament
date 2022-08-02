@@ -95,12 +95,12 @@ ImportedRenderTarget::ImportedRenderTarget(char const* resourceName,
 }
 
 UTILS_NOINLINE
-bool ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage u) {
+void ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage u) {
     constexpr auto ANY_ATTACHMENT = FrameGraphTexture::Usage::COLOR_ATTACHMENT |
                                     FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
                                     FrameGraphTexture::Usage::STENCIL_ATTACHMENT;
 
-    return ASSERT_PRECONDITION_NON_FATAL(none(u & ~ANY_ATTACHMENT),
+    ASSERT_PRECONDITION(none(u & ~ANY_ATTACHMENT),
             "Imported render target resource \"%s\" can only be used as an attachment (usage=%s)",
             name, utils::to_string(u).c_str());
 }
@@ -108,18 +108,14 @@ bool ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage u) {
 bool ImportedRenderTarget::connect(DependencyGraph& graph, PassNode* passNode,
         ResourceNode* resourceNode, TextureUsage u) {
     // pass Node to resource Node edge (a write to)
-    if (UTILS_UNLIKELY(!assertConnect(u))) {
-        return false;
-    }
+    assertConnect(u);
     return Resource::connect(graph, passNode, resourceNode, u);
 }
 
 bool ImportedRenderTarget::connect(DependencyGraph& graph, ResourceNode* resourceNode,
         PassNode* passNode, TextureUsage u) {
     // resource Node to pass Node edge (a read from)
-    if (UTILS_UNLIKELY(!assertConnect(u))) {
-        return false;
-    }
+    assertConnect(u);
     return Resource::connect(graph, resourceNode, passNode, u);
 }
 

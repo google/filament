@@ -68,27 +68,21 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     using backend::TextureUsage;
     const FRenderTarget::Attachment& color = mImpl->mAttachments[(size_t)AttachmentPoint::COLOR0];
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[(size_t)AttachmentPoint::DEPTH];
-    if (!ASSERT_PRECONDITION_NON_FATAL(color.texture, "COLOR0 attachment not set")) {
-        return nullptr;
-    }
-    if (!ASSERT_PRECONDITION_NON_FATAL(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT,
-            "Texture usage must contain COLOR_ATTACHMENT")) {
-        return nullptr;
-    }
+    ASSERT_PRECONDITION(color.texture, "COLOR0 attachment not set");
+
+    ASSERT_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT,
+            "Texture usage must contain COLOR_ATTACHMENT");
+
     if (depth.texture) {
-        if (!ASSERT_PRECONDITION_NON_FATAL(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT,
-                "Texture usage must contain DEPTH_ATTACHMENT")) {
-            return nullptr;
-        }
+        ASSERT_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT,
+                "Texture usage must contain DEPTH_ATTACHMENT");
     }
 
     const size_t maxDrawBuffers = upcast(engine).getDriverApi().getMaxDrawBuffers();
     for (size_t i = maxDrawBuffers; i < MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT; i++) {
-        if (!ASSERT_PRECONDITION_NON_FATAL(!mImpl->mAttachments[i].texture,
+        ASSERT_PRECONDITION(!mImpl->mAttachments[i].texture,
                 "Only %u color attachments are supported, but COLOR%u attachment is set",
-                maxDrawBuffers, i)) {
-            return nullptr;
-        }
+                maxDrawBuffers, i);
     }
     
     uint32_t minWidth = std::numeric_limits<uint32_t>::max();
@@ -106,10 +100,8 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
         }
     }
 
-    if (!ASSERT_PRECONDITION_NON_FATAL(minWidth == maxWidth && minHeight == maxHeight,
-            "All attachments dimensions must match")) {
-        return nullptr;
-    }
+    ASSERT_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight,
+            "All attachments dimensions must match");
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
