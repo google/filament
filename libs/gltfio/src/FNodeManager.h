@@ -52,7 +52,7 @@ public:
         if (UTILS_UNLIKELY(mManager.hasComponent(entity))) {
             destroy(entity);
         }
-        Instance ci = mManager.addComponent(entity);
+        UTILS_UNUSED_IN_RELEASE Instance ci = mManager.addComponent(entity);
         assert_invariant(ci);
     }
 
