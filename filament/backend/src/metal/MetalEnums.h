@@ -52,7 +52,7 @@ constexpr inline MTLCompareFunction getMetalCompareFunction(RasterState::DepthFu
     }
 }
 
-constexpr inline MTLStencilOperation getMetalStencilOperation(RasterState::StencilOperation op) {
+constexpr inline MTLStencilOperation getMetalStencilOperation(StencilOperation op) {
     switch (op) {
         case StencilOperation::KEEP: return MTLStencilOperationKeep;
         case StencilOperation::ZERO: return MTLStencilOperationZero;

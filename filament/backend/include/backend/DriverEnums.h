@@ -787,11 +787,9 @@ struct RasterState {
     using DepthFunc = backend::SamplerCompareFunc;
     using BlendEquation = backend::BlendEquation;
     using BlendFunction = backend::BlendFunction;
-    using StencilFunction = backend::SamplerCompareFunc;
-    using StencilOperation = backend::StencilOperation;
 
     RasterState() noexcept { // NOLINT
-        static_assert(sizeof(RasterState) == sizeof(uint64_t),
+        static_assert(sizeof(RasterState) == sizeof(uint32_t),
                 "RasterState size not what was intended");
         culling = CullingMode::BACK;
         blendEquationRGB = BlendEquation::ADD;
@@ -800,10 +798,6 @@ struct RasterState {
         blendFunctionSrcAlpha = BlendFunction::ONE;
         blendFunctionDstRGB = BlendFunction::ZERO;
         blendFunctionDstAlpha = BlendFunction::ZERO;
-        stencilFunc = StencilFunction::A;
-        stencilOpStencilFail = StencilOperation::KEEP;
-        stencilOpDepthFail = StencilOperation::KEEP;
-        stencilOpDepthStencilPass = StencilOperation::KEEP;
     }
 
     bool operator == (RasterState rhs) const noexcept { return u == rhs.u; }
@@ -862,26 +856,10 @@ struct RasterState {
             //! whether front face winding direction must be inverted
             bool inverseFrontFaces                      : 1;        // 31
 
-            //! Whether stencil-buffer writes are enabled
-            bool stencilWrite                           : 1;        // 32
-            //! Stencil reference value
-            uint8_t stencilRef                          : 8;        // 40
-            //! Stencil test function
-            StencilFunction stencilFunc                 : 3;        // 43
-            //! Stencil operation when stencil test fails
-            StencilOperation stencilOpStencilFail       : 3;        // 46
             //! padding, must be 0
-            uint8_t padding0                            : 2;        // 48
-            //! Stencil operation when stencil test passes but depth test fails
-            StencilOperation stencilOpDepthFail         : 3;        // 51
-            //! Stencil operation when both stencil and depth test pass
-            StencilOperation stencilOpDepthStencilPass  : 3;        // 54
-            //! padding, must be 0
-            uint8_t padding1                            : 2;        // 56
-            //! padding, must be 0
-            uint8_t padding2                            : 8;        // 64
+            uint8_t padding                             : 1;        // 32
         };
-        uint64_t u = 0;
+        uint32_t u = 0;
     };
 };
 
@@ -975,6 +953,45 @@ struct PolygonOffset {
     float constant = 0;     // units in GL-speak
 };
 
+struct StencilState {
+    using StencilFunction = SamplerCompareFunc;
+
+    StencilState() noexcept : referenceValue(0u), stencilWrite(false) {
+        static_assert(sizeof(StencilState) == 4u, "StencilState size not what was intended");
+        frontBack.u = 0u;
+        frontBack.stencilFunc = StencilFunction::A;
+    }
+
+    bool operator==(StencilState rhs) const noexcept {
+        return frontBack.u == rhs.frontBack.u &&
+                referenceValue == rhs.referenceValue &&
+                stencilWrite == rhs.stencilWrite;
+    }
+    bool operator!=(StencilState rhs) const noexcept { return !(*this == rhs); }
+
+    union StencilOperations {
+        struct {
+            //! Stencil test function
+            StencilFunction stencilFunc                     : 3;
+
+            //! Stencil operation when stencil test fails
+            StencilOperation stencilOpStencilFail           : 3;
+
+            //! Stencil operation when stencil test passes but depth test fails
+            StencilOperation stencilOpDepthFail             : 3;
+
+            //! Stencil operation when both stencil and depth test pass
+            StencilOperation stencilOpDepthStencilPass      : 3;
+        };
+        uint16_t u = 0;
+    };
+
+    // TODO: separate out front and back stencil states.
+    StencilOperations frontBack;
+    uint8_t referenceValue;
+    //! Whether stencil-buffer writes are enabled
+    bool stencilWrite;
+};
 
 using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 

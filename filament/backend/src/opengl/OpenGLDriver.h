@@ -286,6 +286,13 @@ private:
         }
     }
 
+    void setStencilStateSlow(StencilState ss) noexcept;
+    void setStencilState(StencilState ss) noexcept {
+        if (UTILS_UNLIKELY(ss != mStencilState)) {
+            setStencilStateSlow(ss);
+        }
+    }
+
     void setTextureData(GLTexture* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
@@ -337,6 +344,7 @@ private:
             GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept;
 
     RasterState mRasterState;
+    StencilState mStencilState;
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
