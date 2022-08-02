@@ -357,17 +357,9 @@ public:
      * @param center    The point in world space the camera is looking at.
      * @param up        A unit vector denoting the camera's "up" direction.
      */
-    void lookAt(const math::float3& eye,
-                const math::float3& center,
-                const math::float3& up) noexcept;
-
-    /** Sets the camera's model matrix, assuming up is along the y axis
-     *
-     * @param eye       The position of the camera in world space.
-     * @param center    The point in world space the camera is looking at.
-     */
-    void lookAt(const math::float3& eye,
-                const math::float3& center) noexcept;
+    void lookAt(math::double3 const& eye,
+                math::double3 const& center,
+                math::double3 const& up = math::double3{0, 1, 0}) noexcept;
 
     /** Returns the camera's model matrix
      *
