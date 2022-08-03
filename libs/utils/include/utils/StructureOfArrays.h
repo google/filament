@@ -17,19 +17,18 @@
 #ifndef TNT_UTILS_STRUCTUREOFARRAYS_H
 #define TNT_UTILS_STRUCTUREOFARRAYS_H
 
-#include <array>        // note: this is safe, see how std::array is used below (inline / private)
-#include <cstddef>
-#include <utility>
+#include <utils/Allocator.h>
+#include <utils/compiler.h>
+#include <utils/Slice.h>
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <utils/Allocator.h>
-#include <utils/compiler.h>
-#include <utils/EntityInstance.h>
-#include <utils/Slice.h>
+#include <array>        // note: this is safe, see how std::array is used below (inline / private)
+#include <cstddef>
+#include <utility>
 
 namespace utils {
 
@@ -268,8 +267,10 @@ public:
         // allocate enough space for "capacity" elements of each array
         // capacity cannot change when optional storage is specified
         if (capacity >= mSize) {
+            // TODO: not entirely sure if "max" of all alignments is always correct
+            constexpr size_t align = std::max({ std::max(alignof(std::max_align_t), alignof(Elements))... });
             const size_t sizeNeeded = getNeededSize(capacity);
-            void* buffer = mAllocator.alloc(sizeNeeded);
+            void* buffer = mAllocator.alloc(sizeNeeded, align);
 
             // move all the items (one array at a time) from the old allocation to the new
             // this also update the array pointers
@@ -427,10 +428,10 @@ public:
         return data<ElementIndex>()[size() - 1];
     }
 
-    template <size_t E>
+    template <size_t E, typename IndexType = uint32_t>
     struct Field {
         SoA& soa;
-        EntityInstanceBase::Type i;
+        IndexType i;
         using Type = typename SoA::template TypeAt<E>;
 
         UTILS_ALWAYS_INLINE Field& operator = (Field&& rhs) noexcept {
@@ -518,17 +519,18 @@ private:
         // compute the required size of each array
         const size_t sizes[] = { (sizeof(Elements) * capacity)... };
 
-        // we align each array to the same alignment guaranteed by malloc
-        const size_t align = alignof(std::max_align_t);
+        // we align each array to at least the same alignment guaranteed by malloc
+        constexpr size_t const alignments[] = { std::max(alignof(std::max_align_t), alignof(Elements))... };
 
         // hopefully most of this gets unrolled and inlined
         std::array<size_t, kArrayCount> offsets;
         offsets[0] = 0;
         #pragma unroll
         for (size_t i = 1; i < kArrayCount; i++) {
-            size_t unalignment = sizes[i - 1] % align;
-            size_t alignment = unalignment ? (align - unalignment) : 0;
+            size_t unalignment = (offsets[i - 1] + sizes[i - 1]) % alignments[i];
+            size_t alignment = unalignment ? (alignments[i] - unalignment) : 0;
             offsets[i] = offsets[i - 1] + (sizes[i - 1] + alignment);
+            assert_invariant(offsets[i] % alignments[i] == 0);
         }
         return offsets;
     }
