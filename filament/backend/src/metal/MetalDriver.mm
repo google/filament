@@ -1234,12 +1234,13 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         depthState.depthWriteEnabled = rs.depthWrite;
     }
     if (stencilAttachment) {
-        depthState.stencilCompare = getMetalCompareFunction(rs.stencilFunc);
-        depthState.stencilOperationDepthStencilPass = getMetalStencilOperation(rs.stencilOpDepthStencilPass);
-        depthState.stencilOperationDepthFail = getMetalStencilOperation(rs.stencilOpDepthFail);
-        depthState.stencilOperationStencilFail = getMetalStencilOperation(rs.stencilOpStencilFail);
-        depthState.stencilWriteEnabled = rs.stencilWrite;
-        [mContext->currentRenderPassEncoder setStencilReferenceValue:rs.stencilRef];
+        const auto& ss = ps.stencilState;
+        depthState.stencilCompare = getMetalCompareFunction(ss.frontBack.stencilFunc);
+        depthState.stencilOperationDepthStencilPass = getMetalStencilOperation(ss.frontBack.stencilOpDepthStencilPass);
+        depthState.stencilOperationDepthFail = getMetalStencilOperation(ss.frontBack.stencilOpDepthFail);
+        depthState.stencilOperationStencilFail = getMetalStencilOperation(ss.frontBack.stencilOpStencilFail);
+        depthState.stencilWriteEnabled = ss.stencilWrite;
+        [mContext->currentRenderPassEncoder setStencilReferenceValue:ss.referenceValue];
     }
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {
