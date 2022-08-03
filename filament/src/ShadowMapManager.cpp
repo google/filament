@@ -181,6 +181,9 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         .type = SamplerType::SAMPLER_2D_ARRAY,
                         .format = view.hasVSM() ? vsmTextureFormat : mTextureFormat
                 });
+                // This pass must be declared as having a side effect because it never gets a
+                // "read" from one of its resource (only writes), so the FrameGraph culls it.
+                builder.sideEffect();
             },
             [&view](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 // set uniforms needed to render this ShadowMap
