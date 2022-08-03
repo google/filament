@@ -107,7 +107,7 @@ public:
         ps.rasterState.colorWrite = false;
         ps.rasterState.depthWrite = false;
         ps.stencilState.stencilWrite = true;
-        ps.stencilState.frontBack.stencilOpDepthStencilPass = StencilOperation::INCR;
+        ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0);
@@ -121,8 +121,8 @@ public:
         params.flags.discardStart = TargetBufferFlags::NONE;
         ps.rasterState.colorWrite = true;
         ps.stencilState.stencilWrite = false;
-        ps.stencilState.frontBack.stencilOpDepthStencilPass = StencilOperation::KEEP;
-        ps.stencilState.frontBack.stencilFunc = StencilState::StencilFunction::E;
+        ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
+        ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
         ps.stencilState.referenceValue = 0u;
 
         api.beginRenderPass(renderTarget, params);
@@ -234,7 +234,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     ps.rasterState.colorWrite = false;
     ps.rasterState.depthWrite = false;
     ps.stencilState.stencilWrite = true;
-    ps.stencilState.frontBack.stencilOpDepthStencilPass = StencilOperation::INCR;
+    ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
     api.makeCurrent(swapChain, swapChain);
     api.beginFrame(0, 0);
@@ -250,8 +250,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
     ps.rasterState.colorWrite = true;
     ps.stencilState.stencilWrite = false;
-    ps.stencilState.frontBack.stencilOpDepthStencilPass = StencilOperation::KEEP;
-    ps.stencilState.frontBack.stencilFunc = StencilState::StencilFunction::E;
+    ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
+    ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
     ps.stencilState.referenceValue = 0u;
 
     api.beginRenderPass(renderTarget1, params);
