@@ -101,9 +101,11 @@ public:
     inline void colorMask(GLboolean flag) noexcept;
     inline void depthMask(GLboolean flag) noexcept;
     inline void depthFunc(GLenum func) noexcept;
-    inline void stencilFunc(GLenum func, GLint ref, GLuint mask) noexcept;
-    inline void stencilOp(GLenum sfail, GLenum dpfail, GLenum dppass) noexcept;
-    inline void stencilMask(GLuint mask) noexcept;
+    inline void stencilFuncSeparate(GLenum funcFront, GLint refFront, GLuint maskFront,
+            GLenum funcBack, GLint refBack, GLuint maskBack) noexcept;
+    inline void stencilOpSeparate(GLenum sfailFront, GLenum dpfailFront, GLenum dppassFront,
+            GLenum sfailBack, GLenum dpfailBack, GLenum dppassBack) noexcept;
+    inline void stencilMaskSeparate(GLuint maskFront, GLuint maskBack) noexcept;
     inline void polygonOffset(GLfloat factor, GLfloat units) noexcept;
     inline void beginQuery(GLenum target, GLuint query) noexcept;
     inline void endQuery(GLenum target) noexcept;
@@ -255,6 +257,9 @@ public:
             GLboolean colorMask         = GL_TRUE;
             GLboolean depthMask         = GL_TRUE;
             GLenum depthFunc            = GL_LESS;
+        } raster;
+
+        struct {
             struct StencilFunc {
                 GLenum func             = GL_ALWAYS;
                 GLint ref               = 0;
@@ -262,7 +267,7 @@ public:
                 bool operator != (StencilFunc const& rhs) const noexcept {
                     return func != rhs.func || ref != rhs.ref || mask != rhs.mask;
                 }
-            } stencilFunc;
+            };
             struct StencilOp {
                 GLenum sfail            = GL_KEEP;
                 GLenum dpfail           = GL_KEEP;
@@ -270,9 +275,13 @@ public:
                 bool operator != (StencilOp const& rhs) const noexcept {
                     return sfail != rhs.sfail || dpfail != rhs.dpfail || dppass != rhs.dppass;
                 }
-            } stencilOp;
-            GLuint stencilMask          = ~GLuint(0);
-        } raster;
+            };
+            struct {
+                StencilFunc func;
+                StencilOp op;
+                GLuint stencilMask      = ~GLuint(0);
+            } front, back;
+        } stencil;
 
         struct PolygonOffset {
             GLfloat factor = 0;
@@ -664,24 +673,35 @@ void OpenGLContext::depthFunc(GLenum func) noexcept {
     });
 }
 
-void OpenGLContext::stencilFunc(GLenum func, GLint ref, GLuint mask) noexcept {
-    // WARNING: don't call this without updating mRasterState
-    update_state(state.raster.stencilFunc, {func, ref, mask}, [&]() {
-        glStencilFunc(func, ref, mask);
+void OpenGLContext::stencilFuncSeparate(GLenum funcFront, GLint refFront, GLuint maskFront,
+        GLenum funcBack, GLint refBack, GLuint maskBack) noexcept {
+    // WARNING: don't call this without updating mStencilState
+    update_state(state.stencil.front.func, {funcFront, refFront, maskFront}, [&]() {
+        glStencilFuncSeparate(GL_FRONT, funcFront, refFront, maskFront);
+    });
+    update_state(state.stencil.back.func, {funcBack, refBack, maskBack}, [&]() {
+        glStencilFuncSeparate(GL_BACK, funcBack, refBack, maskBack);
     });
 }
 
-void OpenGLContext::stencilOp(GLenum sfail, GLenum dpfail, GLenum dppass) noexcept {
-    // WARNING: don't call this without updating mRasterState
-    update_state(state.raster.stencilOp, {sfail, dpfail, dppass}, [&]() {
-        glStencilOp(sfail, dpfail, dppass);
+void OpenGLContext::stencilOpSeparate(GLenum sfailFront, GLenum dpfailFront, GLenum dppassFront,
+        GLenum sfailBack, GLenum dpfailBack, GLenum dppassBack) noexcept {
+    // WARNING: don't call this without updating mStencilState
+    update_state(state.stencil.front.op, {sfailFront, dpfailFront, dppassFront}, [&]() {
+        glStencilOpSeparate(GL_FRONT, sfailFront, dpfailFront, dppassFront);
+    });
+    update_state(state.stencil.back.op, {sfailBack, dpfailBack, dppassBack}, [&]() {
+        glStencilOpSeparate(GL_BACK, sfailBack, dpfailBack, dppassBack);
     });
 }
 
-void OpenGLContext::stencilMask(GLuint mask) noexcept {
-    // WARNING: don't call this without updating mRasterState
-    update_state(state.raster.stencilMask, mask, [&]() {
-        glStencilMask(mask);
+void OpenGLContext::stencilMaskSeparate(GLuint maskFront, GLuint maskBack) noexcept {
+    // WARNING: don't call this without updating mStencilState
+    update_state(state.stencil.front.stencilMask, maskFront, [&]() {
+        glStencilMaskSeparate(GL_FRONT, maskFront);
+    });
+    update_state(state.stencil.back.stencilMask, maskBack, [&]() {
+        glStencilMaskSeparate(GL_BACK, maskBack);
     });
 }
 
