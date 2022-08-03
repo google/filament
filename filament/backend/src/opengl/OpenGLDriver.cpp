@@ -316,7 +316,7 @@ void OpenGLDriver::setStencilStateSlow(StencilState ss) noexcept {
     auto& gl = mContext;
 
     // stencil test / operation
-    if (!ss.stencilEnabled()) {
+    if (!ss.isStencilEnabled()) {
         gl.disable(GL_STENCIL_TEST);
         gl.stencilOpSeparate(GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP);
     } else {

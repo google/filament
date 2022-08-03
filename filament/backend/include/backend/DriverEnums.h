@@ -977,7 +977,7 @@ struct StencilState {
     }
     bool operator!=(StencilState rhs) const noexcept { return !(*this == rhs); }
 
-    bool stencilEnabled() const noexcept {
+    bool isStencilEnabled() const noexcept {
         return stencilWrite ||
                 front.stencilFunc != StencilState::StencilFunction::A ||
                 back.stencilFunc != StencilState::StencilFunction::A;
@@ -1010,9 +1010,15 @@ struct StencilState {
         uint32_t u = 0;
     };
 
+    //! Stencil operations for front-facing polygons
     StencilOperations front;
+
+    //! Stencil operations for back-facing polygons
     StencilOperations back;
+
+    //! Reference value for stencil comparison tests
     uint8_t referenceValue;
+
     //! Whether stencil-buffer writes are enabled
     bool stencilWrite;
 
