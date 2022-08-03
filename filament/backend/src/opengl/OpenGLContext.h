@@ -143,6 +143,8 @@ public:
         bool EXT_multisampled_render_to_texture = false;
         bool EXT_multisampled_render_to_texture2 = false;
         bool EXT_shader_framebuffer_fetch = false;
+        bool KHR_texture_compression_astc_hdr = false;
+        bool KHR_texture_compression_astc_ldr = false;
         bool EXT_texture_compression_etc2 = false;
         bool EXT_texture_compression_s3tc = false;
         bool EXT_texture_compression_s3tc_srgb = false;
