@@ -960,14 +960,6 @@ struct PolygonOffset {
 struct StencilState {
     using StencilFunction = SamplerCompareFunc;
 
-    bool operator==(StencilState rhs) const noexcept {
-        return front.u == rhs.front.u &&
-                back.u == rhs.back.u &&
-                referenceValue == rhs.referenceValue &&
-                stencilWrite == rhs.stencilWrite;
-    }
-    bool operator!=(StencilState rhs) const noexcept { return !(*this == rhs); }
-
     union StencilOperations {
         struct {
             //! Stencil test function

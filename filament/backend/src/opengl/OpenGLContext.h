@@ -675,7 +675,6 @@ void OpenGLContext::depthFunc(GLenum func) noexcept {
 
 void OpenGLContext::stencilFuncSeparate(GLenum funcFront, GLint refFront, GLuint maskFront,
         GLenum funcBack, GLint refBack, GLuint maskBack) noexcept {
-    // WARNING: don't call this without updating mStencilState
     update_state(state.stencil.front.func, {funcFront, refFront, maskFront}, [&]() {
         glStencilFuncSeparate(GL_FRONT, funcFront, refFront, maskFront);
     });
@@ -686,7 +685,6 @@ void OpenGLContext::stencilFuncSeparate(GLenum funcFront, GLint refFront, GLuint
 
 void OpenGLContext::stencilOpSeparate(GLenum sfailFront, GLenum dpfailFront, GLenum dppassFront,
         GLenum sfailBack, GLenum dpfailBack, GLenum dppassBack) noexcept {
-    // WARNING: don't call this without updating mStencilState
     update_state(state.stencil.front.op, {sfailFront, dpfailFront, dppassFront}, [&]() {
         glStencilOpSeparate(GL_FRONT, sfailFront, dpfailFront, dppassFront);
     });
@@ -696,7 +694,6 @@ void OpenGLContext::stencilOpSeparate(GLenum sfailFront, GLenum dpfailFront, GLe
 }
 
 void OpenGLContext::stencilMaskSeparate(GLuint maskFront, GLuint maskBack) noexcept {
-    // WARNING: don't call this without updating mStencilState
     update_state(state.stencil.front.stencilMask, maskFront, [&]() {
         glStencilMaskSeparate(GL_FRONT, maskFront);
     });
