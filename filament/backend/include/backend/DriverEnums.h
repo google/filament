@@ -977,12 +977,6 @@ struct StencilState {
     }
     bool operator!=(StencilState rhs) const noexcept { return !(*this == rhs); }
 
-    bool isStencilEnabled() const noexcept {
-        return stencilWrite ||
-                front.stencilFunc != StencilState::StencilFunction::A ||
-                back.stencilFunc != StencilState::StencilFunction::A;
-    }
-
     union StencilOperations {
         struct {
             //! Stencil test function

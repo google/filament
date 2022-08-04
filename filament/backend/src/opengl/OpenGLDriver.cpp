@@ -316,14 +316,25 @@ void OpenGLDriver::setStencilStateSlow(StencilState ss) noexcept {
     auto& gl = mContext;
 
     // stencil test / operation
-    if (!ss.isStencilEnabled()) {
+    if (UTILS_LIKELY(
+            ss.front.stencilFunc == StencilState::StencilFunction::A &&
+            ss.back.stencilFunc == StencilState::StencilFunction::A)) {
+        // that's equivalent to having the stencil test disabled
         gl.disable(GL_STENCIL_TEST);
-        gl.stencilOpSeparate(GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP);
     } else {
         gl.enable(GL_STENCIL_TEST);
-        gl.stencilFuncSeparate(
-                getStencilFunc(ss.front.stencilFunc), ss.referenceValue, ss.front.readMask,
-                getStencilFunc(ss.back.stencilFunc), ss.referenceValue, ss.back.readMask);
+    }
+
+    // glStencilFuncSeparate() also sets the reference value, which may be used depending
+    // on the stencilOp, so we always need to call glStencilFuncSeparate().
+    gl.stencilFuncSeparate(
+            getStencilFunc(ss.front.stencilFunc), ss.referenceValue, ss.front.readMask,
+            getStencilFunc(ss.back.stencilFunc), ss.referenceValue, ss.back.readMask);
+
+    if (UTILS_LIKELY(!ss.stencilWrite)) {
+        gl.stencilMaskSeparate(0x00, 0x00);
+    } else {
+        // Stencil ops are only relevant when stencil write is enabled
         gl.stencilOpSeparate(
                 getStencilOp(ss.front.stencilOpStencilFail),
                 getStencilOp(ss.front.stencilOpDepthFail),
@@ -331,11 +342,7 @@ void OpenGLDriver::setStencilStateSlow(StencilState ss) noexcept {
                 getStencilOp(ss.back.stencilOpStencilFail),
                 getStencilOp(ss.back.stencilOpDepthFail),
                 getStencilOp(ss.back.stencilOpDepthStencilPass));
-        if (!ss.stencilWrite) {
-            gl.stencilMaskSeparate(0x00, 0x00);
-        } else {
-            gl.stencilMaskSeparate(ss.front.writeMask, ss.back.writeMask);
-        }
+        gl.stencilMaskSeparate(ss.front.writeMask, ss.back.writeMask);
     }
 }
 
