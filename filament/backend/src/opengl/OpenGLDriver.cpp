@@ -319,8 +319,8 @@ void OpenGLDriver::setStencilState(StencilState ss) noexcept {
     // glStencilFuncSeparate() also sets the reference value, which may be used depending
     // on the stencilOp, so we always need to call glStencilFuncSeparate().
     gl.stencilFuncSeparate(
-            getStencilFunc(ss.front.stencilFunc), ss.referenceValue, ss.front.readMask,
-            getStencilFunc(ss.back.stencilFunc), ss.referenceValue, ss.back.readMask);
+            getStencilFunc(ss.front.stencilFunc), ss.front.ref, ss.front.readMask,
+            getStencilFunc(ss.back.stencilFunc), ss.back.ref, ss.back.readMask);
 
     if (UTILS_LIKELY(!ss.stencilWrite)) {
         gl.stencilMaskSeparate(0x00, 0x00);

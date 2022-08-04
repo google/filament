@@ -977,31 +977,31 @@ struct StencilState {
 
         uint8_t padding1                                : 2;                    // 16
 
+        //! Reference value for stencil comparison tests and updates
+        uint8_t ref;                                                            // 24
+
         //! Masks the bits of the stencil values participating in the stencil comparison test.
-        uint8_t readMask;                                                       // 24
+        uint8_t readMask;                                                       // 32
 
         //! Masks the bits of the stencil values updated by the stencil test.
-        uint8_t writeMask;                                                      // 32
+        uint8_t writeMask;                                                      // 40
     };
 
     //! Stencil operations for front-facing polygons
     StencilOperations front = {
-            .stencilFunc = StencilFunction::A, .readMask = 0xff, .writeMask = 0xff };
+            .stencilFunc = StencilFunction::A, .ref = 0, .readMask = 0xff, .writeMask = 0xff };
 
     //! Stencil operations for back-facing polygons
     StencilOperations back  = {
-            .stencilFunc = StencilFunction::A, .readMask = 0xff, .writeMask = 0xff };
-
-    //! Reference value for stencil comparison tests
-    uint8_t referenceValue = 0;
+            .stencilFunc = StencilFunction::A, .ref = 0, .readMask = 0xff, .writeMask = 0xff };
 
     //! Whether stencil-buffer writes are enabled
     bool stencilWrite = false;
 
-    uint16_t padding = 0;
+    uint8_t padding = 0;
 };
 
-static_assert(sizeof(StencilState::StencilOperations) == sizeof(uint32_t),
+static_assert(sizeof(StencilState::StencilOperations) == 5u,
         "StencilOperations size not what was intended");
 
 static_assert(sizeof(StencilState) == 12u,
