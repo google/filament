@@ -960,31 +960,28 @@ struct PolygonOffset {
 struct StencilState {
     using StencilFunction = SamplerCompareFunc;
 
-    union StencilOperations {
-        struct {
-            //! Stencil test function
-            StencilFunction stencilFunc                     : 3;                    // 3
+    struct StencilOperations {
+        //! Stencil test function
+        StencilFunction stencilFunc                     : 3;                    // 3
 
-            //! Stencil operation when stencil test fails
-            StencilOperation stencilOpStencilFail           : 3;                    // 6
+        //! Stencil operation when stencil test fails
+        StencilOperation stencilOpStencilFail           : 3;                    // 6
 
-            uint8_t padding0                                : 2;                    // 8
+        uint8_t padding0                                : 2;                    // 8
 
-            //! Stencil operation when stencil test passes but depth test fails
-            StencilOperation stencilOpDepthFail             : 3;                    // 11
+        //! Stencil operation when stencil test passes but depth test fails
+        StencilOperation stencilOpDepthFail             : 3;                    // 11
 
-            //! Stencil operation when both stencil and depth test pass
-            StencilOperation stencilOpDepthStencilPass      : 3;                    // 14
+        //! Stencil operation when both stencil and depth test pass
+        StencilOperation stencilOpDepthStencilPass      : 3;                    // 14
 
-            uint8_t padding1                                : 2;                    // 16
+        uint8_t padding1                                : 2;                    // 16
 
-            //! Masks the bits of the stencil values participating in the stencil comparison test.
-            uint8_t readMask;                                                       // 24
+        //! Masks the bits of the stencil values participating in the stencil comparison test.
+        uint8_t readMask;                                                       // 24
 
-            //! Masks the bits of the stencil values updated by the stencil test.
-            uint8_t writeMask;                                                      // 32
-        };
-        uint32_t u = 0;
+        //! Masks the bits of the stencil values updated by the stencil test.
+        uint8_t writeMask;                                                      // 32
     };
 
     //! Stencil operations for front-facing polygons
