@@ -311,8 +311,7 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
     }
 }
 
-void OpenGLDriver::setStencilStateSlow(StencilState ss) noexcept {
-    mStencilState = ss;
+void OpenGLDriver::setStencilState(StencilState ss) noexcept {
     auto& gl = mContext;
 
     // stencil test / operation
@@ -2909,7 +2908,6 @@ UTILS_NOINLINE
 void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
         math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept {
     RasterState rs(mRasterState);
-    StencilState ss(mStencilState);
 
     if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
         rs.colorWrite = true;
@@ -2921,8 +2919,7 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
         setRasterState(rs);
     }
     if (any(clearFlags & TargetBufferFlags::STENCIL)) {
-        ss.stencilWrite = true;
-        setStencilState(ss);
+        mContext.stencilMaskSeparate(0xFF, mContext.state.stencil.back.stencilMask);
     }
 
     if (any(clearFlags & TargetBufferFlags::COLOR0)) {
