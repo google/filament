@@ -240,7 +240,7 @@ public:
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
         PrimitiveInfo primitive;    // 40 bytes
-        uint64_t reserved = 0;      //  8 bytes
+        uint64_t reserved[2] = {};  // 16 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t, void* ptr) {
@@ -248,7 +248,7 @@ public:
             return ptr;
         }
     };
-    static_assert(sizeof(Command) == 56);
+    static_assert(sizeof(Command) == 64);
     static_assert(std::is_trivially_destructible_v<Command>,
             "Command isn't trivially destructible");
 
