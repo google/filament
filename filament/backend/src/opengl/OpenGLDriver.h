@@ -277,14 +277,7 @@ private:
     void framebufferTexture(TargetBufferInfo const& binfo,
             GLRenderTarget const* rt, GLenum attachment) noexcept;
 
-    void setRasterStateSlow(RasterState rs) noexcept;
-    void setRasterState(RasterState rs) noexcept {
-        mRenderPassColorWrite |= rs.colorWrite;
-        mRenderPassDepthWrite |= rs.depthWrite;
-        if (UTILS_UNLIKELY(rs != mRasterState)) {
-            setRasterStateSlow(rs);
-        }
-    }
+    void setRasterState(RasterState rs) noexcept;
 
     void setStencilState(StencilState ss) noexcept;
 
@@ -337,8 +330,6 @@ private:
     using AttachmentArray = std::array<GLenum, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2>;
     static GLsizei getAttachments(AttachmentArray& attachments,
             GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept;
-
-    RasterState mRasterState;
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
