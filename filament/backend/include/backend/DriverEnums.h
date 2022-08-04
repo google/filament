@@ -960,15 +960,6 @@ struct PolygonOffset {
 struct StencilState {
     using StencilFunction = SamplerCompareFunc;
 
-    StencilState() noexcept : referenceValue(0u), stencilWrite(false), padding(0u) {
-        static_assert(sizeof(StencilOperations) == sizeof(uint32_t), "StencilOperations size not what was intended");
-        static_assert(sizeof(StencilState) == 12u, "StencilState size not what was intended");
-        front.u = back.u = 0u;
-        front.stencilFunc = back.stencilFunc = StencilFunction::A;
-        front.readMask = back.readMask = 0xFF;
-        front.writeMask = back.writeMask = 0xFF;
-    }
-
     bool operator==(StencilState rhs) const noexcept {
         return front.u == rhs.front.u &&
                 back.u == rhs.back.u &&
@@ -996,28 +987,36 @@ struct StencilState {
             uint8_t padding1                                : 2;                    // 16
 
             //! Masks the bits of the stencil values participating in the stencil comparison test.
-            uint8_t readMask                                : 8;                    // 24
+            uint8_t readMask;                                                       // 24
 
             //! Masks the bits of the stencil values updated by the stencil test.
-            uint8_t writeMask                               : 8;                    // 32
+            uint8_t writeMask;                                                      // 32
         };
         uint32_t u = 0;
     };
 
     //! Stencil operations for front-facing polygons
-    StencilOperations front;
+    StencilOperations front = {
+            .stencilFunc = StencilFunction::A, .readMask = 0xff, .writeMask = 0xff };
 
     //! Stencil operations for back-facing polygons
-    StencilOperations back;
+    StencilOperations back  = {
+            .stencilFunc = StencilFunction::A, .readMask = 0xff, .writeMask = 0xff };
 
     //! Reference value for stencil comparison tests
-    uint8_t referenceValue;
+    uint8_t referenceValue = 0;
 
     //! Whether stencil-buffer writes are enabled
-    bool stencilWrite;
+    bool stencilWrite = false;
 
-    uint16_t padding;
+    uint16_t padding = 0;
 };
+
+static_assert(sizeof(StencilState::StencilOperations) == sizeof(uint32_t),
+        "StencilOperations size not what was intended");
+
+static_assert(sizeof(StencilState) == 12u,
+        "StencilState size not what was intended");
 
 using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 
