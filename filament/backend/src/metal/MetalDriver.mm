@@ -1235,10 +1235,25 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     }
     if (stencilAttachment) {
         const auto& ss = ps.stencilState;
-        depthState.stencilCompare = getMetalCompareFunction(ss.frontBack.stencilFunc);
-        depthState.stencilOperationDepthStencilPass = getMetalStencilOperation(ss.frontBack.stencilOpDepthStencilPass);
-        depthState.stencilOperationDepthFail = getMetalStencilOperation(ss.frontBack.stencilOpDepthFail);
-        depthState.stencilOperationStencilFail = getMetalStencilOperation(ss.frontBack.stencilOpStencilFail);
+
+        auto& front = depthState.front;
+        front.stencilCompare = getMetalCompareFunction(ss.front.stencilFunc);
+        front.stencilOperationStencilFail = getMetalStencilOperation(ss.front.stencilOpStencilFail);
+        front.stencilOperationDepthFail = getMetalStencilOperation(ss.front.stencilOpDepthFail);
+        front.stencilOperationDepthStencilPass =
+                getMetalStencilOperation(ss.front.stencilOpDepthStencilPass);
+        front.readMask = ss.front.readMask;
+        front.writeMask = ss.front.writeMask;
+
+        auto& back = depthState.back;
+        back.stencilCompare = getMetalCompareFunction(ss.back.stencilFunc);
+        back.stencilOperationStencilFail = getMetalStencilOperation(ss.back.stencilOpStencilFail);
+        back.stencilOperationDepthFail = getMetalStencilOperation(ss.back.stencilOpDepthFail);
+        back.stencilOperationDepthStencilPass =
+                getMetalStencilOperation(ss.back.stencilOpDepthStencilPass);
+        back.readMask = ss.back.readMask;
+        back.writeMask = ss.back.writeMask;
+
         depthState.stencilWriteEnabled = ss.stencilWrite;
         [mContext->currentRenderPassEncoder setStencilReferenceValue:ss.referenceValue];
     }

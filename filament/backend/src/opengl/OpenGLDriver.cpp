@@ -316,16 +316,26 @@ void OpenGLDriver::setStencilStateSlow(StencilState ss) noexcept {
     auto& gl = mContext;
 
     // stencil test / operation
-    if (ss.frontBack.stencilFunc == StencilState::StencilFunction::A && !ss.stencilWrite) {
+    if (!ss.isStencilEnabled()) {
         gl.disable(GL_STENCIL_TEST);
+        gl.stencilOpSeparate(GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP, GL_KEEP);
     } else {
         gl.enable(GL_STENCIL_TEST);
-        gl.stencilFunc(getStencilFunc(ss.frontBack.stencilFunc), ss.referenceValue, ~GLuint(0));
-        gl.stencilOp(getStencilOp(ss.frontBack.stencilOpStencilFail),
-                getStencilOp(ss.frontBack.stencilOpDepthFail),
-                getStencilOp(ss.frontBack.stencilOpDepthStencilPass));
-        GLuint stencilMask = ss.stencilWrite ? ~GLuint(0) : 0x00;
-        gl.stencilMask(stencilMask);
+        gl.stencilFuncSeparate(
+                getStencilFunc(ss.front.stencilFunc), ss.referenceValue, ss.front.readMask,
+                getStencilFunc(ss.back.stencilFunc), ss.referenceValue, ss.back.readMask);
+        gl.stencilOpSeparate(
+                getStencilOp(ss.front.stencilOpStencilFail),
+                getStencilOp(ss.front.stencilOpDepthFail),
+                getStencilOp(ss.front.stencilOpDepthStencilPass),
+                getStencilOp(ss.back.stencilOpStencilFail),
+                getStencilOp(ss.back.stencilOpDepthFail),
+                getStencilOp(ss.back.stencilOpDepthStencilPass));
+        if (!ss.stencilWrite) {
+            gl.stencilMaskSeparate(0x00, 0x00);
+        } else {
+            gl.stencilMaskSeparate(ss.front.writeMask, ss.back.writeMask);
+        }
     }
 }
 

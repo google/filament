@@ -960,41 +960,69 @@ struct PolygonOffset {
 struct StencilState {
     using StencilFunction = SamplerCompareFunc;
 
-    StencilState() noexcept : referenceValue(0u), stencilWrite(false) {
-        static_assert(sizeof(StencilState) == 4u, "StencilState size not what was intended");
-        frontBack.u = 0u;
-        frontBack.stencilFunc = StencilFunction::A;
+    StencilState() noexcept : referenceValue(0u), stencilWrite(false), padding(0u) {
+        static_assert(sizeof(StencilOperations) == sizeof(uint32_t), "StencilOperations size not what was intended");
+        static_assert(sizeof(StencilState) == 12u, "StencilState size not what was intended");
+        front.u = back.u = 0u;
+        front.stencilFunc = back.stencilFunc = StencilFunction::A;
+        front.readMask = back.readMask = 0xFF;
+        front.writeMask = back.writeMask = 0xFF;
     }
 
     bool operator==(StencilState rhs) const noexcept {
-        return frontBack.u == rhs.frontBack.u &&
+        return front.u == rhs.front.u &&
+                back.u == rhs.back.u &&
                 referenceValue == rhs.referenceValue &&
                 stencilWrite == rhs.stencilWrite;
     }
     bool operator!=(StencilState rhs) const noexcept { return !(*this == rhs); }
 
+    bool isStencilEnabled() const noexcept {
+        return stencilWrite ||
+                front.stencilFunc != StencilState::StencilFunction::A ||
+                back.stencilFunc != StencilState::StencilFunction::A;
+    }
+
     union StencilOperations {
         struct {
             //! Stencil test function
-            StencilFunction stencilFunc                     : 3;
+            StencilFunction stencilFunc                     : 3;                    // 3
 
             //! Stencil operation when stencil test fails
-            StencilOperation stencilOpStencilFail           : 3;
+            StencilOperation stencilOpStencilFail           : 3;                    // 6
+
+            uint8_t padding0                                : 2;                    // 8
 
             //! Stencil operation when stencil test passes but depth test fails
-            StencilOperation stencilOpDepthFail             : 3;
+            StencilOperation stencilOpDepthFail             : 3;                    // 11
 
             //! Stencil operation when both stencil and depth test pass
-            StencilOperation stencilOpDepthStencilPass      : 3;
+            StencilOperation stencilOpDepthStencilPass      : 3;                    // 14
+
+            uint8_t padding1                                : 2;                    // 16
+
+            //! Masks the bits of the stencil values participating in the stencil comparison test.
+            uint8_t readMask                                : 8;                    // 24
+
+            //! Masks the bits of the stencil values updated by the stencil test.
+            uint8_t writeMask                               : 8;                    // 32
         };
-        uint16_t u = 0;
+        uint32_t u = 0;
     };
 
-    // TODO: separate out front and back stencil states.
-    StencilOperations frontBack;
+    //! Stencil operations for front-facing polygons
+    StencilOperations front;
+
+    //! Stencil operations for back-facing polygons
+    StencilOperations back;
+
+    //! Reference value for stencil comparison tests
     uint8_t referenceValue;
+
     //! Whether stencil-buffer writes are enabled
     bool stencilWrite;
+
+    uint16_t padding;
 };
 
 using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
