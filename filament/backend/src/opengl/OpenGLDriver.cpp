@@ -249,31 +249,21 @@ void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
 }
 
 
-void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
-    mRasterState = rs;
+void OpenGLDriver::setRasterState(RasterState rs) noexcept {
     auto& gl = mContext;
 
+    mRenderPassColorWrite |= rs.colorWrite;
+    mRenderPassDepthWrite |= rs.depthWrite;
+
     // culling state
-    switch (rs.culling) {
-        case CullingMode::NONE:
-            gl.disable(GL_CULL_FACE);
-            break;
-        case CullingMode::FRONT:
-            gl.cullFace(GL_FRONT);
-            break;
-        case CullingMode::BACK:
-            gl.cullFace(GL_BACK);
-            break;
-        case CullingMode::FRONT_AND_BACK:
-            gl.cullFace(GL_FRONT_AND_BACK);
-            break;
+    if (rs.culling == CullingMode::NONE) {
+        gl.disable(GL_CULL_FACE);
+    } else {
+        gl.enable(GL_CULL_FACE);
+        gl.cullFace(getCullingMode(rs.culling));
     }
 
     gl.frontFace(rs.inverseFrontFaces ? GL_CW : GL_CCW);
-
-    if (rs.culling != CullingMode::NONE) {
-        gl.enable(GL_CULL_FACE);
-    }
 
     // blending state
     if (!rs.hasBlending()) {
@@ -2907,16 +2897,12 @@ void OpenGLDriver::finish(int) {
 UTILS_NOINLINE
 void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
         math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept {
-    RasterState rs(mRasterState);
 
     if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
-        rs.colorWrite = true;
+        mContext.colorMask(GL_TRUE);
     }
     if (any(clearFlags & TargetBufferFlags::DEPTH)) {
-        rs.depthWrite = true;
-    }
-    if (any(clearFlags & (TargetBufferFlags::COLOR_ALL | TargetBufferFlags::DEPTH))) {
-        setRasterState(rs);
+        mContext.depthMask(GL_TRUE);
     }
     if (any(clearFlags & TargetBufferFlags::STENCIL)) {
         mContext.stencilMaskSeparate(0xFF, mContext.state.stencil.back.stencilMask);

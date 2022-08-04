@@ -615,21 +615,18 @@ void OpenGLContext::disable(GLenum cap) noexcept {
 }
 
 void OpenGLContext::frontFace(GLenum mode) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.frontFace, mode, [&]() {
         glFrontFace(mode);
     });
 }
 
 void OpenGLContext::cullFace(GLenum mode) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.cullFace, mode, [&]() {
         glCullFace(mode);
     });
 }
 
 void OpenGLContext::blendEquation(GLenum modeRGB, GLenum modeA) noexcept {
-    // WARNING: don't call this without updating mRasterState
     if (UTILS_UNLIKELY(
             state.raster.blendEquationRGB != modeRGB || state.raster.blendEquationA != modeA)) {
         state.raster.blendEquationRGB = modeRGB;
@@ -639,7 +636,6 @@ void OpenGLContext::blendEquation(GLenum modeRGB, GLenum modeA) noexcept {
 }
 
 void OpenGLContext::blendFunction(GLenum srcRGB, GLenum srcA, GLenum dstRGB, GLenum dstA) noexcept {
-    // WARNING: don't call this without updating mRasterState
     if (UTILS_UNLIKELY(
             state.raster.blendFunctionSrcRGB != srcRGB ||
             state.raster.blendFunctionSrcA != srcA ||
@@ -654,20 +650,17 @@ void OpenGLContext::blendFunction(GLenum srcRGB, GLenum srcA, GLenum dstRGB, GLe
 }
 
 void OpenGLContext::colorMask(GLboolean flag) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.colorMask, flag, [&]() {
         glColorMask(flag, flag, flag, flag);
     });
 }
 void OpenGLContext::depthMask(GLboolean flag) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.depthMask, flag, [&]() {
         glDepthMask(flag);
     });
 }
 
 void OpenGLContext::depthFunc(GLenum func) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.depthFunc, func, [&]() {
         glDepthFunc(func);
     });
