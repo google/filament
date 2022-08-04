@@ -304,6 +304,8 @@ void OpenGLDriver::setRasterState(RasterState rs) noexcept {
 void OpenGLDriver::setStencilState(StencilState ss) noexcept {
     auto& gl = mContext;
 
+    mRenderPassStencilWrite |= ss.stencilWrite;
+
     // stencil test / operation
     if (UTILS_LIKELY(
             ss.front.stencilFunc == StencilState::StencilFunction::A &&
@@ -2338,8 +2340,9 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     }
 
     // we need to reset those after we call clearWithRasterPipe()
-    mRenderPassColorWrite = any(clearFlags & TargetBufferFlags::COLOR_ALL);
-    mRenderPassDepthWrite = any(clearFlags & TargetBufferFlags::DEPTH);
+    mRenderPassColorWrite   = any(clearFlags & TargetBufferFlags::COLOR_ALL);
+    mRenderPassDepthWrite   = any(clearFlags & TargetBufferFlags::DEPTH);
+    mRenderPassStencilWrite = any(clearFlags & TargetBufferFlags::STENCIL);
 
     gl.viewport(params.viewport.left, params.viewport.bottom,
             (GLsizei)params.viewport.width, (GLsizei)params.viewport.height);
@@ -2368,10 +2371,16 @@ void OpenGLDriver::endRenderPass(int) {
     }
 
     if (!mRenderPassColorWrite) {
+        // ignore discard flags if the buffer wasn't written at all
         discardFlags &= ~TargetBufferFlags::COLOR_ALL;
     }
     if (!mRenderPassDepthWrite) {
+        // ignore discard flags if the buffer wasn't written at all
         discardFlags &= ~TargetBufferFlags::DEPTH;
+    }
+    if (!mRenderPassStencilWrite) {
+        // ignore discard flags if the buffer wasn't written at all
+        discardFlags &= ~TargetBufferFlags::STENCIL;
     }
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just

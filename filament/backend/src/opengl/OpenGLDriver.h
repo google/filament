@@ -336,6 +336,7 @@ private:
     RenderPassParams mRenderPassParams;
     GLboolean mRenderPassColorWrite{};
     GLboolean mRenderPassDepthWrite{};
+    GLboolean mRenderPassStencilWrite{};
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;
