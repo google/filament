@@ -1255,7 +1255,8 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         back.writeMask = ss.back.writeMask;
 
         depthState.stencilWriteEnabled = ss.stencilWrite;
-        [mContext->currentRenderPassEncoder setStencilReferenceValue:ss.referenceValue];
+        [mContext->currentRenderPassEncoder setStencilFrontReferenceValue:ss.front.ref
+                                                       backReferenceValue:ss.back.ref];
     }
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {

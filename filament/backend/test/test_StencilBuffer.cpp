@@ -123,7 +123,7 @@ public:
         ps.stencilState.stencilWrite = false;
         ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
         ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
-        ps.stencilState.referenceValue = 0u;
+        ps.stencilState.front.ref = 0u;
 
         api.beginRenderPass(renderTarget, params);
         api.draw(ps, triangle.getRenderPrimitive(), 1);
@@ -252,7 +252,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     ps.stencilState.stencilWrite = false;
     ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
     ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
-    ps.stencilState.referenceValue = 0u;
+    ps.stencilState.front.ref = 0u;
 
     api.beginRenderPass(renderTarget1, params);
     api.draw(ps, triangle.getRenderPrimitive(), 1);
