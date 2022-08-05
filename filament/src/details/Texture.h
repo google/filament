@@ -52,7 +52,7 @@ public:
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& buffer) const;
 
-    [[deprecated]]
+    UTILS_DEPRECATED
     void setImage(FEngine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
 
