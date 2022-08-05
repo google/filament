@@ -80,8 +80,8 @@ public:
         // refresh-rate of the display in Hz. set to 0 for offscreen or turn off frame-pacing.
         float refreshRate = 60.0f;
 
-        [[deprecated]] uint64_t presentationDeadlineNanos = 0;
-        [[deprecated]] uint64_t vsyncOffsetNanos = 0;
+        UTILS_DEPRECATED uint64_t presentationDeadlineNanos = 0;
+        UTILS_DEPRECATED uint64_t vsyncOffsetNanos = 0;
     };
 
     /**
