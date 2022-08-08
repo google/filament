@@ -28,7 +28,6 @@
 #include <utils/trap.h>
 #include <utils/debug.h>
 
-#include <math/vec2.h>
 #include <math/scalar.h>
 
 #include <math.h>
@@ -790,8 +789,8 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         Attachment depthAttachment, Attachment stencilAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
-    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<size_t>::max()};
-    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
+    math::uint2 tmin = {std::numeric_limits<uint32_t>::max()};
+    UTILS_UNUSED_IN_RELEASE math::uint2 tmax = {0};
     UTILS_UNUSED_IN_RELEASE size_t attachmentCount = 0;
 
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
@@ -880,9 +879,9 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
     // The render target dimensions must be less than or equal to the attachment size.
     assert_invariant(width <= tmin.x && height <= tmin.y);
 
-    // Store the height of all attachments. We'll use this when converting from Filament's
+    // Store the width/height of all attachments. We'll use this when converting from Filament's
     // coordinate system to Metal's.
-    attachmentHeight = tmin.y;
+    attachmentSize = tmin;
 }
 
 void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor,
@@ -1065,15 +1064,16 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     return [device newTextureWithDescriptor:descriptor];
 }
 
-uint32_t MetalRenderTarget::getAttachmentHeight() noexcept {
+math::uint2 MetalRenderTarget::getAttachmentSize() noexcept {
     if (defaultRenderTarget) {
         // The default render target always has a color attachment.
         auto colorAttachment = getDrawColorAttachment(0);
         assert_invariant(colorAttachment);
-        return colorAttachment.getTexture().height;
+        id<MTLTexture> t = colorAttachment.getTexture();
+        return {t.width, t.height};
     }
-    assert_invariant(attachmentHeight > 0);
-    return attachmentHeight;
+    assert_invariant(attachmentSize.x > 0 && attachmentSize.y > 0);
+    return attachmentSize;
 }
 
 MetalFence::MetalFence(MetalContext& context) : context(context), value(context.signalId++) { }

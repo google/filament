@@ -33,6 +33,8 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
+#include <math/vec2.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <memory>
@@ -287,7 +289,7 @@ public:
     void setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor, const RenderPassParams& params);
 
     MTLRegion getRegionFromClientRect(Viewport rect) {
-        const uint32_t height = getAttachmentHeight();
+        const uint32_t height = getAttachmentSize().y;
         assert_invariant(height > 0);
 
         // Convert the Filament rect into Metal texture coordinates, taking into account Metal's
@@ -298,6 +300,8 @@ public:
                 std::max(height - (int64_t) rect.bottom - rect.height, (int64_t) 0),
                 rect.width, rect.height);
     }
+
+    math::uint2 getAttachmentSize() noexcept;
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
@@ -314,8 +318,6 @@ private:
     static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
             uint32_t width, uint32_t height, uint8_t samples);
 
-    uint32_t getAttachmentHeight() noexcept;
-
     MetalContext* context;
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
@@ -323,7 +325,7 @@ private:
     Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     Attachment depth = {};
     Attachment stencil = {};
-    uint32_t attachmentHeight = 0;
+    math::uint2 attachmentSize = {};
 };
 
 // MetalFence is used to implement both Fences and Syncs.
