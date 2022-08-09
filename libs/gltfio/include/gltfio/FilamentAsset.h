@@ -334,6 +334,23 @@ public:
     void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
             SceneMask sceneFilter);
 
+    /**
+     * Releases ownership of entities and their Filament components.
+     *
+     * This makes the client take responsibility for destroying Filament
+     * components (e.g. Renderable, TransformManager component) as well as
+     * the underlying entities.
+     */
+    void detachFilamentComponents();
+
+    /**
+     * Releases ownership of material instances.
+     *
+     * This makes the client take responsibility for destroying MaterialInstance
+     * objects. The getMaterialInstances query becomes invalid after detachment.
+     */
+    void detachMaterialInstances();
+
     /*! \cond PRIVATE */
 
     FilamentInstance** getAssetInstances() noexcept;
