@@ -687,7 +687,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
                 << provider->getPushMessage() << io::endl;
         asset->mDependencyGraph.markAsError(tb.materialInstance);
     } else {
-        asset->takeOwnership(texture);
+        asset->attachTexture(texture);
     }
 
     return texture;
