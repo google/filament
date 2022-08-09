@@ -33,10 +33,11 @@ using namespace utils;
 namespace filament::gltfio {
 
 FFilamentAsset::~FFilamentAsset() {
+    // Free transient load-time data if they haven't been freed yet.
     releaseSourceData();
 
-    // The only things we need to free in the instances are their animators.
-    // The union of all instance entities will be destroyed below.
+    // Destroy all instance objects and their animators. Instance entities / components are
+    // destroyed later in this method because they are owned by the asset.
     for (FFilamentInstance* instance : mInstances) {
         delete instance->animator;
         delete instance;
@@ -45,21 +46,30 @@ FFilamentAsset::~FFilamentAsset() {
     delete mAnimator;
     delete mWireframe;
 
-    mEngine->destroy(mRoot);
-    mEntityManager->destroy(mRoot);
-
-    for (auto entity : mEntities) {
-        // Destroy the entity's renderable, light, transform, and camera components.
-        mEngine->destroy(entity);
-        // Destroy the name component.
-        if (mNameManager) {
+    // Destroy name components.
+    if (mNameManager) {
+        for (auto entity : mEntities) {
             mNameManager->removeComponent(entity);
         }
-        // Destroy the node component.
-        mNodeManager->destroy(entity);
-        // Destroy the actual entity.
-        mEntityManager->destroy(entity);
     }
+
+    // Destroy gltfio node components.
+    for (auto entity : mEntities) {
+        mNodeManager->destroy(entity);
+
+    }
+
+    // Destroy all renderable, light, transform, and camera components,
+    // then destroy the actual entities. This includes instances.
+    if (!mDetachedFilamentComponents) {
+        mEngine->destroy(mRoot);
+        mEntityManager->destroy(mRoot);
+        for (auto entity : mEntities) {
+            mEngine->destroy(entity);
+            mEntityManager->destroy(entity);
+        }
+    }
+
     for (auto mi : mMaterialInstances) {
         mEngine->destroy(mi);
     }
@@ -281,6 +291,14 @@ void FFilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entiti
             targetScene.addEntity(entity);
         }
     }
+}
+
+void FilamentAsset::detachFilamentComponents() {
+    upcast(this)->detachFilamentComponents();
+}
+
+void FilamentAsset::detachMaterialInstances() {
+    upcast(this)->detachMaterialInstances();
 }
 
 size_t FilamentAsset::getEntityCount() const noexcept {
