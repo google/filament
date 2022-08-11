@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- gltfio: minor efficiency improvement for Android and WebGL builds.
+
 ## v1.25.5
 
 - WebGL: upgraded the JS bindings to work with emsdk 3.1.15

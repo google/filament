@@ -347,67 +347,40 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     const cgltf_data* gltf = asset->mSourceAsset->hierarchy;
     cgltf_options options {};
 
-    // For emscripten and Android builds we have a custom implementation of cgltf_load_buffers which
-    // looks inside a cache of externally-supplied data blobs, rather than loading from the
-    // filesystem.
+    // For emscripten and Android builds we supply a custom file reader callback that looks inside a
+    // cache of externally-supplied data blobs, rather than loading from the filesystem.
 
     SYSTRACE_NAME_BEGIN("Load buffers");
     #if !USE_FILESYSTEM
 
-    if (gltf->buffers_count && !gltf->buffers[0].data && !gltf->buffers[0].uri && gltf->bin) {
-        if (gltf->bin_size < gltf->buffers[0].size) {
-            slog.e << "Bad size." << io::endl;
-            return false;
-        }
-        gltf->buffers[0].data = (void*) gltf->bin;
-    }
+    struct Closure {
+        Impl* impl;
+        const cgltf_data* gltf;
+    };
 
-    bool missingResources = false;
+    Closure closure = { pImpl, gltf };
 
-    for (cgltf_size i = 0; i < gltf->buffers_count; ++i) {
-        if (gltf->buffers[i].data) {
-            continue;
-        }
-        const char* uri = gltf->buffers[i].uri;
-        if (uri == nullptr) {
-            continue;
-        }
-        if (strncmp(uri, "data:", 5) == 0) {
-            const char* comma = strchr(uri, ',');
-            if (comma && comma - uri >= 7 && strncmp(comma - 7, ";base64", 7) == 0) {
-                cgltf_result res = cgltf_load_buffer_base64(&options, gltf->buffers[i].size,
-                        comma + 1, &gltf->buffers[i].data);
-                if (res != cgltf_result_success) {
-                    slog.e << "Unable to load " << uri << io::endl;
-                    return false;
-                }
-            } else {
-                slog.e << "Unable to load " << uri << io::endl;
-                return false;
-            }
-        } else if (strstr(uri, "://") == nullptr) {
-            auto iter = pImpl->mUriDataCache.find(uri);
-            if (iter == pImpl->mUriDataCache.end()) {
-                slog.e << "Unable to load external resource: " << uri << io::endl;
-                missingResources = true;
-            }
-            // Make a copy to allow cgltf_free() to work as expected and prevent a double-free.
-            // TODO: Future versions of CGLTF will make this easier, see the following ticket.
-            // https://github.com/jkuhlmann/cgltf/issues/94
-            gltf->buffers[i].data = malloc(iter->second.size);
-            memcpy(gltf->buffers[i].data, iter->second.buffer, iter->second.size);
-        } else {
-            slog.e << "Unable to load " << uri << io::endl;
-            return false;
-        }
-    }
+    options.file.user_data = &closure;
 
-    if (missingResources) {
-        slog.e << "Some external resources have not been added via addResourceData()" << io::endl;
-        return false;
-    }
+    options.file.read = [](const cgltf_memory_options* memoryOpts,
+            const cgltf_file_options* fileOpts, const char* path, cgltf_size* size, void** data) {
+        Closure* closure = (Closure*) fileOpts->user_data;
+        auto& uriDataCache = closure->impl->mUriDataCache;
+        cgltf_buffer* buffers = closure->gltf->buffers;
 
-    #else
+        if (auto iter = uriDataCache.find(path); iter != uriDataCache.end()) {
+            *size = iter->second.size;
+            *data = iter->second.buffer;
+        }
+        return cgltf_result_success;
+    };
+
+    options.file.release = [](const cgltf_memory_options* memoryOpts,
+            const cgltf_file_options* fileOpts, void* data) {
+        // Do nothing here because no memory was allocated in the read callback.
+    };
+
+    #endif
 
     // Read data from the file system and base64 URIs.
     cgltf_result result = cgltf_load_buffers(&options, (cgltf_data*) gltf, pImpl->mGltfPath.c_str());
@@ -416,7 +389,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         return false;
     }
 
-    #endif
     SYSTRACE_NAME_END();
 
     #ifndef NDEBUG
@@ -630,6 +602,8 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     }
 
     // Check if the texture slot is a data URI.
+    // Note that this is a data URI in an image, not a buffer. Data URI's in buffers are decoded
+    // by the cgltf_load_buffers() function.
     else if (dataUriContent) {
         if (auto iter = mBufferTextureCache.find(uri); iter != mBufferTextureCache.end()) {
             free((void*)dataUriContent);
@@ -701,13 +675,13 @@ void ResourceLoader::Impl::cancelTextureDecoding() {
 }
 
 bool ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
-    // If any decoding jobs are still underway, wait for them to finish.
+    // If any decoding jobs are still underway from a previous load, wait for them to finish.
     for (const auto& iter : mTextureProviders) {
         iter.second->waitForCompletion();
         iter.second->updateQueue();
     }
 
-    // Create new texture objects if they are not cached.
+    // Create new texture objects if they are not cached and kick off decoding jobs.
     for (auto slot : asset->mTextureSlots) {
         if (Texture* texture = getOrCreateTexture(asset, slot)) {
             asset->bindTexture(slot, texture);
