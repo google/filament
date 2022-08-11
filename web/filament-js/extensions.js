@@ -26,6 +26,22 @@ function getBufferDescriptor(buffer) {
     return buffer;
 }
 
+function isTexture(uri) {
+    // TODO: This is not a great way to determine if a resource is a texture, but we can
+    // remove it after gltfio gains support for concurrent downloading of vertex data:
+    // https://github.com/google/filament/issues/5909
+    if (uri.endsWith(".png")) {
+        return true;
+    }
+    if (uri.endsWith(".ktx2")) {
+        return true;
+    }
+    if (uri.endsWith(".jpg") || uri.endsWith(".jpeg")) {
+        return true;
+    }
+    return false;
+}
+
 Filament.vectorToArray = function(vector) {
     const result = [];
     for (let i = 0; i < vector.size(); i++) {
@@ -565,14 +581,21 @@ Filament.loadClassExtensions = function() {
         onFetched = onFetched || ((name) => {});
         onDone = onDone || (() => {});
 
-        // Construct the set of URI strings to fetch.
-        const urlset = new Set();
-        const urlToName = {};
-        for (const name of this.getResourceUris()) {
-            const url = '' + new URL(name, basePath);
-            urlToName[url] = name;
-            urlset.add(url);
+        // Construct two lists of URI strings to fetch: textures and non-textures.
+        let textureUris = new Set();
+        let bufferUris = new Set();
+        const absoluteToRelativeUri = {};
+        for (const relativeUri of this.getResourceUris()) {
+            const absoluteUri = '' + new URL(relativeUri, basePath);
+            absoluteToRelativeUri[absoluteUri] = relativeUri;
+            if (isTexture(relativeUri)) {
+                textureUris.add(absoluteUri);
+                continue;
+            }
+            bufferUris.add(absoluteUri);
         }
+        textureUris = Array.from(textureUris);
+        bufferUris = Array.from(bufferUris);
 
         // Construct a resource loader and start decoding after all textures are fetched.
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine,
@@ -607,18 +630,26 @@ Filament.loadClassExtensions = function() {
             }, interval);
         };
 
-        if (urlset.size == 0) {
+        // Download all non-texture resources and invoke the callback when done.
+        if (bufferUris.length == 0) {
             onComplete();
-            return;
+        } else {
+            Filament.fetch(bufferUris, onComplete, function(absoluteUri) {
+                const buffer = getBufferDescriptor(absoluteUri);
+                const relativeUri = absoluteToRelativeUri[absoluteUri];
+                resourceLoader.addResourceData(relativeUri, buffer);
+                buffer.delete();
+                onFetched(relativeUri);
+            });
         }
 
-        // Begin downloading all external resources.
-        Filament.fetch(Array.from(urlset), onComplete, function(url) {
-            const buffer = getBufferDescriptor(url);
-            const name = urlToName[url];
-            resourceLoader.addResourceData(name, buffer);
+        // Begin downloading all texture resources, no completion callback necessary.
+        Filament.fetch(textureUris, null, function(absoluteUri) {
+            const buffer = getBufferDescriptor(absoluteUri);
+            const relativeUri = absoluteToRelativeUri[absoluteUri];
+            resourceLoader.addResourceData(relativeUri, buffer);
             buffer.delete();
-            onFetched(name);
+            onFetched(relativeUri);
         });
     };
 

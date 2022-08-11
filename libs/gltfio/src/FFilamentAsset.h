@@ -303,7 +303,10 @@ struct FFilamentAsset : public FilamentAsset {
     SkinVector mSkins; // unused for instanced assets
     Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;
+
+    // Indicates if resource decoding has started (not necessarily finished)
     bool mResourcesLoaded = false;
+
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
     utils::CString mAssetExtras;

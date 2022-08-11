@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - gltfio: minor efficiency improvement for Android and WebGL builds.
+- gltfio: add support for concurrent texture downloading and decoding.
 
 ## v1.25.5
 
