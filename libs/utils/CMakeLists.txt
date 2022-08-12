@@ -152,6 +152,10 @@ set(TEST_SRCS
         test/test_BinaryTreeArray.cpp
 )
 
+if (WEBGL_PTHREADS)
+    target_compile_definitions(${TARGET} PUBLIC -DFILAMENT_WASM_THREADS)
+endif()
+
 # The Path tests are platform-specific
 if (NOT WEBGL)
     if (WIN32)

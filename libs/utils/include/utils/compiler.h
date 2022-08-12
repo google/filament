@@ -116,8 +116,14 @@
 #   define UTILS_HAS_HYPER_THREADING 0
 #endif
 
-#if defined(__EMSCRIPTEN__) || defined(FILAMENT_SINGLE_THREADED)
+#if defined(FILAMENT_SINGLE_THREADED)
 #   define UTILS_HAS_THREADING 0
+#elif defined(__EMSCRIPTEN__)
+#   if defined(__EMSCRIPTEN_PTHREADS__) && defined(FILAMENT_WASM_THREADS)
+#      define UTILS_HAS_THREADING 1
+#   else
+#      define UTILS_HAS_THREADING 0
+#   endif
 #else
 #   define UTILS_HAS_THREADING 1
 #endif
