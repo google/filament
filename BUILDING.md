@@ -368,13 +368,11 @@ export EMSDK=<your chosen home for the emscripten SDK>
 
 The EMSDK variable is required so that the build script can find the Emscripten SDK. The build
 creates a `samples` folder that can be used as the root of a simple static web server. Note that you
-cannot open the HTML directly from the filesystem due to CORS. One way to deal with this is to
-use Python to create a quick localhost server:
+cannot open the HTML directly from the filesystem due to CORS. We recommend using the emrun tool
+to create a quick localhost server:
 
 ```
-cd out/cmake-webgl-release/web/samples
-python3 -m http.server     # Python 3
-python -m SimpleHTTPServer # Python 2.7
+emrun out/cmake-webgl-release/web/samples --no_browser --port 8000
 ```
 
 You can then open http://localhost:8000/suzanne.html in your web browser.

@@ -176,7 +176,19 @@ add_custom_command(
     DEPENDS ${PROJECT_BINARY_DIR}/../filament-js/filament-viewer.js
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament-viewer.js ${SERVER_DIR})
 
-add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_DIR}/filament.wasm ${SERVER_DIR}/filament-viewer.js)
+add_custom_target(filamentjs_public DEPENDS
+    ${SERVER_DIR}/filament.js
+    ${SERVER_DIR}/filament.wasm
+    ${SERVER_DIR}/filament-viewer.js)
+
+if (WEBGL_PTHREADS)
+    add_custom_command(
+        OUTPUT ${SERVER_DIR}/filament.worker.js
+        DEPENDS filament-js
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.worker.js ${SERVER_DIR})
+
+    add_dependencies(filamentjs_public ${SERVER_DIR}/filament.worker.js)
+endif()
 
 # ==================================================================================================
 # The websamples target depends on all HTML files, assets, and filament.{js,wasm}
@@ -219,6 +231,12 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gl-matrix/gl-matrix-min.js ${SERVER_DIR}/gl-matrix-min.js
     MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gl-matrix/gl-matrix-min.js)
 list(APPEND DEMO_ASSETS ${SERVER_DIR}/gl-matrix-min.js)
+
+add_custom_command(
+    OUTPUT ${SERVER_DIR}/gltumble.min.js
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gltumble/gltumble.min.js ${SERVER_DIR}/gltumble.min.js
+    MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gltumble/gltumble.min.js)
+list(APPEND DEMO_ASSETS ${SERVER_DIR}/gltumble.min.js)
 
 add_custom_target(${PROJECT_NAME} ALL DEPENDS
     ${DEMO_ASSETS}
