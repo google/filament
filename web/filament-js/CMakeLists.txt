@@ -17,6 +17,11 @@ set(CPP_SRC
 # The emcc options are not documented well, the best place to find them is the source:
 # https://github.com/kripken/emscripten/blob/main/src/settings.js
 
+if (WEBGL_PTHREADS)
+  set(COPTS "${COPTS} -pthread")
+  set(LOPTS "${LOPTS} -pthread")
+endif()
+
 # The following setting is required because we disable RTTI.
 set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 
@@ -27,6 +32,7 @@ set(LOPTS "${LOPTS} --bind")
 set(LOPTS "${LOPTS} -s ALLOW_MEMORY_GROWTH=1")
 set(LOPTS "${LOPTS} -s MODULARIZE=1")
 set(LOPTS "${LOPTS} -s EXPORT_NAME=Filament")
+set(LOPTS "${LOPTS} -s USE_WEBGL2=1")
 set(LOPTS "${LOPTS} -s FULL_ES3")
 set(LOPTS "${LOPTS} -s MIN_WEBGL_VERSION=2")
 set(LOPTS "${LOPTS} -s MAX_WEBGL_VERSION=2")
