@@ -40,6 +40,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("viewFromClipMatrix",      UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("clipFromWorldMatrix",     UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromClipMatrix",     UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("clipTransform",           UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
 
             .add("clipControl",             UniformInterfaceBlock::Type::FLOAT2)
             .add("time",                    UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)

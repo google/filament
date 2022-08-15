@@ -10,6 +10,8 @@ A new header is inserted each time a *tag* is created.
 - Add CONFIG_MINSPEC_UBO_SIZE as a nicer way to allow exceeding the ES3.0 minspec.
 - gltfio: minor efficiency improvement for Android and WebGL builds.
 - gltfio: add support for concurrent texture downloading and decoding.
+- engine: Fix guard bands and TAA with `vertexDomain:Device` [⚠️ **Recompile Materials**]
+- engine: `clipSpaceTransform` is now only available with `vertexDomain:Device` [⚠️ **API Change**]
 
 ## v1.25.5
 

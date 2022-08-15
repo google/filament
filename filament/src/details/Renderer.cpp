@@ -590,6 +590,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // update the camera projection
         cameraInfo.projection = highPrecisionMultiply(ts, cameraInfo.projection);
 
+        // VERTEX_DOMAIN_DEVICE doesn't apply the projection, but it still needs this
+        // clip transform, so we apply it separately (see main.vs)
+        cameraInfo.clipTransfrom = { ts[0][0], ts[1][1], ts[3].x, ts[3].y };
+
         // adjust svp to the new, larger, rendering dimensions
         svp.width  = uint32_t(width);
         svp.height = uint32_t(height);

@@ -531,6 +531,8 @@ public:
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
+    MaterialBuilder& vertexDomainDeviceJittered(bool enabled) noexcept;
+
     /**
      * Legacy morphing uses the data in the VertexAttribute slots (\c MORPH_POSITION_0, etc) and is
      * limited to 4 morph targets. See filament::RenderableManager::Builder::morphing().
@@ -752,6 +754,8 @@ private:
     bool mCustomSurfaceShading = false;
 
     bool mEnableFramebufferFetch = false;
+
+    bool mVertexDomainDeviceJittered = false;
 
     bool mUseLegacyMorphing = false;
 

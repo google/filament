@@ -386,6 +386,8 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     // material defines
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_INSTANCES", material.instanced);
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
+            material.vertexDomainDeviceJittered);
 
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY",
             material.hasDoubleSidedCapability);

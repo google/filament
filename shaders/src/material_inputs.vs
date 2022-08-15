@@ -24,9 +24,11 @@ struct MaterialVertexInputs {
     vec3 worldNormal;
 #endif
     vec4 worldPosition;
+#ifdef VERTEX_DOMAIN_DEVICE
 #ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
     mat4 clipSpaceTransform;
-#endif
+#endif // MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+#endif // VERTEX_DOMAIN_DEVICE
 };
 
 // Workaround for a driver bug on ARM Bifrost GPUs. Assigning a structure member
@@ -35,11 +37,13 @@ vec4 getWorldPosition(const MaterialVertexInputs material) {
     return material.worldPosition;
 }
 
+#ifdef VERTEX_DOMAIN_DEVICE
 #ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
-mat4 getClipSpaceTransform(const MaterialVertexInputs material) {
+mat4 getMaterialClipSpaceTransform(const MaterialVertexInputs material) {
     return material.clipSpaceTransform;
 }
-#endif
+#endif // MATERIAL_HAS_CLIP_SPACE_TRANSFORM
+#endif // VERTEX_DOMAIN_DEVICE
 
 void initMaterialVertex(out MaterialVertexInputs material) {
 #ifdef HAS_ATTRIBUTE_COLOR
@@ -72,7 +76,9 @@ void initMaterialVertex(out MaterialVertexInputs material) {
     material.VARIABLE_CUSTOM3 = vec4(0.0);
 #endif
     material.worldPosition = computeWorldPosition();
+#ifdef VERTEX_DOMAIN_DEVICE
 #ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
     material.clipSpaceTransform = mat4(1.0);
+#endif
 #endif
 }
