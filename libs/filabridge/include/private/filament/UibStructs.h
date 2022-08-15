@@ -288,8 +288,9 @@ struct PerRenderableBoneUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     };
     BoneData bones[CONFIG_MAX_BONE_COUNT];
 };
-static_assert(sizeof(PerRenderableBoneUib) <= 16384,
-        "PerRenderableUibBone exceed max UBO size");
+
+static_assert(sizeof(PerRenderableBoneUib) <= CONFIG_MINSPEC_UBO_SIZE,
+        "PerRenderableUibBone exceeds max UBO size");
 
 // ------------------------------------------------------------------------------------------------
 // MARK: -
@@ -299,8 +300,9 @@ struct alignas(16) PerRenderableMorphingUib {
     // The array stride(the bytes between array elements) is always rounded up to the size of a vec4 in std140.
     math::float4 weights[CONFIG_MAX_MORPH_TARGET_COUNT];
 };
-static_assert(sizeof(PerRenderableMorphingUib) <= 16384,
-        "PerRenderableMorphingUib exceed max UBO size");
+
+static_assert(sizeof(PerRenderableMorphingUib) <= CONFIG_MINSPEC_UBO_SIZE,
+        "PerRenderableMorphingUib exceeds max UBO size");
 
 } // namespace filament
 
