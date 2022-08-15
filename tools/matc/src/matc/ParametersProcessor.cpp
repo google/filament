@@ -595,6 +595,11 @@ static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue
     return true;
 }
 
+static bool processVertexDomainDeviceJittered(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.vertexDomainDeviceJittered(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processLegacyMorphing(MaterialBuilder& builder, const JsonishValue& value) {
     if (value.toJsonBool()->getBool()) {
         builder.useLegacyMorphing();
@@ -775,6 +780,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
+    mParameters["vertexDomainDeviceJittered"]    = { &processVertexDomainDeviceJittered, Type::BOOL };
     mParameters["legacyMorphing"]                = { &processLegacyMorphing, Type::BOOL };
     mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
     mParameters["quality"]                       = { &processQuality, Type::STRING };

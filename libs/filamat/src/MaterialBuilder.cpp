@@ -498,6 +498,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.hasCustomSurfaceShading = mCustomSurfaceShading;
     info.useLegacyMorphing = mUseLegacyMorphing;
     info.instanced = mInstanced;
+    info.vertexDomainDeviceJittered = mVertexDomainDeviceJittered;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -741,10 +742,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .shaderModel = shaderModel,
                         .domain = mMaterialDomain,
                         .materialInfo = &info,
+                        .hasFramebufferFetch = mEnableFramebufferFetch,
                         .glsl = {},
                 };
-
-                config.hasFramebufferFetch = mEnableFramebufferFetch;
 
                 if (mEnableFramebufferFetch) {
                     config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
@@ -914,6 +914,11 @@ MaterialBuilder& MaterialBuilder::enableFramebufferFetch() noexcept {
     // This API is temporary, it is used to enable EXT_framebuffer_fetch for GLSL shaders,
     // this is used sparingly by filament's post-processing stage.
     mEnableFramebufferFetch = true;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::vertexDomainDeviceJittered(bool enabled) noexcept {
+    mVertexDomainDeviceJittered = enabled;
     return *this;
 }
 

@@ -51,6 +51,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f viewFromClipMatrix;
     math::mat4f clipFromWorldMatrix;
     math::mat4f worldFromClipMatrix;
+    math::float4 clipTransform;     // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
 
     math::float2 clipControl;       // clip control
     float time;                     // time in seconds, with a 1 second period
@@ -164,7 +165,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrStride;                    // ssr texel stride, >= 1.0
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[48];
+    math::float4 reserved[47];
 };
 
 // 2 KiB == 128 float4s
