@@ -57,6 +57,12 @@
 #define GLTFIO_WARN(msg) slog.w << msg << io::endl
 #endif
 
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(IOS)
+#define GLTFIO_USE_FILESYSTEM 0
+#else
+#define GLTFIO_USE_FILESYSTEM 1
+#endif
+
 namespace utils {
     class NameComponentManager;
     class EntityManager;
