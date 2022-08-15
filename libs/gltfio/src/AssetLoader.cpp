@@ -174,6 +174,21 @@ FILAMENT_UPCAST(AssetLoader)
 
 FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t nbytes) {
     cgltf_options options { cgltf_file_type_invalid };
+
+    if constexpr (!GLTFIO_USE_FILESYSTEM) {
+
+        // Provide a custom free callback for each buffer that was loaded from a "file", as opposed
+        // to a data:// URL.
+        //
+        // Since GLTFIO_USE_FILESYSTEM is false, ResourceLoader requires the app provide the file
+        // content from outside, so we need to do nothing here, as opposed to the default, which is
+        // to call "free".
+        //
+        // This callback also gets called for the root-level file_data, but since we use
+        // `cgltf_parse`, the file_data field is always null.
+        options.file.release = [](const cgltf_memory_options*, const cgltf_file_options*, void*) {};
+    }
+
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, bytes, nbytes, &sourceAsset);
     if (result != cgltf_result_success) {

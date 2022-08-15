@@ -48,12 +48,6 @@
 #include <string>
 #include <fstream>
 
-#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(IOS)
-#define USE_FILESYSTEM 0
-#else
-#define USE_FILESYSTEM 1
-#endif
-
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
@@ -390,7 +384,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // cache of externally-supplied data blobs, rather than loading from the filesystem.
 
     SYSTRACE_NAME_BEGIN("Load buffers");
-    #if !USE_FILESYSTEM
+    #if !GLTFIO_USE_FILESYSTEM
 
     struct Closure {
         Impl* impl;
@@ -410,13 +404,14 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         if (auto iter = uriDataCache.find(path); iter != uriDataCache.end()) {
             *size = iter->second.size;
             *data = iter->second.buffer;
+        } else {
+            // Even if we don't find the given resource in the cache, we still return a successful
+            // error code, because we allow downloads to finish after the decoding work starts.
+           *size = 0;
+           *data = 0;
         }
-        return cgltf_result_success;
-    };
 
-    options.file.release = [](const cgltf_memory_options* memoryOpts,
-            const cgltf_file_options* fileOpts, void* data) {
-        // Do nothing here because no memory was allocated in the read callback.
+        return cgltf_result_success;
     };
 
     #endif
@@ -673,7 +668,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     }
 
     // Finally, try the file system.
-    else if constexpr (USE_FILESYSTEM) {
+    else if constexpr (GLTFIO_USE_FILESYSTEM) {
         if (auto iter = mFilepathTextureCache.find(uri); iter != mFilepathTextureCache.end()) {
             return iter->second;
         }
