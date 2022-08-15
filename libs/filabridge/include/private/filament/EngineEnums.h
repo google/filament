@@ -63,12 +63,17 @@ constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 14;
 // The maximum number of shadow cascades that can be used for directional lights.
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
 
-// This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
-// We store 64 bytes per bone. Must be a power-of-two.
+// The maximum UBO size, in bytes. This value is set to 16 KiB due to the ES3.0 spec.
+// Note that this value constrains the maximum number of skinning bones and morph targets.
+constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 16384;
+
+// The maximum number of bones that can be associated with a single renderable.
+// We store 32 bytes per bone. Must be a power-of-two, and must fit within CONFIG_MINSPEC_UBO_SIZE.
 constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 
-// The maximum number of morph target count.
-// This value is limited by ES3.0, ES3.0 only guarantees 256 layers in an array texture.
+// The maximum number of morph targets associated with a single renderable.
+// Note that ES3.0 only guarantees 256 layers in an array texture.
+// Furthermore this is constrained by CONFIG_MINSPEC_UBO_SIZE (16 bytes per morph target).
 constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
 
 } // namespace filament
