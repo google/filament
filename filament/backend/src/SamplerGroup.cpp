@@ -41,11 +41,12 @@ SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept {
 
 void SamplerGroup::setSampler(size_t index, SamplerDescriptor sampler) noexcept {
     if (UTILS_LIKELY(index < mBuffer.size())) {
-        if (mBuffer[index].s.u != sampler.s.u || mBuffer[index].t != sampler.t) {
-            // it's a big deal to mutate a sampler group, so we avoid doing it.
-            mBuffer[index] = sampler;
-            mDirty = true;
-        }
+        // We cannot compare two texture handles to determine if an update is needed. Texture
+        // handles are (quickly) recycled and therefore can't be used for that purpose. e.g. if a
+        // texture is destroyed, its handle could be reused quickly by another texture.
+        // TODO: find a way to avoid marking dirty if the texture does not change.
+        mBuffer[index] = sampler;
+        mDirty = true;
     }
 }
 
