@@ -37,11 +37,6 @@ public:
     static constexpr size_t SHADER_TYPE_COUNT = 2;
     static constexpr size_t BINDING_COUNT = CONFIG_BINDING_COUNT;
 
-    enum class Shader : uint8_t {
-        VERTEX = 0,
-        FRAGMENT = 1
-    };
-
     struct Sampler {
         utils::CString name = {};   // name of the sampler in the shader
         uint16_t binding = 0;       // binding point of the sampler in the shader
@@ -70,7 +65,7 @@ public:
     // sets one of the program's shader (e.g. vertex, fragment)
     // string-based shaders are null terminated, consequently the size parameter must include the
     // null terminating character.
-    Program& shader(Shader shader, void const* data, size_t size) noexcept;
+    Program& shader(ShaderType shader, void const* data, size_t size) noexcept;
 
     // sets the 'bindingPoint' uniform block's name for this program.
     //
@@ -90,13 +85,13 @@ public:
     // string-based shaders are null terminated, consequently the size parameter must include the
     // null terminating character.
     Program& withVertexShader(void const* data, size_t size) {
-        return shader(Shader::VERTEX, data, size);
+        return shader(ShaderType::VERTEX, data, size);
     }
 
     // string-based shaders are null terminated, consequently the size parameter must include the
     // null terminating character.
     Program& withFragmentShader(void const* data, size_t size) {
-        return shader(Shader::FRAGMENT, data, size);
+        return shader(ShaderType::FRAGMENT, data, size);
     }
 
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
