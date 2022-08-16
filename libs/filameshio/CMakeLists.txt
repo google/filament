@@ -21,6 +21,7 @@ set(SRCS src/MeshReader.cpp)
 include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET}
     PRIVATE meshoptimizer
     PUBLIC filament # Public only because the filamesh API needs Box.h

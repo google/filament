@@ -51,7 +51,7 @@ add_library(GenericCodeGen STATIC
     GenericCodeGen/CodeGen.cpp
     GenericCodeGen/Link.cpp)
 set_property(TARGET GenericCodeGen PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET GenericCodeGen PROPERTY FOLDER glslang)
+set_property(TARGET GenericCodeGen PROPERTY FOLDER ThirdParty/glslang)
 
 ################################################################################
 # MachineIndependent
@@ -133,7 +133,7 @@ endif()
 
 add_library(MachineIndependent STATIC ${MACHINEINDEPENDENT_SOURCES} ${MACHINEINDEPENDENT_HEADERS})
 set_property(TARGET MachineIndependent PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET MachineIndependent PROPERTY FOLDER glslang)
+set_property(TARGET MachineIndependent PROPERTY FOLDER ThirdParty/glslang)
 
 glslang_add_build_info_dependency(MachineIndependent)
 
@@ -166,7 +166,7 @@ set(GLSLANG_HEADERS
 
 add_library(glslang ${LIB_TYPE} ${BISON_GLSLParser_OUTPUT_SOURCE} ${GLSLANG_SOURCES} ${GLSLANG_HEADERS})
 set_target_properties(glslang PROPERTIES
-    FOLDER glslang
+    FOLDER ThirdParty/glslang
     POSITION_INDEPENDENT_CODE ON
     VERSION   "${GLSLANG_VERSION}"
     SOVERSION "${GLSLANG_VERSION_MAJOR}")

@@ -35,6 +35,7 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} math utils)
 
 add_library(${TARGET}-lite ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})

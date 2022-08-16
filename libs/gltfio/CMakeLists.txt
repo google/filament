@@ -172,6 +172,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/JitShaderProvider.cpp)
     target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
     target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
 
     # ==================================================================================================
     # Compiler flags

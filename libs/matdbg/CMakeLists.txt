@@ -87,6 +87,7 @@ target_link_libraries(${TARGET} PUBLIC
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
 # Compiler flags

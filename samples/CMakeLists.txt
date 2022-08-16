@@ -218,6 +218,7 @@ function(add_demo NAME)
     add_executable(${NAME} ${NAME}.cpp)
     target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
+    set_target_properties (${NAME} PROPERTIES FOLDER Samples)
 endfunction()
 
 if (NOT ANDROID)
