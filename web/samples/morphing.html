@@ -33,7 +33,7 @@ class App {
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
         const loader = engine.createAssetLoader();
-        const asset = this.asset = loader.createAssetFromBinary(mesh_url);
+        const asset = this.asset = loader.createAsset(mesh_url);
 
         const onDone = () => {
             loader.delete();

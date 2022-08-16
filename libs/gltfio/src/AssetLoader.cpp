@@ -100,8 +100,7 @@ struct FAssetLoader : public AssetLoader {
             mEngine(*config.engine),
             mDefaultNodeName(config.defaultNodeName) {}
 
-    FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
-    FFilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
+    FFilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
         FilamentInstance** instances, size_t numInstances);
     FilamentInstance* createInstance(FFilamentAsset* primary);
@@ -172,8 +171,18 @@ struct FAssetLoader : public AssetLoader {
 
 FILAMENT_UPCAST(AssetLoader)
 
-FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t nbytes) {
-    cgltf_options options { cgltf_file_type_invalid };
+FFilamentAsset* FAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
+    FilamentInstance* instances;
+    return createInstancedAsset(bytes, byteCount, &instances, 1);
+}
+
+FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t byteCount,
+        FilamentInstance** instances, size_t numInstances) {
+    ASSERT_PRECONDITION(numInstances > 0, "Instance count must be 1 or more.");
+
+    // This method can be used to load JSON or GLB. By using a default options struct, we are asking
+    // cgltf to examine the magic identifier to determine which type of file is being loaded.
+    cgltf_options options {};
 
     if constexpr (!GLTFIO_USE_FILESYSTEM) {
 
@@ -188,50 +197,6 @@ FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t
         // `cgltf_parse`, the file_data field is always null.
         options.file.release = [](const cgltf_memory_options*, const cgltf_file_options*, void*) {};
     }
-
-    cgltf_data* sourceAsset;
-    cgltf_result result = cgltf_parse(&options, bytes, nbytes, &sourceAsset);
-    if (result != cgltf_result_success) {
-        slog.e << "Unable to parse JSON file." << io::endl;
-        return nullptr;
-    }
-    createAsset(sourceAsset, 0);
-    return mResult;
-}
-
-FFilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_t byteCount) {
-
-    // The cgltf library handles GLB efficiently by pointing all buffer views into the source data.
-    // However, we wish our API to be simple and safe, allowing clients to free up their source blob
-    // immediately, without worrying about when all the data has finished uploading asynchronously
-    // to the GPU. To achieve this we create a copy of the source blob and stash it inside the
-    // asset, asking cgltf to parse the copy. This allows us to free it at the correct time (i.e.
-    // after all GPU uploads have completed). Although it incurs a copy, the added safety of this
-    // API seems worthwhile.
-    utils::FixedCapacityVector<uint8_t> glbdata(byteCount);
-    std::copy_n(bytes, byteCount, glbdata.data());
-
-    cgltf_options options { cgltf_file_type_glb };
-    cgltf_data* sourceAsset;
-    cgltf_result result = cgltf_parse(&options, glbdata.data(), byteCount, &sourceAsset);
-    if (result != cgltf_result_success) {
-        slog.e << "Unable to parse glb file." << io::endl;
-        return nullptr;
-    }
-    createAsset(sourceAsset, 0);
-    if (mResult) {
-        glbdata.swap(mResult->mSourceAsset->glbData);
-    }
-    return mResult;
-}
-
-FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t byteCount,
-        FilamentInstance** instances, size_t numInstances) {
-    ASSERT_PRECONDITION(numInstances > 0, "Instance count must be 1 or more.");
-
-    // This method can be used to load JSON or GLB. By using a default options struct, we are asking
-    // cgltf to examine the magic identifier to determine which type of file is being loaded.
-    cgltf_options options {};
 
     // Clients can free up their source blob immediately, but cgltf has pointers into the data that
     // need to stay valid. Therefore we create a copy of the source blob and stash it inside the
@@ -256,10 +221,6 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
 FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
     if (!primary->mSourceAsset) {
         slog.e << "Source data has been released; asset is frozen." << io::endl;
-        return nullptr;
-    }
-    if (!primary->isInstanced()) {
-        slog.e << "Cannot add an instance to a non-instanced asset." << io::endl;
         return nullptr;
     }
     const cgltf_data* srcAsset = primary->mSourceAsset->hierarchy;
@@ -345,20 +306,13 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
 
     mResult->mRenderableCount = 0;
 
-    if (numInstances == 0) {
-        // For each scene root, recursively create all entities.
-        for (const auto& pair : mRootNodes) {
-            createEntity(srcAsset, pair.first, pair.second, mResult->mRoot, true, nullptr);
-        }
-    } else {
-        // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
-        // buffers and index buffers) and MatInstanceCache (materials and textures) help avoid
-        // needless duplication of resources.
-        for (size_t index = 0; index < numInstances; ++index) {
-            if (createInstance(mResult, srcAsset) == nullptr) {
-                mError = true;
-                break;
-            }
+    // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
+    // buffers and index buffers) and MatInstanceCache (materials and textures) help avoid
+    // needless duplication of resources.
+    for (size_t index = 0; index < numInstances; ++index) {
+        if (createInstance(mResult, srcAsset) == nullptr) {
+            mError = true;
+            break;
         }
     }
 
@@ -371,7 +325,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
 
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
     // that match the URI. These strings get freed during releaseSourceData().
-    tsl::robin_map<std::string, const char*> resourceUris;
+    tsl::robin_map<std::string_view, const char*> resourceUris;
     auto addResourceUri = [&resourceUris](const char* uri) {
         if (uri) {
             resourceUris[uri] = uri;
@@ -454,12 +408,8 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
 
     // Update the asset's entity list and private node mapping.
     mResult->mEntities.push_back(entity);
-    if (instance) {
-        instance->entities.push_back(entity);
-        instance->nodeMap[node] = entity;
-    } else {
-        mResult->mNodeMap[node] = entity;
-    }
+    instance->entities.push_back(entity);
+    instance->nodeMap[node] = entity;
 
     const char* name = getNodeName(node, mDefaultNodeName);
 
@@ -644,11 +594,8 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
                 break;
             }
             mResult->mDependencyGraph.addEdge(entity, mi);
-            if (instance) {
-                instance->variants[variantIndex].mappings.push_back({entity, prim, mi});
-            } else {
-                mResult->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
-            }
+            instance->variants[variantIndex].mappings.push_back({entity, prim, mi});
+            mResult->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
         }
     }
 }
@@ -1430,12 +1377,8 @@ void AssetLoader::destroy(AssetLoader** loader) {
     *loader = temp;
 }
 
-FilamentAsset* AssetLoader::createAssetFromJson(uint8_t const* bytes, uint32_t nbytes) {
-    return upcast(this)->createAssetFromJson(bytes, nbytes);
-}
-
-FilamentAsset* AssetLoader::createAssetFromBinary(uint8_t const* bytes, uint32_t nbytes) {
-    return upcast(this)->createAssetFromBinary(bytes, nbytes);
+FilamentAsset* AssetLoader::createAsset(uint8_t const* bytes, uint32_t nbytes) {
+    return upcast(this)->createAsset(bytes, nbytes);
 }
 
 FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
