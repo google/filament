@@ -17,7 +17,7 @@
 #ifndef TNT_UTILS_CONDITION_H
 #define TNT_UTILS_CONDITION_H
 
-#if defined(__linux__)
+#if defined(__ANDROID__)
 #include <utils/linux/Condition.h>
 #else
 #include <utils/generic/Condition.h>
