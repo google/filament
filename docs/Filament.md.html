@@ -3682,7 +3682,7 @@ However we only need the real bases:
 
 $$\begin{align*}
 y^{m > 0}_l &= \sqrt{2} K^m_l cos(m \phi) P^m_l(cos \theta) \\
-y^{m < 0}_l &= \sqrt{2} K^m_l sin(m \phi) P^{|m|}_l(cos \theta) \\
+y^{m < 0}_l &= \sqrt{2} K^m_l sin(|m| \phi) P^{|m|}_l(cos \theta) \\
 y^0_l &= K^0_l P^0_l(cos \theta)
 \end{align*}$$
 
@@ -3716,19 +3716,18 @@ $l = 2$      | $y^{-2}_2$ $y^{-1}_2$ $y^0_2$ $y^1_2$ $y^2_2$
 It’s also fairly easy to compute the trigonometric terms recursively:
 
 $$\begin{align*}
-C_m &\equiv cos(m \phi) \\
-S_m &\equiv sin(m \phi) \\
+C_m &\equiv cos(m \phi)sin(\theta)^m \\
+S_m &\equiv sin(m \phi)sin(\theta)^m \\
 \{ x, y, z \} &= \{ cos \phi sin \theta, sin \phi sin \theta, cos \theta \}
 \end{align*}$$
 
 Using the angle sum trigonometric identities:
 
 $$\begin{align*}
-cos(m \phi + \phi) &= cos(m \phi) cos(\phi) - sin(m \phi) sin(\phi) \Leftrightarrow C_{m + 1} = \frac{(x C_m - y S_m)}{sin(\theta)^{|m + 1|}} \\
-sin(m \phi + \phi) &= sin(m \phi) sin(\phi) + cos(m \phi) sin(\phi) \Leftrightarrow S_{m + 1} = \frac{(x S_m - y C_m)}{sin(\theta)^{|m + 1|}}
+cos(m \phi + \phi) &= cos(m \phi) cos(\phi) - sin(m \phi) sin(\phi) \Leftrightarrow C_{m + 1} = x C_m - y S_m \\
+sin(m \phi + \phi) &= sin(m \phi) cos(\phi) + cos(m \phi) sin(\phi) \Leftrightarrow S_{m + 1} = x S_m - y C_m
 \end{align*}$$
 
-The equations above have an extra term $sin(\theta)^{-|m + 1|}$ but we can compensate for that in the $P^{|m|}_l(z)$ recursion by multiplying $P^l_l(z)$ by $sin(\theta)^{|m + 1|}$ which greatly simplifies the third equation in $\ref{shRecursions}$ because $P^l_l(cos \theta) sin(\theta)^{-l} = (-1)^l(2l - 1)!!$.
 
 Listing [nonNormalizedSHBasis] shows the C++ code to compute the non-normalized SH basis $\frac{y^m_l(s)}{\sqrt{2} K^m_l}$:
 

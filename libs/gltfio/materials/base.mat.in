@@ -47,7 +47,7 @@ material {
         { type : sampler2d, name : emissiveMap },
         { type : mat3, name : emissiveUvMatrix, precision: high },
 
-        // Cleat coat
+        // Clear coat
         { type : float, name : clearCoatFactor },
         { type : float, name : clearCoatRoughnessFactor },
         { type : int, name : clearCoatIndex },

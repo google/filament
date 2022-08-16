@@ -255,9 +255,17 @@ struct FFilamentAsset : public FilamentAsset {
     void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
             SceneMask sceneFilter);
 
+    void detachFilamentComponents() {
+        mDetachedFilamentComponents = true;
+    }
+
+    void detachMaterialInstances() {
+        mMaterialInstances.clear();
+    }
+
     // end public API
 
-    void takeOwnership(filament::Texture* texture) {
+    void attachTexture(filament::Texture* texture) {
         mTextures.push_back(texture);
     }
 
@@ -299,6 +307,7 @@ struct FFilamentAsset : public FilamentAsset {
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
     utils::CString mAssetExtras;
+    bool mDetachedFilamentComponents = false;
 
     // Sentinels for situations where ResourceLoader needs to generate data.
     const cgltf_accessor mGenerateNormals = {};

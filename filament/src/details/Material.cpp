@@ -113,9 +113,8 @@ Material* Material::Builder::build(Engine& engine) {
         materialParser->getName(&name);
         slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
         switch (shaderModel) {
-            case ShaderModel::GL_ES_30: slog.e << "mobile.\n"; break;
-            case ShaderModel::GL_CORE_41: slog.e << "desktop.\n"; break;
-            case ShaderModel::UNKNOWN: /* should never happen */ break;
+            case ShaderModel::MOBILE: slog.e << "mobile.\n"; break;
+            case ShaderModel::DESKTOP: slog.e << "desktop.\n"; break;
         }
         slog.e << "Compiled material contains shader models 0x"
                 << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
@@ -342,8 +341,8 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 }
 
 UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
-        utils::StaticString const& name) const noexcept {
-    return mUniformInterfaceBlock.getUniformInfo(name.c_str());
+        std::string_view name) const noexcept {
+    return mUniformInterfaceBlock.getUniformInfo(name);
 }
 
 void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
@@ -375,7 +374,8 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
         .setUniformBlock(BindingPoints::LIGHTS, LightsUib::_name)
         .setUniformBlock(BindingPoints::SHADOW, ShadowUib::_name)
         .setUniformBlock(BindingPoints::FROXEL_RECORDS, FroxelRecordUib::_name)
-        .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
+        .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE,
+                { mUniformInterfaceBlock.getName().data(), mUniformInterfaceBlock.getName().size() });
 
     if (Variant(variant).hasSkinningOrMorphing()) {
         pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableBoneUib::_name);
@@ -398,7 +398,8 @@ void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
 
     Program pb = getProgramBuilderWithVariants(variant, variant, variant);
     pb.setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
-      .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
+      .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE,
+              { mUniformInterfaceBlock.getName().data(), mUniformInterfaceBlock.getName().size() });
 
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 

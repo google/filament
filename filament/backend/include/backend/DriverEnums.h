@@ -177,16 +177,18 @@ static constexpr uint64_t FENCE_WAIT_FOR_EVER = uint64_t(-1);
 /**
  * Shader model.
  *
- * These enumerants are used across all backends and refer to a level of functionality, rather
- * than to an OpenGL specific shader model.
+ * These enumerants are used across all backends and refer to a level of functionality and quality.
+ *
+ * For example, the OpenGL backend returns `MOBILE` if it supports OpenGL ES, or `DESKTOP` if it
+ * supports Desktop OpenGL, this is later used to select the proper shader.
+ *
+ * Shader quality vs. performance is also affected by ShaderModel.
  */
 enum class ShaderModel : uint8_t {
-    //! For testing
-    UNKNOWN    = 0,
-    GL_ES_30   = 1,    //!< Mobile level functionality
-    GL_CORE_41 = 2,    //!< Desktop level functionality
+    MOBILE  = 1,    //!< Mobile level functionality
+    DESKTOP = 2,    //!< Desktop level functionality
 };
-static constexpr size_t SHADER_MODEL_COUNT = 3;
+static constexpr size_t SHADER_MODEL_COUNT = 2;
 
 /**
  * Primitive types
@@ -235,11 +237,12 @@ enum class Precision : uint8_t {
 
 //! Texture sampler type
 enum class SamplerType : uint8_t {
-    SAMPLER_2D,         //!< 2D texture
-    SAMPLER_2D_ARRAY,   //!< 2D array texture
-    SAMPLER_CUBEMAP,    //!< Cube map texture
-    SAMPLER_EXTERNAL,   //!< External texture
-    SAMPLER_3D,         //!< 3D texture
+    SAMPLER_2D,             //!< 2D texture
+    SAMPLER_2D_ARRAY,       //!< 2D array texture
+    SAMPLER_CUBEMAP,        //!< Cube map texture
+    SAMPLER_EXTERNAL,       //!< External texture
+    SAMPLER_3D,             //!< 3D texture
+    SAMPLER_CUBEMAP_ARRAY,  //!< Cube map array texture (feature level 2)
 };
 
 //! Subpass type

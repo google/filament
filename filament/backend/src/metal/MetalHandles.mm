@@ -433,36 +433,27 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
 
     const BOOL mipmapped = levels > 1;
     const BOOL multisampled = samples > 1;
-    const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
 
 #if defined(IOS)
+    const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
     ASSERT_PRECONDITION(!textureArray || !multisampled,
             "iOS does not support multisampled texture arrays.");
 #endif
 
-    const auto get2DTextureType = [](bool isArray, bool isMultisampled) {
-        uint8_t value = 0;
-        if (isMultisampled) {
-            value |= 0b10u;
+    const auto get2DTextureType = [](SamplerType target, bool isMultisampled) {
+        if (!isMultisampled) {
+            return getMetalType(target);
         }
-        if (isArray) {
-            value |= 0b01u;
-        }
-        switch (value) {
-            default:
-            case 0b00:
-                return MTLTextureType2D;
-            case 0b01:
-                return MTLTextureType2DArray;
-            case 0b10:
+        switch (target) {
+            case SamplerType::SAMPLER_2D:
                 return MTLTextureType2DMultisample;
-            case 0b11:
 #if !defined(IOS)
+            case SamplerType::SAMPLER_2D_ARRAY:
                 return MTLTextureType2DMultisampleArray;
-#else
-                // should not get here
-                return MTLTextureType2DArray;
 #endif
+            default:
+                // should not get here
+                return getMetalType(target);
         }
     };
 
@@ -472,7 +463,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         case SamplerType::SAMPLER_2D_ARRAY:
             descriptor = [MTLTextureDescriptor new];
             descriptor.pixelFormat = devicePixelFormat;
-            descriptor.textureType = get2DTextureType(textureArray, multisampled);
+            descriptor.textureType = get2DTextureType(target, multisampled);
             descriptor.width = width;
             descriptor.height = height;
             descriptor.arrayLength = depth;
@@ -484,11 +475,13 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;
         case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             ASSERT_POSTCONDITION(!multisampled, "Multisampled cubemap faces not supported.");
             ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
             descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:devicePixelFormat
                                                                                size:width
                                                                           mipmapped:mipmapped];
+            descriptor.arrayLength = depth;
             descriptor.mipmapLevelCount = levels;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
@@ -642,6 +635,7 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
         }
 
         case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
         case SamplerType::SAMPLER_2D_ARRAY: {
             // Metal uses 'slice' (not z offset) to index into individual layers of a texture array.
             const uint32_t slice = region.origin.z;
@@ -793,7 +787,8 @@ void MetalTexture::updateLodRange(uint32_t level) {
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment) :
+        uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
+        Attachment depthAttachment, Attachment stencilAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
     UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<size_t>::max()};
     UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
@@ -848,6 +843,31 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
             if (!sidecar) {
                 sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
                         depth.metalTexture->width, depth.metalTexture->height, samples);
+            }
+        }
+    }
+
+    if (stencilAttachment) {
+        stencil = stencilAttachment;
+
+        ASSERT_PRECONDITION(stencil.getSampleCount() <= samples,
+                "MetalRenderTarget was initialized with a MSAA STENCIL texture, but sample count is %d.",
+                samples);
+
+        auto t = stencil.metalTexture;
+        const auto twidth = std::max(1u, t->width >> stencil.level);
+        const auto theight = std::max(1u, t->height >> stencil.level);
+        tmin = { math::min(tmin.x, twidth), math::min(tmin.y, theight) };
+        tmax = { math::max(tmax.x, twidth), math::max(tmax.y, theight) };
+        attachmentCount++;
+
+        // If we were given a single-sampled texture but the samples parameter is > 1, we create
+        // a multisampled sidecar texture and do a resolve automatically.
+        if (samples > 1 && stencil.getSampleCount() == 1) {
+            auto& sidecar = stencil.metalTexture->msaaSidecar;
+            if (!sidecar) {
+                sidecar = createMultisampledTexture(context->device, stencil.getPixelFormat(),
+                        stencil.metalTexture->width, stencil.metalTexture->height, samples);
             }
         }
     }
@@ -909,15 +929,17 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 
     Attachment depthAttachment = getDepthAttachment();
-    descriptor.depthAttachment.texture = depthAttachment.getTexture();
-    descriptor.depthAttachment.level = depthAttachment.level;
-    descriptor.depthAttachment.slice = depthAttachment.layer;
-    descriptor.depthAttachment.loadAction = getLoadAction(params, TargetBufferFlags::DEPTH);
-    descriptor.depthAttachment.storeAction = getStoreAction(params, TargetBufferFlags::DEPTH);
-    descriptor.depthAttachment.clearDepth = params.clearDepth;
+    if (depthAttachment) {
+        descriptor.depthAttachment.texture = depthAttachment.getTexture();
+        descriptor.depthAttachment.level = depthAttachment.level;
+        descriptor.depthAttachment.slice = depthAttachment.layer;
+        descriptor.depthAttachment.loadAction = getLoadAction(params, TargetBufferFlags::DEPTH);
+        descriptor.depthAttachment.storeAction = getStoreAction(params, TargetBufferFlags::DEPTH);
+        descriptor.depthAttachment.clearDepth = params.clearDepth;
+    }
 
-    const bool automaticResolve = samples > 1 && depthAttachment.getSampleCount() == 1;
-    if (automaticResolve) {
+    const bool depthAutomaticResolve = samples > 1 && depthAttachment.getSampleCount() == 1;
+    if (depthAutomaticResolve) {
         // We're rendering into our temporary MSAA texture and doing an automatic resolve.
         // We should not be attempting to load anything into the MSAA texture.
         assert_invariant(descriptor.depthAttachment.loadAction != MTLLoadActionLoad);
@@ -935,6 +957,38 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.depthAttachment.resolveLevel = depthAttachment.level;
             descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
             descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
+        }
+    }
+
+    Attachment stencilAttachment = getStencilAttachment();
+    if (stencilAttachment) {
+        descriptor.stencilAttachment.texture = stencilAttachment.getTexture();
+        descriptor.stencilAttachment.level = stencilAttachment.level;
+        descriptor.stencilAttachment.slice = stencilAttachment.layer;
+        descriptor.stencilAttachment.loadAction = getLoadAction(params, TargetBufferFlags::STENCIL);
+        descriptor.stencilAttachment.storeAction = getStoreAction(params, TargetBufferFlags::STENCIL);
+        descriptor.stencilAttachment.clearStencil = params.clearStencil;
+    }
+
+    const bool stencilAutomaticResolve = samples > 1 && stencilAttachment.getSampleCount() == 1;
+    if (stencilAutomaticResolve) {
+        // We're rendering into our temporary MSAA texture and doing an automatic resolve.
+        // We should not be attempting to load anything into the MSAA texture.
+        assert_invariant(descriptor.stencilAttachment.loadAction != MTLLoadActionLoad);
+        assert_invariant(!defaultRenderTarget);
+
+        id<MTLTexture> sidecar = stencilAttachment.getMSAASidecarTexture();
+        assert_invariant(sidecar);
+
+        descriptor.stencilAttachment.texture = sidecar;
+        descriptor.stencilAttachment.level = 0;
+        descriptor.stencilAttachment.slice = 0;
+        const bool discard = any(discardFlags & TargetBufferFlags::STENCIL);
+        if (!discard) {
+            descriptor.stencilAttachment.resolveTexture = stencilAttachment.getTexture();
+            descriptor.stencilAttachment.resolveLevel = stencilAttachment.level;
+            descriptor.stencilAttachment.resolveSlice = stencilAttachment.layer;
+            descriptor.stencilAttachment.storeAction = MTLStoreActionMultisampleResolve;
         }
     }
 }
@@ -963,6 +1017,14 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     Attachment result = depth;
     if (defaultRenderTarget) {
         result.texture = context->currentDrawSwapChain->acquireDepthTexture();
+    }
+    return result;
+}
+
+MetalRenderTarget::Attachment MetalRenderTarget::getStencilAttachment() {
+    Attachment result = stencil;
+    if (defaultRenderTarget) {
+        // TODO: do we want the default SwapChain to have a default stencil buffer?
     }
     return result;
 }

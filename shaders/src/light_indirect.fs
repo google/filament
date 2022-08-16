@@ -387,23 +387,25 @@ void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
+    if (pixel.clearCoat > 0.0) {
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
-    // We want to use the geometric normal for the clear coat layer
-    float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
-    vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
+        // We want to use the geometric normal for the clear coat layer
+        float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
+        vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
 #else
-    float clearCoatNoV = shading_NoV;
-    vec3 clearCoatR = shading_reflected;
+        float clearCoatNoV = shading_NoV;
+        vec3 clearCoatR = shading_reflected;
 #endif
-    // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
-    float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
-    float attenuation = 1.0 - Fc;
-    Fd *= attenuation;
-    Fr *= attenuation;
+        // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
+        float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
+        float attenuation = 1.0 - Fc;
+        Fd *= attenuation;
+        Fr *= attenuation;
 
-    // TODO: Should we apply specularAO to the attenuation as well?
-    float specularAO = specularAO(clearCoatNoV, diffuseAO, pixel.clearCoatRoughness, cache);
-    Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatPerceptualRoughness) * (specularAO * Fc);
+        // TODO: Should we apply specularAO to the attenuation as well?
+        float specularAO = specularAO(clearCoatNoV, diffuseAO, pixel.clearCoatRoughness, cache);
+        Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatPerceptualRoughness) * (specularAO * Fc);
+    }
 #endif
 }
 

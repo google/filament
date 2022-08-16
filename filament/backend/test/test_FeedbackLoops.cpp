@@ -135,7 +135,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             Program prog = shaderGen.getProgram();
             Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
             prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
-            prog.setUniformBlock(1, utils::CString("params"));
+            prog.setUniformBlock(1, "params");
             program = api.createProgram(std::move(prog));
         }
 
@@ -185,9 +185,9 @@ TEST_F(BackendTest, FeedbackLoops) {
             SamplerParams sparams = {};
             sparams.filterMag = SamplerMagFilter::LINEAR;
             sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
-            samplers.setSampler(0, texture, sparams);
+            samplers.setSampler(0, { texture, sparams });
             auto sgroup = api.createSamplerGroup(samplers.getSize());
-            api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+            api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
             auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
                     BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
             api.makeCurrent(swapChain, swapChain);

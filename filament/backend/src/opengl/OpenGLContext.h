@@ -220,51 +220,6 @@ public:
     }
     void resetProgram() noexcept { state.program.use = 0; }
 
-private:
-    ShaderModel mShaderModel = ShaderModel::UNKNOWN;
-
-    const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
-            {   bugs.disable_glFlush,
-                    "disable_glFlush",
-                    ""},
-            {   bugs.vao_doesnt_store_element_array_buffer_binding,
-                    "vao_doesnt_store_element_array_buffer_binding",
-                    ""},
-            {   bugs.disable_shared_context_draws,
-                    "disable_shared_context_draws",
-                    ""},
-            {   bugs.texture_external_needs_rebind,
-                    "texture_external_needs_rebind",
-                    ""},
-            {   bugs.disable_invalidate_framebuffer,
-                    "disable_invalidate_framebuffer",
-                    ""},
-            {   bugs.texture_filter_anisotropic_broken_on_sampler,
-                    "texture_filter_anisotropic_broken_on_sampler",
-                    ""},
-            {   bugs.disable_feedback_loops,
-                    "disable_feedback_loops",
-                    ""},
-            {   bugs.dont_use_timer_query,
-                    "dont_use_timer_query",
-                    ""},
-            {   bugs.disable_sidecar_blit_into_texture_array,
-                    "disable_sidecar_blit_into_texture_array",
-                    ""},
-            {   bugs.split_easu,
-                    "split_easu",
-                    ""},
-            {   bugs.invalidate_end_only_if_invalidate_start,
-                    "invalidate_end_only_if_invalidate_start",
-                    ""},
-            {   bugs.allow_read_only_ancillary_feedback_loop,
-                    "allow_read_only_ancillary_feedback_loop",
-                    ""},
-            {   bugs.enable_initialize_non_used_uniform_array,
-                    "enable_initialize_non_used_uniform_array",
-                    ""},
-    }};
-
     // Try to keep the State structure sorted by data-access patterns
     struct State {
         GLint major = 0;
@@ -346,7 +301,7 @@ private:
                 GLuint sampler = 0;
                 struct {
                     GLuint texture_id = 0;
-                } targets[6];  // this must match getIndexForTextureTarget()
+                } targets[7];  // this must match getIndexForTextureTarget()
             } units[MAX_TEXTURE_UNIT_COUNT];
         } textures;
 
@@ -375,6 +330,51 @@ private:
         } queries;
     } state;
 
+private:
+    ShaderModel mShaderModel = ShaderModel::MOBILE;
+
+    const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
+            {   bugs.disable_glFlush,
+                    "disable_glFlush",
+                    ""},
+            {   bugs.vao_doesnt_store_element_array_buffer_binding,
+                    "vao_doesnt_store_element_array_buffer_binding",
+                    ""},
+            {   bugs.disable_shared_context_draws,
+                    "disable_shared_context_draws",
+                    ""},
+            {   bugs.texture_external_needs_rebind,
+                    "texture_external_needs_rebind",
+                    ""},
+            {   bugs.disable_invalidate_framebuffer,
+                    "disable_invalidate_framebuffer",
+                    ""},
+            {   bugs.texture_filter_anisotropic_broken_on_sampler,
+                    "texture_filter_anisotropic_broken_on_sampler",
+                    ""},
+            {   bugs.disable_feedback_loops,
+                    "disable_feedback_loops",
+                    ""},
+            {   bugs.dont_use_timer_query,
+                    "dont_use_timer_query",
+                    ""},
+            {   bugs.disable_sidecar_blit_into_texture_array,
+                    "disable_sidecar_blit_into_texture_array",
+                    ""},
+            {   bugs.split_easu,
+                    "split_easu",
+                    ""},
+            {   bugs.invalidate_end_only_if_invalidate_start,
+                    "invalidate_end_only_if_invalidate_start",
+                    ""},
+            {   bugs.allow_read_only_ancillary_feedback_loop,
+                    "allow_read_only_ancillary_feedback_loop",
+                    ""},
+            {   bugs.enable_initialize_non_used_uniform_array,
+                    "enable_initialize_non_used_uniform_array",
+                    ""},
+    }};
+
     RenderPrimitive mDefaultVAO;
 
     // this is chosen to minimize code size
@@ -399,13 +399,15 @@ private:
 constexpr size_t OpenGLContext::getIndexForTextureTarget(GLuint target) noexcept {
     // this must match state.textures[].targets[]
     switch (target) {
-        case GL_TEXTURE_2D:             return 0;
-        case GL_TEXTURE_2D_ARRAY:       return 1;
-        case GL_TEXTURE_CUBE_MAP:       return 2;
-        case GL_TEXTURE_2D_MULTISAMPLE: return 3;
-        case GL_TEXTURE_EXTERNAL_OES:   return 4;
-        case GL_TEXTURE_3D:             return 5;
-        default:                        return 0;
+        case GL_TEXTURE_2D:                     return 0;
+        case GL_TEXTURE_2D_ARRAY:               return 1;
+        case GL_TEXTURE_CUBE_MAP:               return 2;
+        case GL_TEXTURE_2D_MULTISAMPLE:         return 3;
+        case GL_TEXTURE_EXTERNAL_OES:           return 4;
+        case GL_TEXTURE_3D:                     return 5;
+        case GL_TEXTURE_CUBE_MAP_ARRAY:         return 6;
+        default:
+            return 0;
     }
 }
 

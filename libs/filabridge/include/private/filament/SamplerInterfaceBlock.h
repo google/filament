@@ -26,6 +26,7 @@
 
 #include <initializer_list>
 #include <unordered_map>
+#include <string_view>
 
 namespace filament {
 
@@ -61,7 +62,7 @@ public:
         ~Builder() noexcept;
 
         struct ListEntry { // NOLINT(cppcoreguidelines-pro-type-member-init)
-            utils::StaticString name;       // name of this sampler
+            std::string_view name;          // name of this sampler
             Type type;                      // type of this sampler
             Format format;                  // format of this sampler
             Precision precision;            // precision of this sampler
@@ -69,12 +70,12 @@ public:
         };
 
         // Give a name to this sampler interface block
-        Builder& name(utils::CString interfaceBlockName);
+        Builder& name(std::string_view interfaceBlockName);
 
         Builder& stageFlags(backend::ShaderStageFlags stageFlags);
 
         // Add a sampler
-        Builder& add(utils::CString samplerName, Type type, Format format,
+        Builder& add(std::string_view samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
 
@@ -105,9 +106,9 @@ public:
     }
 
     // information record for sampler of the given name
-    SamplerInfo const* getSamplerInfo(const char* name) const;
+    SamplerInfo const* getSamplerInfo(std::string_view name) const;
 
-    bool hasSampler(const char* name) const noexcept {
+    bool hasSampler(std::string_view name) const noexcept {
         return mInfoMap.find(name) != mInfoMap.end();
     }
 
@@ -123,7 +124,7 @@ private:
     utils::CString mName;
     backend::ShaderStageFlags mStageFlags{}; // It's needed to check if MAX_SAMPLER_COUNT is exceeded.
     utils::FixedCapacityVector<SamplerInfo> mSamplersInfoList;
-    std::unordered_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
+    std::unordered_map<std::string_view, uint32_t> mInfoMap;
 };
 
 } // namespace filament

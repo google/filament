@@ -29,7 +29,6 @@ import java.nio.ReadOnlyBufferException;
  * Stream supports three different configurations:
  *
  * <dl>
- * <dt>TEXTURE_ID</dt>   <dd>takes an OpenGL texture ID and incurs a copy</dd>
  * <dt>ACQUIRED</dt>     <dd>connects to an Android AHardwareBuffer</dd>
  * <dt>NATIVE</dt>       <dd>connects to an Android SurfaceTexture</dd>
  * </dl>
@@ -64,12 +63,6 @@ import java.nio.ReadOnlyBufferException;
  * <li>Filament invokes low-level graphics commands on the <em>driver thread</em>.</li>
  * <li>The thread that calls beginFrame is called the <em>main thread</em>.</li>
  * </ul>
- *
- * <p>
- * The <b>TEXTURE_ID</b> configuration achieves synchronization automatically. In this mode,
- * Filament performs a copy on the main thread during beginFrame by blitting the external image into
- * an internal round-robin queue of images. This copy has a run-time cost.
- * </p>
  *
  * <p>
  * For <b>ACQUIRED</b> streams, there is no need to perform the copy because Filament explictly
@@ -118,8 +111,7 @@ public class Stream {
      * By default, Stream objects are {@link StreamType#ACQUIRED ACQUIRED} and must have external images pushed to them via
      * {@link #setAcquiredImage}.
      *
-     * To create a {@link StreamType#NATIVE NATIVE} stream, call one of the <pre>stream</pre> methods
-     * on the builder.
+     * To create a {@link StreamType#NATIVE NATIVE} stream, call the <pre>stream</pre> method on the builder.
      */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
@@ -211,7 +203,7 @@ public class Stream {
     }
 
     /**
-     * Indicates whether this <code>Stream</code> is NATIVE, TEXTURE_ID, or ACQUIRED.
+     * Indicates whether this <code>Stream</code> is NATIVE or ACQUIRED.
      */
     public StreamType getStreamType() {
         return sStreamTypeValues[nGetStreamType(getNativeObject())];
@@ -230,7 +222,7 @@ public class Stream {
      * also where the callback is invoked. This method can only be used for streams that were
      * constructed without calling the {@link Builder.stream} method.
      *
-     * See {@link Stream} for more information about NATIVE, TEXTURE_ID, and ACQUIRED configurations.
+     * See {@link Stream} for more information about NATIVE and ACQUIRED configurations.
      *
      * @param hwbuffer {@link android.hardware.HardwareBuffer HardwareBuffer} (requires API level 26)
      * @param handler {@link java.util.concurrent.Executor Executor} or {@link android.os.Handler Handler}.

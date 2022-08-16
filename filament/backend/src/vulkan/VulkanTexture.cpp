@@ -77,6 +77,10 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         // In other words, the "arrayness" of the texture is an aspect of the VkImageView,
         // not the VkImage.
     }
+    if (target == SamplerType::SAMPLER_CUBEMAP_ARRAY) {
+        imageInfo.arrayLayers = depth * 6;
+        imageInfo.extent.depth = 1;
+    }
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // TODO: investigate performance implications of setting these flags.
@@ -169,6 +173,8 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     mPrimaryViewRange.baseArrayLayer = 0;
     if (target == SamplerType::SAMPLER_CUBEMAP) {
         mPrimaryViewRange.layerCount = 6;
+    } else if (target == SamplerType::SAMPLER_CUBEMAP_ARRAY) {
+        mPrimaryViewRange.layerCount = depth * 6;
     } else if (target == SamplerType::SAMPLER_2D_ARRAY) {
         mPrimaryViewRange.layerCount = depth;
     } else if (target == SamplerType::SAMPLER_3D) {
@@ -206,7 +212,8 @@ VulkanTexture::~VulkanTexture() {
 void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
         uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel) {
     assert_invariant(width <= this->width && height <= this->height);
-    assert_invariant(depth <= this->depth * (target == SamplerType::SAMPLER_CUBEMAP ? 6 : 1));
+    assert_invariant(depth <= this->depth * ((target == SamplerType::SAMPLER_CUBEMAP ||
+                        target == SamplerType::SAMPLER_CUBEMAP_ARRAY) ? 6 : 1));
 
     const PixelBufferDescriptor* hostData = &data;
     PixelBufferDescriptor reshapedData;
@@ -262,7 +269,9 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     };
 
     // Vulkan specifies subregions for 3D textures differently than from 2D arrays.
-    if (target == SamplerType::SAMPLER_2D_ARRAY || target == SamplerType::SAMPLER_CUBEMAP) {
+    if (    target == SamplerType::SAMPLER_2D_ARRAY ||
+            target == SamplerType::SAMPLER_CUBEMAP ||
+            target == SamplerType::SAMPLER_CUBEMAP_ARRAY) {
         copyRegion.imageOffset.z = 0;
         copyRegion.imageExtent.depth = 1;
         copyRegion.imageSubresource.baseArrayLayer = zoffset;

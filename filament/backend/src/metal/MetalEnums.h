@@ -52,6 +52,19 @@ constexpr inline MTLCompareFunction getMetalCompareFunction(RasterState::DepthFu
     }
 }
 
+constexpr inline MTLStencilOperation getMetalStencilOperation(RasterState::StencilOperation op) {
+    switch (op) {
+        case StencilOperation::KEEP: return MTLStencilOperationKeep;
+        case StencilOperation::ZERO: return MTLStencilOperationZero;
+        case StencilOperation::REPLACE: return MTLStencilOperationReplace;
+        case StencilOperation::INCR: return MTLStencilOperationIncrementClamp;
+        case StencilOperation::INCR_WRAP: return MTLStencilOperationIncrementWrap;
+        case StencilOperation::DECR: return MTLStencilOperationDecrementClamp;
+        case StencilOperation::DECR_WRAP: return MTLStencilOperationDecrementWrap;
+        case StencilOperation::INVERT: return MTLStencilOperationInvert;
+    }
+}
+
 constexpr inline MTLIndexType getIndexType(size_t elementSize) noexcept {
     if (elementSize == 2) {
         return MTLIndexTypeUInt16;
@@ -260,6 +273,8 @@ constexpr inline MTLTextureType getMetalType(SamplerType target) {
             return MTLTextureTypeCube;
         case SamplerType::SAMPLER_3D:
             return MTLTextureType3D;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return MTLTextureTypeCubeArray;
     }
 }
 

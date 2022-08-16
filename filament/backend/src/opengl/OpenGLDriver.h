@@ -97,8 +97,15 @@ public:
         } gl;
     };
 
+    struct GLTexture;
     struct GLSamplerGroup : public HwSamplerGroup {
         using HwSamplerGroup::HwSamplerGroup;
+        struct Entry {
+            GLTexture const* texture = nullptr;
+            GLuint sampler = 0u;
+        };
+        utils::FixedCapacityVector<Entry> textureUnitEntries;
+        explicit GLSamplerGroup(size_t size) noexcept : textureUnitEntries(size) { }
     };
 
     struct GLRenderPrimitive : public HwRenderPrimitive {
@@ -300,7 +307,7 @@ private:
     /* State tracking GL wrappers... */
 
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
-           void bindSampler(GLuint unit, SamplerParams params) noexcept;
+           void bindSampler(GLuint unit, GLuint sampler) noexcept;
     inline void useProgram(OpenGLProgram* p) noexcept;
 
     enum class ResolveAction { LOAD, STORE };
@@ -321,7 +328,7 @@ private:
         return pos->second;
     }
 
-    const std::array<HwSamplerGroup*, Program::BINDING_COUNT>& getSamplerBindings() const {
+    const std::array<GLSamplerGroup*, Program::BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
 
@@ -343,7 +350,7 @@ private:
     void setViewportScissor(Viewport const& viewportScissor) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<HwSamplerGroup*, Program::BINDING_COUNT> mSamplerBindings = {};   // 12 pointers
+    std::array<GLSamplerGroup*, Program::BINDING_COUNT> mSamplerBindings = {};   // 12 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;

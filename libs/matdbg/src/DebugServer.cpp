@@ -40,6 +40,7 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 
 using utils::FixedCapacityVector;
 
@@ -60,11 +61,11 @@ using namespace filament::backend;
 using filaflat::ChunkContainer;
 using filamat::ChunkType;
 
-static const StaticString kSuccessHeader =
+static const std::string_view kSuccessHeader =
         "HTTP/1.1 200 OK\r\nContent-Type: %s\r\n"
         "Connection: close\r\n\r\n";
 
-static const StaticString kErrorHeader =
+static const std::string_view kErrorHeader =
         "HTTP/1.1 404 Not Found\r\nContent-Type: %s\r\n"
         "Connection: close\r\n\r\n";
 
@@ -75,7 +76,7 @@ static void spirvToAsm(struct mg_connection *conn, const uint32_t* spirv, size_t
             SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
     spvBinaryToText(context, spirv, size / 4, options, &text, nullptr);
 
-    mg_printf(conn, kSuccessHeader.c_str(), "application/txt");
+    mg_printf(conn, kSuccessHeader.data(), "application/txt");
     mg_write(conn, text->str, text->length);
     spvTextDestroy(text);
     spvContextDestroy(context);
@@ -83,7 +84,7 @@ static void spirvToAsm(struct mg_connection *conn, const uint32_t* spirv, size_t
 
 static void spirvToGlsl(struct mg_connection *conn, const uint32_t* spirv, size_t size) {
     auto glsl = ShaderExtractor::spirvToGLSL(spirv, size / 4);
-    mg_printf(conn, kSuccessHeader.c_str(), "application/txt");
+    mg_printf(conn, kSuccessHeader.data(), "application/txt");
     mg_printf(conn, glsl.c_str(), glsl.size());
 }
 
@@ -97,7 +98,7 @@ public:
             #if SERVE_FROM_SOURCE_TREE
             mg_send_file(conn, "libs/matdbg/web/index.html");
             #else
-            mg_printf(conn, kSuccessHeader.c_str(), "text/html");
+            mg_printf(conn, kSuccessHeader.data(), "text/html");
             mg_write(conn, mServer->mHtml.c_str(), mServer->mHtml.size());
             #endif
             return true;
@@ -106,7 +107,7 @@ public:
             #if SERVE_FROM_SOURCE_TREE
             mg_send_file(conn, "libs/matdbg/web/style.css");
             #else
-            mg_printf(conn, kSuccessHeader.c_str(), "text/css");
+            mg_printf(conn, kSuccessHeader.data(), "text/css");
             mg_write(conn, mServer->mCss.c_str(), mServer->mCss.size());
             #endif
             return true;
@@ -115,7 +116,7 @@ public:
             #if SERVE_FROM_SOURCE_TREE
             mg_send_file(conn, "libs/matdbg/web/script.js");
             #else
-            mg_printf(conn, kSuccessHeader.c_str(), "text/javascript");
+            mg_printf(conn, kSuccessHeader.data(), "text/javascript");
             mg_write(conn, mServer->mJavascript.c_str(), mServer->mJavascript.size());
             #endif
             return true;
@@ -151,14 +152,14 @@ public:
 
         const auto softError = [request, conn](const char* msg) {
             slog.e << "DebugServer: " <<  msg << ": " << request->query_string << io::endl;
-            mg_printf(conn, kErrorHeader.c_str(), "application/txt");
+            mg_printf(conn, kErrorHeader.data(), "application/txt");
             mg_write(conn, msg, strlen(msg));
             return true;
         };
 
         if (uri == "/api/active") {
             mServer->updateActiveVariants();
-            mg_printf(conn, kSuccessHeader.c_str(), "application/json");
+            mg_printf(conn, kSuccessHeader.data(), "application/json");
             mg_printf(conn, "{");
 
             // If the backend has not been resolved to Vulkan, Metal, etc., then return an empty
@@ -188,7 +189,7 @@ public:
         }
 
         if (uri == "/api/matids") {
-            mg_printf(conn, kSuccessHeader.c_str(), "application/json");
+            mg_printf(conn, kSuccessHeader.data(), "application/json");
             mg_printf(conn, "[");
             int index = 0;
             for (const auto& record : mServer->mMaterialRecords) {
@@ -200,7 +201,7 @@ public:
         }
 
         if (uri == "/api/materials") {
-            mg_printf(conn, kSuccessHeader.c_str(), "application/json");
+            mg_printf(conn, kSuccessHeader.data(), "application/json");
             mg_printf(conn, "[");
             int index = 0;
             for (const auto& record : mServer->mMaterialRecords) {
@@ -248,21 +249,21 @@ public:
             if (!writer.writeMaterialInfo(package)) {
                 return error(__LINE__);
             }
-            mg_printf(conn, kSuccessHeader.c_str(), "application/json");
+            mg_printf(conn, kSuccessHeader.data(), "application/json");
             mg_printf(conn, "{ %s }", writer.getJsonString());
             return true;
         }
 
-        const StaticString glsl("glsl");
-        const StaticString msl("msl");
-        const StaticString spirv("spirv");
+        const std::string_view glsl("glsl");
+        const std::string_view msl("msl");
+        const std::string_view spirv("spirv");
 
         char type[6] = {};
         if (mg_get_var(request->query_string, qlength, "type", type, sizeof(type)) < 0) {
             return error(__LINE__);
         }
 
-        CString language(type, strlen(type));
+        std::string_view language(type, strlen(type));
 
         char glindex[4] = {};
         char vkindex[4] = {};
@@ -303,7 +304,7 @@ public:
             filaflat::ShaderContent content;
             extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
-            mg_printf(conn, kSuccessHeader.c_str(), "application/txt");
+            mg_printf(conn, kSuccessHeader.data(), "application/txt");
             mg_write(conn, content.data(), content.size() - 1);
             return true;
         }
@@ -362,7 +363,7 @@ public:
             extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
             if (language == msl) {
-                mg_printf(conn, kSuccessHeader.c_str(), "application/txt");
+                mg_printf(conn, kSuccessHeader.data(), "application/txt");
                 mg_write(conn, content.data(), content.size() - 1);
                 return true;
             }
@@ -437,10 +438,10 @@ public:
         //     EDIT [material id] [api index] [shader index] [shader length] [shader source....]
         //
 
-        const static StaticString kEditCmd = "EDIT ";
+        const static std::string_view kEditCmd = "EDIT ";
         const static size_t kEditCmdLength = kEditCmd.size();
 
-        if (0 == strncmp(data, kEditCmd.c_str(), kEditCmdLength)) {
+        if (0 == strncmp(data, kEditCmd.data(), kEditCmdLength)) {
             std::string command(data + kEditCmdLength, size - kEditCmdLength);
             std::istringstream str(command);
             uint32_t matid;

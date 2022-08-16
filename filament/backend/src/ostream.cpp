@@ -41,9 +41,8 @@ using namespace utils;
 
 io::ostream& operator<<(io::ostream& out, ShaderModel model) {
     switch (model) {
-        CASE(ShaderModel, UNKNOWN)
-        CASE(ShaderModel, GL_ES_30)
-        CASE(ShaderModel, GL_CORE_41)
+        CASE(ShaderModel, MOBILE)
+        CASE(ShaderModel, DESKTOP)
     }
     return out;
 }
@@ -117,6 +116,7 @@ io::ostream& operator<<(io::ostream& out, SamplerType type) {
         CASE(SamplerType, SAMPLER_2D_ARRAY)
         CASE(SamplerType, SAMPLER_3D)
         CASE(SamplerType, SAMPLER_CUBEMAP)
+        CASE(SamplerType, SAMPLER_CUBEMAP_ARRAY)
         CASE(SamplerType, SAMPLER_EXTERNAL)
     }
     return out;

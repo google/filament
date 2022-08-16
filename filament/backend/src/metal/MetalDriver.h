@@ -125,7 +125,7 @@ private:
             uint32_t offset, uint32_t minIndex, uint32_t maxIndex, uint32_t count);
 
     void enumerateSamplerGroups(const MetalProgram* program, ShaderType shaderType,
-            const std::function<void(const SamplerGroup::Sampler*, size_t)>& f);
+            const std::function<void(const SamplerDescriptor*, size_t)>& f);
     void enumerateBoundUniformBuffers(const std::function<void(const UniformBufferState&,
             MetalBuffer*, uint32_t)>& f);
 

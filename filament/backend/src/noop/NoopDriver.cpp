@@ -33,9 +33,9 @@ Dispatcher NoopDriver::getDispatcher() const noexcept {
 
 ShaderModel NoopDriver::getShaderModel() const noexcept {
 #if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
-    return ShaderModel::GL_ES_30;
+    return ShaderModel::MOBILE;
 #else
-    return ShaderModel::GL_CORE_41;
+    return ShaderModel::DESKTOP;
 #endif
 }
 
@@ -247,7 +247,8 @@ bool NoopDriver::canGenerateMipmaps() {
 }
 
 void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        SamplerGroup&& samplerGroup) {
+        BufferDescriptor&& data) {
+    scheduleDestroy(std::move(data));
 }
 
 void NoopDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {

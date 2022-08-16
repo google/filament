@@ -71,12 +71,12 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
     mShaderModels.reset();
 
     if (mPlatform == Platform::MOBILE) {
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_ES_30));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::MOBILE));
     } else if (mPlatform == Platform::DESKTOP) {
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_CORE_41));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::DESKTOP));
     } else if (mPlatform == Platform::ALL) {
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_ES_30));
-        mShaderModels.set(static_cast<size_t>(ShaderModel::GL_CORE_41));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::MOBILE));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::DESKTOP));
     }
 
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
@@ -95,8 +95,9 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
     }
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
-    // The shader model loop starts at 1 to skip ShaderModel::UNKNOWN.
-    for (uint8_t i = 1; i < filament::backend::SHADER_MODEL_COUNT; i++) {
+    static_assert(filament::backend::SHADER_MODEL_COUNT == 2);
+    for (const auto shaderModel : {ShaderModel::MOBILE, ShaderModel::DESKTOP}) {
+        const auto i = static_cast<uint8_t>(shaderModel);
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
@@ -438,9 +439,11 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
         if (param.isSampler()) {
-            sbb.add(param.name, param.samplerType, param.format, param.precision);
+            sbb.add({ param.name.data(), param.name.size() },
+                    param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add(param.name, param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
+            ibb.add({ param.name.data(), param.name.size() },
+                    param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses belong to the "MaterialParams" block.

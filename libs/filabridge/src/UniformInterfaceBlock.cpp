@@ -25,15 +25,16 @@ using namespace utils;
 
 namespace filament {
 
-UniformInterfaceBlock::Builder::Entry::Entry(utils::CString name, uint32_t size,
+UniformInterfaceBlock::Builder::Entry::Entry(std::string_view name, uint32_t size,
         UniformInterfaceBlock::Type type, UniformInterfaceBlock::Precision precision) noexcept
-        : name(std::move(name)), size(size), type(type), precision(precision),
+        : name(name.data(), name.size()), size(size), type(type), precision(precision),
           stride(strideForType(type, 0)) {
 }
 
-UniformInterfaceBlock::Builder::Entry::Entry(utils::CString name, uint32_t size,
-        utils::CString structName, size_t stride) noexcept
-        : name(std::move(name)), size(size), type(Type::STRUCT), structName(std::move(structName)),
+UniformInterfaceBlock::Builder::Entry::Entry(std::string_view name, uint32_t size,
+        std::string_view structName, size_t stride) noexcept
+        : name(name.data(), name.size()), size(size), type(Type::STRUCT),
+          structName(structName.data(), structName.size()),
           stride(stride) {
 }
 
@@ -41,36 +42,36 @@ UniformInterfaceBlock::Builder::Builder() noexcept = default;
 UniformInterfaceBlock::Builder::~Builder() noexcept = default;
 
 UniformInterfaceBlock::Builder&
-UniformInterfaceBlock::Builder::name(utils::CString interfaceBlockName) {
-    mName = std::move(interfaceBlockName);
+UniformInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
+    mName = { interfaceBlockName.data(), interfaceBlockName.size() };
     return *this;
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        utils::CString uniformName, UniformInterfaceBlock::Type type,
+        std::string_view uniformName, UniformInterfaceBlock::Type type,
         UniformInterfaceBlock::Precision precision) {
-    mEntries.emplace_back(std::move(uniformName), 0u, type, precision);
+    mEntries.emplace_back(uniformName, 0u, type, precision);
     return *this;
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        utils::CString uniformName, size_t size, UniformInterfaceBlock::Type type,
+        std::string_view uniformName, size_t size, UniformInterfaceBlock::Type type,
         UniformInterfaceBlock::Precision precision) {
-    mEntries.emplace_back(std::move(uniformName), (uint32_t)size, type, precision);
+    mEntries.emplace_back(uniformName, (uint32_t)size, type, precision);
     return *this;
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        utils::CString uniformName,
-        utils::CString structName, size_t stride) {
-    mEntries.emplace_back(std::move(uniformName), 0u, std::move(structName), stride);
+        std::string_view uniformName,
+        std::string_view structName, size_t stride) {
+    mEntries.emplace_back(uniformName, 0u, structName, stride);
     return *this;
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        utils::CString uniformName, size_t size,
-        utils::CString structName, size_t stride) {
-    mEntries.emplace_back(std::move(uniformName), (uint32_t)size, std::move(structName), stride);
+        std::string_view uniformName, size_t size,
+        std::string_view structName, size_t stride) {
+    mEntries.emplace_back(uniformName, (uint32_t)size, structName, stride);
     return *this;
 }
 
@@ -112,7 +113,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
         info = { e.name, offset, stride, e.type, e.size, e.precision, e.structName };
 
         // record this uniform info
-        infoMap[info.name.c_str()] = i;
+        infoMap[{ info.name.data(), info.name.size() }] = i;
 
         // advance offset to next slot
         offset += stride * std::max(1u, e.size);
@@ -123,22 +124,19 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
     mSize = sizeof(uint32_t) * ((offset + 3) & ~3);
 }
 
-ssize_t UniformInterfaceBlock::getUniformOffset(const char* name, size_t index) const {
+ssize_t UniformInterfaceBlock::getUniformOffset(std::string_view name, size_t index) const {
     auto const* info = getUniformInfo(name);
-    if (!info) {
-        return -1;
-    }
-    return info->getBufferOffset(index);
+    assert_invariant(info);
+    return (ssize_t)info->getBufferOffset(index);
 }
 
-UniformInterfaceBlock::UniformInfo const* UniformInterfaceBlock::getUniformInfo(const char* name) const {
-    auto const& pos = mInfoMap.find(name);
-    if (!ASSERT_PRECONDITION_NON_FATAL(pos != mInfoMap.end(), "uniform named \"%s\" not found", name)) {
-        return nullptr;
-    }
+UniformInterfaceBlock::UniformInfo const* UniformInterfaceBlock::getUniformInfo(
+        std::string_view name) const {
+    auto pos = mInfoMap.find(name);
+    ASSERT_PRECONDITION(pos != mInfoMap.end(),
+            "uniform named \"%.*s\" not found", name.size(), name.data());
     return &mUniformsInfoList[pos->second];
 }
-
 
 uint8_t UTILS_NOINLINE UniformInterfaceBlock::baseAlignmentForType(UniformInterfaceBlock::Type type) noexcept {
     switch (type) {

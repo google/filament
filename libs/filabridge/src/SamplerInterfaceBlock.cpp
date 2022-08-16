@@ -31,8 +31,8 @@ SamplerInterfaceBlock::Builder::Builder() = default;
 SamplerInterfaceBlock::Builder::~Builder() noexcept = default;
 
 SamplerInterfaceBlock::Builder&
-SamplerInterfaceBlock::Builder::name(utils::CString interfaceBlockName) {
-    mName = std::move(interfaceBlockName);
+SamplerInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
+    mName = { interfaceBlockName.data(), interfaceBlockName.size() };
     return *this;
 }
 
@@ -43,10 +43,11 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
 }
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        utils::CString samplerName, Type type, Format format,
+        std::string_view samplerName, Type type, Format format,
         Precision precision, bool multisample) noexcept {
     mEntries.push_back({
-            std::move(samplerName), uint8_t(mEntries.size()), type, format, precision, multisample });
+            { samplerName.data(), samplerName.size() },
+            uint8_t(mEntries.size()), type, format, precision, multisample });
     return *this;
 }
 
@@ -83,17 +84,16 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
         assert_invariant(i == e.offset);
         SamplerInfo& info = samplersInfoList[i++];
         info = e;
-        infoMap[info.name.c_str()] = info.offset; // info.name.c_str() guaranteed constant
+        infoMap[{ info.name.data(), info.name.size() }] = info.offset; // info.name.c_str() guaranteed constant
     }
     assert_invariant(i == samplersInfoList.size());
 }
 
 const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
-        const char* name) const {
-    auto const& pos = mInfoMap.find(name);
-    if (!ASSERT_PRECONDITION_NON_FATAL(pos != mInfoMap.end(), "sampler named \"%s\" not found", name)) {
-        return nullptr;
-    }
+        std::string_view name) const {
+    auto pos = mInfoMap.find(name);
+    ASSERT_PRECONDITION(pos != mInfoMap.end(), "sampler named \"%.*s\" not found",
+            name.size(), name.data());
     return &mSamplersInfoList[pos->second];
 }
 

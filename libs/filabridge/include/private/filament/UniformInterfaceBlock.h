@@ -53,31 +53,31 @@ public:
         ~Builder() noexcept;
 
         // Give a name to this uniform interface block
-        Builder& name(utils::CString interfaceBlockName);
+        Builder& name(std::string_view interfaceBlockName);
 
         // Add a uniform field
-        Builder& add(utils::CString uniformName,
+        Builder& add(std::string_view uniformName,
                 Type type, Precision precision = Precision::DEFAULT);
 
         // Add a uniform array
-        Builder& add(utils::CString uniformName, size_t size,
+        Builder& add(std::string_view uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT);
 
         // Add a known struct field
-        Builder& add(utils::CString uniformName,
-                utils::CString structName, size_t stride);
+        Builder& add(std::string_view uniformName,
+                std::string_view structName, size_t stride);
 
         // Add a known struct array
-        Builder& add(utils::CString uniformName, size_t size,
-                utils::CString structName, size_t stride);
+        Builder& add(std::string_view uniformName, size_t size,
+                std::string_view structName, size_t stride);
 
         // build and return the UniformInterfaceBlock
         UniformInterfaceBlock build();
     private:
         friend class UniformInterfaceBlock;
         struct Entry {
-            Entry(utils::CString name, uint32_t size, Type type, Precision precision) noexcept;
-            Entry(utils::CString name, uint32_t size, utils::CString structName, size_t stride) noexcept;
+            Entry(std::string_view name, uint32_t size, Type type, Precision precision) noexcept;
+            Entry(std::string_view name, uint32_t size, std::string_view structName, size_t stride) noexcept;
             utils::CString name;
             uint32_t size;
             Type type;
@@ -116,11 +116,11 @@ public:
     }
 
     // negative value if name doesn't exist or Panic if exceptions are enabled
-    ssize_t getUniformOffset(const char* name, size_t index) const;
+    ssize_t getUniformOffset(std::string_view name, size_t index) const;
 
-    UniformInfo const* getUniformInfo(const char* name) const;
+    UniformInfo const* getUniformInfo(std::string_view name) const;
 
-    bool hasUniform(const char* name) const noexcept {
+    bool hasUniform(std::string_view name) const noexcept {
         return mInfoMap.find(name) != mInfoMap.end();
     }
 
@@ -136,7 +136,7 @@ private:
 
     utils::CString mName;
     utils::FixedCapacityVector<UniformInfo> mUniformsInfoList;
-    std::unordered_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
+    std::unordered_map<std::string_view , uint32_t> mInfoMap;
     uint32_t mSize = 0; // size in bytes rounded to multiple of 4
 };
 

@@ -131,15 +131,16 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
                 }
             }
 
-            if (UTILS_UNLIKELY(context.getShaderModel() == ShaderModel::GL_CORE_41 &&
-                !context.ext.ARB_shading_language_packing)) {
-                // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
-                // MacOS doesn't support GL_ARB_shading_language_packing
-                if (temp.empty()) {
-                    temp = shaderView; // copy string
-                }
+            // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
+            // MacOS doesn't support GL_ARB_shading_language_packing
+            if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
+                if (context.state.major == 4 && context.state.minor == 1 &&
+                        !context.ext.ARB_shading_language_packing) {
+                    if (temp.empty()) {
+                        temp = shaderView; // copy string
+                    }
 
-                std::string unpackHalf2x16{ R"(
+                    std::string unpackHalf2x16{ R"(
 
 // these don't handle denormals, NaNs or inf
 float u16tofp32(highp uint v) {
@@ -175,12 +176,13 @@ highp uint packHalf2x16(vec2 v) {
     return (y << 16) | x;
 }
 )"};
-                // a good point for insertion is just before the first occurrence of an uniform block
-                auto pos = temp.find("layout(std140)");
-                if (pos != std::string_view::npos) {
-                    temp.insert(pos, unpackHalf2x16);
+                    // a good point for insertion is just before the first occurrence of an uniform block
+                    auto pos = temp.find("layout(std140)");
+                    if (pos != std::string_view::npos) {
+                        temp.insert(pos, unpackHalf2x16);
+                    }
+                    shaderView = temp;
                 }
-                shaderView = temp;
             }
 
             GLuint shaderId = glCreateShader(glShaderType);
@@ -346,71 +348,25 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     using GLTexture = OpenGLDriver::GLTexture;
 
     // cache a few member variable locally, outside the loop
-    OpenGLContext& context = gld->getContext();
-#if defined(GL_EXT_texture_filter_anisotropic)
-    const bool anisotropyWorkaround = context.ext.EXT_texture_filter_anisotropic &&
-                                      context.bugs.texture_filter_anisotropic_broken_on_sampler;
-#endif
     auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
     auto const& UTILS_RESTRICT usedBindingPoints = mUsedBindingPoints;
 
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
-        const auto binding = usedBindingPoints[i];
-        HwSamplerGroup const * const hwsb = samplerBindings[binding];
-        assert_invariant(hwsb);
-
-        SamplerGroup const& sb = *(hwsb->sb);
-        SamplerGroup::Sampler const* const samplers = sb.getSamplers();
-        for (uint8_t j = 0, m = sb.getSize(); j < m; ++j, ++tmu) { // "<=" on purpose here
-            Handle<HwTexture> th = samplers[j].t;
-            if (!th) {
-                // this happens if the program doesn't use all samplers of a sampler group,
-                // which is not an error.
-                continue;
+        auto const binding = usedBindingPoints[i];
+        auto const * const sb = samplerBindings[binding];
+        assert_invariant(sb);
+        for (uint8_t j = 0, m = sb->textureUnitEntries.size(); j < m; ++j, ++tmu) { // "<=" on purpose here
+            const GLTexture* const t = sb->textureUnitEntries[j].texture;
+            GLuint s = sb->textureUnitEntries[j].sampler;
+            if (t) { // program may not use all samplers of sampler group
+                if (UTILS_UNLIKELY(t->gl.fence)) {
+                    glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
+                    glDeleteSync(t->gl.fence);
+                    t->gl.fence = nullptr;
+                }
+                gld->bindTexture(tmu, t);
+                gld->bindSampler(tmu, s);
             }
-
-            const GLTexture* const UTILS_RESTRICT t = gld->handle_cast<const GLTexture*>(th);
-            if (UTILS_UNLIKELY(t->gl.fence)) {
-                glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
-                glDeleteSync(t->gl.fence);
-                t->gl.fence = nullptr;
-            }
-
-            SamplerParams params{ samplers[j].s };
-            if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-                // From OES_EGL_image_external spec:
-                // "The default s and t wrap modes are CLAMP_TO_EDGE and it is an INVALID_ENUM
-                //  error to set the wrap mode to any other value."
-                params.wrapS = SamplerWrapMode::CLAMP_TO_EDGE;
-                params.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
-                params.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
-            }
-
-#ifndef NDEBUG
-            // GLES3.x specification forbids depth textures to be filtered.
-            if (isDepthFormat(t->format)
-                && params.compareMode == SamplerCompareMode::NONE
-                && params.filterMag != SamplerMagFilter::NEAREST
-                && params.filterMin != SamplerMinFilter::NEAREST
-                && params.filterMin != SamplerMinFilter::NEAREST_MIPMAP_NEAREST) {
-                slog.w << "In program " << name.c_str()
-                       << ": depth texture used with filtering sampler, tmu = "
-                       << +tmu << io::endl;
-            }
-#endif
-            gld->bindTexture(tmu, t);
-            gld->bindSampler(tmu, params);
-
-#if defined(GL_EXT_texture_filter_anisotropic)
-            if (UTILS_UNLIKELY(anisotropyWorkaround)) {
-                // Driver claims to support anisotropic filtering, but it fails when set on
-                // the sampler, we have to set it on the texture instead.
-                // The texture is already bound here.
-                GLfloat anisotropy = float(1u << params.anisotropyLog2);
-                glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                        std::min(context.gets.max_anisotropy, anisotropy));
-            }
-#endif
         }
     }
     CHECK_GL_ERROR(utils::slog.e)

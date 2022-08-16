@@ -40,8 +40,8 @@ Program& Program::shader(Program::Shader shader, void const* data, size_t size) 
     return *this;
 }
 
-Program& Program::setUniformBlock(size_t bindingPoint, utils::CString uniformBlockName) noexcept {
-    mUniformBlocks[bindingPoint] = std::move(uniformBlockName);
+Program& Program::setUniformBlock(size_t bindingPoint, std::string_view uniformBlockName) noexcept {
+    mUniformBlocks[bindingPoint] = { uniformBlockName.data(), uniformBlockName.size() };
     return *this;
 }
 

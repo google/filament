@@ -300,7 +300,7 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
         return false;
     }
 
-    builder.name(std::move(name));
+    builder.name({ name.data(), name.size() });
 
     // Read number of fields.
     uint64_t numFields = 0;
@@ -331,7 +331,7 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
         }
 
         // a size of 1 means not an array
-        builder.add(fieldName, fieldSize == 1 ? 0 : fieldSize,
+        builder.add({ fieldName.data(), fieldName.size() }, fieldSize == 1 ? 0 : fieldSize,
                 UniformInterfaceBlock::Type(fieldType),
                 UniformInterfaceBlock::Precision(fieldPrecision));
     }
@@ -349,7 +349,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
     if (!unflattener.read(&name)) {
         return false;
     }
-    builder.name(name);
+    builder.name({ name.data(), name.size() });
 
     // Read number of fields.
     uint64_t numFields = 0;
@@ -384,7 +384,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
-        builder.add(fieldName, SamplerInterfaceBlock::Type(fieldType),
+        builder.add({ fieldName.data(), fieldName.size() }, SamplerInterfaceBlock::Type(fieldType),
                 SamplerInterfaceBlock::Format(fieldFormat),
                 SamplerInterfaceBlock::Precision(fieldPrecision),
                 fieldMultisample);

@@ -412,10 +412,10 @@ void FTransformManager::computeWorldTransform(
 
         const mat4 ptd{
                 pt[0], pt[1], pt[2],
-                double4{ pt[3].xyz + ptTranslationLo, pt[3].w }};
+                double4{ double3(pt[3].xyz) + double3(ptTranslationLo), pt[3].w }};
 
         const double4 worldTranslation =
-                ptd * double4{ local[3].xyz + localTranslationLo, local[3].w };
+                ptd * double4{ double3(local[3].xyz) + double3(localTranslationLo), local[3].w };
 
         inoutWorldTranslationLo = worldTranslation.xyz - float3{ worldTranslation.xyz };
         outWorld[3] = worldTranslation;

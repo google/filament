@@ -22,11 +22,11 @@
 #include <math/vec4.h>
 
 #include <utils/Panic.h>
-#include <utils/CString.h>
 
 #include <memory>
-#include <vector>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 using namespace image;
 
@@ -363,20 +363,19 @@ uint32_t getMipmapCount(const LinearImage& source) {
 
 Filter filterFromString(const char* rawname) {
     using namespace utils;
-    using std::unordered_map;
-    static const unordered_map<StaticString, Filter, StaticString::Hasher> map = {
-        { "BOX", Filter::BOX},
-        { "NEAREST", Filter::NEAREST},
-        { "HERMITE", Filter::HERMITE},
-        { "GAUSSIAN", Filter::GAUSSIAN_SCALARS},
-        { "NORMALS", Filter::GAUSSIAN_NORMALS},
-        { "MITCHELL", Filter::MITCHELL},
-        { "LANCZOS", Filter::LANCZOS},
-        { "MINIMUM", Filter::MINIMUM},
+    static const std::unordered_map<std::string_view, Filter> map = {
+            { "BOX",      Filter::BOX },
+            { "NEAREST",  Filter::NEAREST },
+            { "HERMITE",  Filter::HERMITE },
+            { "GAUSSIAN", Filter::GAUSSIAN_SCALARS },
+            { "NORMALS",  Filter::GAUSSIAN_NORMALS },
+            { "MITCHELL", Filter::MITCHELL },
+            { "LANCZOS",  Filter::LANCZOS },
+            { "MINIMUM",  Filter::MINIMUM },
     };
     std::string name = rawname;
-    for (auto& c: name) { c = toupper((unsigned char)c); }
-    auto iter = map.find(StaticString::make(name.c_str(), name.size()));
+    for (auto& c: name) { c = (char)toupper((unsigned char)c); }
+    auto iter = map.find(name);
     return iter == map.end() ? Filter::DEFAULT : iter->second;
 }
 

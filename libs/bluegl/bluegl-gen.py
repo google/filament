@@ -57,8 +57,8 @@ def generateHeader(api, functions, include_dir, output_dir):
         # special case for GL_GLEXT_PROTOTYPES
         if 'GL_GLEXT_PROTOTYPES' in defines:
             headers += '''
-// MSVC includes .../Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h, with gl APIs conflicting with
-// bluegl\include\GL/glcorearb.h, causing errors for OpenGL APIs such as:
+// MSVC includes .../Windows Kits\\10\\Include\\10.0.17763.0\\um\GL/gl.h, with gl APIs conflicting with
+// bluegl\\include\\GL/glcorearb.h, causing errors for OpenGL APIs such as:
 // error C2375:  'glBindTexture': redefinition; different linkage
 #ifndef FILAMENT_PLATFORM_WGL
     #define GL_GLEXT_PROTOTYPES 1

@@ -303,13 +303,12 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{}};
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        const auto& buffer = color[i];
-        if (!buffer.handle) {
-            ASSERT_POSTCONDITION(none(targetBufferFlags & getTargetBufferFlagsAt(i)),
-                    "The COLOR%u flag was specified, but no color texture provided.", i);
+        if (none(targetBufferFlags & getTargetBufferFlagsAt(i))) {
             continue;
         }
-
+        const auto& buffer = color[i];
+        ASSERT_PRECONDITION(buffer.handle,
+                "The COLOR%u flag was specified, but invalid color handle provided.", i);
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         ASSERT_PRECONDITION(colorTexture->texture,
                 "Color texture passed to render target has no texture allocation");
@@ -318,23 +317,29 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     }
 
     MetalRenderTarget::Attachment depthAttachment = {};
-    if (depth.handle) {
+    if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
+        ASSERT_PRECONDITION(depth.handle,
+                "The DEPTH flag was specified, but invalid depth handle provided.");
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         ASSERT_PRECONDITION(depthTexture->texture,
                 "Depth texture passed to render target has no texture allocation.");
         depthTexture->updateLodRange(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
-    ASSERT_POSTCONDITION(!depth.handle || any(targetBufferFlags & TargetBufferFlags::DEPTH),
-            "The DEPTH flag was specified, but no depth texture provided.");
+
+    MetalRenderTarget::Attachment stencilAttachment = {};
+    if (any(targetBufferFlags & TargetBufferFlags::STENCIL)) {
+        ASSERT_PRECONDITION(stencil.handle,
+                "The STENCIL flag was specified, but invalid stencil handle provided.");
+        auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
+        ASSERT_PRECONDITION(stencilTexture->texture,
+                "Stencil texture passed to render target has no texture allocation.");
+        stencilTexture->updateLodRange(stencil.level);
+        stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
+    }
 
     construct_handle<MetalRenderTarget>(rth, mContext, width, height, samples,
-            colorAttachments, depthAttachment);
-
-    ASSERT_POSTCONDITION(
-            !stencil.handle &&
-            !(targetBufferFlags & TargetBufferFlags::STENCIL),
-            "Stencil buffer not supported.");
+            colorAttachments, depthAttachment, stencilAttachment);
 }
 
 void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
@@ -495,9 +500,9 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
 
     // Unbind this texture from any sampler groups that currently reference it.
     for (auto* metalSamplerGroup : mContext->samplerGroups) {
-        const SamplerGroup::Sampler* samplers = metalSamplerGroup->sb->getSamplers();
+        const SamplerDescriptor* samplers = metalSamplerGroup->sb->data();
         for (size_t i = 0; i < metalSamplerGroup->sb->getSize(); i++) {
-            const SamplerGroup::Sampler* sampler = samplers + i;
+            const SamplerDescriptor* sampler = samplers + i;
             if (sampler->t == th) {
                 metalSamplerGroup->sb->setSampler(i, {{}, {}});
             }
@@ -550,9 +555,9 @@ void MetalDriver::terminate() {
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
 #if defined(IOS)
-    return ShaderModel::GL_ES_30;
+    return ShaderModel::MOBILE;
 #else
-    return ShaderModel::GL_CORE_41;
+    return ShaderModel::DESKTOP;
 #endif
 }
 
@@ -807,9 +812,19 @@ bool MetalDriver::canGenerateMipmaps() {
 }
 
 void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        SamplerGroup&& samplerGroup) {
+        BufferDescriptor&& data) {
     auto sb = handle_cast<MetalSamplerGroup>(sbh);
-    *sb->sb = samplerGroup;
+
+    // FIXME: we shouldn't be using SamplerGroup here, instead the backend should create
+    //        a descriptor or any internal data-structure that represents the textures/samplers.
+    //        It's preferable to do as much work as possible here.
+    //        Here, we emulate the older backend API by re-creating a SamplerGroup from the
+    //        passed data.
+    SamplerGroup samplerGroup(data.size / sizeof(SamplerDescriptor));
+    memcpy(samplerGroup.data(), data.buffer, data.size);
+    *sb->sb = std::move(samplerGroup);
+
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
@@ -1157,6 +1172,11 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     if (depthAttachment) {
         depthPixelFormat = depthAttachment.getPixelFormat();
     }
+    MTLPixelFormat stencilPixelFormat = MTLPixelFormatInvalid;
+    const auto& stencilAttachment = mContext->currentRenderTarget->getStencilAttachment();
+    if (stencilAttachment) {
+        stencilPixelFormat = stencilAttachment.getPixelFormat();
+    }
     MetalPipelineState pipelineState {
         .vertexFunction = program->vertexFunction,
         .fragmentFunction = program->fragmentFunction,
@@ -1172,6 +1192,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
             colorPixelFormat[7]
         },
         .depthAttachmentPixelFormat = depthPixelFormat,
+        .stencilAttachmentPixelFormat = stencilPixelFormat,
         .sampleCount = mContext->currentRenderTarget->getSamples(),
         .blendState = BlendState {
             .blendingEnabled = rs.hasBlending(),
@@ -1209,8 +1230,16 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     // Set the depth-stencil state, if a state change is needed.
     DepthStencilState depthState;
     if (depthAttachment) {
-        depthState.compareFunction = getMetalCompareFunction(rs.depthFunc);
+        depthState.depthCompare = getMetalCompareFunction(rs.depthFunc);
         depthState.depthWriteEnabled = rs.depthWrite;
+    }
+    if (stencilAttachment) {
+        depthState.stencilCompare = getMetalCompareFunction(rs.stencilFunc);
+        depthState.stencilOperationDepthStencilPass = getMetalStencilOperation(rs.stencilOpDepthStencilPass);
+        depthState.stencilOperationDepthFail = getMetalStencilOperation(rs.stencilOpDepthFail);
+        depthState.stencilOperationStencilFail = getMetalStencilOperation(rs.stencilOpStencilFail);
+        depthState.stencilWriteEnabled = rs.stencilWrite;
+        [mContext->currentRenderPassEncoder setStencilReferenceValue:rs.stencilRef];
     }
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {
@@ -1261,7 +1290,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
 
-    auto getTextureToBind = [this](const SamplerGroup::Sampler* sampler) {
+    auto getTextureToBind = [this](const SamplerDescriptor* sampler) {
         const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
         id<MTLTexture> textureToBind = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
                                                                          : metalTexture->texture;
@@ -1271,7 +1300,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         return textureToBind;
     };
 
-    auto getSamplerToBind = [this](const SamplerGroup::Sampler* sampler) {
+    auto getSamplerToBind = [this](const SamplerDescriptor* sampler) {
         const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
         SamplerState s {
             .samplerParams = sampler->s,
@@ -1286,7 +1315,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     enumerateSamplerGroups(program, ShaderType::VERTEX,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
-                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
+                    const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
         if (binding >= MAX_VERTEX_SAMPLER_COUNT) {
@@ -1324,7 +1353,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     enumerateSamplerGroups(program, ShaderType::FRAGMENT,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
-                    const SamplerGroup::Sampler* sampler, uint8_t binding) {
+                    const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
         if (binding >= MAX_FRAGMENT_SAMPLER_COUNT) {
@@ -1415,7 +1444,7 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void MetalDriver::enumerateSamplerGroups(
         const MetalProgram* program, ShaderType shaderType,
-        const std::function<void(const SamplerGroup::Sampler*, size_t)>& f) {
+        const std::function<void(const SamplerDescriptor*, size_t)>& f) {
     auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ?
             program->vertexSamplerBlockInfo : program->fragmentSamplerBlockInfo;
     auto maxSamplerCount = (shaderType == ShaderType::VERTEX) ?
@@ -1434,7 +1463,7 @@ void MetalDriver::enumerateSamplerGroups(
         }
 
         SamplerGroup* sb = metalSamplerGroup->sb.get();
-        const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + blockInfo.sampler;
+        const SamplerDescriptor* boundSampler = sb->data() + blockInfo.sampler;
 
         if (!boundSampler->t) {
             continue;

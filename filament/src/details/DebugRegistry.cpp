@@ -35,7 +35,7 @@ FDebugRegistry::FDebugRegistry() noexcept = default;
 
 UTILS_NOINLINE
 void* FDebugRegistry::getPropertyAddress(const char* name) noexcept {
-    StaticString key = StaticString::make(name, strlen(name));
+    std::string_view key{ name };
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(key) == propertyMap.end()) {
         return nullptr;
@@ -43,7 +43,7 @@ void* FDebugRegistry::getPropertyAddress(const char* name) noexcept {
     return propertyMap[key];
 }
 
-void FDebugRegistry::registerProperty(utils::StaticString name, void* p, Type type) noexcept {
+void FDebugRegistry::registerProperty(std::string_view name, void* p, Type type) noexcept {
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(name) == propertyMap.end()) {
         propertyMap[name] = p;
@@ -91,7 +91,7 @@ template bool FDebugRegistry::getProperty<float2>(const char* name, float2* v) c
 template bool FDebugRegistry::getProperty<float3>(const char* name, float3* v) const noexcept;
 template bool FDebugRegistry::getProperty<float4>(const char* name, float4* v) const noexcept;
 
-void FDebugRegistry::registerDataSource(StaticString name,
+void FDebugRegistry::registerDataSource(std::string_view name,
         void const* data, size_t count) noexcept {
     auto& dataSourceMap = mDataSourceMap;
     if (dataSourceMap.find(name) == dataSourceMap.end()) {
@@ -100,7 +100,7 @@ void FDebugRegistry::registerDataSource(StaticString name,
 }
 
 DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
-    StaticString key = StaticString::make(name, strlen(name));
+    std::string_view key{ name };
     auto& dataSourceMap = mDataSourceMap;
     auto const& it = dataSourceMap.find(key);
     if (it == dataSourceMap.end()) {
