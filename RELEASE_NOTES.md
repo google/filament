@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - engine: new feature level APIs, see `Engine::getSupportedFeatureLevel()`
+- gltfio: add unified `AssetLoader::createAsset()` method [⚠️ **API Change**]
+- gltfio: all assets are now "instanced" [⚠️ **API Change**]
 
 ## v1.25.6
 

@@ -220,7 +220,11 @@ int main(int argc, char** argv) {
             app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
         }
-        app.resourceLoader->asyncBeginLoad(app.asset);
+
+        if (!app.resourceLoader->asyncBeginLoad(app.asset)) {
+            std::cerr << "Unable to start loading resources for " << filename << std::endl;
+            exit(1);
+        }
 
         // Load animation data.
         app.asset->getAnimator();

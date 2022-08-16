@@ -75,9 +75,7 @@ struct ResourceLoader::Impl {
     const bool mNormalizeSkinningWeights;
     const bool mRecomputeBoundingBoxes;
     const std::string mGltfPath;
-
-    // TODO: this should be const
-    bool mIgnoreBindTransform;
+    const bool mIgnoreBindTransform;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
@@ -442,22 +440,14 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         if (pImpl->mNormalizeSkinningWeights) {
             normalizeSkinningWeights(asset);
         }
-        if (!asset->isInstanced()) {
-            importSkins(gltf, asset->mNodeMap, asset->mSkins);
-        } else {
-            // NOTE: This takes care of up-front instances, but dynamically added instances also
-            // need to import the skin data, which is done in AssetLoader.
-            for (FFilamentInstance* instance : asset->mInstances) {
-                importSkins(gltf, instance->nodeMap, instance->skins);
-            }
+        // NOTE: This takes care of up-front instances, but dynamically added instances also
+        // need to import the skin data, which is done in AssetLoader.
+        for (FFilamentInstance* instance : asset->mInstances) {
+            importSkins(gltf, instance->nodeMap, instance->skins);
         }
     }
 
     if (pImpl->mRecomputeBoundingBoxes) {
-        // asset->mSkins is unused for instanced assets
-        if (!pImpl->mIgnoreBindTransform) {
-            pImpl->mIgnoreBindTransform = asset->isInstanced();
-        }
         updateBoundingBoxes(asset);
     }
 
@@ -766,7 +756,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         }
     }
     // Create a job description for morph targets.
-    NodeMap& nodeMap = asset->isInstanced() ? asset->mInstances[0]->nodeMap : asset->mNodeMap;
+    const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
     for (auto iter : nodeMap) {
         cgltf_node const* node = iter.first;
         cgltf_mesh const* mesh = node->mesh;
@@ -869,7 +859,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     SYSTRACE_CALL();
     auto& rm = pImpl->mEngine->getRenderableManager();
     auto& tm = pImpl->mEngine->getTransformManager();
-    NodeMap& nodeMap = asset->isInstanced() ? asset->mInstances[0]->nodeMap : asset->mNodeMap;
+    const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
 
     // The purpose of the root node is to give the client a place for custom transforms.
     // Since it is not part of the source model, it should be ignored when computing the
@@ -980,7 +970,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
                 primitives.push_back({&mesh->primitives[index], nullptr, iter.second});
             }
             if (cgltf_skin* const skin = iter.first->skin; skin) {
-                primitives.back().skin = &asset->mSkins[skin - baseSkin];
+                primitives.back().skin = &asset->mInstances[0]->skins[skin - baseSkin];
             }
         }
     }

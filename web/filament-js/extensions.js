@@ -517,22 +517,9 @@ Filament.loadClassExtensions = function() {
         return new Float32Array(arrayBuffer);
     };
 
-    Filament.gltfio$AssetLoader.prototype.createAssetFromJson = function(buffer) {
-        if ('string' == typeof buffer && buffer.endsWith('.glb')) {
-            console.error('Please use createAssetFromBinary for glb files.');
-        }
+    Filament.gltfio$AssetLoader.prototype.createAsset = function(buffer) {
         buffer = getBufferDescriptor(buffer);
-        const result = this._createAssetFromJson(buffer);
-        buffer.delete();
-        return result;
-    };
-
-    Filament.gltfio$AssetLoader.prototype.createAssetFromBinary = function(buffer) {
-        if ('string' == typeof buffer && buffer.endsWith('.gltf')) {
-            console.error('Please use createAssetFromJson for gltf files.');
-        }
-        buffer = getBufferDescriptor(buffer);
-        const result = this._createAssetFromBinary(buffer);
+        const result = this._createAsset(buffer);
         buffer.delete();
         return result;
     };
