@@ -34,7 +34,7 @@ using namespace utils;
 using namespace backend;
 
 static void logCompilationError(utils::io::ostream& out,
-        Program::Shader shaderType, const char* name,
+        ShaderType shaderType, const char* name,
         GLuint shaderId, CString const& sourceCode) noexcept;
 
 static void logProgramLinkError(utils::io::ostream& out,
@@ -104,13 +104,13 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
     // build all shaders
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-        Program::Shader type = static_cast<Program::Shader>(i);
+        ShaderType type = static_cast<ShaderType>(i);
         GLenum glShaderType;
         switch (type) {
-            case Program::Shader::VERTEX:
+            case ShaderType::VERTEX:
                 glShaderType = GL_VERTEX_SHADER;
                 break;
-            case Program::Shader::FRAGMENT:
+            case ShaderType::FRAGMENT:
                 glShaderType = GL_FRAGMENT_SHADER;
                 break;
         }
@@ -226,7 +226,7 @@ GLuint OpenGLProgram::linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_CO
  */
 bool OpenGLProgram::checkProgramStatus(const char* name,
         GLuint& program, GLuint shaderIds[Program::SHADER_TYPE_COUNT],
-        std::array<CString, 2> const& shaderSourceCode) noexcept {
+        std::array<CString, Program::SHADER_TYPE_COUNT> const& shaderSourceCode) noexcept {
 
     GLint status;
     glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -237,7 +237,7 @@ bool OpenGLProgram::checkProgramStatus(const char* name,
     // only if the link fails, we check the compilation status
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-        const Program::Shader type = static_cast<Program::Shader>(i);
+        const ShaderType type = static_cast<ShaderType>(i);
         const GLuint shader = shaderIds[i];
         glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
         if (status != GL_TRUE) {
@@ -374,13 +374,13 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 }
 
 UTILS_NOINLINE
-void logCompilationError(io::ostream& out, Program::Shader shaderType,
+void logCompilationError(io::ostream& out, ShaderType shaderType,
         const char* name, GLuint shaderId, CString const& sourceCode) noexcept {
 
-    auto to_string = [](Program::Shader type) -> const char* {
+    auto to_string = [](ShaderType type) -> const char* {
         switch (type) {
-            case Program::Shader::VERTEX:       return "vertex";
-            case Program::Shader::FRAGMENT:     return "fragment";
+            case ShaderType::VERTEX:   return "vertex";
+            case ShaderType::FRAGMENT: return "fragment";
         }
     };
 
