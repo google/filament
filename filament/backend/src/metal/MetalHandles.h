@@ -288,6 +288,19 @@ public:
 
     void setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor, const RenderPassParams& params);
 
+    MTLViewport getViewportFromClientViewport(
+            Viewport rect, float depthRangeNear, float depthRangeFar) {
+        const int32_t height = int32_t(getAttachmentSize().y);
+        assert_invariant(height > 0);
+
+        // Metal's viewport coordinates have (0, 0) at the top-left, but Filament's have (0, 0) at
+        // bottom-left.
+        return {double(rect.left),
+                double(height - rect.bottom - int32_t(rect.height)),
+                double(rect.width), double(rect.height),
+                double(depthRangeNear), double(depthRangeFar)};
+    }
+
     MTLRegion getRegionFromClientRect(Viewport rect) {
         const uint32_t height = getAttachmentSize().y;
         assert_invariant(height > 0);

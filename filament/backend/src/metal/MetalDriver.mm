@@ -844,17 +844,11 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                                    encoding:NSUTF8StringEncoding];
     }
 
-    MTLRegion mvp = renderTarget->getRegionFromClientRect(params.viewport);
-    MTLViewport metalViewport {
-        .originX = static_cast<double>(mvp.origin.x),
-        .originY = static_cast<double>(mvp.origin.y),
-        .width = static_cast<double>(mvp.size.width),
-        .height = static_cast<double>(mvp.size.height),
-        .znear = static_cast<double>(params.depthRange.near),
-        .zfar = static_cast<double>(params.depthRange.far)
-    };
+    MTLViewport metalViewport =
+            renderTarget->getViewportFromClientViewport(params.viewport,
+                    params.depthRange.near,
+                    params.depthRange.far);
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
-
     mContext->currentViewport = metalViewport;
 
     // Metal requires a new command encoder for each render pass, and they cannot be reused.

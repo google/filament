@@ -164,4 +164,102 @@ TEST_F(BackendTest, ScissorViewportRegion) {
     getDriver().purge();
 }
 
+// Verify that a negative Viewport origin works with scissor.
+TEST_F(BackendTest, ScissorViewportEdgeCases) {
+    auto& api = getDriverApi();
+
+    api.startCapture(0);
+
+    // The test is executed within this block scope to force destructors to run before
+    // executeCommands().
+    {
+        // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
+        auto swapChain = api.createSwapChainHeadless(256, 256, 0);
+        api.makeCurrent(swapChain, swapChain);
+
+        // Create a program.
+        ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
+        Program p = shaderGen.getProgram();
+        ProgramHandle program = api.createProgram(std::move(p));
+
+        // Create a source color textures.
+        Handle<HwTexture> srcTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureFormat::RGBA8, 1, 512, 512, 1,
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
+
+        // Render into the bottom-left quarter of the texture, checking 3 special cases.
+        // 1. negative viewport left/bottom
+        Viewport bottomLeftViewport = {
+                .left = -64,
+                .bottom = -64,
+                .width = 256,
+                .height = 256
+        };
+        // 2. viewport that extends beyond the top of the render target.
+        Viewport topLeftViewport = {
+                .left = -64,
+                .bottom = 320,
+                .width = 256,
+                .height = 256
+        };
+        // 3. A scissor rect > render target size.
+        // This is precisely what Filament does to essentially convey "no scissor".
+        Viewport scissor = {0, 0, (uint32_t)std::numeric_limits<int32_t>::max(),
+                (uint32_t)std::numeric_limits<int32_t>::max()};
+
+        Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
+                TargetBufferFlags::COLOR, 512, 512, 1,
+                {srcTexture, 0, 0}, {}, {});
+
+        TrianglePrimitive triangle(api);
+
+        // Render a white triangle over blue.
+        RenderPassParams params = {};
+        params.flags.clear = TargetBufferFlags::COLOR0;
+        params.viewport = bottomLeftViewport;
+        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
+        params.flags.discardStart = TargetBufferFlags::ALL;
+        params.flags.discardEnd = TargetBufferFlags::NONE;
+
+        PipelineState ps = {};
+        ps.program = program;
+        ps.rasterState.colorWrite = true;
+        ps.rasterState.depthWrite = false;
+        ps.scissor = scissor;
+
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0);
+
+        api.beginRenderPass(renderTarget, params);
+        api.draw(ps, triangle.getRenderPrimitive(), 1);
+        api.endRenderPass();
+
+        params.viewport = topLeftViewport;
+        params.flags.clear = TargetBufferFlags::NONE;
+        params.flags.discardStart = TargetBufferFlags::NONE;
+        api.beginRenderPass(renderTarget, params);
+        api.draw(ps, triangle.getRenderPrimitive(), 1);
+        api.endRenderPass();
+
+        readPixelsAndAssertHash(
+                "ScissorViewportEdgeCases", 512, 512, renderTarget, 0x6BF00F31, true);
+
+        api.commit(swapChain);
+        api.endFrame(0);
+
+        api.stopCapture(0);
+
+        // Cleanup.
+        api.destroyTexture(srcTexture);
+        api.destroySwapChain(swapChain);
+        api.destroyRenderTarget(renderTarget);
+    }
+
+    // Wait for the ReadPixels result to come back.
+    api.finish();
+
+    executeCommands();
+    getDriver().purge();
+}
+
 } // namespace test
