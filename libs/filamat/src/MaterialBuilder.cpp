@@ -969,9 +969,7 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
         return Package::invalidPackage();
     }
 
-    filament::SamplerBindingMap map;
-    map.populate(&info.sib, mMaterialName.c_str());
-    info.samplerBindings = std::move(map);
+    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
 
     // Create chunk tree.
     ChunkContainer container;
@@ -1029,10 +1027,7 @@ std::string MaterialBuilder::peek(filament::backend::ShaderType type,
 
     MaterialInfo info;
     prepareToBuild(info);
-
-    filament::SamplerBindingMap map;
-    map.populate(&info.sib, mMaterialName.c_str());
-    info.samplerBindings = std::move(map);
+    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
 
     if (type == filament::backend::ShaderType::VERTEX) {
         return sg.createVertexProgram(ShaderModel(params.shaderModel),

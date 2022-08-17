@@ -67,7 +67,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
             )
             .build();
 
-    // SamplerBindingMap relies the assumption that Sibs have the same names and offsets
+    // SamplerBindingMap relies on the assumption that Sibs have the same names and offsets
     // regardless of variant.
     assert(sibPcf.getSize() == PerViewSib::SAMPLER_COUNT);
     assert(sibVsm.getSize() == PerViewSib::SAMPLER_COUNT);
