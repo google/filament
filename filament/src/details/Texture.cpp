@@ -248,27 +248,31 @@ void FTexture::setImage(FEngine& engine, size_t level,
 
     ASSERT_PRECONDITION(buffer.buffer, "Data buffer is nullptr.");
 
-    uint32_t textureDepthOrLayers;
+    uint32_t effectiveTextureDepthOrLayers;
     switch (mTarget) {
         case SamplerType::SAMPLER_EXTERNAL:
             // can't happen by construction, fallthrough...
         case SamplerType::SAMPLER_2D:
             assert_invariant(mDepth == 1);
-            textureDepthOrLayers = 1;
+            effectiveTextureDepthOrLayers = 1;
             break;
         case SamplerType::SAMPLER_3D:
-            textureDepthOrLayers = valueForLevel(level, mDepth);
+            effectiveTextureDepthOrLayers = valueForLevel(level, mDepth);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
+            effectiveTextureDepthOrLayers = mDepth;
+            break;
         case SamplerType::SAMPLER_CUBEMAP:
+            effectiveTextureDepthOrLayers = 6;
+            break;
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            textureDepthOrLayers = mDepth;
+            effectiveTextureDepthOrLayers = mDepth * 6;
             break;
     }
 
-    ASSERT_PRECONDITION(zoffset + depth <= textureDepthOrLayers,
+    ASSERT_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers,
             "zoffset (%u) + depth (%u) > texture depth (%u) at level (%u)",
-            unsigned(zoffset), unsigned(depth), textureDepthOrLayers, unsigned(level));
+            unsigned(zoffset), unsigned(depth), effectiveTextureDepthOrLayers, unsigned(level));
 
     engine.getDriverApi().update3DImage(mHandle,
             uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
