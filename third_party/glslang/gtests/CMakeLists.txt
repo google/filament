@@ -66,6 +66,7 @@ if(BUILD_TESTING)
 
         add_executable(glslangtests ${TEST_SOURCES})
         glslang_pch(glslangtests ${CMAKE_CURRENT_SOURCE_DIR}/pch.h)
+        set_property(TARGET glslangtests PROPERTY FOLDER tests)
         glslang_set_link_args(glslangtests)
         if(ENABLE_GLSLANG_INSTALL)
             install(TARGETS glslangtests EXPORT glslangtestsTargets
