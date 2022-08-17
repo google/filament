@@ -84,6 +84,7 @@ set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(sample-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties (sample-resources PROPERTIES FOLDER Samples/Assets)
 
 # ==================================================================================================
 # Invoke cmgen to build KTX files for the default IBL and skybox
@@ -170,12 +171,14 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
 endif()
 
 add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties (suzanne-resources PROPERTIES FOLDER Samples/Assets)
 
 # ==================================================================================================
 # Resources for gltf_viewer and gltf_instances
 # ==================================================================================================
 
 add_library(gltf-demo-resources ${DUMMY_SRC})
+set_target_properties (gltf-demo-resources PROPERTIES FOLDER Samples/Assets)
 
 set(GLTF_DEMO_RESOURCES
     ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
@@ -284,12 +287,15 @@ endif()
 file(COPY ../third_party/textures DESTINATION ${PROJECT_BINARY_DIR})
 add_custom_target(textures ALL DEPENDS textures)
 add_dependencies(filament textures)
+set_target_properties(textures PROPERTIES FOLDER Samples/Assets)
 
 file(COPY ../assets DESTINATION ${PROJECT_BINARY_DIR}
         PATTERN "reference" EXCLUDE
         PATTERN "environments" EXCLUDE)
 add_custom_target(assets ALL DEPENDS assets)
 add_dependencies(filament assets)
+set_target_properties(assets PROPERTIES FOLDER Samples/Assets)
 
 add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
+set_target_properties(envs PROPERTIES FOLDER Samples/Assets)

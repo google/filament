@@ -94,6 +94,7 @@ target_link_libraries(${TARGET} shaders filabridge utils smol-v)
 # Filamat Lite
 add_library(filamat_lite STATIC ${HDRS} ${LITE_PRIVATE_HDRS} ${LITE_SRCS})
 target_include_directories(filamat_lite PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties (filamat_lite PROPERTIES FOLDER Libs)
 target_link_libraries(filamat_lite shaders filabridge utils)
 
 # We are being naughty and accessing private headers here

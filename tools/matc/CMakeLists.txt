@@ -71,6 +71,7 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS} ${HDRS})
 target_link_libraries(${TARGET} matlang)
+set_target_properties (${TARGET} PROPERTIES FOLDER Tools)
 
 # ==================================================================================================
 # Installation

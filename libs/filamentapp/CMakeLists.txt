@@ -120,6 +120,7 @@ set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(filamentapp-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties (filamentapp-resources PROPERTIES FOLDER Samples/Assets)
 
 # ==================================================================================================
 # Include and target definitions

@@ -1698,7 +1698,10 @@ add_library(SDL2main STATIC ${SDLMAIN_SOURCES})
 target_include_directories(SDL2main PUBLIC $<INSTALL_INTERFACE:include>)
 set(_INSTALL_LIBS "SDL2main")
 if (NOT ANDROID)
-  set_target_properties(SDL2main PROPERTIES DEBUG_POSTFIX ${SDL_CMAKE_DEBUG_POSTFIX})
+  set_target_properties(SDL2main PROPERTIES 
+    DEBUG_POSTFIX ${SDL_CMAKE_DEBUG_POSTFIX}
+    FOLDER ThirdParty
+  )
 endif()
 
 if(SDL_SHARED)

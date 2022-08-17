@@ -123,6 +123,7 @@ build_ubershader(transmission              transmission    _ _)
 build_ubershader(sheen                     sheen           _ _)
 
 add_custom_target(uberz_file DEPENDS ${UBERZ_OUTPUT_PATH})
+set_target_properties (uberz_file PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
 # Build a resgen library for the ubershader archive.
@@ -145,6 +146,7 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(uberarchive ${DUMMY_SRC} ${RESGEN_SOURCE})
 target_include_directories(uberarchive PUBLIC ${RESOURCE_DIR})
+set_target_properties (uberarchive PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
 # Build the "core" library (no filamat)
@@ -156,6 +158,7 @@ link_libraries(math utils filament cgltf stb ktxreader geometry tsl trie uberzli
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties (gltfio_core PROPERTIES FOLDER Libs)
 
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
 target_link_libraries(gltfio_core PUBLIC dracodec)
@@ -172,7 +175,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/JitShaderProvider.cpp)
     target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
     target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
+    set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
 
     # ==================================================================================================
     # Compiler flags
