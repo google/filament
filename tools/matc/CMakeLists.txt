@@ -91,3 +91,5 @@ set(SRCS
 add_executable(${TARGET} ${SRCS})
 
 target_link_libraries(${TARGET} matlang gtest)
+
+set_target_properties (test_matc PROPERTIES FOLDER Tests)

@@ -54,6 +54,7 @@ target_include_directories(benchmark PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
     )
 target_link_libraries(benchmark_main benchmark)
+set_target_properties (benchmark_main PROPERTIES FOLDER ThirdParty)
 
 set(include_install_dir "include")
 set(lib_install_dir "lib/")

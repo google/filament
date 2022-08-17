@@ -261,7 +261,7 @@ target_include_directories(SPIRV-Tools-opt
 target_link_libraries(SPIRV-Tools-opt
   PUBLIC ${SPIRV_TOOLS_FULL_VISIBILITY})
 
-set_property(TARGET SPIRV-Tools-opt PROPERTY FOLDER "SPIRV-Tools libraries")
+set_property(TARGET SPIRV-Tools-opt PROPERTY FOLDER "ThirdParty/SPIRV-Tools libraries")
 spvtools_check_symbol_exports(SPIRV-Tools-opt)
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)

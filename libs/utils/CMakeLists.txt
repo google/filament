@@ -96,7 +96,7 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
+    set_target_properties (${NAME} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} PUBLIC tsl)
 
 if (ANDROID)
@@ -169,6 +169,7 @@ endif()
 add_executable(test_${TARGET} ${TEST_SRCS})
 
 target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)
+set_target_properties (test_${TARGET} PROPERTIES FOLDER Tests)
 
 # ==================================================================================================
 # Benchmarks
@@ -177,6 +178,7 @@ target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)
 if (NOT WEBGL)
 
     add_library(benchmark_${TARGET}_callee SHARED benchmark/benchmark_callee.cpp)
+    set_target_properties (benchmark_${TARGET}_callee PROPERTIES FOLDER Benchmarks)
 
     set(BENCHMARK_SRCS
             benchmark/benchmark_allocators.cpp
@@ -190,5 +192,7 @@ if (NOT WEBGL)
     add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
 
     target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils benchmark_${TARGET}_callee)
+
+    set_target_properties (benchmark_${TARGET} PROPERTIES FOLDER Benchmarks)
 
 endif()

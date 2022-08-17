@@ -167,6 +167,8 @@ target_include_directories(${TARGET} PRIVATE src)
 
 target_link_libraries(${TARGET} filamat gtest)
 
+set_target_properties (${TARGET} PROPERTIES FOLDER Tests)
+
 set(TARGET test_filamat_lite)
 set(SRCS
         tests/test_filamat_lite.cpp)
@@ -176,3 +178,5 @@ add_executable(${TARGET} ${SRCS})
 target_include_directories(${TARGET} PRIVATE src)
 
 target_link_libraries(${TARGET} filamat_lite gtest)
+
+set_target_properties (${TARGET} PROPERTIES FOLDER Tests)
