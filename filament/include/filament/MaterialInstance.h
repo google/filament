@@ -334,8 +334,8 @@ public:
      * for back-facing polygons. The face parameter determines the stencil fail operation(s) updated
      * by this call.
      */
-    void setStencilOpStencilFail(
-            StencilOperation op, StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+    void setStencilOpStencilFail(StencilOperation op,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
 
     /**
      * Sets the depth fail operation (default is StencilOperation::KEEP).
@@ -347,8 +347,8 @@ public:
      * for back-facing polygons. The face parameter determines the depth fail operation(s) updated
      * by this call.
      */
-    void setStencilOpDepthFail(
-            StencilOperation op, StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+    void setStencilOpDepthFail(StencilOperation op,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
 
     /**
      * Sets the depth-stencil pass operation (default is StencilOperation::KEEP).
@@ -360,8 +360,8 @@ public:
      * and one for back-facing polygons. The face parameter determines the depth-stencil pass
      * operation(s) updated by this call.
      */
-    void setStencilOpDepthStencilPass(
-            StencilOperation op, StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+    void setStencilOpDepthStencilPass(StencilOperation op,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
 
     /**
      * Sets the stencil reference value (default is 0).
@@ -386,8 +386,8 @@ public:
      * back-facing polygons. The face parameter determines the stencil read mask(s) updated by this
      * call.
      */
-    void setStencilReadMask(
-            uint8_t readMask, StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+    void setStencilReadMask(uint8_t readMask,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
 
     /**
      * Sets the stencil write mask (default is 0xFF).
@@ -398,8 +398,8 @@ public:
      * back-facing polygons. The face parameter determines the stencil write mask(s) updated by this
      * call.
      */
-    void setStencilWriteMask(
-            uint8_t writeMask, StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+    void setStencilWriteMask(uint8_t writeMask,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
 };
 
 } // namespace filament
