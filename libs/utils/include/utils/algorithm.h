@@ -59,7 +59,13 @@ template<typename T, typename = std::enable_if_t<std::is_unsigned<T>::value>>
 constexpr inline T ctz(T x) noexcept {
     static_assert(sizeof(T) * CHAR_BIT <= 64, "details::ctz() only support up to 64 bits");
     T c = sizeof(T) * CHAR_BIT;
+#if defined(_MSC_VER)
+    // equivalent to x & -x, but MSVC yield a warning for using unary minus operator on unsigned types
     x &= (~x + 1);
+#else
+    // equivalent to x & (~x + 1), but some compilers generate a better sequence on ARM
+    x &= -x;
+#endif
     if (x) c--;
     if (sizeof(T) * CHAR_BIT >= 64) {
         if (x & T(0x00000000FFFFFFFF)) c -= 32;
