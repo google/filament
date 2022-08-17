@@ -1176,6 +1176,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     const auto& stencilAttachment = mContext->currentRenderTarget->getStencilAttachment();
     if (stencilAttachment) {
         stencilPixelFormat = stencilAttachment.getPixelFormat();
+        assert_invariant(isMetalFormatStencil(stencilPixelFormat));
     }
     MetalPipelineState pipelineState {
         .vertexFunction = program->vertexFunction,

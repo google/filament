@@ -262,6 +262,22 @@ constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
     }
 }
 
+constexpr inline bool isMetalFormatStencil(MTLPixelFormat format) {
+    switch (format) {
+        case MTLPixelFormatStencil8:
+        case MTLPixelFormatDepth32Float_Stencil8:
+        case MTLPixelFormatX32_Stencil8:
+#if !defined(IOS)
+        case MTLPixelFormatDepth24Unorm_Stencil8:
+        case MTLPixelFormatX24_Stencil8:
+#endif
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 constexpr inline MTLTextureType getMetalType(SamplerType target) {
     switch (target) {
         case SamplerType::SAMPLER_2D:

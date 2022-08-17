@@ -275,6 +275,14 @@ bool View::isScreenSpaceRefractionEnabled() const noexcept {
     return upcast(this)->isScreenSpaceRefractionEnabled();
 }
 
+void View::setStencilBufferEnabled(bool enabled) noexcept {
+    upcast(this)->setStencilBufferEnabled(enabled);
+}
+
+bool View::getStencilBufferEnabled() const noexcept {
+    return upcast(this)->getStencilBufferEnabled();
+}
+
 View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
         View::PickingQueryResultCallback callback) noexcept {
     return upcast(this)->pick(x, y, handler, callback);

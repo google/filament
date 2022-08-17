@@ -182,6 +182,10 @@ public:
 
     bool isScreenSpaceReflectionEnabled() const noexcept { return mScreenSpaceReflectionsOptions.enabled; }
 
+    void setStencilBufferEnabled(bool enabled) noexcept { mStencilBufferEnabled = enabled; }
+
+    bool getStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
+
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
     }
@@ -489,6 +493,7 @@ private:
     bool mShadowingEnabled = true;
     bool mScreenSpaceRefractionEnabled = true;
     bool mHasPostProcessPass = true;
+    bool mStencilBufferEnabled = false;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     ShadowType mShadowType = ShadowType::PCF;
     VsmShadowOptions mVsmShadowOptions; // FIXME: this should probably be per-light
