@@ -88,13 +88,13 @@ include_directories(${CMAKE_BINARY_DIR})
 # Filamat
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} shaders filabridge utils smol-v)
 
 # Filamat Lite
 add_library(filamat_lite STATIC ${HDRS} ${LITE_PRIVATE_HDRS} ${LITE_SRCS})
 target_include_directories(filamat_lite PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (filamat_lite PROPERTIES FOLDER Libs)
+set_target_properties(filamat_lite PROPERTIES FOLDER Libs)
 target_link_libraries(filamat_lite shaders filabridge utils)
 
 # We are being naughty and accessing private headers here
@@ -168,7 +168,7 @@ target_include_directories(${TARGET} PRIVATE src)
 
 target_link_libraries(${TARGET} filamat gtest)
 
-set_target_properties (${TARGET} PROPERTIES FOLDER Tests)
+set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
 
 set(TARGET test_filamat_lite)
 set(SRCS
@@ -180,4 +180,4 @@ target_include_directories(${TARGET} PRIVATE src)
 
 target_link_libraries(${TARGET} filamat_lite gtest)
 
-set_target_properties (${TARGET} PROPERTIES FOLDER Tests)
+set_target_properties(${TARGET} PROPERTIES FOLDER Tests)

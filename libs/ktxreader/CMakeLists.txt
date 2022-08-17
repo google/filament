@@ -27,7 +27,7 @@ add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_link_libraries(${TARGET} PUBLIC utils image filament basis_transcoder)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
 # Compiler flags
@@ -65,5 +65,5 @@ add_testfile(lightroom_ibl.ktx)
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_executable(test_ktxreader tests/test_ktxreader.cpp ${TESTFILES})
     target_link_libraries(test_ktxreader PRIVATE ${TARGET} gtest)
-    set_target_properties (test_ktxreader PROPERTIES FOLDER Tests)
+    set_target_properties(test_ktxreader PROPERTIES FOLDER Tests)
 endif()

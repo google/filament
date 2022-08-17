@@ -84,7 +84,7 @@ set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(sample-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
-set_target_properties (sample-resources PROPERTIES FOLDER Samples/Resources)
+set_target_properties(sample-resources PROPERTIES FOLDER Samples/Resources)
 
 # ==================================================================================================
 # Invoke cmgen to build KTX files for the default IBL and skybox
@@ -171,14 +171,14 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
 endif()
 
 add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
-set_target_properties (suzanne-resources PROPERTIES FOLDER Samples/Resources)
+set_target_properties(suzanne-resources PROPERTIES FOLDER Samples/Resources)
 
 # ==================================================================================================
 # Resources for gltf_viewer and gltf_instances
 # ==================================================================================================
 
 add_library(gltf-demo-resources ${DUMMY_SRC})
-set_target_properties (gltf-demo-resources PROPERTIES FOLDER Samples/Resources)
+set_target_properties(gltf-demo-resources PROPERTIES FOLDER Samples/Resources)
 
 set(GLTF_DEMO_RESOURCES
     ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
@@ -221,7 +221,7 @@ function(add_demo NAME)
     add_executable(${NAME} ${NAME}.cpp)
     target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
-    set_target_properties (${NAME} PROPERTIES FOLDER Samples)
+    set_target_properties(${NAME} PROPERTIES FOLDER Samples)
 endfunction()
 
 if (NOT ANDROID)

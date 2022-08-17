@@ -20,7 +20,7 @@ target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC assimp)
 target_link_libraries(${TARGET} PRIVATE getopt filameshio meshoptimizer)
-set_target_properties (${TARGET} PROPERTIES FOLDER Tools)
+set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # ==================================================================================================
 # Compile options and optimizations

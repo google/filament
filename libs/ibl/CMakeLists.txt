@@ -35,13 +35,13 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (${TARGET} PROPERTIES FOLDER Libs)
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} math utils)
 
 add_library(${TARGET}-lite ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_compile_definitions(${TARGET}-lite PUBLIC -DFILAMENT_IBL_LITE=1)
 target_include_directories(${TARGET}-lite PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (${TARGET}-lite PROPERTIES FOLDER Libs)
+set_target_properties(${TARGET}-lite PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET}-lite math utils)
 
 # ==================================================================================================

@@ -197,7 +197,7 @@ add_library(${TARGET} STATIC ${SRCS})
 
 # libraries we're linking against
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
-set_target_properties (${TARGET} PROPERTIES FOLDER ThirdParty)
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)
 
 if(NOT MSVC)
     target_compile_options(${TARGET}

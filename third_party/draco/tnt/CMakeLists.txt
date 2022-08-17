@@ -559,7 +559,7 @@ set(draco_cmake_helper_scripts "${draco_root}/cmake/FindDraco.cmake"
 # targets. Silence the harmless warnings/errors with some dummy source files.
 foreach(target ${draco_header_only_targets})
   add_dummy_source_file_to_target("${target}" "cc")
-  set_target_properties (${target} PROPERTIES FOLDER ThirdParty/draco)
+  set_target_properties(${target} PROPERTIES FOLDER ThirdParty/draco)
 endforeach()
 
 # Generate $draco_build_dir/draco/draco_features.h.

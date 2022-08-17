@@ -225,7 +225,7 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # add this subproject to the Core folder
-set_target_properties (${TARGET} PROPERTIES FOLDER Core)
+set_target_properties(${TARGET} PROPERTIES FOLDER Core)
 
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
@@ -272,7 +272,7 @@ set(DUMMY_SRC "${VKSHADERS_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(vkshaders STATIC ${DUMMY_SRC} ${RESGEN_SOURCE})
-set_target_properties (vkshaders PROPERTIES FOLDER Core)
+set_target_properties(vkshaders PROPERTIES FOLDER Core)
 
 # ==================================================================================================
 # Dependencies
@@ -440,7 +440,7 @@ if (APPLE)
         install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
     endif()
 
-    set_target_properties (backend_test PROPERTIES FOLDER Tests)
+    set_target_properties(backend_test PROPERTIES FOLDER Tests)
 endif()
 
 if (APPLE AND NOT IOS)
@@ -449,6 +449,6 @@ if (APPLE AND NOT IOS)
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the
     # linker from removing "unused" symbols.
     target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
-    set_target_properties (backend_test_mac PROPERTIES FOLDER Tests)
+    set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
 endif()
 

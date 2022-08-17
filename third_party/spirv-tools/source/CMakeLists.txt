@@ -184,11 +184,11 @@ add_custom_target(enum_string_mapping
 add_custom_target(extinst_tables
   DEPENDS ${EXTINST_CPP_DEPENDS})
 
-set_target_properties (core_tables PROPERTIES 
+set_target_properties(core_tables PROPERTIES 
   FOLDER "ThirdParty/SPIRV-Tools libraries")
-set_target_properties (enum_string_mapping PROPERTIES 
+set_target_properties(enum_string_mapping PROPERTIES 
   FOLDER "ThirdParty/SPIRV-Tools libraries")
-set_target_properties (extinst_tables PROPERTIES 
+set_target_properties(extinst_tables PROPERTIES 
   FOLDER "ThirdParty/SPIRV-Tools libraries")
 
 set_source_files_properties(

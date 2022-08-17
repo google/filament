@@ -15,7 +15,7 @@ add_executable(${TARGET} ${SRCS})
 
 target_link_libraries(${TARGET} getopt utils math)
 
-set_target_properties (${TARGET} PROPERTIES FOLDER Tools)
+set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================
 # Licenses
