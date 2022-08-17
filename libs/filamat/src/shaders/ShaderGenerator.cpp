@@ -212,8 +212,17 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER",
             useOptimizedDepthVertexShader);
 
+    // material defines
     CodeGenerator::generateDefine(vs, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
+
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_INSTANCES", material.instanced);
+
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
+            material.vertexDomainDeviceJittered);
+
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_TRANSPARENT_SHADOW",
+            material.hasTransparentShadow);
 
     CodeGenerator::generateDefine(vs, "VARIANT_HAS_DIRECTIONAL_LIGHTING",
             litVariants && variant.hasDirectionalLighting());
@@ -364,8 +373,15 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     // lighting variants
     bool litVariants = lit || material.hasShadowMultiplier;
 
+    // material defines
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
+
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_INSTANCES", material.instanced);
+
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
+            material.vertexDomainDeviceJittered);
+
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_TRANSPARENT_SHADOW",
             material.hasTransparentShadow);
 
@@ -383,11 +399,6 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
             filament::Variant::isVSMVariant(variant));
     CodeGenerator::generateDefine(fs, "VARIANT_HAS_SSR",
             filament::Variant::isSSRVariant(variant));
-
-    // material defines
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_INSTANCES", material.instanced);
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
-            material.vertexDomainDeviceJittered);
 
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY",
             material.hasDoubleSidedCapability);
