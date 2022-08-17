@@ -173,7 +173,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
         VertexDomain vertexDomain) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return createPostProcessVertexProgram(shaderModel, targetApi,
-                targetLanguage, material, variant.key, material.samplerBindings);
+                targetLanguage, material, variant.key);
     }
 
     io::sstream vs;
@@ -308,7 +308,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         Interpolation interpolation) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return createPostProcessFragmentProgram(shaderModel, targetApi, targetLanguage, material,
-                variant.key, material.samplerBindings);
+                variant.key);
     }
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
@@ -530,10 +530,9 @@ void ShaderGenerator::fixupExternalSamplers(ShaderModel sm,
     }
 }
 
-std::string ShaderGenerator::createPostProcessVertexProgram(
-        ShaderModel sm, MaterialBuilder::TargetApi targetApi,
-        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-        const filament::Variant::type_t variantKey, SamplerBindingMap const& samplerBindingMap) const noexcept {
+std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialInfo const& material, const filament::Variant::type_t variantKey) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream vs;
     cg.generateProlog(vs, ShaderType::VERTEX, material);
@@ -571,10 +570,9 @@ std::string ShaderGenerator::createPostProcessVertexProgram(
     return vs.c_str();
 }
 
-std::string ShaderGenerator::createPostProcessFragmentProgram(
-        ShaderModel sm, MaterialBuilder::TargetApi targetApi,
-        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-        uint8_t variant, const SamplerBindingMap& samplerBindingMap) const noexcept {
+std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialInfo const& material, uint8_t variant) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream fs;
     cg.generateProlog(fs, ShaderType::FRAGMENT, material);
