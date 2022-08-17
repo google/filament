@@ -21,5 +21,6 @@ if (NOT MSVC)
 endif()
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)
 
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})

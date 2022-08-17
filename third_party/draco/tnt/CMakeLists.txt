@@ -559,6 +559,7 @@ set(draco_cmake_helper_scripts "${draco_root}/cmake/FindDraco.cmake"
 # targets. Silence the harmless warnings/errors with some dummy source files.
 foreach(target ${draco_header_only_targets})
   add_dummy_source_file_to_target("${target}" "cc")
+  set_target_properties(${target} PROPERTIES FOLDER ThirdParty/draco)
 endforeach()
 
 # Generate $draco_build_dir/draco/draco_features.h.
@@ -569,3 +570,34 @@ target_include_directories(dracodec
     PUBLIC "${draco_root}/src")
 
 install(TARGETS dracodec ARCHIVE DESTINATION lib/${DIST_DIR})
+
+# Add Draco Targets to the ThirdParty/draco folder
+set_target_properties(draco_attributes                               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_attributes_dec               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_attributes_enc               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_attributes_pred_schemes_dec  PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_attributes_pred_schemes_enc  PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_bit_coders                   PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_enc_config                               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_dec_config                               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_decode                       PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_encode                       PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_entropy                      PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_mesh_traverser               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_mesh_dec                     PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_mesh_enc                     PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_point_cloud_dec              PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_compression_point_cloud_enc              PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_core                                     PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_io                                       PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_mesh                                     PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_metadata_dec                             PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_metadata_enc                             PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_metadata                                 PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_animation_dec                            PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_animation_enc                            PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_animation                                PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_point_cloud                              PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_points_dec                               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(draco_points_enc                               PROPERTIES FOLDER ThirdParty/draco)
+set_target_properties(dracodec                                       PROPERTIES FOLDER ThirdParty/draco)

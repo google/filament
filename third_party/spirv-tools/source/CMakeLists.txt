@@ -124,7 +124,7 @@ macro(spvtools_vendor_tables VENDOR_TABLE SHORT_NAME OPERAND_KIND_PREFIX)
     DEPENDS ${GRAMMAR_PROCESSING_SCRIPT} ${GRAMMAR_FILE}
     COMMENT "Generate extended instruction tables for ${VENDOR_TABLE}.")
   add_custom_target(spv-tools-${SHORT_NAME} DEPENDS ${INSTS_FILE})
-  set_property(TARGET spv-tools-${SHORT_NAME} PROPERTY FOLDER "SPIRV-Tools build")
+  set_property(TARGET spv-tools-${SHORT_NAME} PROPERTY FOLDER "ThirdParty/SPIRV-Tools build")
   list(APPEND EXTINST_CPP_DEPENDS spv-tools-${SHORT_NAME})
 endmacro(spvtools_vendor_tables)
 
@@ -137,7 +137,7 @@ macro(spvtools_extinst_lang_headers NAME GRAMMAR_FILE)
     DEPENDS ${LANG_HEADER_PROCESSING_SCRIPT} ${GRAMMAR_FILE}
     COMMENT "Generate language specific header for ${NAME}.")
   add_custom_target(spirv-tools-header-${NAME} DEPENDS ${OUT_H})
-  set_property(TARGET spirv-tools-header-${NAME} PROPERTY FOLDER "SPIRV-Tools build")
+  set_property(TARGET spirv-tools-header-${NAME} PROPERTY FOLDER "ThirdParty/SPIRV-Tools build")
   list(APPEND EXTINST_CPP_DEPENDS spirv-tools-header-${NAME})
 endmacro(spvtools_extinst_lang_headers)
 
@@ -159,7 +159,7 @@ spvtools_extinst_lang_headers("NonSemanticShaderDebugInfo100" ${VKDEBUGINFO100_G
 
 spvtools_vimsyntax("unified1" "1.0")
 add_custom_target(spirv-tools-vimsyntax DEPENDS ${VIMSYNTAX_FILE})
-set_property(TARGET spirv-tools-vimsyntax PROPERTY FOLDER "SPIRV-Tools utilities")
+set_property(TARGET spirv-tools-vimsyntax PROPERTY FOLDER "ThirdParty/SPIRV-Tools utilities")
 
 # Extract the list of known generators from the SPIR-V XML registry file.
 set(GENERATOR_INC_FILE ${spirv-tools_BINARY_DIR}/generators.inc)
@@ -184,6 +184,13 @@ add_custom_target(enum_string_mapping
 add_custom_target(extinst_tables
   DEPENDS ${EXTINST_CPP_DEPENDS})
 
+set_target_properties(core_tables PROPERTIES 
+  FOLDER "ThirdParty/SPIRV-Tools libraries")
+set_target_properties(enum_string_mapping PROPERTIES 
+  FOLDER "ThirdParty/SPIRV-Tools libraries")
+set_target_properties(extinst_tables PROPERTIES 
+  FOLDER "ThirdParty/SPIRV-Tools libraries")
+
 set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/extensions.h
   PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -205,7 +212,7 @@ add_custom_command(OUTPUT ${SPIRV_TOOLS_BUILD_VERSION_INC}
 # This is not required for any dependence chain.
 add_custom_target(spirv-tools-build-version
    DEPENDS ${SPIRV_TOOLS_BUILD_VERSION_INC})
-set_property(TARGET spirv-tools-build-version PROPERTY FOLDER "SPIRV-Tools build")
+set_property(TARGET spirv-tools-build-version PROPERTY FOLDER "ThirdParty/SPIRV-Tools build")
 
 list(APPEND PCH_DEPENDS ${ENUM_STRING_MAPPING_CPP_DEPENDS} ${OPCODE_CPP_DEPENDS} ${OPERAND_CPP_DEPENDS} ${EXTENSION_H_DEPENDS} ${EXTINST_CPP_DEPENDS} ${SPIRV_TOOLS_BUILD_VERSION_INC})
 set_source_files_properties(
@@ -367,7 +374,7 @@ function(spirv_tools_default_target_options target)
     PRIVATE ${spirv-tools_BINARY_DIR}
     PRIVATE ${SPIRV_HEADER_INCLUDE_DIR}
   )
-  set_property(TARGET ${target} PROPERTY FOLDER "SPIRV-Tools libraries")
+  set_property(TARGET ${target} PROPERTY FOLDER "ThirdParty/SPIRV-Tools libraries")
   spvtools_check_symbol_exports(${target})
   add_dependencies(${target} spirv-tools-build-version core_tables enum_string_mapping extinst_tables)
 endfunction()

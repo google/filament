@@ -23,6 +23,7 @@ set(SRCS
 add_executable(${TARGET} ${HDRS} ${SRCS})
 
 target_link_libraries(${TARGET} PRIVATE math utils ibl z image imageio getopt)
+set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # ==================================================================================================
 # Compile options and optimizations
@@ -56,4 +57,5 @@ install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 if (NOT ANDROID)
     add_executable(test_${TARGET} tests/test_cmgen.cpp)
     target_link_libraries(test_${TARGET} PRIVATE image imageio gtest)
+    set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 endif()

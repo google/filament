@@ -20,6 +20,8 @@ target_link_libraries(${TARGET} matdbg filaflat backend_headers utils getopt SPI
 # in the path allows us to do #include <SPIRV/disassemble.h>
 target_include_directories(${TARGET} PRIVATE ${../glslang_SOURCE_DIR}/..)
 
+set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
+
 # =================================================================================================
 # Licenses
 # ==================================================================================================
