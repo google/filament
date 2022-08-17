@@ -13,6 +13,7 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
 target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
+set_target_properties (${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================
 # Licenses

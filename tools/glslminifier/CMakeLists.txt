@@ -13,6 +13,7 @@ set(SRCS src/main.cpp src/GlslMinify.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
 target_link_libraries(${TARGET} PRIVATE utils getopt)
+set_target_properties (${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================
 # Licenses

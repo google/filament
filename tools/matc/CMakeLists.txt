@@ -45,6 +45,7 @@ target_include_directories(${TARGET} PUBLIC src)
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
 target_link_libraries(${TARGET} getopt filamat filabridge utils)
+set_target_properties (${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================
 # Licenses
