@@ -224,8 +224,8 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-# add this subproject to the Core folder
-set_target_properties(${TARGET} PROPERTIES FOLDER Core)
+# add this subproject to the Filament folder
+set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
 
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
@@ -272,7 +272,7 @@ set(DUMMY_SRC "${VKSHADERS_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(vkshaders STATIC ${DUMMY_SRC} ${RESGEN_SOURCE})
-set_target_properties(vkshaders PROPERTIES FOLDER Core)
+set_target_properties(vkshaders PROPERTIES FOLDER Filament/Generated)
 
 # ==================================================================================================
 # Dependencies

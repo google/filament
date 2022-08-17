@@ -108,7 +108,7 @@ endif()
 # ==================================================================================================
 add_library(${TARGET} STATIC ${RESGEN_SOURCE})
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-set_target_properties(${TARGET} PROPERTIES FOLDER Core)
+set_target_properties(${TARGET} PROPERTIES FOLDER Filament/Generated)
 
 # ==================================================================================================
 # Installation

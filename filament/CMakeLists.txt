@@ -523,8 +523,8 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS} ${DATA_BINS}
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-# add this subproject to the Core folder
-set_target_properties(${TARGET} PROPERTIES FOLDER Core)
+# add this subproject to the Filament folder
+set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
 
 # ==================================================================================================
 # Dependencies
