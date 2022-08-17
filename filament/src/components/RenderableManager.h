@@ -161,7 +161,7 @@ public:
     inline size_t getLevelCount(Instance) const noexcept { return 1; }
     inline size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
-            size_t primitiveIndex, FMaterialInstance const* materialInstance) noexcept;
+            size_t primitiveIndex, FMaterialInstance const* materialInstance);
     MaterialInstance* getMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
             PrimitiveType type, FVertexBuffer* vertices, FIndexBuffer* indices,

@@ -86,6 +86,7 @@ static void printStringChunk(ostream& json, const ChunkContainer& container,
 static bool printMaterial(ostream& json, const ChunkContainer& container) {
     printStringChunk(json, container, MaterialName, "name");
     printUint32Chunk(json, container, MaterialVersion, "version");
+    printUint32Chunk(json, container, MaterialFeatureLevel, "feature_level");
     json << "\"shading\": {\n";
     printChunk<Shading, uint8_t>(json, container, MaterialShading, "model");
     printChunk<MaterialDomain, uint8_t>(json, container, ChunkType::MaterialDomain, "material_domain");

@@ -118,6 +118,10 @@ bool MaterialParser::getMaterialVersion(uint32_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialVersion, value);
 }
 
+bool MaterialParser::getFeatureLevel(uint8_t* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialFeatureLevel, value);
+}
+
 bool MaterialParser::getName(utils::CString* cstring) const noexcept {
    ChunkType type = ChunkType::MaterialName;
    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);

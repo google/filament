@@ -16,6 +16,8 @@
 
 #include "CodeGenerator.h"
 
+#include "MaterialInfo.h"
+
 #include "generated/shaders.h"
 
 #include <utils/sstream.h>
@@ -37,25 +39,27 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
     return out;
 }
 
-io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
-        bool hasExternalSamplers) const {
+utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, ShaderType type,
+        MaterialInfo const& info) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
             // Vulkan requires version 310 or higher
-            if (mTargetLanguage == TargetLanguage::SPIRV) {
+            if (mTargetLanguage == TargetLanguage::SPIRV ||
+                    info.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
                 // Vulkan requires layout locations on ins and outs, which were not supported
                 // in the OpenGL 4.1 GLSL profile.
                 out << "#version 310 es\n\n";
             } else {
                 out << "#version 300 es\n\n";
             }
-            if (hasExternalSamplers) {
+            if (info.hasExternalSamplers) {
                 out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
             }
             out << "#define TARGET_MOBILE\n";
             break;
         case ShaderModel::DESKTOP:
-            if (mTargetLanguage == TargetLanguage::SPIRV) {
+            if (mTargetLanguage == TargetLanguage::SPIRV ||
+                info.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
                 // Vulkan requires binding specifiers on uniforms and samplers, which were not
                 // supported in the OpenGL 4.1 GLSL profile.
                 out << "#version 450 core\n\n";
@@ -92,9 +96,16 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     }
 
     out << '\n';
+    out << "#define FILAMENT_FEATURE_LEVEL_1    1\n";
+    out << "#define FILAMENT_FEATURE_LEVEL_2    2\n";
+    out << "#define FILAMENT_FEATURE_LEVEL      FILAMENT_FEATURE_LEVEL_" << (int)info.featureLevel << "\n";
+
+
+    out << '\n';
     if (mTargetApi == TargetApi::VULKAN ||
         mTargetApi == TargetApi::METAL ||
-        (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP)) {
+        (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
+        info.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 

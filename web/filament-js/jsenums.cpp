@@ -399,6 +399,10 @@ enum_<backend::CullingMode>("CullingMode")
     .value("BACK", backend::CullingMode::BACK)
     .value("FRONT_AND_BACK", backend::CullingMode::FRONT_AND_BACK);
 
+enum_<backend::FeatureLevel>("FeatureLevel")
+    .value("FEATURE_LEVEL_1", backend::FeatureLevel::FEATURE_LEVEL_1)
+    .value("FEATURE_LEVEL_2", backend::FeatureLevel::FEATURE_LEVEL_2);
+
 enum_<ktxreader::Ktx2Reader::TransferFunction>("Ktx2Reader$TransferFunction")
     .value("LINEAR", ktxreader::Ktx2Reader::TransferFunction::LINEAR)
     .value("sRGB", ktxreader::Ktx2Reader::TransferFunction::sRGB);

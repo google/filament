@@ -22,6 +22,7 @@
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <filamat/MaterialBuilder.h>
+#include "../shaders/MaterialInfo.h"
 
 #include <utils/Log.h>
 
@@ -53,7 +54,8 @@ GLSLangCleaner::~GLSLangCleaner() {
 
 bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain,
-        MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading) const noexcept {
+        MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading,
+        MaterialInfo const& info) const noexcept {
 
     // Parse to check syntax and semantic.
     const char* shaderCString = shaderCode.c_str();
@@ -88,6 +90,18 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
         utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
         utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
         return false;
+    }
+
+    switch (info.featureLevel) {
+        case FeatureLevel::FEATURE_LEVEL_1:
+            // TODO: feature level checks
+            //  - check no more than 9 samplers are used by the user and 16 total
+            //  - check cubemap arrays are not used
+            break;
+        case FeatureLevel::FEATURE_LEVEL_2:
+            // TODO: feature level checks
+            //  - check no more than 12 samplers are used by the user and 31 total
+            break;
     }
 
     // If this is a post-process material, at this point we've successfully met all the
@@ -129,7 +143,8 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
 
 bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain,
-        MaterialBuilder::TargetApi targetApi) const noexcept {
+        MaterialBuilder::TargetApi targetApi,
+        MaterialInfo const& info) const noexcept {
 
     // TODO: After implementing post-process vertex shaders, properly analyze them here.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
@@ -159,6 +174,18 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel m
         utils::slog.e << "ERROR: Invalid vertex shader" << utils::io::endl;
         utils::slog.e << "ERROR: Unable to find materialVertex() function" << utils::io::endl;
         return false;
+    }
+
+    switch (info.featureLevel) {
+        case FeatureLevel::FEATURE_LEVEL_1:
+            // TODO: feature level checks
+            //  - check no more than 9 samplers are used by the user and 16 total
+            //  - check cubemap arrays are not used
+            break;
+        case FeatureLevel::FEATURE_LEVEL_2:
+            // TODO: feature level checks
+            //  - check no more than 12 samplers are used by the user and 31 total
+            break;
     }
 
     return true;

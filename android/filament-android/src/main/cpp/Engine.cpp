@@ -328,3 +328,24 @@ Java_com_google_android_filament_Engine_nIsAutomaticInstancingEnabled(JNIEnv*, j
     Engine* engine = (Engine*) nativeEngine;
     return (jboolean)engine->isAutomaticInstancingEnabled();
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Engine_nGetSupportedFeatureLevel(JNIEnv *, jclass,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jint)engine->getSupportedFeatureLevel();
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Engine_nSetActiveFeatureLevel(JNIEnv *, jclass,
+        jlong nativeEngine, jint ordinal) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jint)engine->setActiveFeatureLevel((Engine::FeatureLevel)ordinal);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Engine_nGetActiveFeatureLevel(JNIEnv *, jclass,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jint)engine->getActiveFeatureLevel();
+}
