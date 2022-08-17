@@ -51,7 +51,7 @@ if(BUILD_TESTING)
             gmock
             gmock_main)
         foreach(target ${GTEST_TARGETS})
-            set_property(TARGET ${target} PROPERTY FOLDER ThirdParty/gtest)
+            set_property(TARGET ${target} PROPERTY FOLDER gtest)
         endforeach()
         mark_as_advanced(gmock_build_tests
             BUILD_GMOCK

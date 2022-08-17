@@ -20,5 +20,3 @@ if(${CMAKE_VERSION} VERSION_GREATER "3.7")
     # Only available since version 3.8
     target_compile_features(tsl_hat_trie INTERFACE cxx_std_11)
 endif()
-
-set_target_properties(tsl_hat_trie PROPERTIES FOLDER ThirdParty)
