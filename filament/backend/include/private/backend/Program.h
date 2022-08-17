@@ -24,6 +24,8 @@
 #include <utils/Log.h>
 #include <utils/ostream.h>
 
+#include <private/backend/DriverApiForward.h>
+
 #include <backend/DriverEnums.h>
 
 #include <array>
@@ -51,11 +53,14 @@ public:
     using SamplerGroupInfo = std::array<SamplerGroupData, BINDING_COUNT>;
     using UniformBlockInfo = std::array<utils::CString, BINDING_COUNT>;
 
-    Program() noexcept;
+    explicit Program(DriverApi& driver) noexcept;
+
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
+
     Program(Program&& rhs) noexcept;
     Program& operator=(Program&& rhs) noexcept;
+
     ~Program() noexcept;
 
     // sets the material name and variant for diagnostic purposes only
@@ -65,7 +70,7 @@ public:
     // sets one of the program's shader (e.g. vertex, fragment)
     // string-based shaders are null terminated, consequently the size parameter must include the
     // null terminating character.
-    Program& shader(ShaderType shader, void const* data, size_t size) noexcept;
+    Program& shader(ShaderType shader, void const* data, size_t size);
 
     // sets the 'bindingPoint' uniform block's name for this program.
     //
@@ -112,6 +117,7 @@ public:
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
+    DriverApi& mDriverApi;
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     ShaderSource mShadersSource;

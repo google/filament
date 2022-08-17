@@ -76,7 +76,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
 
         // Create a program.
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram();
+        Program p = shaderGen.getProgram(getDriverApi());
         auto program = getDriverApi().createProgram(std::move(p));
 
         auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);

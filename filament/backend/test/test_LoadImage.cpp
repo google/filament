@@ -347,7 +347,7 @@ TEST_F(BackendTest, UpdateImage2D) {
         std::string fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program prog = shaderGen.getProgram();
+        Program prog = shaderGen.getProgram(api);
         Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
         prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         program = api.createProgram(std::move(prog));
@@ -426,7 +426,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentTemplate);
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program prog = shaderGen.getProgram();
+    Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
     prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
@@ -512,7 +512,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program prog = shaderGen.getProgram();
+    Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
     prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
@@ -584,7 +584,7 @@ TEST_F(BackendTest, UpdateImage3D) {
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program prog = shaderGen.getProgram();
+    Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
     prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));

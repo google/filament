@@ -20,10 +20,23 @@ using namespace utils;
 
 namespace filament::backend {
 
-// We want these in the .cpp file so they're not inlined (not worth it)
-Program::Program() noexcept {}  // = default; does not work with msvc because of noexcept
+// We want these in the .cpp file, so they're not inlined (not worth it)
+Program::Program(DriverApi& driver) noexcept
+        : mDriverApi(driver) {
+}
+
 Program::Program(Program&& rhs) noexcept = default;
-Program& Program::operator=(Program&& rhs) noexcept = default;
+
+Program& Program::operator=(Program&& rhs) noexcept {
+    mUniformBlocks.operator=(std::move(rhs.mUniformBlocks));
+    mSamplerGroups.operator=(std::move(rhs.mSamplerGroups));
+    mShadersSource.operator=(std::move(rhs.mShadersSource));
+    mHasSamplers = rhs.mHasSamplers;
+    mName.operator=(std::move(rhs.mName));
+    mLogger.operator=(std::move(rhs.mLogger));
+    return *this;
+}
+
 Program::~Program() noexcept = default;
 
 Program& Program::diagnostics(utils::CString const& name,
@@ -33,7 +46,7 @@ Program& Program::diagnostics(utils::CString const& name,
     return *this;
 }
 
-Program& Program::shader(ShaderType shader, void const* data, size_t size) noexcept {
+Program& Program::shader(ShaderType shader, void const* data, size_t size) {
     ShaderBlob blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
     mShadersSource[size_t(shader)] = std::move(blob);

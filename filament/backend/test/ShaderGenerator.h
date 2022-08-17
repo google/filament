@@ -20,6 +20,7 @@
 #include "PlatformRunner.h"
 
 #include "private/backend/DriverApi.h"
+#include "private/backend/Program.h"
 
 #include <string>
 
@@ -35,14 +36,14 @@ public:
     /**
      * Generates shaders transpiled for the given backend / mobile combination.
      * @param vertex The vertex shader, written in GLSL 450 core.
-     * @param fragment The framgnet shader, written in GLSL 450 core.
+     * @param fragment The fragment shader, written in GLSL 450 core.
      */
     ShaderGenerator(std::string vertex, std::string fragment, Backend backend, bool isMobile) noexcept;
 
     ShaderGenerator(const ShaderGenerator& rhs) = delete;
     ShaderGenerator& operator=(const ShaderGenerator& rhs) = delete;
 
-    filament::backend::Program getProgram() noexcept;
+    filament::backend::Program getProgram(filament::backend::DriverApi& driverApi) noexcept;
 
 private:
 
