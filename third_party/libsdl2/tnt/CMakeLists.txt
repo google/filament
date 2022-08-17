@@ -221,6 +221,9 @@ if (WIN32)
         target_compile_options(${TARGET} PRIVATE -Wno-unused-local-typedef)
         target_compile_options(${TARGET}main PRIVATE -Wno-pragma-pack)
     endif()
+
+    # Set sdl2main's folder here
+    set_target_properties(sdl2main PROPERTIES FOLDER ThirdParty)
 else()
     target_compile_options(${TARGET} PRIVATE -fvisibility=hidden)
 
@@ -228,6 +231,3 @@ else()
     #        implementation for aarch64 on certain targets. ideally, we would just std::atomic
     target_compile_definitions(${TARGET} PRIVATE SDL_ATOMIC_DISABLED=1)
 endif()
-
-# Set sdl2main's folder here
-set_target_properties(sdl2main PROPERTIES FOLDER ThirdParty)
