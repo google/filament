@@ -108,7 +108,7 @@ Material* Material::Builder::build(Engine& engine) {
     utils::bitset32 shaderModels;
     shaderModels.setValue(v);
 
-    ShaderModel shaderModel = upcast(engine).getDriver().getShaderModel();
+    ShaderModel shaderModel = upcast(engine).getShaderModel();
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
@@ -424,7 +424,7 @@ Program FMaterial::getProgramBuilderWithVariants(
         Variant variant,
         Variant vertexVariant,
         Variant fragmentVariant) const noexcept {
-    const ShaderModel sm = mEngine.getDriver().getShaderModel();
+    const ShaderModel sm = mEngine.getShaderModel();
     const bool isNoop = mEngine.getBackend() == Backend::NOOP;
 
     /*
@@ -455,7 +455,7 @@ Program FMaterial::getProgramBuilderWithVariants(
             "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filtered=0x%x).",
             mName.c_str(), variant.key, fragmentVariant.key);
 
-    Program pb;
+    Program pb(mEngine.getDriverApi());
     pb.diagnostics(mName,
               [this, variant](io::ostream& out) -> io::ostream& {
                   return out << mName.c_str_safe()

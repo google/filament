@@ -136,7 +136,7 @@ public:
 
     ~FEngine() noexcept;
 
-    backend::Driver& getDriver() const noexcept { return *mDriver; }
+    backend::ShaderModel getShaderModel() const noexcept { return getDriver().getShaderModel(); }
 
     DriverApi& getDriverApi() noexcept {
         return *std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage));
@@ -383,6 +383,8 @@ private:
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
+
+    backend::Driver& getDriver() const noexcept { return *mDriver; }
 
     template<typename T>
     bool terminateAndDestroy(const T* p, ResourceList<T>& list);

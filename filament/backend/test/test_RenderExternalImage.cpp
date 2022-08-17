@@ -66,7 +66,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
 
     // Create a program that samples a texture.
-    Program p = shaderGen.getProgram();
+    Program p = shaderGen.getProgram(getDriverApi());
     Program::Sampler sampler { utils::CString("tex"), 6 };
     p.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, &sampler, 1);
     backend::Handle<HwProgram> program = getDriverApi().createProgram(std::move(p));
@@ -140,7 +140,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
 
     // Create a program that samples a texture.
-    Program p = shaderGen.getProgram();
+    Program p = shaderGen.getProgram(getDriverApi());
     Program::Sampler sampler { utils::CString("tex"), 6 };
     p.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, &sampler, 1);
     auto program = getDriverApi().createProgram(std::move(p));
