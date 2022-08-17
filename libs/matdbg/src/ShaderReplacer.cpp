@@ -176,8 +176,9 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
 
     auto getShaderStage = [](ShaderStage type) {
         switch (type) {
-            case ShaderStage::VERTEX:        return EShLanguage::EShLangVertex;
-            case ShaderStage::FRAGMENT:      return EShLanguage::EShLangFragment;
+            case ShaderStage::VERTEX:   return EShLanguage::EShLangVertex;
+            case ShaderStage::FRAGMENT: return EShLanguage::EShLangFragment;
+            case ShaderStage::COMPUTE:  return EShLanguage::EShLangCompute;
         }
     };
 

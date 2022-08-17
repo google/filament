@@ -120,15 +120,12 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
     // build all shaders
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-        ShaderStage type = static_cast<ShaderStage>(i);
+        const ShaderStage stage = static_cast<ShaderStage>(i);
         GLenum glShaderType;
-        switch (type) {
-            case ShaderStage::VERTEX:
-                glShaderType = GL_VERTEX_SHADER;
-                break;
-            case ShaderStage::FRAGMENT:
-                glShaderType = GL_FRAGMENT_SHADER;
-                break;
+        switch (stage) {
+            case ShaderStage::VERTEX:    glShaderType = GL_VERTEX_SHADER;    break;
+            case ShaderStage::FRAGMENT:  glShaderType = GL_FRAGMENT_SHADER;  break;
+            case ShaderStage::COMPUTE:   glShaderType = GL_COMPUTE_SHADER;   break;
         }
 
         if (UTILS_LIKELY(!shadersSource[i].empty())) {
@@ -428,6 +425,7 @@ void logCompilationError(io::ostream& out, ShaderStage shaderType,
         switch (type) {
             case ShaderStage::VERTEX:   return "vertex";
             case ShaderStage::FRAGMENT: return "fragment";
+            case ShaderStage::COMPUTE:  return "compute";
         }
     };
 

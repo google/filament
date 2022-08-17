@@ -238,6 +238,9 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         case ShaderStage::FRAGMENT:
             internalConfig.shLang = EShLangFragment;
             break;
+        case ShaderStage::COMPUTE:
+            internalConfig.shLang = EShLangCompute;
+            break;
     }
 
     TProgram program;

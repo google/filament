@@ -1039,7 +1039,8 @@ static const char* to_string(ShaderStageFlags stageFlags) noexcept {
         case ShaderStageFlags::NONE:                    return "{ }";
         case ShaderStageFlags::VERTEX:                  return "{ vertex }";
         case ShaderStageFlags::FRAGMENT:                return "{ fragment }";
-        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:  return "{ vertex | fragment }";
+        case ShaderStageFlags::COMPUTE:                 return "{ compute }";
+        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:  return "{ vertex | fragment | COMPUTE }";
     }
     return nullptr;
 }

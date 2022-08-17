@@ -313,7 +313,8 @@ enum class ElementType : uint8_t {
 //! Buffer object binding type
 enum class BufferObjectBinding : uint8_t {
     VERTEX,
-    UNIFORM
+    UNIFORM,
+    SHADER_STORAGE
 };
 
 //! Face culling Mode
@@ -897,7 +898,8 @@ struct RasterState {
 
 enum class ShaderStage : uint8_t {
     VERTEX = 0,
-    FRAGMENT = 1
+    FRAGMENT = 1,
+    COMPUTE = 2
 };
 
 static constexpr size_t PIPELINE_STAGE_COUNT = 2;
@@ -905,7 +907,8 @@ enum class ShaderStageFlags : uint8_t {
     NONE        =    0,
     VERTEX      =    0x1,
     FRAGMENT    =    0x2,
-    ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT
+    COMPUTE     =    0x4,
+    ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT | COMPUTE
 };
 
 static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
@@ -914,6 +917,8 @@ static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage t
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
         case ShaderStage::FRAGMENT:
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::FRAGMENT));
+        case ShaderStage::COMPUTE:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::COMPUTE));
     }
 }
 

@@ -342,7 +342,8 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
 
     using MetalFunctionPtr = __strong id<MTLFunction>*;
 
-    static_assert(Program::SHADER_TYPE_COUNT == 2, "Only vertex and fragment shaders expected.");
+    // FIXME: rework this to handle compute
+    //static_assert(Program::SHADER_TYPE_COUNT == 2, "Only vertex and fragment shaders expected.");
     MetalFunctionPtr shaderFunctions[2] = { &vertexFunction, &fragmentFunction };
 
     const auto& sources = program.getShadersSource();
@@ -424,6 +425,9 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
             switch (type) {
                 case ShaderStage::VERTEX:    return vertexSamplerBlockInfo;
                 case ShaderStage::FRAGMENT:  return fragmentSamplerBlockInfo;
+                case ShaderStage::COMPUTE:
+                    // FIXME: implement ShaderStage::COMPUTE
+                    std::terminate();
             }
         };
 
