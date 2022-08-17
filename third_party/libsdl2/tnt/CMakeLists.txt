@@ -197,6 +197,7 @@ add_library(${TARGET} STATIC ${SRCS})
 
 # libraries we're linking against
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
+set_target_properties (${TARGET} PROPERTIES FOLDER ThirdParty)
 
 if(NOT MSVC)
     target_compile_options(${TARGET}
@@ -210,7 +211,6 @@ endif()
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-set_target_properties (${TARGET} PROPERTIES FOLDER ThirdParty)
 
 if (WIN32)
     # Windows needs a WinMain static library.
@@ -229,3 +229,5 @@ else()
     target_compile_definitions(${TARGET} PRIVATE SDL_ATOMIC_DISABLED=1)
 endif()
 
+# Set sdl2main's folder here
+set_target_properties(sdl2main PROPERTIES FOLDER ThirdParty)
