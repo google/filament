@@ -968,6 +968,9 @@ void MetalDriver::popGroupMarker(int) {
 }
 
 void MetalDriver::startCapture(int) {
+    // Submit any pending command buffers. Metal will only capture command buffers created and
+    // submitted during the capture period.
+    submitPendingCommands(mContext);
     if (@available(iOS 13, *)) {
         MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
         descriptor.captureObject = mContext->device;
@@ -989,6 +992,9 @@ void MetalDriver::startCapture(int) {
 }
 
 void MetalDriver::stopCapture(int) {
+    // Submit any pending command buffers. Metal will only capture command buffers created and
+    // submitted during the capture period.
+    submitPendingCommands(mContext);
     [[MTLCaptureManager sharedCaptureManager] stopCapture];
 }
 
