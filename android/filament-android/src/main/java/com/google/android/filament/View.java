@@ -1046,7 +1046,7 @@ public class View {
      * @return true if the stencil buffer is enabled.
      * @see View#setStencilBufferEnabled(boolean)
      */
-    boolean isStencilBufferEnabled() {
+    public boolean isStencilBufferEnabled() {
         return nIsStencilBufferEnabled(getNativeObject());
     }
 
