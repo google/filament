@@ -344,9 +344,10 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
         }
 
         // a size of 1 means not an array
-        builder.add({ fieldName.data(), fieldName.size() }, fieldSize == 1 ? 0 : fieldSize,
-                UniformInterfaceBlock::Type(fieldType),
-                UniformInterfaceBlock::Precision(fieldPrecision));
+        builder.add({{{ fieldName.data(), fieldName.size() },
+                      uint32_t(fieldSize == 1 ? 0 : fieldSize),
+                      UniformInterfaceBlock::Type(fieldType),
+                      UniformInterfaceBlock::Precision(fieldPrecision) }});
     }
 
     *uib = builder.build();
