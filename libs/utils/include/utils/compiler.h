@@ -64,12 +64,6 @@
 #    define UTILS_PRIVATE
 #endif
 
-#define UTILS_HAS_CXX17 0
-#if __cplusplus >= 201703L  || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
-#undef UTILS_HAS_CXX17
-#define UTILS_HAS_CXX17 1
-#endif
-
 #define UTILS_NO_SANITIZE_THREAD
 #if __has_feature(thread_sanitizer)
 #undef UTILS_NO_SANITIZE_THREAD
@@ -152,7 +146,7 @@
 #define UTILS_PURE
 #endif
 
-#if __has_attribute(maybe_unused) || (defined(_MSC_VER) && _MSC_VER >= 1911 && UTILS_HAS_CXX17)
+#if __has_attribute(maybe_unused) || (defined(_MSC_VER) && _MSC_VER >= 1911)
 #define UTILS_UNUSED [[maybe_unused]]
 #define UTILS_UNUSED_IN_RELEASE [[maybe_unused]]
 #elif __has_attribute(unused)
