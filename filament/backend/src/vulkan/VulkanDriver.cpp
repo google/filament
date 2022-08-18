@@ -884,9 +884,21 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     return false;
 }
 
+FeatureLevel VulkanDriver::getFeatureLevel() {
+    const auto supportedSamplerCount = std::min(
+            mContext.physicalDeviceProperties.limits.maxDescriptorSetSamplers,
+            mContext.physicalDeviceProperties.limits.maxDescriptorSetSampledImages);
+
+    const bool imageCubeArray = (bool)mContext.physicalDeviceFeatures.imageCubeArray;
+
+    return (supportedSamplerCount >= 31 && imageCubeArray) ?
+            FeatureLevel::FEATURE_LEVEL_2 :
+            FeatureLevel::FEATURE_LEVEL_1;
+}
+
 math::float2 VulkanDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
-    // Note: this is actually never used (see: main.vs), but it's a backend API so we implement it
+    // Note: this is actually never used (see: main.vs), but it's a backend API, so we implement it
     // properly.
     return math::float2{ 1.0f, 0.0f };
 }

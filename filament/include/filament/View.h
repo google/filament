@@ -637,6 +637,33 @@ public:
      */
     bool isFrontFaceWindingInverted() const noexcept;
 
+    /**
+     * Enables use of the stencil buffer. This API is currently a WIP and experimental.
+     *
+     * The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth
+     * buffer. The stencil buffer is cleared at the beginning of a frame and discarded after the
+     * color pass.
+     *
+     * Each fragment's stencil value is set during rasterization by specifying stencil operations on
+     * a Material. The stencil buffer can be used as a mask for later rendering by setting a
+     * Material's stencil comparison function and reference value. Fragments that don't pass the
+     * stencil test are then discarded.
+     *
+     * Post-processing must be enabled in order to use the stencil buffer.
+     *
+     * A renderable's priority (see RenderableManager::setPriority) is useful to control the order
+     * in which primitives are drawn.
+     *
+     * @param enabled True to enable the stencil buffer, false disables it (default)
+     */
+    void setStencilBufferEnabled(bool enabled) noexcept;
+
+    /**
+     * Returns true if the stencil buffer is enabled.
+     * See setStencilBufferEnabled() for more information.
+     */
+    bool getStencilBufferEnabled() const noexcept;
+
     // for debugging...
 
     //! debugging: allows to entirely disable frustum culling. (culling enabled by default).

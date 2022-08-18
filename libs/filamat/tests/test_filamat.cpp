@@ -47,7 +47,8 @@ static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::Prop
 std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderType type,
         const std::string fragmentCode, const std::string vertexCode = "",
         filamat::MaterialBuilder::Shading shadingModel = filamat::MaterialBuilder::Shading::LIT,
-        filamat::MaterialBuilder::RefractionMode refractionMode = filamat::MaterialBuilder::RefractionMode::NONE) {
+        filamat::MaterialBuilder::RefractionMode refractionMode = filamat::MaterialBuilder::RefractionMode::NONE,
+        filamat::MaterialBuilder::VertexDomain vertexDomain = filamat::MaterialBuilder::VertexDomain::OBJECT) {
     MockIncluder includer;
     includer
         .sourceForInclude("modify_normal.h", "material.normal = vec3(0.8);");
@@ -60,6 +61,7 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderType type,
     builder.shading(shadingModel);
     builder.includeCallback(includer);
     builder.refractionMode(refractionMode);
+    builder.vertexDomain(vertexDomain);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
@@ -193,7 +195,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
     )");
 
     std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::VERTEX,
-            fragmentCode, vertexCode);
+            fragmentCode, vertexCode,
+            MaterialBuilder::Shading::LIT,
+            MaterialBuilder::RefractionMode::NONE,
+            MaterialBuilder::VertexDomain::DEVICE);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties {false};

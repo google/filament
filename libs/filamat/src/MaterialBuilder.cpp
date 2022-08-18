@@ -271,6 +271,11 @@ MaterialBuilder& MaterialBuilder::quality(ShaderQuality quality) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::featureLevel(FeatureLevel featureLevel) noexcept {
+    mFeatureLevel = featureLevel;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
     return *this;
@@ -498,6 +503,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.hasCustomSurfaceShading = mCustomSurfaceShading;
     info.useLegacyMorphing = mUseLegacyMorphing;
     info.instanced = mInstanced;
+    info.vertexDomainDeviceJittered = mVertexDomainDeviceJittered;
+    info.featureLevel = mFeatureLevel;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -545,7 +552,7 @@ bool MaterialBuilder::findAllProperties() noexcept {
 #endif
 }
 
-bool MaterialBuilder::runSemanticAnalysis() noexcept {
+bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
 #ifndef FILAMAT_LITE
     using namespace filament::backend;
     GLSLTools glslTools;
@@ -560,12 +567,12 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
 
     ShaderModel model = static_cast<ShaderModel>(mSemanticCodeGenParams.shaderModel);
     std::string shaderCode = peek(ShaderType::VERTEX, mSemanticCodeGenParams, mProperties);
-    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi, info);
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
     result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi,
-            mCustomSurfaceShading);
+            mCustomSurfaceShading, info);
     return result;
 #else
     return true;
@@ -741,10 +748,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .shaderModel = shaderModel,
                         .domain = mMaterialDomain,
                         .materialInfo = &info,
+                        .hasFramebufferFetch = mEnableFramebufferFetch,
                         .glsl = {},
                 };
-
-                config.hasFramebufferFetch = mEnableFramebufferFetch;
 
                 if (mEnableFramebufferFetch) {
                     config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
@@ -917,6 +923,11 @@ MaterialBuilder& MaterialBuilder::enableFramebufferFetch() noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::vertexDomainDeviceJittered(bool enabled) noexcept {
+    mVertexDomainDeviceJittered = enabled;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::useLegacyMorphing() noexcept {
     mUseLegacyMorphing = true;
     return *this;
@@ -948,12 +959,12 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     }
 
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
-    MaterialInfo info {};
+    MaterialInfo info{};
     prepareToBuild(info);
 
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
-    if (!checkLiteRequirements() || !findAllProperties() || !runSemanticAnalysis()) {
+    if (!checkLiteRequirements() || !findAllProperties() || !runSemanticAnalysis(info)) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
     }
@@ -1034,6 +1045,7 @@ std::string MaterialBuilder::peek(filament::backend::ShaderType type,
 
 void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
     container.addSimpleChild<uint32_t>(ChunkType::MaterialVersion, filament::MATERIAL_VERSION);
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialFeatureLevel, (uint8_t)mFeatureLevel);
     container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));

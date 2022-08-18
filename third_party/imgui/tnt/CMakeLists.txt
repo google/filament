@@ -32,3 +32,5 @@ set(SRCS
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR} ${PRIVATE_HDR_DIR})
+
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)

@@ -688,6 +688,13 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     return false;
 }
 
+FeatureLevel MetalDriver::getFeatureLevel() {
+    // TODO: before we can return FEATURE_LEVEL_2 we need to decouple the samplers from
+    //       the textures. Metal only supports 16 samplers, but at least 31 textures on all
+    //       hardware.
+    return FeatureLevel::FEATURE_LEVEL_1;
+}
+
 math::float2 MetalDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
     // Note: this is actually never used (see: main.vs), but it's a backend API so we implement it
@@ -1176,6 +1183,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     const auto& stencilAttachment = mContext->currentRenderTarget->getStencilAttachment();
     if (stencilAttachment) {
         stencilPixelFormat = stencilAttachment.getPixelFormat();
+        assert_invariant(isMetalFormatStencil(stencilPixelFormat));
     }
     MetalPipelineState pipelineState {
         .vertexFunction = program->vertexFunction,

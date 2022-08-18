@@ -932,6 +932,36 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: featureLevel
+
+Type
+:    `number`
+
+Value
+:     An integer value, either 1 or 2. Defaults to 1.
+
+      Feature Level    |        Guaranteed features
+:----------------------|:---------------------------------
+1                      | 9 textures per material
+2                      | 12 textures per material, cubemap arrays, ESSL 3.10
+[Table [featureLevels]: Feature levels]
+
+Description
+:     Sets the feature level of the material. Each feature level defines a set of features the
+      material can use. If the material uses a feature not supported by the selected level, `matc`
+      will generate an error during compilation. A given feature level is guaranteed to support
+      all features of lower feature levels.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    featureLevel : 2
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Bugs
+:     `matc` doesn't verify that a material is not using features above its selected feature level.
+
+
 ### General: shadingModel
 
 Type
@@ -1138,6 +1168,29 @@ Description
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
     instanced : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### General: vertexDomainDeviceJittered
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Only meaningful for `vertexDomain:Device` materials, this parameter specifies whether the
+     filament clip-space transforms need to be applied or not, which affects TAA and guard bands.
+     Generally it needs to be applied because by definition `vertexDomain:Device` materials
+     vertices are not transformed and used *as is*.
+     However, if the vertex shader uses for instance `getViewFromClipMatrix()` (or other
+     matrices based on the projection), the clip-space transform is already applied.
+     Setting this parameter incorrectly can prevent TAA or the guard bands to work correctly.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    vertexDomainDeviceJittered : true
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1846,7 +1899,7 @@ struct MaterialVertexInputs {
     float3 worldNormal;        // only if the shading model is not unlit
     float4 worldPosition;      // always available (see note below about world-space)
 
-    mat4   clipSpaceTransform; // default: identity, transforms the clip-space position
+    mat4   clipSpaceTransform; // default: identity, transforms the clip-space position, only available for `vertexDomain:device`
 
     // variable* names are replaced with actual names
     float4 variable0;          // if 1 or more variables is defined

@@ -119,6 +119,8 @@ public:
     struct ClearOptions {
         /** Color to use to clear the SwapChain */
         math::float4 clearColor = {};
+        /** Value to clear the stencil buffer */
+        uint8_t clearStencil = 0u;
         /**
          * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
          * View will be drawn, for instance.

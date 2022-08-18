@@ -60,6 +60,14 @@ static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
 static constexpr size_t CONFIG_BINDING_COUNT = 12;  // This is guaranteed by OpenGL ES.
 
 /**
+ * Defines the backend's feature levels.
+ */
+enum class FeatureLevel : uint8_t {
+    FEATURE_LEVEL_1 = 1,  //!< OpenGL ES 3.0 features (default)
+    FEATURE_LEVEL_2       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
+};
+
+/**
  * Selects which driver a particular Engine should use.
  */
 enum class Backend : uint8_t {

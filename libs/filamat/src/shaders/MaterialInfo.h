@@ -47,6 +47,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool hasCustomSurfaceShading;
     bool useLegacyMorphing;
     bool instanced;
+    bool vertexDomainDeviceJittered;
     filament::SpecularAmbientOcclusion specularAO;
     filament::RefractionMode refractionMode;
     filament::RefractionType refractionType;
@@ -60,6 +61,7 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::SubpassInfo subpass;
     filament::SamplerBindingMap samplerBindings;
     filament::ShaderQuality quality;
+    filament::backend::FeatureLevel featureLevel;
 };
 
 }

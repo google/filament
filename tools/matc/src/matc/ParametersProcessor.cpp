@@ -15,6 +15,7 @@
  */
 
 #include "ParametersProcessor.h"
+#include "backend/DriverEnums.h"
 
 #include <algorithm>
 #include <iostream>
@@ -35,7 +36,7 @@ static bool logEnumIssue(const std::string& key, const JsonishString& value,
     std::cerr << "Error while processing key '" << key << "' value." << std::endl;
     std::cerr << "Value '" << value.getString() << "' is invalid. Valid values are:"
             << std::endl;
-    for (auto entries : map) {
+    for (const auto& entries : map) {
         std::cerr << "    " << entries.first  << std::endl;
     }
     return false;
@@ -398,6 +399,22 @@ static bool processQuality(MaterialBuilder& builder, const JsonishValue& value) 
     return true;
 }
 
+static bool processFeatureLevel(MaterialBuilder& builder, const JsonishValue& value) {
+    using filament::backend::FeatureLevel;
+    JsonishNumber const* const number = value.toJsonNumber();
+    FeatureLevel featureLevel;
+    if (number->getFloat() == 1.0f) {
+        featureLevel = FeatureLevel::FEATURE_LEVEL_1;
+    } else if (number->getFloat() == 2.0f) {
+        featureLevel = FeatureLevel::FEATURE_LEVEL_2;
+    } else {
+        std::cerr << "featureLevel: invalid value " << number->getFloat() << std::endl;
+        return false;
+    }
+    builder.featureLevel(featureLevel);
+    return true;
+}
+
 static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
@@ -595,6 +612,11 @@ static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue
     return true;
 }
 
+static bool processVertexDomainDeviceJittered(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.vertexDomainDeviceJittered(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processLegacyMorphing(MaterialBuilder& builder, const JsonishValue& value) {
     if (value.toJsonBool()->getBool()) {
         builder.useLegacyMorphing();
@@ -775,10 +797,12 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["refractionMode"]                = { &processRefractionMode, Type::STRING };
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
+    mParameters["vertexDomainDeviceJittered"]    = { &processVertexDomainDeviceJittered, Type::BOOL };
     mParameters["legacyMorphing"]                = { &processLegacyMorphing, Type::BOOL };
     mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
     mParameters["quality"]                       = { &processQuality, Type::STRING };
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };
+    mParameters["featureLevel"]                  = { &processFeatureLevel, Type::NUMBER };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

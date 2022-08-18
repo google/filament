@@ -261,4 +261,16 @@ bool Engine::isAutomaticInstancingEnabled() const noexcept {
     return upcast(this)->isAutomaticInstancingEnabled();
 }
 
+FeatureLevel Engine::getSupportedFeatureLevel() const noexcept {
+    return upcast(this)->getSupportedFeatureLevel();
+}
+
+FeatureLevel Engine::setActiveFeatureLevel(FeatureLevel featureLevel) {
+    return upcast(this)->setActiveFeatureLevel(featureLevel);
+}
+
+FeatureLevel Engine::getActiveFeatureLevel() const noexcept {
+    return upcast(this)->getActiveFeatureLevel();
+}
+
 } // namespace filament

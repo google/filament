@@ -80,6 +80,7 @@ void PerViewUniforms::prepareCamera(const CameraInfo& camera) noexcept {
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
     s.clipFromWorldMatrix = clipFromWorld;    // projection * view
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
+    s.clipTransform = camera.clipTransfrom;
     s.cameraPosition = float3{ camera.getPosition() };
     s.worldOffset = camera.getWorldOffset();
     s.cameraFar = camera.zf;

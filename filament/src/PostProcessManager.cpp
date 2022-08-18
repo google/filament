@@ -2429,6 +2429,9 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
 
     // update projection matrix
     inoutCameraInfo->projection[2].xy -= jitterInClipSpace;
+    // VERTEX_DOMAIN_DEVICE doesn't apply the projection, but it still needs this
+    // clip transform, so we apply it separately (see main.vs)
+    inoutCameraInfo->clipTransfrom.zw -= jitterInClipSpace;
 
     fg.addTrivialSideEffectPass("Jitter Camera",
             [=, &uniforms] (DriverApi& driver) {

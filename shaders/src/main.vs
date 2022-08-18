@@ -152,15 +152,20 @@ void main() {
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
     gl_Position = getPosition();
-#else
-    gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
-#endif
 
 #if !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 #if defined(MATERIAL_HAS_CLIP_SPACE_TRANSFORM)
-    gl_Position = getClipSpaceTransform(material) * gl_Position;
+    gl_Position = getMaterialClipSpaceTransform(material) * gl_Position;
 #endif
 #endif // !USE_OPTIMIZED_DEPTH_VERTEX_SHADER
+
+#if defined(MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED)
+    // Apply the clip-space transform which is normally part of the projection
+    gl_Position.xy = gl_Position.xy * frameUniforms.clipTransform.xy + (gl_Position.w * frameUniforms.clipTransform.zw);
+#endif
+#else
+    gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
+#endif
 
 #if defined(VERTEX_DOMAIN_DEVICE)
     // GL convention to inverted DX convention (must happen after clipSpaceTransform)

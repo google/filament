@@ -590,6 +590,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // update the camera projection
         cameraInfo.projection = highPrecisionMultiply(ts, cameraInfo.projection);
 
+        // VERTEX_DOMAIN_DEVICE doesn't apply the projection, but it still needs this
+        // clip transform, so we apply it separately (see main.vs)
+        cameraInfo.clipTransfrom = { ts[0][0], ts[1][1], ts[3].x, ts[3].y };
+
         // adjust svp to the new, larger, rendering dimensions
         svp.width  = uint32_t(width);
         svp.height = uint32_t(height);
@@ -668,6 +672,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     const float4 clearColor = mClearOptions.clearColor;
+    const uint8_t clearStencil = mClearOptions.clearStencil;
     const TargetBufferFlags clearFlags = mClearFlags;
     const TargetBufferFlags discardStartFlags = mDiscardStartFlags;
     TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
@@ -713,10 +718,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .msaa = msaaSampleCount,
             .clearFlags = clearFlags,
             .clearColor = clearColor,
+            .clearStencil = clearStencil,
             .ssrLodOffset = 0.0f,
             .hasContactShadows = scene.hasContactShadows(),
             // at this point we don't know if we have refraction, but that's handled later
-            .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled
+            .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled,
+            .enabledStencilBuffer = view.getStencilBufferEnabled()
     };
 
     /*
