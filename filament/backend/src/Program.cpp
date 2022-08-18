@@ -28,10 +28,9 @@ Program::Program(DriverApi& driver) noexcept
 Program::Program(Program&& rhs) noexcept = default;
 
 Program& Program::operator=(Program&& rhs) noexcept {
-    mUniformBlocks.operator=(std::move(rhs.mUniformBlocks));
+    mUniformBlocks.operator=(rhs.mUniformBlocks);
     mSamplerGroups.operator=(std::move(rhs.mSamplerGroups));
     mShadersSource.operator=(std::move(rhs.mShadersSource));
-    mHasSamplers = rhs.mHasSamplers;
     mName.operator=(std::move(rhs.mName));
     mLogger.operator=(std::move(rhs.mLogger));
     return *this;
@@ -53,8 +52,12 @@ Program& Program::shader(ShaderType shader, void const* data, size_t size) {
     return *this;
 }
 
-Program& Program::setUniformBlock(size_t bindingPoint, std::string_view uniformBlockName) noexcept {
-    mUniformBlocks[bindingPoint] = { uniformBlockName.data(), uniformBlockName.size() };
+Program& Program::uniformBlockBindings(
+        utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept {
+    for (auto const& item : uniformBlockBindings) {
+        assert_invariant(item.second < BINDING_COUNT);
+        mUniformBlocks[item.second] = item.first;
+    }
     return *this;
 }
 
@@ -66,7 +69,6 @@ Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFla
     samplerList.reserve(count);
     samplerList.resize(count);
     std::copy_n(samplers, count, samplerList.data());
-    mHasSamplers = true;
     return *this;
 }
 

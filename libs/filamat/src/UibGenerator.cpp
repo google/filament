@@ -30,7 +30,6 @@ static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
         "Changing CONFIG_MAX_SHADOW_CASCADES affects PerView size and breaks materials.");
 
 UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
-    // IMPORTANT NOTE: Respect std140 layout, don't update without updating Engine::PerViewUib
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerViewUib::_name)
             // transforms

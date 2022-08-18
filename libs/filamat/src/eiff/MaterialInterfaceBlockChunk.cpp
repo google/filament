@@ -15,6 +15,8 @@
  */
 #include "MaterialInterfaceBlockChunk.h"
 
+#include <utility>
+
 #include "filament/MaterialChunkType.h"
 
 using namespace filament;
@@ -27,7 +29,7 @@ MaterialUniformInterfaceBlockChunk::MaterialUniformInterfaceBlockChunk(UniformIn
 }
 
 void MaterialUniformInterfaceBlockChunk::flatten(Flattener &f) {
-    f.writeString(mUib.getName().c_str());
+    f.writeString(mUib.getName());
     auto uibFields = mUib.getUniformInfoList();
     f.writeUint64(uibFields.size());
     for (auto uInfo: uibFields) {
@@ -71,6 +73,20 @@ void MaterialSubpassInterfaceBlockChunk::flatten(Flattener &f) {
         f.writeUint8(static_cast<uint8_t>(mSubpass.precision));
         f.writeUint8(static_cast<uint8_t>(mSubpass.attachmentIndex));
         f.writeUint8(static_cast<uint8_t>(mSubpass.binding));
+    }
+}
+
+MaterialUniformBlockBindingsChunk::MaterialUniformBlockBindingsChunk(
+        utils::FixedCapacityVector<std::pair<std::string_view, uint8_t>> list)
+        : Chunk(ChunkType::MaterialUniformBindings),
+          mBindingList(std::move(list)) {
+}
+
+void MaterialUniformBlockBindingsChunk::flatten(Flattener& f) {
+    f.writeUint8(mBindingList.size());
+    for (auto const& item: mBindingList) {
+        f.writeString(item.first);
+        f.writeUint8(item.second);
     }
 }
 

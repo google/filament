@@ -25,6 +25,7 @@
 
 #include <math/vec4.h>
 
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -105,7 +106,7 @@ public:
     };
 
     // name of this uniform interface block
-    const utils::CString& getName() const noexcept { return mName; }
+    std::string_view getName() const noexcept { return { mName.data(), mName.size() }; }
 
     // size in bytes needed to store the uniforms described by this interface block in a UniformBuffer
     size_t getSize() const noexcept { return mSize; }

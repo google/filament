@@ -33,9 +33,7 @@
 namespace filament {
 
 /*
- * These structures are only used to call offsetof() and make it easy to visualize the UBO.
- *
- * IMPORTANT NOTE: Respect std140 layout, don't update without updating getUib()
+ * IMPORTANT NOTE: Respect std140 layout, don't update without updating UibGenerator::get{*}Uib()
  */
 
 struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)

@@ -28,10 +28,10 @@ namespace filamat {
 class MaterialUniformInterfaceBlockChunk final : public Chunk {
 public:
     explicit MaterialUniformInterfaceBlockChunk(filament::UniformInterfaceBlock& uib);
-    ~MaterialUniformInterfaceBlockChunk() = default;
+    ~MaterialUniformInterfaceBlockChunk() final = default;
 
 private:
-    void flatten(Flattener &) override;
+    void flatten(Flattener &) final;
 
     filament::UniformInterfaceBlock& mUib;
 };
@@ -39,10 +39,10 @@ private:
 class MaterialSamplerInterfaceBlockChunk final : public Chunk {
 public:
     explicit MaterialSamplerInterfaceBlockChunk(filament::SamplerInterfaceBlock& sib);
-    ~MaterialSamplerInterfaceBlockChunk() = default;
+    ~MaterialSamplerInterfaceBlockChunk() final = default;
 
 private:
-    void flatten(Flattener &) override;
+    void flatten(Flattener &) final;
 
     filament::SamplerInterfaceBlock& mSib;
 };
@@ -50,12 +50,24 @@ private:
 class MaterialSubpassInterfaceBlockChunk final : public Chunk {
 public:
     explicit MaterialSubpassInterfaceBlockChunk(filament::SubpassInfo& subpass);
-    ~MaterialSubpassInterfaceBlockChunk() = default;
+    ~MaterialSubpassInterfaceBlockChunk() final = default;
 
 private:
-    void flatten(Flattener &) override;
+    void flatten(Flattener &) final;
 
     filament::SubpassInfo& mSubpass;
+};
+
+class MaterialUniformBlockBindingsChunk final : public Chunk {
+public:
+    explicit MaterialUniformBlockBindingsChunk(
+            utils::FixedCapacityVector<std::pair<std::string_view, uint8_t>> list);
+    ~MaterialUniformBlockBindingsChunk() final = default;
+
+private:
+    void flatten(Flattener &) final;
+
+    utils::FixedCapacityVector<std::pair<std::string_view, uint8_t>> mBindingList;
 };
 
 } // namespace filamat
