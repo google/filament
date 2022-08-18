@@ -260,9 +260,11 @@ void FTexture::setImage(FEngine& engine, size_t level,
             textureDepthOrLayers = valueForLevel(level, mDepth);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
+            textureDepthOrLayers = mDepth;
+            break;
         case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            textureDepthOrLayers = mDepth;
+            textureDepthOrLayers = mDepth * 6;
             break;
     }
 
