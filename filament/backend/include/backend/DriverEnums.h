@@ -767,6 +767,13 @@ enum class StencilOperation : uint8_t {
     INVERT,                 //!< Bitwise inverts the current value.
 };
 
+//! stencil faces
+enum class StencilFace : uint8_t {
+    FRONT               = 0x1,              //!< Update stencil state for front-facing polygons.
+    BACK                = 0x2,              //!< Update stencil state for back-facing polygons.
+    FRONT_AND_BACK      = FRONT | BACK,     //!< Update stencil state for all polygons.
+};
+
 //! Stream for external textures
 enum class StreamType {
     NATIVE,     //!< Not synchronized but copy-free. Good for video.
@@ -1035,7 +1042,8 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferF
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
-
+template<> struct utils::EnableBitMaskOperators<filament::backend::StencilFace>
+        : public std::true_type {};
 
 #if !defined(NDEBUG)
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferUsage usage);
