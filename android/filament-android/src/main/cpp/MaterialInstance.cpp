@@ -343,10 +343,82 @@ Java_com_google_android_filament_MaterialInstance_nSetDepthWrite(JNIEnv*,
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilWrite(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jboolean enable) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilWrite(enable);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetDepthCulling(JNIEnv*,
         jclass, jlong nativeMaterialInstance, jboolean enable) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     instance->setDepthCulling(enable);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilCompareFunction(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jlong function, jlong face) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilCompareFunction(
+            static_cast<MaterialInstance::StencilCompareFunc>(function),
+            static_cast<MaterialInstance::StencilFace>(face));
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilOpStencilFail(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jlong op, jlong face) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilOpStencilFail(
+            static_cast<MaterialInstance::StencilOperation>(op),
+            static_cast<MaterialInstance::StencilFace>(face));
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthFail(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jlong op, jlong face) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilOpDepthFail(
+            static_cast<MaterialInstance::StencilOperation>(op),
+            static_cast<MaterialInstance::StencilFace>(face));
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilOpDepthStencilPass(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jlong op, jlong face) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilOpDepthStencilPass(
+            static_cast<MaterialInstance::StencilOperation>(op),
+            static_cast<MaterialInstance::StencilFace>(face));
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilReferenceValue(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jint value, jlong face) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilReferenceValue(value, static_cast<MaterialInstance::StencilFace>(face));
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilReadMask(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jint readMask, jlong face) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilReadMask(readMask, static_cast<MaterialInstance::StencilFace>(face));
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetStencilWriteMask(JNIEnv*, jclass,
+        jlong nativeMaterialInstance, jint writeMask, jlong face) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setStencilWriteMask(writeMask, static_cast<MaterialInstance::StencilFace>(face));
 }
 
 extern "C"

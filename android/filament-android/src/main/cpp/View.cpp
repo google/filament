@@ -464,6 +464,21 @@ Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass,
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetStencilBufferEnabled(JNIEnv *, jclass, jlong nativeView,
+        jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setStencilBufferEnabled(enabled);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsStencilBufferEnabled(JNIEnv *, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->isStencilBufferEnabled();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetGuardBandOptions(JNIEnv *, jclass,
         jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
