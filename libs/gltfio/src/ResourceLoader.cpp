@@ -65,10 +65,10 @@ using TextureProviderList = tsl::robin_map<std::string, TextureProvider*>;
 
 struct ResourceLoader::Impl {
     Impl(const ResourceConfiguration& config) :
-        mGltfPath(config.gltfPath ? config.gltfPath : ""),
         mEngine(config.engine),
         mNormalizeSkinningWeights(config.normalizeSkinningWeights),
         mRecomputeBoundingBoxes(config.recomputeBoundingBoxes),
+        mGltfPath(config.gltfPath ? config.gltfPath : ""),
         mIgnoreBindTransform(config.ignoreBindTransform) {}
 
     Engine* const mEngine;
@@ -397,7 +397,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             const cgltf_file_options* fileOpts, const char* path, cgltf_size* size, void** data) {
         Closure* closure = (Closure*) fileOpts->user_data;
         auto& uriDataCache = closure->impl->mUriDataCache;
-        cgltf_buffer* buffers = closure->gltf->buffers;
 
         if (auto iter = uriDataCache.find(path); iter != uriDataCache.end()) {
             *size = iter->second.size;
