@@ -413,11 +413,7 @@ int main(int argc, char** argv) {
         }
 
         // Parse the glTF file and create Filament entities.
-        if (filename.getExtension() == "glb") {
-            app.asset = app.assetLoader->createAssetFromBinary(buffer.data(), buffer.size());
-        } else {
-            app.asset = app.assetLoader->createAssetFromJson(buffer.data(), buffer.size());
-        }
+        app.asset = app.assetLoader->createAsset(buffer.data(), buffer.size());
         buffer.clear();
         buffer.shrink_to_fit();
 
@@ -436,6 +432,7 @@ int main(int argc, char** argv) {
         configuration.recomputeBoundingBoxes = app.recomputeAabb;
         configuration.ignoreBindTransform = app.ignoreBindTransform;
         configuration.normalizeSkinningWeights = true;
+
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
             app.stbDecoder = createStbProvider(app.engine);
@@ -444,7 +441,12 @@ int main(int argc, char** argv) {
             app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
         }
-        app.resourceLoader->asyncBeginLoad(app.asset);
+
+        if (!app.resourceLoader->asyncBeginLoad(app.asset)) {
+            std::cerr << "Unable to start loading resources for " << filename << std::endl;
+            exit(1);
+        }
+
         app.asset->releaseSourceData();
 
         auto ibl = FilamentApp::get().getIBL();
@@ -512,7 +514,7 @@ int main(int argc, char** argv) {
         app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
         app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {
-            app.asset = app.assetLoader->createAssetFromBinary(
+            app.asset = app.assetLoader->createAsset(
                     GLTF_DEMO_DAMAGEDHELMET_DATA,
                     GLTF_DEMO_DAMAGEDHELMET_SIZE);
         } else {

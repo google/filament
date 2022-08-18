@@ -226,58 +226,6 @@ public class FilamentAsset {
     }
 
     /**
-     * Gets the skin count of this asset.
-     */
-    public int getSkinCount() {
-        return nGetSkinCount(getNativeObject());
-    }
-
-    /**
-     * Gets the skin name at skin index in this asset.
-     */
-    public @NonNull String[] getSkinNames() {
-        String[] result = new String[getSkinCount()];
-        nGetSkinNames(getNativeObject(), result);
-        return result;
-    }
-
-    /**
-     * Attaches the given skin to the given node, which must have an associated mesh with
-     * BONE_INDICES and BONE_WEIGHTS attributes.
-     *
-     * This is a no-op if the given skin index or target is invalid.
-     */
-    public void attachSkin(@IntRange(from = 0) int skinIndex, @Entity int target) {
-        nAttachSkin(getNativeObject(), skinIndex, target);
-    }
-
-    /**
-     * Attaches the given skin to the given node, which must have an associated mesh with
-     * BONE_INDICES and BONE_WEIGHTS attributes.
-     *
-     * This is a no-op if the given skin index or target is invalid.
-     */
-    public void detachSkin(@IntRange(from = 0) int skinIndex, @Entity int target) {
-        nDetachSkin(getNativeObject(), skinIndex, target);
-    }
-
-    /**
-     * Gets the joint count at skin index in this asset.
-     */
-    public int getJointCountAt(@IntRange(from = 0) int skinIndex) {
-        return nGetJointCountAt(getNativeObject(), skinIndex);
-    }
-
-    /**
-     * Gets joints at skin index in this asset.
-     */
-    public @NonNull @Entity int[] getJointsAt(@IntRange(from = 0) int skinIndex) {
-        int[] result = new int[getJointCountAt(skinIndex)];
-        nGetJointsAt(getNativeObject(), skinIndex, result);
-        return result;
-    }
-
-    /**
      * Gets the names of all morph targets in the given entity.
      */
     public @NonNull String[] getMorphTargetNames(@Entity int entity) {
@@ -365,18 +313,11 @@ public class FilamentAsset {
     private static native int nGetMorphTargetCount(long nativeAsset, int entity);
     private static native void nGetMorphTargetNames(long nativeAsset, int entity, String[] result);
 
-    private static native void nAttachSkin(long nativeAsset, int skinIndex, int entity);
-    private static native void nDetachSkin(long nativeAsset, int skinIndex, int entity);
-
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
     private static native void nApplyMaterialVariant(long nativeAsset, int variantIndex);
-    private static native int nGetSkinCount(long nativeAsset);
-    private static native void nGetSkinNames(long nativeAsset, String[] result);
-    private static native int nGetJointCountAt(long nativeAsset, int skinIndex);
-    private static native void nGetJointsAt(long nativeAsset, int skinIndex, int[] result);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
     private static native void nReleaseSourceData(long nativeAsset);

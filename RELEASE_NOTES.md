@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 - engine: new feature level APIs, see `Engine::getSupportedFeatureLevel()`
 - engine: add new stencil API to `View` and stencil state APIs to `MaterialInstance` [**NEW API**].
+- gltfio: add unified `AssetLoader::createAsset()` method [⚠️ **API Change**]
+- gltfio: all assets are now "instanced" [⚠️ **API Change**]
 
 ## v1.25.6
 

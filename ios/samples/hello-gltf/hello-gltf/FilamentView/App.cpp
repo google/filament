@@ -137,7 +137,7 @@ void App::setupMesh() {
         std::cerr << "Unable to read glTF" << std::endl;
         exit(1);
     }
-    app.asset = app.assetLoader->createAssetFromBinary(buffer.data(), static_cast<uint32_t>(size));
+    app.asset = app.assetLoader->createAsset(buffer.data(), static_cast<uint32_t>(size));
 
     filament::gltfio::ResourceLoader({
         .engine = engine,

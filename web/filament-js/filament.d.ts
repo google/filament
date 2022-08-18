@@ -568,8 +568,7 @@ export class Ktx2Reader {
 }
 
 export class gltfio$AssetLoader {
-    public createAssetFromJson(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
-    public createAssetFromBinary(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
+    public createAsset(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
     public createInstancedAsset(urlOrBuffer: BufferReference,
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public destroyAsset(asset: gltfio$FilamentAsset): void;
@@ -591,9 +590,6 @@ export class gltfio$FilamentAsset {
     public popRenderable(): Entity;
     public getMaterialInstances(): Vector<MaterialInstance>;
     public getResourceUris(): Vector<string>;
-    public getSkinNames(): Vector<string>;
-    public attachSkin(skinIndex: number, entity: Entity): void;
-    public detachSkin(skinIndex: number, entity: Entity): void;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;
@@ -608,6 +604,9 @@ export class gltfio$FilamentInstance {
     public getEntities(): Vector<Entity>;
     public getRoot(): Entity;
     public getAnimator(): gltfio$Animator;
+    public getSkinNames(): Vector<string>;
+    public attachSkin(skinIndex: number, entity: Entity): void;
+    public detachSkin(skinIndex: number, entity: Entity): void;
 }
 
 export class gltfio$Animator {

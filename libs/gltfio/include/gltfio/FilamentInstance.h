@@ -74,6 +74,41 @@ public:
      * The animator is owned by the asset and should not be manually deleted.
      */
     Animator* getAnimator() noexcept;
+
+    /**
+     * Gets the number of skins.
+     */
+    size_t getSkinCount() const noexcept;
+
+    /**
+     * Gets the skin name at skin index.
+     */
+    const char* getSkinNameAt(size_t skinIndex) const noexcept;
+
+    /**
+     * Gets the number of joints at skin index.
+     */
+    size_t getJointCountAt(size_t skinIndex) const noexcept;
+
+    /**
+     * Gets joints at skin index.
+     */
+    const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    void attachSkin(size_t skinIndex, utils::Entity target) noexcept;
+
+    /**
+     * Detaches the given skin from the given node.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
 };
 
 } // namespace filament::gltfio

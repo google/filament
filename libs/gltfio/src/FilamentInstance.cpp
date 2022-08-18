@@ -61,6 +61,20 @@ const utils::Entity* FFilamentInstance::getJointsAt(size_t skinIndex) const noex
     return skins[skinIndex].joints.data();
 }
 
+void FFilamentInstance::attachSkin(size_t skinIndex, Entity target) noexcept {
+    if (UTILS_UNLIKELY(skins.size() <= skinIndex || target.isNull())) {
+        return;
+    }
+    skins[skinIndex].targets.insert(target);
+}
+
+void FFilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
+    if (UTILS_UNLIKELY(skins.size() <= skinIndex || target.isNull())) {
+        return;
+    }
+    skins[skinIndex].targets.erase(target);
+}
+
 void FFilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
     if (variantIndex >= variants.size()) {
         return;
@@ -97,5 +111,30 @@ void FilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
 Animator* FilamentInstance::getAnimator() noexcept {
     return upcast(this)->getAnimator();
 }
+
+size_t FilamentInstance::getSkinCount() const noexcept {
+    return upcast(this)->getSkinCount();
+}
+
+const char* FilamentInstance::getSkinNameAt(size_t skinIndex) const noexcept {
+    return upcast(this)->getSkinNameAt(skinIndex);
+}
+
+size_t FilamentInstance::getJointCountAt(size_t skinIndex) const noexcept {
+    return upcast(this)->getJointCountAt(skinIndex);
+}
+
+const Entity* FilamentInstance::getJointsAt(size_t skinIndex) const noexcept {
+    return upcast(this)->getJointsAt(skinIndex);
+}
+
+void FilamentInstance::attachSkin(size_t skinIndex, Entity target) noexcept {
+    return upcast(this)->attachSkin(skinIndex, target);
+}
+
+void FilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
+    return upcast(this)->detachSkin(skinIndex, target);
+}
+
 
 } // namespace filament::gltfio

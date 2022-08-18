@@ -104,6 +104,7 @@ private:
     friend struct FFilamentInstance;
     /*! \endcond */
 
+    // If "instance" is null, then this is the primary animator.
     Animator(FFilamentAsset* asset, FFilamentInstance* instance);
     ~Animator();
 
