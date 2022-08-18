@@ -162,6 +162,15 @@ bool MaterialParser::getMaterialProperties(uint64_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialProperties, value);
 }
 
+bool MaterialParser::getUniformBlockBindings(
+        utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* value) const noexcept {
+    auto type = MaterialUniformBindings;
+    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
+    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+    Unflattener unflattener(start, end);
+    return ChunkUniformBlockBindings::unflatten(unflattener, value);
+}
+
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWriteSet, value);
 }
@@ -452,5 +461,28 @@ bool ChunkSubpassInterfaceBlock::unflatten(Unflattener& unflattener,
 
     return true;
 }
+
+bool ChunkUniformBlockBindings::unflatten(filaflat::Unflattener& unflattener,
+        utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* uniformBlockBindings) {
+    uint8_t count;
+    if (!unflattener.read(&count)) {
+        return false;
+    }
+    uniformBlockBindings->reserve(count);
+
+    for (uint8_t i = 0; i < count; i++) {
+        CString name;
+        uint8_t binding;
+        if (!unflattener.read(&name)) {
+            return false;
+        }
+        if (!unflattener.read(&binding)) {
+            return false;
+        }
+        uniformBlockBindings->emplace_back(std::move(name), binding);
+    }
+    return true;
+}
+
 
 } // namespace filament

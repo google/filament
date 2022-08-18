@@ -45,13 +45,13 @@ OpenGLProgram::OpenGLProgram() noexcept
 }
 
 OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& programBuilder) noexcept
-        : HwProgram(programBuilder.getName()),
+        : HwProgram(std::move(programBuilder.getName())),
           mInitialized(false), mValid(true),
           mLazyInitializationData{ new(LazyInitializationData) } {
 
     OpenGLContext& context = gld.getContext();
 
-    mLazyInitializationData->uniformBlockInfo = std::move(programBuilder.getUniformBlockInfo());
+    mLazyInitializationData->uniformBlockInfo = programBuilder.getUniformBlockBindings();
     mLazyInitializationData->samplerGroupInfo = std::move(programBuilder.getSamplerGroupInfo());
 
     // this cannot fail because we check compilation status after linking the program
@@ -290,13 +290,13 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         Program::UniformBlockInfo const& uniformBlockInfo,
         Program::SamplerGroupInfo const& samplerGroupInfo) noexcept {
 
-    // TODO: we shouldn't need this at feature level 2 (but requires a change in generateUniforms)
-    // Associate each UniformBlock in the program to a known binding.
+    // Note: This is only needed, because the layout(binding=) syntax is not permitted in glsl
+    // (ES3.0 and GL4.1). The backend needs a way to associate a uniform block to a binding point.
     UTILS_NOUNROLL
     for (GLuint binding = 0, n = uniformBlockInfo.size(); binding < n; binding++) {
-        auto const& name = uniformBlockInfo[binding];
-        if (!name.empty()) {
-            GLint index = glGetUniformBlockIndex(program, name.c_str());
+        const char* name = uniformBlockInfo[binding];
+        if (name) {
+            GLint index = glGetUniformBlockIndex(program, name);
             if (index >= 0) {
                 glUniformBlockBinding(program, GLuint(index), binding);
             }

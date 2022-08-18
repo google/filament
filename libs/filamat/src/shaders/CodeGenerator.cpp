@@ -322,8 +322,8 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType shader
         return out;
     }
 
-    const CString& blockName = uib.getName();
-    std::string instanceName(uib.getName().c_str());
+    const std::string_view blockName = uib.getName();
+    std::string instanceName(uib.getName());
     instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
 
     Precision uniformPrecision = getDefaultUniformPrecision();
@@ -335,7 +335,7 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType shader
         uint32_t bindingIndex = (uint32_t) binding; // avoid char output
         out << "binding = " << bindingIndex << ", ";
     }
-    out << "std140) uniform " << blockName.c_str() << " {\n";
+    out << "std140) uniform " << blockName << " {\n";
     for (auto const& info : infos) {
         char const* const type = getUniformTypeName(info);
         char const* const precision = getUniformPrecisionQualifier(info.type, info.precision,

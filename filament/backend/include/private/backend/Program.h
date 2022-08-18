@@ -50,8 +50,10 @@ public:
         ShaderStageFlags stageFlags = ALL_SHADER_STAGE_FLAGS;
     };
 
+    using UniformBlockInfo = std::array<const char*, BINDING_COUNT>;
     using SamplerGroupInfo = std::array<SamplerGroupData, BINDING_COUNT>;
-    using UniformBlockInfo = std::array<utils::CString, BINDING_COUNT>;
+    using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
+    using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
     explicit Program(DriverApi& driver) noexcept;
 
@@ -72,13 +74,11 @@ public:
     // null terminating character.
     Program& shader(ShaderType shader, void const* data, size_t size);
 
-    // sets the 'bindingPoint' uniform block's name for this program.
-    //
     // Note: This is only needed for GLES3.0 backends, because the layout(binding=) syntax is
     //       not permitted in glsl. The backend needs a way to associate a uniform block
     //       to a binding point.
-    //
-    Program& setUniformBlock(size_t bindingPoint, std::string_view uniformBlockName) noexcept;
+    Program& uniformBlockBindings(
+            utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept;
 
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
@@ -99,29 +99,24 @@ public:
         return shader(ShaderType::FRAGMENT, data, size);
     }
 
-    using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
-    using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
     ShaderSource const& getShadersSource() const noexcept { return mShadersSource; }
     ShaderSource& getShadersSource() noexcept { return mShadersSource; }
 
-    UniformBlockInfo const& getUniformBlockInfo() const noexcept { return mUniformBlocks; }
-    UniformBlockInfo& getUniformBlockInfo() noexcept { return mUniformBlocks; }
+    UniformBlockInfo const& getUniformBlockBindings() const noexcept { return mUniformBlocks; }
 
     SamplerGroupInfo const& getSamplerGroupInfo() const { return mSamplerGroups; }
     SamplerGroupInfo& getSamplerGroupInfo() { return mSamplerGroups; }
 
-    const utils::CString& getName() const noexcept { return mName; }
-
-    bool hasSamplers() const noexcept { return mHasSamplers; }
+    utils::CString const& getName() const noexcept { return mName; }
+    utils::CString& getName() noexcept { return mName; }
 
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
-    DriverApi& mDriverApi;
+    UTILS_UNUSED DriverApi& mDriverApi;
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     ShaderSource mShadersSource;
-    bool mHasSamplers = false;
     utils::CString mName;
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
 };
