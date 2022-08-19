@@ -349,7 +349,7 @@ TEST_F(BackendTest, UpdateImage2D) {
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
         Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-        prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+        prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         program = api.createProgram(std::move(prog));
 
         // Create a Texture.
@@ -428,7 +428,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
     Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-    prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
 
     // Create a texture.
@@ -514,7 +514,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
     Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-    prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
 
     // Create a texture with 3 mip levels.
@@ -586,7 +586,7 @@ TEST_F(BackendTest, UpdateImage3D) {
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
     Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-    prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
 
     // Create a texture.

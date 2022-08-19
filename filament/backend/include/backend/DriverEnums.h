@@ -887,17 +887,23 @@ enum ShaderType : uint8_t {
     VERTEX = 0,
     FRAGMENT = 1
 };
-static constexpr size_t PIPELINE_STAGE_COUNT = 2;
 
-struct ShaderStageFlags {
-    bool vertex : 1;
-    bool fragment : 1;
-    bool hasShaderType(ShaderType type) const {
-        return (vertex && type == ShaderType::VERTEX) ||
-               (fragment && type == ShaderType::FRAGMENT);
-    }
+static constexpr size_t PIPELINE_STAGE_COUNT = 2;
+enum class ShaderStageFlags : uint8_t {
+    NONE        =    0,
+    VERTEX      =    0x1,
+    FRAGMENT    =    0x2,
+    ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT
 };
-static constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { true, true };
+
+static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderType type) noexcept {
+    switch (type) {
+        case VERTEX:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
+        case FRAGMENT:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::FRAGMENT));
+    }
+}
 
 /**
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
@@ -1034,6 +1040,8 @@ enum class Workaround : uint16_t {
 
 } // namespace filament::backend
 
+template<> struct utils::EnableBitMaskOperators<filament::backend::ShaderStageFlags>
+        : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>

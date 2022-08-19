@@ -55,7 +55,10 @@ UTILS_NOINLINE
 static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
         SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
     const auto stageFlags = sib.getStageFlags();
-    if (stageFlags.hasShaderType(config.shaderType)) {
+
+
+
+    if (hasShaderType(stageFlags, config.shaderType)) {
         const auto& infoList = sib.getSamplerInfoList();
         for (const auto& info: infoList) {
             auto uniformName = SamplerInterfaceBlock::getUniformName(

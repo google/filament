@@ -487,13 +487,20 @@ io::ostream& operator<<(io::ostream& out, MRT const& mrt) {
 }
 
 io::ostream& operator<<(io::ostream& stream, ShaderStageFlags stageFlags) {
-    unsigned int v = +stageFlags.vertex + 2u * +stageFlags.fragment;
     const char* str = nullptr;
-    switch (v & 3) {
-        case 0: str = "{ }"; break;
-        case 1: str = "{ vertex }"; break;
-        case 2: str = "{ fragment }"; break;
-        case 3: str = "{ vertex | fragment }"; break;
+    switch (stageFlags) {
+        case ShaderStageFlags::NONE:
+            str = "{ }";
+            break;
+        case ShaderStageFlags::VERTEX:
+            str = "{ vertex }";
+            break;
+        case ShaderStageFlags::FRAGMENT:
+            str = "{ fragment }";
+            break;
+        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:
+            str = "{ vertex | fragment }";
+            break;
     }
     return stream << str;
 }

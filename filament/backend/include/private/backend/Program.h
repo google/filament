@@ -47,7 +47,7 @@ public:
 
     struct SamplerGroupData {
         utils::FixedCapacityVector<Sampler> samplers;
-        ShaderStageFlags stageFlags = ALL_SHADER_STAGE_FLAGS;
+        ShaderStageFlags stageFlags = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS;
     };
 
     using UniformBlockInfo = std::array<const char*, BINDING_COUNT>;
