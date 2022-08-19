@@ -87,18 +87,6 @@ public:
     Program& setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
             Sampler const* samplers, size_t count) noexcept;
 
-    // string-based shaders are null terminated, consequently the size parameter must include the
-    // null terminating character.
-    Program& withVertexShader(void const* data, size_t size) {
-        return shader(ShaderType::VERTEX, data, size);
-    }
-
-    // string-based shaders are null terminated, consequently the size parameter must include the
-    // null terminating character.
-    Program& withFragmentShader(void const* data, size_t size) {
-        return shader(ShaderType::FRAGMENT, data, size);
-    }
-
     ShaderSource const& getShadersSource() const noexcept { return mShadersSource; }
     ShaderSource& getShadersSource() noexcept { return mShadersSource; }
 
