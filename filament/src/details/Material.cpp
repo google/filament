@@ -454,8 +454,8 @@ Program FMaterial::getProgramBuilderWithVariants(
             mName.c_str(), variant.key, fragmentVariant.key);
 
     Program program(mEngine.getDriverApi());
-    program.withVertexShader(vsBuilder.data(), vsBuilder.size())
-           .withFragmentShader(fsBuilder.data(), fsBuilder.size())
+    program.shader(ShaderType::VERTEX, vsBuilder.data(), vsBuilder.size())
+           .shader(ShaderType::FRAGMENT, fsBuilder.data(), fsBuilder.size())
            .uniformBlockBindings(mUniformBlockBindings)
            .diagnostics(mName,
                     [this, variant](io::ostream& out) -> io::ostream& {
