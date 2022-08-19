@@ -1842,43 +1842,30 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const SamplerDescriptor* boundSampler = sb->data() + samplerIdx;
             samplerIdx++;
 
-            // Note that we always use a 2D texture for the fallback texture, which might not be
-            // appropriate. The fallback improves robustness but does not guarantee 100% success.
-            // It can be argued that clients are being malfeasant here anyway, since Vulkan does
-            // not allow sampling from a non-bound texture.
-            VulkanTexture* texture;
-            if (UTILS_UNLIKELY(!boundSampler->t)) {
-                if (!sampler.strict) {
-                    continue;
-                }
-                utils::slog.w << "No texture bound to '" << sampler.name.c_str() << "'";
-#ifndef NDEBUG
-                utils::slog.w << " in material '" << program->name.c_str() << "'";
-#endif
-                utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
-                texture = mContext.emptyTexture;
-            } else {
-                texture = handle_cast<VulkanTexture*>(boundSampler->t);
+            if (UTILS_LIKELY(boundSampler->t)) {
+                VulkanTexture* texture = handle_cast<VulkanTexture*>(boundSampler->t);
                 mDisposer.acquire(texture);
-            }
 
-            if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VK_IMAGE_LAYOUT_UNDEFINED)) {
+                // TODO: can this uninitialized check be checked in a higher layer?
+                if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VK_IMAGE_LAYOUT_UNDEFINED)) {
 #ifndef NDEBUG
-                utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
-                utils::slog.w << " in material '" << program->name.c_str() << "'";
-                utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
+                    utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
+                    utils::slog.w << " in material '" << program->name.c_str() << "'";
+                    utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
 #endif
-                texture = mContext.emptyTexture;
+                    texture = mContext.emptyTexture;
+                }
+
+                const SamplerParams& samplerParams = boundSampler->s;
+                VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
+
+                iInfo[bindingPoint] = {
+                    .sampler = vksampler,
+                    .imageView = texture->getPrimaryImageView(),
+                    .imageLayout = texture->getPrimaryImageLayout()
+                };
+
             }
-
-            const SamplerParams& samplerParams = boundSampler->s;
-            VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
-
-            iInfo[bindingPoint] = {
-                .sampler = vksampler,
-                .imageView = texture->getPrimaryImageView(),
-                .imageLayout = texture->getPrimaryImageLayout()
-            };
         }
     }
 
