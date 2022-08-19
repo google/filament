@@ -36,6 +36,7 @@ import java.util.Set;
  *
  * @see <a href="https://google.github.io/filament/Materials.html">Filament Materials Guide</a>
  */
+@UsedByNative("AssetLoader.cpp")
 public class Material {
     static final class EnumCache {
         private EnumCache() { }
