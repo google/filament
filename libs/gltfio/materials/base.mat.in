@@ -12,6 +12,8 @@ material {
     reflections : screenspace,
     parameters : [
 
+        { type : sampler2d, name : Foo },
+
         { type : float3, name : specularFactor },
         { type : float, name : glossinessFactor },
 
@@ -111,6 +113,9 @@ fragment {
         #endif
 
         material.baseColor *= getColor();
+        if (false) {
+             material.baseColor += texture(materialParams_Foo, uvs[0]);
+        }
 
         #if !defined(SHADING_MODEL_UNLIT)
 

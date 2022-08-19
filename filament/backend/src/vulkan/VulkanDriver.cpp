@@ -57,6 +57,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
                 << pMessage << utils::io::endl;
     }
     utils::slog.e << utils::io::endl;
+    exit(1);
     return VK_FALSE;
 }
 
@@ -75,6 +76,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
                 << cbdata->pMessage << utils::io::endl;
     }
     utils::slog.e << utils::io::endl;
+    exit(1);
     return VK_FALSE;
 }
 
