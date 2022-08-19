@@ -761,28 +761,28 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
 
             // bind per-renderable uniform block. there is no need to attempt to skip this command
             // because the backends already do this.
-            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
+            driver.bindUniformBufferRange(+BindingPoints::PER_RENDERABLE,
                     (info.instanceCount > 1) ? mInstancedUboHandle : uboHandle,
                     info.index * sizeof(PerRenderableData),
                     sizeof(PerRenderableUib));
 
             if (UTILS_UNLIKELY(info.skinningHandle)) {
                 // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
-                driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE_BONES,
+                driver.bindUniformBufferRange(+BindingPoints::PER_RENDERABLE_BONES,
                         info.skinningHandle,
                         info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
                         sizeof(PerRenderableBoneUib));
                 // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
-                driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                driver.bindSamplers(+BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
             }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
                 // Instead of using a UBO per primitive, we could also have a single UBO for all
                 // primitives and use bindUniformBufferRange which might be more efficient.
-                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING,
+                driver.bindUniformBuffer(+BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphWeightBuffer);
-                driver.bindSamplers(BindingPoints::PER_RENDERABLE_MORPHING,
+                driver.bindSamplers(+BindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
             }
 

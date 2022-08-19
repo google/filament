@@ -26,9 +26,55 @@
 #include <stdint.h>
 
 namespace utils {
+
 template<typename Enum>
 struct EnableBitMaskOperators : public std::false_type { };
+
+template<typename Enum>
+struct EnableIntegerOperators : public std::false_type { };
+
+namespace Enum {
+
+template<typename Enum>
+size_t count();
+
+} // namespace enum
 } // namespace utils
+
+// ------------------------------------------------------------------------------------------------
+
+template<typename Enum, typename std::enable_if_t<
+        std::is_enum<Enum>::value && utils::EnableIntegerOperators<Enum>::value, int> = 0>
+inline constexpr int operator+(Enum value) noexcept {
+    return int(value);
+}
+
+template<typename Enum, typename std::enable_if_t<
+        std::is_enum<Enum>::value && utils::EnableIntegerOperators<Enum>::value, int> = 0>
+inline constexpr bool operator==(Enum lhs, size_t rhs) noexcept {
+    using underlying_t = std::underlying_type_t<Enum>;
+    return underlying_t(lhs) == rhs;
+}
+
+template<typename Enum, typename std::enable_if_t<
+        std::is_enum<Enum>::value && utils::EnableIntegerOperators<Enum>::value, int> = 0>
+inline constexpr bool operator==(size_t lhs, Enum rhs) noexcept {
+    return rhs == lhs;
+}
+
+template<typename Enum, typename std::enable_if_t<
+        std::is_enum<Enum>::value && utils::EnableIntegerOperators<Enum>::value, int> = 0>
+inline constexpr bool operator!=(Enum lhs, size_t rhs) noexcept {
+    return !(rhs == lhs);
+}
+
+template<typename Enum, typename std::enable_if_t<
+        std::is_enum<Enum>::value && utils::EnableIntegerOperators<Enum>::value, int> = 0>
+inline constexpr bool operator!=(size_t lhs, Enum rhs) noexcept {
+    return rhs != lhs;
+}
+
+// ------------------------------------------------------------------------------------------------
 
 template<typename Enum, typename std::enable_if_t<
         std::is_enum<Enum>::value && utils::EnableBitMaskOperators<Enum>::value, int> = 0>

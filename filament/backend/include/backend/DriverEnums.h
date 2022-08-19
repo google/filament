@@ -653,10 +653,6 @@ enum class TextureCubemapFace : uint8_t {
     NEGATIVE_Z = 5, //!< -z face
 };
 
-inline constexpr int operator +(TextureCubemapFace rhs) noexcept {
-    return int(rhs);
-}
-
 //! Sampler Wrap mode
 enum class SamplerWrapMode : uint8_t {
     CLAMP_TO_EDGE,      //!< clamp-to-edge. The edge of the texture extends to infinity.
@@ -1043,6 +1039,8 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferF
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::StencilFace>
+        : public std::true_type {};
+template<> struct utils::EnableIntegerOperators<filament::backend::TextureCubemapFace>
         : public std::true_type {};
 
 #if !defined(NDEBUG)

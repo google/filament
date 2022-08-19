@@ -77,7 +77,7 @@ void MaterialSubpassInterfaceBlockChunk::flatten(Flattener &f) {
 }
 
 MaterialUniformBlockBindingsChunk::MaterialUniformBlockBindingsChunk(
-        utils::FixedCapacityVector<std::pair<std::string_view, uint8_t>> list)
+        utils::FixedCapacityVector<std::pair<std::string_view, filament::BindingPoints>> list)
         : Chunk(ChunkType::MaterialUniformBindings),
           mBindingList(std::move(list)) {
 }
@@ -86,8 +86,8 @@ void MaterialUniformBlockBindingsChunk::flatten(Flattener& f) {
     f.writeUint8(mBindingList.size());
     for (auto const& item: mBindingList) {
         f.writeString(item.first);
-        f.writeUint8(item.second);
+        f.writeUint8(uint8_t(item.second));
     }
 }
 
-}
+} // namespace filamat

@@ -1052,7 +1052,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)
     using namespace filament;
-    utils::FixedCapacityVector<std::pair<std::string_view, uint8_t>> list = {
+    utils::FixedCapacityVector<std::pair<std::string_view, BindingPoints>> list = {
             { PerViewUib::_name,                  BindingPoints::PER_VIEW },
             { PerRenderableUib::_name,            BindingPoints::PER_RENDERABLE },
             { LightsUib::_name,                   BindingPoints::LIGHTS },

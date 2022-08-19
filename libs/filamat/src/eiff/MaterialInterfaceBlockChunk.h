@@ -19,6 +19,7 @@
 
 #include "Chunk.h"
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
@@ -61,13 +62,13 @@ private:
 class MaterialUniformBlockBindingsChunk final : public Chunk {
 public:
     explicit MaterialUniformBlockBindingsChunk(
-            utils::FixedCapacityVector<std::pair<std::string_view, uint8_t>> list);
+            utils::FixedCapacityVector<std::pair<std::string_view, filament::BindingPoints>> list);
     ~MaterialUniformBlockBindingsChunk() final = default;
 
 private:
     void flatten(Flattener &) final;
 
-    utils::FixedCapacityVector<std::pair<std::string_view, uint8_t>> mBindingList;
+    utils::FixedCapacityVector<std::pair<std::string_view, filament::BindingPoints>> mBindingList;
 };
 
 } // namespace filamat
