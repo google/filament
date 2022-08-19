@@ -67,10 +67,6 @@
     #endif
 #elif defined(__EMSCRIPTEN__)
     #include "opengl/platforms/PlatformWebGL.h"
-#else
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include "opengl/platforms/PlatformDummyGL.h"
-    #endif
 #endif
 
 #if defined (FILAMENT_SUPPORTS_METAL)
@@ -81,9 +77,7 @@ filament::backend::DefaultPlatform* createDefaultMetalPlatform();
 
 #include "noop/PlatformNoop.h"
 
-namespace filament {
-
-namespace backend {
+namespace filament::backend {
 
 // this generates the vtable in this translation unit
 Platform::~Platform() noexcept = default;
@@ -152,6 +146,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     assert_invariant(*backend == Backend::OPENGL);
     #if defined(FILAMENT_SUPPORTS_OPENGL)
         #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
+            // Swiftshader OpenGLES support is deprecated and incomplete
             return nullptr;
         #elif defined(__ANDROID__)
             return new PlatformEGLAndroid();
@@ -170,14 +165,14 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
         #elif defined(__EMSCRIPTEN__)
             return new PlatformWebGL();
         #else
-            return new PlatformDummyGL();
+            return nullptr;
         #endif
     #else
         return nullptr;
     #endif
 }
 
-// destroys an Platform create by create()
+// destroys a Platform created by create()
 void DefaultPlatform::destroy(DefaultPlatform** platform) noexcept {
     delete *platform;
     *platform = nullptr;
@@ -185,5 +180,4 @@ void DefaultPlatform::destroy(DefaultPlatform** platform) noexcept {
 
 DefaultPlatform::~DefaultPlatform() noexcept = default;
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
