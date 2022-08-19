@@ -27,6 +27,7 @@
 #include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
@@ -37,12 +38,11 @@
 #include <utils/CString.h>
 #include <utils/Panic.h>
 
-using namespace utils;
-using namespace filaflat;
-
 namespace filament {
 
 using namespace backend;
+using namespace filaflat;
+using namespace utils;
 
 static MaterialParser* createParser(Backend backend, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
@@ -127,8 +127,8 @@ Material* Material::Builder::build(Engine& engine) {
     return upcast(engine).createMaterial(*this);
 }
 
-static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceBlock const& sib,
-        SamplerBindingMap const& map) {
+static void addSamplerGroup(Program& pb, BindingPoints bindingPoint,
+        SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
     const size_t samplerCount = sib.getSize();
     if (samplerCount) {
         std::vector<Program::Sampler> samplers(samplerCount);
@@ -141,7 +141,7 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
             const bool strict = (bindingPoint == filament::BindingPoints::PER_MATERIAL_INSTANCE);
             samplers[i] = { std::move(uniformName), binding, strict };
         }
-        pb.setSamplerGroup(bindingPoint, sib.getStageFlags(), samplers.data(), samplers.size());
+        pb.setSamplerGroup(+bindingPoint, sib.getStageFlags(), samplers.data(), samplers.size());
     }
 }
 

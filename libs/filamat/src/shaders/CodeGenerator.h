@@ -35,6 +35,7 @@
 #include <utils/sstream.h>
 
 #include <private/filament/Variant.h>
+#include "private/filament/EngineEnums.h"
 
 namespace filamat {
 
@@ -106,12 +107,12 @@ public:
     static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderType type);
 
     // generate uniforms
-    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderType type, uint8_t binding,
-            const filament::UniformInterfaceBlock& uib) const;
+    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderType type,
+            filament::BindingPoints binding, const filament::UniformInterfaceBlock& uib) const;
 
     // generate samplers
-    utils::io::sstream& generateSamplers(
-        utils::io::sstream& out, uint8_t firstBinding, const filament::SamplerInterfaceBlock& sib) const;
+    utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,
+            const filament::SamplerInterfaceBlock& sib) const;
 
     // generate subpass
     static utils::io::sstream& generateSubpass(utils::io::sstream& out,

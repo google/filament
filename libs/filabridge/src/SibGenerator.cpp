@@ -97,16 +97,12 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Vari
     return sib;
 }
 
-SamplerInterfaceBlock const* SibGenerator::getSib(uint8_t bindingPoint, Variant variant) noexcept {
+SamplerInterfaceBlock const* SibGenerator::getSib(BindingPoints bindingPoint, Variant variant) noexcept {
     switch (bindingPoint) {
         case BindingPoints::PER_VIEW:
             return &getPerViewSib(variant);
-        case BindingPoints::PER_RENDERABLE:
-            return nullptr;
         case BindingPoints::PER_RENDERABLE_MORPHING:
             return &getPerRenderPrimitiveMorphingSib(variant);
-        case BindingPoints::LIGHTS:
-            return nullptr;
         default:
             return nullptr;
     }
