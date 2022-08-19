@@ -31,11 +31,13 @@
 
 using namespace bluevk;
 
+using utils::bitset64;
+
 namespace filament::backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
-static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t binding) {
+static VkShaderStageFlags getShaderStageFlags(bitset64 key, uint16_t binding) {
     VkShaderStageFlags flags = 0;
     if (key.test(binding * 2 + 0)) {
         flags |= VK_SHADER_STAGE_VERTEX_BIT;
@@ -44,23 +46,6 @@ static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t bind
         flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     }
     return flags;
-}
-
-utils::bitset64
-static getPipelineLayoutKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
-    utils::bitset64 key = {};
-    for (uint32_t binding = 0; binding < Program::SAMPLER_BINDING_COUNT; ++binding) {
-        const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
-        for (const auto& sampler : samplerGroupInfo[binding].samplers) {
-            if (any(stageFlags & ShaderStageFlags::VERTEX)) {
-                key.set(sampler.binding * 2 + 0);
-            }
-            if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
-                key.set(sampler.binding * 2 + 1);
-            }
-        }
-    }
-    return key;
 }
 
 VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
@@ -299,8 +284,8 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
         writeInfo.dstBinding = binding;
     }
     for (uint32_t binding = 0; binding < SAMPLER_BINDING_COUNT; binding++) {
-        VkWriteDescriptorSet& writeInfo = writes[nwrites++];
         if (mDescriptorRequirements.samplers[binding].sampler) {
+            VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             VkDescriptorImageInfo& imageInfo = descriptorSamplers[binding];
             imageInfo = mDescriptorRequirements.samplers[binding];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -311,14 +296,9 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             writeInfo.pImageInfo = &imageInfo;
             writeInfo.pBufferInfo = nullptr;
             writeInfo.pTexelBufferView = nullptr;
-        } else {
-            writeInfo = mDummySamplerWriteInfo;
-            assert_invariant(mDummySamplerWriteInfo.pImageInfo->sampler);
-            assert_invariant(mDummySamplerInfo.imageView);
-
+            writeInfo.dstSet = descriptorCacheEntry.handles[1];
+            writeInfo.dstBinding = binding;
         }
-        writeInfo.dstSet = descriptorCacheEntry.handles[1];
-        writeInfo.dstBinding = binding;
     }
     for (uint32_t binding = 0; binding < TARGET_BINDING_COUNT; binding++) {
         VkWriteDescriptorSet& writeInfo = writes[nwrites++];
@@ -867,6 +847,27 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
         mExtinctDescriptorBundles.push_back(iter.value());
     }
     mDescriptorSets.clear();
+}
+
+bitset64 VulkanPipelineCache::getPipelineLayoutKey(
+        const Program::SamplerGroupInfo& samplerGroupInfo) const noexcept {
+    bitset64 key = {};
+    for (uint32_t binding = 0; binding < Program::SAMPLER_BINDING_COUNT; ++binding) {
+        const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
+        for (const auto& sampler : samplerGroupInfo[binding].samplers) {
+            // Crucially, we set bits in the key only if the sampler is actually used.
+            // When a sampler changes from used to unused, it requires a new pipeline layout.
+            if (mDescriptorRequirements.samplers[binding].sampler) {
+                if (any(stageFlags & ShaderStageFlags::VERTEX)) {
+                    key.set(sampler.binding * 2 + 0);
+                }
+                if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
+                    key.set(sampler.binding * 2 + 1);
+                }
+            }
+        }
+    }
+    return key;
 }
 
 size_t VulkanPipelineCache::PipelineLayoutKeyHashFn::operator()(const PipelineLayoutKey& key) const {

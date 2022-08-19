@@ -376,6 +376,7 @@ private:
     void destroyLayoutsAndDescriptors() noexcept;
     VkDescriptorPool createDescriptorPool(uint32_t size) const;
     void growDescriptorPool() noexcept;
+    utils::bitset64 getPipelineLayoutKey(const Program::SamplerGroupInfo& samplerGroupInfo) const noexcept;
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;

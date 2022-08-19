@@ -1824,7 +1824,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
 
-    VkDescriptorImageInfo iInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
+    VkDescriptorImageInfo samplerInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
 
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
@@ -1861,17 +1861,18 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 const SamplerParams& samplerParams = boundSampler->s;
                 VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
 
-                iInfo[bindingPoint] = {
+                samplerInfo[bindingPoint] = {
                     .sampler = vksampler,
                     .imageView = texture->getPrimaryImageView(),
                     .imageLayout = texture->getPrimaryImageLayout()
                 };
-
+            } else {
+                // samplerInfo[bindingPoint] = {};
             }
         }
     }
 
-    mPipelineCache.bindSamplers(iInfo);
+    mPipelineCache.bindSamplers(samplerInfo);
 
     // Bind new descriptor sets if they need to change.
     // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error
