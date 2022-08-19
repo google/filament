@@ -86,6 +86,58 @@ public class FilamentInstance {
     }
 
     /**
+     * Gets the skin count of this instance.
+     */
+    public int getSkinCount() {
+        return nGetSkinCount(getNativeObject());
+    }
+
+    /**
+     * Gets the skin name at skin index in this instance.
+     */
+    public @NonNull String[] getSkinNames() {
+        String[] result = new String[getSkinCount()];
+        nGetSkinNames(getNativeObject(), result);
+        return result;
+    }
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    public void attachSkin(@IntRange(from = 0) int skinIndex, @Entity int target) {
+        nAttachSkin(getNativeObject(), skinIndex, target);
+    }
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    public void detachSkin(@IntRange(from = 0) int skinIndex, @Entity int target) {
+        nDetachSkin(getNativeObject(), skinIndex, target);
+    }
+
+    /**
+     * Gets the joint count at skin index in this instance.
+     */
+    public int getJointCountAt(@IntRange(from = 0) int skinIndex) {
+        return nGetJointCountAt(getNativeObject(), skinIndex);
+    }
+
+    /**
+     * Gets joints at skin index in this instance.
+     */
+    public @NonNull @Entity int[] getJointsAt(@IntRange(from = 0) int skinIndex) {
+        int[] result = new int[getJointCountAt(skinIndex)];
+        nGetJointsAt(getNativeObject(), skinIndex, result);
+        return result;
+    }
+
+    /**
      * Applies the given material variant to all primitives in this instance.
      *
      * Ignored if variantIndex is out of bounds.
@@ -94,9 +146,15 @@ public class FilamentInstance {
         nApplyMaterialVariant(mNativeObject, variantIndex);
     }
 
-    private static native int nGetRoot(long nativeAsset);
-    private static native int nGetEntityCount(long nativeAsset);
-    private static native void nGetEntities(long nativeAsset, int[] result);
-    private static native long nGetAnimator(long nativeAsset);
-    private static native void nApplyMaterialVariant(long nativeAsset, int variantIndex);
+    private static native int nGetRoot(long nativeInstance);
+    private static native int nGetEntityCount(long nativeInstance);
+    private static native void nGetEntities(long nativeInstance, int[] result);
+    private static native long nGetAnimator(long nativeInstance);
+    private static native void nApplyMaterialVariant(long nativeInstance, int variantIndex);
+    private static native void nGetJointsAt(long nativeInstance, int skinIndex, int[] result);
+    private static native int nGetSkinCount(long nativeInstance);
+    private static native void nGetSkinNames(long nativeInstance, String[] result);
+    private static native int nGetJointCountAt(long nativeInstance, int skinIndex);
+    private static native void nAttachSkin(long nativeInstance, int skinIndex, int entity);
+    private static native void nDetachSkin(long nativeInstance, int skinIndex, int entity);
 }

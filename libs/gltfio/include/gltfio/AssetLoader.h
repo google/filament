@@ -69,8 +69,8 @@ struct AssetConfiguration {
  * \brief Consumes glTF content and produces FilamentAsset objects.
  *
  * AssetLoader consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a FilamentAsset
- * object, which is a bundle of Filament entities, material instances, textures, vertex buffers,
- * and index buffers.
+ * object, which is a bundle of Filament textures, vertex buffers, index buffers, etc. An asset is
+ * composed of 1 or more FilamentInstance objects which contain entities and components.
  *
  * Clients must use AssetLoader to create and destroy FilamentAsset objects. This is similar to
  * how filament::Engine is used to create and destroy core objects like VertexBuffer.
@@ -92,7 +92,7 @@ struct AssetConfiguration {
  *
  * // Parse the glTF content and create Filament entities.
  * std::vector<uint8_t> content(...);
- * FilamentAsset* asset = loader->createAssetFromJson(content.data(), content.size());
+ * FilamentAsset* asset = loader->createAsset(content.data(), content.size());
  * content.clear();
  *
  * // Load buffers and textures from disk.
@@ -148,16 +148,10 @@ public:
     static void destroy(AssetLoader** loader);
 
     /**
-     * Takes a pointer to the contents of a JSON-based glTF 2.0 file and returns a bundle
-     * of Filament objects. Returns null on failure.
+     * Takes a pointer to the contents of a GLB or a JSON-based glTF 2.0 file and returns an asset
+     * with one instance, or null on failure.
      */
-    FilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
-
-    /**
-     * Takes a pointer to the contents of a GLB glTF 2.0 file and returns a bundle
-     * of Filament objects. Returns null on failure.
-     */
-    FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
+    FilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
 
     /**
      * Consumes the contents of a glTF 2.0 file and produces a primary asset with one or more
@@ -186,7 +180,7 @@ public:
             FilamentInstance** instances, size_t numInstances);
 
     /**
-     * Adds a new instance to an instanced asset.
+     * Adds a new instance to the asset.
      *
      * Use this with caution. It is more efficient to pre-allocate a max number of instances, and
      * gradually add them to the scene as needed. Instances can also be "recycled" by removing and
@@ -197,7 +191,6 @@ public:
      * create/destroy churn, as noted above.
      *
      * This cannot be called after FilamentAsset::releaseSourceData().
-     * This cannot be called on a non-instanced asset.
      * See also AssetLoader::createInstancedAsset().
      */
     FilamentInstance* createInstance(FilamentAsset* primary);

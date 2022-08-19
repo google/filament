@@ -73,13 +73,11 @@ private:
 
     std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, filament::Variant::type_t variantKey,
-            const filament::SamplerBindingMap& samplerBindingMap) const noexcept;
+            MaterialInfo const& material, filament::Variant::type_t variantKey) const noexcept;
 
     std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, uint8_t variant,
-            const filament::SamplerBindingMap& samplerBindingMap) const noexcept;
+            MaterialInfo const& material, uint8_t variant) const noexcept;
 
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;

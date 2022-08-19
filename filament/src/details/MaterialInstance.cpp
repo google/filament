@@ -44,6 +44,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mCulling(other->mCulling),
           mColorWrite(other->mColorWrite),
           mDepthWrite(other->mDepthWrite),
+          mStencilState(other->mStencilState),
           mDepthFunc(other->mDepthFunc),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
@@ -92,6 +93,11 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
     }
 
     const RasterState& rasterState = material->getRasterState();
+    // At the moment, only MaterialInstances have a stencil state, but in the future it should be
+    // possible to set the stencil state directly on a material (through material definitions, or
+    // MaterialBuilder).
+    // TODO: Here is where we'd "inherit" the stencil state from the Material.
+    // mStencilState = material->getStencilState();
 
     // We inherit the resolved culling mode rather than the builder-set culling mode.
     // This preserves the property whereby double-sidedness automatically disables culling.

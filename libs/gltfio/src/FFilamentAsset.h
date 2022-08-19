@@ -210,18 +210,6 @@ struct FFilamentAsset : public FilamentAsset {
 
     Animator* getAnimator() const noexcept { return mAnimator; }
 
-    size_t getSkinCount() const noexcept;
-
-    const char* getSkinNameAt(size_t skinIndex) const noexcept;
-
-    size_t getJointCountAt(size_t skinIndex) const noexcept;
-
-    const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
-
-    void attachSkin(size_t skinIndex, Entity target) noexcept;
-
-    void detachSkin(size_t skinIndex, Entity target) noexcept;
-
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
     size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
@@ -281,10 +269,6 @@ struct FFilamentAsset : public FilamentAsset {
         mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
     }
 
-    bool isInstanced() const {
-        return mInstances.size() > 0;
-    }
-
     void createAnimators();
 
     filament::Engine* const mEngine;
@@ -306,7 +290,6 @@ struct FFilamentAsset : public FilamentAsset {
     filament::Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
-    SkinVector mSkins; // unused for instanced assets
     Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;
 
@@ -341,7 +324,6 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<BufferSlot> mBufferSlots;
     std::vector<TextureSlot> mTextureSlots;
     std::vector<const char*> mResourceUris;
-    NodeMap mNodeMap; // unused for instanced assets
     std::vector<std::pair<const cgltf_primitive*, filament::VertexBuffer*> > mPrimitives;
     MatInstanceCache mMatInstanceCache;
     MeshCache mMeshCache;

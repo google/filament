@@ -330,6 +330,7 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType shader
     Precision defaultPrecision = getDefaultPrecision(shaderType);
 
     out << "\nlayout(";
+    // TODO: at feature level 2, GLSL should support the binding qualifier
     if (mTargetLanguage == TargetLanguage::SPIRV) {
         uint32_t bindingIndex = (uint32_t) binding; // avoid char output
         out << "binding = " << bindingIndex << ", ";

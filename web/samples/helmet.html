@@ -88,7 +88,7 @@ class App {
         const loader = this.loader = engine.createAssetLoader();
 
         this.allowRefresh = false;
-        const asset = this.asset = loader.createAssetFromJson(mesh_url);
+        const asset = this.asset = loader.createAsset(mesh_url);
         this.assetRoot = this.asset.getRoot();
 
         // Crudely indicate progress by printing the URI of each resource as it is loaded.
@@ -138,7 +138,7 @@ class App {
         this.allowRefresh = false;
         this.scene.removeEntities(this.asset.getEntities());
         this.loader.destroyAsset(this.asset);
-        this.asset = this.loader.createAssetFromJson(mesh_url);
+        this.asset = this.loader.createAsset(mesh_url);
         const onDone = () => { this.allowRefresh = true; }
         this.asset.loadResources(onDone);
     }

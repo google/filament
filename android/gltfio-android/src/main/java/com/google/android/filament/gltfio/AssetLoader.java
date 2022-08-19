@@ -26,8 +26,8 @@ import java.nio.Buffer;
 
 /**
  * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a {@link FilamentAsset}
- * object, which is a bundle of Filament entities, material instances, textures, vertex buffers,
- * and index buffers.
+ * object, which is a bundle of Filament textures, vertex buffers, index buffers, etc. An asset is
+ * composed of 1 or more FilamentInstance objects which contain entities and components.
  *
  * <p>AssetLoader does not fetch external buffer data or create textures on its own. Clients can use
  * the provided {@link ResourceLoader} class for this, which obtains the URI list from the asset.
@@ -51,7 +51,7 @@ import java.nio.Buffer;
  *     filamentAsset = assets.open("models/lucy.gltf").use { input -&gt;
  *         val bytes = ByteArray(input.available())
  *         input.read(bytes)
- *         assetLoader.createAssetFromJson(ByteBuffer.wrap(bytes))!!
+ *         assetLoader.createAsset(ByteBuffer.wrap(bytes))!!
  *     }
  *
  *     val resourceLoader = ResourceLoader(engine)
@@ -115,20 +115,11 @@ public class AssetLoader {
     }
 
     /**
-     * Creates a {@link FilamentAsset} from the contents of a GLB file.
+     * Creates a {@link FilamentAsset} from the contents of a GLB or GLTF file.
      */
     @Nullable
-    public FilamentAsset createAssetFromBinary(@NonNull Buffer buffer) {
-        long nativeAsset = nCreateAssetFromBinary(mNativeObject, buffer, buffer.remaining());
-        return nativeAsset != 0 ? new FilamentAsset(mEngine, nativeAsset) : null;
-    }
-
-    /**
-     * Creates a {@link FilamentAsset} from the contents of a GLTF file.
-     */
-    @Nullable
-    public FilamentAsset createAssetFromJson(@NonNull Buffer buffer) {
-        long nativeAsset = nCreateAssetFromJson(mNativeObject, buffer, buffer.remaining());
+    public FilamentAsset createAsset(@NonNull Buffer buffer) {
+        long nativeAsset = nCreateAsset(mNativeObject, buffer, buffer.remaining());
         return nativeAsset != 0 ? new FilamentAsset(mEngine, nativeAsset) : null;
     }
 
@@ -158,7 +149,7 @@ public class AssetLoader {
     }
 
     /**
-     * Adds a new instance to an instanced asset.
+     * Adds a new instance to the asset.
      *
      * Use this with caution. It is more efficient to pre-allocate a max number of instances, and
      * gradually add them to the scene as needed. Instances can also be "recycled" by removing and
@@ -169,7 +160,6 @@ public class AssetLoader {
      * create/destroy churn, as noted above.
      *
      * This cannot be called after FilamentAsset#releaseSourceData().
-     * This cannot be called on a non-instanced asset.
      * Animation is not supported in new instances.
      * See also AssetLoader#createInstancedAsset().
      */
@@ -202,8 +192,7 @@ public class AssetLoader {
     private static native long nCreateAssetLoader(long nativeEngine, Object provider,
             long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
-    private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);
-    private static native long nCreateAssetFromJson(long nativeLoader, Buffer buffer, int remaining);
+    private static native long nCreateAsset(long nativeLoader, Buffer buffer, int remaining);
     private static native long nCreateInstancedAsset(long nativeLoader, Buffer buffer, int remaining,
             long[] nativeInstances);
     private static native long nCreateInstance(long nativeLoader, long nativeAsset);

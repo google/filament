@@ -287,7 +287,7 @@ class FilamentViewer extends LitElement {
         // Dropping a glb file is simple because there are no external resources.
         if (this.srcBlob && this.srcBlob.name.endsWith(".glb")) {
             this.srcBlob.arrayBuffer().then(buffer => {
-                this.asset = this.loader.createAssetFromBinary(new Uint8Array(buffer));
+                this.asset = this.loader.createAsset(new Uint8Array(buffer));
                 const aabb = this.asset.getBoundingBox();
                 this.assetRoot = this.asset.getRoot();
                 this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
@@ -327,7 +327,7 @@ class FilamentViewer extends LitElement {
             };
 
             this.srcBlob.arrayBuffer().then(buffer => {
-                this.asset = this.loader.createAssetFromJson(new Uint8Array(buffer));
+                this.asset = this.loader.createAsset(new Uint8Array(buffer));
                 const aabb = this.asset.getBoundingBox();
                 this.assetRoot = this.asset.getRoot();
                 this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
@@ -367,12 +367,7 @@ class FilamentViewer extends LitElement {
             return response.arrayBuffer();
         }).then(arrayBuffer => {
             const modelData = new Uint8Array(arrayBuffer);
-            if (this.src.endsWith(".glb")) {
-                this.asset = this.loader.createAssetFromBinary(modelData);
-            } else {
-                this.asset = this.loader.createAssetFromJson(modelData);
-            }
-
+            this.asset = this.loader.createAsset(modelData);
             const aabb = this.asset.getBoundingBox();
             this.assetRoot = this.asset.getRoot();
             this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);

@@ -52,6 +52,9 @@ class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
 public:
     using CullingMode = filament::backend::CullingMode;
     using TransparencyMode = filament::TransparencyMode;
+    using StencilCompareFunc = filament::backend::SamplerCompareFunc;
+    using StencilOperation = filament::backend::StencilOperation;
+    using StencilFace = filament::backend::StencilFace;
 
     template<typename T>
     using is_supported_parameter_t = typename std::enable_if<
@@ -305,6 +308,98 @@ public:
      * Overrides the default depth testing state that was set on the material.
      */
     void setDepthCulling(bool enable) noexcept;
+
+    /**
+     * Overrides the default stencil-buffer write state that was set on the material.
+     */
+    void setStencilWrite(bool enable) noexcept;
+
+    /**
+     * Sets the stencil comparison function (default is StencilCompareFunc::A).
+     *
+     * It's possible to set separate stencil comparison functions; one for front-facing polygons,
+     * and one for back-facing polygons. The face parameter determines the comparison function(s)
+     * updated by this call.
+     */
+    void setStencilCompareFunction(StencilCompareFunc func,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+    /**
+     * Sets the stencil fail operation (default is StencilOperation::KEEP).
+     *
+     * The stencil fail operation is performed to update values in the stencil buffer when the
+     * stencil test fails.
+     *
+     * It's possible to set separate stencil fail operations; one for front-facing polygons, and one
+     * for back-facing polygons. The face parameter determines the stencil fail operation(s) updated
+     * by this call.
+     */
+    void setStencilOpStencilFail(StencilOperation op,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+    /**
+     * Sets the depth fail operation (default is StencilOperation::KEEP).
+     *
+     * The depth fail operation is performed to update values in the stencil buffer when the depth
+     * test fails.
+     *
+     * It's possible to set separate depth fail operations; one for front-facing polygons, and one
+     * for back-facing polygons. The face parameter determines the depth fail operation(s) updated
+     * by this call.
+     */
+    void setStencilOpDepthFail(StencilOperation op,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+    /**
+     * Sets the depth-stencil pass operation (default is StencilOperation::KEEP).
+     *
+     * The depth-stencil pass operation is performed to update values in the stencil buffer when
+     * both the stencil test and depth test pass.
+     *
+     * It's possible to set separate depth-stencil pass operations; one for front-facing polygons,
+     * and one for back-facing polygons. The face parameter determines the depth-stencil pass
+     * operation(s) updated by this call.
+     */
+    void setStencilOpDepthStencilPass(StencilOperation op,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+    /**
+     * Sets the stencil reference value (default is 0).
+     *
+     * The stencil reference value is the left-hand side for stencil comparison tests. It's also
+     * used as the replacement stencil value when StencilOperation is REPLACE.
+     *
+     * It's possible to set separate stencil reference values; one for front-facing polygons, and
+     * one for back-facing polygons. The face parameter determines the reference value(s) updated by
+     * this call.
+     */
+    void setStencilReferenceValue(uint8_t value,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+    /**
+     * Sets the stencil read mask (default is 0xFF).
+     *
+     * The stencil read mask masks the bits of the values participating in the stencil comparison
+     * test- both the value read from the stencil buffer and the reference value.
+     *
+     * It's possible to set separate stencil read masks; one for front-facing polygons, and one for
+     * back-facing polygons. The face parameter determines the stencil read mask(s) updated by this
+     * call.
+     */
+    void setStencilReadMask(uint8_t readMask,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+    /**
+     * Sets the stencil write mask (default is 0xFF).
+     *
+     * The stencil write mask masks the bits in the stencil buffer updated by stencil operations.
+     *
+     * It's possible to set separate stencil write masks; one for front-facing polygons, and one for
+     * back-facing polygons. The face parameter determines the stencil write mask(s) updated by this
+     * call.
+     */
+    void setStencilWriteMask(uint8_t writeMask,
+            StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
 };
 
 } // namespace filament

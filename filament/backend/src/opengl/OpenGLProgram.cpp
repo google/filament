@@ -290,6 +290,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         Program::UniformBlockInfo const& uniformBlockInfo,
         Program::SamplerGroupInfo const& samplerGroupInfo) noexcept {
 
+    // TODO: we shouldn't need this at feature level 2 (but requires a change in generateUniforms)
     // Associate each UniformBlock in the program to a known binding.
     UTILS_NOUNROLL
     for (GLuint binding = 0, n = uniformBlockInfo.size(); binding < n; binding++) {

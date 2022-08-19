@@ -32,7 +32,7 @@ class App {
         const scene = this.scene = engine.createScene();
 
         const loader = engine.createAssetLoader();
-        const asset = this.asset = loader.createAssetFromJson(mesh_url);
+        const asset = this.asset = loader.createAsset(mesh_url);
 
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN).direction([0, 0, -1]).build(engine, sunlight);
