@@ -306,7 +306,9 @@ public:
      * components (e.g. Renderable, TransformManager component) as well as
      * the underlying entities.
      */
-    void detachFilamentComponents();
+    void detachFilamentComponents() noexcept;
+
+    bool areFilamentComponentsDetached() const noexcept;
 
     /**
      * Releases ownership of material instances.
