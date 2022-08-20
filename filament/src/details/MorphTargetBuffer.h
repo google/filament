@@ -21,7 +21,7 @@
 
 #include <filament/MorphTargetBuffer.h>
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include "private/backend/SamplerGroup.h"
 

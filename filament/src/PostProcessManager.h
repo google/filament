@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_POSTPROCESSMANAGER_H
 #define TNT_FILAMENT_POSTPROCESSMANAGER_H
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include "FrameHistory.h"
 
