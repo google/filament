@@ -332,7 +332,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
             tmu++;
         }
 
-        // if this program doesn't use any sampler from this SamplerGroup, just cancel the
+        // if this program doesn't use any sampler from this HwSamplerGroup, just cancel the
         // whole group.
         if (atLeastOneSamplerUsed) {
             // Cache the sampler uniform locations for each interface block

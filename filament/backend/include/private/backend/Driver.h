@@ -48,7 +48,6 @@ class BufferDescriptor;
 class CallbackHandler;
 class PixelBufferDescriptor;
 class Program;
-class SamplerGroup;
 
 template<typename T>
 class ConcreteDispatcher;
