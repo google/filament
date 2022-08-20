@@ -19,6 +19,8 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
+#include "private/backend/SamplerGroup.h"
+
 #include <utils/Hash.h>
 #include <utils/Log.h>
 

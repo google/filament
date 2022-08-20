@@ -20,7 +20,6 @@
 #include "private/backend/CircularBuffer.h"
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Program.h"
-#include "private/backend/SamplerGroup.h"
 #include "private/backend/Driver.h"
 
 #include <backend/BufferDescriptor.h>
