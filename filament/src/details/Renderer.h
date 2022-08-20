@@ -27,7 +27,7 @@
 
 #include "details/SwapChain.h"
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <fg/FrameGraphId.h>
 #include <fg/FrameGraphTexture.h>

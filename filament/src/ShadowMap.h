@@ -22,7 +22,7 @@
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 #include "private/backend/SamplerGroup.h"
 
 #include <math/mat4.h>

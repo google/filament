@@ -22,7 +22,7 @@
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphRenderPass.h"
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <backend/TargetBufferInfo.h>
 

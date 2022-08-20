@@ -22,7 +22,7 @@
 #include "HwRenderPrimitiveFactory.h"
 #include "UniformBuffer.h"
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <backend/Handle.h>
 
