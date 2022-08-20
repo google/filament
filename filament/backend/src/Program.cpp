@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 using namespace utils;
 

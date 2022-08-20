@@ -19,13 +19,13 @@
 
 #include "private/backend/CircularBuffer.h"
 #include "private/backend/Dispatcher.h"
-#include "private/backend/Program.h"
 #include "private/backend/Driver.h"
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
+#include <backend/Program.h>
 #include <backend/PixelBufferDescriptor.h>
 #include <backend/PresentCallable.h>
 #include <backend/TargetBufferInfo.h>
@@ -36,8 +36,11 @@
 #include <cstddef>
 #include <functional>
 #include <tuple>
-#include <thread>
 #include <utility>
+
+#ifndef NDEBUG
+#include <thread>
+#endif
 
 #include <assert.h>
 #include <stddef.h>
