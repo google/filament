@@ -24,12 +24,10 @@
 #include <utils/Log.h>
 #include <utils/ostream.h>
 
-#include "backend/DriverApiForward.h"
-
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 
 #include <array>
-#include <string_view>
 
 namespace filament::backend {
 

@@ -17,6 +17,7 @@ set(PUBLIC_HDRS
         include/backend/PipelineState.h
         include/backend/PixelBufferDescriptor.h
         include/backend/Platform.h
+        include/backend/Program.h
         include/backend/SamplerDescriptor.h
         include/backend/TargetBufferInfo.h
 )
@@ -49,7 +50,6 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/HandleAllocator.h
-        include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h
         src/DataReshaper.h

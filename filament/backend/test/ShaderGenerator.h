@@ -20,7 +20,7 @@
 #include "PlatformRunner.h"
 
 #include "private/backend/DriverApi.h"
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include <string>
 

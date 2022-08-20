@@ -31,7 +31,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include <backend/DriverEnums.h>
 

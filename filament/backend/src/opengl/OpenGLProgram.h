@@ -21,7 +21,7 @@
 #include "OpenGLDriver.h"
 
 #include "private/backend/Driver.h"
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
