@@ -179,7 +179,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram();
+        Program p = shaderGen.getProgram(api);
         ProgramHandle program = api.createProgram(std::move(p));
 
         // Create a source color textures.
