@@ -453,7 +453,7 @@ Program FMaterial::getProgramBuilderWithVariants(
             "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filtered=0x%x).",
             mName.c_str(), variant.key, fragmentVariant.key);
 
-    Program program(mEngine.getDriverApi());
+    Program program;
     program.shader(ShaderType::VERTEX, vsBuilder.data(), vsBuilder.size())
            .shader(ShaderType::FRAGMENT, fsBuilder.data(), fsBuilder.size())
            .uniformBlockBindings(mUniformBlockBindings)

@@ -43,7 +43,7 @@ public:
     ShaderGenerator(const ShaderGenerator& rhs) = delete;
     ShaderGenerator& operator=(const ShaderGenerator& rhs) = delete;
 
-    filament::backend::Program getProgram(filament::backend::DriverApi& driverApi) noexcept;
+    filament::backend::Program getProgram(filament::backend::DriverApi&) noexcept;
 
 private:
 
