@@ -361,11 +361,6 @@ io::sstream& CodeGenerator::generateSamplers(
     }
 
     for (auto const& info : infos) {
-
-        CString uniformName =
-                SamplerInterfaceBlock::getUniformName(
-                        sib.getName().c_str(), info.name.c_str());
-
         auto type = info.type;
         if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::MOBILE) {
             // we're generating the shader for the desktop, where we assume external textures
@@ -392,7 +387,7 @@ io::sstream& CodeGenerator::generateSamplers(
 
             out << ") ";
         }
-        out << "uniform " << precision << " " << typeName << " " << uniformName.c_str();
+        out << "uniform " << precision << " " << typeName << " " << info.uniformName.c_str();
         out << ";\n";
     }
     out << "\n";
@@ -406,7 +401,7 @@ io::sstream& CodeGenerator::generateSubpass(io::sstream& out, SubpassInfo subpas
     }
 
     CString subpassName =
-            SamplerInterfaceBlock::getUniformName(subpass.block.c_str(), subpass.name.c_str());
+            SamplerInterfaceBlock::generateUniformName(subpass.block.c_str(), subpass.name.c_str());
 
     char const* const typeName = "subpassInput";
     // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
@@ -435,18 +430,13 @@ void CodeGenerator::fixupExternalSamplers(
     // been swapped during a previous optimization step
     for (auto const& info : infos) {
         if (info.type == SamplerType::SAMPLER_EXTERNAL) {
-
-            CString uniformName =
-                    SamplerInterfaceBlock::getUniformName(
-                            sib.getName().c_str(), info.name.c_str());
-
-            auto name = std::string("sampler2D ") + uniformName.c_str();
+            auto name = std::string("sampler2D ") + info.uniformName.c_str();
             size_t index = shader.find(name);
 
             if (index != std::string::npos) {
                 hasExternalSampler = true;
                 auto newName =
-                        std::string("samplerExternalOES ") + uniformName.c_str();
+                        std::string("samplerExternalOES ") + info.uniformName.c_str();
                 shader.replace(index, name.size(), newName);
             }
         }

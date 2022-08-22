@@ -19,13 +19,13 @@
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/SibGenerator.h>
 #include <private/filament/Variant.h>
 
 #include <utils/CString.h>
 
 #include "filamat/MaterialBuilder.h"
 #include "CodeGenerator.h"
+#include "../SibGenerator.h"
 #include "../UibGenerator.h"
 
 #include <iterator>

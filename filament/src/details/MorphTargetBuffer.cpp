@@ -16,14 +16,13 @@
 
 #include "details/MorphTargetBuffer.h"
 
-#include "private/filament/SibGenerator.h"
+#include <private/filament/SibStructs.h>
 
-#include "details/Engine.h"
+#include <details/Engine.h>
 
 #include "FilamentAPI-impl.h"
 
 #include <math/mat4.h>
-
 #include <math/norm.h>
 
 namespace filament {

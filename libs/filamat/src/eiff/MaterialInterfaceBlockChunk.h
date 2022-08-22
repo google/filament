@@ -20,44 +20,56 @@
 #include "Chunk.h"
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
-#include <private/filament/SubpassInfo.h>
+
+#include <utils/FixedCapacityVector.h>
+
+namespace filament {
+class SamplerBindingMap;
+class SamplerInterfaceBlock;
+class UniformInterfaceBlock;
+struct SubpassInfo;
+} // namespace filament
 
 namespace filamat {
 
 class MaterialUniformInterfaceBlockChunk final : public Chunk {
 public:
-    explicit MaterialUniformInterfaceBlockChunk(filament::UniformInterfaceBlock& uib);
+    explicit MaterialUniformInterfaceBlockChunk(filament::UniformInterfaceBlock const& uib);
     ~MaterialUniformInterfaceBlockChunk() final = default;
 
 private:
-    void flatten(Flattener &) final;
+    void flatten(Flattener&) final;
 
-    filament::UniformInterfaceBlock& mUib;
+    filament::UniformInterfaceBlock const& mUib;
 };
+
+// ------------------------------------------------------------------------------------------------
 
 class MaterialSamplerInterfaceBlockChunk final : public Chunk {
 public:
-    explicit MaterialSamplerInterfaceBlockChunk(filament::SamplerInterfaceBlock& sib);
+    explicit MaterialSamplerInterfaceBlockChunk(filament::SamplerInterfaceBlock const& sib);
     ~MaterialSamplerInterfaceBlockChunk() final = default;
 
 private:
-    void flatten(Flattener &) final;
+    void flatten(Flattener&) final;
 
-    filament::SamplerInterfaceBlock& mSib;
+    filament::SamplerInterfaceBlock const& mSib;
 };
+
+// ------------------------------------------------------------------------------------------------
 
 class MaterialSubpassInterfaceBlockChunk final : public Chunk {
 public:
-    explicit MaterialSubpassInterfaceBlockChunk(filament::SubpassInfo& subpass);
+    explicit MaterialSubpassInterfaceBlockChunk(filament::SubpassInfo const& subpass);
     ~MaterialSubpassInterfaceBlockChunk() final = default;
 
 private:
-    void flatten(Flattener &) final;
+    void flatten(Flattener&) final;
 
-    filament::SubpassInfo& mSubpass;
+    filament::SubpassInfo const& mSubpass;
 };
+
+// ------------------------------------------------------------------------------------------------
 
 class MaterialUniformBlockBindingsChunk final : public Chunk {
 public:
@@ -66,9 +78,22 @@ public:
     ~MaterialUniformBlockBindingsChunk() final = default;
 
 private:
-    void flatten(Flattener &) final;
+    void flatten(Flattener&) final;
 
     utils::FixedCapacityVector<std::pair<std::string_view, filament::BindingPoints>> mBindingList;
+};
+
+// ------------------------------------------------------------------------------------------------
+
+class MaterialSamplerBlockBindingChunk final : public Chunk {
+public:
+    explicit MaterialSamplerBlockBindingChunk(filament::SamplerBindingMap const& samplerBindings);
+    ~MaterialSamplerBlockBindingChunk() final = default;
+
+private:
+    void flatten(Flattener &) final;
+
+    filament::SamplerBindingMap const& mSamplerBindings;
 };
 
 } // namespace filamat
