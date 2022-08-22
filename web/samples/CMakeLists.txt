@@ -137,7 +137,7 @@ function(add_envmap SOURCE TARGET)
 
         # Create a low-resolution skybox.
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS_TINY} ${source_envmap}
-        COMMAND mv ${target_skybox} ${target_skybox_tiny}
+        COMMAND ${CMAKE_COMMAND} -E rename ${target_skybox} ${target_skybox_tiny}
 
         # Create KTX files for the full-size envmap.
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
