@@ -101,14 +101,16 @@ void ShaderGenerator::shutdown() {
     FinalizeProcess();
 }
 
-ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment, Backend backend,
-        bool isMobile) noexcept : mBackend(backend), mIsMobile(isMobile) {
-    mVertexBlob = transpileShader(backend, isMobile, std::move(vertex), ShaderStage::VERTEX);
-    mFragmentBlob = transpileShader(backend, isMobile, std::move(fragment), ShaderStage::FRAGMENT);
+ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment,
+        Backend backend, bool isMobile) noexcept
+        : mBackend(backend),
+          mVertexBlob(transpileShader(ShaderStage::VERTEX, std::move(vertex), backend, isMobile)),
+          mFragmentBlob(transpileShader(ShaderStage::FRAGMENT, std::move(fragment), backend,
+                  isMobile)) {
 }
 
-ShaderGenerator::Blob ShaderGenerator::transpileShader(Backend backend, bool isMobile, std::string shader,
-            ShaderStage stage) noexcept {
+ShaderGenerator::Blob ShaderGenerator::transpileShader(
+        ShaderStage stage, std::string shader, Backend backend, bool isMobile) noexcept {
     TProgram program;
     const EShLanguage language = stage == ShaderStage::VERTEX ? EShLangVertex : EShLangFragment;
     TShader tShader(language);

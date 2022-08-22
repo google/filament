@@ -46,18 +46,13 @@ public:
     filament::backend::Program getProgram(filament::backend::DriverApi&) noexcept;
 
 private:
-
-    enum class ShaderStage {
-        VERTEX,
-        FRAGMENT
-    };
+    using ShaderStage = filament::backend::ShaderType;
 
     using Blob = std::vector<char>;
-    static Blob transpileShader(Backend backend, bool isMobile, std::string shader,
-            ShaderStage stage) noexcept;
+    static Blob transpileShader(ShaderStage stage, std::string shader, Backend backend,
+            bool isMobile) noexcept;
 
     Backend mBackend;
-    bool mIsMobile;
 
     Blob mVertexBlob;
     Blob mFragmentBlob;
