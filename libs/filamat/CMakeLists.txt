@@ -43,6 +43,8 @@ set(COMMON_SRCS
         src/Includes.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
+        src/SamplerBindingMap.cpp
+        src/SibGenerator.cpp
         src/UibGenerator.cpp
 )
 

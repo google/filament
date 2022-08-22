@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "private/filament/SibGenerator.h"
+#include "SibGenerator.h"
 
 #include "private/filament/Variant.h"
 #include "private/filament/EngineEnums.h"
-
-#include <private/filament/SamplerInterfaceBlock.h>
+#include "private/filament/SamplerInterfaceBlock.h"
+#include "private/filament/SibStructs.h"
 
 namespace filament {
 

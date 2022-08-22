@@ -29,7 +29,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
 
-#include <private/filament/SibGenerator.h>
+#include "SibGenerator.h"
 
 #include "MaterialVariants.h"
 
@@ -972,7 +972,7 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
         return Package::invalidPackage();
     }
 
-    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
+    info.samplerBindings.init(mMaterialDomain, &info.sib, mMaterialName.c_str());
 
     // Create chunk tree.
     ChunkContainer container;
@@ -1030,7 +1030,7 @@ std::string MaterialBuilder::peek(filament::backend::ShaderType type,
 
     MaterialInfo info;
     prepareToBuild(info);
-    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
+    info.samplerBindings.init(mMaterialDomain, &info.sib, mMaterialName.c_str());
 
     if (type == filament::backend::ShaderType::VERTEX) {
         return sg.createVertexProgram(ShaderModel(params.shaderModel),
@@ -1047,8 +1047,6 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
 
     // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)
     using namespace filament;
@@ -1064,18 +1062,22 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     };
     container.addChild<MaterialUniformBlockBindingsChunk>(std::move(list));
 
-    // UIB
+    // note: this chunk is needed for Vulkan and GL backends. Metal shouldn't need it (but
+    // still does as of now).
+    container.addChild<MaterialSamplerBlockBindingChunk>(info.samplerBindings);
+
+    // User Material UIB
     container.addChild<MaterialUniformInterfaceBlockChunk>(info.uib);
 
-    // SIB
+    // User Material SIB
     container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
 
-    // Subpass
+    // User Subpass
     container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
+
 
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
-
     container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionMode, static_cast<uint8_t>(mReflectionMode));
@@ -1087,6 +1089,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
 
     uint64_t properties = 0;
+    UTILS_NOUNROLL
     for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {
         if (mProperties[i]) {
             properties |= uint64_t(1u) << i;
@@ -1106,6 +1109,8 @@ void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexce
         container.addSimpleChild<bool>(ChunkType::MaterialShadowMultiplier, mShadowMultiplier);
     }
 
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
     container.addSimpleChild<bool>(ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);
     container.addSimpleChild<uint32_t>(ChunkType::MaterialRequiredAttributes, mRequiredAttributes.getValue());
     container.addSimpleChild<bool>(ChunkType::MaterialSpecularAntiAliasing, mSpecularAntiAliasing);

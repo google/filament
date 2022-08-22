@@ -16,11 +16,7 @@
 
 #include "GLSLTools.h"
 
-#include <cstring>
-
 #include <filament/MaterialEnums.h>
-#include <private/filament/UniformInterfaceBlock.h>
-#include <private/filament/SamplerInterfaceBlock.h>
 #include <filamat/MaterialBuilder.h>
 #include "../shaders/MaterialInfo.h"
 

@@ -30,7 +30,7 @@
 #include <filament/TextureSampler.h>
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/SibGenerator.h>
+#include <private/filament/SibStructs.h>
 
 #include <math/mat4.h>
 

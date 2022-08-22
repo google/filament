@@ -36,7 +36,7 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
-#include <private/filament/SibGenerator.h>
+#include <private/filament/SibStructs.h>
 
 #include <filament/MaterialEnums.h>
 

@@ -29,7 +29,7 @@
 
 #include <filament/MaterialEnums.h>
 #include <private/filament/Variant.h>
-#include <private/filament/SibGenerator.h>
+#include "SibGenerator.h"
 
 #include <utils/Log.h>
 
@@ -55,15 +55,10 @@ UTILS_NOINLINE
 static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
         SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
     const auto stageFlags = sib.getStageFlags();
-
-
-
     if (hasShaderType(stageFlags, config.shaderType)) {
         const auto& infoList = sib.getSamplerInfoList();
         for (const auto& info: infoList) {
-            auto uniformName = SamplerInterfaceBlock::getUniformName(
-                    sib.getName().c_str(), info.name.c_str());
-            map[uniformName.c_str()] = map.size();
+            map[info.uniformName.c_str()] = map.size();
         }
     }
 }

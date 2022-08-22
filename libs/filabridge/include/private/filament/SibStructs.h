@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILABRIDGE_SIBGENERATOR_H
-#define TNT_FILABRIDGE_SIBGENERATOR_H
-
-#include <private/filament/Variant.h>
+#ifndef TNT_FILABRIDGE_SIBSTRUCTS_H
+#define TNT_FILABRIDGE_SIBSTRUCTS_H
 
 #include <stdint.h>
 #include <stddef.h>
-#include "EngineEnums.h"
 
 namespace filament {
-
-class SamplerInterfaceBlock;
-
-class SibGenerator {
-public:
-    static SamplerInterfaceBlock const& getPerViewSib(Variant variant) noexcept;
-    static SamplerInterfaceBlock const& getPerRenderPrimitiveMorphingSib(Variant variant) noexcept;
-    static SamplerInterfaceBlock const* getSib(filament::BindingPoints bindingPoint, Variant variant) noexcept;
-    // When adding a sampler block here, make sure to also update
-    //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
-};
 
 struct PerViewSib {
     // indices of each sampler in this SamplerInterfaceBlock (see: getPerViewSib())
@@ -56,5 +42,6 @@ struct PerRenderPrimitiveMorphingSib {
     static constexpr size_t SAMPLER_COUNT  = 2;
 };
 
-}
-#endif // TNT_FILABRIDGE_SIBGENERATOR_H
+} // namespace filament
+
+#endif //TNT_FILABRIDGE_SIBSTRUCTS_H

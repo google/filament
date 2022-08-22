@@ -32,7 +32,7 @@
 #include <filament/TextureSampler.h>
 #include <filament/View.h>
 
-#include <private/filament/SibGenerator.h>
+#include <private/filament/SibStructs.h>
 #include <private/filament/UibStructs.h>
 
 #include <utils/Profiler.h>

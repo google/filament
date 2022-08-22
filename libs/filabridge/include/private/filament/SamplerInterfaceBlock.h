@@ -48,12 +48,13 @@ public:
     using SamplerParams = backend::SamplerParams;
 
     struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
-        utils::CString name;    // name of this sampler
-        uint8_t offset;         // offset in "Sampler" of this sampler in the buffer
-        Type type;              // type of this sampler
-        Format format;          // format of this sampler
-        Precision precision;    // precision of this sampler
-        bool multisample;       // multisample capable
+        utils::CString name;        // name of this sampler
+        utils::CString uniformName; // name of the uniform holding this sampler (needed for glsl)
+        uint8_t offset;             // offset in "Sampler" of this sampler in the buffer
+        Type type;                  // type of this sampler
+        Format format;              // format of this sampler
+        Precision precision;        // precision of this sampler
+        bool multisample;           // multisample capable
     };
 
     class Builder {
@@ -114,10 +115,11 @@ public:
 
     bool isEmpty() const noexcept { return mSamplersInfoList.empty(); }
 
-    static utils::CString getUniformName(const char* group, const char* sampler) noexcept;
+    static utils::CString generateUniformName(const char* group, const char* sampler) noexcept;
 
 private:
     friend class Builder;
+
 
     explicit SamplerInterfaceBlock(Builder const& builder) noexcept;
 
