@@ -180,8 +180,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(Backend backend, bool isM
     return {};
 }
 
-Program ShaderGenerator::getProgram(filament::backend::DriverApi& driverApi) noexcept {
-    Program program(driverApi);
+Program ShaderGenerator::getProgram(filament::backend::DriverApi&) noexcept {
+    Program program;
     program.shader(ShaderType::VERTEX, mVertexBlob.data(), mVertexBlob.size());
     program.shader(ShaderType::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
     return program;

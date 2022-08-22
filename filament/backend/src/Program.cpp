@@ -21,8 +21,7 @@ using namespace utils;
 namespace filament::backend {
 
 // We want these in the .cpp file, so they're not inlined (not worth it)
-Program::Program(DriverApi& driver) noexcept
-        : mDriverApi(driver) {
+Program::Program() noexcept { // NOLINT(modernize-use-equals-default)
 }
 
 Program::Program(Program&& rhs) noexcept = default;

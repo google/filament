@@ -24,7 +24,6 @@
 #include <utils/Log.h>
 #include <utils/ostream.h>
 
-#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 
 #include <array>
@@ -53,7 +52,7 @@ public:
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
-    explicit Program(DriverApi& driver) noexcept;
+    Program() noexcept;
 
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
@@ -99,7 +98,6 @@ public:
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
-    UTILS_UNUSED DriverApi& mDriverApi;
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     ShaderSource mShadersSource;
