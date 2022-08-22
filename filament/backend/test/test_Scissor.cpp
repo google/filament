@@ -85,7 +85,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram();
+        Program p = shaderGen.getProgram(api);
         ProgramHandle program = api.createProgram(std::move(p));
 
         // Create source color and depth textures.

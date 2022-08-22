@@ -22,6 +22,7 @@ include_directories(${OUR_DIR}/tsl)
 add_library(${TARGET} INTERFACE)
 target_sources(${TARGET} INTERFACE ${PUBLIC_HDRS})
 target_include_directories(${TARGET} INTERFACE ${OUR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)
 
 # ==================================================================================================
 # Installation

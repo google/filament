@@ -21,7 +21,7 @@
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <utils/Hash.h>
 

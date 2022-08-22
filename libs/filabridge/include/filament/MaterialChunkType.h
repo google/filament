@@ -46,10 +46,12 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialMetal = charTo64bitNum("MAT_METL"),
     MaterialShaderModels = charTo64bitNum("MAT_SMDL"),
     MaterialSamplerBindings = charTo64bitNum("MAT_SAMP"),   // no longer used
+    MaterialUniformBindings = charTo64bitNum("MAT_UNIF"),
     MaterialProperties = charTo64bitNum("MAT_PROP"),
 
     MaterialName = charTo64bitNum("MAT_NAME"),
     MaterialVersion = charTo64bitNum("MAT_VERS"),
+    MaterialFeatureLevel = charTo64bitNum("MAT_FEAT"),
     MaterialShading = charTo64bitNum("MAT_SHAD"),
     MaterialBlendingMode = charTo64bitNum("MAT_BLEN"),
     MaterialTransparencyMode = charTo64bitNum("MAT_TRMD"),

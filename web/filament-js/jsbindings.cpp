@@ -391,6 +391,12 @@ class_<Engine>("Engine")
 
     .function("isAutomaticInstancingEnabled", &Engine::isAutomaticInstancingEnabled)
 
+    .function("getSupportedFeatureLevel", &Engine::getSupportedFeatureLevel)
+
+    .function("setActiveFeatureLevel", &Engine::setActiveFeatureLevel)
+
+    .function("getActiveFeatureLevel", &Engine::getActiveFeatureLevel)
+
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({
             const handle = window.filament_contextHandle;
@@ -1779,17 +1785,6 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return retval;
     }), allow_raw_pointers())
 
-    .function("getSkinNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
-        std::vector<std::string> names(self->getSkinCount());
-        for (size_t i = 0; i < names.size(); ++i) {
-            names[i] = self->getSkinNameAt(i);
-        }
-        return names;
-    }), allow_raw_pointers())
-
-    .function("attachSkin", &FilamentAsset::attachSkin)
-    .function("detachSkin", &FilamentAsset::detachSkin)
-
     .function("getBoundingBox", &FilamentAsset::getBoundingBox)
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getName(entity));
@@ -1810,7 +1805,18 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
     }), allow_raw_pointers())
     .function("getRoot", &FilamentInstance::getRoot)
     .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
-    .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
+    .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers())
+
+    .function("getSkinNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentInstance* self), {
+        std::vector<std::string> names(self->getSkinCount());
+        for (size_t i = 0; i < names.size(); ++i) {
+            names[i] = self->getSkinNameAt(i);
+        }
+        return names;
+    }), allow_raw_pointers())
+
+    .function("attachSkin", &FilamentInstance::attachSkin)
+    .function("detachSkin", &FilamentInstance::detachSkin);
 
 // These little wrappers exist to get around RTTI requirements in embind.
 
@@ -1846,20 +1852,12 @@ class_<AssetLoader>("gltfio$AssetLoader")
         return AssetLoader::create({ engine, materials.provider, names });
     }), allow_raw_pointers())
 
-    /// createAssetFromJson ::method::
+    /// createAsset ::method::
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     /// ::retval:: an instance of [FilamentAsset]
-    .function("_createAssetFromJson", EMBIND_LAMBDA(FilamentAsset*,
+    .function("_createAsset", EMBIND_LAMBDA(FilamentAsset*,
             (AssetLoader* self, BufferDescriptor buffer), {
-        return self->createAssetFromJson((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
-    }), allow_raw_pointers())
-
-    /// createAssetFromBinary ::method::
-    /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
-    /// ::retval:: an instance of [FilamentAsset]
-    .function("_createAssetFromBinary", EMBIND_LAMBDA(FilamentAsset*,
-            (AssetLoader* self, BufferDescriptor buffer), {
-        return self->createAssetFromBinary((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
+        return self->createAsset((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
     }), allow_raw_pointers())
 
     /// createInstancedAsset ::method::

@@ -56,3 +56,4 @@ target_link_libraries(${TARGET} PUBLIC z)
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)

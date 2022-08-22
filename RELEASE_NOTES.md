@@ -5,13 +5,18 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- engine: new feature level APIs, see `Engine::getSupportedFeatureLevel()`
+- engine: add new stencil API to `View` and stencil state APIs to `MaterialInstance` [**NEW API**].
+- engine: Fix guard bands and TAA with `vertexDomain:Device` [⚠️ **Recompile Materials**]
+- engine: `clipSpaceTransform` is now only available with `vertexDomain:Device` [⚠️ **API Change**]
+- gltfio: add unified `AssetLoader::createAsset()` method [⚠️ **API Change**]
+- gltfio: all assets are now "instanced" [⚠️ **API Change**]
+
 ## v1.25.6
 
 - Add CONFIG_MINSPEC_UBO_SIZE as a nicer way to allow exceeding the ES3.0 minspec.
 - gltfio: minor efficiency improvement for Android and WebGL builds.
 - gltfio: add support for concurrent texture downloading and decoding.
-- engine: Fix guard bands and TAA with `vertexDomain:Device` [⚠️ **Recompile Materials**]
-- engine: `clipSpaceTransform` is now only available with `vertexDomain:Device` [⚠️ **API Change**]
 
 ## v1.25.5
 

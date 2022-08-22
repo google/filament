@@ -136,7 +136,7 @@ public:
 
     ~FEngine() noexcept;
 
-    backend::Driver& getDriver() const noexcept { return *mDriver; }
+    backend::ShaderModel getShaderModel() const noexcept { return getDriver().getShaderModel(); }
 
     DriverApi& getDriverApi() noexcept {
         return *std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage));
@@ -173,6 +173,14 @@ public:
 
     math::mat4f getUvFromClipMatrix() const noexcept {
         return mUvFromClipMatrix;
+    }
+
+    FeatureLevel getSupportedFeatureLevel() const noexcept;
+
+    FeatureLevel setActiveFeatureLevel(FeatureLevel featureLevel);
+
+    FeatureLevel getActiveFeatureLevel() const noexcept {
+        return mActiveFeatureLevel;
     }
 
     PostProcessManager const& getPostProcessManager() const noexcept {
@@ -362,6 +370,10 @@ public:
     size_t getRequestedDriverHandleArenaSize() const noexcept { return mConfig.driverHandleArenaSizeMB * MiB; }
     Config const& getConfig() const noexcept { return mConfig; }
 
+    bool hasFeatureLevel(backend::FeatureLevel featureLevel) const noexcept {
+        return featureLevel <= mActiveFeatureLevel;
+    }
+
 private:
     static Config validateConfig(const Config* pConfig) noexcept;
 
@@ -371,6 +383,8 @@ private:
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
+
+    backend::Driver& getDriver() const noexcept { return *mDriver; }
 
     template<typename T>
     bool terminateAndDestroy(const T* p, ResourceList<T>& list);
@@ -388,6 +402,7 @@ private:
     backend::Handle<backend::HwRenderTarget> mDefaultRenderTarget;
 
     Backend mBackend;
+    FeatureLevel mActiveFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     Platform* mPlatform = nullptr;
     bool mOwnPlatform = false;
     bool mAutomaticInstancingEnabled = false;

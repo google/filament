@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 #include "private/backend/CommandStream.h"
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H

@@ -251,6 +251,11 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             continue;
         }
 
+        // we want a feature level violation to be a hard error (exception if enabled, or crash)
+        ASSERT_PRECONDITION(upcast(engine).hasFeatureLevel(material->getFeatureLevel()),
+                "Material \"%s\" has feature level %u which is not supported by this Engine",
+                material->getName().c_str_safe(), (uint8_t)material->getFeatureLevel());
+
         // reject invalid geometry parameters
         ASSERT_PRECONDITION(entry.offset + entry.count <= entry.indices->getIndexCount(),
                 "[entity=%u, primitive @ %u] offset (%u) + count (%u) > indexCount (%u)",
@@ -514,12 +519,20 @@ void FRenderableManager::destroyComponentMorphTargets(FEngine& engine,
 }
 
 void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
-        size_t primitiveIndex, FMaterialInstance const* mi) noexcept {
+        size_t primitiveIndex, FMaterialInstance const* mi) {
     if (instance) {
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
-            primitives[primitiveIndex].setMaterialInstance(upcast(mi));
-            AttributeBitset required = mi->getMaterial()->getRequiredAttributes();
+            assert_invariant(mi);
+            FMaterial const* material = mi->getMaterial();
+
+            // we want a feature level violation to be a hard error (exception if enabled, or crash)
+            ASSERT_PRECONDITION(mEngine.hasFeatureLevel(material->getFeatureLevel()),
+                    "Material \"%s\" has feature level %u which is not supported by this Engine",
+                    material->getName().c_str_safe(), (uint8_t)material->getFeatureLevel());
+
+            primitives[primitiveIndex].setMaterialInstance(mi);
+            AttributeBitset required = material->getRequiredAttributes();
             AttributeBitset declared = primitives[primitiveIndex].getEnabledAttributes();
             if (UTILS_UNLIKELY((declared & required) != required)) {
                 slog.w << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex

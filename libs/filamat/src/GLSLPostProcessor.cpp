@@ -45,6 +45,8 @@ using namespace filament::backend;
 
 namespace filamat {
 
+using namespace utils;
+
 namespace msl {  // this is only used for MSL
 
 using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
@@ -53,7 +55,10 @@ UTILS_NOINLINE
 static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
         SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
     const auto stageFlags = sib.getStageFlags();
-    if (stageFlags.hasShaderType(config.shaderType)) {
+
+
+
+    if (hasShaderType(stageFlags, config.shaderType)) {
         const auto& infoList = sib.getSamplerInfoList();
         for (const auto& info: infoList) {
             auto uniformName = SamplerInterfaceBlock::getUniformName(
@@ -68,9 +73,9 @@ static BindingIndexMap getBindingIndexMap(const GLSLPostProcessor::Config& confi
     switch (config.domain) {
         case MaterialDomain::SURFACE:
             UTILS_NOUNROLL
-            for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
+            for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
                 if (blockIndex != BindingPoints::PER_MATERIAL_INSTANCE) {
-                    auto const* sib = SibGenerator::getSib(blockIndex, config.variant);
+                    auto const* sib = SibGenerator::getSib(BindingPoints(blockIndex), config.variant);
                     if (sib) {
                         generateBindingIndexMap(config, *sib, map);
                     }
@@ -92,7 +97,7 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
     // SPIRV error handler registration needs to occur only once. To avoid a race we do it up here
     // in the constructor, which gets invoked before MaterialBuilder kicks off jobs.
     spv::spirvbin_t::registerErrorHandler([](const std::string& str) {
-        utils::slog.e << str << utils::io::endl;
+        slog.e << str << io::endl;
     });
 }
 
@@ -225,7 +230,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     if (targetApi == TargetApi::OPENGL && mOptimization == MaterialBuilder::Optimization::NONE) {
         *outputGlsl = inputShader;
         if (mPrintShaders) {
-            utils::slog.i << *outputGlsl << utils::io::endl;
+            slog.i << *outputGlsl << io::endl;
         }
         return true;
     }
@@ -257,7 +262,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
     bool ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
     if (!ok) {
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        slog.e << tShader.getInfoLog() << io::endl;
         return false;
     }
 
@@ -272,7 +277,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     // SPIR-V types
     bool linkOk = program.link(msg);
     if (!linkOk) {
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        slog.e << tShader.getInfoLog() << io::endl;
         return false;
     }
 
@@ -288,8 +293,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                             internalConfig.minifier);
                 }
             } else {
-                utils::slog.e << "GLSL post-processor invoked with optimization level NONE"
-                        << utils::io::endl;
+                slog.e << "GLSL post-processor invoked with optimization level NONE"
+                        << io::endl;
             }
             break;
         case MaterialBuilder::Optimization::PREPROCESSOR:
@@ -312,7 +317,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         }
 
         if (mPrintShaders) {
-            utils::slog.i << *internalConfig.glslOutput << utils::io::endl;
+            slog.i << *internalConfig.glslOutput << io::endl;
         }
     }
     return true;
@@ -333,7 +338,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
             msg, &glsl, forbidIncluder);
 
     if (!ok) {
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        slog.e << tShader.getInfoLog() << io::endl;
     }
 
     if (internalConfig.spirvOutput) {
@@ -354,7 +359,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         // SPIR-V types
         bool linkOk = program.link(msg);
         if (!ok || !linkOk) {
-            utils::slog.e << spirvShader.getInfoLog() << utils::io::endl;
+            slog.e << spirvShader.getInfoLog() << io::endl;
         } else {
             SpvOptions options;
             options.generateDebugInfo = mGenerateDebugInfo;
@@ -432,8 +437,8 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         if (!filterSpvOptimizerMessage(level)) {
             return;
         }
-        utils::slog.e << stringifySpvOptimizerMessage(level, source, position, message)
-                << utils::io::endl;
+        slog.e << stringifySpvOptimizerMessage(level, source, position, message)
+                << io::endl;
     });
 
     if (optimization == MaterialBuilder::Optimization::SIZE) {
@@ -454,7 +459,7 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const {
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
-        utils::slog.e << "SPIR-V optimizer pass failed" << utils::io::endl;
+        slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
     }
 

@@ -178,7 +178,7 @@ class ModelViewer(
      */
     fun loadModelGlb(buffer: Buffer) {
         destroyModel()
-        asset = assetLoader.createAssetFromBinary(buffer)
+        asset = assetLoader.createAsset(buffer)
         asset?.let { asset ->
             resourceLoader.asyncBeginLoad(asset)
             animator = asset.animator
@@ -193,7 +193,7 @@ class ModelViewer(
      */
     fun loadModelGltf(buffer: Buffer, callback: (String) -> Buffer?) {
         destroyModel()
-        asset = assetLoader.createAssetFromJson(buffer)
+        asset = assetLoader.createAsset(buffer)
         asset?.let { asset ->
             for (uri in asset.resourceUris) {
                 val resourceBuffer = callback(uri)
@@ -216,7 +216,7 @@ class ModelViewer(
      */
     fun loadModelGltfAsync(buffer: Buffer, callback: (String) -> Buffer) {
         destroyModel()
-        asset = assetLoader.createAssetFromJson(buffer)
+        asset = assetLoader.createAsset(buffer)
         fetchResourcesJob = CoroutineScope(Dispatchers.IO).launch {
             fetchResources(asset!!, callback)
         }

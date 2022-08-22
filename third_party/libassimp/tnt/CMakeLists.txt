@@ -297,3 +297,5 @@ target_include_directories (${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # and we're linking against the libraries below, importing their public headers
 target_link_libraries(${TARGET} LINK_PUBLIC z)
+
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)

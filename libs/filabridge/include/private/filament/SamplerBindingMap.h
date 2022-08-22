@@ -35,20 +35,20 @@ public:
 
     // Given a valid Filament binding point and an offset within the block, returns a global unique
     // binding index.
-    uint8_t getSamplerBinding(uint8_t bindingPoint, uint8_t localOffset) const {
-        assert_invariant(mSamplerBlockOffsets[bindingPoint] != UNKNOWN_OFFSET);
-        return mSamplerBlockOffsets[bindingPoint] + localOffset;
+    uint8_t getSamplerBinding(BindingPoints bindingPoint, uint8_t localOffset) const {
+        assert_invariant(mSamplerBlockOffsets[+bindingPoint] != UNKNOWN_OFFSET);
+        return mSamplerBlockOffsets[+bindingPoint] + localOffset;
     }
 
     // Gets the global offset of the first sampler in the given sampler block.
-    uint8_t getBlockOffset(uint8_t bindingPoint) const {
-        assert_invariant(mSamplerBlockOffsets[bindingPoint] != UNKNOWN_OFFSET);
-        return mSamplerBlockOffsets[bindingPoint];
+    uint8_t getBlockOffset(BindingPoints bindingPoint) const {
+        assert_invariant(mSamplerBlockOffsets[+bindingPoint] != UNKNOWN_OFFSET);
+        return mSamplerBlockOffsets[+bindingPoint];
     }
 
 private:
     constexpr static uint8_t UNKNOWN_OFFSET = 0xff;
-    uint8_t mSamplerBlockOffsets[filament::BindingPoints::COUNT] = { UNKNOWN_OFFSET };
+    uint8_t mSamplerBlockOffsets[utils::Enum::count<BindingPoints>()] = { UNKNOWN_OFFSET };
 };
 
 } // namespace filament

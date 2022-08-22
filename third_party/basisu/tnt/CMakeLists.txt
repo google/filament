@@ -64,9 +64,14 @@ target_include_directories(basis_transcoder PUBLIC ../transcoder)
 target_compile_definitions(basis_encoder PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_transcoder PRIVATE ${BASIS_CONFIG})
 
+set_target_properties(zstd PROPERTIES FOLDER ThirdParty)
+set_target_properties(basis_encoder PROPERTIES FOLDER ThirdParty)
+set_target_properties(basis_transcoder PROPERTIES FOLDER ThirdParty)
+
 if (IS_HOST_PLATFORM)
     add_executable(basisu ../basisu_tool.cpp)
     target_link_libraries(basisu basis_encoder)
+    set_target_properties(basisu PROPERTIES FOLDER ThirdParty)
     target_compile_definitions(basisu PRIVATE ${BASIS_CONFIG})
     install(TARGETS basisu DESTINATION bin)
 

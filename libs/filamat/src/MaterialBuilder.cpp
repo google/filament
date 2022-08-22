@@ -27,6 +27,7 @@
 
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
 #include <private/filament/SibGenerator.h>
 
@@ -271,6 +272,11 @@ MaterialBuilder& MaterialBuilder::quality(ShaderQuality quality) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::featureLevel(FeatureLevel featureLevel) noexcept {
+    mFeatureLevel = featureLevel;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
     return *this;
@@ -442,8 +448,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
             sbb.add({ param.name.data(), param.name.size() },
                     param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add({ param.name.data(), param.name.size() },
-                    param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
+            ibb.add({{{ param.name.data(), param.name.size() },
+                      uint32_t(param.size == 1u ? 0u : param.size), param.uniformType, param.precision }});
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses belong to the "MaterialParams" block.
@@ -455,16 +461,18 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     }
 
     if (mSpecularAntiAliasing) {
-        ibb.add("_specularAntiAliasingVariance", UniformType::FLOAT);
-        ibb.add("_specularAntiAliasingThreshold", UniformType::FLOAT);
+        ibb.add({
+                { "_specularAntiAliasingVariance",  0, UniformType::FLOAT },
+                { "_specularAntiAliasingThreshold", 0, UniformType::FLOAT },
+        });
     }
 
     if (mBlendingMode == BlendingMode::MASKED) {
-        ibb.add("_maskThreshold", UniformType::FLOAT);
+        ibb.add({{ "_maskThreshold", 0, UniformType::FLOAT }});
     }
 
     if (mDoubleSidedCapability) {
-        ibb.add("_doubleSided", UniformType::BOOL);
+        ibb.add({{ "_doubleSided", 0, UniformType::BOOL }});
     }
 
     mRequiredAttributes.set(filament::VertexAttribute::POSITION);
@@ -499,6 +507,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.useLegacyMorphing = mUseLegacyMorphing;
     info.instanced = mInstanced;
     info.vertexDomainDeviceJittered = mVertexDomainDeviceJittered;
+    info.featureLevel = mFeatureLevel;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -546,7 +555,7 @@ bool MaterialBuilder::findAllProperties() noexcept {
 #endif
 }
 
-bool MaterialBuilder::runSemanticAnalysis() noexcept {
+bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
 #ifndef FILAMAT_LITE
     using namespace filament::backend;
     GLSLTools glslTools;
@@ -561,12 +570,12 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
 
     ShaderModel model = static_cast<ShaderModel>(mSemanticCodeGenParams.shaderModel);
     std::string shaderCode = peek(ShaderType::VERTEX, mSemanticCodeGenParams, mProperties);
-    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi, info);
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
     result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi,
-            mCustomSurfaceShading);
+            mCustomSurfaceShading, info);
     return result;
 #else
     return true;
@@ -953,19 +962,17 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     }
 
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
-    MaterialInfo info {};
+    MaterialInfo info{};
     prepareToBuild(info);
 
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
-    if (!checkLiteRequirements() || !findAllProperties() || !runSemanticAnalysis()) {
+    if (!checkLiteRequirements() || !findAllProperties() || !runSemanticAnalysis(info)) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
     }
 
-    filament::SamplerBindingMap map;
-    map.populate(&info.sib, mMaterialName.c_str());
-    info.samplerBindings = std::move(map);
+    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
 
     // Create chunk tree.
     ChunkContainer container;
@@ -1023,10 +1030,7 @@ std::string MaterialBuilder::peek(filament::backend::ShaderType type,
 
     MaterialInfo info;
     prepareToBuild(info);
-
-    filament::SamplerBindingMap map;
-    map.populate(&info.sib, mMaterialName.c_str());
-    info.samplerBindings = std::move(map);
+    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
 
     if (type == filament::backend::ShaderType::VERTEX) {
         return sg.createVertexProgram(ShaderModel(params.shaderModel),
@@ -1039,11 +1043,26 @@ std::string MaterialBuilder::peek(filament::backend::ShaderType type,
 
 void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
     container.addSimpleChild<uint32_t>(ChunkType::MaterialVersion, filament::MATERIAL_VERSION);
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialFeatureLevel, (uint8_t)mFeatureLevel);
     container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
+
+    // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)
+    using namespace filament;
+    utils::FixedCapacityVector<std::pair<std::string_view, BindingPoints>> list = {
+            { PerViewUib::_name,                  BindingPoints::PER_VIEW },
+            { PerRenderableUib::_name,            BindingPoints::PER_RENDERABLE },
+            { LightsUib::_name,                   BindingPoints::LIGHTS },
+            { ShadowUib::_name,                   BindingPoints::SHADOW },
+            { FroxelRecordUib::_name,             BindingPoints::FROXEL_RECORDS },
+            { PerRenderableBoneUib::_name,        BindingPoints::PER_RENDERABLE_BONES },
+            { PerRenderableMorphingUib::_name,    BindingPoints::PER_RENDERABLE_MORPHING },
+            { info.uib.getName(),                 BindingPoints::PER_MATERIAL_INSTANCE }
+    };
+    container.addChild<MaterialUniformBlockBindingsChunk>(std::move(list));
 
     // UIB
     container.addChild<MaterialUniformInterfaceBlockChunk>(info.uib);

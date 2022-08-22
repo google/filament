@@ -29,9 +29,11 @@
 #include <filament/Options.h>
 #include <filament/TextureSampler.h>
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SibGenerator.h>
 
 #include <math/mat4.h>
+
 
 namespace filament {
 
@@ -367,8 +369,8 @@ void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
 }
 
 void PerViewUniforms::bind(backend::DriverApi& driver) noexcept {
-    driver.bindUniformBuffer(BindingPoints::PER_VIEW, mUniformBufferHandle);
-    driver.bindSamplers(BindingPoints::PER_VIEW, mSamplerGroupHandle);
+    driver.bindUniformBuffer(+BindingPoints::PER_VIEW, mUniformBufferHandle);
+    driver.bindSamplers(+BindingPoints::PER_VIEW, mSamplerGroupHandle);
 }
 
 void PerViewUniforms::unbindSamplers() noexcept {

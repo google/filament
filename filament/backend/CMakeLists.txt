@@ -11,11 +11,13 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
         include/backend/CallbackHandler.h
+        include/backend/DriverApiForward.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
         include/backend/PipelineState.h
         include/backend/PixelBufferDescriptor.h
         include/backend/Platform.h
+        include/backend/Program.h
         include/backend/SamplerDescriptor.h
         include/backend/TargetBufferInfo.h
 )
@@ -47,9 +49,7 @@ set(PRIVATE_HDRS
         include/private/backend/Driver.h
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
-        include/private/backend/DriverApiForward.h
         include/private/backend/HandleAllocator.h
-        include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h
         src/DataReshaper.h
@@ -104,8 +104,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
         endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
-    else()
-        list(APPEND SRCS src/opengl/platforms/PlatformDummyGL.cpp)
     endif()
 endif()
 
@@ -224,6 +222,9 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
+# add this subproject to the Filament folder
+set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
+
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
 # ==================================================================================================
@@ -269,6 +270,7 @@ set(DUMMY_SRC "${VKSHADERS_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(vkshaders STATIC ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(vkshaders PROPERTIES FOLDER Filament/Generated)
 
 # ==================================================================================================
 # Dependencies
@@ -435,6 +437,8 @@ if (APPLE)
         install(FILES "${BACKEND_TEST_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${BACKEND_TEST_LIB_NAME})
         install(FILES test/PlatformRunner.h DESTINATION include/backend_test)
     endif()
+
+    set_target_properties(backend_test PROPERTIES FOLDER Tests)
 endif()
 
 if (APPLE AND NOT IOS)
@@ -443,5 +447,6 @@ if (APPLE AND NOT IOS)
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the
     # linker from removing "unused" symbols.
     target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
+    set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
 endif()
 

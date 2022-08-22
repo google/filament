@@ -106,6 +106,15 @@ public:
         mCursor += len + 1;
     }
 
+    void writeString(std::string_view str) {
+        size_t len = str.length();
+        if (mStart != nullptr) {
+            memcpy(reinterpret_cast<char*>(mCursor), str.data(), len);
+            mCursor[len] = 0;
+        }
+        mCursor += len + 1;
+    }
+
     void writeBlob(const char* blob, size_t nbytes) {
         writeUint64(nbytes);
         if (mStart != nullptr) {

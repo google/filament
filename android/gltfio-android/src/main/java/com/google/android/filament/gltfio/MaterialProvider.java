@@ -24,12 +24,16 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
+@UsedByNative("AssetLoader.cpp")
 public interface MaterialProvider {
 
     /**
      * MaterialKey specifies the requirements for a requested glTF material.
      * The provider creates Filament materials that fulfill these requirements.
      */
+    @UsedByNative("MaterialKey.cpp")
     public static class MaterialKey {
         public boolean doubleSided;
         public boolean unlit;

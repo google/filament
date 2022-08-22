@@ -25,6 +25,8 @@
 #include "OpenGLTimerQuery.h"
 #include "OpenGLContext.h"
 
+#include <backend/SamplerDescriptor.h>
+
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
@@ -1633,6 +1635,10 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     return false;
 }
 
+FeatureLevel OpenGLDriver::getFeatureLevel() {
+    return mContext.getFeatureLevel();
+}
+
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
            // z-coordinate of virtual and physical clip-space is in [-w, 0]
@@ -1828,7 +1834,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
                 params.filterMag = SamplerMagFilter::NEAREST;
                 params.filterMin = SamplerMinFilter::NEAREST;
 #ifndef NDEBUG
-                slog.w << "SamplerGroup specifies a filtered depth texture, which is not allowed."
+                slog.w << "HwSamplerGroup specifies a filtered depth texture, which is not allowed."
                        << io::endl;
 #endif
             }

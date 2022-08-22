@@ -58,12 +58,14 @@ public:
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;
+    bool getFeatureLevel(uint8_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
     bool getUIB(UniformInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getSubpasses(SubpassInfo* subpass) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
     bool getMaterialProperties(uint64_t* value) const noexcept;
+    bool getUniformBlockBindings(utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* value) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;
     bool getDepthWrite(bool* value) const noexcept;
@@ -146,6 +148,11 @@ struct ChunkSamplerInterfaceBlock {
 
 struct ChunkSubpassInterfaceBlock {
     static bool unflatten(filaflat::Unflattener& unflattener, SubpassInfo* sib);
+};
+
+struct ChunkUniformBlockBindings {
+    static bool unflatten(filaflat::Unflattener& unflattener,
+            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* uniformBlockBindings);
 };
 
 } // namespace filament

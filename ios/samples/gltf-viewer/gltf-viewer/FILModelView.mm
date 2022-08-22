@@ -198,7 +198,7 @@ const float kSensitivity = 100.0f;
 
 - (void)loadModelGlb:(NSData*)buffer {
     [self destroyModel];
-    _asset = _assetLoader->createAssetFromBinary(
+    _asset = _assetLoader->createAsset(
             static_cast<const uint8_t*>(buffer.bytes), static_cast<uint32_t>(buffer.length));
 
     if (!_asset) {
@@ -213,7 +213,7 @@ const float kSensitivity = 100.0f;
 
 - (void)loadModelGltf:(NSData*)buffer callback:(ResourceCallback)callback {
     [self destroyModel];
-    _asset = _assetLoader->createAssetFromJson(
+    _asset = _assetLoader->createAsset(
             static_cast<const uint8_t*>(buffer.bytes), static_cast<uint32_t>(buffer.length));
 
     if (!_asset) {

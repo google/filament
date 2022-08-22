@@ -182,6 +182,10 @@ public:
 
     bool isScreenSpaceReflectionEnabled() const noexcept { return mScreenSpaceReflectionsOptions.enabled; }
 
+    void setStencilBufferEnabled(bool enabled) noexcept { mStencilBufferEnabled = enabled; }
+
+    bool getStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
+
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
     }
@@ -449,9 +453,9 @@ private:
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         mPerViewUniforms.bind(driver);
-        driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
-        driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowMapManager.getShadowUniformsHandle());
-        driver.bindUniformBuffer(BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
+        driver.bindUniformBuffer(+BindingPoints::LIGHTS, mLightUbh);
+        driver.bindUniformBuffer(+BindingPoints::SHADOW, mShadowMapManager.getShadowUniformsHandle());
+        driver.bindUniformBuffer(+BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
     }
 
     // Clean-up the whole history, free all resources. This is typically called when the View is
@@ -489,6 +493,7 @@ private:
     bool mShadowingEnabled = true;
     bool mScreenSpaceRefractionEnabled = true;
     bool mHasPostProcessPass = true;
+    bool mStencilBufferEnabled = false;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     ShadowType mShadowType = ShadowType::PCF;
     VsmShadowOptions mVsmShadowOptions; // FIXME: this should probably be per-light

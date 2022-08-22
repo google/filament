@@ -932,6 +932,36 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: featureLevel
+
+Type
+:    `number`
+
+Value
+:     An integer value, either 1 or 2. Defaults to 1.
+
+      Feature Level    |        Guaranteed features
+:----------------------|:---------------------------------
+1                      | 9 textures per material
+2                      | 12 textures per material, cubemap arrays, ESSL 3.10
+[Table [featureLevels]: Feature levels]
+
+Description
+:     Sets the feature level of the material. Each feature level defines a set of features the
+      material can use. If the material uses a feature not supported by the selected level, `matc`
+      will generate an error during compilation. A given feature level is guaranteed to support
+      all features of lower feature levels.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    featureLevel : 2
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Bugs
+:     `matc` doesn't verify that a material is not using features above its selected feature level.
+
+
 ### General: shadingModel
 
 Type

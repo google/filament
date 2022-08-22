@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_FG_FRAMEGRAPHPASS_H
 #define TNT_FILAMENT_FG_FRAMEGRAPHPASS_H
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include "fg/FrameGraphResources.h"
 
