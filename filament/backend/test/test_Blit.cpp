@@ -417,7 +417,7 @@ TEST_F(BackendTest, DepthMinify) {
     {
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
-        Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
+        Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
         prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         prog.uniformBlockBindings({{"params", 1}});
         program = api.createProgram(std::move(prog));
@@ -559,7 +559,7 @@ TEST_F(BackendTest, ColorResolve) {
     {
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
-        Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
+        Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
         prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         prog.uniformBlockBindings({{"params", 1}});
         program = api.createProgram(std::move(prog));
@@ -667,7 +667,7 @@ TEST_F(BackendTest, DepthResolve) {
     {
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
-        Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
+        Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
         prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         prog.uniformBlockBindings({{"params", 1}});
         program = api.createProgram(std::move(prog));

@@ -38,8 +38,7 @@ public:
 
     struct Sampler {
         utils::CString name = {};   // name of the sampler in the shader
-        uint16_t binding = 0;       // binding point of the sampler in the shader
-        bool strict = false;        // if true, this sampler must always have a bound texture
+        uint32_t binding = 0;       // binding point of the sampler in the shader
     };
 
     struct SamplerGroupData {
