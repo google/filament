@@ -31,7 +31,7 @@ class BinaryTreeArray {
 
     // Simple fixed capacity stack
     template<typename TYPE, size_t CAPACITY,
-            typename = typename std::enable_if<std::is_pod<TYPE>::value>::type>
+            typename = typename std::enable_if<std::is_trivial<TYPE>::value>::type>
     class stack {
         TYPE mElements[CAPACITY];
         size_t mSize = 0;
