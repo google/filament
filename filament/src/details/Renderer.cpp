@@ -723,7 +723,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .hasContactShadows = scene.hasContactShadows(),
             // at this point we don't know if we have refraction, but that's handled later
             .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled,
-            .enabledStencilBuffer = view.getStencilBufferEnabled()
+            .enabledStencilBuffer = view.isStencilBufferEnabled()
     };
 
     /*

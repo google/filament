@@ -403,6 +403,21 @@ enum_<backend::FeatureLevel>("FeatureLevel")
     .value("FEATURE_LEVEL_1", backend::FeatureLevel::FEATURE_LEVEL_1)
     .value("FEATURE_LEVEL_2", backend::FeatureLevel::FEATURE_LEVEL_2);
 
+enum_<backend::StencilOperation>("StencilOperation")
+    .value("KEEP", backend::StencilOperation::KEEP)
+    .value("ZERO", backend::StencilOperation::ZERO)
+    .value("REPLACE", backend::StencilOperation::REPLACE)
+    .value("INCR_CLAMP", backend::StencilOperation::INCR)
+    .value("INCR_WRAP", backend::StencilOperation::INCR_WRAP)
+    .value("DECR_CLAMP", backend::StencilOperation::DECR)
+    .value("DECR_WRAP", backend::StencilOperation::DECR_WRAP)
+    .value("INVERT", backend::StencilOperation::INVERT);
+
+enum_<backend::StencilFace>("StencilFace")
+    .value("FRONT", backend::StencilFace::FRONT)
+    .value("BACK", backend::StencilFace::BACK)
+    .value("FRONT_AND_BACK", backend::StencilFace::FRONT_AND_BACK);
+
 enum_<ktxreader::Ktx2Reader::TransferFunction>("Ktx2Reader$TransferFunction")
     .value("LINEAR", ktxreader::Ktx2Reader::TransferFunction::LINEAR)
     .value("sRGB", ktxreader::Ktx2Reader::TransferFunction::sRGB);

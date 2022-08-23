@@ -662,7 +662,7 @@ public:
      * Returns true if the stencil buffer is enabled.
      * See setStencilBufferEnabled() for more information.
      */
-    bool getStencilBufferEnabled() const noexcept;
+    bool isStencilBufferEnabled() const noexcept;
 
     // for debugging...
 
