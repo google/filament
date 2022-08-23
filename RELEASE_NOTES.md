@@ -5,8 +5,6 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
-- WebGL: reduce max instance count to work around Chrome issues [⚠️ **Recompile Materials**]
-
 ## v1.26.0
 
 - engine: new feature level APIs, see `Engine::getSupportedFeatureLevel()`
