@@ -177,7 +177,7 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
     transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
 }
 
-void FCamera::lookAt(const float3& eye, const float3& center, const float3& up) noexcept {
+void FCamera::lookAt(double3 const& eye, double3 const& center, double3 const& up) noexcept {
     FTransformManager& transformManager = mEngine.getTransformManager();
     transformManager.setTransform(transformManager.getInstance(mEntity),
             mat4::lookAt(eye, center, up));

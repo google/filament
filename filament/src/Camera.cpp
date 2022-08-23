@@ -131,12 +131,8 @@ void Camera::setModelMatrix(const mat4f& modelMatrix) noexcept {
     upcast(this)->setModelMatrix(modelMatrix);
 }
 
-void Camera::lookAt(const float3& eye, const float3& center, float3 const& up) noexcept {
+void Camera::lookAt(double3 const& eye, double3 const& center, double3 const& up) noexcept {
     upcast(this)->lookAt(eye, center, up);
-}
-
-void Camera::lookAt(const float3& eye, const float3& center) noexcept {
-    upcast(this)->lookAt(eye, center, {0, 1, 0});
 }
 
 mat4 Camera::getModelMatrix() const noexcept {
@@ -147,7 +143,7 @@ mat4 Camera::getViewMatrix() const noexcept {
     return upcast(this)->getViewMatrix();
 }
 
-float3 Camera::getPosition() const noexcept {
+double3 Camera::getPosition() const noexcept {
     return upcast(this)->getPosition();
 }
 

@@ -19,6 +19,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/EntityInstance.h>
 #include <utils/EntityManager.h>
 #include <utils/StructureOfArrays.h>
 

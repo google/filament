@@ -106,8 +106,8 @@ public:
         ps.program = program;
         ps.rasterState.colorWrite = false;
         ps.rasterState.depthWrite = false;
-        ps.rasterState.stencilWrite = true;
-        ps.rasterState.stencilOpDepthStencilPass = StencilOperation::INCR;
+        ps.stencilState.stencilWrite = true;
+        ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0);
@@ -120,10 +120,10 @@ public:
         params.flags.clear = TargetBufferFlags::NONE;
         params.flags.discardStart = TargetBufferFlags::NONE;
         ps.rasterState.colorWrite = true;
-        ps.rasterState.stencilWrite = false;
-        ps.rasterState.stencilOpDepthStencilPass = StencilOperation::KEEP;
-        ps.rasterState.stencilFunc = RasterState::StencilFunction::E;
-        ps.rasterState.stencilRef = 0u;
+        ps.stencilState.stencilWrite = false;
+        ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
+        ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
+        ps.stencilState.front.ref = 0u;
 
         api.beginRenderPass(renderTarget, params);
         api.draw(ps, triangle.getRenderPrimitive(), 1);
@@ -233,8 +233,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     ps.program = program;
     ps.rasterState.colorWrite = false;
     ps.rasterState.depthWrite = false;
-    ps.rasterState.stencilWrite = true;
-    ps.rasterState.stencilOpDepthStencilPass = StencilOperation::INCR;
+    ps.stencilState.stencilWrite = true;
+    ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
     api.makeCurrent(swapChain, swapChain);
     api.beginFrame(0, 0);
@@ -249,10 +249,10 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     params.flags.discardEnd = TargetBufferFlags::STENCIL;
     params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
     ps.rasterState.colorWrite = true;
-    ps.rasterState.stencilWrite = false;
-    ps.rasterState.stencilOpDepthStencilPass = StencilOperation::KEEP;
-    ps.rasterState.stencilFunc = RasterState::StencilFunction::E;
-    ps.rasterState.stencilRef = 0u;
+    ps.stencilState.stencilWrite = false;
+    ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
+    ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
+    ps.stencilState.front.ref = 0u;
 
     api.beginRenderPass(renderTarget1, params);
     api.draw(ps, triangle.getRenderPrimitive(), 1);

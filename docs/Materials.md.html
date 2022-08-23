@@ -986,6 +986,7 @@ uint4                  | Vector of 4 unsigned integers
 float3x3               | Matrix of 3x3 floats
 float4x4               | Matrix of 4x4 floats
 sampler2d              | 2D texture
+sampler2dArray         | Array of 2D textures
 samplerExternal        | External texture (platform-specific)
 samplerCubemap         | Cubemap texture
 [Table [materialParamsTypes]: Material parameter types]
@@ -997,7 +998,7 @@ Samplers
 Arrays
 :     A parameter can define an array of values by appending `[size]` after the type name, where
       `size` is a positive integer. For instance: `float[9]` declares an array of nine `float`
-      values. Arrays of samplers are _not_ supported at the moment.
+      values. This syntax does not apply to samplers as arrays are treated as separate types.
 
 Description
 :     Lists the parameters required by your material. These parameters can be set at runtime using

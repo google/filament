@@ -122,23 +122,21 @@ Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swi
 }
 
 Texture* Texture::Builder::build(Engine& engine) {
-    if (!ASSERT_POSTCONDITION_NON_FATAL(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
-            "Texture format %u not supported on this platform", mImpl->mFormat)) {
-        return nullptr;
-    }
+    ASSERT_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
+            "Texture format %u not supported on this platform", mImpl->mFormat);
 
     const bool sampleable = bool(mImpl->mUsage & TextureUsage::SAMPLEABLE);
     const bool swizzled = mImpl->mTextureIsSwizzled;
     const bool imported = mImpl->mImportedId;
 
     #if defined(__EMSCRIPTEN__)
-    ASSERT_POSTCONDITION_NON_FATAL(!swizzled, "WebGL does not support texture swizzling.");
+    ASSERT_PRECONDITION(!swizzled, "WebGL does not support texture swizzling.");
     #endif
 
-    ASSERT_POSTCONDITION_NON_FATAL((swizzled && sampleable) || !swizzled,
+    ASSERT_PRECONDITION((swizzled && sampleable) || !swizzled,
             "Swizzled texture must be SAMPLEABLE");
 
-    ASSERT_POSTCONDITION_NON_FATAL((imported && sampleable) || !imported,
+    ASSERT_PRECONDITION((imported && sampleable) || !imported,
             "Imported texture must be SAMPLEABLE");
 
     return upcast(engine).createTexture(*this);
@@ -224,43 +222,31 @@ void FTexture::setImage(FEngine& engine, size_t level,
         }
     };
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.type == PixelDataType::COMPRESSED ||
-                         validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
+    ASSERT_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
+            validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
             "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
-            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type))) {
-        return;
-    }
+            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(!mStream, "setImage() called on a Stream texture.")) {
-        return;
-    }
+    ASSERT_PRECONDITION(!mStream, "setImage() called on a Stream texture.");
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(level < mLevelCount,
-            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount))) {
-        return;
-    }
+    ASSERT_PRECONDITION(level < mLevelCount,
+            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(validateTarget(mTarget),
-            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget))) {
-        return;
-    }
+    ASSERT_PRECONDITION(validateTarget(mTarget),
+            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(mSampleCount <= 1,
-            "Operation not supported with multisample (%u) texture.", unsigned(mSampleCount))) {
-        return;
-    }
+    ASSERT_PRECONDITION(mSampleCount <= 1,
+            "Operation not supported with multisample (%u) texture.", unsigned(mSampleCount));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(xoffset + width <= valueForLevel(level, mWidth),
+    ASSERT_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth),
             "xoffset (%u) + width (%u) > texture width (%u) at level (%u)",
-            unsigned(xoffset), unsigned(width), unsigned(valueForLevel(level, mWidth)), unsigned(level))) {
-        return;
-    }
+            unsigned(xoffset), unsigned(width), unsigned(valueForLevel(level, mWidth)), unsigned(level));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(yoffset + height <= valueForLevel(level, mHeight),
+    ASSERT_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight),
             "yoffset (%u) + height (%u) > texture height (%u) at level (%u)",
-            unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)), unsigned(level))) {
-        return;
-    }
+            unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)), unsigned(level));
+
+    ASSERT_PRECONDITION(buffer.buffer, "Data buffer is nullptr.");
 
     uint32_t textureDepthOrLayers;
     switch (mTarget) {
@@ -284,15 +270,9 @@ void FTexture::setImage(FEngine& engine, size_t level,
             break;
     }
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(zoffset + depth <= textureDepthOrLayers,
+    ASSERT_PRECONDITION(zoffset + depth <= textureDepthOrLayers,
             "zoffset (%u) + depth (%u) > texture depth (%u) at level (%u)",
-            unsigned(zoffset), unsigned(depth), textureDepthOrLayers, unsigned(level))) {
-        return;
-    }
-
-    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.buffer, "Data buffer is nullptr.")) {
-        return;
-    }
+            unsigned(zoffset), unsigned(depth), textureDepthOrLayers, unsigned(level));
 
     engine.getDriverApi().update3DImage(mHandle,
             uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
@@ -315,30 +295,20 @@ void FTexture::setImage(FEngine& engine, size_t level,
         }
     };
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.type == PixelDataType::COMPRESSED ||
+    ASSERT_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
                         validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
             "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
-            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type))) {
-        return;
-    }
+            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(!mStream, "setImage() called on a Stream texture.")) {
-        return;
-    }
+    ASSERT_PRECONDITION(!mStream, "setImage() called on a Stream texture.");
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(level < mLevelCount,
-            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount))) {
-        return;
-    }
+    ASSERT_PRECONDITION(level < mLevelCount,
+            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(validateTarget(mTarget),
-            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget))) {
-        return;
-    }
+    ASSERT_PRECONDITION(validateTarget(mTarget),
+            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget));
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(buffer.buffer, "Data buffer is nullptr.")) {
-        return;
-    }
+    ASSERT_PRECONDITION(buffer.buffer, "Data buffer is nullptr.");
 
     auto w = std::max(1u, mWidth >> level);
     auto h = std::max(1u, mHeight >> level);
@@ -375,10 +345,9 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
     if (stream) {
-        if (!ASSERT_POSTCONDITION_NON_FATAL(mTarget == Sampler::SAMPLER_EXTERNAL,
-                "Texture target must be SAMPLER_EXTERNAL")) {
-            return;
-        }
+        ASSERT_PRECONDITION(mTarget == Sampler::SAMPLER_EXTERNAL,
+                "Texture target must be SAMPLER_EXTERNAL");
+
         mStream = stream;
         engine.getDriverApi().setExternalStream(mHandle, stream->getHandle());
     } else {
@@ -388,16 +357,12 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
 }
 
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
-    if (!ASSERT_POSTCONDITION_NON_FATAL(mTarget != SamplerType::SAMPLER_EXTERNAL,
-            "External Textures are not mipmappable.")) {
-        return;
-    }
+    ASSERT_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL,
+            "External Textures are not mipmappable.");
 
     const bool formatMipmappable = engine.getDriverApi().isTextureFormatMipmappable(mFormat);
-    if (!ASSERT_POSTCONDITION_NON_FATAL(formatMipmappable,
-            "Texture format %u is not mipmappable.", (unsigned)mFormat)) {
-        return;
-    }
+    ASSERT_PRECONDITION(formatMipmappable,
+            "Texture format %u is not mipmappable.", (unsigned)mFormat);
 
     if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {
         return;
@@ -503,31 +468,23 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
 
     /* validate input data */
 
-    if (!ASSERT_PRECONDITION_NON_FATAL(buffer.format == PixelDataFormat::RGB ||
+    ASSERT_PRECONDITION(buffer.format == PixelDataFormat::RGB ||
                                        buffer.format == PixelDataFormat::RGBA,
-            "input data format must be RGB or RGBA")) {
-        return;
-    }
+            "input data format must be RGB or RGBA");
 
-    if (!ASSERT_PRECONDITION_NON_FATAL(
+    ASSERT_PRECONDITION(
             buffer.type == PixelDataType::FLOAT ||
             buffer.type == PixelDataType::HALF ||
             buffer.type == PixelDataType::UINT_10F_11F_11F_REV,
-            "input data type must be FLOAT, HALF or UINT_10F_11F_11F_REV")) {
-        return;
-    }
+            "input data type must be FLOAT, HALF or UINT_10F_11F_11F_REV");
 
     /* validate texture */
 
-    if (!ASSERT_PRECONDITION_NON_FATAL(!(size & (size-1)),
-            "input data cubemap dimensions must be a power-of-two")) {
-        return;
-    }
+    ASSERT_PRECONDITION(!(size & (size-1)),
+            "input data cubemap dimensions must be a power-of-two");
 
-    if (!ASSERT_PRECONDITION_NON_FATAL(!isCompressed(),
-            "reflections texture cannot be compressed")) {
-        return;
-    }
+    ASSERT_PRECONDITION(!isCompressed(),
+            "reflections texture cannot be compressed");
 
 
     PrefilterOptions defaultOptions;

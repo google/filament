@@ -31,6 +31,7 @@ namespace filament::backend {
 struct PipelineState {
     Handle<HwProgram> program;
     RasterState rasterState;
+    StencilState stencilState;
     PolygonOffset polygonOffset;
     Viewport scissor{ 0, 0,
                       (uint32_t)std::numeric_limits<int32_t>::max(),

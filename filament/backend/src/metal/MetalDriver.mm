@@ -1234,12 +1234,29 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         depthState.depthWriteEnabled = rs.depthWrite;
     }
     if (stencilAttachment) {
-        depthState.stencilCompare = getMetalCompareFunction(rs.stencilFunc);
-        depthState.stencilOperationDepthStencilPass = getMetalStencilOperation(rs.stencilOpDepthStencilPass);
-        depthState.stencilOperationDepthFail = getMetalStencilOperation(rs.stencilOpDepthFail);
-        depthState.stencilOperationStencilFail = getMetalStencilOperation(rs.stencilOpStencilFail);
-        depthState.stencilWriteEnabled = rs.stencilWrite;
-        [mContext->currentRenderPassEncoder setStencilReferenceValue:rs.stencilRef];
+        const auto& ss = ps.stencilState;
+
+        auto& front = depthState.front;
+        front.stencilCompare = getMetalCompareFunction(ss.front.stencilFunc);
+        front.stencilOperationStencilFail = getMetalStencilOperation(ss.front.stencilOpStencilFail);
+        front.stencilOperationDepthFail = getMetalStencilOperation(ss.front.stencilOpDepthFail);
+        front.stencilOperationDepthStencilPass =
+                getMetalStencilOperation(ss.front.stencilOpDepthStencilPass);
+        front.readMask = ss.front.readMask;
+        front.writeMask = ss.front.writeMask;
+
+        auto& back = depthState.back;
+        back.stencilCompare = getMetalCompareFunction(ss.back.stencilFunc);
+        back.stencilOperationStencilFail = getMetalStencilOperation(ss.back.stencilOpStencilFail);
+        back.stencilOperationDepthFail = getMetalStencilOperation(ss.back.stencilOpDepthFail);
+        back.stencilOperationDepthStencilPass =
+                getMetalStencilOperation(ss.back.stencilOpDepthStencilPass);
+        back.readMask = ss.back.readMask;
+        back.writeMask = ss.back.writeMask;
+
+        depthState.stencilWriteEnabled = ss.stencilWrite;
+        [mContext->currentRenderPassEncoder setStencilFrontReferenceValue:ss.front.ref
+                                                       backReferenceValue:ss.back.ref];
     }
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {

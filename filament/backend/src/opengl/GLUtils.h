@@ -325,6 +325,20 @@ constexpr inline GLenum getSwizzleChannel(TextureSwizzle c) noexcept {
     }
 }
 
+constexpr inline GLenum getCullingMode(CullingMode mode) noexcept {
+    switch (mode) {
+        case CullingMode::NONE:
+            // should never happen
+            return GL_FRONT_AND_BACK;
+        case CullingMode::FRONT:
+            return GL_FRONT;
+        case CullingMode::BACK:
+            return GL_BACK;
+        case CullingMode::FRONT_AND_BACK:
+            return GL_FRONT_AND_BACK;
+    }
+}
+
 // clang looses it on this one, and generates a huge jump table when
 // inlined. So we don't  mark it as inline (only constexpr) which solves the problem,
 // strangely, when not inlined, clang simply generates an array lookup.

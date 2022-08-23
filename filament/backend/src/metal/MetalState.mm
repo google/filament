@@ -102,15 +102,27 @@ id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
     MTLDepthStencilDescriptor* depthStencilDescriptor = [MTLDepthStencilDescriptor new];
     depthStencilDescriptor.depthCompareFunction = state.depthCompare;
     depthStencilDescriptor.depthWriteEnabled = BOOL(state.depthWriteEnabled);
-    MTLStencilDescriptor* stencilDescriptor = [MTLStencilDescriptor new];
-    stencilDescriptor.stencilCompareFunction = state.stencilCompare;
-    stencilDescriptor.stencilFailureOperation = state.stencilOperationStencilFail;
-    stencilDescriptor.depthFailureOperation = state.stencilOperationDepthFail;
-    stencilDescriptor.depthStencilPassOperation = state.stencilOperationDepthStencilPass;
-    stencilDescriptor.readMask = 0xFFFFFFFF;
-    stencilDescriptor.writeMask = state.stencilWriteEnabled ? 0xFFFFFFFF : 0x0;
-    depthStencilDescriptor.backFaceStencil = stencilDescriptor;
-    depthStencilDescriptor.frontFaceStencil = stencilDescriptor;
+
+    // Front-facing stencil.
+    MTLStencilDescriptor* frontStencilDescriptor = [MTLStencilDescriptor new];
+    frontStencilDescriptor.stencilCompareFunction = state.front.stencilCompare;
+    frontStencilDescriptor.stencilFailureOperation = state.front.stencilOperationStencilFail;
+    frontStencilDescriptor.depthFailureOperation = state.front.stencilOperationDepthFail;
+    frontStencilDescriptor.depthStencilPassOperation = state.front.stencilOperationDepthStencilPass;
+    frontStencilDescriptor.readMask = state.front.readMask;
+    frontStencilDescriptor.writeMask = state.stencilWriteEnabled ? state.front.writeMask : 0x0;
+    depthStencilDescriptor.frontFaceStencil = frontStencilDescriptor;
+
+    // Back-facing stencil.
+    MTLStencilDescriptor* backStencilDescriptor = [MTLStencilDescriptor new];
+    backStencilDescriptor.stencilCompareFunction = state.back.stencilCompare;
+    backStencilDescriptor.stencilFailureOperation = state.back.stencilOperationStencilFail;
+    backStencilDescriptor.depthFailureOperation = state.back.stencilOperationDepthFail;
+    backStencilDescriptor.depthStencilPassOperation = state.back.stencilOperationDepthStencilPass;
+    backStencilDescriptor.readMask = state.back.readMask;
+    backStencilDescriptor.writeMask = state.stencilWriteEnabled ? state.back.writeMask : 0x0;
+    depthStencilDescriptor.backFaceStencil = backStencilDescriptor;
+
     return [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
 }
 

@@ -93,8 +93,7 @@ public:
     void setModelMatrix(const math::mat4f& modelMatrix) noexcept;
 
     // sets the camera's model matrix
-    void lookAt(const math::float3& eye, const math::float3& center,
-            const math::float3& up = { 0, 1, 0 })  noexcept;
+    void lookAt(math::double3 const& eye, math::double3 const& center, math::double3 const& up) noexcept;
 
     // returns the model matrix
     math::mat4 getModelMatrix() const noexcept;

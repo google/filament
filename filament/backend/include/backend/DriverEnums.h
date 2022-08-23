@@ -630,6 +630,10 @@ static constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_SRGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
+static constexpr bool isASTCCompression(TextureFormat format) noexcept {
+    return format >= TextureFormat::RGBA_ASTC_4x4 && format <= TextureFormat::SRGB8_ALPHA8_ASTC_12x12;
+}
+
 //! Texture Cubemap Face
 enum class TextureCubemapFace : uint8_t {
     // don't change the enums values
@@ -787,11 +791,9 @@ struct RasterState {
     using DepthFunc = backend::SamplerCompareFunc;
     using BlendEquation = backend::BlendEquation;
     using BlendFunction = backend::BlendFunction;
-    using StencilFunction = backend::SamplerCompareFunc;
-    using StencilOperation = backend::StencilOperation;
 
     RasterState() noexcept { // NOLINT
-        static_assert(sizeof(RasterState) == sizeof(uint64_t),
+        static_assert(sizeof(RasterState) == sizeof(uint32_t),
                 "RasterState size not what was intended");
         culling = CullingMode::BACK;
         blendEquationRGB = BlendEquation::ADD;
@@ -800,10 +802,6 @@ struct RasterState {
         blendFunctionSrcAlpha = BlendFunction::ONE;
         blendFunctionDstRGB = BlendFunction::ZERO;
         blendFunctionDstAlpha = BlendFunction::ZERO;
-        stencilFunc = StencilFunction::A;
-        stencilOpStencilFail = StencilOperation::KEEP;
-        stencilOpDepthFail = StencilOperation::KEEP;
-        stencilOpDepthStencilPass = StencilOperation::KEEP;
     }
 
     bool operator == (RasterState rhs) const noexcept { return u == rhs.u; }
@@ -862,26 +860,10 @@ struct RasterState {
             //! whether front face winding direction must be inverted
             bool inverseFrontFaces                      : 1;        // 31
 
-            //! Whether stencil-buffer writes are enabled
-            bool stencilWrite                           : 1;        // 32
-            //! Stencil reference value
-            uint8_t stencilRef                          : 8;        // 40
-            //! Stencil test function
-            StencilFunction stencilFunc                 : 3;        // 43
-            //! Stencil operation when stencil test fails
-            StencilOperation stencilOpStencilFail       : 3;        // 46
             //! padding, must be 0
-            uint8_t padding0                            : 2;        // 48
-            //! Stencil operation when stencil test passes but depth test fails
-            StencilOperation stencilOpDepthFail         : 3;        // 51
-            //! Stencil operation when both stencil and depth test pass
-            StencilOperation stencilOpDepthStencilPass  : 3;        // 54
-            //! padding, must be 0
-            uint8_t padding1                            : 2;        // 56
-            //! padding, must be 0
-            uint8_t padding2                            : 8;        // 64
+            uint8_t padding                             : 1;        // 32
         };
-        uint64_t u = 0;
+        uint32_t u = 0;
     };
 };
 
@@ -975,6 +957,55 @@ struct PolygonOffset {
     float constant = 0;     // units in GL-speak
 };
 
+struct StencilState {
+    using StencilFunction = SamplerCompareFunc;
+
+    struct StencilOperations {
+        //! Stencil test function
+        StencilFunction stencilFunc                     : 3;                    // 3
+
+        //! Stencil operation when stencil test fails
+        StencilOperation stencilOpStencilFail           : 3;                    // 6
+
+        uint8_t padding0                                : 2;                    // 8
+
+        //! Stencil operation when stencil test passes but depth test fails
+        StencilOperation stencilOpDepthFail             : 3;                    // 11
+
+        //! Stencil operation when both stencil and depth test pass
+        StencilOperation stencilOpDepthStencilPass      : 3;                    // 14
+
+        uint8_t padding1                                : 2;                    // 16
+
+        //! Reference value for stencil comparison tests and updates
+        uint8_t ref;                                                            // 24
+
+        //! Masks the bits of the stencil values participating in the stencil comparison test.
+        uint8_t readMask;                                                       // 32
+
+        //! Masks the bits of the stencil values updated by the stencil test.
+        uint8_t writeMask;                                                      // 40
+    };
+
+    //! Stencil operations for front-facing polygons
+    StencilOperations front = {
+            .stencilFunc = StencilFunction::A, .ref = 0, .readMask = 0xff, .writeMask = 0xff };
+
+    //! Stencil operations for back-facing polygons
+    StencilOperations back  = {
+            .stencilFunc = StencilFunction::A, .ref = 0, .readMask = 0xff, .writeMask = 0xff };
+
+    //! Whether stencil-buffer writes are enabled
+    bool stencilWrite = false;
+
+    uint8_t padding = 0;
+};
+
+static_assert(sizeof(StencilState::StencilOperations) == 5u,
+        "StencilOperations size not what was intended");
+
+static_assert(sizeof(StencilState) == 12u,
+        "StencilState size not what was intended");
 
 using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 

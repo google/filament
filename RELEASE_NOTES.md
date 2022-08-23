@@ -5,6 +5,12 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.25.6
+
+- engine: Add `CONFIG_MINSPEC_UBO_SIZE` as a nicer way to allow exceeding the ES3.0 minspec.
+- gltfio: minor efficiency improvement for Android and WebGL builds.
+- gltfio: add support for concurrent texture downloading and decoding.
+
 ## v1.25.5
 
 - WebGL: upgraded the JS bindings to work with emsdk 3.1.15

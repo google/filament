@@ -331,6 +331,8 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = exts.has("GL_KHR_debug"sv);
+    ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
+    ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
     ext.QCOM_tiled_rendering = exts.has("GL_QCOM_tiled_rendering"sv);
     ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
@@ -373,6 +375,8 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = major >= 4 && minor >= 3;
+    ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
+    ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
     ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
     ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);

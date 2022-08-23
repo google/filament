@@ -884,7 +884,7 @@ public class Texture {
     // TODO: add a setImage() version that takes an android Bitmap
 
     /**
-     * <code>setImage</code> is used to modify the whole content of the texure from a CPU-buffer.
+     * <code>setImage</code> is used to modify the whole content of the texture from a CPU-buffer.
      *
      *  <p>This <code>Texture</code> instance must use {@link Sampler#SAMPLER_2D SAMPLER_2D} or
      *  {@link Sampler#SAMPLER_EXTERNAL SAMPLER_EXTERNAL}. If the later is specified
@@ -951,11 +951,11 @@ public class Texture {
     }
 
     /**
-     * <code>setImage</code> is used to modify a sub-region of the 3D texture or 2D texture array
-     * from a CPU-buffer.
+     * <code>setImage</code> is used to modify a sub-region of a 3D texture, 2D texture array or
+     * cubemap from a CPU-buffer. Cubemaps are treated like a 2D array of six layers.
      *
-     *  <p>This <code>Texture</code> instance must use {@link Sampler#SAMPLER_2D_ARRAY SAMPLER_2D_ARRAY} or
-     *  {@link Sampler#SAMPLER_3D SAMPLER_3D}.</p>
+     *  <p>This <code>Texture</code> instance must use {@link Sampler#SAMPLER_2D_ARRAY SAMPLER_2D_ARRAY},
+     *  {@link Sampler#SAMPLER_3D SAMPLER_3D} or {@link Sampler#SAMPLER_CUBEMAP SAMPLER_CUBEMAP}.</p>
      *
      * @param engine    {@link Engine} this texture is associated to. Must be the
      *                  instance passed to {@link Builder#build Builder.build()}.

@@ -249,31 +249,21 @@ void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
 }
 
 
-void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
-    mRasterState = rs;
+void OpenGLDriver::setRasterState(RasterState rs) noexcept {
     auto& gl = mContext;
 
+    mRenderPassColorWrite |= rs.colorWrite;
+    mRenderPassDepthWrite |= rs.depthWrite;
+
     // culling state
-    switch (rs.culling) {
-        case CullingMode::NONE:
-            gl.disable(GL_CULL_FACE);
-            break;
-        case CullingMode::FRONT:
-            gl.cullFace(GL_FRONT);
-            break;
-        case CullingMode::BACK:
-            gl.cullFace(GL_BACK);
-            break;
-        case CullingMode::FRONT_AND_BACK:
-            gl.cullFace(GL_FRONT_AND_BACK);
-            break;
+    if (rs.culling == CullingMode::NONE) {
+        gl.disable(GL_CULL_FACE);
+    } else {
+        gl.enable(GL_CULL_FACE);
+        gl.cullFace(getCullingMode(rs.culling));
     }
 
     gl.frontFace(rs.inverseFrontFaces ? GL_CW : GL_CCW);
-
-    if (rs.culling != CullingMode::NONE) {
-        gl.enable(GL_CULL_FACE);
-    }
 
     // blending state
     if (!rs.hasBlending()) {
@@ -300,19 +290,6 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
         gl.depthMask(GLboolean(rs.depthWrite));
     }
 
-    // stencil test / operation
-    if (rs.stencilFunc == RasterState::StencilFunction::A && !rs.stencilWrite) {
-        gl.disable(GL_STENCIL_TEST);
-    } else {
-        gl.enable(GL_STENCIL_TEST);
-        gl.stencilFunc(getStencilFunc(rs.stencilFunc), rs.stencilRef, ~GLuint(0));
-        gl.stencilOp(getStencilOp(rs.stencilOpStencilFail),
-                getStencilOp(rs.stencilOpDepthFail),
-                getStencilOp(rs.stencilOpDepthStencilPass));
-        GLuint stencilMask = rs.stencilWrite ? ~GLuint(0) : 0x00;
-        gl.stencilMask(stencilMask);
-    }
-
     // write masks
     gl.colorMask(GLboolean(rs.colorWrite));
 
@@ -321,6 +298,42 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
         gl.enable(GL_SAMPLE_ALPHA_TO_COVERAGE);
     } else {
         gl.disable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+    }
+}
+
+void OpenGLDriver::setStencilState(StencilState ss) noexcept {
+    auto& gl = mContext;
+
+    mRenderPassStencilWrite |= ss.stencilWrite;
+
+    // stencil test / operation
+    if (UTILS_LIKELY(
+            ss.front.stencilFunc == StencilState::StencilFunction::A &&
+            ss.back.stencilFunc == StencilState::StencilFunction::A)) {
+        // that's equivalent to having the stencil test disabled
+        gl.disable(GL_STENCIL_TEST);
+    } else {
+        gl.enable(GL_STENCIL_TEST);
+    }
+
+    // glStencilFuncSeparate() also sets the reference value, which may be used depending
+    // on the stencilOp, so we always need to call glStencilFuncSeparate().
+    gl.stencilFuncSeparate(
+            getStencilFunc(ss.front.stencilFunc), ss.front.ref, ss.front.readMask,
+            getStencilFunc(ss.back.stencilFunc), ss.back.ref, ss.back.readMask);
+
+    if (UTILS_LIKELY(!ss.stencilWrite)) {
+        gl.stencilMaskSeparate(0x00, 0x00);
+    } else {
+        // Stencil ops are only relevant when stencil write is enabled
+        gl.stencilOpSeparate(
+                getStencilOp(ss.front.stencilOpStencilFail),
+                getStencilOp(ss.front.stencilOpDepthFail),
+                getStencilOp(ss.front.stencilOpDepthStencilPass),
+                getStencilOp(ss.back.stencilOpStencilFail),
+                getStencilOp(ss.back.stencilOpDepthFail),
+                getStencilOp(ss.back.stencilOpDepthStencilPass));
+        gl.stencilMaskSeparate(ss.front.writeMask, ss.back.writeMask);
     }
 }
 
@@ -1484,6 +1497,9 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
         return  ext.EXT_texture_compression_s3tc || // this is ES specific
                 ext.WEBGL_compressed_texture_s3tc; // this is WEBGL specific
     }
+    if (isASTCCompression(format)) {
+        return ext.KHR_texture_compression_astc_hdr;
+    }
     return getInternalFormat(format) != 0;
 }
 
@@ -2324,8 +2340,9 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     }
 
     // we need to reset those after we call clearWithRasterPipe()
-    mRenderPassColorWrite = any(clearFlags & TargetBufferFlags::COLOR_ALL);
-    mRenderPassDepthWrite = any(clearFlags & TargetBufferFlags::DEPTH);
+    mRenderPassColorWrite   = any(clearFlags & TargetBufferFlags::COLOR_ALL);
+    mRenderPassDepthWrite   = any(clearFlags & TargetBufferFlags::DEPTH);
+    mRenderPassStencilWrite = any(clearFlags & TargetBufferFlags::STENCIL);
 
     gl.viewport(params.viewport.left, params.viewport.bottom,
             (GLsizei)params.viewport.width, (GLsizei)params.viewport.height);
@@ -2354,10 +2371,16 @@ void OpenGLDriver::endRenderPass(int) {
     }
 
     if (!mRenderPassColorWrite) {
+        // ignore discard flags if the buffer wasn't written at all
         discardFlags &= ~TargetBufferFlags::COLOR_ALL;
     }
     if (!mRenderPassDepthWrite) {
+        // ignore discard flags if the buffer wasn't written at all
         discardFlags &= ~TargetBufferFlags::DEPTH;
+    }
+    if (!mRenderPassStencilWrite) {
+        // ignore discard flags if the buffer wasn't written at all
+        discardFlags &= ~TargetBufferFlags::STENCIL;
     }
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
@@ -2883,17 +2906,15 @@ void OpenGLDriver::finish(int) {
 UTILS_NOINLINE
 void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
         math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept {
-    RasterState rs(mRasterState);
 
     if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
-        rs.colorWrite = true;
+        mContext.colorMask(GL_TRUE);
     }
     if (any(clearFlags & TargetBufferFlags::DEPTH)) {
-        rs.depthWrite = true;
+        mContext.depthMask(GL_TRUE);
     }
-    // stencil state is not part of the RasterState currently
-    if (any(clearFlags & (TargetBufferFlags::COLOR_ALL | TargetBufferFlags::DEPTH))) {
-        setRasterState(rs);
+    if (any(clearFlags & TargetBufferFlags::STENCIL)) {
+        mContext.stencilMaskSeparate(0xFF, mContext.state.stencil.back.stencilMask);
     }
 
     if (any(clearFlags & TargetBufferFlags::COLOR0)) {
@@ -3054,6 +3075,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
     }
 
     setRasterState(state.rasterState);
+    setStencilState(state.stencilState);
 
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
 

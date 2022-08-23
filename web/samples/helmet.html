@@ -10,7 +10,7 @@ html, body { height: 100%; }
 body       { margin: 0; overflow: hidden; }
 #container { position: relative; height: 100%; }
 canvas     { position: absolute; width: 100%; height: 100%; }
-#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:white; pointer-events: none; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:blue; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -43,12 +43,15 @@ class App {
         const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
+        const messages = document.getElementById('messages');
+
         canvas.addEventListener('pointerdown', evt => {
             const x = evt.clientX;
             const y = this.canvas.getBoundingClientRect().height - 1 - evt.clientY;
             const dpr = window.devicePixelRatio;
             this.view.pick(x * dpr, y * dpr, (results) => {
-                document.getElementById('messages').innerText = this.asset.getName(results.renderable);
+                const name = this.asset.getName(results.renderable);
+                messages.innerText = name ? ('Picked ' + name) : '';
             });
         });
 
@@ -87,8 +90,6 @@ class App {
         this.allowRefresh = false;
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
         this.assetRoot = this.asset.getRoot();
-
-        const messages = document.getElementById('messages');
 
         // Crudely indicate progress by printing the URI of each resource as it is loaded.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;

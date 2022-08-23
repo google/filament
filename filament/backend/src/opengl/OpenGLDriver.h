@@ -277,14 +277,9 @@ private:
     void framebufferTexture(TargetBufferInfo const& binfo,
             GLRenderTarget const* rt, GLenum attachment) noexcept;
 
-    void setRasterStateSlow(RasterState rs) noexcept;
-    void setRasterState(RasterState rs) noexcept {
-        mRenderPassColorWrite |= rs.colorWrite;
-        mRenderPassDepthWrite |= rs.depthWrite;
-        if (UTILS_UNLIKELY(rs != mRasterState)) {
-            setRasterStateSlow(rs);
-        }
-    }
+    void setRasterState(RasterState rs) noexcept;
+
+    void setStencilState(StencilState ss) noexcept;
 
     void setTextureData(GLTexture* t,
             uint32_t level,
@@ -336,13 +331,12 @@ private:
     static GLsizei getAttachments(AttachmentArray& attachments,
             GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept;
 
-    RasterState mRasterState;
-
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
     RenderPassParams mRenderPassParams;
     GLboolean mRenderPassColorWrite{};
     GLboolean mRenderPassDepthWrite{};
+    GLboolean mRenderPassStencilWrite{};
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;

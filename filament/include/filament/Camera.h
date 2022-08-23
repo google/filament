@@ -281,6 +281,7 @@ public:
      * By default, this is an identity matrix.
      *
      * @param shift     x and y translation added to the projection matrix, specified in NDC
+     * @param shift     x and y translation added to the projection matrix, specified in NDC
      *                  coordinates, that is, if the translation must be specified in pixels,
      *                  shift must be scaled by 1.0 / { viewport.width, viewport.height }.
      *
@@ -356,17 +357,9 @@ public:
      * @param center    The point in world space the camera is looking at.
      * @param up        A unit vector denoting the camera's "up" direction.
      */
-    void lookAt(const math::float3& eye,
-                const math::float3& center,
-                const math::float3& up) noexcept;
-
-    /** Sets the camera's model matrix, assuming up is along the y axis
-     *
-     * @param eye       The position of the camera in world space.
-     * @param center    The point in world space the camera is looking at.
-     */
-    void lookAt(const math::float3& eye,
-                const math::float3& center) noexcept;
+    void lookAt(math::double3 const& eye,
+                math::double3 const& center,
+                math::double3 const& up = math::double3{0, 1, 0}) noexcept;
 
     /** Returns the camera's model matrix
      *
@@ -387,7 +380,7 @@ public:
     math::mat4 getViewMatrix() const noexcept;
 
     //! Returns the camera's position in world space
-    math::float3 getPosition() const noexcept;
+    math::double3 getPosition() const noexcept;
 
     //! Returns the camera's normalized left vector
     math::float3 getLeftVector() const noexcept;

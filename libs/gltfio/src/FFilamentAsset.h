@@ -57,6 +57,12 @@
 #define GLTFIO_WARN(msg) slog.w << msg << io::endl
 #endif
 
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(IOS)
+#define GLTFIO_USE_FILESYSTEM 0
+#else
+#define GLTFIO_USE_FILESYSTEM 1
+#endif
+
 namespace utils {
     class NameComponentManager;
     class EntityManager;
@@ -303,7 +309,10 @@ struct FFilamentAsset : public FilamentAsset {
     SkinVector mSkins; // unused for instanced assets
     Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;
+
+    // Indicates if resource decoding has started (not necessarily finished)
     bool mResourcesLoaded = false;
+
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
     utils::CString mAssetExtras;
