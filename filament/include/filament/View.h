@@ -638,7 +638,7 @@ public:
     bool isFrontFaceWindingInverted() const noexcept;
 
     /**
-     * Enables use of the stencil buffer. This API is currently a WIP and experimental.
+     * Enables use of the stencil buffer.
      *
      * The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth
      * buffer. The stencil buffer is cleared at the beginning of a frame and discarded after the

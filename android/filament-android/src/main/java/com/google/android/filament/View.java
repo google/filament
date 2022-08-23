@@ -1012,6 +1012,45 @@ public class View {
     }
 
     /**
+     * Enables use of the stencil buffer.
+     *
+     * <p>
+     * The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth
+     * buffer. The stencil buffer is cleared at the beginning of a frame and discarded after the
+     * color pass.
+     * </p>
+     *
+     * <p>
+     * Each fragment's stencil value is set during rasterization by specifying stencil operations on
+     * a {@link Material}. The stencil buffer can be used as a mask for later rendering by setting a
+     * {@link Material}'s stencil comparison function and reference value. Fragments that don't pass
+     * the stencil test are then discarded.
+     * </p>
+     *
+     * <p>
+     * Post-processing must be enabled in order to use the stencil buffer.
+     * </p>
+     *
+     * <p>
+     * A renderable's priority (see {@link RenderableManager#setPriority(int, int)}) is useful to
+     * control the order in which primitives are drawn.
+     * </p>
+     *
+     * @param enabled True to enable the stencil buffer, false disables it (default)
+     */
+    public void setStencilBufferEnabled(boolean enabled) {
+        nSetStencilBufferEnabled(getNativeObject(), enabled);
+    }
+
+    /**
+     * @return true if the stencil buffer is enabled.
+     * @see View#setStencilBufferEnabled(boolean)
+     */
+    public boolean isStencilBufferEnabled() {
+        return nIsStencilBufferEnabled(getNativeObject());
+    }
+
+    /**
      * A class containing the result of a picking query
      */
     public static class PickingQueryResult {
@@ -1131,6 +1170,8 @@ public class View {
     private static native void nSetGuardBandOptions(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
     private static native void nPick(long nativeView, int x, int y, Object handler, InternalOnPickCallback internalCallback);
+    private static native void nSetStencilBufferEnabled(long nativeView, boolean enabled);
+    private static native boolean nIsStencilBufferEnabled(long nativeView);
 
     /**
      * List of available ambient occlusion techniques.
