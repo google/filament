@@ -36,7 +36,8 @@ enum class AlphaMode : uint8_t {
 
 // The following struct gets hashed so all padding bits should be explicit.
 // Tell the compiler to emit a warning if it adds any padding.
-UTILS_PUSH_WARNING_ENABLE_PADDED
+UTILS_WARNING_PUSH
+UTILS_WARNING_ENABLE_PADDED
 
 /**
  * \struct MaterialKey MaterialProvider.h gltfio/MaterialProvider.h
@@ -97,7 +98,7 @@ struct alignas(4) MaterialKey {
 
 static_assert(sizeof(MaterialKey) == 16, "MaterialKey has unexpected size.");
 
-UTILS_POP_WARNING
+UTILS_WARNING_POP
 
 bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 

@@ -241,23 +241,17 @@ typedef SSIZE_T ssize_t;
 
 
 #if defined(_MSC_VER)
-#   define UTILS_POP_WARNING _Pragma("warning( pop )")
+#   define UTILS_WARNING_PUSH _Pragma("warning( push )")
+#   define UTILS_WARNING_POP _Pragma("warning( pop )")
+#   define UTILS_WARNING_ENABLE_PADDED _Pragma("warning(1: 4324)")
 #elif defined(__clang__)
-#   define UTILS_POP_WARNING  _Pragma("clang diagnostic pop")
+#   define UTILS_WARNING_PUSH _Pragma("clang diagnostic push")
+#   define UTILS_WARNING_POP  _Pragma("clang diagnostic pop")
+#   define UTILS_WARNING_ENABLE_PADDED _Pragma("clang diagnostic warning \"-Wpadded\"")
 #else
-#   define UTILS_POP_WARNING
-#endif
-
-#if defined(_MSC_VER)
-#   define UTILS_PUSH_WARNING_ENABLE_PADDED \
-        _Pragma("warning( push )") \
-        _Pragma("warning(1: 4324)")
-#elif defined(__clang__)
-#   define UTILS_PUSH_WARNING_ENABLE_PADDED \
-        _Pragma("clang diagnostic push") \
-        _Pragma("clang diagnostic warning \"-Wpadded\"")
-#else
-#   define UTILS_PUSH_WARNING_ENABLE_PADDED
+#   define UTILS_WARNING_PUSH
+#   define UTILS_WARNING_POP
+#   define UTILS_WARNING_ENABLE_PADDED
 #endif
 
 #endif // TNT_UTILS_COMPILER_H
