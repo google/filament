@@ -184,7 +184,7 @@ public:
 
     void setStencilBufferEnabled(bool enabled) noexcept { mStencilBufferEnabled = enabled; }
 
-    bool getStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
+    bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();

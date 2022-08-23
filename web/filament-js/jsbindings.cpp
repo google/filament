@@ -612,7 +612,9 @@ class_<View>("View")
     .function("getSampleCount", &View::getSampleCount)
     .function("setRenderTarget", EMBIND_LAMBDA(void, (View* self, RenderTarget* renderTarget), {
         self->setRenderTarget(renderTarget);
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+    .function("setStencilBufferEnabled", &View::setStencilBufferEnabled)
+    .function("isStencilBufferEnabled", &View::isStencilBufferEnabled);
 
 /// Scene ::core class:: Flat container of renderables and lights.
 /// See also the [Engine] methods `createScene` and `destroyScene`.
@@ -1251,7 +1253,43 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setCullingMode", &MaterialInstance::setCullingMode)
     .function("setColorWrite", &MaterialInstance::setColorWrite)
     .function("setDepthWrite", &MaterialInstance::setDepthWrite)
-    .function("setDepthCulling", &MaterialInstance::setDepthCulling);
+    .function("setStencilWrite", &MaterialInstance::setStencilWrite)
+    .function("setDepthCulling", &MaterialInstance::setDepthCulling)
+    .function("setStencilCompareFunction", &MaterialInstance::setStencilCompareFunction)
+    .function("setStencilCompareFunction", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilCompareFunc func), {
+                self->setStencilCompareFunction(func, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilOpStencilFail", &MaterialInstance::setStencilOpStencilFail)
+    .function("setStencilOpStencilFail", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilOperation op), {
+                self->setStencilOpStencilFail(op, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilOpDepthFail", &MaterialInstance::setStencilOpDepthFail)
+    .function("setStencilOpDepthFail", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilOperation op), {
+                self->setStencilOpDepthFail(op, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilOpDepthStencilPass", &MaterialInstance::setStencilOpDepthStencilPass)
+    .function("setStencilOpDepthStencilPass", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilOperation op), {
+                self->setStencilOpDepthStencilPass(op, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilReferenceValue", &MaterialInstance::setStencilReferenceValue)
+    .function("setStencilReferenceValue", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, uint8_t value), {
+                self->setStencilReferenceValue(value, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilReadMask", &MaterialInstance::setStencilReadMask)
+    .function("setStencilReadMask", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, uint8_t readMask), {
+                self->setStencilReadMask(readMask, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilWriteMask", &MaterialInstance::setStencilWriteMask)
+    .function("setStencilWriteMask", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, uint8_t writeMask), {
+                self->setStencilWriteMask(writeMask, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers());
 
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>()

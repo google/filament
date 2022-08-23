@@ -279,8 +279,8 @@ void View::setStencilBufferEnabled(bool enabled) noexcept {
     upcast(this)->setStencilBufferEnabled(enabled);
 }
 
-bool View::getStencilBufferEnabled() const noexcept {
-    return upcast(this)->getStencilBufferEnabled();
+bool View::isStencilBufferEnabled() const noexcept {
+    return upcast(this)->isStencilBufferEnabled();
 }
 
 View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
