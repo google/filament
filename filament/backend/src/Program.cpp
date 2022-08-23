@@ -14,16 +14,27 @@
  * limitations under the License.
  */
 
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 using namespace utils;
 
 namespace filament::backend {
 
-// We want these in the .cpp file so they're not inlined (not worth it)
-Program::Program() noexcept {}  // = default; does not work with msvc because of noexcept
+// We want these in the .cpp file, so they're not inlined (not worth it)
+Program::Program() noexcept { // NOLINT(modernize-use-equals-default)
+}
+
 Program::Program(Program&& rhs) noexcept = default;
-Program& Program::operator=(Program&& rhs) noexcept = default;
+
+Program& Program::operator=(Program&& rhs) noexcept {
+    mUniformBlocks.operator=(rhs.mUniformBlocks);
+    mSamplerGroups.operator=(std::move(rhs.mSamplerGroups));
+    mShadersSource.operator=(std::move(rhs.mShadersSource));
+    mName.operator=(std::move(rhs.mName));
+    mLogger.operator=(std::move(rhs.mLogger));
+    return *this;
+}
+
 Program::~Program() noexcept = default;
 
 Program& Program::diagnostics(utils::CString const& name,
@@ -33,15 +44,19 @@ Program& Program::diagnostics(utils::CString const& name,
     return *this;
 }
 
-Program& Program::shader(Program::Shader shader, void const* data, size_t size) noexcept {
+Program& Program::shader(ShaderType shader, void const* data, size_t size) {
     ShaderBlob blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
     mShadersSource[size_t(shader)] = std::move(blob);
     return *this;
 }
 
-Program& Program::setUniformBlock(size_t bindingPoint, std::string_view uniformBlockName) noexcept {
-    mUniformBlocks[bindingPoint] = { uniformBlockName.data(), uniformBlockName.size() };
+Program& Program::uniformBlockBindings(
+        utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept {
+    for (auto const& item : uniformBlockBindings) {
+        assert_invariant(item.second < BINDING_COUNT);
+        mUniformBlocks[item.second] = item.first;
+    }
     return *this;
 }
 
@@ -53,7 +68,6 @@ Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFla
     samplerList.reserve(count);
     samplerList.resize(count);
     std::copy_n(samplers, count, samplerList.data());
-    mHasSamplers = true;
     return *this;
 }
 

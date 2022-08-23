@@ -20,7 +20,7 @@
 #include <Metal/Metal.h>
 
 #include "private/backend/Driver.h"
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include <backend/DriverEnums.h>
 

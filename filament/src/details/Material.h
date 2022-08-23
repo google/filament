@@ -227,6 +227,8 @@ private:
     UniformInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
     SamplerBindingMap mSamplerBindings;
+    utils::FixedCapacityVector<std::pair<const char*, uint8_t>> mUniformBlockBindings;
+    utils::FixedCapacityVector<utils::CString> mUniformBlockNames;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

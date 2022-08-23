@@ -20,6 +20,7 @@
 #include <utils/compressed_pair.h>
 #include <utils/Panic.h>
 
+#include <initializer_list>
 #include <limits>
 #include <memory>
 #include <type_traits>
@@ -89,6 +90,14 @@ public:
               mCapacityAllocator(size, allocator) {
         mData = this->allocator().allocate(this->capacity());
         construct(begin(), end());
+    }
+
+    FixedCapacityVector(std::initializer_list<T> list,
+            const allocator_type& alloc = allocator_type())
+            : mSize(list.size()),
+              mCapacityAllocator(list.size(), alloc) {
+        mData = this->allocator().allocate(this->capacity());
+        std::uninitialized_copy(list.begin(), list.end(), begin());
     }
 
     FixedCapacityVector(size_type size, const_reference value,

@@ -19,6 +19,8 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
+#include "private/backend/SamplerGroup.h"
+
 #include <utils/Hash.h>
 #include <utils/Log.h>
 
@@ -132,10 +134,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         ProgramHandle program;
         {
             ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform);
-            Program prog = shaderGen.getProgram();
+            Program prog = shaderGen.getProgram(api);
             Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-            prog.setSamplerGroup(0, ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
-            prog.setUniformBlock(1, "params");
+            prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+            prog.uniformBlockBindings({{"params", 1}});
             program = api.createProgram(std::move(prog));
         }
 

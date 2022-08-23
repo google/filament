@@ -20,7 +20,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
-#include <private/backend/Program.h>
+#include "backend/Program.h"
 
 #include <bluevk/BlueVK.h>
 

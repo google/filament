@@ -17,13 +17,12 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 
+#include <utils/compiler.h>
+
 #include <stddef.h>
 #include <stdint.h>
 
-#include <utils/compiler.h>
-
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 class CircularBuffer {
 public:
@@ -85,7 +84,6 @@ private:
     void* mHead = nullptr;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H

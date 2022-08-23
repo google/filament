@@ -28,7 +28,6 @@
 
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
-#include "private/backend/SamplerGroup.h"
 
 #include <condition_variable>
 #include <memory>

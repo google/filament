@@ -179,7 +179,15 @@ export class MaterialInstance {
     public setCullingMode(mode: CullingMode): void;
     public setColorWrite(enable: boolean): void;
     public setDepthWrite(enable: boolean): void;
+    public setStencilWrite(enable: boolean): void;
     public setDepthCulling(enable: boolean): void;
+    public setStencilCompareFunction(func: CompareFunc, face?: StencilFace): void;
+    public setStencilOpStencilFail(op: StencilOperation, face?: StencilFace): void;
+    public setStencilOpDepthFail(op: StencilOperation, face?: StencilFace): void;
+    public setStencilOpDepthStencilPass(op: StencilOperation, face?: StencilFace): void;
+    public setStencilReferenceValue(value: Number, face?: StencilFace): void;
+    public setStencilReadMask(readMask: Number, face?: StencilFace): void;
+    public setStencilWriteMask(writeMask: Number, face?: StencilFace): void;
 }
 
 export class EntityManager {
@@ -494,6 +502,8 @@ export class View {
     public getBlendMode(): View$BlendMode;
     public setPostProcessingEnabled(enabled: boolean): void;
     public setAntiAliasing(antialiasing: View$AntiAliasing): void;
+    public setStencilBufferEnabled(enabled: boolean): void;
+    public isStencilBufferEnabled(): boolean;
 }
 
 export class TransformManager {
@@ -772,6 +782,23 @@ export enum CompareFunc {
 
 export enum CullingMode {
     NONE,
+    FRONT,
+    BACK,
+    FRONT_AND_BACK,
+}
+
+export enum StencilOperation {
+    KEEP,
+    ZERO,
+    REPLACE,
+    INCR_CLAMP,
+    INCR_WRAP,
+    DECR_CLAMP,
+    DECR_WRAP,
+    INVERT,
+}
+
+export enum StencilFace {
     FRONT,
     BACK,
     FRONT_AND_BACK,

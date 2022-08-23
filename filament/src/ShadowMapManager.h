@@ -28,7 +28,7 @@
 #include <private/filament/EngineEnums.h>
 
 #include <private/backend/DriverApi.h>
-#include <private/backend/DriverApiForward.h>
+#include "backend/DriverApiForward.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

@@ -18,7 +18,6 @@
 
 #include <GlslangToSpv.h>
 #include <SPVRemapper.h>
-#include <localintermediate.h>
 
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
@@ -26,6 +25,7 @@
 #include "builtinResource.h"
 
 #include <iostream>
+#include <utility>
 #include <vector>
 
 namespace test {
@@ -101,14 +101,16 @@ void ShaderGenerator::shutdown() {
     FinalizeProcess();
 }
 
-ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment, Backend backend,
-        bool isMobile) noexcept : mBackend(backend), mIsMobile(isMobile) {
-    mVertexBlob = transpileShader(backend, isMobile, vertex, ShaderStage::VERTEX);
-    mFragmentBlob = transpileShader(backend, isMobile, fragment, ShaderStage::FRAGMENT);
+ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment,
+        Backend backend, bool isMobile) noexcept
+        : mBackend(backend),
+          mVertexBlob(transpileShader(ShaderStage::VERTEX, std::move(vertex), backend, isMobile)),
+          mFragmentBlob(transpileShader(ShaderStage::FRAGMENT, std::move(fragment), backend,
+                  isMobile)) {
 }
 
-ShaderGenerator::Blob ShaderGenerator::transpileShader(Backend backend, bool isMobile, std::string shader,
-            ShaderStage stage) noexcept {
+ShaderGenerator::Blob ShaderGenerator::transpileShader(
+        ShaderStage stage, std::string shader, Backend backend, bool isMobile) noexcept {
     TProgram program;
     const EShLanguage language = stage == ShaderStage::VERTEX ? EShLangVertex : EShLangFragment;
     TShader tShader(language);
@@ -169,21 +171,21 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(Backend backend, bool isM
         } else {
             SpvToGlsl(&spirv, &result);
         }
-        return Blob(result.c_str(), result.c_str() + result.length() + 1);
+        return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::METAL) {
         SpvToMsl(&spirv, &result);
-        return Blob(result.c_str(), result.c_str() + result.length() + 1);
+        return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::VULKAN) {
-        return Blob((uint8_t*) spirv.data(), (uint8_t*) (spirv.data() + spirv.size()));
+        return { (uint8_t*)spirv.data(), (uint8_t*)(spirv.data() + spirv.size()) };
     }
 
     return {};
 }
 
-Program ShaderGenerator::getProgram() noexcept {
+Program ShaderGenerator::getProgram(filament::backend::DriverApi&) noexcept {
     Program program;
-    program.shader(Program::Shader::VERTEX, mVertexBlob.data(), mVertexBlob.size());
-    program.shader(Program::Shader::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
+    program.shader(ShaderType::VERTEX, mVertexBlob.data(), mVertexBlob.size());
+    program.shader(ShaderType::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
     return program;
 }
 

@@ -20,6 +20,9 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
+@UsedByNative("AssetLoader.cpp")
 public class MaterialInstance {
     private Material mMaterial;
     private String mName;

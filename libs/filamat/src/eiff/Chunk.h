@@ -36,7 +36,7 @@ public:
     virtual void flatten(Flattener &f) = 0;
 
 protected:
-    Chunk(ChunkType type) : mType(type) {
+    explicit Chunk(ChunkType type) : mType(type) {
     }
 
 private:

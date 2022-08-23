@@ -22,6 +22,8 @@
 
 #include "private/backend/HandleAllocator.h"
 
+#include <backend/SamplerDescriptor.h>
+
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/debug.h>

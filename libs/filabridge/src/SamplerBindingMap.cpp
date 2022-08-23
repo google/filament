@@ -26,14 +26,21 @@
 
 namespace filament {
 
+using namespace utils;
+using namespace backend;
+
 // we can't use operator<< because it's defined in libbackend, which is only a header dependency
-static const char* to_string(backend::ShaderStageFlags stageFlags) noexcept {
-    unsigned int v = +stageFlags.vertex + 2u * +stageFlags.fragment;
-    switch (v & 3u) {
-        case 0: return "{ }";
-        case 1: return "{ vertex }";
-        case 2: return "{ fragment }";
-        case 3: return "{ vertex | fragment }";
+static const char* to_string(ShaderStageFlags stageFlags) noexcept {
+    using namespace backend;
+    switch (stageFlags) {
+        case ShaderStageFlags::NONE:
+            return "{ }";
+        case ShaderStageFlags::VERTEX:
+            return "{ vertex }";
+        case ShaderStageFlags::FRAGMENT:
+            return "{ fragment }";
+        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:
+            return "{ vertex | fragment }";
     }
     return nullptr;
 }
@@ -49,53 +56,53 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
     size_t fragmentSamplerCount = 0;
 
     UTILS_NOUNROLL
-    for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
+    for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
         SamplerInterfaceBlock const* const sib =
                 (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
-                perMaterialSib : SibGenerator::getSib(blockIndex, dummyVariant);
+                perMaterialSib : SibGenerator::getSib(BindingPoints(blockIndex), dummyVariant);
         if (sib) {
             const auto& sibFields = sib->getSamplerInfoList();
             const auto stageFlags = sib->getStageFlags();
             const size_t samplerCount = sibFields.size();
             offset += samplerCount;
-            if (stageFlags.vertex) {
+            if (any(stageFlags & ShaderStageFlags::VERTEX)) {
                 vertexSamplerCount += samplerCount;
             }
-            if (stageFlags.fragment) {
+            if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
                 fragmentSamplerCount += samplerCount;
             }
         }
     }
 
-    const bool isOverflow = vertexSamplerCount > backend::MAX_VERTEX_SAMPLER_COUNT ||
-                            fragmentSamplerCount > backend::MAX_FRAGMENT_SAMPLER_COUNT;
+    const bool isOverflow = vertexSamplerCount > MAX_VERTEX_SAMPLER_COUNT ||
+                            fragmentSamplerCount > MAX_FRAGMENT_SAMPLER_COUNT;
 
     // If an overflow occurred, go back through and list all sampler names. This is helpful to
     // material authors who need to understand where the samplers are coming from.
     if (UTILS_UNLIKELY(isOverflow)) {
-        utils::slog.e << "WARNING: Exceeded max sampler count of " << backend::MAX_SAMPLER_COUNT;
+        slog.e << "WARNING: Exceeded max sampler count of " << MAX_SAMPLER_COUNT;
         if (materialName) {
-            utils::slog.e << " (" << materialName << ")";
+            slog.e << " (" << materialName << ")";
         }
-        utils::slog.e << utils::io::endl;
+        slog.e << io::endl;
         offset = 0;
 
 
         UTILS_NOUNROLL
-        for (uint8_t blockIndex = 0; blockIndex < BindingPoints::COUNT; blockIndex++) {
+        for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
             SamplerInterfaceBlock const* const sib =
                     (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
-                    perMaterialSib : SibGenerator::getSib(blockIndex, dummyVariant);
+                    perMaterialSib : SibGenerator::getSib(BindingPoints(blockIndex), dummyVariant);
             if (sib) {
                 auto const& sibFields = sib->getSamplerInfoList();
                 auto const stageFlagsAsString = to_string(sib->getStageFlags());
                 for (auto const& sInfo : sibFields) {
-                    utils::slog.e << "  " << +offset << " " << sInfo.name.c_str()
+                    slog.e << "  " << +offset << " " << sInfo.name.c_str()
                         << " " <<  stageFlagsAsString << '\n';
                     offset++;
                 }
-                flush(utils::slog.e);
+                flush(slog.e);
             }
         }
     }

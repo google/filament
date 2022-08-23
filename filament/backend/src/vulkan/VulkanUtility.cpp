@@ -642,8 +642,8 @@ VkImageLayout getDefaultImageLayout(TextureUsage usage) {
 
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
     VkShaderStageFlags flags = 0x0;
-    if (stageFlags.vertex)   flags |= VK_SHADER_STAGE_VERTEX_BIT;
-    if (stageFlags.fragment) flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    if (any(stageFlags & ShaderStageFlags::VERTEX))     flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT))   flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     return flags;
 }
 
