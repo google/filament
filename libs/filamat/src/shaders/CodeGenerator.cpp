@@ -315,19 +315,19 @@ const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precis
     return getPrecisionQualifier(precision, defaultPrecision);
 }
 
-io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType shaderType,
-        uint8_t binding, const UniformInterfaceBlock& uib) const {
+io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType type,
+        BindingPoints binding, const UniformInterfaceBlock& uib) const {
     auto const& infos = uib.getUniformInfoList();
     if (infos.empty()) {
         return out;
     }
 
-    const CString& blockName = uib.getName();
-    std::string instanceName(uib.getName().c_str());
+    const std::string_view blockName = uib.getName();
+    std::string instanceName(uib.getName());
     instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
 
     Precision uniformPrecision = getDefaultUniformPrecision();
-    Precision defaultPrecision = getDefaultPrecision(shaderType);
+    Precision defaultPrecision = getDefaultPrecision(type);
 
     out << "\nlayout(";
     // TODO: at feature level 2, GLSL should support the binding qualifier
@@ -335,7 +335,7 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType shader
         uint32_t bindingIndex = (uint32_t) binding; // avoid char output
         out << "binding = " << bindingIndex << ", ";
     }
-    out << "std140) uniform " << blockName.c_str() << " {\n";
+    out << "std140) uniform " << blockName << " {\n";
     for (auto const& info : infos) {
         char const* const type = getUniformTypeName(info);
         char const* const precision = getUniformPrecisionQualifier(info.type, info.precision,

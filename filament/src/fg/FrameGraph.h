@@ -29,7 +29,7 @@
 #include "fg/details/Resource.h"
 #include "fg/details/Utilities.h"
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

@@ -17,12 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_DRIVER_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_DRIVER_H
 
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/TargetBufferInfo.h>
-
-#include "private/backend/DriverApiForward.h"
 
 #include <utils/compiler.h>
 
@@ -48,7 +47,6 @@ class BufferDescriptor;
 class CallbackHandler;
 class PixelBufferDescriptor;
 class Program;
-class SamplerGroup;
 
 template<typename T>
 class ConcreteDispatcher;

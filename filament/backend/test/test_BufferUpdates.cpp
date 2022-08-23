@@ -95,7 +95,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 
         // Create a program.
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram();
+        Program p = shaderGen.getProgram(getDriverApi());
         auto program = getDriverApi().createProgram(std::move(p));
 
         auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
@@ -201,8 +201,8 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
 
     // Create a program.
     ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program p = shaderGen.getProgram();
-    p.setUniformBlock(1, "params");
+    Program p = shaderGen.getProgram(getDriverApi());
+    p.uniformBlockBindings({{"params", 1}});
     auto program = getDriverApi().createProgram(std::move(p));
 
     // Create a uniform buffer.

@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>

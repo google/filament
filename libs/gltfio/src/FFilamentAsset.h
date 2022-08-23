@@ -249,7 +249,7 @@ struct FFilamentAsset : public FilamentAsset {
     void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
             SceneMask sceneFilter);
 
-    void detachFilamentComponents() {
+    void detachFilamentComponents() noexcept {
         mDetachedFilamentComponents = true;
     }
 

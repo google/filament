@@ -87,7 +87,7 @@ public:
     private:
         friend class SamplerInterfaceBlock;
         utils::CString mName;
-        backend::ShaderStageFlags mStageFlags = backend::ALL_SHADER_STAGE_FLAGS;
+        backend::ShaderStageFlags mStageFlags = backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS;
         utils::FixedCapacityVector<SamplerInfo> mEntries =
                 utils::FixedCapacityVector<SamplerInfo>::with_capacity(backend::MAX_SAMPLER_COUNT);
     };

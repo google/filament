@@ -11,11 +11,13 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
         include/backend/CallbackHandler.h
+        include/backend/DriverApiForward.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
         include/backend/PipelineState.h
         include/backend/PixelBufferDescriptor.h
         include/backend/Platform.h
+        include/backend/Program.h
         include/backend/SamplerDescriptor.h
         include/backend/TargetBufferInfo.h
 )
@@ -47,9 +49,7 @@ set(PRIVATE_HDRS
         include/private/backend/Driver.h
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
-        include/private/backend/DriverApiForward.h
         include/private/backend/HandleAllocator.h
-        include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h
         src/DataReshaper.h
@@ -104,8 +104,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
         endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
-    else()
-        list(APPEND SRCS src/opengl/platforms/PlatformDummyGL.cpp)
     endif()
 endif()
 

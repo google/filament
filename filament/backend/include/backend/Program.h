@@ -27,7 +27,6 @@
 #include <backend/DriverEnums.h>
 
 #include <array>
-#include <string_view>
 
 namespace filament::backend {
 
@@ -37,11 +36,6 @@ public:
     static constexpr size_t SHADER_TYPE_COUNT = 2;
     static constexpr size_t BINDING_COUNT = CONFIG_BINDING_COUNT;
 
-    enum class Shader : uint8_t {
-        VERTEX = 0,
-        FRAGMENT = 1
-    };
-
     struct Sampler {
         utils::CString name = {};   // name of the sampler in the shader
         uint16_t binding = 0;       // binding point of the sampler in the shader
@@ -50,17 +44,22 @@ public:
 
     struct SamplerGroupData {
         utils::FixedCapacityVector<Sampler> samplers;
-        ShaderStageFlags stageFlags = ALL_SHADER_STAGE_FLAGS;
+        ShaderStageFlags stageFlags = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS;
     };
 
+    using UniformBlockInfo = std::array<const char*, BINDING_COUNT>;
     using SamplerGroupInfo = std::array<SamplerGroupData, BINDING_COUNT>;
-    using UniformBlockInfo = std::array<utils::CString, BINDING_COUNT>;
+    using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
+    using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
     Program() noexcept;
+
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
+
     Program(Program&& rhs) noexcept;
     Program& operator=(Program&& rhs) noexcept;
+
     ~Program() noexcept;
 
     // sets the material name and variant for diagnostic purposes only
@@ -70,15 +69,13 @@ public:
     // sets one of the program's shader (e.g. vertex, fragment)
     // string-based shaders are null terminated, consequently the size parameter must include the
     // null terminating character.
-    Program& shader(Shader shader, void const* data, size_t size) noexcept;
+    Program& shader(ShaderType shader, void const* data, size_t size);
 
-    // sets the 'bindingPoint' uniform block's name for this program.
-    //
     // Note: This is only needed for GLES3.0 backends, because the layout(binding=) syntax is
     //       not permitted in glsl. The backend needs a way to associate a uniform block
     //       to a binding point.
-    //
-    Program& setUniformBlock(size_t bindingPoint, std::string_view uniformBlockName) noexcept;
+    Program& uniformBlockBindings(
+            utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept;
 
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
@@ -87,32 +84,16 @@ public:
     Program& setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
             Sampler const* samplers, size_t count) noexcept;
 
-    // string-based shaders are null terminated, consequently the size parameter must include the
-    // null terminating character.
-    Program& withVertexShader(void const* data, size_t size) {
-        return shader(Shader::VERTEX, data, size);
-    }
-
-    // string-based shaders are null terminated, consequently the size parameter must include the
-    // null terminating character.
-    Program& withFragmentShader(void const* data, size_t size) {
-        return shader(Shader::FRAGMENT, data, size);
-    }
-
-    using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
-    using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
     ShaderSource const& getShadersSource() const noexcept { return mShadersSource; }
     ShaderSource& getShadersSource() noexcept { return mShadersSource; }
 
-    UniformBlockInfo const& getUniformBlockInfo() const noexcept { return mUniformBlocks; }
-    UniformBlockInfo& getUniformBlockInfo() noexcept { return mUniformBlocks; }
+    UniformBlockInfo const& getUniformBlockBindings() const noexcept { return mUniformBlocks; }
 
     SamplerGroupInfo const& getSamplerGroupInfo() const { return mSamplerGroups; }
     SamplerGroupInfo& getSamplerGroupInfo() { return mSamplerGroups; }
 
-    const utils::CString& getName() const noexcept { return mName; }
-
-    bool hasSamplers() const noexcept { return mHasSamplers; }
+    utils::CString const& getName() const noexcept { return mName; }
+    utils::CString& getName() noexcept { return mName; }
 
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
@@ -120,7 +101,6 @@ private:
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     ShaderSource mShadersSource;
-    bool mHasSamplers = false;
     utils::CString mName;
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
 };

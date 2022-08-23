@@ -253,8 +253,12 @@ void FFilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entiti
     }
 }
 
-void FilamentAsset::detachFilamentComponents() {
+void FilamentAsset::detachFilamentComponents() noexcept {
     upcast(this)->detachFilamentComponents();
+}
+
+bool FilamentAsset::areFilamentComponentsDetached() const noexcept {
+    return upcast(this)->mDetachedFilamentComponents;
 }
 
 void FilamentAsset::detachMaterialInstances() {

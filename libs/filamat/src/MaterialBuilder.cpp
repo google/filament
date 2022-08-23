@@ -27,6 +27,7 @@
 
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
 #include <private/filament/SibGenerator.h>
 
@@ -447,8 +448,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
             sbb.add({ param.name.data(), param.name.size() },
                     param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add({ param.name.data(), param.name.size() },
-                    param.size == 1 ? 0 : param.size, param.uniformType, param.precision);
+            ibb.add({{{ param.name.data(), param.name.size() },
+                      uint32_t(param.size == 1u ? 0u : param.size), param.uniformType, param.precision }});
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses belong to the "MaterialParams" block.
@@ -460,16 +461,18 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     }
 
     if (mSpecularAntiAliasing) {
-        ibb.add("_specularAntiAliasingVariance", UniformType::FLOAT);
-        ibb.add("_specularAntiAliasingThreshold", UniformType::FLOAT);
+        ibb.add({
+                { "_specularAntiAliasingVariance",  0, UniformType::FLOAT },
+                { "_specularAntiAliasingThreshold", 0, UniformType::FLOAT },
+        });
     }
 
     if (mBlendingMode == BlendingMode::MASKED) {
-        ibb.add("_maskThreshold", UniformType::FLOAT);
+        ibb.add({{ "_maskThreshold", 0, UniformType::FLOAT }});
     }
 
     if (mDoubleSidedCapability) {
-        ibb.add("_doubleSided", UniformType::BOOL);
+        ibb.add({{ "_doubleSided", 0, UniformType::BOOL }});
     }
 
     mRequiredAttributes.set(filament::VertexAttribute::POSITION);
@@ -1046,6 +1049,20 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
+
+    // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)
+    using namespace filament;
+    utils::FixedCapacityVector<std::pair<std::string_view, BindingPoints>> list = {
+            { PerViewUib::_name,                  BindingPoints::PER_VIEW },
+            { PerRenderableUib::_name,            BindingPoints::PER_RENDERABLE },
+            { LightsUib::_name,                   BindingPoints::LIGHTS },
+            { ShadowUib::_name,                   BindingPoints::SHADOW },
+            { FroxelRecordUib::_name,             BindingPoints::FROXEL_RECORDS },
+            { PerRenderableBoneUib::_name,        BindingPoints::PER_RENDERABLE_BONES },
+            { PerRenderableMorphingUib::_name,    BindingPoints::PER_RENDERABLE_MORPHING },
+            { info.uib.getName(),                 BindingPoints::PER_MATERIAL_INSTANCE }
+    };
+    container.addChild<MaterialUniformBlockBindingsChunk>(std::move(list));
 
     // UIB
     container.addChild<MaterialUniformInterfaceBlockChunk>(info.uib);
