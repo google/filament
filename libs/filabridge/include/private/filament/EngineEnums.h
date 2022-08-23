@@ -61,8 +61,12 @@ constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 14;
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
 
 // The maximum UBO size, in bytes. This value is set to 16 KiB due to the ES3.0 spec.
-// Note that this value constrains the maximum number of skinning bones and morph targets.
+// Note that this value constrains the maximum number of skinning bones, morph targets,
+// instances, and shadow casting spotlights.
 constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 16384;
+
+// The maximum number of instances that Filament automatically creates as an optimization.
+constexpr size_t CONFIG_MAX_INSTANCES = 64;
 
 // The maximum number of bones that can be associated with a single renderable.
 // We store 32 bytes per bone. Must be a power-of-two, and must fit within CONFIG_MINSPEC_UBO_SIZE.

@@ -213,8 +213,7 @@ void RenderPass::instanceify() noexcept {
     uint32_t instancedPrimitiveOffset = 0;
 
     // TODO: for the case of instancing we could actually use 128 instead of 64 instances
-    constexpr size_t maxInstanceCount = sizeof(PerRenderableUib) / sizeof(PerRenderableData);
-    static_assert(maxInstanceCount == 64); // just to make sure we don't change by accident
+    constexpr size_t maxInstanceCount = CONFIG_MAX_INSTANCES;
 
     while (curr != last) {
 
