@@ -59,9 +59,9 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
     size_t vertexSamplerCount = 0;
     size_t fragmentSamplerCount = 0;
 
-    auto processSamplerGroup = [&](BindingPoints bindingPoint){
+    auto processSamplerGroup = [&](SamplerBindingPoints bindingPoint){
         SamplerInterfaceBlock const* const sib =
-                (bindingPoint == BindingPoints::PER_MATERIAL_INSTANCE) ?
+                (bindingPoint == SamplerBindingPoints::PER_MATERIAL_INSTANCE) ?
                 perMaterialSib : SibGenerator::getSib(bindingPoint, {});
         if (sib) {
             const auto stageFlags = sib->getStageFlags();
@@ -88,12 +88,12 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
     switch(materialDomain) {
         case MaterialDomain::SURFACE:
             UTILS_NOUNROLL
-            for (size_t i = 0; i < Enum::count<BindingPoints>(); i++) {
-                processSamplerGroup((BindingPoints)i);
+            for (size_t i = 0; i < Enum::count<SamplerBindingPoints>(); i++) {
+                processSamplerGroup((SamplerBindingPoints)i);
             }
             break;
         case MaterialDomain::POST_PROCESS:
-            processSamplerGroup(BindingPoints::PER_MATERIAL_INSTANCE);
+            processSamplerGroup(SamplerBindingPoints::PER_MATERIAL_INSTANCE);
             break;
     }
 
@@ -115,10 +115,10 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
 
 
         UTILS_NOUNROLL
-        for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
+        for (size_t blockIndex = 0; blockIndex < Enum::count<SamplerBindingPoints>(); blockIndex++) {
             SamplerInterfaceBlock const* const sib =
-                    (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
-                    perMaterialSib : SibGenerator::getSib(BindingPoints(blockIndex), {});
+                    (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) ?
+                    perMaterialSib : SibGenerator::getSib(SamplerBindingPoints(blockIndex), {});
             if (sib) {
                 auto const& sibFields = sib->getSamplerInfoList();
                 auto const stageFlagsAsString = to_string(sib->getStageFlags());

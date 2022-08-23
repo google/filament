@@ -316,7 +316,7 @@ const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precis
 }
 
 io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType type,
-        BindingPoints binding, const UniformInterfaceBlock& uib) const {
+        UniformBindingPoints binding, const UniformInterfaceBlock& uib) const {
     auto const& infos = uib.getUniformInfoList();
     if (infos.empty()) {
         return out;

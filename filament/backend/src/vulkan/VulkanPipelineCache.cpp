@@ -49,7 +49,7 @@ static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t bind
 utils::bitset64
 static getPipelineLayoutKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
     utils::bitset64 key = {};
-    for (uint32_t binding = 0; binding < Program::BINDING_COUNT; ++binding) {
+    for (uint32_t binding = 0; binding < Program::SAMPLER_BINDING_COUNT; ++binding) {
         const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
         for (const auto& sampler : samplerGroupInfo[binding].samplers) {
             if (any(stageFlags & ShaderStageFlags::VERTEX)) {

@@ -1824,7 +1824,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     VkDescriptorImageInfo iInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
 
-    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::BINDING_COUNT; samplerGroupIdx++) {
+    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
         const auto& samplers = samplerGroup.samplers;
         if (samplers.empty()) {

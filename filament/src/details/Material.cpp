@@ -428,8 +428,8 @@ Program FMaterial::getProgramBuilderWithVariants(
                     });
 
     UTILS_NOUNROLL
-    for (size_t i = 0; i < Enum::count<BindingPoints>(); i++) {
-        BindingPoints bindingPoint = (BindingPoints)i;
+    for (size_t i = 0; i < Enum::count<SamplerBindingPoints>(); i++) {
+        SamplerBindingPoints bindingPoint = (SamplerBindingPoints)i;
         auto const& info = mSamplerGroupBindingInfoList[i];
         if (info.count) {
             std::array<Program::Sampler, backend::MAX_SAMPLER_COUNT> samplers{};

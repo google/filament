@@ -68,9 +68,9 @@ static BindingIndexMap getBindingIndexMap(const GLSLPostProcessor::Config& confi
     switch (config.domain) {
         case MaterialDomain::SURFACE:
             UTILS_NOUNROLL
-            for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
-                if (blockIndex != BindingPoints::PER_MATERIAL_INSTANCE) {
-                    auto const* sib = SibGenerator::getSib(BindingPoints(blockIndex), config.variant);
+            for (size_t blockIndex = 0; blockIndex < Enum::count<SamplerBindingPoints>(); blockIndex++) {
+                if (blockIndex != SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
+                    auto const* sib = SibGenerator::getSib(SamplerBindingPoints(blockIndex), config.variant);
                     if (sib) {
                         generateBindingIndexMap(config, *sib, map);
                     }

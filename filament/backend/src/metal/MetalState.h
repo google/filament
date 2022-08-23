@@ -35,9 +35,9 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
     return lhs.u == rhs.u;
 }
 
-static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::BINDING_COUNT;
+static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::SAMPLER_BINDING_COUNT;
 static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
-static constexpr uint32_t VERTEX_BUFFER_START = Program::BINDING_COUNT;
+static constexpr uint32_t VERTEX_BUFFER_START = Program::UNIFORM_BINDING_COUNT;
 
 // The "zero" buffer is a small buffer for missing attributes that resides in the vertex slot
 // immediately following any user-provided vertex buffers.

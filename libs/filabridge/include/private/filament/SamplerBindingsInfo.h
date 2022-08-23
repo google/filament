@@ -40,7 +40,7 @@ struct SamplerGroupBindingInfo {
 
 // list of binding information for all known binding points
 using SamplerGroupBindingInfoList =
-        std::array<SamplerGroupBindingInfo, utils::Enum::count<BindingPoints>()>;
+        std::array<SamplerGroupBindingInfo, utils::Enum::count<SamplerBindingPoints>()>;
 
 // map of sampler shader binding to sampler shader name
 using SamplerBindingToNameMap =

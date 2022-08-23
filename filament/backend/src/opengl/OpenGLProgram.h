@@ -109,7 +109,7 @@ private:
     union {
         // when mInitialized == true:
         // information about each USED sampler buffer per binding (no gaps)
-        std::array<uint8_t, Program::BINDING_COUNT> mUsedBindingPoints;   // 12 bytes
+        std::array<uint8_t, Program::SAMPLER_BINDING_COUNT> mUsedSamplerBindingPoints;   // 4 bytes
         // when mInitialized == false:
         // lazy initialization data pointer
         LazyInitializationData* mLazyInitializationData;

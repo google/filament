@@ -54,7 +54,7 @@ Program& Program::shader(ShaderType shader, void const* data, size_t size) {
 Program& Program::uniformBlockBindings(
         utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept {
     for (auto const& item : uniformBlockBindings) {
-        assert_invariant(item.second < BINDING_COUNT);
+        assert_invariant(item.second < UNIFORM_BINDING_COUNT);
         mUniformBlocks[item.second] = item.first;
     }
     return *this;
