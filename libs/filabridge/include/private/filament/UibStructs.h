@@ -210,10 +210,10 @@ static_assert(sizeof(PerRenderableData) == 256,
 
 struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ObjectUniforms" };
-    PerRenderableData data[64];
+    PerRenderableData data[CONFIG_MAX_INSTANCES];
 };
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
-static_assert(sizeof(PerRenderableUib) <= 16384,
+static_assert(sizeof(PerRenderableUib) <= CONFIG_MINSPEC_UBO_SIZE,
         "PerRenderableUib exceeds max UBO size");
 
 // ------------------------------------------------------------------------------------------------
@@ -259,7 +259,7 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     };
     ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
 };
-static_assert(sizeof(ShadowUib) <= 16384,
+static_assert(sizeof(ShadowUib) <= CONFIG_MINSPEC_UBO_SIZE,
         "ShadowUib exceeds max UBO size");
 
 // ------------------------------------------------------------------------------------------------
