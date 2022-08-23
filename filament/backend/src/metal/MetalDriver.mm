@@ -851,17 +851,11 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                                    encoding:NSUTF8StringEncoding];
     }
 
-    MTLRegion mvp = renderTarget->getRegionFromClientRect(params.viewport);
-    MTLViewport metalViewport {
-        .originX = static_cast<double>(mvp.origin.x),
-        .originY = static_cast<double>(mvp.origin.y),
-        .width = static_cast<double>(mvp.size.width),
-        .height = static_cast<double>(mvp.size.height),
-        .znear = static_cast<double>(params.depthRange.near),
-        .zfar = static_cast<double>(params.depthRange.far)
-    };
+    MTLViewport metalViewport =
+            renderTarget->getViewportFromClientViewport(params.viewport,
+                    params.depthRange.near,
+                    params.depthRange.far);
     [mContext->currentRenderPassEncoder setViewport:metalViewport];
-
     mContext->currentViewport = metalViewport;
 
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
@@ -1287,20 +1281,37 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     }
 
     // Set scissor-rectangle.
+    // In order to do this, we compute the intersection between:
+    //  1. the scissor rectangle
+    //  2. the current viewport
+    //  3. the render target attachment dimensions (important, as the scissor can't be set larger)
+    // fmax/min are used below to guard against NaN and because the MTLViewport/MTLRegion
+    // coordinates are doubles.
     MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
-    const MTLViewport& viewport = mContext->currentViewport;
+    const float sleft = scissor.origin.x, sright = scissor.origin.x + scissor.size.width;
+    const float stop = scissor.origin.y, sbottom = scissor.origin.y + scissor.size.height;
 
-    // fmax/min are used here to guard against NaN and because the MTLViewport coordinates are doubles.
-    const auto left   = std::fmax(viewport.originX                  , scissor.origin.x   );
-    const auto right  = std::fmin(viewport.originX + viewport.width , scissor.origin.x + scissor.size.width );
-    const auto top    = std::fmax(viewport.originY                  , scissor.origin.y );
-    const auto bottom = std::fmin(viewport.originY + viewport.height, scissor.origin.y + scissor.size.height );
+    // Viewport extent
+    const MTLViewport& viewport = mContext->currentViewport;
+    const float vleft = viewport.originX, vright = viewport.originX + viewport.width;
+    const float vtop = viewport.originY, vbottom = viewport.originY + viewport.height;
+
+    // Attachment extent
+    const auto attachmentSize = mContext->currentRenderTarget->getAttachmentSize();
+    const float aleft = 0.0f, atop = 0.0f;
+    const float aright = static_cast<float>(attachmentSize.x);
+    const float abottom = static_cast<float>(attachmentSize.y);
+
+    const auto left   = std::fmax(std::fmax(sleft, vleft), aleft);
+    const auto right  = std::fmin(std::fmin(sright, vright), aright);
+    const auto top    = std::fmax(std::fmax(stop, vtop), atop);
+    const auto bottom = std::fmin(std::fmin(sbottom, vbottom), abottom);
 
     MTLScissorRect scissorRect = {
         .x      = static_cast<NSUInteger>(left),
-        .y      = static_cast<NSUInteger>(top ),
+        .y      = static_cast<NSUInteger>(top),
         .width  = static_cast<NSUInteger>(right  - left),
-        .height = static_cast<NSUInteger>(bottom - top )
+        .height = static_cast<NSUInteger>(bottom - top)
     };
 
     [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
