@@ -36,11 +36,9 @@ static void destroy(void*, size_t, void *userData) {
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_ResourceLoader_nCreateResourceLoader(JNIEnv*, jclass,
-        jlong nativeEngine, jboolean normalizeSkinningWeights, jboolean recomputeBoundingBoxes,
-        jboolean ignoreBindTransform) {
+        jlong nativeEngine, jboolean normalizeSkinningWeights) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) new ResourceLoader({ engine, {}, (bool) normalizeSkinningWeights,
-            (bool) recomputeBoundingBoxes, (bool) ignoreBindTransform});
+    return (jlong) new ResourceLoader({ engine, {}, (bool) normalizeSkinningWeights});
 }
 
 extern "C" JNIEXPORT void JNICALL

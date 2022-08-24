@@ -20,6 +20,8 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 
+#include <filament/Box.h>
+
 namespace filament::gltfio {
 
 class Animator;
@@ -109,6 +111,24 @@ public:
      * This is a no-op if the given skin index or target is invalid.
      */
     void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
+
+    /**
+     * Resets the AABB on all renderables by manually computing the bounding box.
+     *
+     * THIS IS ONLY USEFUL FOR MALFORMED ASSETS THAT DO NOT HAVE MIN/MAX SET UP CORRECTLY.
+     *
+     * Does not affect the return value of getBoundingBox() on the owning asset.
+     * Cannot be called after releaseSourceData() on the owning asset.
+     * Can only be called after loadResources() or asyncBeginLoad().
+     */
+    void recomputeBoundingBoxes();
+
+    /**
+     * Gets the axis-aligned bounding box from the supplied min / max values in glTF accessors.
+     *
+     * If recomputeBoundingBoxes() has been called, then this returns the recomputed AABB.
+     */
+    Aabb getBoundingBox() const noexcept;
 };
 
 } // namespace filament::gltfio

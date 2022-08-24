@@ -141,8 +141,7 @@ void App::setupMesh() {
 
     filament::gltfio::ResourceLoader({
         .engine = engine,
-        .normalizeSkinningWeights = true,
-        .recomputeBoundingBoxes = false
+        .normalizeSkinningWeights = true
     }).loadResources(app.asset);
 
     scene->addEntities(app.asset->getEntities(), app.asset->getEntityCount());

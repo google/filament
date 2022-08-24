@@ -133,7 +133,7 @@ const float kSensitivity = 100.0f;
     NameComponentManager* ncm = new NameComponentManager(em);
     _assetLoader = AssetLoader::create({_engine, _materialProvider, ncm, &em});
     _resourceLoader = new ResourceLoader(
-            {.engine = _engine, .normalizeSkinningWeights = true, .recomputeBoundingBoxes = false});
+            {.engine = _engine, .normalizeSkinningWeights = true});
     _stbDecoder = createStbProvider(_engine);
     _ktxDecoder = createKtx2Provider(_engine);
     _resourceLoader->addTextureProvider("image/png", _stbDecoder);

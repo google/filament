@@ -373,6 +373,8 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
     for (const auto& pair : mRootNodes) {
         createEntity(srcAsset, pair.first, pair.second, instanceRoot, false, instance);
     }
+
+    instance->boundingBox = primary->mBoundingBox;
     return instance;
 }
 
@@ -539,8 +541,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     }
 
     // Per the spec, glTF models must have valid mix / max annotations for position attributes.
-    // However in practice these can be missing and we should be as robust as other glTF viewers.
-    // If desired, clients can enable the "recomputeBoundingBoxes" feature in ResourceLoader.
+    // If desired, clients can call "recomputeBoundingBoxes()" in FilamentInstance.
     Box box = Box().set(aabb.min, aabb.max);
     if (box.isEmpty()) {
         slog.w << "Missing bounding box in " << name << io::endl;
