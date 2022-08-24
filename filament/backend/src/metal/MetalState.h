@@ -35,17 +35,33 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
     return lhs.u == rhs.u;
 }
 
+//   Bindings    Buffer name                          Count
+//   ------------------------------------------------------
+//   0           Zero buffer (placeholder vertex buffer)  1
+//   1-16        Filament vertex buffers                 16   limited by MAX_VERTEX_BUFFER_COUNT
+//   17-26       Uniform buffers                         10
+//   27-30       Sampler Uniforms (argument buffers)      4   TODO: use arg buffers for samplers
+//
+//   Total                                               31
+
 static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::BINDING_COUNT;
 static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
-static constexpr uint32_t VERTEX_BUFFER_START = Program::BINDING_COUNT;
-
-// The "zero" buffer is a small buffer for missing attributes that resides in the vertex slot
-// immediately following any user-provided vertex buffers.
-static constexpr uint32_t ZERO_VERTEX_BUFFER = MAX_VERTEX_BUFFER_COUNT;
 
 // The total number of vertex buffer "slots" that the Metal backend can bind.
-// + 1 to account for the zero buffer.
-static constexpr uint32_t VERTEX_BUFFER_COUNT = MAX_VERTEX_BUFFER_COUNT + 1;
+// + 1 to account for the zero buffer, a placeholder buffer used internally by the Metal backend.
+// MAX_VERTEX_BUFFER_COUNT represents the max number of vertex buffers Filament can bind.
+static constexpr uint32_t LOGICAL_VERTEX_BUFFER_COUNT = MAX_VERTEX_BUFFER_COUNT + 1;
+
+// The "zero" buffer is a small buffer for missing attributes.
+static constexpr uint32_t ZERO_VERTEX_BUFFER_LOGICAL_INDEX = 0u;
+static constexpr uint32_t ZERO_VERTEX_BUFFER_BINDING = 0u;
+
+static constexpr uint32_t USER_VERTEX_BUFFER_BINDING_START = 1u;
+
+// The max number of uniform buffers that the Metal backend can simultaneously bind.
+static constexpr uint32_t UNIFORM_BUFFER_COUNT = 10u;
+// This constant must match the equivalent in CodeGenerator.cpp.
+static constexpr uint32_t UNIFORM_BUFFER_BINDING_START = 17u;
 
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);
@@ -58,7 +74,7 @@ inline bool operator!=(const MTLViewport& lhs, const MTLViewport& rhs);
 struct VertexDescription {
     struct Attribute {
         MTLVertexFormat format;     // 8 bytes
-        uint32_t buffer;            // 4 bytes
+        uint32_t buffer;            // 4 bytes      a logical vertex buffer index
         uint32_t offset;            // 4 bytes
     };
     struct Layout {
@@ -66,7 +82,8 @@ struct VertexDescription {
         uint64_t stride;            // 8 bytes
     };
     Attribute attributes[MAX_VERTEX_ATTRIBUTE_COUNT] = {};      // 256 bytes
-    Layout layouts[VERTEX_BUFFER_COUNT] = {};                   // 272 bytes
+    // layouts[n] represents the layout of the vertex buffer at logical index n
+    Layout layouts[LOGICAL_VERTEX_BUFFER_COUNT] = {};           // 272 bytes
 
     bool operator==(const VertexDescription& rhs) const noexcept {
         bool result = true;

@@ -38,18 +38,18 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
         if (vertexDescription.attributes[i].format > MTLVertexFormatInvalid) {
             const auto& attribute = vertexDescription.attributes[i];
             vertex.attributes[i].format = attribute.format;
-            vertex.attributes[i].bufferIndex = VERTEX_BUFFER_START + attribute.buffer;
+            vertex.attributes[i].bufferIndex = attribute.buffer;
             vertex.attributes[i].offset = attribute.offset;
         }
     }
 
-    for (uint32_t i = 0; i < VERTEX_BUFFER_COUNT; i++) {
+    for (uint32_t i = 0; i < LOGICAL_VERTEX_BUFFER_COUNT; i++) {
         if (vertexDescription.layouts[i].stride > 0) {
             const auto& layout = vertexDescription.layouts[i];
-            vertex.layouts[VERTEX_BUFFER_START + i].stride = layout.stride;
-            vertex.layouts[VERTEX_BUFFER_START + i].stepFunction = layout.step;
+            vertex.layouts[i].stride = layout.stride;
+            vertex.layouts[i].stepFunction = layout.step;
             if (layout.step == MTLVertexStepFunctionConstant) {
-                vertex.layouts[VERTEX_BUFFER_START + i].stepRate = 0;
+                vertex.layouts[i].stepRate = 0;
             }
         }
     }
