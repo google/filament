@@ -74,13 +74,13 @@ private:
 class MaterialUniformBlockBindingsChunk final : public Chunk {
 public:
     explicit MaterialUniformBlockBindingsChunk(
-            utils::FixedCapacityVector<std::pair<std::string_view, filament::BindingPoints>> list);
+            utils::FixedCapacityVector<std::pair<std::string_view, filament::UniformBindingPoints>> list);
     ~MaterialUniformBlockBindingsChunk() final = default;
 
 private:
     void flatten(Flattener&) final;
 
-    utils::FixedCapacityVector<std::pair<std::string_view, filament::BindingPoints>> mBindingList;
+    utils::FixedCapacityVector<std::pair<std::string_view, filament::UniformBindingPoints>> mBindingList;
 };
 
 // ------------------------------------------------------------------------------------------------

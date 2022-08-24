@@ -1319,8 +1319,8 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
 
     // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[UNIFORM_BUFFER_COUNT] = { nil };
-    NSUInteger offsets[UNIFORM_BUFFER_COUNT] = { 0 };
+    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
+    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
             MetalBuffer* buffer, uint32_t index) {
@@ -1329,7 +1329,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     });
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
             UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
-            uniformsToBind, offsets, UNIFORM_BUFFER_COUNT);
+            uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
 
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
@@ -1519,7 +1519,7 @@ void MetalDriver::enumerateSamplerGroups(
 
 void MetalDriver::enumerateBoundUniformBuffers(
         const std::function<void(const UniformBufferState&, MetalBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < UNIFORM_BUFFER_COUNT; i++) {
+    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
         auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;

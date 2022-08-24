@@ -90,7 +90,7 @@ void MaterialSubpassInterfaceBlockChunk::flatten(Flattener& f) {
 // ------------------------------------------------------------------------------------------------
 
 MaterialUniformBlockBindingsChunk::MaterialUniformBlockBindingsChunk(
-        utils::FixedCapacityVector<std::pair<std::string_view, filament::BindingPoints>> list)
+        utils::FixedCapacityVector<std::pair<std::string_view, filament::UniformBindingPoints>> list)
         : Chunk(ChunkType::MaterialUniformBindings),
           mBindingList(std::move(list)) {
 }
@@ -112,10 +112,10 @@ MaterialSamplerBlockBindingChunk::MaterialSamplerBlockBindingChunk(
 }
 
 void MaterialSamplerBlockBindingChunk::flatten(Flattener& f) {
-    f.writeUint8(utils::Enum::count<BindingPoints>());
+    f.writeUint8(utils::Enum::count<SamplerBindingPoints>());
     UTILS_NOUNROLL
-    for (size_t i = 0; i < utils::Enum::count<BindingPoints>(); i++) {
-        BindingPoints bindingPoint = (BindingPoints)i;
+    for (size_t i = 0; i < utils::Enum::count<SamplerBindingPoints>(); i++) {
+        SamplerBindingPoints bindingPoint = (SamplerBindingPoints)i;
         auto const& bindingInfo = mSamplerBindings.getSamplerGroupBindingInfo(bindingPoint);
         f.writeUint8(bindingInfo.bindingOffset);
         f.writeUint8((uint8_t)bindingInfo.shaderStageFlags);

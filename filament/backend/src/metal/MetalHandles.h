@@ -125,7 +125,7 @@ public:
     MetalBuffer* getBuffer() { return &buffer; }
 
     // Tracks which uniform buffers this buffer object is bound into.
-    static_assert(Program::BINDING_COUNT <= 32);
+    static_assert(Program::UNIFORM_BINDING_COUNT <= 32);
     utils::bitset32 boundUniformBuffers;
 
 private:

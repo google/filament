@@ -364,7 +364,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         // whole group.
         if (atLeastOneSamplerUsed) {
             // Cache the sampler uniform locations for each interface block
-            mUsedBindingPoints[usedBindingCount] = i;
+            mUsedSamplerBindingPoints[usedBindingCount] = i;
             usedBindingCount++;
         } else {
             tmu -= samplers.size();
@@ -378,7 +378,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 
     // cache a few member variable locally, outside the loop
     auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
-    auto const& UTILS_RESTRICT usedBindingPoints = mUsedBindingPoints;
+    auto const& UTILS_RESTRICT usedBindingPoints = mUsedSamplerBindingPoints;
 
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
         auto const binding = usedBindingPoints[i];

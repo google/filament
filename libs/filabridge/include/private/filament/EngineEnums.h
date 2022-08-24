@@ -32,19 +32,27 @@ enum class PostProcessVariant : uint8_t {
     TRANSLUCENT
 };
 
-// Binding points for uniform buffers and sampler buffers.
-// Effectively, these are just names.
-enum class BindingPoints : uint8_t {
-    PER_VIEW                   = 0,    // uniforms/samplers updated per view
-    PER_RENDERABLE             = 1,    // uniforms/samplers updated per renderable
+// Binding points for uniform buffers
+enum class UniformBindingPoints : uint8_t {
+    PER_VIEW                   = 0,    // uniforms updated per view
+    PER_RENDERABLE             = 1,    // uniforms updated per renderable
     PER_RENDERABLE_BONES       = 2,    // bones data, per renderable
     PER_RENDERABLE_MORPHING    = 3,    // morphing uniform/sampler updated per render primitive
     LIGHTS                     = 4,    // lights data array
     SHADOW                     = 5,    // punctual shadow data
     FROXEL_RECORDS             = 6,
-    PER_MATERIAL_INSTANCE      = 7,    // uniforms/samplers updates per material
+    PER_MATERIAL_INSTANCE      = 7,    // uniforms updates per material
     // Update utils::Enum::count<>() below when adding values here
-    // These are limited by CONFIG_BINDING_COUNT (currently 12)
+    // These are limited by CONFIG_BINDING_COUNT (currently 10)
+};
+
+// Binding points for sampler buffers.
+enum class SamplerBindingPoints : uint8_t {
+    PER_VIEW                   = 0,    // samplers updated per view
+    PER_RENDERABLE_MORPHING    = 1,    // morphing sampler updated per render primitive
+    PER_MATERIAL_INSTANCE      = 2,    // samplers updates per material
+    // Update utils::Enum::count<>() below when adding values here
+    // These are limited by CONFIG_SAMPLER_BINDING_COUNT (currently 4)
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
@@ -90,15 +98,16 @@ constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
 } // namespace filament
 
 template<>
-struct utils::EnableIntegerOperators<filament::BindingPoints> : public std::true_type {};
+struct utils::EnableIntegerOperators<filament::UniformBindingPoints> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::SamplerBindingPoints> : public std::true_type {};
 
 template<>
-inline constexpr size_t utils::Enum::count<filament::BindingPoints>() { return 8; }
+inline constexpr size_t utils::Enum::count<filament::UniformBindingPoints>() { return 8; }
+template<>
+inline constexpr size_t utils::Enum::count<filament::SamplerBindingPoints>() { return 3; }
 
-static_assert(utils::Enum::count<filament::BindingPoints>() <= filament::backend::CONFIG_BINDING_COUNT);
-
-static_assert(
-        filament::BindingPoints::PER_MATERIAL_INSTANCE == utils::Enum::count<filament::BindingPoints>()-1u,
-        "Dynamically sized sampler buffer must be the last binding point.");
+static_assert(utils::Enum::count<filament::UniformBindingPoints>() <= filament::backend::CONFIG_UNIFORM_BINDING_COUNT);
+static_assert(utils::Enum::count<filament::SamplerBindingPoints>() <= filament::backend::CONFIG_SAMPLER_BINDING_COUNT);
 
 #endif // TNT_FILAMENT_ENGINE_ENUM_H

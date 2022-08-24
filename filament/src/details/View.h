@@ -453,9 +453,9 @@ private:
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         mPerViewUniforms.bind(driver);
-        driver.bindUniformBuffer(+BindingPoints::LIGHTS, mLightUbh);
-        driver.bindUniformBuffer(+BindingPoints::SHADOW, mShadowMapManager.getShadowUniformsHandle());
-        driver.bindUniformBuffer(+BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
+        driver.bindUniformBuffer(+UniformBindingPoints::LIGHTS, mLightUbh);
+        driver.bindUniformBuffer(+UniformBindingPoints::SHADOW, mShadowMapManager.getShadowUniformsHandle());
+        driver.bindUniformBuffer(+UniformBindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
     }
 
     // Clean-up the whole history, free all resources. This is typically called when the View is

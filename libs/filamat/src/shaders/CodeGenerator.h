@@ -108,7 +108,7 @@ public:
 
     // generate uniforms
     utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderType type,
-            filament::BindingPoints binding, const filament::UniformInterfaceBlock& uib) const;
+            filament::UniformBindingPoints binding, const filament::UniformInterfaceBlock& uib) const;
 
     // generate samplers
     utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,

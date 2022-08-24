@@ -369,8 +369,8 @@ void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
 }
 
 void PerViewUniforms::bind(backend::DriverApi& driver) noexcept {
-    driver.bindUniformBuffer(+BindingPoints::PER_VIEW, mUniformBufferHandle);
-    driver.bindSamplers(+BindingPoints::PER_VIEW, mSamplerGroupHandle);
+    driver.bindUniformBuffer(+UniformBindingPoints::PER_VIEW, mUniformBufferHandle);
+    driver.bindSamplers(+SamplerBindingPoints::PER_VIEW, mSamplerGroupHandle);
 }
 
 void PerViewUniforms::unbindSamplers() noexcept {

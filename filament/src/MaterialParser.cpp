@@ -509,7 +509,7 @@ bool ChunkSamplerBlockBindings::unflatten(Unflattener& unflattener,
     if (!unflattener.read(&count)) {
         return false;
     }
-    assert_invariant(count == utils::Enum::count<BindingPoints>());
+    assert_invariant(count == utils::Enum::count<SamplerBindingPoints>());
 
     UTILS_NOUNROLL
     for (size_t i = 0; i < count; i++) {

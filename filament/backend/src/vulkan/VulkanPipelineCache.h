@@ -56,7 +56,7 @@ public:
     VulkanPipelineCache(VulkanPipelineCache const&) = delete;
     VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
 
-    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::BINDING_COUNT;
+    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
     static constexpr uint32_t TARGET_BINDING_COUNT = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
@@ -289,17 +289,17 @@ private:
 
     // Represents all the Vulkan state that comprises a bound descriptor set.
     struct DescriptorKey {
-        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             //   96     0
-        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        //  768    96
-        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; //  192   864
-        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       //   48  1056
-        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         //   48  1104
+        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             //   80     0
+        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        //  768    80
+        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; //  192   848
+        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       //   40  1040
+        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         //   40  1080
     };
-    static_assert(offsetof(DescriptorKey, samplers)              == 96);
-    static_assert(offsetof(DescriptorKey, inputAttachments)      == 864);
-    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1056);
-    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1104);
-    static_assert(sizeof(DescriptorKey) == 1152, "DescriptorKey must not have implicit padding.");
+    static_assert(offsetof(DescriptorKey, samplers)              == 80);
+    static_assert(offsetof(DescriptorKey, inputAttachments)      == 848);
+    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1040);
+    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1080);
+    static_assert(sizeof(DescriptorKey) == 1120, "DescriptorKey must not have implicit padding.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 

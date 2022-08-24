@@ -34,7 +34,8 @@ class Program {
 public:
 
     static constexpr size_t SHADER_TYPE_COUNT = 2;
-    static constexpr size_t BINDING_COUNT = CONFIG_BINDING_COUNT;
+    static constexpr size_t UNIFORM_BINDING_COUNT = CONFIG_UNIFORM_BINDING_COUNT;
+    static constexpr size_t SAMPLER_BINDING_COUNT = CONFIG_SAMPLER_BINDING_COUNT;
 
     struct Sampler {
         utils::CString name = {};   // name of the sampler in the shader
@@ -46,8 +47,8 @@ public:
         ShaderStageFlags stageFlags = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS;
     };
 
-    using UniformBlockInfo = std::array<const char*, BINDING_COUNT>;
-    using SamplerGroupInfo = std::array<SamplerGroupData, BINDING_COUNT>;
+    using UniformBlockInfo = std::array<const char*, UNIFORM_BINDING_COUNT>;
+    using SamplerGroupInfo = std::array<SamplerGroupData, SAMPLER_BINDING_COUNT>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 

@@ -44,7 +44,7 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
 //
 //   Total                                               31
 
-static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::BINDING_COUNT;
+static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::SAMPLER_BINDING_COUNT;
 static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
 
 // The total number of vertex buffer "slots" that the Metal backend can bind.

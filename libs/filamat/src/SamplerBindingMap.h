@@ -47,12 +47,12 @@ public:
             const SamplerInterfaceBlock* perMaterialSib = nullptr,
             const char* materialName = nullptr);
 
-    SamplerGroupBindingInfo const& getSamplerGroupBindingInfo(BindingPoints bindingPoint) const noexcept {
+    SamplerGroupBindingInfo const& getSamplerGroupBindingInfo(SamplerBindingPoints bindingPoint) const noexcept {
         return mSamplerBlockOffsets[+bindingPoint];
     }
 
     // Gets the global offset of the first sampler in the given sampler block.
-    inline uint8_t getBlockOffset(BindingPoints bindingPoint) const noexcept {
+    inline uint8_t getBlockOffset(SamplerBindingPoints bindingPoint) const noexcept {
         assert_invariant(mSamplerBlockOffsets[+bindingPoint].bindingOffset != UNKNOWN_OFFSET);
         return getSamplerGroupBindingInfo(bindingPoint).bindingOffset;
     }
