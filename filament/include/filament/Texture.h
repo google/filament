@@ -327,7 +327,8 @@ public:
      *              PixelBufferDescriptor&& buffer)
      */
     inline void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const {
-        setImage(engine, level, 0, 0, 0, getWidth(level), getHeight(level), 1, std::move(buffer));
+        setImage(engine, level, 0, 0, 0,
+            uint32_t(getWidth(level)), uint32_t(getHeight(level)), 1, std::move(buffer));
     }
 
     /**
