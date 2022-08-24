@@ -296,9 +296,8 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
     vertexDescription = {};
 
-    // Each attribute gets its own vertex buffer.
-
-    uint32_t bufferIndex = 0;
+    // Each attribute gets its own vertex buffer, starting at logical buffer 1.
+    uint32_t bufferIndex = 1;
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
         const auto& attribute = vertexBuffer->attributes[attributeIndex];
         if (attribute.buffer == Attribute::BUFFER_UNUSED) {
@@ -310,10 +309,10 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
             // shader to read from missing vertex attributes.
             vertexDescription.attributes[attributeIndex] = {
                     .format = format,
-                    .buffer = ZERO_VERTEX_BUFFER,
+                    .buffer = ZERO_VERTEX_BUFFER_LOGICAL_INDEX,
                     .offset = 0
             };
-            vertexDescription.layouts[ZERO_VERTEX_BUFFER] = {
+            vertexDescription.layouts[ZERO_VERTEX_BUFFER_LOGICAL_INDEX] = {
                     .step = MTLVertexStepFunctionConstant,
                     .stride = 16
             };
