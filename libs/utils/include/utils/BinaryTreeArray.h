@@ -53,7 +53,9 @@ class BinaryTreeArray {
 public:
     static size_t count(size_t height) noexcept { return  (1u << height) - 1; }
     static size_t left(size_t i, size_t /*height*/) noexcept { return i + 1; }
-    static size_t right(size_t i, size_t height) noexcept { return i + (1u << (height - 1)); }
+    static size_t right(size_t i, size_t height) noexcept {
+        return i + (size_t(1) << (height - 1));
+    }
 
     // this builds the depth-first binary tree array top down (post-order)
     template<typename Leaf, typename Node>

@@ -81,7 +81,7 @@ UTILS_PUBLIC inline void decomposeMatrix(const filament::math::mat4f& mat, filam
         *rotation = clone.toQuaternion();
     } else {
         // Set to identity if close to zero
-        *rotation = quatf(1);
+        *rotation = quatf(1.0f);
     }
 }
 

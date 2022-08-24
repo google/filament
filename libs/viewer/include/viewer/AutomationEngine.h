@@ -60,7 +60,7 @@ public:
          * Minimum time that automation waits between applying a settings object and advancing
          * to the next test case. Specified in seconds.
          */
-        float sleepDuration = 0.2;
+        float sleepDuration = 0.2f;
 
         /**
          * Similar to sleepDuration, but expressed as a frame count. Both the minimum sleep time
