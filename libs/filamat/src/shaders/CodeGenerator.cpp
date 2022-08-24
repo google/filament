@@ -329,15 +329,16 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType type,
     Precision uniformPrecision = getDefaultUniformPrecision();
     Precision defaultPrecision = getDefaultPrecision(type);
 
+    // This constant must match the equivalent in MetalState.h.
+    static constexpr uint32_t METAL_UNIFORM_BUFFER_BINDING_START = 17u;
+
     out << "\nlayout(";
     // TODO: at feature level 2, GLSL should support the binding qualifier
     if (mTargetLanguage == TargetLanguage::SPIRV) {
         const auto bindingIndex = (uint32_t) binding; // avoid char output
         switch (mTargetApi) {
             case TargetApi::METAL:
-                // This constant must match the equivalent in MetalState.h.
-                static constexpr uint32_t UNIFORM_BUFFER_BINDING_START = 17u;
-                out << "binding = " << UNIFORM_BUFFER_BINDING_START + bindingIndex << ", ";
+                out << "binding = " << METAL_UNIFORM_BUFFER_BINDING_START + bindingIndex << ", ";
                 break;
 
             default:
