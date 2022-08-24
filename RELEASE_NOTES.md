@@ -5,6 +5,7 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- WebGL: reduce max instance count to work around Chrome issues [⚠️ **Recompile Materials**]
 - engine: rework material/shader sampler binding code [⚠️ **Recompile Materials**]
 
 ## v1.26.0

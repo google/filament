@@ -131,6 +131,34 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
                 }
             }
 
+#ifdef __EMSCRIPTEN__
+            // HACK ALERT
+            // ----------
+            // The values below are based on CONFIG_MAX_INSTANCES, which is not accessible here.
+            // Since matc cannot know if it's building for WebGL, we replace the constant at run
+            // time. This will go away after we support specialization constants. The name of the
+            // struct field might be changed by the GLSL optimizer, so we search for any codeline
+            // that has the pattern: "PerRenderableData(.*)[64]"
+            const std::string_view type = "PerRenderableData";
+            const std::string_view source = "[64]";
+            const std::string_view target = "[8] ";
+            assert_invariant(source.size() == target.size());
+            const size_t npos = std::string_view::npos;
+            for (size_t typePos = shaderView.find(type); typePos != npos;) {
+                size_t newlinePos = shaderView.find('\n', typePos + type.size());
+                std::string_view codeline = shaderView.substr(typePos, newlinePos - typePos);
+                if (size_t sourcePos = codeline.find(source, type.size()); sourcePos != npos) {
+                    if (temp.empty()) {
+                        temp = shaderView;
+                    }
+                    target.copy(temp.data() + typePos + sourcePos, target.size());
+                    shaderView = temp;
+                    break;
+                }
+                typePos = shaderView.find(type, newlinePos + 1);
+            }
+#endif
+
             // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
             // MacOS doesn't support GL_ARB_shading_language_packing
             if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
