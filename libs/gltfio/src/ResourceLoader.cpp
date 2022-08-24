@@ -67,15 +67,11 @@ struct ResourceLoader::Impl {
     Impl(const ResourceConfiguration& config) :
         mEngine(config.engine),
         mNormalizeSkinningWeights(config.normalizeSkinningWeights),
-        mRecomputeBoundingBoxes(config.recomputeBoundingBoxes),
-        mGltfPath(config.gltfPath ? config.gltfPath : ""),
-        mIgnoreBindTransform(config.ignoreBindTransform) {}
+        mGltfPath(config.gltfPath ? config.gltfPath : "") {}
 
     Engine* const mEngine;
     const bool mNormalizeSkinningWeights;
-    const bool mRecomputeBoundingBoxes;
     const std::string mGltfPath;
-    const bool mIgnoreBindTransform;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
@@ -444,10 +440,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         for (FFilamentInstance* instance : asset->mInstances) {
             importSkins(gltf, instance->nodeMap, instance->skins);
         }
-    }
-
-    if (pImpl->mRecomputeBoundingBoxes) {
-        updateBoundingBoxes(asset);
     }
 
     Engine& engine = *pImpl->mEngine;
@@ -852,178 +844,6 @@ void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
             }
         }
     }
-}
-
-void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
-    SYSTRACE_CALL();
-    auto& rm = pImpl->mEngine->getRenderableManager();
-    auto& tm = pImpl->mEngine->getTransformManager();
-    const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
-
-    // The purpose of the root node is to give the client a place for custom transforms.
-    // Since it is not part of the source model, it should be ignored when computing the
-    // bounding box.
-    TransformManager::Instance root = tm.getInstance(asset->getRoot());
-    std::vector<Entity> modelRoots(tm.getChildCount(root));
-    tm.getChildren(root, modelRoots.data(), modelRoots.size());
-    for (auto e : modelRoots) {
-        tm.setParent(tm.getInstance(e), 0);
-    }
-
-    auto computeBoundingBox = [](const cgltf_primitive* prim, Aabb* result) {
-        Aabb aabb;
-        for (cgltf_size slot = 0; slot < prim->attributes_count; slot++) {
-            const cgltf_attribute& attr = prim->attributes[slot];
-            const cgltf_accessor* accessor = attr.data;
-            const size_t dim = cgltf_num_components(accessor->type);
-            if (attr.type == cgltf_attribute_type_position && dim >= 3) {
-                std::vector<float> unpacked(accessor->count * dim);
-                cgltf_accessor_unpack_floats(accessor, unpacked.data(), unpacked.size());
-                for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; ++i, j += dim) {
-                    float3 pt(unpacked[j + 0], unpacked[j + 1], unpacked[j + 2]);
-                    aabb.min = min(aabb.min, pt);
-                    aabb.max = max(aabb.max, pt);
-                }
-                break;
-            }
-        }
-        *result = aabb;
-    };
-
-    struct Prim {
-        cgltf_primitive const* prim;
-        Skin const* skin;
-        Entity node;
-    };
-
-    auto computeBoundingBoxSkinned = [&](const Prim& prim, Aabb* result) {
-        FixedCapacityVector<float3> verts;
-        FixedCapacityVector<uint4> joints;
-        FixedCapacityVector<float4> weights;
-        for (cgltf_size slot = 0, n = prim.prim->attributes_count; slot < n; ++slot) {
-            const cgltf_attribute& attr = prim.prim->attributes[slot];
-            const cgltf_accessor& accessor = *attr.data;
-            switch (attr.type) {
-            case cgltf_attribute_type_position:
-                verts = FixedCapacityVector<float3>(accessor.count);
-                cgltf_accessor_unpack_floats(&accessor, &verts.data()->x, accessor.count * 3);
-                break;
-            case cgltf_attribute_type_joints: {
-                FixedCapacityVector<float4> tmp(accessor.count);
-                cgltf_accessor_unpack_floats(&accessor, &tmp.data()->x, accessor.count * 4);
-                joints = FixedCapacityVector<uint4>(accessor.count);
-                for (size_t i = 0, n = accessor.count; i < n; ++i) {
-                    joints[i] = uint4(tmp[i]);
-                }
-                break;
-            }
-            case cgltf_attribute_type_weights:
-                weights = FixedCapacityVector<float4>(accessor.count);
-                cgltf_accessor_unpack_floats(&accessor, &weights.data()->x, accessor.count * 4);
-                break;
-            default:
-                break;
-            }
-        }
-
-        Aabb aabb;
-        TransformManager::Instance transformable = tm.getInstance(prim.node);
-        const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
-        for (size_t i = 0, n = verts.size(); i < n; i++) {
-            float3 point = verts[i];
-            mat4f tmp = mat4f(0.0f);
-            for (size_t j = 0; j < 4; j++) {
-                size_t jointIndex = joints[i][j];
-                Entity jointEntity = prim.skin->joints[jointIndex];
-                mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
-                mat4f inverseBindMatrix = prim.skin->inverseBindMatrices[jointIndex];
-                tmp += weights[i][j] * globalJointTransform * inverseBindMatrix;
-            }
-            mat4f skinMatrix = inverseGlobalTransform * tmp;
-            if (!pImpl->mNormalizeSkinningWeights) {
-                skinMatrix /= skinMatrix[3].w;
-            }
-            float3 skinnedPoint = (point.x * skinMatrix[0] +
-                    point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
-            aabb.min = min(aabb.min, skinnedPoint);
-            aabb.max = max(aabb.max, skinnedPoint);
-        }
-        *result = aabb;
-    };
-
-    // Collect all mesh primitives that we wish to find bounds for. For each mesh primitive, we also
-    // collect the skin it is bound to (nullptr if not skinned) for bounds computation.
-    size_t primCount = 0;
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            primCount += mesh->primitives_count;
-        }
-    }
-    auto primitives = FixedCapacityVector<Prim>::with_capacity(primCount);
-    const cgltf_skin* baseSkin = &asset->mSourceAsset->hierarchy->skins[0];
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
-                primitives.push_back({&mesh->primitives[index], nullptr, iter.second});
-            }
-            if (cgltf_skin* const skin = iter.first->skin; skin) {
-                primitives.back().skin = &asset->mInstances[0]->skins[skin - baseSkin];
-            }
-        }
-    }
-
-    // Kick off a bounding box job for every primitive.
-    FixedCapacityVector<Aabb> bounds(primitives.size());
-    JobSystem* js = &pImpl->mEngine->getJobSystem();
-    JobSystem::Job* parent = js->createJob();
-    for (size_t i = 0; i < primitives.size(); ++i) {
-        Aabb* result = &bounds[i];
-        if (pImpl->mIgnoreBindTransform || primitives[i].skin == nullptr) {
-            cgltf_primitive const* prim = primitives[i].prim;
-            js->run(jobs::createJob(*js, parent, [prim, result, computeBoundingBox] {
-                computeBoundingBox(prim, result);
-            }));
-        } else {
-            const Prim& prim = primitives[i];
-            js->run(jobs::createJob(*js, parent, [&prim, result, computeBoundingBoxSkinned] {
-                computeBoundingBoxSkinned(prim, result);
-            }));
-        }
-    }
-    js->runAndWait(parent);
-
-    // Compute the asset-level bounding box.
-    size_t primIndex = 0;
-    Aabb assetBounds;
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            // Find the object-space bounds for the renderable by unioning the bounds of each prim.
-            Aabb aabb;
-            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
-                Aabb primBounds = bounds[primIndex++];
-                aabb.min = min(aabb.min, primBounds.min);
-                aabb.max = max(aabb.max, primBounds.max);
-            }
-            auto renderable = rm.getInstance(iter.second);
-            rm.setAxisAlignedBoundingBox(renderable, Box().set(aabb.min, aabb.max));
-
-            // Transform this bounding box, then update the asset-level bounding box.
-            auto transformable = tm.getInstance(iter.second);
-            const mat4f worldTransform = tm.getWorldTransform(transformable);
-            const Aabb transformed = aabb.transform(worldTransform);
-            assetBounds.min = min(assetBounds.min, transformed.min);
-            assetBounds.max = max(assetBounds.max, transformed.max);
-        }
-    }
-
-    for (auto e : modelRoots) {
-        tm.setParent(tm.getInstance(e), root);
-    }
-
-    asset->mBoundingBox = assetBounds;
 }
 
 } // namespace filament::gltfio

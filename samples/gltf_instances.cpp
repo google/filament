@@ -211,7 +211,6 @@ int main(int argc, char** argv) {
         configuration.engine = app.engine;
         configuration.gltfPath = gltfPath.c_str();
         configuration.normalizeSkinningWeights = true;
-        configuration.recomputeBoundingBoxes = false;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
             app.stbDecoder = createStbProvider(app.engine);

@@ -80,6 +80,7 @@ struct FFilamentInstance : public FilamentInstance {
     FFilamentAsset* owner;
     SkinVector skins;
     NodeMap nodeMap;
+    filament::Aabb boundingBox;
     void createAnimator();
     Animator* getAnimator() const noexcept;
     size_t getSkinCount() const noexcept;
@@ -89,6 +90,7 @@ struct FFilamentInstance : public FilamentInstance {
     void attachSkin(size_t skinIndex, utils::Entity target) noexcept;
     void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
     void applyMaterialVariant(size_t variantIndex) noexcept;
+    void recomputeBoundingBoxes();
 };
 
 FILAMENT_UPCAST(FilamentInstance)
