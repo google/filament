@@ -442,6 +442,10 @@ Program FMaterial::getProgramBuilderWithVariants(
         }
     }
 
+    program.specializationConstants({
+            { 0, (int)mEngine.getSupportedFeatureLevel() }
+    });
+
     return program;
 }
 

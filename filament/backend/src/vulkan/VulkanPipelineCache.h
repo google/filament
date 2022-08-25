@@ -82,6 +82,7 @@ public:
     struct ProgramBundle {
         VkShaderModule vertex;
         VkShaderModule fragment;
+        VkSpecializationInfo* specializationInfos = nullptr;
     };
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
@@ -385,6 +386,7 @@ private:
     PipelineLayoutKey mLayoutRequirements = {};
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
+    VkSpecializationInfo* mSpecializationRequirements = {};
 
     // Current bindings for the pipeline layout, pipeline, and descriptor sets.
     PipelineLayoutKey mBoundLayout = {};

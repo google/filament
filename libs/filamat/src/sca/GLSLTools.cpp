@@ -356,7 +356,7 @@ int GLSLTools::glslangVersionFromShaderModel(ShaderModel model) {
 }
 
 EShMessages GLSLTools::glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi) {
-    EShMessages msg = EShMessages::EShMsgDefault;
+    EShMessages msg = EShMessages::EShMsgSpvRules;
     if (targetApi == MaterialBuilder::TargetApi::VULKAN) {
         msg = (EShMessages) (EShMessages::EShMsgVulkanRules | EShMessages::EShMsgSpvRules);
     }

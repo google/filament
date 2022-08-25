@@ -53,6 +53,8 @@ public:
     /**
      * High-level hint that works in concert with TargetApi to determine the shader models (used to
      * generate GLSL) and final output representations (spirv and/or text).
+     * When generating the GLSL this is used to differentiate OpenGL from OpenGLES, it is also
+     * used to make some performance adjustments.
      */
     enum class Platform {
         DESKTOP,
@@ -60,6 +62,10 @@ public:
         ALL
     };
 
+    /**
+     * TargetApi defines which language after transpilation will be used, it is used to
+     * account for some differences between these langages when generating the GLSL.
+     */
     enum class TargetApi : uint8_t {
         OPENGL      = 0x01u,
         VULKAN      = 0x02u,
@@ -67,8 +73,23 @@ public:
         ALL         = OPENGL | VULKAN | METAL
     };
 
+    /*
+     * Generally we generate GLSL that will be converted to SPIRV, optimized and then
+     * transpiled to the backend's language such as MSL, ESSL300, ESSL410 or SPIRV, in this
+     * case the generated GLSL uses ESSL310 or ESSL450 and has Vulkan semantics and
+     * TargetLanguage::SPIRV must be used.
+     *
+     * However, in some cases (e.g. when no optimization is asked) we generate the *final* GLSL
+     * directly, this GLSL must be ESSL300 or ESSL410 and cannot use any Vulkan syntax, for this
+     * situation we use TargetLanguage::GLSL. In this case TargetApi is guaranteed to be OPENGL.
+     *
+     * Note that TargetLanguage::GLSL is not the common case, as it is generally note used in
+     * release builds.
+     *
+     * Also note that glslang performs semantics analysis on whichever GLSL ends up being generated.
+     */
     enum class TargetLanguage {
-        GLSL,           // GLSL with OpenGL semantics
+        GLSL,           // GLSL with OpenGL 4.1 / OpenGL ES 3.0 semantics
         SPIRV           // GLSL with Vulkan semantics
     };
 
