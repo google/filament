@@ -113,47 +113,6 @@ static void uploadCallback(void* buffer, size_t size, void* user) {
     delete event;
 }
 
-void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins) {
-    dstSkins.resize(gltf->skins_count);
-    for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
-        const cgltf_node& node = gltf->nodes[i];
-        if (node.skin) {
-            int skinIndex = node.skin - &gltf->skins[0];
-            Entity entity = nodeMap.at(&node);
-            dstSkins[skinIndex].targets.insert(entity);
-        }
-    }
-    for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
-        Skin& dstSkin = dstSkins[i];
-        const cgltf_skin& srcSkin = gltf->skins[i];
-        if (srcSkin.name) {
-            dstSkin.name = CString(srcSkin.name);
-        }
-
-        // Build a list of transformables for this skin, one for each joint.
-        dstSkin.joints = FixedCapacityVector<Entity>(srcSkin.joints_count);
-        for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
-            auto iter = nodeMap.find(srcSkin.joints[i]);
-            assert_invariant(iter != nodeMap.end());
-            dstSkin.joints[i] = iter->second;
-        }
-
-        // Retain a copy of the inverse bind matrices because the source blob could be evicted later.
-        const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
-        dstSkin.inverseBindMatrices = FixedCapacityVector<mat4f>(srcSkin.joints_count);
-        if (srcMatrices) {
-            auto dstMatrices = (uint8_t*) dstSkin.inverseBindMatrices.data();
-            uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
-            if (!bytes) {
-                slog.w << "Empty animation buffer, have resources been loaded yet?" << io::endl;
-                continue;
-            }
-            auto srcBuffer = (void*) (bytes + srcMatrices->offset + srcMatrices->buffer_view->offset);
-            memcpy(dstMatrices, srcBuffer, srcSkin.joints_count * sizeof(mat4f));
-        }
-    }
-}
-
 static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         dst[i] = src[i];
@@ -429,16 +388,32 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // tangent generation.
     decodeDracoMeshes(asset);
 
-    // Normalize skinning weights, then "import" each skin into the asset by building a mapping of
-    // skins to their affected entities.
+    // For each skin, optionally normalize skinning weights and store a copy of the bind matrices.
     if (gltf->skins_count > 0) {
         if (pImpl->mNormalizeSkinningWeights) {
             normalizeSkinningWeights(asset);
         }
-        // NOTE: This takes care of up-front instances, but dynamically added instances also
-        // need to import the skin data, which is done in AssetLoader.
-        for (FFilamentInstance* instance : asset->mInstances) {
-            importSkins(gltf, instance->nodeMap, instance->skins);
+        asset->mSkins.reserve(gltf->skins_count);
+        for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
+            const cgltf_skin& srcSkin = gltf->skins[i];
+            CString name;
+            if (srcSkin.name) {
+                name = CString(srcSkin.name);
+            }
+            const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
+            FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
+            if (srcMatrices) {
+                uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
+                assert_invariant(bytes);
+                uint8_t* srcBuffer = bytes + srcMatrices->offset + srcMatrices->buffer_view->offset;
+                memcpy((uint8_t*) inverseBindMatrices.data(),
+                        (const void*) srcBuffer, srcSkin.joints_count * sizeof(mat4f));
+            }
+            FFilamentAsset::Skin skin {
+                .name = std::move(name),
+                .inverseBindMatrices = std::move(inverseBindMatrices),
+            };
+            asset->mSkins.emplace_back(std::move(skin));
         }
     }
 
@@ -747,6 +722,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         }
     }
     // Create a job description for morph targets.
+    // TODO: do not iterate over the nodemap; iterate over the cgltf hierarchy.
     const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
     for (auto iter : nodeMap) {
         cgltf_node const* node = iter.first;

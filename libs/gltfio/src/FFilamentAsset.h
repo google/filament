@@ -271,6 +271,11 @@ struct FFilamentAsset : public FilamentAsset {
 
     void createAnimators();
 
+    struct Skin {
+        utils::CString name;
+        utils::FixedCapacityVector<math::mat4f> inverseBindMatrices;
+    };
+
     filament::Engine* const mEngine;
     utils::NameComponentManager* const mNameManager;
     utils::EntityManager* const mEntityManager;
@@ -285,6 +290,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<filament::IndexBuffer*> mIndexBuffers;
     std::vector<filament::MorphTargetBuffer*> mMorphTargetBuffers;
     std::vector<filament::Texture*> mTextures;
+    utils::FixedCapacityVector<Skin> mSkins;
     utils::FixedCapacityVector<Variant> mVariants;
     utils::FixedCapacityVector<utils::CString> mScenes;
     filament::Aabb mBoundingBox;

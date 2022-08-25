@@ -46,7 +46,7 @@ const char* FFilamentInstance::getSkinNameAt(size_t skinIndex) const noexcept {
     if (skins.size() <= skinIndex) {
         return nullptr;
     }
-    return skins[skinIndex].name.c_str();
+    return owner->mSkins[skinIndex].name.c_str();
 }
 
 size_t FFilamentInstance::getJointCountAt(size_t skinIndex) const noexcept {
@@ -109,6 +109,12 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         tm.setParent(tm.getInstance(e), 0);
     }
 
+    struct Prim {
+        cgltf_primitive const* prim;
+        Entity node;
+        ssize_t skinIndex;
+    };
+
     auto computeBoundingBox = [](const cgltf_primitive* prim) -> Aabb {
         Aabb aabb;
         for (cgltf_size slot = 0; slot < prim->attributes_count; slot++) {
@@ -129,13 +135,7 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         return aabb;
     };
 
-    struct Prim {
-        cgltf_primitive const* prim;
-        Skin const* skin;
-        Entity node;
-    };
-
-    auto computeBoundingBoxSkinned = [&tm](const Prim& prim) -> Aabb {
+    auto computeBoundingBoxSkinned = [&tm, this](const Prim& prim) -> Aabb {
         FixedCapacityVector<float3> verts;
         FixedCapacityVector<uint4> joints;
         FixedCapacityVector<float4> weights;
@@ -168,13 +168,15 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         Aabb aabb;
         TransformManager::Instance transformable = tm.getInstance(prim.node);
         const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
+        const Skin& instanceSkin = skins[prim.skinIndex];
+        const FFilamentAsset::Skin& assetSkin = owner->mSkins[prim.skinIndex];
         for (size_t i = 0, n = verts.size(); i < n; i++) {
             mat4f tmp = mat4f(0.0f);
             for (size_t j = 0; j < 4; j++) {
                 size_t jointIndex = joints[i][j];
-                Entity jointEntity = prim.skin->joints[jointIndex];
+                Entity jointEntity = instanceSkin.joints[jointIndex];
                 mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
-                mat4f inverseBindMatrix = prim.skin->inverseBindMatrices[jointIndex];
+                mat4f inverseBindMatrix = assetSkin.inverseBindMatrices[jointIndex];
                 tmp += weights[i][j] *  globalJointTransform * inverseBindMatrix;
             }
             const mat4f skinMatrix = inverseGlobalTransform * tmp;
@@ -207,37 +209,36 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     }
     auto primitives = FixedCapacityVector<Prim>::with_capacity(primCount);
     const cgltf_skin* baseSkin = &owner->mSourceAsset->hierarchy->skins[0];
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
+    for (auto [node, entity] : nodeMap) {
+        if (const cgltf_mesh* mesh = node->mesh; mesh) {
             for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
-                primitives.push_back({&mesh->primitives[index], nullptr, iter.second});
-            }
-            if (cgltf_skin* const skin = iter.first->skin; skin) {
-                primitives.back().skin = &skins[skin - baseSkin];
+                primitives.push_back({
+                    .prim = &mesh->primitives[index],
+                    .node = entity,
+                    .skinIndex = node->skin ? (node->skin - baseSkin) : -1
+                });
             }
         }
     }
 
     // Kick off a bounding box job for every primitive.
     FixedCapacityVector<Aabb> bounds(primitives.size());
-    JobSystem* js = &owner->mEngine->getJobSystem();
-    JobSystem::Job* parent = js->createJob();
+    JobSystem& js = owner->mEngine->getJobSystem();
+    JobSystem::Job* parent = js.createJob();
     for (size_t i = 0; i < primitives.size(); ++i) {
-        Aabb* result = &bounds[i];
-        if (primitives[i].skin == nullptr) {
-            cgltf_primitive const* prim = primitives[i].prim;
-            js->run(jobs::createJob(*js, parent, [prim, result, computeBoundingBox] {
-                *result = computeBoundingBox(prim);
+        Aabb& result = bounds[i];
+        const Prim& prim = primitives[i];
+        if (primitives[i].skinIndex < 0) {
+            js.run(jobs::createJob(js, parent, [&prim, &result, computeBoundingBox] {
+                result = computeBoundingBox(prim.prim);
             }));
         } else {
-            const Prim& prim = primitives[i];
-            js->run(jobs::createJob(*js, parent, [&prim, result, computeBoundingBoxSkinned] {
-                *result = computeBoundingBoxSkinned(prim);
+            js.run(jobs::createJob(js, parent, [&prim, &result, computeBoundingBoxSkinned] {
+                result = computeBoundingBoxSkinned(prim);
             }));
         }
     }
-    js->runAndWait(parent);
+    js.runAndWait(parent);
 
     // Compute the asset-level bounding box.
     size_t primIndex = 0;
