@@ -740,7 +740,7 @@ private:
     bool mDoubleSidedCapability = false;
     bool mColorWrite = true;
     bool mDepthTest = true;
-    bool mInstanced = true;
+    bool mInstanced = false;
     bool mDepthWrite = true;
     bool mDepthWriteSet = false;
 
