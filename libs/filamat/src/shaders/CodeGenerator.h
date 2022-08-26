@@ -25,13 +25,14 @@
 #include <utils/Log.h>
 
 #include <filamat/MaterialBuilder.h>
-
-#include <backend/DriverEnums.h>
-#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
+
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/sstream.h>
 

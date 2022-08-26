@@ -115,6 +115,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     // specification constants
     out << '\n';
     generateSpecificationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
+    generateSpecificationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
 
     out << '\n';
     out << SHADERS_COMMON_TYPES_GLSL_DATA;
@@ -355,7 +356,11 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType type,
         if (precision[0] != '\0') out << " ";
         out << type << " " << info.name.c_str();
         if (info.size > 0) {
-            out << "[" << info.size << "]";
+            if (info.sizeName.empty()) {
+                out << "[" << info.size << "]";
+            } else {
+                out << "[" << info.sizeName.c_str() << "]";
+            }
         }
         out << ";\n";
     }

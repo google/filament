@@ -73,13 +73,12 @@ constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
 // instances, and shadow casting spotlights.
 constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 16384;
 
-// HACK ALERT
-// ----------
-// If you modify the values below, you will need to update the hack in OpenGLProgram.cpp!
 // The maximum number of instances that Filament automatically creates as an optimization.
 // Use a much smaller number for WebGL as a workaround for the following Chrome issues:
 //     https://crbug.com/1348017 Compiling GLSL is very slow with struct arrays
 //     https://crbug.com/1348363 Lighting looks wrong with D3D11 but not OpenGL
+// Note that __EMSCRIPTEN__ is not defined when running matc, but that's okay because we're
+// actually using a specification constant.
 #if defined(__EMSCRIPTEN__)
 constexpr size_t CONFIG_MAX_INSTANCES = 8;
 #else
