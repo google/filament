@@ -504,8 +504,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     pImpl->createTextures(asset, async);
 
     // Non-textured renderables are now considered ready, and we can guarantee that no new
-    // materials or textures will be added. notify the dependency graph.
-    asset->mDependencyGraph.finalize();
+    // materials or textures will be added. Notify the dependency graph.
+    asset->mDependencyGraph.commitEdges();
 
     asset->createAnimators();
 

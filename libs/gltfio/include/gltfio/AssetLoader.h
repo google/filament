@@ -157,9 +157,10 @@ public:
      * Consumes the contents of a glTF 2.0 file and produces a primary asset with one or more
      * instances. The primary asset has ownership over the instances.
      *
-     * The returned instances share their textures, material instances, and vertex buffers with the
-     * primary asset. However each instance has its own unique set of entities, transform
-     * components, and renderable components. Instances are freed when the primary asset is freed.
+     * The returned instances share their textures, materials, and vertex buffers with the primary
+     * asset. However each instance has its own unique set of entities, transform components,
+     * material instances, and renderable components. Instances are freed when the primary asset is
+     * freed.
      *
      * Light components are not instanced, they belong only to the primary asset.
      *
@@ -201,7 +202,8 @@ public:
     void enableDiagnostics(bool enable = true);
 
     /**
-     * Destroys the given asset and all of its associated Filament objects.
+     * Destroys the given asset, all of its associated Filament objects, and all associated
+     * FilamentInstance objects.
      *
      * This destroys entities, components, material instances, vertex buffers, index buffers,
      * and textures. This does not necessarily immediately free all source data, since

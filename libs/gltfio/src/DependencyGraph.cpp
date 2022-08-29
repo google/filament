@@ -34,36 +34,21 @@ size_t DependencyGraph::popRenderables(Entity* result, size_t count) noexcept {
 }
 
 void DependencyGraph::addEdge(Entity entity, MaterialInstance* mi) {
-
-    // Permit adding an Entity-Material edge to a finalized graph as long as the material is already
-    // known. Since we already encountered this material instance, we already know what textures it
-    // is associated with.
-    assert(!mFinalized || mMaterialToEntity.find(mi) != mMaterialToEntity.end());
-
     mMaterialToEntity[mi].insert(entity);
     mEntityToMaterial[entity].materials.insert(mi);
 }
 
 void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
-    assert(!mFinalized);
+    if (auto iter = mMaterialToTexture.find(mi); iter != mMaterialToTexture.end()) {
+        const tsl::robin_map<std::string, TextureNode*>& params = iter.value().params;
+        if (params.find(parameter) != params.end()) {
+            return;
+        }
+    }
     mMaterialToTexture[mi].params[parameter] = nullptr;
 }
 
-// During finalization, the structure of the glTF is known but we have not yet created texture
-// objects. Find all non-textured entities and immediately add mark them as ready.
-void DependencyGraph::finalize() {
-    assert(!mFinalized);
-    for (const auto& pair : mMaterialToEntity) {
-        auto mi = pair.first;
-        if (mMaterialToTexture.find(mi) == mMaterialToTexture.end()) {
-            markAsReady(mi);
-        }
-    }
-    mFinalized = true;
-}
-
-void DependencyGraph::refinalize() {
-    assert(mFinalized);
+void DependencyGraph::commitEdges() {
     for (const auto& pair : mMaterialToEntity) {
         auto material = pair.first;
         if (mMaterialToTexture.find(material) == mMaterialToTexture.end()) {
@@ -75,7 +60,7 @@ void DependencyGraph::refinalize() {
 }
 
 void DependencyGraph::addEdge(Texture* texture, MaterialInstance* material, const char* parameter) {
-    assert(texture && !mFinalized);
+    assert(texture);
     mTextureToMaterial[texture].insert(material);
     mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
 }
@@ -86,8 +71,7 @@ void DependencyGraph::checkReadiness(Material* material) {
     // Check this material's texture parameters, there are 5 in the worst case.
     bool materialIsReady = true;
     for (const auto& pair : status.params) {
-        assert(pair.second && "Parameter-to-Texture edge is missing.");
-        if (!pair.second->ready) {
+        if (!pair.second || !pair.second->ready) {
             materialIsReady = false;
             break;
         }
@@ -100,7 +84,7 @@ void DependencyGraph::checkReadiness(Material* material) {
 }
 
 void DependencyGraph::markAsReady(Texture* texture) {
-    assert(texture && mFinalized);
+    assert(texture);
     mTextureNodes.at(texture)->ready = true;
 
     // Iterate over the materials associated with this texture to check if any have become ready.
