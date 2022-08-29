@@ -70,7 +70,7 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderType type,
     builder.build(jobSystem);
 
     return builder.peek(type,
-            {1, MaterialBuilder::TargetApi::OPENGL, MaterialBuilder::TargetLanguage::GLSL},
+            { 1, MaterialBuilder::TargetApi::OPENGL, MaterialBuilder::TargetLanguage::SPIRV },
             allProperties);
 }
 
