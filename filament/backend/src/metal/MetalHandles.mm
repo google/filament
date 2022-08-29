@@ -372,7 +372,22 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
             return;
         }
 
-        *shaderFunctions[i] = [library newFunctionWithName:@"main0"];
+        MTLFunctionConstantValues* constants = [MTLFunctionConstantValues new];
+        auto const& specializationConstants = program.getSpecializationConstants();
+        for (auto const& sc : specializationConstants) {
+            const std::array<MTLDataType, 3> types{
+                MTLDataTypeInt, MTLDataTypeFloat, MTLDataTypeBool };
+            std::visit([&sc, constants, type = types[sc.value.index()]](auto&& arg) {
+                [constants setConstantValue:&arg
+                                       type:type
+                                    atIndex:sc.id];
+            }, sc.value);
+        }
+
+        *shaderFunctions[i] = [library newFunctionWithName:@"main0"
+                                            constantValues:constants
+                                                     error:&error];
+
     }
 
     // All stages of the program have compiled successfully, this is a valid program.

@@ -738,13 +738,13 @@ TEST(FilamentTest, FroxelData) {
 TEST(FilamentTest, GoogleLineDirective) {
     {
         char s[512] = "#line 10 \"foobar\"";
-        EXPECT_FALSE(filament::backend::requestsGoogleLineDirectivesExtension(&s[0], strlen(s)));
+        EXPECT_FALSE(filament::backend::requestsGoogleLineDirectivesExtension({ &s[0], strlen(s) }));
     }
     {
         char s[512] =
             "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
             "#line 10 \"foobar\"";
-        EXPECT_TRUE(filament::backend::requestsGoogleLineDirectivesExtension(&s[0], strlen(s)));
+        EXPECT_TRUE(filament::backend::requestsGoogleLineDirectivesExtension({ &s[0], strlen(s) }));
     }
     {
         char s[512] =

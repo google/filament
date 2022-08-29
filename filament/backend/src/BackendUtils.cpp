@@ -22,12 +22,10 @@
 
 #include <string_view>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
-bool requestsGoogleLineDirectivesExtension(const char* shader, size_t length) noexcept {
-    std::string_view s(shader, length);
-    return s.find("GL_GOOGLE_cpp_style_line_directive") != std::string_view::npos;
+bool requestsGoogleLineDirectivesExtension(std::string_view source) noexcept {
+    return source.find("GL_GOOGLE_cpp_style_line_directive") != std::string_view::npos;
 }
 
 void removeGoogleLineDirectives(char* shader, size_t length) noexcept {
@@ -380,8 +378,7 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
     }
 }
 
-} // namespace backend
-} // namespace filament
+} // namespace backend::filament
 
 
 namespace utils {

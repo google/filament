@@ -19,18 +19,20 @@
 
 #include <iosfwd>
 #include <string>
+#include <variant>
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
 #include <filamat/MaterialBuilder.h>
-
-#include <backend/DriverEnums.h>
-#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
+
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/sstream.h>
 
@@ -61,7 +63,7 @@ public:
 
     // generate prolog for the given shader
     utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderType type,
-            MaterialInfo const& info) const;
+            MaterialInfo const& material) const;
 
     static utils::io::sstream& generateEpilog(utils::io::sstream& out);
 
@@ -129,6 +131,9 @@ public:
     static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string);
     static utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,
             uint32_t index, uint32_t value);
+
+    utils::io::sstream& generateSpecificationConstant(utils::io::sstream& out,
+            const char* name, uint32_t id, std::variant<int, float, bool> value) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderType type);
     static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderType type);

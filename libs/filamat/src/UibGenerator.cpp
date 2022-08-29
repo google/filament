@@ -153,7 +153,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
     static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
             .name(PerRenderableUib::_name)
             .add({{ "data", CONFIG_MAX_INSTANCES, UniformInterfaceBlock::Type::STRUCT, {},
-                    "PerRenderableData", sizeof(PerRenderableData) }})
+                    "PerRenderableData", sizeof(PerRenderableData), "CONFIG_MAX_INSTANCES" }})
             .build();
     return uib;
 }

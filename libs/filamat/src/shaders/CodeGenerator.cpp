@@ -40,26 +40,26 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
 }
 
 utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, ShaderType type,
-        MaterialInfo const& info) const {
+        MaterialInfo const& material) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
             // Vulkan requires version 310 or higher
             if (mTargetLanguage == TargetLanguage::SPIRV ||
-                    info.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
                 // Vulkan requires layout locations on ins and outs, which were not supported
                 // in the OpenGL 4.1 GLSL profile.
                 out << "#version 310 es\n\n";
             } else {
                 out << "#version 300 es\n\n";
             }
-            if (info.hasExternalSamplers) {
+            if (material.hasExternalSamplers) {
                 out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
             }
             out << "#define TARGET_MOBILE\n";
             break;
         case ShaderModel::DESKTOP:
             if (mTargetLanguage == TargetLanguage::SPIRV ||
-                info.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
                 // Vulkan requires binding specifiers on uniforms and samplers, which were not
                 // supported in the OpenGL 4.1 GLSL profile.
                 out << "#version 450 core\n\n";
@@ -96,16 +96,10 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     }
 
     out << '\n';
-    out << "#define FILAMENT_FEATURE_LEVEL_1    1\n";
-    out << "#define FILAMENT_FEATURE_LEVEL_2    2\n";
-    out << "#define FILAMENT_FEATURE_LEVEL      FILAMENT_FEATURE_LEVEL_" << (int)info.featureLevel << "\n";
-
-
-    out << '\n';
     if (mTargetApi == TargetApi::VULKAN ||
         mTargetApi == TargetApi::METAL ||
         (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
-        info.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+        material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
@@ -118,7 +112,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         out << "precision lowp sampler3D;\n";
     }
 
-    out << SHADERS_COMMON_TYPES_FS_DATA;
+    // specification constants
+    out << '\n';
+    generateSpecificationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
+    generateSpecificationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
+
+    out << '\n';
+    out << SHADERS_COMMON_TYPES_GLSL_DATA;
 
     out << "\n";
     return out;
@@ -356,7 +356,11 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType type,
         if (precision[0] != '\0') out << " ";
         out << type << " " << info.name.c_str();
         if (info.size > 0) {
-            out << "[" << info.size << "]";
+            if (info.sizeName.empty()) {
+                out << "[" << info.size << "]";
+            } else {
+                out << "[" << info.sizeName.c_str() << "]";
+            }
         }
         out << ";\n";
     }
@@ -492,6 +496,27 @@ io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* 
     out << "#define " << name << index << " " << value << "\n";
     return out;
 }
+
+utils::io::sstream& CodeGenerator::generateSpecificationConstant(utils::io::sstream& out,
+        const char* name, uint32_t id, std::variant<int, float, bool> value) const {
+    static const char* types[] = { "int", "float", "bool" };
+    if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
+        std::visit([&](auto&& arg) {
+            out << "layout (constant_id = " << id << ") const "
+                << types[value.index()] << " " << name << " = " << arg << ";\n";
+        }, value);
+    } else {
+        std::visit([&](auto&& arg) {
+            out << "#ifndef SPIRV_CROSS_CONSTANT_ID_" << id << '\n'
+                << "#define SPIRV_CROSS_CONSTANT_ID_" << id << " " << arg << '\n'
+                << "#endif" << '\n'
+                << "const " << types[value.index()] << " " << name << " = SPIRV_CROSS_CONSTANT_ID_" << id
+                << ";\n";
+        }, value);
+    }
+    return out;
+}
+
 
 io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
         MaterialBuilder::Property property, bool isSet) {

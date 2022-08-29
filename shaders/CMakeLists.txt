@@ -21,7 +21,7 @@ set(SHADERS
         src/common_math.glsl
         src/common_shading.fs
         src/common_shadowing.glsl
-        src/common_types.fs
+        src/common_types.glsl
         src/depth_main.fs
         src/fog.fs
         src/getters.fs

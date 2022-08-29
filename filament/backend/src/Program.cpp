@@ -71,11 +71,18 @@ Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFla
     return *this;
 }
 
+Program& Program::specializationConstants(
+        FixedCapacityVector<SpecializationConstant> specConstants) noexcept {
+    mSpecializationConstants = std::move(specConstants);
+    return *this;
+}
+
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
     out << "Program{";
     builder.mLogger(out);
     out << "}";
     return out;
 }
+
 
 } // namespace filament::backend

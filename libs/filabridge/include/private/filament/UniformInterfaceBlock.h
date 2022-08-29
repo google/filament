@@ -43,6 +43,7 @@ public:
         backend::Precision precision{};
         std::string_view structName{};
         uint32_t stride{};
+        std::string_view sizeName{};
     };
 
     UniformInterfaceBlock();
@@ -66,6 +67,7 @@ public:
         uint32_t size;              // size of the array in elements, or 0 if not an array
         Precision precision;        // precision of this uniform
         utils::CString structName;  // name of this uniform structure if type is STRUCT
+        utils::CString sizeName;    // name of the size parameter in the shader
         // returns offset in bytes of this uniform (at index if an array)
         inline size_t getBufferOffset(size_t index = 0) const {
             assert_invariant(index < std::max(1u, size));

@@ -65,6 +65,47 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create shader module.");
     }
 
+    // populate the specialization constants requirements right now
+    auto const& specializationConstants = builder.getSpecializationConstants();
+    if (!specializationConstants.empty()) {
+        // Allocate a single heap block to store all the specialization constants structures
+        // our supported types are int32, float and bool, so we use 4 bytes per data. bool will
+        // just use the first byte.
+        char* pStorage = (char*)malloc(
+                sizeof(VkSpecializationInfo) +
+                specializationConstants.size() * sizeof(VkSpecializationMapEntry) +
+                specializationConstants.size() * 4);
+
+        VkSpecializationInfo* const pInfo = (VkSpecializationInfo*)pStorage;
+        VkSpecializationMapEntry* const pEntries =
+                (VkSpecializationMapEntry*)(pStorage + sizeof(VkSpecializationInfo));
+        void* pData = pStorage + sizeof(VkSpecializationInfo) +
+                      specializationConstants.size() * sizeof(VkSpecializationMapEntry);
+
+        *pInfo = {
+                .mapEntryCount = specializationConstants.size(),
+                .pMapEntries = pEntries,
+                .dataSize = pInfo->mapEntryCount * 4,
+                .pData = pData,
+        };
+
+        for (size_t i = 0; i < specializationConstants.size(); i++) {
+            const uint32_t offset = uint32_t(i) * 4;
+            std::visit([&](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                pEntries[i] = {
+                        .constantID = specializationConstants[i].id,
+                        .offset = offset,
+                        .size = sizeof(arg)
+                };
+                T* const addr = (T*)((char*)pData + offset);
+                *addr = arg;
+            }, specializationConstants[i].value);
+        }
+
+        bundle.specializationInfos = pInfo;
+    }
+
     // Output a warning because it's okay to encounter empty blobs, but it's not okay to use
     // this program handle in a draw call.
     if (missing) {
@@ -90,6 +131,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, VkShaderModule vs, VkShader
 VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.vertex, VKALLOC);
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
+    free(bundle.specializationInfos);
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
