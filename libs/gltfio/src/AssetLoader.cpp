@@ -234,7 +234,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         primary->mAnimator->addInstance(instance);
     }
 
-    primary->mDependencyGraph.refinalize();
+    primary->mDependencyGraph.commitEdges();
     return instance;
 }
 
@@ -474,6 +474,8 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     builder.morphing(numMorphTargets);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
+    // The VertexBuffer and IndexBuffer objects are cached for possible re-use, but MaterialInstance
+    // is not.
     for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim, ++inputPrim) {
         RenderableManager::PrimitiveType primType;
         if (!getPrimitiveType(inputPrim->type, &primType)) {
@@ -1327,7 +1329,7 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         dstSampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
         dstSampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
 
-        // These defaults are up the implementation but since we try to provide mipmaps,
+        // These defaults are up to the implementation but since we try to provide mipmaps,
         // we might as well use them. In practice the conformance models look awful without
         // using mipmapping by default.
         dstSampler.setMagFilter(TextureSampler::MagFilter::LINEAR);

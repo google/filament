@@ -160,7 +160,6 @@ public class AssetLoader {
      * create/destroy churn, as noted above.
      *
      * This cannot be called after FilamentAsset#releaseSourceData().
-     * Animation is not supported in new instances.
      * See also AssetLoader#createInstancedAsset().
      */
     @Nullable
