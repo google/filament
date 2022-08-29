@@ -64,7 +64,7 @@ public:
 
     /**
      * TargetApi defines which language after transpilation will be used, it is used to
-     * account for some differences between these langages when generating the GLSL.
+     * account for some differences between these languages when generating the GLSL.
      */
     enum class TargetApi : uint8_t {
         OPENGL      = 0x01u,
