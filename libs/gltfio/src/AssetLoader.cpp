@@ -352,6 +352,12 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
     Entity instanceRoot = mEntityManager.create();
     mTransformManager.create(instanceRoot, rootTransform);
 
+    // TODO: refactor loading into 2 passes: the first pass creates all objects that are shared
+    // amongst instances (VertexBuffer, IndexBuffer, etc) while the second pass creates the
+    // lightweight ECS stuff (Renderables, Transformables) for each instance. This will allow
+    // users to create assets with zero instances, which is a feature request from Google.
+    const bool firstPass = primary->mInstances.empty();
+
     // Create an instance object, which is a just a lightweight wrapper around a vector of
     // entities and a lazily created animator.
     FFilamentInstance* instance = new FFilamentInstance;
@@ -368,7 +374,7 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
 
     // For each scene root, recursively create all entities.
     for (const auto& pair : mRootNodes) {
-        createEntity(srcAsset, pair.first, pair.second, instanceRoot, false, instance);
+        createEntity(srcAsset, pair.first, pair.second, instanceRoot, firstPass, instance);
     }
 
     importSkins(primary, instance, srcAsset);
