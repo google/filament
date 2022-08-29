@@ -10,6 +10,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: move the API for `recomputeBoundingBoxes` [⚠️ **API Change**]
 - engine: add support for specialization constants [⚠️ **Recompile Materials**]
 - gltfio: fix spotlight regression
+- gltfio: clear the MaterialInstance cache when creating new instances
 
 ## v1.26.0
 
