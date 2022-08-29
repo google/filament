@@ -554,9 +554,9 @@ void ResourceLoader::asyncUpdateLoad() {
 }
 
 Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
-    const cgltf_texture* srcTexture = tb.texture;
-    const cgltf_image* image = srcTexture->basisu_image ?
-            srcTexture->basisu_image : srcTexture->image;
+    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[tb.sourceTexture];
+    const cgltf_image* image = srcTexture.basisu_image ?
+            srcTexture.basisu_image : srcTexture.image;
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
@@ -653,7 +653,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     }
 
     if (!texture) {
-        const char* name = srcTexture->name ? srcTexture->name : uri;
+        const char* name = srcTexture.name ? srcTexture.name : uri;
         slog.e << "Unable to create texture " << name << ": "
                 << provider->getPushMessage() << io::endl;
         asset->mDependencyGraph.markAsError(tb.materialInstance);

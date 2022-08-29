@@ -78,17 +78,17 @@ struct BufferSlot {
     const cgltf_accessor* accessor;
     cgltf_attribute_type attribute;
     int bufferIndex; // for vertex buffer and morph target buffer only
-    filament::VertexBuffer* vertexBuffer;
-    filament::IndexBuffer* indexBuffer;
-    filament::MorphTargetBuffer* morphTargetBuffer;
+    VertexBuffer* vertexBuffer;
+    IndexBuffer* indexBuffer;
+    MorphTargetBuffer* morphTargetBuffer;
 };
 
 // Encapsulates a connection between Texture and MaterialInstance.
 struct TextureSlot {
-    const cgltf_texture* texture;
-    filament::MaterialInstance* materialInstance;
+    size_t sourceTexture; // index into cgltf_texture
+    MaterialInstance* materialInstance;
     const char* materialParameter;
-    filament::TextureSampler sampler;
+    TextureSampler sampler;
     bool srgb;
 };
 
@@ -100,35 +100,22 @@ struct TextureSlot {
 // small cache. The cache keys are glTF mesh definitions and the cache entries are lists of
 // primitives, where a "primitive" is a reference to a Filament VertexBuffer and IndexBuffer.
 struct Primitive {
-    filament::VertexBuffer* vertices = nullptr;
-    filament::IndexBuffer* indices = nullptr;
-    filament::Aabb aabb; // object-space bounding box
+    VertexBuffer* vertices = nullptr;
+    IndexBuffer* indices = nullptr;
+    Aabb aabb; // object-space bounding box
     UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
-    filament::MorphTargetBuffer* targets = nullptr;
+    MorphTargetBuffer* targets = nullptr;
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
-// MatInstanceCache
-// ----------------
-// Each glTF material definition corresponds to a single filament::MaterialInstance, which are
-// temporarily cached during loading. The filament::Material objects that are used to create instances are
-// cached in MaterialProvider. If a given glTF material is referenced by multiple glTF meshes, then
-// their corresponding filament primitives will share the same Filament MaterialInstance and UvMap.
-// The UvMap is a mapping from each texcoord slot in glTF to one of Filament's 2 texcoord sets.
-struct MaterialEntry {
-    filament::MaterialInstance* instance;
-    UvMap uvmap;
-};
-using MatInstanceCache = tsl::robin_map<intptr_t, MaterialEntry>;
-
 struct FFilamentAsset : public FilamentAsset {
-    FFilamentAsset(filament::Engine* engine, utils::NameComponentManager* names,
+    FFilamentAsset(Engine* engine, utils::NameComponentManager* names,
             utils::EntityManager* entityManager, NodeManager* nodeManager,
             const cgltf_data* srcAsset) :
             mEngine(engine), mNameManager(names), mEntityManager(entityManager),
-            mNodeManager(nodeManager) {
-        mSourceAsset.reset(new SourceAsset {(cgltf_data*)srcAsset});
-    }
+            mNodeManager(nodeManager),
+            mSourceAsset(new SourceAsset {(cgltf_data*)srcAsset}),
+            mTextureBindings(srcAsset->textures_count, 0) {}
 
     ~FFilamentAsset();
 
@@ -176,11 +163,11 @@ struct FFilamentAsset : public FilamentAsset {
         return mMaterialInstances.size();
     }
 
-    const filament::MaterialInstance* const* getMaterialInstances() const noexcept {
+    const MaterialInstance* const* getMaterialInstances() const noexcept {
         return mMaterialInstances.data();
     }
 
-    filament::MaterialInstance* const* getMaterialInstances() noexcept {
+    MaterialInstance* const* getMaterialInstances() noexcept {
         return mMaterialInstances.data();
     }
 
@@ -192,7 +179,7 @@ struct FFilamentAsset : public FilamentAsset {
         return mResourceUris.data();
     }
 
-    filament::Aabb getBoundingBox() const noexcept {
+    Aabb getBoundingBox() const noexcept {
         return mBoundingBox;
     }
 
@@ -222,7 +209,7 @@ struct FFilamentAsset : public FilamentAsset {
 
     utils::Entity getWireframe() noexcept;
 
-    filament::Engine* getEngine() const noexcept {
+    Engine* getEngine() const noexcept {
         return mEngine;
     }
 
@@ -246,7 +233,7 @@ struct FFilamentAsset : public FilamentAsset {
         return mScenes[sceneIndex].c_str();
     }
 
-    void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
+    void addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
             SceneMask sceneFilter);
 
     void detachFilamentComponents() noexcept {
@@ -259,14 +246,24 @@ struct FFilamentAsset : public FilamentAsset {
 
     // end public API
 
-    void attachTexture(filament::Texture* texture) {
+    void attachTexture(Texture* texture) {
         mTextures.push_back(texture);
     }
 
-    void bindTexture(const TextureSlot& tb, filament::Texture* texture) {
+    void bindTexture(const TextureSlot& tb, Texture* texture) {
         assert_invariant(texture);
         tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
         mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
+        mTextureBindings[tb.sourceTexture] = texture;
+    }
+
+    void addTextureSlot(const TextureSlot& tb) {
+        if (Texture* texture = mTextureBindings[tb.sourceTexture]; texture) {
+            tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
+        } else {
+            mTextureSlots.push_back(tb);
+            mDependencyGraph.addEdge(tb.materialInstance, tb.materialParameter);
+        }
     }
 
     void createAnimators();
@@ -276,7 +273,7 @@ struct FFilamentAsset : public FilamentAsset {
         utils::FixedCapacityVector<math::mat4f> inverseBindMatrices;
     };
 
-    filament::Engine* const mEngine;
+    Engine* const mEngine;
     utils::NameComponentManager* const mNameManager;
     utils::EntityManager* const mEntityManager;
     NodeManager* const mNodeManager;
@@ -284,16 +281,16 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<utils::Entity> mLightEntities;
     std::vector<utils::Entity> mCameraEntities;
     size_t mRenderableCount = 0;
-    std::vector<filament::MaterialInstance*> mMaterialInstances;
-    std::vector<filament::VertexBuffer*> mVertexBuffers;
-    std::vector<filament::BufferObject*> mBufferObjects;
-    std::vector<filament::IndexBuffer*> mIndexBuffers;
-    std::vector<filament::MorphTargetBuffer*> mMorphTargetBuffers;
-    std::vector<filament::Texture*> mTextures;
+    std::vector<MaterialInstance*> mMaterialInstances;
+    std::vector<VertexBuffer*> mVertexBuffers;
+    std::vector<BufferObject*> mBufferObjects;
+    std::vector<IndexBuffer*> mIndexBuffers;
+    std::vector<MorphTargetBuffer*> mMorphTargetBuffers;
+    std::vector<Texture*> mTextures;
     utils::FixedCapacityVector<Skin> mSkins;
     utils::FixedCapacityVector<Variant> mVariants;
     utils::FixedCapacityVector<utils::CString> mScenes;
-    filament::Aabb mBoundingBox;
+    Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
     Animator* mAnimator = nullptr;
@@ -327,11 +324,11 @@ struct FFilamentAsset : public FilamentAsset {
     SourceHandle mSourceAsset;
 
     // Transient source data that can freed via releaseSourceData:
+    utils::FixedCapacityVector<Texture*> mTextureBindings; // one element for each cgltf_texture
     std::vector<BufferSlot> mBufferSlots;
     std::vector<TextureSlot> mTextureSlots;
     std::vector<const char*> mResourceUris;
-    std::vector<std::pair<const cgltf_primitive*, filament::VertexBuffer*> > mPrimitives;
-    MatInstanceCache mMatInstanceCache;
+    std::vector<std::pair<const cgltf_primitive*, VertexBuffer*> > mPrimitives;
     MeshCache mMeshCache;
 };
 
