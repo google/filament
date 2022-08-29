@@ -154,16 +154,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
     // read the uniform binding list
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> uniformBlockBindings;
-    success = parser->getUniformBlockBindings(&uniformBlockBindings);
+    success = parser->getUniformBlockBindings(&mUniformBlockBindings);
     assert_invariant(success);
-    // store the name in an array (so we can use pointers), and create the uniform block binding
-    // list for the backend (to be used with Program)
-    mUniformBlockNames.reserve(uniformBlockBindings.size());
-    mUniformBlockBindings.reserve(uniformBlockBindings.size());
-    for (auto& item : uniformBlockBindings) {
-        mUniformBlockNames.emplace_back(std::move(item.first));
-        mUniformBlockBindings.emplace_back(mUniformBlockNames.back().c_str(), item.second);
-    }
 
     success = parser->getSamplerBlockBindings(&mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
     assert_invariant(success);
