@@ -85,7 +85,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         *pInfo = {
                 .mapEntryCount = specializationConstants.size(),
                 .pMapEntries = pEntries,
-                .dataSize = pInfo->mapEntryCount * 4,
+                .dataSize = specializationConstants.size() * 4,
                 .pData = pData,
         };
 
