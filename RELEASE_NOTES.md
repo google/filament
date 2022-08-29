@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 - engine: rework material/shader sampler binding code [⚠️ **Recompile Materials**]
 - gltfio: move the API for `recomputeBoundingBoxes` [⚠️ **API Change**]
 - engine: add support for specialization constants [⚠️ **Recompile Materials**]
+- Java: add JNI for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()
 
 ## v1.26.0
 
