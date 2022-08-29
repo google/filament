@@ -66,9 +66,6 @@ public:
     static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 3;
     static constexpr uint32_t INITIAL_DESCRIPTOR_SET_POOL_SIZE = 512;
 
-    #pragma clang diagnostic push
-    #pragma clang diagnostic warning "-Wpadded"
-
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
     // as a vertex assembler configuration. For simplicity it contains fixed-size arrays and does
@@ -84,6 +81,9 @@ public:
         VkShaderModule fragment;
         VkSpecializationInfo* specializationInfos = nullptr;
     };
+
+    #pragma clang diagnostic push
+    #pragma clang diagnostic warning "-Wpadded"
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
     // The following states are omitted because Filament never changes them:
