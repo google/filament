@@ -16,9 +16,9 @@
 
 #include "backend/Program.h"
 
-using namespace utils;
-
 namespace filament::backend {
+
+using namespace utils;
 
 // We want these in the .cpp file, so they're not inlined (not worth it)
 Program::Program() noexcept { // NOLINT(modernize-use-equals-default)
@@ -37,8 +37,8 @@ Program& Program::operator=(Program&& rhs) noexcept {
 
 Program::~Program() noexcept = default;
 
-Program& Program::diagnostics(utils::CString const& name,
-        utils::Invocable<io::ostream&(utils::io::ostream&)>&& logger) {
+Program& Program::diagnostics(CString const& name,
+        Invocable<io::ostream&(io::ostream&)>&& logger) {
     mName = name;
     mLogger = std::move(logger);
     return *this;
@@ -52,7 +52,7 @@ Program& Program::shader(ShaderType shader, void const* data, size_t size) {
 }
 
 Program& Program::uniformBlockBindings(
-        utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept {
+        FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& uniformBlockBindings) noexcept {
     for (auto const& item : uniformBlockBindings) {
         assert_invariant(item.second < UNIFORM_BINDING_COUNT);
         mUniformBlocks[item.second] = item.first;

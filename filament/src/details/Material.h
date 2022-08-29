@@ -226,8 +226,7 @@ private:
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     UniformInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
-    utils::FixedCapacityVector<std::pair<const char*, uint8_t>> mUniformBlockBindings;
-    utils::FixedCapacityVector<utils::CString> mUniformBlockNames;
+    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
 
