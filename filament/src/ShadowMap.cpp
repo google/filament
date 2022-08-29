@@ -836,45 +836,57 @@ size_t ShadowMap::intersectFrustumWithBox(
             }
         }
 
-        // if we have no vertices at this point, we can't have an intersection because
-        // no vertices of the frustum is in the box and not vertices of the box is in the frustum.
+        /*
+         * At this point it's possible to have zero vertices (i.e.: no vertices of the box
+         * are in the frustum and no vertices of the frustum are in the box) but both objects
+         * have a non-null intersection, e.g.:
+         *
+         *         +--------+
+         *         |        |
+         *    +----|--------|---+
+         *    |    |        |   |
+         *    |    |        |   |
+         *    |    |        |   |
+         *    +----|--------|---+
+         *         |        |
+         *         +--------+
+         *
+         */
 
-        if (vertexCount) {
-            /*
-             * It's not enough here to have all 8 vertices, consider this:
-             *
-             *                     +
-             *                   / |
-             *                 /   |
-             *    +---------C/--B  |
-             *    |       A/    |  |
-             *    |       |     |  |
-             *    |       A\    |  |
-             *    +----------\--B  |
-             *                 \   |
-             *                   \ |
-             *                     +
-             *
-             * A vertices will be selected by step (a)
-             * B vertices will be selected by step (b)
-             *
-             * if we stop here, the segment (A,B) is inside the intersection of the box and the
-             * frustum.  We do need step (c) and (d) to compute the actual intersection C.
-             *
-             * However, a special case is if all the vertices of the box are inside the frustum.
-             */
+        /*
+         * It's not enough here to have all 8 vertices, consider this:
+         *
+         *                     +
+         *                   / |
+         *                 /   |
+         *    +---------C/--B  |
+         *    |       A/    |  |
+         *    |       |     |  |
+         *    |       A\    |  |
+         *    +----------\--B  |
+         *                 \   |
+         *                   \ |
+         *                     +
+         *
+         * A vertices will be selected by step (a)
+         * B vertices will be selected by step (b)
+         *
+         * if we stop here, the segment (A,B) is inside the intersection of the box and the
+         * frustum.  We do need step (c) and (d) to compute the actual intersection C.
+         *
+         * However, a special case is if all the vertices of the box are inside the frustum.
+         */
 
-            if (someFrustumVerticesAreInTheBox && vertexCount >= 8) {
-                // special case, we don't need to calculate any edge intersections
-            } else {
-                // c) intersect scene's volume edges with frustum planes
-                vertexCount = intersectFrustum(outVertices.data(), vertexCount,
-                        wsSceneReceiversCorners.vertices, wsFrustumCorners);
+        if (someFrustumVerticesAreInTheBox && vertexCount >= 8) {
+            // special case, we don't need to calculate any edge intersections
+        } else {
+            // c) intersect scene's volume edges with frustum planes
+            vertexCount = intersectFrustum(outVertices.data(), vertexCount,
+                    wsSceneReceiversCorners.vertices, wsFrustumCorners);
 
-                // d) intersect frustum edges with the scene's volume planes
-                vertexCount = intersectFrustum(outVertices.data(), vertexCount,
-                        wsFrustumCorners, wsSceneReceiversCorners.vertices);
-            }
+            // d) intersect frustum edges with the scene's volume planes
+            vertexCount = intersectFrustum(outVertices.data(), vertexCount,
+                    wsFrustumCorners, wsSceneReceiversCorners.vertices);
         }
     }
 
