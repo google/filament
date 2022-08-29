@@ -86,7 +86,8 @@ Java_com_google_android_filament_Scene_nGetLightCount(JNIEnv *env, jclass type, 
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Scene_nHasEntity(JNIEnv *env, jclass type, jlong nativeScene,
-        jint entity) {
+        jint entityId) {
     Scene* scene = (Scene*) nativeScene;
-    return (jboolean) scene->hasEntity((Entity &) entity);
+    Entity entity = Entity::import(entityId);
+    return (jboolean) scene->hasEntity(entity);
 }

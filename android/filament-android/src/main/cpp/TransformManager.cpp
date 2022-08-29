@@ -122,7 +122,7 @@ Java_com_google_android_filament_TransformManager_nGetChildren(JNIEnv* env,
         jclass, jlong nativeTransformManager, jint i,
         jintArray outEntities_, jint count) {
     TransformManager* tm = (TransformManager*) nativeTransformManager;
-    jint* entities = env->GetIntArrayElements(outEntities_, NULL);
+    jint* entities = env->GetIntArrayElements(outEntities_, nullptr);
     // This is very very gross, we just pretend Entity is just like an jint
     // (which it is), but still.
     tm->getChildren((TransformManager::Instance) i,
