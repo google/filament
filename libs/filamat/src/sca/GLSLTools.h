@@ -35,7 +35,9 @@ namespace filamat {
 
 // Used for symbol tracking during static code analysis.
 struct Access {
-    enum Type {Swizzling, DirectIndexForStruct, FunctionCall};
+    enum Type {
+        Swizzling, DirectIndexForStruct, FunctionCall
+    };
     Type type;
     std::string string;
     size_t parameterIdx = 0; // Only used when type == FunctionCall;
@@ -49,8 +51,8 @@ struct Access {
 // Combinations are possible. e.g: foo(material.baseColor.xyz)
 class Symbol {
 public:
-    Symbol() {}
-    Symbol(const std::string& name) {
+    Symbol() = default;
+    explicit Symbol(const std::string& name) {
         mName = name;
     }
 
@@ -72,7 +74,7 @@ public:
 
     std::string toString() const {
         std::string str(mName);
-        for (Access access: mAccesses) {
+        for (const Access& access: mAccesses) {
             str += ".";
             str += access.string;
         }
@@ -80,7 +82,7 @@ public:
     }
 
     bool hasDirectIndexForStruct() const noexcept {
-        for (Access access : mAccesses) {
+        for (const Access& access : mAccesses) {
             if (access.type == Access::Type::DirectIndexForStruct) {
                 return true;
             }
@@ -88,8 +90,8 @@ public:
         return false;
     }
 
-    const std::string getDirectIndexStructName() const noexcept {
-        for (Access access : mAccesses) {
+    std::string getDirectIndexStructName() const noexcept {
+        for (const Access& access : mAccesses) {
             if (access.type == Access::Type::DirectIndexForStruct) {
                 return access.string;
             }
@@ -121,17 +123,17 @@ public:
     // The shader features a material() function AND
     // The shader features a prepareMaterial() function AND
     // prepareMaterial() is called at some point in material() call chain.
-    bool analyzeFragmentShader(const std::string& shaderCode,
+    static bool analyzeFragmentShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
             MaterialBuilder::MaterialDomain materialDomain,
             MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading,
-            MaterialInfo const& info) const noexcept;
+            MaterialInfo const& info) noexcept;
 
-    bool analyzeVertexShader(const std::string& shaderCode,
+    static bool analyzeVertexShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
             MaterialBuilder::MaterialDomain materialDomain,
             MaterialBuilder::TargetApi targetApi,
-            MaterialInfo const& info) const noexcept;
+            MaterialInfo const& info) noexcept;
 
     // Public for unit tests.
     using Property = MaterialBuilder::Property;
@@ -161,8 +163,8 @@ private:
     // in a function call.
     // Start in the function matching the signature provided and follow all out and inout calls.
     // Does NOT recurse to follow function calls.
-    bool findSymbolsUsage(const std::string& functionSignature, TIntermNode& root,
-            std::deque<Symbol>& symbols) const noexcept;
+    static bool findSymbolsUsage(const std::string& functionSignature, TIntermNode& root,
+            std::deque<Symbol>& symbols) noexcept;
 
 
     // Determine how a function affect one of its parameter by following all write and function call

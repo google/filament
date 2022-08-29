@@ -51,7 +51,7 @@ GLSLangCleaner::~GLSLangCleaner() {
 bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading,
-        MaterialInfo const& info) const noexcept {
+        MaterialInfo const& info) noexcept {
 
     // Parse to check syntax and semantic.
     const char* shaderCString = shaderCode.c_str();
@@ -140,7 +140,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
 bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi,
-        MaterialInfo const& info) const noexcept {
+        MaterialInfo const& info) noexcept {
 
     // TODO: After implementing post-process vertex shaders, properly analyze them here.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
@@ -263,12 +263,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
     }
 
     std::deque<Symbol> symbols;
-    bool ok = findSymbolsUsage(functionName, *rootNode, symbols);
-    if (!ok) {
-        utils::slog.e << "Unable to trace usage of symbols in function '" << functionName
-                << utils::io::endl;
-        return false;
-    }
+    findSymbolsUsage(functionName, *rootNode, symbols);
 
     // Iterate over symbols to see if the parameter we are interested in what written.
     std::string parameterName = functionMaterialParameters.at(parameterIdx).name;
@@ -279,7 +274,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
         }
 
         // This is a direct assignment of the variable. X =
-        if (symbol.getAccesses().size() == 0) {
+        if (symbol.getAccesses().empty()) {
             continue;
         }
 
@@ -291,7 +286,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
 void GLSLTools::scanSymbolForProperty(Symbol& symbol,
         TIntermNode* rootNode,
         MaterialBuilder::PropertyList& properties) const noexcept {
-    for (Access access : symbol.getAccesses()) {
+    for (const Access& access : symbol.getAccesses()) {
         if (access.type == Access::Type::FunctionCall) {
             // Do NOT look into prepareMaterial call.
             if (access.string.find("prepareMaterial(struct") != std::string::npos) {
@@ -336,7 +331,7 @@ void GLSLTools::scanSymbolForProperty(Symbol& symbol,
 }
 
 bool GLSLTools::findSymbolsUsage(const std::string& functionSignature, TIntermNode& root,
-        std::deque<Symbol>& symbols) const noexcept {
+        std::deque<Symbol>& symbols) noexcept {
     TIntermNode* functionAST = ASTUtils::getFunctionBySignature(functionSignature, root);
     ASTUtils::traceSymbols(*functionAST, symbols);
     return true;
@@ -365,7 +360,7 @@ EShMessages GLSLTools::glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targ
 
 void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslang::TShader& shader,
         EShLanguage language, int version, filamat::MaterialBuilder::Optimization optimization) {
-    // We must only setup the SPIRV environment when we actually need to output SPIRV
+    // We must only set up the SPIRV environment when we actually need to output SPIRV
     if (optimization == filamat::MaterialBuilder::Optimization::SIZE ||
             optimization == filamat::MaterialBuilder::Optimization::PERFORMANCE) {
         shader.setAutoMapBindings(true);
