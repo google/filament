@@ -28,6 +28,11 @@ using namespace utils;
 
 namespace filament::gltfio {
 
+FFilamentInstance::FFilamentInstance(Entity root, FFilamentAsset* owner) :
+    root(root),
+    owner(owner),
+    nodeMap(owner->mSourceAsset->hierarchy->nodes_count, Entity()) {}
+
 Animator* FFilamentInstance::getAnimator() const noexcept {
     assert_invariant(animator);
     return animator;
@@ -201,21 +206,24 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     // Collect all mesh primitives that we wish to find bounds for. For each mesh primitive, we also
     // collect the skin it is bound to (nullptr if not skinned) for bounds computation.
     size_t primCount = 0;
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
+    const cgltf_data* hierarchy = owner->mSourceAsset->hierarchy;
+    const cgltf_node* nodes = hierarchy->nodes;
+    for (size_t i = 0, n = hierarchy->nodes_count; i < n; ++i) {
+        if (const cgltf_mesh* mesh = nodes[i].mesh; mesh) {
             primCount += mesh->primitives_count;
         }
     }
     auto primitives = FixedCapacityVector<Prim>::with_capacity(primCount);
-    const cgltf_skin* baseSkin = &owner->mSourceAsset->hierarchy->skins[0];
-    for (auto [node, entity] : nodeMap) {
-        if (const cgltf_mesh* mesh = node->mesh; mesh) {
-            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
+    const cgltf_skin* baseSkin = &hierarchy->skins[0];
+    for (size_t i = 0, n = hierarchy->nodes_count; i < n; ++i) {
+        const cgltf_node& node = nodes[i];
+        const Entity entity = nodeMap[i];
+        if (const cgltf_mesh* mesh = node.mesh; mesh) {
+            for (cgltf_size j = 0, nprims = mesh->primitives_count; j < nprims; ++j) {
                 primitives.push_back({
-                    .prim = &mesh->primitives[index],
+                    .prim = &mesh->primitives[j],
                     .node = entity,
-                    .skinIndex = node->skin ? (node->skin - baseSkin) : -1
+                    .skinIndex = node.skin ? (node.skin - baseSkin) : -1
                 });
             }
         }
@@ -243,21 +251,22 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     // Compute the asset-level bounding box.
     size_t primIndex = 0;
     Aabb assetBounds;
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
+    for (size_t i = 0, n = owner->mSourceAsset->hierarchy->nodes_count; i < n; ++i) {
+        const cgltf_node& node = nodes[i];
+        const Entity entity = nodeMap[i];
+        if (const cgltf_mesh* mesh = node.mesh; mesh) {
             // Find the object-space bounds for the renderable by unioning the bounds of each prim.
             Aabb aabb;
-            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
+            for (cgltf_size j = 0, nprims = mesh->primitives_count; j < nprims; ++j) {
                 Aabb primBounds = bounds[primIndex++];
                 aabb.min = min(aabb.min, primBounds.min);
                 aabb.max = max(aabb.max, primBounds.max);
             }
-            auto renderable = rm.getInstance(iter.second);
+            auto renderable = rm.getInstance(entity);
             rm.setAxisAlignedBoundingBox(renderable, Box().set(aabb.min, aabb.max));
 
             // Transform this bounding box, then update the asset-level bounding box.
-            auto transformable = tm.getInstance(iter.second);
+            auto transformable = tm.getInstance(entity);
             const mat4f worldTransform = tm.getWorldTransform(transformable);
             const Aabb transformed = aabb.transform(worldTransform);
             assetBounds.min = min(assetBounds.min, transformed.min);

@@ -181,7 +181,7 @@ private:
     // MaterialInstance and UvMap. The UvMap is a mapping from each texcoord slot in glTF to one of
     // Filament's 2 texcoord sets.
     struct MaterialEntry {
-        filament::MaterialInstance* instance;
+        MaterialInstance* instance;
         UvMap uvmap;
     };
 
@@ -405,11 +405,9 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
     mTransformManager.create(instanceRoot, rootTransform);
 
     // Create an instance object, which is a just a lightweight wrapper around a vector of
-    // entities and a lazily created animator.
-    FFilamentInstance* instance = new FFilamentInstance;
-    instance->root = instanceRoot;
-    instance->animator = nullptr;
-    instance->owner = primary;
+    // entities and an animator. The creation of animator is triggered from ResourceLoader
+    // because it could require external bin data.
+    FFilamentInstance* instance = new FFilamentInstance(instanceRoot, primary);
 
     // Check if the asset has variants.
     instance->variants.reserve(srcAsset->variants_count);
@@ -424,6 +422,7 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
 
     importSkins(primary, instance, srcAsset);
 
+    // This needs to stay near the end of the method to allow detection of the first instance.
     primary->mInstances.push_back(instance);
 
     instance->boundingBox = primary->mBoundingBox;
@@ -463,7 +462,7 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
     // Update the asset's entity list and private node mapping.
     mResult->mEntities.push_back(entity);
     instance->entities.push_back(entity);
-    instance->nodeMap[node] = entity;
+    instance->nodeMap[node - srcAsset->nodes] = entity;
 
     const char* name = getNodeName(node, mDefaultNodeName);
 
@@ -512,17 +511,17 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     auto thisTransform = mTransformManager.getInstance(entity);
     mat4f worldTransform = mTransformManager.getWorldTransform(thisTransform);
 
-    cgltf_size nprims = mesh->primitives_count;
-    RenderableManager::Builder builder(nprims);
+    const cgltf_size primitiveCount = mesh->primitives_count;
+    RenderableManager::Builder builder(primitiveCount);
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive), otherwise allocate a new list of
     // pointers for the primitives.
-    auto iter = mResult->mMeshCache.find(mesh);
-    if (iter == mResult->mMeshCache.end()) {
-        mResult->mMeshCache[mesh].resize(nprims);
+    FixedCapacityVector<Primitive>& prims = mResult->mMeshCache[mesh - srcAsset->meshes];
+    if (prims.empty()) {
+        prims = FixedCapacityVector<Primitive>(primitiveCount, Primitive {});
     }
-    Primitive* outputPrim = mResult->mMeshCache[mesh].data();
+    Primitive* outputPrim = prims.data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
 
     Aabb aabb;
@@ -534,7 +533,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
     // The VertexBuffer and IndexBuffer objects are cached for possible re-use, but MaterialInstance
     // is not.
-    for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim, ++inputPrim) {
+    for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
         RenderableManager::PrimitiveType primType;
         if (!getPrimitiveType(inputPrim->type, &primType)) {
             slog.e << "Unsupported primitive type in " << name << io::endl;
@@ -1420,9 +1419,9 @@ void FAssetLoader::importSkins(FFilamentAsset* primary,
     const auto& nodeMap = instance->nodeMap;
     for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
         const cgltf_node& node = gltf->nodes[i];
-        if (node.skin) {
+        Entity entity = nodeMap[i];
+        if (node.skin && entity) {
             int skinIndex = node.skin - &gltf->skins[0];
-            Entity entity = nodeMap.at(&node);
             instance->skins[skinIndex].targets.insert(entity);
         }
     }
@@ -1433,9 +1432,7 @@ void FAssetLoader::importSkins(FFilamentAsset* primary,
         // Build a list of transformables for this skin, one for each joint.
         dstSkin.joints = FixedCapacityVector<Entity>(srcSkin.joints_count);
         for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
-            auto iter = nodeMap.find(srcSkin.joints[i]);
-            assert_invariant(iter != nodeMap.end());
-            dstSkin.joints[i] = iter->second;
+            dstSkin.joints[i] = nodeMap[srcSkin.joints[i] - gltf->nodes];
         }
     }
 }
