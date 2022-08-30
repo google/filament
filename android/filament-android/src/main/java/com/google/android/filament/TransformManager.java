@@ -215,29 +215,28 @@ import androidx.annotation.Size;
      * Gets a list of children for a transform component.
      *
      * @param i the {@link EntityInstance} of the transform component to get the children from.
-     * @param count The maximum number of children to retrieve.
      * @return Array of retrieved children {@link Entity}.
      */
-    @Entity
-    @NonNull
-    public int[] getChildren(@EntityInstance int i, @IntRange(from = 1) int count) {
-        int[] entities = new int[count];
-        getChildren(i, entities);
-        return entities;
+    public @Entity @NonNull int[] getChildren(@EntityInstance int i) {
+        return getChildren(i, null);
     }
 
     /**
      * Gets a list of children for a transform component.
      *
-     * @param i the {@link EntityInstance} of the transform component to get the children from.
-     * @param outEntities array to receive the result sized to the maximum number of children to
-     *                    retrieve
+     * @param i        the {@link EntityInstance} of the transform component to get the children
+     *                 from.
+     * @param entities array to receive the result sized to the maximum number of children to
+     *                 retrieve.
      */
-    @Entity
-    @NonNull
-    public void getChildren(@EntityInstance int i, @Size(min = 1) int[] outEntities) {
-        if (outEntities.length < 1) throw new ArrayIndexOutOfBoundsException("outEntities must be at least 1");
-        nGetChildren(mNativeObject, i, outEntities, outEntities.length);
+    public @Entity @NonNull int[] getChildren(@EntityInstance int i, @Nullable @Size(min = 1) int[] entities) {
+        if (entities == null) {
+            entities = new int[getChildCount(i)];
+        }
+        if (entities.length > 0) {
+            nGetChildren(mNativeObject, i, entities, entities.length);
+        }
+        return entities;
     }
 
     /**
