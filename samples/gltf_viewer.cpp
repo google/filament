@@ -776,6 +776,14 @@ int main(int argc, char** argv) {
                             debugDirectionalShadowmap);
                 }
 
+                bool debugFroxelVisualization;
+                if (debug.getProperty("d.lighting.debug_froxel_visualization",
+                        &debugFroxelVisualization)) {
+                    ImGui::Checkbox("Froxel Visualization", &debugFroxelVisualization);
+                    debug.setProperty("d.lighting.debug_froxel_visualization",
+                            debugFroxelVisualization);
+                }
+
                 auto dataSource = debug.getDataSource("d.view.frame_info");
                 if (dataSource.data) {
                     ImGuiExt::PlotLinesSeries("FrameInfo", 6,

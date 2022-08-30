@@ -242,4 +242,29 @@ void evaluatePunctualLights(const MaterialInputs material,
         color.rgb += surfaceShading(pixel, light, visibility);
 #endif
     }
+
+    if (CONFIG_DEBUG_FROXEL_VISUALIZATION) {
+        if (froxel.count > 0u) {
+            const vec3 debugColors[17] = vec3[](
+                vec3(0.0,     0.0,     0.0),         // black
+                vec3(0.0,     0.0,     0.1647),      // darkest blue
+                vec3(0.0,     0.0,     0.3647),      // darker blue
+                vec3(0.0,     0.0,     0.6647),      // dark blue
+                vec3(0.0,     0.0,     0.9647),      // blue
+                vec3(0.0,     0.9255,  0.9255),      // cyan
+                vec3(0.0,     0.5647,  0.0),         // dark green
+                vec3(0.0,     0.7843,  0.0),         // green
+                vec3(1.0,     1.0,     0.0),         // yellow
+                vec3(0.90588, 0.75294, 0.0),         // yellow-orange
+                vec3(1.0,     0.5647,  0.0),         // orange
+                vec3(1.0,     0.0,     0.0),         // bright red
+                vec3(0.8392,  0.0,     0.0),         // red
+                vec3(1.0,     0.0,     1.0),         // magenta
+                vec3(0.6,     0.3333,  0.7882),      // purple
+                vec3(1.0,     1.0,     1.0),         // white
+                vec3(1.0,     1.0,     1.0)          // white
+            );
+            color = mix(color, debugColors[clamp(froxel.count, 0u, 16u)], 0.8);
+        }
+    }
 }
