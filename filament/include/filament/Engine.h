@@ -173,6 +173,29 @@ public:
      * Config is used to define the memory footprint used by the engine, such as the
      * command buffer size. Config can be used to customize engine requirements based 
      * on the applications needs.
+     *
+     *    .perRenderPassArenaSizeMB (default: 3 MiB)
+     *   +--------------------------+
+     *   |                          |
+     *   | .perFrameCommandsSizeMB  |
+     *   |    (default 2 MiB)       |
+     *   |                          |
+     *   +--------------------------+
+     *   |  (froxel, etc...)        |
+     *   +--------------------------+
+     *
+     *
+     *      .commandBufferSizeMB (default 3MiB)
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   :                          :
+     *   :                          :
+     *
      */
     struct Config {
         /**
@@ -190,7 +213,7 @@ public:
 
 
         /**
-         * Size in MiB of the per-frame high level command buffer arena.
+         * Size in MiB of the per-frame data arena.
          *
          * This is the main arena used for allocations when preparing a frame.
          * e.g.: Froxel data and high-level commands are allocated from this arena.
