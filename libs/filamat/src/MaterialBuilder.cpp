@@ -97,19 +97,19 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
     static_assert(filament::backend::SHADER_MODEL_COUNT == 2);
-    for (const auto shaderModel : {ShaderModel::MOBILE, ShaderModel::DESKTOP}) {
+    for (const auto shaderModel: { ShaderModel::MOBILE, ShaderModel::DESKTOP }) {
         const auto i = static_cast<uint8_t>(shaderModel);
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
         if (any(mTargetApi & TargetApi::OPENGL)) {
-            mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
+            mCodeGenPermutations.push_back({shaderModel, TargetApi::OPENGL, glTargetLanguage});
         }
         if (any(mTargetApi & TargetApi::VULKAN)) {
-            mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
+            mCodeGenPermutations.push_back({shaderModel, TargetApi::VULKAN, TargetLanguage::SPIRV});
         }
         if (any(mTargetApi & TargetApi::METAL)) {
-            mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
+            mCodeGenPermutations.push_back({shaderModel, TargetApi::METAL, TargetLanguage::SPIRV});
         }
     }
 }
@@ -517,8 +517,9 @@ bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
     std::string shaderCodeAllProperties = peek(type, mSemanticCodeGenParams, allProperties);
     // Populate mProperties with the properties set in the shader.
     if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties,
-                mSemanticCodeGenParams.targetApi,
-                ShaderModel(mSemanticCodeGenParams.shaderModel))) {
+            mSemanticCodeGenParams.targetApi,
+            mSemanticCodeGenParams.targetLanguage,
+            mSemanticCodeGenParams.shaderModel)) {
         return false;
     }
     return true;
@@ -561,6 +562,7 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
     GLSLTools glslTools;
 
     TargetApi targetApi = mSemanticCodeGenParams.targetApi;
+    TargetLanguage targetLanguage = mSemanticCodeGenParams.targetLanguage;
     assertSingleTargetApi(targetApi);
 
     if (mEnableFramebufferFetch) {
@@ -570,12 +572,13 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
 
     ShaderModel model = static_cast<ShaderModel>(mSemanticCodeGenParams.shaderModel);
     std::string shaderCode = peek(ShaderType::VERTEX, mSemanticCodeGenParams, mProperties);
-    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi, info);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain,
+            targetApi, targetLanguage, info);
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
-    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi,
-            mCustomSurfaceShading, info);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain,
+            targetApi, targetLanguage, mCustomSurfaceShading, info);
     return result;
 #else
     return true;
@@ -747,6 +750,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 GLSLPostProcessor::Config config{
                         .variant = v.variant,
                         .targetApi = targetApi,
+                        .targetLanguage = targetLanguage,
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
                         .domain = mMaterialDomain,

@@ -127,7 +127,7 @@ protected:
     bool mGenerateDebugInfo = false;
     utils::bitset32 mShaderModels;
     struct CodeGenParams {
-        int shaderModel;
+        ShaderModel shaderModel;
         TargetApi targetApi;
         TargetLanguage targetLanguage;
     };
@@ -135,7 +135,7 @@ protected:
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
     const CodeGenParams mSemanticCodeGenParams = {
-        .shaderModel = (int) ShaderModel::MOBILE,
+        .shaderModel = ShaderModel::MOBILE,
         .targetApi = TargetApi::OPENGL,
         .targetLanguage = TargetLanguage::SPIRV
     };

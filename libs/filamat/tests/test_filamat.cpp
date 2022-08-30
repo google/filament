@@ -70,9 +70,9 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderType type,
     builder.build(jobSystem);
 
     return builder.peek(type, {
-                    int(ShaderModel::MOBILE),
+                    ShaderModel::MOBILE,
                     MaterialBuilder::TargetApi::OPENGL,
-                    MaterialBuilder::TargetLanguage::SPIRV
+                    MaterialBuilder::TargetLanguage::GLSL
             },
             allProperties);
 }

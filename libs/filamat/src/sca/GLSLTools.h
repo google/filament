@@ -124,16 +124,14 @@ public:
     // The shader features a prepareMaterial() function AND
     // prepareMaterial() is called at some point in material() call chain.
     static bool analyzeFragmentShader(const std::string& shaderCode,
-            filament::backend::ShaderModel model,
-            MaterialBuilder::MaterialDomain materialDomain,
-            MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading,
-            MaterialInfo const& info) noexcept;
+            filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            bool hasCustomSurfaceShading, MaterialInfo const& info) noexcept;
 
     static bool analyzeVertexShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
-            MaterialBuilder::MaterialDomain materialDomain,
-            MaterialBuilder::TargetApi targetApi,
-            MaterialInfo const& info) noexcept;
+            MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& info) noexcept;
 
     // Public for unit tests.
     using Property = MaterialBuilder::Property;
@@ -145,14 +143,17 @@ public:
             const std::string& shaderCode,
             MaterialBuilder::PropertyList& properties,
             MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL,
+            MaterialBuilder::TargetLanguage targetLanguage = MaterialBuilder::TargetLanguage::GLSL,
             ShaderModel model = ShaderModel::DESKTOP) const noexcept;
 
     static int glslangVersionFromShaderModel(filament::backend::ShaderModel model);
 
-    static EShMessages glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi);
+    static EShMessages glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage);
 
-    static void prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslang::TShader& shader,
-            EShLanguage language, int version, MaterialBuilder::Optimization optimization);
+    static void prepareShaderParser(MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage, glslang::TShader& shader,
+            EShLanguage stage, int version);
 
     static void textureLodBias(glslang::TShader& shader);
 
