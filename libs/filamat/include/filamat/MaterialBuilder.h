@@ -64,7 +64,7 @@ public:
 
     /**
      * TargetApi defines which language after transpilation will be used, it is used to
-     * account for some differences between these langages when generating the GLSL.
+     * account for some differences between these languages when generating the GLSL.
      */
     enum class TargetApi : uint8_t {
         OPENGL      = 0x01u,
@@ -127,7 +127,7 @@ protected:
     bool mGenerateDebugInfo = false;
     utils::bitset32 mShaderModels;
     struct CodeGenParams {
-        int shaderModel;
+        ShaderModel shaderModel;
         TargetApi targetApi;
         TargetLanguage targetLanguage;
     };
@@ -135,7 +135,7 @@ protected:
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
     const CodeGenParams mSemanticCodeGenParams = {
-        .shaderModel = (int) ShaderModel::MOBILE,
+        .shaderModel = ShaderModel::MOBILE,
         .targetApi = TargetApi::OPENGL,
         .targetLanguage = TargetLanguage::SPIRV
     };

@@ -48,7 +48,7 @@ public:
         ShaderStageFlags stageFlags = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS;
     };
 
-    using UniformBlockInfo = std::array<const char*, UNIFORM_BINDING_COUNT>;
+    using UniformBlockInfo = std::array<utils::CString, UNIFORM_BINDING_COUNT>;
     using SamplerGroupInfo = std::array<SamplerGroupData, SAMPLER_BINDING_COUNT>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
@@ -76,7 +76,7 @@ public:
     //       not permitted in glsl. The backend needs a way to associate a uniform block
     //       to a binding point.
     Program& uniformBlockBindings(
-            utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept;
+            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& uniformBlockBindings) noexcept;
 
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
@@ -98,6 +98,7 @@ public:
     ShaderSource& getShadersSource() noexcept { return mShadersSource; }
 
     UniformBlockInfo const& getUniformBlockBindings() const noexcept { return mUniformBlocks; }
+    UniformBlockInfo& getUniformBlockBindings() noexcept { return mUniformBlocks; }
 
     SamplerGroupInfo const& getSamplerGroupInfo() const { return mSamplerGroups; }
     SamplerGroupInfo& getSamplerGroupInfo() { return mSamplerGroups; }
