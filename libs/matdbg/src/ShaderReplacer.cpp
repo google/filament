@@ -186,7 +186,8 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     assert_invariant(targetApi == MaterialBuilder::TargetApi::VULKAN);
 
     const int langVersion = GLSLTools::glslangVersionFromShaderModel(shaderModel);
-    const EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
+    const EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi,
+            MaterialBuilder::TargetLanguage::SPIRV);
     const bool ok = tShader.parse(&DefaultTBuiltInResource, langVersion, false, msg);
     if (!ok) {
         slog.e << "ShaderReplacer parse:\n" << tShader.getInfoLog() << io::endl;
