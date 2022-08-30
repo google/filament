@@ -65,6 +65,7 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_FROXEL_BUFFER_HEIGHT = 4,
     CONFIG_POWER_VR_SHADER_WORKAROUNDS = 5,
     CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP = 6,
+    CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.

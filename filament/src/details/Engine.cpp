@@ -374,6 +374,17 @@ void FEngine::init() {
                     }
                 });
             });
+
+    mDebugRegistry.registerProperty("d.lighting.debug_froxel_visualization",
+            &debug.lighting.debug_froxel_visualization, [this]() {
+                mMaterials.forEach([](FMaterial* material) {
+                    if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+                        material->invalidate(
+                                Variant::DYN | Variant::DEP,
+                                Variant::DYN);
+                    }
+                });
+            });
 }
 
 FEngine::~FEngine() noexcept {

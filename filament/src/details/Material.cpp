@@ -250,6 +250,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
                     +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
                     (bool)engine.debug.shadowmap.debug_directional_shadowmap });
     mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
+                    (bool)engine.debug.lighting.debug_froxel_visualization });
+    mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
                     (bool)staticTextureWorkaround });
     mSpecializationConstants.push_back({
@@ -453,12 +456,12 @@ FMaterial::~FMaterial() noexcept {
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
     // update the spec constants that can change
     // TODO: should we just always update all of them?
-    auto pos = std::find_if(mSpecializationConstants.begin(), mSpecializationConstants.end(),
-            [&](const auto& item) {
-                return item.id == ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP;
-            });
-    if (pos != mSpecializationConstants.end()) {
-        pos->value = mEngine.debug.shadowmap.debug_directional_shadowmap;
+    for (auto& item : mSpecializationConstants) {
+        if (item.id == ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP) {
+            item.value = mEngine.debug.shadowmap.debug_directional_shadowmap;
+        } else if (item.id == ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION) {
+            item.value = mEngine.debug.lighting.debug_froxel_visualization;
+        }
     }
 
     DriverApi& driverApi = mEngine.getDriverApi();

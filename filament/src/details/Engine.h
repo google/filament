@@ -565,6 +565,9 @@ public:
             bool doFrameCapture = false;
             bool disable_buffer_padding = false;
         } renderer;
+        struct {
+            bool debug_froxel_visualization = false;
+        } lighting;
         matdbg::DebugServer* server = nullptr;
     } debug;
 };
