@@ -721,20 +721,18 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
             jobParams.emplace_back(Params {{ pair.first }, {vb, nullptr, iter->second }});
         }
     }
+
     // Create a job description for morph targets.
-    // TODO: do not iterate over the nodemap; iterate over the cgltf hierarchy.
-    const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
-    for (auto iter : nodeMap) {
-        cgltf_node const* node = iter.first;
-        cgltf_mesh const* mesh = node->mesh;
-        if (UTILS_UNLIKELY(!mesh || !mesh->weights_count)) {
+    for (size_t i = 0, n = asset->mSourceAsset->hierarchy->meshes_count; i < n; ++i) {
+        const cgltf_mesh& mesh = asset->mSourceAsset->hierarchy->meshes[i];
+        const FixedCapacityVector<Primitive>& prims = asset->mMeshCache[i];
+        if (0 == mesh.weights_count) {
             continue;
         }
-        for (cgltf_size pindex = 0, pcount = mesh->primitives_count; pindex < pcount; ++pindex) {
-            const cgltf_primitive& prim = mesh->primitives[pindex];
-            const auto& gltfioPrim = asset->mMeshCache.at(mesh)[pindex];
-            MorphTargetBuffer* tb = gltfioPrim.targets;
-            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++ tindex) {
+        for (cgltf_size pindex = 0, pcount = mesh.primitives_count; pindex < pcount; ++pindex) {
+            const cgltf_primitive& prim = mesh.primitives[pindex];
+            MorphTargetBuffer* tb = prims[pindex].targets;
+            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++tindex) {
                 const cgltf_morph_target& target = prim.targets[tindex];
                 bool hasNormals = false;
                 for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {

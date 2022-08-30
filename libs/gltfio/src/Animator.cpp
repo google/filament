@@ -76,7 +76,8 @@ struct AnimatorImpl {
     TransformManager* transformManager;
     vector<float> weights;
     FixedCapacityVector<mat4f> crossFade;
-    void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst);
+    void addChannels(const FixedCapacityVector<Entity>& nodeMap, const cgltf_animation& srcAnim,
+            Animation& dst);
     void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
     void stashCrossFade();
     void applyCrossFade(float alpha);
@@ -386,15 +387,16 @@ void AnimatorImpl::applyCrossFade(float alpha) {
     recursiveFn(tm.getInstance(asset->mRoot), 0, recursiveFn);
 }
 
-void AnimatorImpl::addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim,
-        Animation& dst) {
-    cgltf_animation_channel* srcChannels = srcAnim.channels;
-    cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
+void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
+        const cgltf_animation& srcAnim, Animation& dst) {
+    const cgltf_animation_channel* srcChannels = srcAnim.channels;
+    const cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
+    const cgltf_node* nodes = asset->mSourceAsset->hierarchy->nodes;
     const Sampler* samplers = dst.samplers.data();
     for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
         const cgltf_animation_channel& srcChannel = srcChannels[j];
-        auto iter = nodeMap.find(srcChannel.target_node);
-        if (UTILS_UNLIKELY(iter == nodeMap.end())) {
+        Entity targetEntity = nodeMap[srcChannel.target_node - nodes];
+        if (UTILS_UNLIKELY(!targetEntity)) {
             if (GLTFIO_VERBOSE) {
                 slog.w << "No scene root contains node ";
                 if (srcChannel.target_node->name) {
@@ -408,7 +410,6 @@ void AnimatorImpl::addChannels(const NodeMap& nodeMap, const cgltf_animation& sr
             }
             continue;
         }
-        Entity targetEntity = iter.value();
         Channel dstChannel;
         dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
         dstChannel.targetEntity = targetEntity;
