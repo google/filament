@@ -160,18 +160,12 @@ Entity FFilamentAsset::getWireframe() noexcept {
 
 void FFilamentAsset::releaseSourceData() noexcept {
     // To ensure that all possible memory is freed, we reassign to new containers rather than
-    // calling clear(). With many container types (such as robin_map), clearing is a fast
-    // operation that merely frees the storage for the items.
+    // calling clear(). With many container types, clearing is a fast operation that merely frees
+    // the storage for the items but not the actual container.
     mTextureBindings = {};
     mMeshCache = {};
     mResourceUris = {};
-    mPrimitives = {};
-    mBufferSlots = {};
-    mTextureSlots = {};
     mSourceAsset.reset();
-    for (FFilamentInstance* instance : mInstances) {
-        instance->nodeMap = {};
-    }
 }
 
 const char* FFilamentAsset::getName(utils::Entity entity) const noexcept {

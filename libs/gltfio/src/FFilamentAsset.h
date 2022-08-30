@@ -82,7 +82,10 @@ struct BufferSlot {
     MorphTargetBuffer* morphTargetBuffer;
 };
 
-// Encapsulates a connection between Texture and MaterialInstance.
+// Stores a connection between Texture and MaterialInstance; consumed by resource loader so that it
+// can call "setParameter" on the given MaterialInstance after the Texture has been created.
+// Since material instances are not typically shared between FilamentInstance, the slots are a
+// unified list across all instances that exist before creation of Texture objects.
 struct TextureSlot {
     size_t sourceTexture; // index into cgltf_texture
     MaterialInstance* materialInstance;
@@ -257,9 +260,16 @@ struct FFilamentAsset : public FilamentAsset {
         mTextureBindings[tb.sourceTexture] = texture;
     }
 
+    // If a Filament Texture already exists for the given slot, go ahead and bind it to the
+    // given material instance. (This can occur when creating new FilamentInstances)
+    // Otherwise, stash the binding information so that ResourceLoader can trigger the bind.
     void addTextureSlot(const TextureSlot& tb) {
-        if (Texture* texture = mTextureBindings[tb.sourceTexture]; texture) {
+        if (mResourcesLoaded) {
+            Texture* texture = mTextureBindings[tb.sourceTexture];
+            assert_invariant(texture);
             tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
+            // Intentionally omit adding a dependency graph edge here. We do not need progressive
+            // reveal for multiple FilamentInstance.
         } else {
             mTextureSlots.push_back(tb);
             mDependencyGraph.addEdge(tb.materialInstance, tb.materialParameter);
@@ -323,13 +333,19 @@ struct FFilamentAsset : public FilamentAsset {
     using SourceHandle = std::shared_ptr<SourceAsset>;
     SourceHandle mSourceAsset;
 
-    // Transient source data that can freed via releaseSourceData:
-    utils::FixedCapacityVector<Texture*> mTextureBindings; // one element for each cgltf_texture
+    // Mapping from cgltf_texture to Texture* is required when creating new instances.
+    utils::FixedCapacityVector<Texture*> mTextureBindings;
+
+    // Resource URIs can be queried by the end user.
+    utils::FixedCapacityVector<const char*> mResourceUris;
+
+    // The mapping from cgltf_mesh to VertexBuffer* (etc) is required when creating new instances.
+    MeshCache mMeshCache;
+
+    // Asset information that is produced by AssetLoader and consumed by ResourceLoader:
     std::vector<BufferSlot> mBufferSlots;
     std::vector<TextureSlot> mTextureSlots;
-    utils::FixedCapacityVector<const char*> mResourceUris;
     std::vector<std::pair<const cgltf_primitive*, VertexBuffer*> > mPrimitives;
-    MeshCache mMeshCache; // one element for each cgltf_mesh
 };
 
 FILAMENT_UPCAST(FilamentAsset)

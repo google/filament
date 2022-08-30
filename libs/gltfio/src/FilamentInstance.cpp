@@ -41,6 +41,7 @@ Animator* FFilamentInstance::getAnimator() const noexcept {
 void FFilamentInstance::createAnimator() {
     assert_invariant(animator == nullptr);
     animator = new Animator(owner, this);
+    nodeMap = {};
 }
 
 size_t FFilamentInstance::getSkinCount() const noexcept {

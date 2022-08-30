@@ -80,6 +80,7 @@ struct FFilamentInstance : public FilamentInstance {
     // may be sparsely populated. This is used as a simple mapping between cgltf_node and Entity,
     // and therefore has the same size as the number of cgltf_node in the original asset. We
     // considered using the ECS for this, but we need Node => Entity, not the other way around.
+    // This is discarded after the animator is created.
     utils::FixedCapacityVector<utils::Entity> nodeMap;
 
     Aabb boundingBox;
