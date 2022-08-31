@@ -200,7 +200,6 @@ import androidx.annotation.Size;
         return nGetParent(mNativeObject, i);
     }
 
-
     /**
      * Returns the number of children of an {@link EntityInstance}.
      *
@@ -214,29 +213,21 @@ import androidx.annotation.Size;
     /**
      * Gets a list of children for a transform component.
      *
-     * @param i the {@link EntityInstance} of the transform component to get the children from.
+     * @param i           the {@link EntityInstance} of the transform component to get the children
+     *                    from.
+     * @param outEntities array to receive the result sized to the maximum number of children to
+     *                    retrieve. If <code>null</code> is given, a new suitable array sized to
+     *                    {@link #getChildCount(int)} is allocated.
      * @return Array of retrieved children {@link Entity}.
      */
-    public @Entity @NonNull int[] getChildren(@EntityInstance int i) {
-        return getChildren(i, null);
-    }
-
-    /**
-     * Gets a list of children for a transform component.
-     *
-     * @param i        the {@link EntityInstance} of the transform component to get the children
-     *                 from.
-     * @param entities array to receive the result sized to the maximum number of children to
-     *                 retrieve.
-     */
-    public @Entity @NonNull int[] getChildren(@EntityInstance int i, @Nullable @Size(min = 1) int[] entities) {
-        if (entities == null) {
-            entities = new int[getChildCount(i)];
+    public @Entity @NonNull int[] getChildren(@EntityInstance int i, @Nullable int[] outEntities) {
+        if (outEntities == null) {
+            outEntities = new int[getChildCount(i)];
         }
-        if (entities.length > 0) {
-            nGetChildren(mNativeObject, i, entities, entities.length);
+        if (outEntities.length > 0) {
+            nGetChildren(mNativeObject, i, outEntities, outEntities.length);
         }
-        return entities;
+        return outEntities;
     }
 
     /**
