@@ -42,7 +42,7 @@ target_link_libraries(SPIRV-Tools-lint
 target_link_libraries(SPIRV-Tools-lint
   PUBLIC SPIRV-Tools-opt)
 
-set_property(TARGET SPIRV-Tools-lint PROPERTY FOLDER "SPIRV-Tools libraries")
+set_property(TARGET SPIRV-Tools-lint PROPERTY FOLDER "ThirdParty/SPIRV-Tools libraries")
 spvtools_check_symbol_exports(SPIRV-Tools-lint)
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)

@@ -35,6 +35,7 @@
 #include <utils/sstream.h>
 
 #include <private/filament/Variant.h>
+#include "private/filament/EngineEnums.h"
 
 namespace filamat {
 
@@ -56,31 +57,32 @@ public:
     filament::backend::ShaderModel getShaderModel() const noexcept { return mShaderModel; }
 
     // insert a separator (can be a new line)
-    static utils::io::sstream& generateSeparator(utils::io::sstream& out) ;
+    static utils::io::sstream& generateSeparator(utils::io::sstream& out);
 
     // generate prolog for the given shader
-    utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderType type, bool hasExternalSamplers) const;
+    utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderType type,
+            MaterialInfo const& info) const;
 
-    static utils::io::sstream& generateEpilog(utils::io::sstream& out) ;
+    static utils::io::sstream& generateEpilog(utils::io::sstream& out);
 
     // generate common functions for the given shader
-    static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type) ;
-    static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderType type) ;
-    static utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type) ;
+    static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type);
+    static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderType type);
+    static utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type);
 
-    static utils::io::sstream& generateFog(utils::io::sstream& out, ShaderType type) ;
+    static utils::io::sstream& generateFog(utils::io::sstream& out, ShaderType type);
 
     // generate the shader's main()
-    static utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type) ;
-    static utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type) ;
+    static utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type);
+    static utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type);
 
     // generate the shader's code for the lit shading model
     static utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderType type,
-            filament::Variant variant, filament::Shading shading, bool customSurfaceShading) ;
+            filament::Variant variant, filament::Shading shading, bool customSurfaceShading);
 
     // generate the shader's code for the unlit shading model
     static utils::io::sstream& generateShaderUnlit(utils::io::sstream& out, ShaderType type,
-            filament::Variant variant, bool hasShadowMultiplier) ;
+            filament::Variant variant, bool hasShadowMultiplier);
 
     // generate the shader's code for the screen-space reflections
     static utils::io::sstream& generateShaderReflections(utils::io::sstream& out, ShaderType type,
@@ -88,12 +90,12 @@ public:
 
     // generate declarations for custom interpolants
     static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderType type,
-            const utils::CString& name, size_t index) ;
+            const utils::CString& name, size_t index);
 
     // generate declarations for non-custom "in" variables
     static utils::io::sstream& generateShaderInputs(utils::io::sstream& out, ShaderType type,
-        const filament::AttributeBitset& attributes, filament::Interpolation interpolation) ;
-    static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderType type) ;
+        const filament::AttributeBitset& attributes, filament::Interpolation interpolation);
+    static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderType type);
 
     // generate declarations for custom output variables
     utils::io::sstream& generateOutput(utils::io::sstream& out, ShaderType type,
@@ -102,35 +104,35 @@ public:
             MaterialBuilder::OutputType outputType) const;
 
     // generate no-op shader for depth prepass
-    static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderType type) ;
+    static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderType type);
 
     // generate uniforms
-    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderType type, uint8_t binding,
-            const filament::UniformInterfaceBlock& uib) const;
+    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderType type,
+            filament::BindingPoints binding, const filament::UniformInterfaceBlock& uib) const;
 
     // generate samplers
-    utils::io::sstream& generateSamplers(
-        utils::io::sstream& out, uint8_t firstBinding, const filament::SamplerInterfaceBlock& sib) const;
+    utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,
+            const filament::SamplerInterfaceBlock& sib) const;
 
     // generate subpass
     static utils::io::sstream& generateSubpass(utils::io::sstream& out,
-            filament::SubpassInfo subpass) ;
+            filament::SubpassInfo subpass);
 
     // generate material properties getters
     static utils::io::sstream& generateMaterialProperty(utils::io::sstream& out,
-            MaterialBuilder::Property property, bool isSet) ;
+            MaterialBuilder::Property property, bool isSet);
 
     utils::io::sstream& generateQualityDefine(utils::io::sstream& out, ShaderQuality quality) const;
 
-    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, bool value) ;
-    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value) ;
-    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string) ;
+    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, bool value);
+    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value);
+    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string);
     static utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,
-            uint32_t index, uint32_t value) ;
+            uint32_t index, uint32_t value);
 
-    static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderType type) ;
-    static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderType type) ;
-    static utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderType type) ;
+    static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderType type);
+    static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderType type);
+    static utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderType type);
 
     static void fixupExternalSamplers(
             std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;

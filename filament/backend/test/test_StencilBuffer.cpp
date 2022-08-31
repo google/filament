@@ -75,7 +75,7 @@ public:
 
         // Create a program.
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram();
+        Program p = shaderGen.getProgram(api);
         program = api.createProgram(std::move(p));
     }
 

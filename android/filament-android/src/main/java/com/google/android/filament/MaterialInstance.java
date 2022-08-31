@@ -20,6 +20,9 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
+@UsedByNative("AssetLoader.cpp")
 public class MaterialInstance {
     private Material mMaterial;
     private String mName;
@@ -48,6 +51,54 @@ public class MaterialInstance {
         MAT3,
         MAT4
     }
+
+    /**
+     * Operations that control how the stencil buffer is updated.
+     */
+    public enum StencilOperation {
+        /**
+         * Keeps the current value.
+         */
+        KEEP,
+        /**
+         * Sets the value to 0.
+         */
+        ZERO,
+        /**
+         * Sets the value to the stencil reference value.
+         */
+        REPLACE,
+        /**
+         * Increments the current value. Clamps to the maximum representable unsigned value.
+         */
+        INCR_CLAMP,
+        /**
+         * Increments the current value. Wraps value to zero when incrementing the maximum
+         * representable unsigned value.
+         */
+        INCR_WRAP,
+        /**
+         * Decrements the current value. Clamps to 0.
+         */
+        DECR_CLAMP,
+        /**
+         * Decrements the current value. Wraps value to the maximum representable unsigned value
+         * when decrementing a value of zero.
+         */
+        DECR_WRAP,
+        /**
+         * Bitwise inverts the current value.
+         */
+        INVERT,
+    }
+
+    public enum StencilFace {
+        FRONT,
+        BACK,
+        FRONT_AND_BACK
+    }
+    // Converts the StencilFace enum ordinal to Filament's equivalent bit field.
+    static final int[] sStencilFaceMapping = {0x1, 0x2, 0x3};
 
     public MaterialInstance(Engine engine, long nativeMaterialInstance) {
         mNativeObject = nativeMaterialInstance;
@@ -473,6 +524,10 @@ public class MaterialInstance {
         nSetDepthWrite(getNativeObject(), enable);
     }
 
+    public void setStencilWrite(boolean enable) {
+        nSetStencilWrite(getNativeObject(), enable);
+    }
+
     /**
      * Overrides the default depth testing state that was set on the material.
      *
@@ -482,6 +537,208 @@ public class MaterialInstance {
      */
     public void setDepthCulling(boolean enable) {
         nSetDepthCulling(getNativeObject(), enable);
+    }
+
+    /**
+     * Sets the stencil comparison function (default is {@link TextureSampler.CompareFunction#ALWAYS}).
+     *
+     * <p>
+     * It's possible to set separate stencil comparison functions; one for front-facing polygons,
+     * and one for back-facing polygons. The face parameter determines the comparison function(s)
+     * updated by this call.
+     * </p>
+     *
+     * @param func the stencil comparison function
+     * @param face the faces to update the comparison function for
+     */
+    public void setStencilCompareFunction(TextureSampler.CompareFunction func, StencilFace face) {
+        nSetStencilCompareFunction(getNativeObject(), func.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil comparison function for both front and back-facing polygons.
+     * @see #setStencilCompareFunction(TextureSampler.CompareFunction, StencilFace)
+     */
+    public void setStencilCompareFunction(TextureSampler.CompareFunction func) {
+        setStencilCompareFunction(func, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil fail operation (default is {@link StencilOperation#KEEP}).
+     *
+     * <p>
+     * The stencil fail operation is performed to update values in the stencil buffer when the
+     * stencil test fails.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil fail operations; one for front-facing polygons, and one
+     * for back-facing polygons. The face parameter determines the stencil fail operation(s) updated
+     * by this call.
+     * </p>
+     *
+     * @param op the stencil fail operation
+     * @param face the faces to update the stencil fail operation for
+     */
+    public void setStencilOpStencilFail(StencilOperation op, StencilFace face) {
+        nSetStencilOpStencilFail(getNativeObject(), op.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil fail operation for both front and back-facing polygons.
+     * @see #setStencilOpStencilFail(StencilOperation, StencilFace)
+     */
+    public void setStencilOpStencilFail(StencilOperation op) {
+        setStencilOpStencilFail(op, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the depth fail operation (default is {@link StencilOperation#KEEP}).
+     *
+     * <p>
+     * The depth fail operation is performed to update values in the stencil buffer when the depth
+     * test fails.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate depth fail operations; one for front-facing polygons, and one
+     * for back-facing polygons. The face parameter determines the depth fail operation(s) updated
+     * by this call.
+     * </p>
+     *
+     * @param op the depth fail operation
+     * @param face the faces to update the depth fail operation for
+     */
+    public void setStencilOpDepthFail(StencilOperation op, StencilFace face) {
+        nSetStencilOpDepthFail(getNativeObject(), op.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the depth fail operation for both front and back-facing polygons.
+     * @see #setStencilOpDepthFail(StencilOperation, StencilFace)
+     */
+    public void setStencilOpDepthFail(StencilOperation op) {
+        setStencilOpDepthFail(op, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the depth-stencil pass operation (default is {@link StencilOperation#KEEP}).
+     *
+     * <p>
+     * The depth-stencil pass operation is performed to update values in the stencil buffer when
+     * both the stencil test and depth test pass.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate depth-stencil pass operations; one for front-facing polygons,
+     * and one for back-facing polygons. The face parameter determines the depth-stencil pass
+     * operation(s) updated by this call.
+     * </p>
+     *
+     * @param op the depth-stencil pass operation
+     * @param face the faces to update the depth-stencil operation for
+     */
+    public void setStencilOpDepthStencilPass(StencilOperation op, StencilFace face) {
+        nSetStencilOpDepthStencilPass(getNativeObject(), op.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the depth-stencil pass operation for both front and back-facing polygons.
+     * @see #setStencilOpDepthStencilPass(StencilOperation, StencilFace)
+     */
+    public void setStencilOpDepthStencilPass(StencilOperation op) {
+        setStencilOpDepthStencilPass(op, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil reference value (default is 0).
+     *
+     * <p>
+     * The stencil reference value is the left-hand side for stencil comparison tests. It's also
+     * used as the replacement stencil value when {@link StencilOperation} is
+     * {@link StencilOperation#REPLACE}.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil reference values; one for front-facing polygons, and
+     * one for back-facing polygons. The face parameter determines the reference value(s) updated by
+     * this call.
+     * </p>
+     *
+     * @param value the stencil reference value (only the least significant 8 bits are used)
+     * @param face the faces to update the reference value for
+     */
+    public void setStencilReferenceValue(@IntRange(from = 0, to = 255) int value, StencilFace face) {
+        nSetStencilReferenceValue(getNativeObject(), value, sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil reference value for both front and back-facing polygons.
+     * @see #setStencilReferenceValue(int, StencilFace)
+     */
+    public void setStencilReferenceValue(@IntRange(from = 0, to = 255) int value) {
+        setStencilReferenceValue(value, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil read mask (default is 0xFF).
+     *
+     * <p>
+     * The stencil read mask masks the bits of the values participating in the stencil comparison
+     * test- both the value read from the stencil buffer and the reference value.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil read masks; one for front-facing polygons, and one for
+     * back-facing polygons. The face parameter determines the stencil read mask(s) updated by this
+     * call.
+     * </p>
+     *
+     * @param readMask the read mask (only the least significant 8 bits are used)
+     * @param face the faces to update the read mask for
+     */
+    public void setStencilReadMask(@IntRange(from = 0, to = 255) int readMask, StencilFace face) {
+        nSetStencilReadMask(getNativeObject(), readMask, sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil read mask for both front and back-facing polygons.
+     * @see #setStencilReadMask(int, StencilFace)
+     */
+    public void setStencilReadMask(@IntRange(from = 0, to = 255) int readMask) {
+        setStencilReadMask(readMask, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil write mask (default is 0xFF).
+     *
+     * <p>
+     * The stencil write mask masks the bits in the stencil buffer updated by stencil operations.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil write masks; one for front-facing polygons, and one for
+     * back-facing polygons. The face parameter determines the stencil write mask(s) updated by this
+     * call.
+     * </p>
+     *
+     * @param writeMask the write mask (only the least significant 8 bits are used)
+     * @param face the faces to update the read mask for
+     */
+    public void setStencilWriteMask(@IntRange(from = 0, to = 255) int writeMask, StencilFace face) {
+        nSetStencilWriteMask(getNativeObject(), writeMask, sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil write mask for both front and back-facing polygons.
+     * @see #setStencilWriteMask(int, StencilFace)
+     */
+    public void setStencilWriteMask(int writeMask) {
+        setStencilWriteMask(writeMask, StencilFace.FRONT_AND_BACK);
     }
 
     public long getNativeObject() {
@@ -556,7 +813,23 @@ public class MaterialInstance {
     private static native void nSetCullingMode(long nativeMaterialInstance, long mode);
     private static native void nSetColorWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthWrite(long nativeMaterialInstance, boolean enable);
+    private static native void nSetStencilWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthCulling(long nativeMaterialInstance, boolean enable);
+
+    private static native void nSetStencilCompareFunction(long nativeMaterialInstance,
+            long function, long face);
+    private static native void nSetStencilOpStencilFail(long nativeMaterialInstance, long op,
+            long face);
+    private static native void nSetStencilOpDepthFail(long nativeMaterialInstance, long op,
+            long face);
+    private static native void nSetStencilOpDepthStencilPass(long nativeMaterialInstance, long op,
+            long face);
+    private static native void nSetStencilReferenceValue(long nativeMaterialInstance, int value,
+            long face);
+    private static native void nSetStencilReadMask(long nativeMaterialInstance, int readMask,
+            long face);
+    private static native void nSetStencilWriteMask(long nativeMaterialInstance, int writeMask,
+            long face);
 
     private static native String nGetName(long nativeMaterialInstance);
     private static native long nGetMaterial(long nativeMaterialInstance);

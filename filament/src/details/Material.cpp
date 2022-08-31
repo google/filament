@@ -27,30 +27,31 @@
 #include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
 #include <utils/Panic.h>
 
-using namespace utils;
-using namespace filaflat;
-
 namespace filament {
 
 using namespace backend;
+using namespace filaflat;
+using namespace utils;
 
 static MaterialParser* createParser(Backend backend, const void* data, size_t size) {
-    MaterialParser* materialParser = new MaterialParser(backend, data, size);
+    // unique_ptr so we don't leak MaterialParser on failures below
+    auto materialParser = std::make_unique<MaterialParser>(backend, data, size);
 
     MaterialParser::ParseResult materialResult = materialParser->parse();
 
     if (backend == Backend::NOOP) {
-        return materialParser;
+        return materialParser.release();
     }
 
     ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
@@ -61,12 +62,12 @@ static MaterialParser* createParser(Backend backend, const void* data, size_t si
 
     uint32_t version = 0;
     materialParser->getMaterialVersion(&version);
-    ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Material version mismatch. Expected %d but "
-            "received %d.", MATERIAL_VERSION, version);
+    ASSERT_PRECONDITION(version == MATERIAL_VERSION,
+            "Material version mismatch. Expected %d but received %d.", MATERIAL_VERSION, version);
 
     assert_invariant(backend != Backend::DEFAULT && "Default backend has not been resolved.");
 
-    return materialParser;
+    return materialParser.release();
 }
 
 struct Material::BuilderDetails {
@@ -95,15 +96,19 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 }
 
 Material* Material::Builder::build(Engine& engine) {
-    MaterialParser* materialParser = createParser(
-            upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize);
+    std::unique_ptr<MaterialParser> materialParser{ createParser(
+            upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize) };
+
+    if (materialParser == nullptr) {
+        return nullptr;
+    }
 
     uint32_t v = 0;
     materialParser->getShaderModels(&v);
     utils::bitset32 shaderModels;
     shaderModels.setValue(v);
 
-    ShaderModel shaderModel = upcast(engine).getDriver().getShaderModel();
+    ShaderModel shaderModel = upcast(engine).getShaderModel();
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
@@ -117,13 +122,13 @@ Material* Material::Builder::build(Engine& engine) {
         return nullptr;
     }
 
-    mImpl->mMaterialParser = materialParser;
+    mImpl->mMaterialParser = materialParser.release();
 
     return upcast(engine).createMaterial(*this);
 }
 
-static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceBlock const& sib,
-        SamplerBindingMap const& map) {
+static void addSamplerGroup(Program& pb, BindingPoints bindingPoint,
+        SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
     const size_t samplerCount = sib.getSize();
     if (samplerCount) {
         std::vector<Program::Sampler> samplers(samplerCount);
@@ -136,7 +141,7 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
             const bool strict = (bindingPoint == filament::BindingPoints::PER_MATERIAL_INSTANCE);
             samplers[i] = { std::move(uniformName), binding, strict };
         }
-        pb.setSamplerGroup(bindingPoint, sib.getStageFlags(), samplers.data(), samplers.size());
+        pb.setSamplerGroup(+bindingPoint, sib.getStageFlags(), samplers.data(), samplers.size());
     }
 }
 
@@ -150,11 +155,37 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     UTILS_UNUSED_IN_RELEASE bool nameOk = parser->getName(&mName);
     assert_invariant(nameOk);
 
-    UTILS_UNUSED_IN_RELEASE bool sibOK = parser->getSIB(&mSamplerInterfaceBlock);
-    assert_invariant(sibOK);
+    uint8_t featureLevel = 1;
+    parser->getFeatureLevel(&featureLevel);
+    assert_invariant(featureLevel <= 2);
+    mFeatureLevel = [featureLevel]() -> FeatureLevel {
+        switch (featureLevel) {
+            default:
+            case 1: return FeatureLevel::FEATURE_LEVEL_1;
+            case 2: return FeatureLevel::FEATURE_LEVEL_2;
+        }
+    }();
 
-    UTILS_UNUSED_IN_RELEASE bool uibOK = parser->getUIB(&mUniformInterfaceBlock);
-    assert_invariant(uibOK);
+    UTILS_UNUSED_IN_RELEASE bool success;
+
+    success = parser->getSIB(&mSamplerInterfaceBlock);
+    assert_invariant(success);
+
+    success = parser->getUIB(&mUniformInterfaceBlock);
+    assert_invariant(success);
+
+    // read the uniform binding list
+    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> uniformBlockBindings;
+    success = parser->getUniformBlockBindings(&uniformBlockBindings);
+    assert_invariant(success);
+    // store the name in an array (so we can use pointers), and create the uniform block binding
+    // list for the backend (to be used with Program)
+    mUniformBlockNames.reserve(uniformBlockBindings.size());
+    mUniformBlockBindings.reserve(uniformBlockBindings.size());
+    for (auto& item : uniformBlockBindings) {
+        mUniformBlockNames.emplace_back(std::move(item.first));
+        mUniformBlockBindings.emplace_back(mUniformBlockNames.back().c_str(), item.second);
+    }
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
@@ -342,6 +373,7 @@ UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
 }
 
 void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
+    assert_invariant(mEngine.hasFeatureLevel(mFeatureLevel));
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
             getSurfaceProgramSlow(variant);
@@ -363,20 +395,7 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     Variant vertexVariant   = Variant::filterVariantVertex(variant);
     Variant fragmentVariant = Variant::filterVariantFragment(variant);
 
-    Program pb = getProgramBuilderWithVariants(variant, vertexVariant, fragmentVariant);
-    pb
-        .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
-        .setUniformBlock(BindingPoints::PER_RENDERABLE, PerRenderableUib::_name)
-        .setUniformBlock(BindingPoints::LIGHTS, LightsUib::_name)
-        .setUniformBlock(BindingPoints::SHADOW, ShadowUib::_name)
-        .setUniformBlock(BindingPoints::FROXEL_RECORDS, FroxelRecordUib::_name)
-        .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE,
-                { mUniformInterfaceBlock.getName().data(), mUniformInterfaceBlock.getName().size() });
-
-    if (Variant(variant).hasSkinningOrMorphing()) {
-        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableBoneUib::_name);
-        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_MORPHING, PerRenderableMorphingUib::_name);
-    }
+    Program pb{ getProgramBuilderWithVariants(variant, vertexVariant, fragmentVariant) };
 
     // Always add the morphing sampler group because there is no way
     // that SamplerBindingMap knows the current variant.
@@ -391,11 +410,7 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
 }
 
 void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
-
-    Program pb = getProgramBuilderWithVariants(variant, variant, variant);
-    pb.setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
-      .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE,
-              { mUniformInterfaceBlock.getName().data(), mUniformInterfaceBlock.getName().size() });
+    Program pb{ getProgramBuilderWithVariants(variant, variant, variant) };
 
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 
@@ -407,7 +422,7 @@ Program FMaterial::getProgramBuilderWithVariants(
         Variant variant,
         Variant vertexVariant,
         Variant fragmentVariant) const noexcept {
-    const ShaderModel sm = mEngine.getDriver().getShaderModel();
+    const ShaderModel sm = mEngine.getShaderModel();
     const bool isNoop = mEngine.getBackend() == Backend::NOOP;
 
     /*
@@ -419,7 +434,7 @@ Program FMaterial::getProgramBuilderWithVariants(
     UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(vsBuilder, sm,
             vertexVariant, ShaderType::VERTEX);
 
-    ASSERT_POSTCONDITION(isNoop || (vsOK && vsBuilder.size() > 0),
+    ASSERT_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()),
             "The material '%s' has not been compiled to include the required "
             "GLSL or SPIR-V chunks for the vertex shader (variant=0x%x, filtered=0x%x).",
             mName.c_str(), variant.key, vertexVariant.key);
@@ -433,20 +448,22 @@ Program FMaterial::getProgramBuilderWithVariants(
     UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(fsBuilder, sm,
             fragmentVariant, ShaderType::FRAGMENT);
 
-    ASSERT_POSTCONDITION(isNoop || (fsOK && fsBuilder.size() > 0),
+    ASSERT_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()),
             "The material '%s' has not been compiled to include the required "
             "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filtered=0x%x).",
             mName.c_str(), variant.key, fragmentVariant.key);
 
-    Program pb;
-    pb.diagnostics(mName,
-              [this, variant](io::ostream& out) -> io::ostream& {
-                  return out << mName.c_str_safe()
-                             << ", variant=(" << io::hex << variant.key << io::dec << ")";
-              })
-            .withVertexShader(vsBuilder.data(), vsBuilder.size())
-            .withFragmentShader(fsBuilder.data(), fsBuilder.size());
-    return pb;
+    Program program;
+    program.shader(ShaderType::VERTEX, vsBuilder.data(), vsBuilder.size())
+           .shader(ShaderType::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+           .uniformBlockBindings(mUniformBlockBindings)
+           .diagnostics(mName,
+                    [this, variant](io::ostream& out) -> io::ostream& {
+                        return out << mName.c_str_safe()
+                                   << ", variant=(" << io::hex << variant.key << io::dec << ")";
+                    });
+
+    return program;
 }
 
 void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {

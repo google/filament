@@ -21,6 +21,7 @@ set(SOURCES
 
 add_library(meshoptimizer STATIC ${SOURCES})
 target_include_directories(meshoptimizer INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set_target_properties(meshoptimizer PROPERTIES FOLDER ThirdParty)
 
 if(MSVC)
 	target_compile_options(meshoptimizer PRIVATE /W4 /WX)

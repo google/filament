@@ -40,7 +40,7 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 OpenGLContext::OpenGLContext() noexcept {
     state.vao.p = &mDefaultVAO;
 
-    // There query work with all GL/GLES versions!
+    // These queries work with all GL/GLES versions!
     state.vendor   = (char const*)glGetString(GL_VENDOR);
     state.renderer = (char const*)glGetString(GL_RENDERER);
     state.version  = (char const*)glGetString(GL_VERSION);
@@ -55,25 +55,55 @@ OpenGLContext::OpenGLContext() noexcept {
 
     queryOpenGLVersion(&state.major, &state.minor);
 
+    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
+    glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &gets.max_texture_image_units);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
+
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
-        // This works on all versions of GLES
-        if (state.major == 3 && state.minor >= 0) {
-            mShaderModel = ShaderModel::MOBILE;
-        }
-        if (state.major == 3 && state.minor >= 1) {
-            features.multisample_texture = true;
-        }
         initExtensionsGLES();
+        if (state.major == 3) {
+            assert_invariant(gets.max_texture_image_units >= 16);
+            if (state.minor >= 0) {
+                mShaderModel = ShaderModel::MOBILE;
+            }
+            if (state.minor >= 1) {
+                features.multisample_texture = true;
+                // figure out our feature level
+                if (gets.max_texture_image_units >= 31 &&
+                    ext.EXT_texture_cube_map_array) {
+                    mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
+                }
+            }
+        }
     } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // OpenGL version
-        if (state.major == 4 && state.minor >= 1) {
-            mShaderModel = ShaderModel::DESKTOP;
+        initExtensionsGL();
+        if (state.major == 4) {
+            if (state.minor >= 1) {
+                mShaderModel = ShaderModel::DESKTOP;
+            }
+            if (state.minor >= 3) {
+                // figure out our feature level
+                if (gets.max_texture_image_units >= 31) {
+                    // cubemap arrays are available as of OpenGL 4.0
+                    mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
+                }
+            }
+            features.multisample_texture = true;
         }
-        features.multisample_texture = true;
         // feedback loops are allowed on GL desktop as long as writes are disabled
         bugs.allow_read_only_ancillary_feedback_loop = true;
-        initExtensionsGL();
+        assert_invariant(gets.max_texture_image_units >= 16);
     }
+
+#ifdef GL_EXT_texture_filter_anisotropic
+    if (ext.EXT_texture_filter_anisotropic) {
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);
+    }
+#endif
 
     /*
      * Figure out which driver bugs we need to workaround
@@ -192,18 +222,6 @@ OpenGLContext::OpenGLContext() noexcept {
     }
     flush(slog.v);
 
-    // now we can query getter and features
-    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
-    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
-    glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
-    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
-#ifdef GL_EXT_texture_filter_anisotropic
-    if (ext.EXT_texture_filter_anisotropic) {
-        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);
-    }
-#endif
-
     assert_invariant(gets.max_draw_buffers >= 4); // minspec
 
 #ifndef NDEBUG
@@ -213,6 +231,7 @@ OpenGLContext::OpenGLContext() noexcept {
             << "GL_MAX_SAMPLES = " << gets.max_samples << '\n'
             << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = " << gets.max_anisotropy << '\n'
             << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << '\n'
+            << "GL_MAX_TEXTURE_IMAGE_UNITS = " << gets.max_texture_image_units << '\n'
             << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment << '\n'
             ;
     flush(slog.v);
@@ -328,18 +347,18 @@ void OpenGLContext::initExtensionsGLES() noexcept {
 #if !defined(__EMSCRIPTEN__)
     ext.EXT_texture_compression_etc2 = true;
 #endif
-    ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
+    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = exts.has("GL_KHR_debug"sv);
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
     ext.QCOM_tiled_rendering = exts.has("GL_QCOM_tiled_rendering"sv);
-    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
-    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
     ext.WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
     ext.WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
-    ext.WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
     // ES 3.2 implies EXT_color_buffer_float
     if (state.major >= 3 && state.minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -371,6 +390,8 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
     ext.EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
     ext.EXT_texture_compression_etc2 = exts.has("GL_ARB_ES3_compatibility"sv);
+    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
+    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
@@ -378,8 +399,6 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
-    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
-    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {

@@ -210,6 +210,7 @@ struct CameraInfo {
     math::mat4f model;              // camera model matrix
     math::mat4f view;               // camera view matrix (inverse(model))
     math::mat4 worldOrigin;         // world origin transform (already applied to model and view)
+    math::float4 clipTransfrom{1,1,0,0}; // clip-space transform, only for VERTEX_DOMAIN_DEVICE
     float zn{};                     // distance (positive) to the near plane
     float zf{};                     // distance (positive) to the far plane
     float ev100{};                  // exposure

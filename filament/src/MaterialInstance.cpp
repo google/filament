@@ -253,6 +253,38 @@ void MaterialInstance::setDepthCulling(bool enable) noexcept {
     upcast(this)->setDepthCulling(enable);
 }
 
+void MaterialInstance::setStencilWrite(bool enable) noexcept {
+    upcast(this)->setStencilWrite(enable);
+}
+
+void MaterialInstance::setStencilCompareFunction(StencilCompareFunc func, StencilFace face) noexcept {
+    upcast(this)->setStencilCompareFunction(func, face);
+}
+
+void MaterialInstance::setStencilOpStencilFail(StencilOperation op, StencilFace face) noexcept {
+    upcast(this)->setStencilOpStencilFail(op, face);
+}
+
+void MaterialInstance::setStencilOpDepthFail(StencilOperation op, StencilFace face) noexcept {
+    upcast(this)->setStencilOpDepthFail(op, face);
+}
+
+void MaterialInstance::setStencilOpDepthStencilPass(StencilOperation op, StencilFace face) noexcept {
+    upcast(this)->setStencilOpDepthStencilPass(op, face);
+}
+
+void MaterialInstance::setStencilReferenceValue(uint8_t value, StencilFace face) noexcept {
+    upcast(this)->setStencilReferenceValue(value, face);
+}
+
+void MaterialInstance::setStencilReadMask(uint8_t readMask, StencilFace face) noexcept {
+    upcast(this)->setStencilReadMask(readMask, face);
+}
+
+void MaterialInstance::setStencilWriteMask(uint8_t writeMask, StencilFace face) noexcept {
+    upcast(this)->setStencilWriteMask(writeMask, face);
+}
+
 MaterialInstance* MaterialInstance::duplicate(MaterialInstance const* other, const char* name) noexcept {
     return FMaterialInstance::duplicate(upcast(other), name);
 }

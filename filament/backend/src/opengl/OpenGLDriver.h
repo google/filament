@@ -24,7 +24,7 @@
 #include "private/backend/AcquiredImage.h"
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include "backend/TargetBufferInfo.h"
 

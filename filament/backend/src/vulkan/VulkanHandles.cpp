@@ -68,7 +68,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
     // Output a warning because it's okay to encounter empty blobs, but it's not okay to use
     // this program handle in a draw call.
     if (missing) {
-        utils::slog.w << "Missing SPIR-V shader: " << builder.getName().c_str() << utils::io::endl;
+        utils::slog.w << "Missing SPIR-V shader: " << this->name.c_str() << utils::io::endl;
         return;
     }
 

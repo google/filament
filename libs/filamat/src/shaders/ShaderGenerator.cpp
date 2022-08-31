@@ -173,7 +173,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
         VertexDomain vertexDomain) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return createPostProcessVertexProgram(shaderModel, targetApi,
-                targetLanguage, material, variant.key, material.samplerBindings);
+                targetLanguage, material, variant.key);
     }
 
     io::sstream vs;
@@ -181,7 +181,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
 
-    cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
+    cg.generateProlog(vs, ShaderType::VERTEX, material);
 
     cg.generateQualityDefine(vs, material.quality);
 
@@ -212,8 +212,17 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER",
             useOptimizedDepthVertexShader);
 
+    // material defines
     CodeGenerator::generateDefine(vs, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
+
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_INSTANCES", material.instanced);
+
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
+            material.vertexDomainDeviceJittered);
+
+    CodeGenerator::generateDefine(vs, "MATERIAL_HAS_TRANSPARENT_SHADOW",
+            material.hasTransparentShadow);
 
     CodeGenerator::generateDefine(vs, "VARIANT_HAS_DIRECTIONAL_LIGHTING",
             litVariants && variant.hasDirectionalLighting());
@@ -299,14 +308,14 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         Interpolation interpolation) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return createPostProcessFragmentProgram(shaderModel, targetApi, targetLanguage, material,
-                variant.key, material.samplerBindings);
+                variant.key);
     }
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
 
     io::sstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT, material.hasExternalSamplers);
+    cg.generateProlog(fs, ShaderType::FRAGMENT, material);
 
     cg.generateQualityDefine(fs, material.quality);
 
@@ -364,8 +373,15 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     // lighting variants
     bool litVariants = lit || material.hasShadowMultiplier;
 
+    // material defines
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
+
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_INSTANCES", material.instanced);
+
+    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
+            material.vertexDomainDeviceJittered);
+
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_TRANSPARENT_SHADOW",
             material.hasTransparentShadow);
 
@@ -383,9 +399,6 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
             filament::Variant::isVSMVariant(variant));
     CodeGenerator::generateDefine(fs, "VARIANT_HAS_SSR",
             filament::Variant::isSSRVariant(variant));
-
-    // material defines
-    CodeGenerator::generateDefine(fs, "MATERIAL_HAS_INSTANCES", material.instanced);
 
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY",
             material.hasDoubleSidedCapability);
@@ -517,13 +530,12 @@ void ShaderGenerator::fixupExternalSamplers(ShaderModel sm,
     }
 }
 
-std::string ShaderGenerator::createPostProcessVertexProgram(
-        ShaderModel sm, MaterialBuilder::TargetApi targetApi,
-        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-        const filament::Variant::type_t variantKey, SamplerBindingMap const& samplerBindingMap) const noexcept {
+std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialInfo const& material, const filament::Variant::type_t variantKey) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream vs;
-    cg.generateProlog(vs, ShaderType::VERTEX, false);
+    cg.generateProlog(vs, ShaderType::VERTEX, material);
 
     cg.generateQualityDefine(vs, material.quality);
 
@@ -558,13 +570,12 @@ std::string ShaderGenerator::createPostProcessVertexProgram(
     return vs.c_str();
 }
 
-std::string ShaderGenerator::createPostProcessFragmentProgram(
-        ShaderModel sm, MaterialBuilder::TargetApi targetApi,
-        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-        uint8_t variant, const SamplerBindingMap& samplerBindingMap) const noexcept {
+std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialInfo const& material, uint8_t variant) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT, false);
+    cg.generateProlog(fs, ShaderType::FRAGMENT, material);
 
     cg.generateQualityDefine(fs, material.quality);
 

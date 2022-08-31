@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "EngineEnums.h"
 
 namespace filament {
 
@@ -30,13 +31,13 @@ class SibGenerator {
 public:
     static SamplerInterfaceBlock const& getPerViewSib(Variant variant) noexcept;
     static SamplerInterfaceBlock const& getPerRenderPrimitiveMorphingSib(Variant variant) noexcept;
-    static SamplerInterfaceBlock const* getSib(uint8_t bindingPoint, Variant variant) noexcept;
+    static SamplerInterfaceBlock const* getSib(filament::BindingPoints bindingPoint, Variant variant) noexcept;
     // When adding a sampler block here, make sure to also update
     //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
 };
 
 struct PerViewSib {
-    // indices of each samplers in this SamplerInterfaceBlock (see: getPerViewSib())
+    // indices of each sampler in this SamplerInterfaceBlock (see: getPerViewSib())
     static constexpr size_t SHADOW_MAP     = 0;     // user defined (1024x1024) DEPTH, array
     static constexpr size_t FROXELS        = 1;     // 64x2048, RG16 {index, count, reserved}
     static constexpr size_t IBL_DFG_LUT    = 2;     // user defined (128x128), RGB16F

@@ -86,6 +86,8 @@ struct FFilamentInstance : public FilamentInstance {
     const char* getSkinNameAt(size_t skinIndex) const noexcept;
     size_t getJointCountAt(size_t skinIndex) const noexcept;
     const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
+    void attachSkin(size_t skinIndex, utils::Entity target) noexcept;
+    void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
     void applyMaterialVariant(size_t variantIndex) noexcept;
 };
 

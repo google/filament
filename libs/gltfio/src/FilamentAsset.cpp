@@ -105,45 +105,6 @@ void FFilamentAsset::createAnimators() {
     }
 }
 
-size_t FFilamentAsset::getSkinCount() const noexcept {
-    return mSkins.size();
-}
-
-const char* FFilamentAsset::getSkinNameAt(size_t skinIndex) const noexcept {
-    if (mSkins.size() <= skinIndex) {
-        return nullptr;
-    }
-    return mSkins[skinIndex].name.c_str();
-}
-
-size_t FFilamentAsset::getJointCountAt(size_t skinIndex) const noexcept {
-    if (mSkins.size() <= skinIndex) {
-        return 0;
-    }
-    return mSkins[skinIndex].joints.size();
-}
-
-const utils::Entity* FFilamentAsset::getJointsAt(size_t skinIndex) const noexcept {
-    if (mSkins.size() <= skinIndex) {
-        return nullptr;
-    }
-    return mSkins[skinIndex].joints.data();
-}
-
-void FFilamentAsset::attachSkin(size_t skinIndex, Entity target) noexcept {
-    if (UTILS_UNLIKELY(mSkins.size() <= skinIndex || target.isNull())) {
-        return;
-    }
-    mSkins[skinIndex].targets.insert(target);
-}
-
-void FFilamentAsset::detachSkin(size_t skinIndex, Entity target) noexcept {
-    if (UTILS_UNLIKELY(mSkins.size() <= skinIndex || target.isNull())) {
-        return;
-    }
-    mSkins[skinIndex].targets.erase(target);
-}
-
 const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         size_t targetIndex) const noexcept {
     if (!mResourcesLoaded) {
@@ -185,7 +146,7 @@ void FFilamentAsset::applyMaterialVariant(size_t variantIndex) noexcept {
     const std::vector<VariantMapping>& mappings = mVariants[variantIndex].mappings;
     RenderableManager& rm = mEngine->getRenderableManager();
     for (const auto& mapping : mappings) {
-        auto instance = rm.getInstance(mapping.renderable);
+        RenderableManager::Instance instance = rm.getInstance(mapping.renderable);
         rm.setMaterialInstanceAt(instance, mapping.primitiveIndex, mapping.material);
     }
 }
@@ -204,7 +165,6 @@ void FFilamentAsset::releaseSourceData() noexcept {
     mMatInstanceCache = {};
     mMeshCache = {};
     mResourceUris = {};
-    mNodeMap = {};
     mPrimitives = {};
     mBufferSlots = {};
     mTextureSlots = {};
@@ -293,8 +253,12 @@ void FFilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entiti
     }
 }
 
-void FilamentAsset::detachFilamentComponents() {
+void FilamentAsset::detachFilamentComponents() noexcept {
     upcast(this)->detachFilamentComponents();
+}
+
+bool FilamentAsset::areFilamentComponentsDetached() const noexcept {
+    return upcast(this)->mDetachedFilamentComponents;
 }
 
 void FilamentAsset::detachMaterialInstances() {
@@ -395,30 +359,6 @@ const char* FilamentAsset::getExtras(Entity entity) const noexcept {
 
 Animator* FilamentAsset::getAnimator() const noexcept {
     return upcast(this)->getAnimator();
-}
-
-size_t FilamentAsset::getSkinCount() const noexcept {
-    return upcast(this)->getSkinCount();
-}
-
-const char* FilamentAsset::getSkinNameAt(size_t skinIndex) const noexcept {
-    return upcast(this)->getSkinNameAt(skinIndex);
-}
-
-size_t FilamentAsset::getJointCountAt(size_t skinIndex) const noexcept {
-    return upcast(this)->getJointCountAt(skinIndex);
-}
-
-const utils::Entity* FilamentAsset::getJointsAt(size_t skinIndex) const noexcept {
-    return upcast(this)->getJointsAt(skinIndex);
-}
-
-void FilamentAsset::attachSkin(size_t skinIndex, Entity target) noexcept {
-    upcast(this)->attachSkin(skinIndex, target);
-}
-
-void FilamentAsset::detachSkin(size_t skinIndex, Entity target) noexcept {
-    upcast(this)->detachSkin(skinIndex, target);
 }
 
 const char* FilamentAsset::getMorphTargetNameAt(utils::Entity entity,

@@ -60,6 +60,14 @@ static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
 static constexpr size_t CONFIG_BINDING_COUNT = 12;  // This is guaranteed by OpenGL ES.
 
 /**
+ * Defines the backend's feature levels.
+ */
+enum class FeatureLevel : uint8_t {
+    FEATURE_LEVEL_1 = 1,  //!< OpenGL ES 3.0 features (default)
+    FEATURE_LEVEL_2       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
+};
+
+/**
  * Selects which driver a particular Engine should use.
  */
 enum class Backend : uint8_t {
@@ -645,10 +653,6 @@ enum class TextureCubemapFace : uint8_t {
     NEGATIVE_Z = 5, //!< -z face
 };
 
-inline constexpr int operator +(TextureCubemapFace rhs) noexcept {
-    return int(rhs);
-}
-
 //! Sampler Wrap mode
 enum class SamplerWrapMode : uint8_t {
     CLAMP_TO_EDGE,      //!< clamp-to-edge. The edge of the texture extends to infinity.
@@ -757,6 +761,13 @@ enum class StencilOperation : uint8_t {
     DECR,                   //!< Decrements the current value. Clamps to 0.
     DECR_WRAP,              //!< Decrements the current value. Wraps value to the maximum representable unsigned value when decrementing a value of zero.
     INVERT,                 //!< Bitwise inverts the current value.
+};
+
+//! stencil faces
+enum class StencilFace : uint8_t {
+    FRONT               = 0x1,              //!< Update stencil state for front-facing polygons.
+    BACK                = 0x2,              //!< Update stencil state for back-facing polygons.
+    FRONT_AND_BACK      = FRONT | BACK,     //!< Update stencil state for all polygons.
 };
 
 //! Stream for external textures
@@ -876,17 +887,23 @@ enum ShaderType : uint8_t {
     VERTEX = 0,
     FRAGMENT = 1
 };
-static constexpr size_t PIPELINE_STAGE_COUNT = 2;
 
-struct ShaderStageFlags {
-    bool vertex : 1;
-    bool fragment : 1;
-    bool hasShaderType(ShaderType type) const {
-        return (vertex && type == ShaderType::VERTEX) ||
-               (fragment && type == ShaderType::FRAGMENT);
-    }
+static constexpr size_t PIPELINE_STAGE_COUNT = 2;
+enum class ShaderStageFlags : uint8_t {
+    NONE        =    0,
+    VERTEX      =    0x1,
+    FRAGMENT    =    0x2,
+    ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT
 };
-static constexpr ShaderStageFlags ALL_SHADER_STAGE_FLAGS = { true, true };
+
+static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderType type) noexcept {
+    switch (type) {
+        case VERTEX:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
+        case FRAGMENT:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::FRAGMENT));
+    }
+}
 
 /**
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
@@ -1023,11 +1040,16 @@ enum class Workaround : uint16_t {
 
 } // namespace filament::backend
 
+template<> struct utils::EnableBitMaskOperators<filament::backend::ShaderStageFlags>
+        : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
-
+template<> struct utils::EnableBitMaskOperators<filament::backend::StencilFace>
+        : public std::true_type {};
+template<> struct utils::EnableIntegerOperators<filament::backend::TextureCubemapFace>
+        : public std::true_type {};
 
 #if !defined(NDEBUG)
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferUsage usage);

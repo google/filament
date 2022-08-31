@@ -208,7 +208,7 @@ void FTexture::setImage(FEngine& engine, size_t level,
         uint32_t width, uint32_t height, uint32_t depth,
         FTexture::PixelBufferDescriptor&& buffer) const {
 
-    auto validateTarget = [](SamplerType sampler) -> bool {
+    auto validateTarget = [&engine](SamplerType sampler) -> bool {
         switch (sampler) {
             case SamplerType::SAMPLER_2D:
             case SamplerType::SAMPLER_3D:
@@ -218,7 +218,7 @@ void FTexture::setImage(FEngine& engine, size_t level,
             case SamplerType::SAMPLER_EXTERNAL:
                 return false;
             case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-                return false; // feature level 2
+                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_2);
         }
     };
 
@@ -248,31 +248,31 @@ void FTexture::setImage(FEngine& engine, size_t level,
 
     ASSERT_PRECONDITION(buffer.buffer, "Data buffer is nullptr.");
 
-    uint32_t textureDepthOrLayers;
+    uint32_t effectiveTextureDepthOrLayers;
     switch (mTarget) {
         case SamplerType::SAMPLER_EXTERNAL:
             // can't happen by construction, fallthrough...
         case SamplerType::SAMPLER_2D:
             assert_invariant(mDepth == 1);
-            textureDepthOrLayers = mDepth;
+            effectiveTextureDepthOrLayers = 1;
             break;
         case SamplerType::SAMPLER_3D:
-            textureDepthOrLayers = valueForLevel(level, mDepth);
+            effectiveTextureDepthOrLayers = valueForLevel(level, mDepth);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
-            textureDepthOrLayers = mDepth;
+            effectiveTextureDepthOrLayers = mDepth;
             break;
         case SamplerType::SAMPLER_CUBEMAP:
-            textureDepthOrLayers = 6;
+            effectiveTextureDepthOrLayers = 6;
             break;
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            textureDepthOrLayers = mDepth * 6;
+            effectiveTextureDepthOrLayers = mDepth * 6;
             break;
     }
 
-    ASSERT_PRECONDITION(zoffset + depth <= textureDepthOrLayers,
+    ASSERT_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers,
             "zoffset (%u) + depth (%u) > texture depth (%u) at level (%u)",
-            unsigned(zoffset), unsigned(depth), textureDepthOrLayers, unsigned(level));
+            unsigned(zoffset), unsigned(depth), effectiveTextureDepthOrLayers, unsigned(level));
 
     engine.getDriverApi().update3DImage(mHandle,
             uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
@@ -315,14 +315,27 @@ void FTexture::setImage(FEngine& engine, size_t level,
     assert_invariant(w == h);
     const size_t faceSize = PixelBufferDescriptor::computeDataSize(buffer.format, buffer.type,
             buffer.stride ? buffer.stride : w, h, buffer.alignment);
-    UTILS_NOUNROLL
-    for (size_t face = 0; face < 6; face++) {
-        engine.getDriverApi().update3DImage(mHandle, uint8_t(level), 0, 0, face, w, h, 1, {
-                        (char*)buffer.buffer + faceOffsets[face],
-                        faceSize, buffer.format, buffer.type, buffer.alignment,
-                        buffer.left, buffer.top, buffer.stride });
+
+    if (faceOffsets[0] == 0 &&
+        faceOffsets[1] == 1 * faceSize &&
+        faceOffsets[2] == 2 * faceSize &&
+        faceOffsets[3] == 3 * faceSize &&
+        faceOffsets[4] == 4 * faceSize &&
+        faceOffsets[5] == 5 * faceSize) {
+        // in this special case, we can upload all 6 faces in one call
+        engine.getDriverApi().update3DImage(mHandle, uint8_t(level),
+                0, 0, 0, w, h, 6, std::move(buffer));
+    } else {
+        UTILS_NOUNROLL
+        for (size_t face = 0; face < 6; face++) {
+            engine.getDriverApi().update3DImage(mHandle, uint8_t(level), 0, 0, face, w, h, 1, {
+                    (char*)buffer.buffer + faceOffsets[face],
+                    faceSize, buffer.format, buffer.type, buffer.alignment,
+                    buffer.left, buffer.top, buffer.stride });
+        }
+        engine.getDriverApi().queueCommand(
+                make_copyable_function([buffer = std::move(buffer)]() {}));
     }
-    engine.getDriverApi().queueCommand(make_copyable_function([buffer = std::move(buffer)]() {}));
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {

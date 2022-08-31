@@ -125,6 +125,7 @@ public:
         GLint max_renderbuffer_size;
         GLint max_samples;
         GLint max_uniform_block_size;
+        GLint max_texture_image_units;
         GLint uniform_buffer_offset_alignment;
     } gets = {};
 
@@ -150,6 +151,7 @@ public:
         bool EXT_texture_compression_etc2 = false;
         bool EXT_texture_compression_s3tc = false;
         bool EXT_texture_compression_s3tc_srgb = false;
+        bool EXT_texture_cube_map_array = false;
         bool EXT_texture_filter_anisotropic = false;
         bool EXT_texture_sRGB = false;
         bool GOOGLE_cpp_style_line_directive = false;
@@ -210,7 +212,8 @@ public:
         // GL and Vulkan and probably Metal.
         bool allow_read_only_ancillary_feedback_loop = false;
 
-        // Some Adreno drivers would crash gl draw when there's uninitialized uniform array exists, even when the code using that uniform array is not called. it's needed to do an initialization to avoid it.
+        // Some Adreno drivers crash in glDrawXXX() when there's an uninitialized uniform block,
+        // even when the shader doesn't access it.
         bool enable_initialize_non_used_uniform_array = false;
     } bugs;
 
@@ -223,6 +226,8 @@ public:
         state.textures.units[state.textures.active].targets[index].texture_id = id;
     }
     void resetProgram() noexcept { state.program.use = 0; }
+
+    FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
     // Try to keep the State structure sorted by data-access patterns
     struct State {
@@ -343,6 +348,7 @@ public:
 
 private:
     ShaderModel mShaderModel = ShaderModel::MOBILE;
+    FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
             {   bugs.disable_glFlush,

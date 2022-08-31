@@ -390,8 +390,13 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         lightmapCube->mapFrustum(*mEngine, lightmapCamera);
         cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
-        // TODO: we need better timing or use SDL_GL_SetSwapInterval
-        SDL_Delay(16);
+        // Delay rendering for roughly one monitor refresh interval
+        // TODO: Use SDL_GL_SetSwapInterval for proper vsync
+        SDL_DisplayMode Mode;
+        int refreshIntervalMS = (SDL_GetDesktopDisplayMode(
+            SDL_GetWindowDisplayIndex(window->mWindow), &Mode) == 0 && 
+            Mode.refresh_rate != 0) ? round(1000.0 / Mode.refresh_rate) : 16;
+        SDL_Delay(refreshIntervalMS);
 
         Renderer* renderer = window->getRenderer();
 

@@ -29,9 +29,11 @@
 #include <filament/Options.h>
 #include <filament/TextureSampler.h>
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SibGenerator.h>
 
 #include <math/mat4.h>
+
 
 namespace filament {
 
@@ -80,6 +82,7 @@ void PerViewUniforms::prepareCamera(const CameraInfo& camera) noexcept {
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
     s.clipFromWorldMatrix = clipFromWorld;    // projection * view
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
+    s.clipTransform = camera.clipTransfrom;
     s.cameraPosition = float3{ camera.getPosition() };
     s.worldOffset = camera.getWorldOffset();
     s.cameraFar = camera.zf;
@@ -366,8 +369,8 @@ void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
 }
 
 void PerViewUniforms::bind(backend::DriverApi& driver) noexcept {
-    driver.bindUniformBuffer(BindingPoints::PER_VIEW, mUniformBufferHandle);
-    driver.bindSamplers(BindingPoints::PER_VIEW, mSamplerGroupHandle);
+    driver.bindUniformBuffer(+BindingPoints::PER_VIEW, mUniformBufferHandle);
+    driver.bindSamplers(+BindingPoints::PER_VIEW, mSamplerGroupHandle);
 }
 
 void PerViewUniforms::unbindSamplers() noexcept {

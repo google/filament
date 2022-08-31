@@ -30,126 +30,130 @@ static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
         "Changing CONFIG_MAX_SHADOW_CASCADES affects PerView size and breaks materials.");
 
 UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
-    // IMPORTANT NOTE: Respect std140 layout, don't update without updating Engine::PerViewUib
+
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerViewUib::_name)
-            // transforms
-            .add("viewFromWorldMatrix",     UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("worldFromViewMatrix",     UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("clipFromViewMatrix",      UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("viewFromClipMatrix",      UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("clipFromWorldMatrix",     UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("worldFromClipMatrix",     UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add({
+            { "viewFromWorldMatrix",    0, UniformInterfaceBlock::Type::MAT4,   Precision::HIGH },
+            { "worldFromViewMatrix",    0, UniformInterfaceBlock::Type::MAT4,   Precision::HIGH },
+            { "clipFromViewMatrix",     0, UniformInterfaceBlock::Type::MAT4,   Precision::HIGH },
+            { "viewFromClipMatrix",     0, UniformInterfaceBlock::Type::MAT4,   Precision::HIGH },
+            { "clipFromWorldMatrix",    0, UniformInterfaceBlock::Type::MAT4,   Precision::HIGH },
+            { "worldFromClipMatrix",    0, UniformInterfaceBlock::Type::MAT4,   Precision::HIGH },
+            { "clipTransform",          0, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH },
 
-            .add("clipControl",             UniformInterfaceBlock::Type::FLOAT2)
-            .add("time",                    UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("temporalNoise",           UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("userTime",                UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            { "clipControl",            0, UniformInterfaceBlock::Type::FLOAT2                  },
+            { "time",                   0, UniformInterfaceBlock::Type::FLOAT,  Precision::HIGH },
+            { "temporalNoise",          0, UniformInterfaceBlock::Type::FLOAT,  Precision::HIGH },
+            { "userTime",               0, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
             // values below should only be accessed in surface materials
             // ------------------------------------------------------------------------------------
 
-            .add("origin",                  UniformInterfaceBlock::Type::FLOAT2, Precision::HIGH)
-            .add("offset",                  UniformInterfaceBlock::Type::FLOAT2, Precision::HIGH)
-            .add("resolution",              UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            { "origin",                 0, UniformInterfaceBlock::Type::FLOAT2, Precision::HIGH },
+            { "offset",                 0, UniformInterfaceBlock::Type::FLOAT2, Precision::HIGH },
+            { "resolution",             0, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH },
 
-            .add("lodBias",                 UniformInterfaceBlock::Type::FLOAT)
-            .add("refractionLodOffset",     UniformInterfaceBlock::Type::FLOAT)
-            .add("padding1",                UniformInterfaceBlock::Type::FLOAT)
-            .add("padding2",                UniformInterfaceBlock::Type::FLOAT)
+            { "lodBias",                0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "refractionLodOffset",    0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "padding1",               0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "padding2",               0, UniformInterfaceBlock::Type::FLOAT                   },
 
-            .add("cameraPosition",          UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
-            .add("oneOverFarMinusNear",     UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("worldOffset",             UniformInterfaceBlock::Type::FLOAT3)
-            .add("nearOverFarMinusNear",    UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("cameraFar",               UniformInterfaceBlock::Type::FLOAT)
-            .add("exposure",                UniformInterfaceBlock::Type::FLOAT, Precision::HIGH) // high precision to work around #3602 (qualcomm)
-            .add("ev100",                   UniformInterfaceBlock::Type::FLOAT)
-            .add("needsAlphaChannel",       UniformInterfaceBlock::Type::FLOAT)
+            { "cameraPosition",         0, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH },
+            { "oneOverFarMinusNear",    0, UniformInterfaceBlock::Type::FLOAT,  Precision::HIGH },
+            { "worldOffset",            0, UniformInterfaceBlock::Type::FLOAT3                  },
+            { "nearOverFarMinusNear",   0, UniformInterfaceBlock::Type::FLOAT,  Precision::HIGH },
+            { "cameraFar",              0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "exposure",               0, UniformInterfaceBlock::Type::FLOAT,  Precision::HIGH }, // high precision to work around #3602 (qualcom),
+            { "ev100",                  0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "needsAlphaChannel",      0, UniformInterfaceBlock::Type::FLOAT                   },
 
             // AO
-            .add("aoSamplingQualityAndEdgeDistance", UniformInterfaceBlock::Type::FLOAT)
-            .add("aoBentNormals",           UniformInterfaceBlock::Type::FLOAT)
-            .add("aoReserved0",             UniformInterfaceBlock::Type::FLOAT)
-            .add("aoReserved1",             UniformInterfaceBlock::Type::FLOAT)
+            { "aoSamplingQualityAndEdgeDistance", 0, UniformInterfaceBlock::Type::FLOAT         },
+            { "aoBentNormals",          0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "aoReserved0",            0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "aoReserved1",            0, UniformInterfaceBlock::Type::FLOAT                   },
 
             // ------------------------------------------------------------------------------------
             // Dynamic Lighting [variant: DYN]
             // ------------------------------------------------------------------------------------
-            .add("zParams",                 UniformInterfaceBlock::Type::FLOAT4)
-            .add("fParams",                 UniformInterfaceBlock::Type::UINT3)
-            .add("lightChannels",           UniformInterfaceBlock::Type::UINT)
-            .add("froxelCountXY",           UniformInterfaceBlock::Type::FLOAT2)
+            { "zParams",                0, UniformInterfaceBlock::Type::FLOAT4                  },
+            { "fParams",                0, UniformInterfaceBlock::Type::UINT3                   },
+            { "lightChannels",          0, UniformInterfaceBlock::Type::UINT                    },
+            { "froxelCountXY",          0, UniformInterfaceBlock::Type::FLOAT2                  },
 
-            .add("iblLuminance",            UniformInterfaceBlock::Type::FLOAT)
-            .add("iblRoughnessOneLevel",    UniformInterfaceBlock::Type::FLOAT)
-            .add("iblSH",                   9, UniformInterfaceBlock::Type::FLOAT3)
+            { "iblLuminance",           0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "iblRoughnessOneLevel",   0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "iblSH",                  9, UniformInterfaceBlock::Type::FLOAT3                  },
 
             // ------------------------------------------------------------------------------------
             // Directional Lighting [variant: DIR]
             // ------------------------------------------------------------------------------------
-            .add("lightDirection",            UniformInterfaceBlock::Type::FLOAT3)
-            .add("padding0",                  UniformInterfaceBlock::Type::FLOAT)
-            .add("lightColorIntensity",       UniformInterfaceBlock::Type::FLOAT4)
-            .add("sun",                       UniformInterfaceBlock::Type::FLOAT4)
-            .add("lightFarAttenuationParams", UniformInterfaceBlock::Type::FLOAT2)
+            { "lightDirection",         0, UniformInterfaceBlock::Type::FLOAT3                  },
+            { "padding0",               0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "lightColorIntensity",    0, UniformInterfaceBlock::Type::FLOAT4                  },
+            { "sun",                    0, UniformInterfaceBlock::Type::FLOAT4                  },
+            { "lightFarAttenuationParams", 0, UniformInterfaceBlock::Type::FLOAT2               },
 
             // ------------------------------------------------------------------------------------
             // Directional light shadowing [variant: SRE | DIR]
             // ------------------------------------------------------------------------------------
-            .add("directionalShadows",      UniformInterfaceBlock::Type::UINT)
-            .add("ssContactShadowDistance", UniformInterfaceBlock::Type::FLOAT)
+            { "directionalShadows",     0, UniformInterfaceBlock::Type::UINT                    },
+            { "ssContactShadowDistance",0, UniformInterfaceBlock::Type::FLOAT                   },
 
-            .add("cascadeSplits",            UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
-            .add("cascades",                 UniformInterfaceBlock::Type::UINT)
-            .add("shadowBulbRadiusLs",       UniformInterfaceBlock::Type::FLOAT)
-            .add("shadowBias",               UniformInterfaceBlock::Type::FLOAT)
-            .add("shadowPenumbraRatioScale", UniformInterfaceBlock::Type::FLOAT)
-            .add("lightFromWorldMatrix",    4, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            { "cascadeSplits",          0, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH },
+            { "cascades",               0, UniformInterfaceBlock::Type::UINT                    },
+            { "shadowBulbRadiusLs",     0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "shadowBias",             0, UniformInterfaceBlock::Type::FLOAT                   },
+            { "shadowPenumbraRatioScale", 0, UniformInterfaceBlock::Type::FLOAT                 },
+            { "lightFromWorldMatrix",   4, UniformInterfaceBlock::Type::MAT4, Precision::HIGH   },
 
             // ------------------------------------------------------------------------------------
             // VSM shadows [variant: VSM]
             // ------------------------------------------------------------------------------------
-            .add("vsmExponent",             UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmDepthScale",           UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmLightBleedReduction",  UniformInterfaceBlock::Type::FLOAT)
-            .add("shadowSamplingType",      UniformInterfaceBlock::Type::UINT)
+            { "vsmExponent",             0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "vsmDepthScale",           0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "vsmLightBleedReduction",  0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "shadowSamplingType",      0, UniformInterfaceBlock::Type::UINT                   },
 
             // ------------------------------------------------------------------------------------
             // Fog [variant: FOG]
             // ------------------------------------------------------------------------------------
-            .add("fogStart",                UniformInterfaceBlock::Type::FLOAT)
-            .add("fogMaxOpacity",           UniformInterfaceBlock::Type::FLOAT)
-            .add("fogHeight",               UniformInterfaceBlock::Type::FLOAT)
-            .add("fogHeightFalloff",        UniformInterfaceBlock::Type::FLOAT)
-            .add("fogColor",                UniformInterfaceBlock::Type::FLOAT3)
-            .add("fogDensity",              UniformInterfaceBlock::Type::FLOAT)
-            .add("fogInscatteringStart",    UniformInterfaceBlock::Type::FLOAT)
-            .add("fogInscatteringSize",     UniformInterfaceBlock::Type::FLOAT)
-            .add("fogColorFromIbl",         UniformInterfaceBlock::Type::FLOAT)
-            .add("fogReserved0",            UniformInterfaceBlock::Type::FLOAT)
+            { "fogStart",                0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogMaxOpacity",           0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogHeight",               0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogHeightFalloff",        0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogColor",                0, UniformInterfaceBlock::Type::FLOAT3                 },
+            { "fogDensity",              0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogInscatteringStart",    0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogInscatteringSize",     0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogColorFromIbl",         0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "fogReserved0",            0, UniformInterfaceBlock::Type::FLOAT                  },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
             // ------------------------------------------------------------------------------------
-            .add("ssrReprojection",         UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("ssrUvFromViewMatrix",     UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("ssrThickness",            UniformInterfaceBlock::Type::FLOAT)
-            .add("ssrBias",                 UniformInterfaceBlock::Type::FLOAT)
-            .add("ssrDistance",             UniformInterfaceBlock::Type::FLOAT)
-            .add("ssrStride",               UniformInterfaceBlock::Type::FLOAT)
+            { "ssrReprojection",         0, UniformInterfaceBlock::Type::MAT4, Precision::HIGH  },
+            { "ssrUvFromViewMatrix",     0, UniformInterfaceBlock::Type::MAT4, Precision::HIGH  },
+            { "ssrThickness",            0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "ssrBias",                 0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "ssrDistance",             0, UniformInterfaceBlock::Type::FLOAT                  },
+            { "ssrStride",               0, UniformInterfaceBlock::Type::FLOAT                  },
 
             // bring PerViewUib to 2 KiB
-            .add("reserved", sizeof(PerViewUib::reserved)/16, UniformInterfaceBlock::Type::FLOAT4)
+            { "reserved", sizeof(PerViewUib::reserved)/16, UniformInterfaceBlock::Type::FLOAT4 }
+            })
             .build();
+
     return uib;
 }
 
 UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
     static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
             .name(PerRenderableUib::_name)
-            .add("data", 64, "PerRenderableData", sizeof(PerRenderableData))
+            .add({{ "data", 64, UniformInterfaceBlock::Type::STRUCT, {},
+                    "PerRenderableData", sizeof(PerRenderableData) }})
             .build();
     return uib;
 }
@@ -157,7 +161,8 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(LightsUib::_name)
-            .add("lights", CONFIG_MAX_LIGHT_COUNT, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add({{ "lights", CONFIG_MAX_LIGHT_COUNT,
+                    UniformInterfaceBlock::Type::MAT4, Precision::HIGH }})
             .build();
     return uib;
 }
@@ -165,7 +170,9 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(ShadowUib::_name)
-            .add("shadows", CONFIG_MAX_SHADOW_CASTING_SPOTS, "ShadowData", sizeof(ShadowUib::ShadowData))
+            .add({{ "shadows", CONFIG_MAX_SHADOW_CASTING_SPOTS,
+                    UniformInterfaceBlock::Type::STRUCT, {},
+                    "ShadowData", sizeof(ShadowUib::ShadowData) }})
             .build();
     return uib;
 }
@@ -173,7 +180,9 @@ UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerRenderableBoneUib::_name)
-            .add("bones", CONFIG_MAX_BONE_COUNT, "BoneData", sizeof(PerRenderableBoneUib::BoneData))
+            .add({{ "bones", CONFIG_MAX_BONE_COUNT,
+                     UniformInterfaceBlock::Type::STRUCT, {},
+                     "BoneData", sizeof(PerRenderableBoneUib::BoneData) }})
             .build();
     return uib;
 }
@@ -181,7 +190,8 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerRenderableMorphingUib::_name)
-            .add("weights", CONFIG_MAX_MORPH_TARGET_COUNT, UniformInterfaceBlock::Type::FLOAT4)
+            .add({{ "weights", CONFIG_MAX_MORPH_TARGET_COUNT,
+                    UniformInterfaceBlock::Type::FLOAT4 }})
             .build();
     return uib;
 }
@@ -189,7 +199,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcep
 UniformInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(FroxelRecordUib::_name)
-            .add("records", 1024, UniformInterfaceBlock::Type::UINT4, Precision::HIGH)
+            .add({{ "records", 1024, UniformInterfaceBlock::Type::UINT4, Precision::HIGH }})
             .build();
     return uib;
 }

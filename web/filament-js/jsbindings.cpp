@@ -391,6 +391,12 @@ class_<Engine>("Engine")
 
     .function("isAutomaticInstancingEnabled", &Engine::isAutomaticInstancingEnabled)
 
+    .function("getSupportedFeatureLevel", &Engine::getSupportedFeatureLevel)
+
+    .function("setActiveFeatureLevel", &Engine::setActiveFeatureLevel)
+
+    .function("getActiveFeatureLevel", &Engine::getActiveFeatureLevel)
+
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({
             const handle = window.filament_contextHandle;
@@ -606,7 +612,9 @@ class_<View>("View")
     .function("getSampleCount", &View::getSampleCount)
     .function("setRenderTarget", EMBIND_LAMBDA(void, (View* self, RenderTarget* renderTarget), {
         self->setRenderTarget(renderTarget);
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+    .function("setStencilBufferEnabled", &View::setStencilBufferEnabled)
+    .function("isStencilBufferEnabled", &View::isStencilBufferEnabled);
 
 /// Scene ::core class:: Flat container of renderables and lights.
 /// See also the [Engine] methods `createScene` and `destroyScene`.
@@ -1245,7 +1253,43 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setCullingMode", &MaterialInstance::setCullingMode)
     .function("setColorWrite", &MaterialInstance::setColorWrite)
     .function("setDepthWrite", &MaterialInstance::setDepthWrite)
-    .function("setDepthCulling", &MaterialInstance::setDepthCulling);
+    .function("setStencilWrite", &MaterialInstance::setStencilWrite)
+    .function("setDepthCulling", &MaterialInstance::setDepthCulling)
+    .function("setStencilCompareFunction", &MaterialInstance::setStencilCompareFunction)
+    .function("setStencilCompareFunction", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilCompareFunc func), {
+                self->setStencilCompareFunction(func, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilOpStencilFail", &MaterialInstance::setStencilOpStencilFail)
+    .function("setStencilOpStencilFail", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilOperation op), {
+                self->setStencilOpStencilFail(op, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilOpDepthFail", &MaterialInstance::setStencilOpDepthFail)
+    .function("setStencilOpDepthFail", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilOperation op), {
+                self->setStencilOpDepthFail(op, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilOpDepthStencilPass", &MaterialInstance::setStencilOpDepthStencilPass)
+    .function("setStencilOpDepthStencilPass", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::StencilOperation op), {
+                self->setStencilOpDepthStencilPass(op, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilReferenceValue", &MaterialInstance::setStencilReferenceValue)
+    .function("setStencilReferenceValue", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, uint8_t value), {
+                self->setStencilReferenceValue(value, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilReadMask", &MaterialInstance::setStencilReadMask)
+    .function("setStencilReadMask", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, uint8_t readMask), {
+                self->setStencilReadMask(readMask, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers())
+    .function("setStencilWriteMask", &MaterialInstance::setStencilWriteMask)
+    .function("setStencilWriteMask", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, uint8_t writeMask), {
+                self->setStencilWriteMask(writeMask, backend::StencilFace::FRONT_AND_BACK);
+            }), allow_raw_pointers());
 
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>()
@@ -1779,17 +1823,6 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return retval;
     }), allow_raw_pointers())
 
-    .function("getSkinNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
-        std::vector<std::string> names(self->getSkinCount());
-        for (size_t i = 0; i < names.size(); ++i) {
-            names[i] = self->getSkinNameAt(i);
-        }
-        return names;
-    }), allow_raw_pointers())
-
-    .function("attachSkin", &FilamentAsset::attachSkin)
-    .function("detachSkin", &FilamentAsset::detachSkin)
-
     .function("getBoundingBox", &FilamentAsset::getBoundingBox)
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getName(entity));
@@ -1810,7 +1843,18 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
     }), allow_raw_pointers())
     .function("getRoot", &FilamentInstance::getRoot)
     .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
-    .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
+    .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers())
+
+    .function("getSkinNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentInstance* self), {
+        std::vector<std::string> names(self->getSkinCount());
+        for (size_t i = 0; i < names.size(); ++i) {
+            names[i] = self->getSkinNameAt(i);
+        }
+        return names;
+    }), allow_raw_pointers())
+
+    .function("attachSkin", &FilamentInstance::attachSkin)
+    .function("detachSkin", &FilamentInstance::detachSkin);
 
 // These little wrappers exist to get around RTTI requirements in embind.
 
@@ -1846,20 +1890,12 @@ class_<AssetLoader>("gltfio$AssetLoader")
         return AssetLoader::create({ engine, materials.provider, names });
     }), allow_raw_pointers())
 
-    /// createAssetFromJson ::method::
+    /// createAsset ::method::
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     /// ::retval:: an instance of [FilamentAsset]
-    .function("_createAssetFromJson", EMBIND_LAMBDA(FilamentAsset*,
+    .function("_createAsset", EMBIND_LAMBDA(FilamentAsset*,
             (AssetLoader* self, BufferDescriptor buffer), {
-        return self->createAssetFromJson((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
-    }), allow_raw_pointers())
-
-    /// createAssetFromBinary ::method::
-    /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
-    /// ::retval:: an instance of [FilamentAsset]
-    .function("_createAssetFromBinary", EMBIND_LAMBDA(FilamentAsset*,
-            (AssetLoader* self, BufferDescriptor buffer), {
-        return self->createAssetFromBinary((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
+        return self->createAsset((const uint8_t*) buffer.bd->buffer, buffer.bd->size);
     }), allow_raw_pointers())
 
     /// createInstancedAsset ::method::

@@ -24,6 +24,8 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
+#include "private/backend/SamplerGroup.h"
+
 namespace filament::backend {
 
 struct VulkanProgram : public HwProgram {

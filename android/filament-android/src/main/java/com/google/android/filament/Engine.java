@@ -47,7 +47,7 @@ import com.google.android.filament.proguard.UsedByReflection;
  * <pre>
  * import com.google.android.filament.*
  *
- * Engin engine         = Engine.create();
+ * Engine engine        = Engine.create();
  * SwapChain swapChain  = engine.createSwapChain(nativeWindow);
  * Renderer renderer    = engine.createRenderer();
  * Scene scene          = engine.createScene();
@@ -107,6 +107,7 @@ import com.google.android.filament.proguard.UsedByReflection;
  */
 public class Engine {
     private static final Backend[] sBackendValues = Backend.values();
+    private static final FeatureLevel[] sFeatureLevelValues = FeatureLevel.values();
 
     private long mNativeObject;
 
@@ -140,6 +141,18 @@ public class Engine {
          */
         NOOP,
     }
+
+    /**
+     * Defines the backend's feature levels.
+     */
+    public enum FeatureLevel {
+        /** Reserved, don't use */
+        FEATURE_LEVEL_0,
+        /** OpenGL ES 3.0 features (default) */
+        FEATURE_LEVEL_1,
+        /** OpenGL ES 3.1 features + 31 textures units + cubemap arrays */
+        FEATURE_LEVEL_2
+    };
 
     private Engine(long nativeEngine) {
         mNativeObject = nativeEngine;
@@ -270,6 +283,50 @@ public class Engine {
     }
 
     /**
+     * Query the feature level supported by the selected backend.
+     *
+     * A specific feature level needs to be set before the corresponding features can be used.
+     *
+     * @return FeatureLevel supported the selected backend.
+     * @see #setActiveFeatureLevel
+     */
+    @NonNull
+    public FeatureLevel getSupportedFeatureLevel() {
+        return sFeatureLevelValues[(int) nGetSupportedFeatureLevel(getNativeObject())];
+    }
+
+    /**
+     * Activate all features of a given feature level. By default FeatureLevel::FEATURE_LEVEL_1 is
+     * active. The selected feature level must not be higher than the value returned by
+     * getActiveFeatureLevel() and it's not possible lower the active feature level.
+     *
+     * @param featureLevel the feature level to activate. If featureLevel is lower than
+     *                     getActiveFeatureLevel(), the current (higher) feature level is kept.
+     *                     If featureLevel is higher than getSupportedFeatureLevel(), an exception
+     *                     is thrown, or the program is terminated if exceptions are disabled.
+     *
+     * @return the active feature level.
+     *
+     * @see #getSupportedFeatureLevel
+     * @see #getActiveFeatureLevel
+     */
+    @NonNull
+    public FeatureLevel setActiveFeatureLevel(@NonNull FeatureLevel featureLevel) {
+        return sFeatureLevelValues[(int) nSetActiveFeatureLevel(getNativeObject(), featureLevel.ordinal())];
+    }
+
+    /**
+     * Returns the currently active feature level.
+     * @return currently active feature level
+     * @see #getSupportedFeatureLevel
+     * @see #setActiveFeatureLevel
+     */
+    @NonNull
+    public FeatureLevel getActiveFeatureLevel() {
+        return sFeatureLevelValues[(int) nGetActiveFeatureLevel(getNativeObject())];
+    }
+
+    /**
      * Enables or disables automatic instancing of render primitives. Instancing of render primitive
      * can greatly reduce CPU overhead but requires the instanced primitives to be identical
      * (i.e. use the same geometry) and use the same MaterialInstance. If it is known that the
@@ -289,7 +346,7 @@ public class Engine {
 
     /**
      * @return true if automatic instancing is enabled, false otherwise.
-     * @see setAutomaticInstancingEnabled
+     * @see #setAutomaticInstancingEnabled
      */
     public boolean isAutomaticInstancingEnabled() {
         return nIsAutomaticInstancingEnabled(getNativeObject());
@@ -760,4 +817,7 @@ public class Engine {
     private static native long nGetEntityManager(long nativeEngine);
     private static native void nSetAutomaticInstancingEnabled(long nativeEngine, boolean enable);
     private static native boolean nIsAutomaticInstancingEnabled(long nativeEngine);
+    private static native int nGetSupportedFeatureLevel(long nativeEngine);
+    private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);
+    private static native int nGetActiveFeatureLevel(long nativeEngine);
 }

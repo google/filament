@@ -21,7 +21,7 @@
 #include "OpenGLDriver.h"
 
 #include "private/backend/Driver.h"
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -72,10 +72,6 @@ public:
     } gl; // 12 bytes
 
 private:
-    static constexpr uint8_t TEXTURE_UNIT_COUNT = OpenGLContext::MAX_TEXTURE_UNIT_COUNT;
-    static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(Program::Shader::VERTEX);
-    static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(Program::Shader::FRAGMENT);
-
     static void compileShaders(OpenGLContext& context,
             Program::ShaderSource shadersSource,
             GLuint shaderIds[Program::SHADER_TYPE_COUNT],
@@ -85,7 +81,7 @@ private:
 
     static bool checkProgramStatus(const char* name,
             GLuint& program, GLuint shaderIds[Program::SHADER_TYPE_COUNT],
-            std::array<utils::CString, 2> const& shaderSourceCode) noexcept;
+            std::array<utils::CString, Program::SHADER_TYPE_COUNT> const& shaderSourceCode) noexcept;
 
     void initialize(OpenGLContext& context);
 

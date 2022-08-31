@@ -27,6 +27,7 @@
 
 #include <math/scalar.h>
 
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 
 #include <filament/MaterialInstance.h>
@@ -55,10 +56,10 @@ public:
 
     void use(FEngine::DriverApi& driver) const {
         if (mUbHandle) {
-            driver.bindUniformBuffer(BindingPoints::PER_MATERIAL_INSTANCE, mUbHandle);
+            driver.bindUniformBuffer(+BindingPoints::PER_MATERIAL_INSTANCE, mUbHandle);
         }
         if (mSbHandle) {
-            driver.bindSamplers(BindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);
+            driver.bindSamplers(+BindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);
         }
     }
 
@@ -91,6 +92,8 @@ public:
 
     bool getDepthWrite() const noexcept { return mDepthWrite; }
 
+    backend::StencilState getStencilState() const noexcept { return mStencilState; }
+
     TransparencyMode getTransparencyMode() const noexcept { return mTransparencyMode; }
 
     backend::RasterState::DepthFunc getDepthFunc() const noexcept { return mDepthFunc; }
@@ -118,7 +121,72 @@ public:
 
     void setDepthWrite(bool enable) noexcept { mDepthWrite = enable; }
 
+    void setStencilWrite(bool enable) noexcept { mStencilState.stencilWrite = enable; }
+
     void setDepthCulling(bool enable) noexcept;
+
+    void setStencilCompareFunction(StencilCompareFunc func, StencilFace face) noexcept {
+        if (any(face & StencilFace::FRONT)) {
+            mStencilState.front.stencilFunc = func;
+        }
+        if (any(face & StencilFace::BACK)) {
+            mStencilState.back.stencilFunc = func;
+        }
+    }
+
+    void setStencilOpStencilFail(StencilOperation op, StencilFace face) noexcept {
+        if (any(face & StencilFace::FRONT)) {
+            mStencilState.front.stencilOpStencilFail = op;
+        }
+        if (any(face & StencilFace::BACK)) {
+            mStencilState.back.stencilOpStencilFail = op;
+        }
+    }
+
+    void setStencilOpDepthFail(StencilOperation op, StencilFace face) noexcept {
+        if (any(face & StencilFace::FRONT)) {
+            mStencilState.front.stencilOpDepthFail = op;
+        }
+        if (any(face & StencilFace::BACK)) {
+            mStencilState.back.stencilOpDepthFail = op;
+        }
+    }
+
+    void setStencilOpDepthStencilPass(StencilOperation op, StencilFace face) noexcept {
+        if (any(face & StencilFace::FRONT)) {
+            mStencilState.front.stencilOpDepthStencilPass = op;
+        }
+        if (any(face & StencilFace::BACK)) {
+            mStencilState.back.stencilOpDepthStencilPass = op;
+        }
+    }
+
+    void setStencilReferenceValue(uint8_t value, StencilFace face) noexcept {
+        if (any(face & StencilFace::FRONT)) {
+            mStencilState.front.ref = value;
+        }
+        if (any(face & StencilFace::BACK)) {
+            mStencilState.back.ref = value;
+        }
+    }
+
+    void setStencilReadMask(uint8_t readMask, StencilFace face) noexcept {
+        if (any(face & StencilFace::FRONT)) {
+            mStencilState.front.readMask = readMask;
+        }
+        if (any(face & StencilFace::BACK)) {
+            mStencilState.back.readMask = readMask;
+        }
+    }
+
+    void setStencilWriteMask(uint8_t writeMask, StencilFace face) noexcept {
+        if (any(face & StencilFace::FRONT)) {
+            mStencilState.front.writeMask = writeMask;
+        }
+        if (any(face & StencilFace::BACK)) {
+            mStencilState.back.writeMask = writeMask;
+        }
+    }
 
     const char* getName() const noexcept;
 
@@ -162,6 +230,7 @@ private:
     backend::CullingMode mCulling;
     bool mColorWrite;
     bool mDepthWrite;
+    backend::StencilState mStencilState = {};
     backend::RasterState::DepthFunc mDepthFunc;
     TransparencyMode mTransparencyMode;
 

@@ -25,19 +25,6 @@ using namespace utils;
 
 namespace filament {
 
-UniformInterfaceBlock::Builder::Entry::Entry(std::string_view name, uint32_t size,
-        UniformInterfaceBlock::Type type, UniformInterfaceBlock::Precision precision) noexcept
-        : name(name.data(), name.size()), size(size), type(type), precision(precision),
-          stride(strideForType(type, 0)) {
-}
-
-UniformInterfaceBlock::Builder::Entry::Entry(std::string_view name, uint32_t size,
-        std::string_view structName, size_t stride) noexcept
-        : name(name.data(), name.size()), size(size), type(Type::STRUCT),
-          structName(structName.data(), structName.size()),
-          stride(stride) {
-}
-
 UniformInterfaceBlock::Builder::Builder() noexcept = default;
 UniformInterfaceBlock::Builder::~Builder() noexcept = default;
 
@@ -48,30 +35,14 @@ UniformInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
 }
 
 UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        std::string_view uniformName, UniformInterfaceBlock::Type type,
-        UniformInterfaceBlock::Precision precision) {
-    mEntries.emplace_back(uniformName, 0u, type, precision);
-    return *this;
-}
-
-UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        std::string_view uniformName, size_t size, UniformInterfaceBlock::Type type,
-        UniformInterfaceBlock::Precision precision) {
-    mEntries.emplace_back(uniformName, (uint32_t)size, type, precision);
-    return *this;
-}
-
-UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        std::string_view uniformName,
-        std::string_view structName, size_t stride) {
-    mEntries.emplace_back(uniformName, 0u, structName, stride);
-    return *this;
-}
-
-UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        std::string_view uniformName, size_t size,
-        std::string_view structName, size_t stride) {
-    mEntries.emplace_back(uniformName, (uint32_t)size, structName, stride);
+        std::initializer_list<UniformBlockEntry> list) {
+    mEntries.reserve(mEntries.size() + list.size());
+    for (auto const& item : list) {
+        mEntries.push_back({
+                { item.name.data(), item.name.size() },
+                0, uint8_t(item.stride), item.type, item.size, item.precision,
+                { item.structName.data(), item.structName.size() }});
+    }
     return *this;
 }
 
