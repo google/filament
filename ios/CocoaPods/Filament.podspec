@@ -50,13 +50,13 @@ Pod::Spec.new do |spec|
   end
 
   spec.subspec "gltfio_core" do |ss|
-    ss.source_files = "include/gltfio/*.h"
+    ss.source_files = "include/gltfio/**/*.h"
+    ss.header_mappings_dir = "include"
     ss.vendored_libraries =
       "lib/universal/libgltfio_core.a",
       "lib/universal/libdracodec.a",
       "lib/universal/libuberarchive.a",
       "lib/universal/libstb.a"
-    ss.header_dir = "gltfio"
     ss.dependency "Filament/filament"
     ss.dependency "Filament/ktxreader"
     ss.dependency "Filament/uberz"
