@@ -39,6 +39,8 @@ public:
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label, const char* extras) override;
 
+    Material* getMaterial(MaterialKey* config, UvMap* uvmap, const char* label) override;
+
     size_t getMaterialsCount() const noexcept override;
     const Material* const* getMaterials() const noexcept override;
     void destroyMaterials() override;
@@ -536,8 +538,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
 }
 
-MaterialInstance* JitShaderProvider::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-        const char* label, const char* extras) {
+Material* JitShaderProvider::getMaterial(MaterialKey* config, UvMap* uvmap, const char* label) {
     constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
     if (iter == mCache.end()) {
@@ -550,9 +551,14 @@ MaterialInstance* JitShaderProvider::createMaterialInstance(MaterialKey* config,
         Material* mat = createMaterial(mEngine, *config, *uvmap, label, optimizeShaders);
         mCache.emplace(std::make_pair(*config, mat));
         mMaterials.push_back(mat);
-        return mat->createInstance(label);
+        return mat;
     }
-    return iter->second->createInstance(label);
+    return iter.value();
+}
+
+MaterialInstance* JitShaderProvider::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
+        const char* label, const char* extras) {
+    return getMaterial(config, uvmap, label)->createInstance(label);
 }
 
 } // anonymous namespace
