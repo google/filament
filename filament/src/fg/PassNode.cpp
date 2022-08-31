@@ -283,6 +283,7 @@ RenderPassNode::RenderPassData const* RenderPassNode::getRenderPassData(uint32_t
 }
 
 utils::CString RenderPassNode::graphvizify() const noexcept {
+#ifndef NDEBUG
     std::string s;
 
     uint32_t id = getId();
@@ -312,6 +313,9 @@ utils::CString RenderPassNode::graphvizify() const noexcept {
     s.append("]");
 
     return utils::CString{ s.c_str() };
+#else
+    return {};
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -327,6 +331,7 @@ char const* PresentPassNode::getName() const noexcept {
 }
 
 utils::CString PresentPassNode::graphvizify() const noexcept {
+#ifndef NDEBUG
     std::string s;
     s.reserve(128);
     uint32_t id = getId();
@@ -335,6 +340,9 @@ utils::CString PresentPassNode::graphvizify() const noexcept {
     s.append("\", style=filled, fillcolor=red3]");
     s.shrink_to_fit();
     return utils::CString{ s.c_str() };
+#else
+    return {};
+#endif
 }
 
 void PresentPassNode::execute(FrameGraphResources const&, DriverApi&) noexcept {
