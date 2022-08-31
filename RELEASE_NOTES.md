@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- engine: Fix stencil buffer writes with OpenGL backend.
+
 ## v1.27.0
 
 - WebGL: reduce max instance count to work around Chrome issues [⚠️ **Recompile Materials**]
