@@ -75,7 +75,7 @@ public:
          * which is only safe to destroy after calling DependencyGraph::clear().
          * @param graph DependencyGraph pointer to add the Node to.
          */
-        Node(DependencyGraph& graph) noexcept;
+        explicit Node(DependencyGraph& graph) noexcept;
 
         // Nodes can't be copied
         Node(Node const&) noexcept = delete;
