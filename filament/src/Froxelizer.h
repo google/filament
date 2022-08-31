@@ -48,9 +48,10 @@ public:
 };
 
 //
-// Light UBO           Froxel Record Buffer     per-froxel light list texture
-// {4 x float4}         R_U8  {index into        RG_U16 {offset, point-count, spot-count}
+// Light UBO           Froxel Record UBO      per-froxel light list texture
+// {4 x float4}            {index into        RG_U16 {offset, point-count, spot-count}
 // (spot/point            light texture}
+//                     {uint4 -> 16 indices}
 //
 //  +----+                     +-+                     +----+
 // 0|....| <------------+     0| |         +-----------|0230| (e.g. offset=02, 3-lights)
@@ -68,16 +69,6 @@ public:
 //  +----+
 // 256 lights max
 //
-
-// Max number of froxels limited by:
-// - max texture size [min 2048]
-// - chosen texture width [64]
-// - size of CPU-side indices [16 bits]
-// Also, increasing the number of froxels adds more pressure on the "record buffer" which stores
-// the light indices per froxel. The record buffer is limited to 65536 entries, so with
-// 8192 froxels, we can store 8 lights per froxels assuming they're all used. In practice, some
-// froxels are not used, so we can store more.
-static constexpr size_t FROXEL_BUFFER_ENTRY_COUNT_MAX = 8192;
 
 class Froxelizer {
 public:
@@ -100,8 +91,8 @@ public:
      * Allocate per-frame data structures for froxelization.
      *
      * driverApi         used to allocate memory in the stream
-     * arena             use to allocate per-frame memory
-     * viewport          viewport used to calculate froxel dimensions
+     * arena             used to allocate per-frame memory
+     * viewport          used to calculate froxel dimensions
      * projection        camera projection matrix
      * projectionNear    near plane
      * projectionFar     far plane
@@ -147,9 +138,10 @@ public:
             };
         };
     };
-    // This depends on the maximum number of lights (currently 255),and can't be more than 16 bits.
-    static_assert(CONFIG_MAX_LIGHT_INDEX <= std::numeric_limits<uint16_t>::max(), "can't have more than 65536 lights");
-    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_INDEX <= std::numeric_limits<uint8_t>::max(), uint8_t, uint16_t>;
+
+    // we can't change this easily because the shader expects 16 indices per uint4
+    using RecordBufferType = uint8_t;
+
     const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
     const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
 
@@ -185,7 +177,7 @@ private:
         uint16_t reserved;
     };
 
-    using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX>;
+    struct FroxelThreadData;
 
     inline void setViewport(Viewport const& viewport) noexcept;
     inline void setProjection(const math::mat4f& projection, float near, float far) noexcept;
@@ -203,8 +195,8 @@ private:
             utils::Slice<RecordBufferType> const& lightList,
             const FScene::LightSoa& lightData, size_t lightRecordsOffset) noexcept;
 
-    uint16_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
-        return uint16_t(ix + (iy * mFroxelCountX) + (iz * mFroxelCountX * mFroxelCountY));
+    size_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
+        return ix + (iy * mFroxelCountX) + (iz * mFroxelCountX * mFroxelCountY);
     }
 
     size_t findSliceZ(float viewSpaceZ) const noexcept UTILS_PURE;
@@ -215,25 +207,27 @@ private:
             math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
             Viewport const& viewport) noexcept;
 
-    // internal state dependant on the viewport and needed for froxelizing
-    LinearAllocatorArena mArena;                    // ~256 KiB
+    // internal state dependent on the viewport and needed for froxelizing
+    LinearAllocatorArena mArena;                        // ~256 KiB
 
-    float* mDistancesZ = nullptr;                   // max 2.1 MiB (actual: resolution dependant)
+    // allocations in the private froxel arena
+    float* mDistancesZ = nullptr;
     math::float4* mPlanesX = nullptr;
     math::float4* mPlanesY = nullptr;
-    math::float4* mBoundingSpheres = nullptr;
+    math::float4* mBoundingSpheres = nullptr;           // 128 KiB w/ 8192 froxels
 
-    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights
+    // allocations in the per frame arena
+    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights and 8192 froxels
     utils::Slice<FroxelEntry> mFroxelBufferUser;        //  32 KiB w/ 8192 froxels
+    utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/  256 lights
 
-    // max 32 KiB  (actual: resolution dependant)
+    // allocations in the command stream
     utils::Slice<RecordBufferType> mRecordBufferUser;   //  16 KiB
-    utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/ 256 lights
 
     uint16_t mFroxelCountX = 0;
     uint16_t mFroxelCountY = 0;
     uint16_t mFroxelCountZ = 0;
-    uint16_t mFroxelCount = 0;
+    uint32_t mFroxelCount = 0;
     math::uint2 mFroxelDimension = {};
 
     math::mat4f mProjection;

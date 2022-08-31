@@ -25,7 +25,6 @@
 
 #include <math/mat4.h>
 
-#include <tsl/robin_map.h>
 #include <tsl/robin_set.h>
 
 #include <vector>
@@ -54,9 +53,8 @@ struct Variant {
     std::vector<VariantMapping> mappings;
 };
 
-using NodeMap = tsl::robin_map<const cgltf_node*, utils::Entity>;
-
 struct FFilamentInstance : public FilamentInstance {
+    FFilamentInstance(utils::Entity root, FFilamentAsset* owner);
 
     // The per-instance skin structure caches information to allow animation to be applied
     // efficiently at run time. Note that shared immutable data, such as the skin name and inverse
@@ -70,13 +68,21 @@ struct FFilamentInstance : public FilamentInstance {
         tsl::robin_set<utils::Entity, utils::Entity::Hasher> targets;
     };
 
+    const utils::Entity root;
+    FFilamentAsset* const owner;
+
     std::vector<utils::Entity> entities;
     utils::FixedCapacityVector<Variant> variants;
-    utils::Entity root;
-    Animator* animator;
-    FFilamentAsset* owner;
+    Animator* animator = nullptr;
     utils::FixedCapacityVector<Skin> skins;
-    NodeMap nodeMap;
+
+    // Note that nodeMap is yet another a vector of entities, but unlike the "entities" field, it
+    // may be sparsely populated. This is used as a simple mapping between cgltf_node and Entity,
+    // and therefore has the same size as the number of cgltf_node in the original asset. We
+    // considered using the ECS for this, but we need Node => Entity, not the other way around.
+    // This is discarded after the animator is created.
+    utils::FixedCapacityVector<utils::Entity> nodeMap;
+
     Aabb boundingBox;
     void createAnimator();
     Animator* getAnimator() const noexcept;

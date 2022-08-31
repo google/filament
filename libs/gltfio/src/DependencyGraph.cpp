@@ -16,6 +16,8 @@
 
 #include "DependencyGraph.h"
 
+#include <utils/Panic.h>
+
 using namespace filament;
 using namespace utils;
 
@@ -49,8 +51,7 @@ void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
 }
 
 void DependencyGraph::commitEdges() {
-    for (const auto& pair : mMaterialToEntity) {
-        auto material = pair.first;
+    for (const auto& [material, entities] : mMaterialToEntity) {
         if (mMaterialToTexture.find(material) == mMaterialToTexture.end()) {
             markAsReady(material);
         } else {
@@ -60,7 +61,7 @@ void DependencyGraph::commitEdges() {
 }
 
 void DependencyGraph::addEdge(Texture* texture, MaterialInstance* material, const char* parameter) {
-    assert(texture);
+    assert_invariant(texture);
     mTextureToMaterial[texture].insert(material);
     mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
 }
@@ -70,8 +71,8 @@ void DependencyGraph::checkReadiness(Material* material) {
 
     // Check this material's texture parameters, there are 5 in the worst case.
     bool materialIsReady = true;
-    for (const auto& pair : status.params) {
-        if (!pair.second || !pair.second->ready) {
+    for (const auto& [name, texture] : status.params) {
+        if (!texture || !texture->ready) {
             materialIsReady = false;
             break;
         }
@@ -84,7 +85,7 @@ void DependencyGraph::checkReadiness(Material* material) {
 }
 
 void DependencyGraph::markAsReady(Texture* texture) {
-    assert(texture);
+    assert_invariant(texture);
     mTextureNodes.at(texture)->ready = true;
 
     // Iterate over the materials associated with this texture to check if any have become ready.
@@ -99,7 +100,7 @@ void DependencyGraph::markAsReady(MaterialInstance* material) {
     auto& entities = mMaterialToEntity.at(material);
     for (auto entity : entities) {
         auto& status = mEntityToMaterial.at(entity);
-        assert(status.numReadyMaterials <= status.materials.size());
+        assert_invariant(status.numReadyMaterials <= status.materials.size());
         if (status.numReadyMaterials == status.materials.size()) {
             continue;
         }
@@ -110,7 +111,7 @@ void DependencyGraph::markAsReady(MaterialInstance* material) {
 }
 
 DependencyGraph::TextureNode* DependencyGraph::getStatus(Texture* texture) {
-    assert(texture);
+    assert_invariant(texture);
     auto iter = mTextureNodes.find(texture);
     if (iter == mTextureNodes.end()) {
         TextureNode* status = (mTextureNodes[texture] = std::make_unique<TextureNode>()).get();

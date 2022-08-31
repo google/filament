@@ -167,8 +167,7 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     };
 
     // Go through every primitive and check if it has a Draco mesh.
-    for (auto& pair : asset->mPrimitives) {
-        const cgltf_primitive* prim = pair.first;
+    for (auto& [prim, vertexBuffer] : asset->mPrimitives) {
         if (!prim->has_draco_mesh_compression) {
             continue;
         }
@@ -177,7 +176,6 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
 
         // If an error occurs, we can simply set the primitive's associated VertexBuffer to null.
         // This does not cause a leak because it is a weak reference.
-        auto& vertexBuffer = pair.second;
 
         // Check if we have already decoded this mesh.
         DracoMesh* mesh = dracoCache->findOrCreateMesh(draco.buffer_view);
@@ -494,6 +492,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // we need to generate the contents of a GPU buffer by processing one or more CPU buffer(s).
     pImpl->computeTangents(asset);
 
+    asset->mBufferSlots = {};
+    asset->mPrimitives = {};
+
     // If any decoding jobs are still underway from a previous load, wait for them to finish.
     for (const auto& iter : pImpl->mTextureProviders) {
         iter.second->waitForCompletion();
@@ -554,9 +555,9 @@ void ResourceLoader::asyncUpdateLoad() {
 }
 
 Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
-    const cgltf_texture* srcTexture = tb.texture;
-    const cgltf_image* image = srcTexture->basisu_image ?
-            srcTexture->basisu_image : srcTexture->image;
+    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[tb.sourceTexture];
+    const cgltf_image* image = srcTexture.basisu_image ?
+            srcTexture.basisu_image : srcTexture.image;
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
@@ -653,7 +654,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     }
 
     if (!texture) {
-        const char* name = srcTexture->name ? srcTexture->name : uri;
+        const char* name = srcTexture.name ? srcTexture.name : uri;
         slog.e << "Unable to create texture " << name << ": "
                 << provider->getPushMessage() << io::endl;
         asset->mDependencyGraph.markAsError(tb.materialInstance);
@@ -674,11 +675,12 @@ void ResourceLoader::Impl::cancelTextureDecoding() {
 void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
     // Create new texture objects if they are not cached and kick off decoding jobs.
     mRemainingTextureDownloads = 0;
-    for (auto slot : asset->mTextureSlots) {
+    for (const TextureSlot& slot : asset->mTextureSlots) {
         if (Texture* texture = getOrCreateTexture(asset, slot)) {
             asset->bindTexture(slot, texture);
         }
     }
+    asset->mTextureSlots = {};
 
     // Non-threaded systems are required to use the asynchronous API.
     assert_invariant(UTILS_HAS_THREADING || async);
@@ -711,30 +713,27 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     // Create a job description for each triangle-based primitive.
     using Params = TangentsJob::Params;
     std::vector<Params> jobParams;
-    for (auto pair : asset->mPrimitives) {
-        if (UTILS_UNLIKELY(pair.first->type != cgltf_primitive_type_triangles)) {
+    for (auto [prim, vb] : asset->mPrimitives) {
+        if (UTILS_UNLIKELY(prim->type != cgltf_primitive_type_triangles)) {
             continue;
         }
-        VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(Params {{ pair.first }, {vb, nullptr, iter->second }});
+            jobParams.emplace_back(Params {{ prim }, {vb, nullptr, iter->second }});
         }
     }
+
     // Create a job description for morph targets.
-    // TODO: do not iterate over the nodemap; iterate over the cgltf hierarchy.
-    const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
-    for (auto iter : nodeMap) {
-        cgltf_node const* node = iter.first;
-        cgltf_mesh const* mesh = node->mesh;
-        if (UTILS_UNLIKELY(!mesh || !mesh->weights_count)) {
+    for (size_t i = 0, n = asset->mSourceAsset->hierarchy->meshes_count; i < n; ++i) {
+        const cgltf_mesh& mesh = asset->mSourceAsset->hierarchy->meshes[i];
+        const FixedCapacityVector<Primitive>& prims = asset->mMeshCache[i];
+        if (0 == mesh.weights_count) {
             continue;
         }
-        for (cgltf_size pindex = 0, pcount = mesh->primitives_count; pindex < pcount; ++pindex) {
-            const cgltf_primitive& prim = mesh->primitives[pindex];
-            const auto& gltfioPrim = asset->mMeshCache.at(mesh)[pindex];
-            MorphTargetBuffer* tb = gltfioPrim.targets;
-            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++ tindex) {
+        for (cgltf_size pindex = 0, pcount = mesh.primitives_count; pindex < pcount; ++pindex) {
+            const cgltf_primitive& prim = mesh.primitives[pindex];
+            MorphTargetBuffer* tb = prims[pindex].targets;
+            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++tindex) {
                 const cgltf_morph_target& target = prim.targets[tindex];
                 bool hasNormals = false;
                 for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {

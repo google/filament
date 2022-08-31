@@ -56,7 +56,7 @@ enum class SamplerBindingPoints : uint8_t {
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
-// Values <= 256, use less CPU and GPU resources.
+// It's also limited by the Froxelizer's record buffer data type (uint8_t).
 constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 

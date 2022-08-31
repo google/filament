@@ -225,12 +225,6 @@ int main(int argc, char** argv) {
             exit(1);
         }
 
-        // Load animation data.
-        app.asset->getAnimator();
-        if (app.instanceToAnimate > -1) {
-            app.instances[app.instanceToAnimate]->getAnimator();
-        }
-
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
