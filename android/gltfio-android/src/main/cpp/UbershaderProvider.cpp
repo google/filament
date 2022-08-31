@@ -49,16 +49,19 @@ Java_com_google_android_filament_gltfio_UbershaderProvider_nDestroyMaterials(JNI
 
 extern "C" JNIEXPORT long JNICALL
 Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateMaterialInstance(JNIEnv* env, jclass,
-        jlong nativeProvider, jobject materialKey, jintArray uvmap, jstring label) {
+        jlong nativeProvider, jobject materialKey, jintArray uvmap, jstring label, jstring extras) {
     MaterialKey nativeKey = {};
 
     auto& helper = MaterialKeyHelper::get();
     helper.copy(env, nativeKey, materialKey);
 
     const char* nativeLabel = label ? env->GetStringUTFChars(label, nullptr) : nullptr;
+    const char* nativeExtras = extras ? env->GetStringUTFChars(extras, nullptr) : nullptr;
+
     UvMap nativeUvMap = {};
     auto provider = (MaterialProvider*) nativeProvider;
-    MaterialInstance* instance = provider->createMaterialInstance(&nativeKey, &nativeUvMap, nativeLabel);
+    MaterialInstance* instance = provider->createMaterialInstance(&nativeKey, &nativeUvMap,
+            nativeLabel, nativeExtras);
 
     // Copy the UvMap results from the native array into the JVM array.
     jint* elements = env->GetIntArrayElements(uvmap, nullptr);
@@ -77,7 +80,45 @@ Java_com_google_android_filament_gltfio_UbershaderProvider_nCreateMaterialInstan
         env->ReleaseStringUTFChars(label, nativeLabel);
     }
 
+    if (extras) {
+        env->ReleaseStringUTFChars(extras, nativeExtras);
+    }
+
     return (long) instance;
+}
+
+extern "C" JNIEXPORT long JNICALL
+Java_com_google_android_filament_gltfio_UbershaderProvider_nGetMaterial(JNIEnv* env, jclass,
+        jlong nativeProvider, jobject materialKey, jintArray uvmap, jstring label) {
+    MaterialKey nativeKey = {};
+
+    auto& helper = MaterialKeyHelper::get();
+    helper.copy(env, nativeKey, materialKey);
+
+    const char* nativeLabel = label ? env->GetStringUTFChars(label, nullptr) : nullptr;
+
+    UvMap nativeUvMap = {};
+    auto provider = (MaterialProvider*) nativeProvider;
+    Material* material = provider->getMaterial(&nativeKey, &nativeUvMap, nativeLabel);
+
+    // Copy the UvMap results from the native array into the JVM array.
+    jint* elements = env->GetIntArrayElements(uvmap, nullptr);
+    if (elements) {
+        const size_t javaSize = env->GetArrayLength(uvmap);
+        for (int i = 0, n = std::min(javaSize, nativeUvMap.size()); i < n; ++i) {
+            elements[i] = nativeUvMap[i];
+        }
+        env->ReleaseIntArrayElements(uvmap, elements, 0);
+    }
+
+    // The config parameter is an in-out parameter so we need to copy the results back to Java.
+    helper.copy(env, materialKey, nativeKey);
+
+    if (label) {
+        env->ReleaseStringUTFChars(label, nativeLabel);
+    }
+
+    return (long) material;
 }
 
 extern "C" JNIEXPORT int JNICALL

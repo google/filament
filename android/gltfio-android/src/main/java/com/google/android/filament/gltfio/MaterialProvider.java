@@ -109,6 +109,12 @@ public interface MaterialProvider {
             @NonNull @Size(min = 8) int[] uvmap, @Nullable String label, @Nullable String extras);
 
     /**
+     * Creates or fetches a compiled Filament material corresponding to the given config.
+     */
+    public @Nullable Material getMaterial(MaterialKey config, @NonNull @Size(min = 8) int[] uvmap,
+            @Nullable String label);
+
+    /**
      * Creates and returns an array containing all cached materials.
      */
     public @NonNull Material[] getMaterials();
