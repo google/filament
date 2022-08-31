@@ -49,7 +49,7 @@ RenderPass::RenderPass(RenderPass const& rhs) = default;
 RenderPass::~RenderPass() noexcept = default;
 
 RenderPass::Command* RenderPass::append(size_t count) noexcept {
-    // this is like a "in-place" realloc(). Works only with LinearAllocator.
+    // this is like an "in-place" realloc(). Works only with LinearAllocator.
     Command* const curr = mCommandArena.alloc<Command>(count);
     assert_invariant(curr);
     assert_invariant(mCommandBegin == nullptr || curr == mCommandEnd);
@@ -448,6 +448,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdDepth.primitive.rasterState.alphaToCoverage = false;
     }
 
+    const float cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
+
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Check if this renderable passes the visibilityMask. If it doesn't, encode SENTINEL
         // commands (no-op).
@@ -463,11 +465,11 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             continue;
         }
 
-        // Signed distance from camera to object's center. Positive distances are in front of
+        // Signed distance from camera plane to object's center. Positive distances are in front of
         // the camera. Some objects with a center behind the camera can still be visible
         // so their distance will be negative (this happens a lot for the shadow map).
 
-        // Using the center is not very good with large AABBs. Instead we can try to use
+        // Using the center is not very good with large AABBs. Instead, we can try to use
         // the closest point on the bounding sphere instead:
         //      d = soaWorldAABBCenter[i] - cameraPosition;
         //      d -= normalize(d) * length(soaWorldAABB[i].halfExtent);
@@ -476,9 +478,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         // Code below is equivalent to:
         // float3 d = soaWorldAABBCenter[i] - cameraPosition;
         // float distance = dot(d, cameraForward);
-        // but saves a couple of instruction, because part of the math is done outside of the loop.
-        float distance = dot(soaWorldAABBCenter[i], cameraForward) - dot(cameraPosition, cameraForward);
-
+        // but saves a couple of instruction, because part of the math is done outside the loop.
+        float distance = dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward;
 
         // We negate the distance to the camera in order to create a bit pattern that will
         // be sorted properly, this works because:
@@ -502,7 +503,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdColor.primitive.index = (uint16_t)i;
         cmdColor.primitive.instanceCount = soaInstanceCount[i];
 
-        // if we are already a SSR variant, the SRE bit is already set,
+        // if we are already an SSR variant, the SRE bit is already set,
         // there is no harm setting it again
         static_assert(Variant::SPECIAL_SSR & Variant::SRE);
         variant.setShadowReceiver(
