@@ -309,9 +309,16 @@ void OpenGLDriver::setStencilState(StencilState ss) noexcept {
     mRenderPassStencilWrite |= ss.stencilWrite;
 
     // stencil test / operation
+    // GL_STENCIL_TEST must be enabled if we're testing OR writing to the stencil buffer.
     if (UTILS_LIKELY(
             ss.front.stencilFunc == StencilState::StencilFunction::A &&
-            ss.back.stencilFunc == StencilState::StencilFunction::A)) {
+            ss.back.stencilFunc == StencilState::StencilFunction::A &&
+            ss.front.stencilOpDepthFail == StencilOperation::KEEP &&
+            ss.back.stencilOpDepthFail == StencilOperation::KEEP &&
+            ss.front.stencilOpStencilFail == StencilOperation::KEEP &&
+            ss.back.stencilOpStencilFail == StencilOperation::KEEP &&
+            ss.front.stencilOpDepthStencilPass == StencilOperation::KEEP &&
+            ss.back.stencilOpDepthStencilPass == StencilOperation::KEEP)) {
         // that's equivalent to having the stencil test disabled
         gl.disable(GL_STENCIL_TEST);
     } else {
