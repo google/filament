@@ -163,6 +163,15 @@ public class Scene {
         return nGetLightCount(getNativeObject());
     }
 
+    /**
+     * Returns true if the given entity is in the Scene.
+     *
+     * @return Whether the given entity is in the Scene.
+     */
+    public boolean hasEntity(@Entity int entity) {
+        return nHasEntity(getNativeObject(), entity);
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Scene");
@@ -182,4 +191,5 @@ public class Scene {
     private static native void nRemoveEntities(long nativeScene, int[] entities);
     private static native int nGetRenderableCount(long nativeScene);
     private static native int nGetLightCount(long nativeScene);
+    private static native boolean nHasEntity(long nativeScene, int entity);
 }

@@ -5,6 +5,7 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Java: add methods for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()
 - engine: Fix stencil buffer writes with OpenGL backend.
 
 ## v1.27.0
