@@ -309,8 +309,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
-    ASSERT_PRECONDITION(!isInRenderPass(mContext),
-            "createRenderTarget must be called outside of a render pass.");
     // Clamp sample count to what the device supports.
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
