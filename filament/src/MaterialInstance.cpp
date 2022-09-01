@@ -193,7 +193,7 @@ const char* MaterialInstance::getName() const noexcept {
 
 void MaterialInstance::setParameter(const char* name, size_t nameLength, Texture const* texture,
         TextureSampler const& sampler) {
-    return upcast(this)->setParameterImpl({ name, nameLength }, texture, sampler);
+    return upcast(this)->setParameterImpl({ name, nameLength }, upcast(texture), sampler);
 }
 
 void MaterialInstance::setParameter(const char* name, size_t nameLength, RgbType type, float3 color) {
