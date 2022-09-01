@@ -25,6 +25,8 @@
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
 
+#include <filamat/Enums.h>
+
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
@@ -996,7 +998,7 @@ error:
         goto error;
     }
 
-    info.samplerBindings.init(mMaterialDomain, &info.sib, mMaterialName.c_str());
+    info.samplerBindings.init(mMaterialDomain, info.sib);
 
     // Create chunk tree.
     ChunkContainer container;
@@ -1025,8 +1027,30 @@ error:
     return package;
 }
 
+using namespace backend;
+static const char* to_string(ShaderStageFlags stageFlags) noexcept {
+    switch (stageFlags) {
+        case ShaderStageFlags::NONE:                    return "{ }";
+        case ShaderStageFlags::VERTEX:                  return "{ vertex }";
+        case ShaderStageFlags::FRAGMENT:                return "{ fragment }";
+        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:  return "{ vertex | fragment }";
+    }
+    return nullptr;
+}
+
 bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const noexcept {
-    auto userSamplerCount = info.sib.getSize();
+
+    auto logSamplerOverflow = [](SamplerInterfaceBlock const& sib) {
+        auto const& samplers = sib.getSamplerInfoList();
+        auto const* stage = to_string(sib.getStageFlags());
+        for (auto const& sampler: samplers) {
+            slog.e << "\"" << sampler.name.c_str() << "\" "
+                    << Enums::toString(sampler.type).c_str() << " " << stage << '\n';
+        }
+        flush(slog.e);
+    };
+
+    const auto userSamplerCount = info.sib.getSize();
     switch (info.featureLevel) {
         case FeatureLevel::FEATURE_LEVEL_1: {
             // TODO: we need constants somewhere for these values
@@ -1034,6 +1058,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << (int)info.featureLevel
                        << " and is using more than 9 samplers." << io::endl;
+                logSamplerOverflow(info.sib);
                 return false;
             }
             auto const& samplerList = info.sib.getSamplerInfoList();
@@ -1045,6 +1070,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << (int)info.featureLevel
                        << " and uses a samplerCubemapArray." << io::endl;
+                logSamplerOverflow(info.sib);
                 return false;
             }
             break;
@@ -1055,6 +1081,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << (int)info.featureLevel
                        << " and is using more than 12 samplers" << io::endl;
+                logSamplerOverflow(info.sib);
                 return false;
             }
             break;
@@ -1091,7 +1118,7 @@ std::string MaterialBuilder::peek(backend::ShaderType type,
 
     MaterialInfo info;
     prepareToBuild(info);
-    info.samplerBindings.init(mMaterialDomain, &info.sib, mMaterialName.c_str());
+    info.samplerBindings.init(mMaterialDomain, info.sib);
 
     if (type == backend::ShaderType::VERTEX) {
         return sg.createVertexProgram(ShaderModel(params.shaderModel),

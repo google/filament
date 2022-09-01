@@ -169,8 +169,8 @@ struct MetalProgram : public HwProgram {
         uint8_t sampler = UINT8_MAX;
     };
 
-    std::array<SamplerBlockInfo, MAX_VERTEX_SAMPLER_COUNT> vertexSamplerBlockInfo;
-    std::array<SamplerBlockInfo, MAX_FRAGMENT_SAMPLER_COUNT> fragmentSamplerBlockInfo;
+    std::array<SamplerBlockInfo, FEATURE_LEVEL_CAPS[1].MAX_VERTEX_SAMPLER_COUNT> vertexSamplerBlockInfo;
+    std::array<SamplerBlockInfo, FEATURE_LEVEL_CAPS[1].MAX_FRAGMENT_SAMPLER_COUNT> fragmentSamplerBlockInfo;
 
     bool isValid = false;
 };

@@ -221,7 +221,7 @@ private:
 };
 
 // implement this for your type for automatic conversion to CString. Failing to do so leads
-// to a compile time failure.
+// to a compile-time failure.
 template<typename T>
 CString to_string(T value) noexcept;
 

@@ -42,12 +42,12 @@ public:
     // Initializes the SamplerBindingMap.
     // Assigns a range of finalized binding points to each sampler block.
     // If a per-material SIB is provided, then material samplers are also inserted (always at the
-    // end). The optional material name is used for error reporting only.
+    // end).
     void init(MaterialDomain materialDomain,
-            const SamplerInterfaceBlock* perMaterialSib = nullptr,
-            const char* materialName = nullptr);
+            SamplerInterfaceBlock const& perMaterialSib);
 
-    SamplerGroupBindingInfo const& getSamplerGroupBindingInfo(SamplerBindingPoints bindingPoint) const noexcept {
+    SamplerGroupBindingInfo const& getSamplerGroupBindingInfo(
+            SamplerBindingPoints bindingPoint) const noexcept {
         return mSamplerBlockOffsets[+bindingPoint];
     }
 
