@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Java: add methods for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()
+
 ## v1.27.0
 
 - WebGL: reduce max instance count to work around Chrome issues [⚠️ **Recompile Materials**]
@@ -13,7 +15,6 @@ A new header is inserted each time a *tag* is created.
 - engine: add support for specialization constants [⚠️ **Recompile Materials**]
 - gltfio: fix spotlight regression
 - gltfio: clear the MaterialInstance cache when creating new instances
-- Java: add methods for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()
 
 ## v1.26.0
 
