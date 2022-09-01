@@ -212,7 +212,7 @@ private:
     void setParameterImpl(std::string_view name, const T* value, size_t count);
 
     void setParameterImpl(std::string_view name,
-            Texture const* texture, TextureSampler const& sampler);
+            FTexture const* texture, TextureSampler const& sampler);
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
