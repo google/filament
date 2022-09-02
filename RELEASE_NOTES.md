@@ -16,6 +16,7 @@ A new header is inserted each time a *tag* is created.
 - engine: add support for specialization constants [⚠️ **Recompile Materials**]
 - gltfio: fix spotlight regression
 - gltfio: clear the MaterialInstance cache when creating new instances
+- samples: add debug overdraw visualization to gltf_viewer
 
 ## v1.26.0
 
