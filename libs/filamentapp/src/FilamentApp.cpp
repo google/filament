@@ -600,6 +600,11 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
 #endif
 
+        // Select the feature level to use
+        config.featureLevel = std::min(config.featureLevel,
+                mFilamentApp->mEngine->getSupportedFeatureLevel());
+        mFilamentApp->mEngine->setActiveFeatureLevel(config.featureLevel);
+
         mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
     }
     mRenderer = mFilamentApp->mEngine->createRenderer();
