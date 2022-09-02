@@ -123,6 +123,10 @@ struct MetalContext {
     os_log_t log;
     os_signpost_id_t signpostId;
 #endif
+
+#ifndef NDEBUG
+    tsl::robin_set<HandleBase::HandleId> aliveTextures;
+#endif
 };
 
 void initializeSupportedGpuFamilies(MetalContext* context);

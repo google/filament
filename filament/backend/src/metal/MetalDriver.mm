@@ -236,6 +236,10 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
             width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
             TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
+
+#ifndef NDEBUG
+    mContext->aliveTextures.insert(th.getId());
+#endif
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -248,6 +252,10 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
 
     construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
             width, height, depth, usage, r, g, b, a);
+
+#ifndef NDEBUG
+    mContext->aliveTextures.insert(th.getId());
+#endif
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -270,6 +278,10 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
             metalTexture.textureType, filamentMetalType);
     construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
         width, height, depth, usage, metalTexture);
+
+#ifndef NDEBUG
+    mContext->aliveTextures.insert(th.getId());
+#endif
 }
 
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
@@ -497,6 +509,10 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     if (!th) {
         return;
     }
+
+#ifndef NDEBUG
+    mContext->aliveTextures.erase(th.getId());
+#endif
 
     // Unbind this texture from any sampler groups that currently reference it.
     for (auto* metalSamplerGroup : mContext->samplerGroups) {
@@ -818,9 +834,29 @@ bool MetalDriver::canGenerateMipmaps() {
     return true;
 }
 
-void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        BufferDescriptor&& data) {
+void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescriptor&& data) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateSamplerGroup must be called outside of a render pass.");
+
     auto sb = handle_cast<MetalSamplerGroup>(sbh);
+
+#ifndef NDEBUG
+    // In debug builds, verify that all the textures in the sampler group are still alive.
+    // These bugs lead to memory corruption and can be difficult to track down.
+    auto const* const samplers = (SamplerDescriptor const*) data.buffer;
+    for (size_t s = 0; s < data.size / sizeof(SamplerDescriptor); s++) {
+        if (!samplers[s].t) {
+            continue;
+        }
+        auto iter = mContext->aliveTextures.find(samplers[s].t.getId());
+        if (iter == mContext->aliveTextures.end()) {
+            utils::slog.e << "updateSamplerGroup: texture #"
+                          << (int) s << " is dead, texture handle = "
+                          << samplers[s].t << utils::io::endl;
+        }
+        assert_invariant(iter != mContext->aliveTextures.end());
+    }
+#endif
 
     // FIXME: we shouldn't be using SamplerGroup here, instead the backend should create
     //        a descriptor or any internal data-structure that represents the textures/samplers.
