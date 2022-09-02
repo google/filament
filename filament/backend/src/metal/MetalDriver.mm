@@ -1390,15 +1390,15 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         return mContext->samplerStateCache.getOrCreateState(s);
     };
 
-    id<MTLTexture> texturesToBindVertex[MAX_VERTEX_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindVertex[MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLTexture> texturesToBindVertex[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindVertex[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT] = {};
 
     enumerateSamplerGroups(program, ShaderType::VERTEX,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
                     const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
-        if (binding >= MAX_VERTEX_SAMPLER_COUNT) {
+        if (binding >= FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT) {
             return;
         }
 
@@ -1422,21 +1422,21 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         }
     }
 
-    NSRange vertexSamplerRange = NSMakeRange(0, MAX_VERTEX_SAMPLER_COUNT);
+    NSRange vertexSamplerRange = NSMakeRange(0, FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT);
     [mContext->currentRenderPassEncoder setVertexTextures:texturesToBindVertex
                                                 withRange:vertexSamplerRange];
     [mContext->currentRenderPassEncoder setVertexSamplerStates:samplersToBindVertex
                                                      withRange:vertexSamplerRange];
 
-    id<MTLTexture> texturesToBindFragment[MAX_FRAGMENT_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindFragment[MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLTexture> texturesToBindFragment[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindFragment[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT] = {};
 
     enumerateSamplerGroups(program, ShaderType::FRAGMENT,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
                     const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
-        if (binding >= MAX_FRAGMENT_SAMPLER_COUNT) {
+        if (binding >= FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT) {
             return;
         }
 
@@ -1460,7 +1460,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         }
     }
 
-    NSRange fragmentSamplerRange = NSMakeRange(0, MAX_FRAGMENT_SAMPLER_COUNT);
+    NSRange fragmentSamplerRange = NSMakeRange(0, FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT);
     [mContext->currentRenderPassEncoder setFragmentTextures:texturesToBindFragment
                                                   withRange:fragmentSamplerRange];
     [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBindFragment
@@ -1528,7 +1528,8 @@ void MetalDriver::enumerateSamplerGroups(
     auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ?
             program->vertexSamplerBlockInfo : program->fragmentSamplerBlockInfo;
     auto maxSamplerCount = (shaderType == ShaderType::VERTEX) ?
-            MAX_VERTEX_SAMPLER_COUNT : MAX_FRAGMENT_SAMPLER_COUNT;
+                           FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT :
+                           FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT;
     for (size_t bindingIdx = 0; bindingIdx != maxSamplerCount; ++bindingIdx) {
         auto& blockInfo = samplerBlockInfo[bindingIdx];
         if (blockInfo.samplerGroup == UINT8_MAX) {

@@ -674,13 +674,17 @@ private:
     // This method finds all the properties defined in the fragment and
     // vertex shaders of the material.
     bool findAllProperties() noexcept;
+
     // Multiple calls to findProperties accumulate the property sets across fragment
     // and vertex shaders in mProperties.
     bool findProperties(filament::backend::ShaderType type,
             MaterialBuilder::PropertyList& p) noexcept;
+
     bool runSemanticAnalysis(MaterialInfo const& info) noexcept;
 
     bool checkLiteRequirements() noexcept;
+
+    bool checkMaterialLevelFeatures(MaterialInfo const& info) const noexcept;
 
     void writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept;
     void writeSurfaceChunks(ChunkContainer& container) const noexcept;

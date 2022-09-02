@@ -88,18 +88,6 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
         return false;
     }
 
-    switch (info.featureLevel) {
-        case FeatureLevel::FEATURE_LEVEL_1:
-            // TODO: feature level checks
-            //  - check no more than 9 samplers are used by the user and 16 total
-            //  - check cubemap arrays are not used
-            break;
-        case FeatureLevel::FEATURE_LEVEL_2:
-            // TODO: feature level checks
-            //  - check no more than 12 samplers are used by the user and 31 total
-            break;
-    }
-
     // If this is a post-process material, at this point we've successfully met all the
     // requirements.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
@@ -170,18 +158,6 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
         utils::slog.e << "ERROR: Invalid vertex shader" << utils::io::endl;
         utils::slog.e << "ERROR: Unable to find materialVertex() function" << utils::io::endl;
         return false;
-    }
-
-    switch (info.featureLevel) {
-        case FeatureLevel::FEATURE_LEVEL_1:
-            // TODO: feature level checks
-            //  - check no more than 9 samplers are used by the user and 16 total
-            //  - check cubemap arrays are not used
-            break;
-        case FeatureLevel::FEATURE_LEVEL_2:
-            // TODO: feature level checks
-            //  - check no more than 12 samplers are used by the user and 31 total
-            break;
     }
 
     return true;
