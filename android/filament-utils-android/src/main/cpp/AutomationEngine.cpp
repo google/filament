@@ -70,7 +70,8 @@ Java_com_google_android_filament_utils_AutomationEngine_nStartBatchMode(JNIEnv* 
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclass klass,
-        jlong nativeAutomation, jlong view, jlongArray materials, jlong renderer, jfloat deltaTime) {
+        jlong nativeAutomation, jlong nativeEngine,
+        jlong view, jlongArray materials, jlong renderer, jfloat deltaTime) {
     using MaterialPointer = MaterialInstance*;
     jsize materialCount = 0;
     jlong* longMaterials = nullptr;
@@ -90,7 +91,8 @@ Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclas
         .materials = ptrMaterials,
         .materialCount = (size_t) materialCount,
     };
-    automation->tick(content, deltaTime);
+    Engine* engine = (Engine*)nativeEngine;
+    automation->tick(engine, content, deltaTime);
     if (longMaterials) {
         env->ReleaseLongArrayElements(materials, longMaterials, 0);
         delete[] ptrMaterials;
@@ -99,7 +101,8 @@ Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclas
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* env, jclass klass,
-        jlong nativeAutomation, jstring json, jlong view, jlongArray materials, jlong nativeIbl,
+        jlong nativeAutomation, jlong nativeEngine,
+        jstring json, jlong view, jlongArray materials, jlong nativeIbl,
         jint sunlightEntity, jintArray assetLights, jlong nativeLm, jlong scene, jlong renderer) {
     using MaterialPointer = MaterialInstance*;
 
@@ -140,8 +143,8 @@ Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* e
         .assetLights = (Entity*) intLights,
         .assetLightCount = (size_t) lightCount,
     };
-
-    automation->applySettings(nativeJson, jsonLength, content);
+    Engine* engine = (Engine*)nativeEngine;
+    automation->applySettings(engine, nativeJson, jsonLength, content);
     env->ReleaseStringUTFChars(json, nativeJson);
     if (longMaterials) {
         env->ReleaseLongArrayElements(materials, longMaterials, 0);

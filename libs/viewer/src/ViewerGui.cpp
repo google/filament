@@ -986,7 +986,7 @@ void ViewerGui::updateUserInterface() {
 
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
-    applySettings(mSettings.view, mView);
+    applySettings(mEngine, mSettings.view, mView);
 
     mView->setSoftShadowOptions(mSettings.lighting.softShadowOptions);
 

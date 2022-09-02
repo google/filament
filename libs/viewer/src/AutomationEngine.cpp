@@ -154,7 +154,7 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
     gStatus = "Exported to '" + std::string(filename) + "' in the current folder.";
 }
 
-void AutomationEngine::applySettings(const char* json, size_t jsonLength,
+void AutomationEngine::applySettings(Engine* engine, const char* json, size_t jsonLength,
         const ViewerContent& content) {
     JsonSerializer serializer;
     if (!serializer.readJson(json, jsonLength, mSettings)) {
@@ -162,15 +162,15 @@ void AutomationEngine::applySettings(const char* json, size_t jsonLength,
         slog.e << "Badly formed JSON:\n" << jsonWithTerminator.c_str() << io::endl;
         return;
     }
-    viewer::applySettings(mSettings->view, content.view);
+    viewer::applySettings(engine, mSettings->view, content.view);
     for (size_t i = 0; i < content.materialCount; i++) {
-        viewer::applySettings(mSettings->material, content.materials[i]);
+        viewer::applySettings(engine, mSettings->material, content.materials[i]);
     }
-    viewer::applySettings(mSettings->lighting, content.indirectLight, content.sunlight,
+    viewer::applySettings(engine, mSettings->lighting, content.indirectLight, content.sunlight,
             content.assetLights, content.assetLightCount, content.lightManager, content.scene, content.view);
     Camera* camera = &content.view->getCamera();
     Skybox* skybox = content.scene->getSkybox();
-    viewer::applySettings(mSettings->viewer, camera, skybox, content.renderer);
+    viewer::applySettings(engine, mSettings->viewer, camera, skybox, content.renderer);
 }
 
 ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
@@ -197,14 +197,14 @@ ViewerOptions AutomationEngine::getViewerOptions() const {
     return mSettings->viewer;
 }
 
-void AutomationEngine::tick(const ViewerContent& content, float deltaTime) {
-    const auto activateTest = [this, content]() {
+void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float deltaTime) {
+    const auto activateTest = [this, engine, content]() {
         mElapsedTime = 0;
         mElapsedFrames = 0;
         mSpec->get(mCurrentTest, mSettings);
-        viewer::applySettings(mSettings->view, content.view);
+        viewer::applySettings(engine, mSettings->view, content.view);
         for (size_t i = 0; i < content.materialCount; i++) {
-            viewer::applySettings(mSettings->material, content.materials[i]);
+            viewer::applySettings(engine, mSettings->material, content.materials[i]);
         }
         if (mOptions.verbose) {
             utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;

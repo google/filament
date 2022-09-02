@@ -874,7 +874,7 @@ int main(int argc, char** argv) {
         // This applies clear options, the skybox mask, and some camera settings.
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
-        applySettings(app.viewer->getSettings().viewer, &camera, skybox, renderer);
+        applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
 
         // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
@@ -902,7 +902,7 @@ int main(int argc, char** argv) {
             .materials = app.asset->getMaterialInstances(),
             .materialCount = app.asset->getMaterialInstanceCount(),
         };
-        app.automationEngine->tick(content, ImGui::GetIO().DeltaTime);
+        app.automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
