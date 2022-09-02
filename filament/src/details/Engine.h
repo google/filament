@@ -370,8 +370,8 @@ public:
     size_t getRequestedDriverHandleArenaSize() const noexcept { return mConfig.driverHandleArenaSizeMB * MiB; }
     Config const& getConfig() const noexcept { return mConfig; }
 
-    bool hasFeatureLevel(backend::FeatureLevel featureLevel) const noexcept {
-        return featureLevel <= mActiveFeatureLevel;
+    bool hasFeatureLevel(backend::FeatureLevel neededFeatureLevel) const noexcept {
+        return FEngine::getActiveFeatureLevel() >= neededFeatureLevel;
     }
 
 private:

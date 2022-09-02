@@ -135,6 +135,8 @@ static void printUsage(char* name) {
         "       Prints this message\n\n"
         "   --api, -a\n"
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
+        "   --feature-level=<1|2>, -f <1|2>\n"
+        "       Specify the feature level to use. The default is the highest supported feature level.\n\n"
         "   --batch=<path to JSON file or 'default'>, -b\n"
         "       Start automation using the given JSON spec, then quit the app\n\n"
         "   --headless, -e\n"
@@ -175,10 +177,11 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:ev";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:ev";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,          nullptr, 'h' },
         { "api",          required_argument,    nullptr, 'a' },
+        { "feature-level",required_argument,    nullptr, 'f' },
         { "batch",        required_argument,    nullptr, 'b' },
         { "headless",     no_argument,          nullptr, 'e' },
         { "ibl",          required_argument,    nullptr, 'i' },
@@ -208,6 +211,15 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     app->config.backend = Engine::Backend::METAL;
                 } else {
                     std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                }
+                break;
+            case 'f':
+                if (arg == "1") {
+                    app->config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
+                } else if (arg == "2") {
+                    app->config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_2;
+                } else {
+                    std::cerr << "Unrecognized feature level. Must be 1 or 2.\n";
                 }
                 break;
             case 'c':
