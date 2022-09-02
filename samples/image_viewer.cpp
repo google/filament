@@ -333,7 +333,7 @@ int main(int argc, char** argv) {
         // This applies clear options, the skybox mask, and some camera settings.
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
-        applySettings(app.viewer->getSettings().viewer, &camera, skybox, renderer);
+        applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
 
         // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;

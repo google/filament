@@ -223,7 +223,7 @@ using namespace ktxreader;
         .indirectLight = _indirectLight,
         .sunlight = _sun,
     };
-    _automation->applySettings(message->buffer, message->bufferByteCount, content);
+    _automation->applySettings(self.modelView.engine, message->buffer, message->bufferByteCount, content);
     ColorGrading* const colorGrading = _automation->getColorGrading(self.modelView.engine);
     self.modelView.view->setColorGrading(colorGrading);
     self.modelView.cameraFocalLength = _automation->getViewerOptions().cameraFocalLength;
