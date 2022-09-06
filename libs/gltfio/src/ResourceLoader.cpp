@@ -680,7 +680,6 @@ void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
             asset->bindTexture(slot, texture);
         }
     }
-    asset->mTextureSlots = {};
 
     // Non-threaded systems are required to use the asynchronous API.
     assert_invariant(UTILS_HAS_THREADING || async);
