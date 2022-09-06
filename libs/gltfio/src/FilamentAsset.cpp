@@ -163,6 +163,7 @@ void FFilamentAsset::releaseSourceData() noexcept {
     // calling clear(). With many container types, clearing is a fast operation that merely frees
     // the storage for the items but not the actual container.
     mTextureBindings = {};
+    mTextureSlots = {};
     mMeshCache = {};
     mResourceUris = {};
     mSourceAsset.reset();
