@@ -65,6 +65,24 @@ using SceneMask = NodeManager::SceneMask;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
+// The default glTF material.
+static constexpr cgltf_material kDefaultMat = {
+    .name = (char*) "Default GLTF material",
+    .has_pbr_metallic_roughness = true,
+    .has_pbr_specular_glossiness = false,
+    .has_clearcoat = false,
+    .has_transmission = false,
+    .has_volume = false,
+    .has_ior = false,
+    .has_specular = false,
+    .has_sheen = false,
+    .pbr_metallic_roughness = {
+        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
+        .metallic_factor = 1.0,
+        .roughness_factor = 1.0,
+    },
+};
+
 // Sometimes a glTF bufferview includes unused data at the end (e.g. in skinning.gltf) so we need to
 // compute the correct size of the vertex buffer. Filament automatically infers the size of
 // driver-level vertex buffers from the attribute data (stride, count, offset) and clients are
@@ -1045,30 +1063,12 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
     MaterialInstanceCache& cache =
             vertexColor ? mMaterialInstanceCacheWithVertexColor : mMaterialInstanceCache;
+    inputMat = inputMat ? inputMat : &kDefaultMat;
     const intptr_t inputMatIndex = inputMat - srcAsset->materials;
     if (cache[inputMatIndex].instance) {
         *uvmap = cache[inputMatIndex].uvmap;
         return cache[inputMatIndex].instance;
     }
-
-    // The default glTF material.
-    static const cgltf_material kDefaultMat = {
-        .name = (char*) "Default GLTF material",
-        .has_pbr_metallic_roughness = true,
-        .has_pbr_specular_glossiness = false,
-        .has_clearcoat = false,
-        .has_transmission = false,
-        .has_volume = false,
-        .has_ior = false,
-        .has_specular = false,
-        .has_sheen = false,
-        .pbr_metallic_roughness = {
-	        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
-	        .metallic_factor = 1.0,
-	        .roughness_factor = 1.0,
-        },
-    };
-    inputMat = inputMat ? inputMat : &kDefaultMat;
 
     auto mrConfig = inputMat->pbr_metallic_roughness;
     auto sgConfig = inputMat->pbr_specular_glossiness;
