@@ -65,6 +65,24 @@ using SceneMask = NodeManager::SceneMask;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
+// The default glTF material.
+static constexpr cgltf_material kDefaultMat = {
+    .name = (char*) "Default GLTF material",
+    .has_pbr_metallic_roughness = true,
+    .has_pbr_specular_glossiness = false,
+    .has_clearcoat = false,
+    .has_transmission = false,
+    .has_volume = false,
+    .has_ior = false,
+    .has_specular = false,
+    .has_sheen = false,
+    .pbr_metallic_roughness = {
+        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
+        .metallic_factor = 1.0,
+        .roughness_factor = 1.0,
+    },
+};
+
 // Sometimes a glTF bufferview includes unused data at the end (e.g. in skinning.gltf) so we need to
 // compute the correct size of the vertex buffer. Filament automatically infers the size of
 // driver-level vertex buffers from the attribute data (stride, count, offset) and clients are
@@ -111,6 +129,51 @@ static LightManager::Type getLightType(const cgltf_light_type light) {
             return LightManager::Type::FOCUSED_SPOT;
     }
 }
+
+// MaterialInstanceCache
+// ---------------------
+// Each glTF material definition corresponds to a single MaterialInstance, which are temporarily
+// cached when loading a FilamentInstance. If a given glTF material is referenced by multiple
+// glTF meshes, then their corresponding Filament primitives will share the same Filament
+// MaterialInstance and UvMap. The UvMap is a mapping from each texcoord slot in glTF to one of
+// Filament's 2 texcoord sets.
+//
+// Notes:
+// - The Material objects (used to create instances) are cached in MaterialProvider, not here.
+// - The cache is not responsible for destroying material instances. They are owned by the asset.
+class MaterialInstanceCache {
+public:
+    struct Entry {
+        MaterialInstance* instance;
+        UvMap uvmap;
+    };
+
+    MaterialInstanceCache() {}
+
+    MaterialInstanceCache(const cgltf_data* hierarchy) :
+        mHierarchy(hierarchy),
+        mMaterialInstances(hierarchy->materials_count, Entry{}),
+        mMaterialInstancesWithVertexColor(hierarchy->materials_count, Entry{}) {}
+
+    Entry* getEntry(const cgltf_material** mat, bool vertexColor) {
+        if (*mat) {
+            EntryVector& entries = vertexColor ?
+                    mMaterialInstancesWithVertexColor : mMaterialInstances;
+            const cgltf_material* basePointer = mHierarchy->materials;
+            return &entries[*mat - basePointer];
+        }
+        *mat = &kDefaultMat;
+        return vertexColor ? &mDefaultMaterialInstanceWithVertexColor : &mDefaultMaterialInstance;
+    }
+
+private:
+    using EntryVector = utils::FixedCapacityVector<Entry>;
+    const cgltf_data* mHierarchy = {};
+    EntryVector mMaterialInstances;
+    EntryVector mMaterialInstancesWithVertexColor;
+    Entry mDefaultMaterialInstance = {};
+    Entry mDefaultMaterialInstanceWithVertexColor = {};
+};
 
 struct FAssetLoader : public AssetLoader {
     FAssetLoader(const AssetConfiguration& config) :
@@ -172,30 +235,6 @@ private:
     void createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh, Entity entity,
             FFilamentInstance* instance);
 
-    // MaterialInstanceCache
-    // ---------------------
-    // Each glTF material definition corresponds to a single MaterialInstance, which are temporarily
-    // cached when loading a FilamentInstance. The Material objects that are used to create
-    // instances are cached in MaterialProvider. If a given glTF material is referenced by multiple
-    // glTF meshes, then their corresponding filament primitives will share the same Filament
-    // MaterialInstance and UvMap. The UvMap is a mapping from each texcoord slot in glTF to one of
-    // Filament's 2 texcoord sets.
-    struct MaterialEntry {
-        MaterialInstance* instance;
-        UvMap uvmap;
-    };
-
-    using MaterialInstanceCache = utils::FixedCapacityVector<MaterialEntry>;
-
-    MaterialInstanceCache mMaterialInstanceCache;
-    MaterialInstanceCache mMaterialInstanceCacheWithVertexColor;
-
-    void resetMaterialInstanceCache() {
-        const size_t count = mResult->mSourceAsset->hierarchy->materials_count;
-        mMaterialInstanceCache = MaterialInstanceCache(count, MaterialEntry{});
-        mMaterialInstanceCacheWithVertexColor = MaterialInstanceCache(count, MaterialEntry{});
-    }
-
 public:
     EntityManager& mEntityManager;
     RenderableManager& mRenderableManager;
@@ -211,6 +250,7 @@ public:
     const char* mDefaultNodeName;
     bool mError = false;
     bool mDiagnosticsEnabled = false;
+    MaterialInstanceCache mMaterialInstanceCache;
 
     // Weak reference to the largest dummy buffer so far in the current loading phase.
     BufferObject* mDummyBufferObject;
@@ -276,7 +316,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         return nullptr;
     }
 
-    resetMaterialInstanceCache();
+    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
 
     FFilamentInstance* instance = createInstance(primary, srcAsset);
 
@@ -303,7 +343,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     mResult = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager, srcAsset);
     mDummyBufferObject = nullptr;
 
-    resetMaterialInstanceCache();
+    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
 
     // It is not an error for a glTF file to have zero scenes.
     mResult->mScenes.clear();
@@ -1043,32 +1083,12 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
 
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsset,
         const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
-    MaterialInstanceCache& cache =
-            vertexColor ? mMaterialInstanceCacheWithVertexColor : mMaterialInstanceCache;
-    const intptr_t inputMatIndex = inputMat - srcAsset->materials;
-    if (cache[inputMatIndex].instance) {
-        *uvmap = cache[inputMatIndex].uvmap;
-        return cache[inputMatIndex].instance;
+    MaterialInstanceCache::Entry* const cacheEntry =
+            mMaterialInstanceCache.getEntry(&inputMat, vertexColor);
+    if (cacheEntry->instance) {
+        *uvmap = cacheEntry->uvmap;
+        return cacheEntry->instance;
     }
-
-    // The default glTF material.
-    static const cgltf_material kDefaultMat = {
-        .name = (char*) "Default GLTF material",
-        .has_pbr_metallic_roughness = true,
-        .has_pbr_specular_glossiness = false,
-        .has_clearcoat = false,
-        .has_transmission = false,
-        .has_volume = false,
-        .has_ior = false,
-        .has_specular = false,
-        .has_sheen = false,
-        .pbr_metallic_roughness = {
-	        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
-	        .metallic_factor = 1.0,
-	        .roughness_factor = 1.0,
-        },
-    };
-    inputMat = inputMat ? inputMat : &kDefaultMat;
 
     auto mrConfig = inputMat->pbr_metallic_roughness;
     auto sgConfig = inputMat->pbr_specular_glossiness;
@@ -1369,7 +1389,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
                 inputMat->emissive_strength.emissive_strength : 1.0f);
     }
 
-    cache[inputMatIndex] = { mi, *uvmap };
+    *cacheEntry = { mi, *uvmap };
     return mi;
 }
 
