@@ -239,9 +239,11 @@ std::array<std::string_view, 2> OpenGLProgram::splitShaderSource(std::string_vie
     auto start = source.find("#version");
     assert_invariant(start != std::string_view::npos);
 
-    auto pos = source.rfind("#extension");
+    auto pos = source.rfind("\n#extension");
     if (pos == std::string_view::npos) {
         pos = start;
+    } else {
+        ++pos;
     }
 
     auto eol = source.find('\n', pos) + 1;
