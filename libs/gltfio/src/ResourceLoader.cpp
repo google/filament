@@ -91,7 +91,7 @@ struct ResourceLoader::Impl {
     void computeTangents(FFilamentAsset* asset);
     void createTextures(FFilamentAsset* asset, bool async);
     void cancelTextureDecoding();
-    Texture* getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb);
+    Texture* getOrCreateTexture(FFilamentAsset* asset, size_t textureIndex, const TextureSlot& tb);
     ~Impl();
 };
 
@@ -554,15 +554,17 @@ void ResourceLoader::asyncUpdateLoad() {
     }
 }
 
-Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
-    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[tb.sourceTexture];
+Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, size_t textureIndex,
+        const TextureSlot& tb) {
+    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[textureIndex];
     const cgltf_image* image = srcTexture.basisu_image ?
             srcTexture.basisu_image : srcTexture.image;
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
     TextureProvider::FlagBits flags = {};
-    if (tb.srgb) {
+    FFilamentAsset::TextureInfo& info = asset->mTextures[textureIndex];
+    if (info.srgb) {
         flags |= int(TextureProvider::Flags::sRGB);
     }
 
@@ -659,7 +661,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
                 << provider->getPushMessage() << io::endl;
         asset->mDependencyGraph.markAsError(tb.materialInstance);
     } else {
-        asset->attachTexture(texture);
+        info.texture = texture;
     }
 
     return texture;
@@ -675,10 +677,16 @@ void ResourceLoader::Impl::cancelTextureDecoding() {
 void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
     // Create new texture objects if they are not cached and kick off decoding jobs.
     mRemainingTextureDownloads = 0;
-    for (const TextureSlot& slot : asset->mTextureSlots) {
-        if (Texture* texture = getOrCreateTexture(asset, slot)) {
-            asset->bindTexture(slot, texture);
+    size_t textureIndex = 0;
+    for (FFilamentAsset::TextureInfo& info : asset->mTextures) {
+        for (const TextureSlot& slot : info.bindings) {
+
+            // Returns null if the user has not yet called addResourceData for the texture.
+            if (Texture* texture = getOrCreateTexture(asset, textureIndex, slot)) {
+                asset->applyTextureBinding(textureIndex, slot);
+            }
         }
+        textureIndex++;
     }
 
     // Non-threaded systems are required to use the asynchronous API.

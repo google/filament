@@ -230,8 +230,6 @@ private:
     void createCamera(const cgltf_camera* camera, Entity entity);
     MaterialInstance* createMaterialInstance(const cgltf_data* srcAsset,
             const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor);
-    void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
-            const cgltf_texture* srcTexture, bool srgb);
     void createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh, Entity entity,
             FFilamentInstance* instance);
 
@@ -1226,7 +1224,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasBaseColorTexture) {
-        addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, true);
+        mResult->addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, true);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = baseColorTexture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1240,7 +1238,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         // specularGlossinessTexture are both sRGB, whereas the core glTF spec stipulates that
         // metallicRoughness is not sRGB.
         bool srgb = inputMat->has_pbr_specular_glossiness;
-        addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
+        mResult->addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = metallicRoughnessTexture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1249,7 +1247,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasNormalTexture) {
-        addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, false);
+        mResult->addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, false);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->normal_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1261,7 +1259,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasOcclusionTexture) {
-        addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, false);
+        mResult->addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, false);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->occlusion_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1273,7 +1271,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasEmissiveTexture) {
-        addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, true);
+        mResult->addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, true);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->emissive_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1286,7 +1284,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("clearCoatRoughnessFactor", ccConfig.clearcoat_roughness_factor);
 
         if (matkey.hasClearCoatTexture) {
-            addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture, false);
+            mResult->addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture,
+                    false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1294,7 +1293,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasClearCoatRoughnessTexture) {
-            addTextureBinding(mi, "clearCoatRoughnessMap",
+            mResult->addTextureBinding(mi, "clearCoatRoughnessMap",
                     ccConfig.clearcoat_roughness_texture.texture, false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_roughness_texture.transform;
@@ -1303,7 +1302,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasClearCoatNormalTexture) {
-            addTextureBinding(mi, "clearCoatNormalMap",
+            mResult->addTextureBinding(mi, "clearCoatNormalMap",
                     ccConfig.clearcoat_normal_texture.texture, false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_normal_texture.transform;
@@ -1320,7 +1319,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("sheenRoughnessFactor", shConfig.sheen_roughness_factor);
 
         if (matkey.hasSheenColorTexture) {
-            addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture, true);
+            mResult->addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture,
+                    true);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_color_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1328,7 +1328,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasSheenRoughnessTexture) {
-            addTextureBinding(mi, "sheenRoughnessMap",
+            mResult->addTextureBinding(mi, "sheenRoughnessMap",
                     shConfig.sheen_roughness_texture.texture, false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
@@ -1349,7 +1349,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("volumeAbsorption", RgbType::LINEAR, absorption);
 
         if (matkey.hasVolumeThicknessTexture) {
-            addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture, false);
+            mResult->addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture,
+                    false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = vlConfig.thickness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1361,7 +1362,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     if (matkey.hasTransmission) {
         mi->setParameter("transmissionFactor", trConfig.transmission_factor);
         if (matkey.hasTransmissionTexture) {
-            addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture, false);
+            mResult->addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture,
+                    false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = trConfig.transmission_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1391,45 +1393,6 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
     *cacheEntry = { mi, *uvmap };
     return mi;
-}
-
-void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
-        const cgltf_texture* srcTexture, bool srgb) {
-    if (!srcTexture->image && !srcTexture->basisu_image) {
-#ifndef NDEBUG
-        slog.w << "Texture is missing image (" << srcTexture->name << ")." << io::endl;
-#endif
-        return;
-    }
-
-    TextureSampler dstSampler;
-    auto srcSampler = srcTexture->sampler;
-    if (srcSampler) {
-        dstSampler.setWrapModeS(getWrapMode(srcSampler->wrap_s));
-        dstSampler.setWrapModeT(getWrapMode(srcSampler->wrap_t));
-        dstSampler.setMagFilter(getMagFilter(srcSampler->mag_filter));
-        dstSampler.setMinFilter(getMinFilter(srcSampler->min_filter));
-    } else {
-        // These defaults are stipulated by the spec:
-        dstSampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
-        dstSampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
-
-        // These defaults are up to the implementation but since we try to provide mipmaps,
-        // we might as well use them. In practice the conformance models look awful without
-        // using mipmapping by default.
-        dstSampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
-        dstSampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
-    }
-
-    const intptr_t textureIndex = srcTexture - mResult->mSourceAsset->hierarchy->textures;
-
-    mResult->addTextureSlot({
-        .sourceTexture = (size_t) textureIndex,
-        .materialInstance = materialInstance,
-        .materialParameter = parameterName,
-        .sampler = dstSampler,
-        .srgb = srgb
-    });
 }
 
 void FAssetLoader::importSkins(FFilamentAsset* primary,
