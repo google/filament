@@ -35,7 +35,7 @@ namespace filament::backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
-static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t binding) {
+static VkShaderStageFlags getShaderStageFlags(VulkanPipelineCache::UsageFlags key, uint16_t binding) {
     VkShaderStageFlags flags = 0;
     if (key.test(binding * 2 + 0)) {
         flags |= VK_SHADER_STAGE_VERTEX_BIT;
@@ -46,21 +46,13 @@ static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t bind
     return flags;
 }
 
-utils::bitset64
-static getPipelineLayoutKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
-    utils::bitset64 key = {};
-    for (uint32_t binding = 0; binding < Program::SAMPLER_BINDING_COUNT; ++binding) {
-        const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
-        for (const auto& sampler : samplerGroupInfo[binding].samplers) {
-            if (any(stageFlags & ShaderStageFlags::VERTEX)) {
-                key.set(sampler.binding * 2 + 0);
-            }
-            if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
-                key.set(sampler.binding * 2 + 1);
-            }
-        }
+void VulkanPipelineCache::setUsageFlags(UsageFlags* key, uint16_t binding, ShaderStageFlags flags) {
+    if (any(flags & ShaderStageFlags::VERTEX)) {
+        key->set(binding * 2 + 0);
     }
-    return key;
+    if (any(flags & ShaderStageFlags::FRAGMENT)) {
+        key->set(binding * 2 + 1);
+    }
 }
 
 VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
@@ -298,8 +290,8 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
         writeInfo.dstBinding = binding;
     }
     for (uint32_t binding = 0; binding < SAMPLER_BINDING_COUNT; binding++) {
-        VkWriteDescriptorSet& writeInfo = writes[nwrites++];
         if (mDescriptorRequirements.samplers[binding].sampler) {
+            VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             VkDescriptorImageInfo& imageInfo = descriptorSamplers[binding];
             imageInfo = mDescriptorRequirements.samplers[binding];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -310,14 +302,9 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             writeInfo.pImageInfo = &imageInfo;
             writeInfo.pBufferInfo = nullptr;
             writeInfo.pTexelBufferView = nullptr;
-        } else {
-            writeInfo = mDummySamplerWriteInfo;
-            assert_invariant(mDummySamplerWriteInfo.pImageInfo->sampler);
-            assert_invariant(mDummySamplerInfo.imageView);
-
+            writeInfo.dstSet = descriptorCacheEntry.handles[1];
+            writeInfo.dstBinding = binding;
         }
-        writeInfo.dstSet = descriptorCacheEntry.handles[1];
-        writeInfo.dstBinding = binding;
     }
     for (uint32_t binding = 0; binding < TARGET_BINDING_COUNT; binding++) {
         VkWriteDescriptorSet& writeInfo = writes[nwrites++];
@@ -580,7 +567,6 @@ void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
     for (uint32_t ssi = 0; ssi < SHADER_MODULE_COUNT; ssi++) {
         mPipelineRequirements.shaders[ssi] = shaders[ssi];
     }
-    mPipelineRequirements.layout = getPipelineLayoutKey(program.samplerGroupInfo);
     mSpecializationRequirements = program.bundle.specializationInfos;
 }
 
@@ -657,10 +643,12 @@ void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer unif
     key.uniformBufferSizes[bindingIndex] = size;
 }
 
-void VulkanPipelineCache::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT]) noexcept {
+void VulkanPipelineCache::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT],
+        UsageFlags flags) noexcept {
     for (uint32_t bindingIndex = 0; bindingIndex < SAMPLER_BINDING_COUNT; bindingIndex++) {
         mDescriptorRequirements.samplers[bindingIndex] = samplers[bindingIndex];
     }
+    mPipelineRequirements.layout = flags;
 }
 
 void VulkanPipelineCache::bindInputAttachment(uint32_t bindingIndex,
