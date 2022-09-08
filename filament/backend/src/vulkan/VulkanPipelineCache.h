@@ -82,6 +82,9 @@ public:
         VkSpecializationInfo* specializationInfos = nullptr;
     };
 
+    using UsageFlags = utils::bitset64;
+    static void setUsageFlags(UsageFlags* dst, uint16_t binding, ShaderStageFlags stages);
+
     #pragma clang diagnostic push
     #pragma clang diagnostic warning "-Wpadded"
 
@@ -150,7 +153,7 @@ public:
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
             VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
-    void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT]) noexcept;
+    void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT], UsageFlags flags) noexcept;
     void bindInputAttachment(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;
     void bindVertexArray(const VertexArray& varray) noexcept;
 
