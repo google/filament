@@ -37,6 +37,14 @@ namespace filament::backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
+static std::string to_string(bitset64 key) {
+    std::string result;
+    for (int i = 0; i < 64; i++) {
+        result += key.test(i) ? "1" : "0";
+    }
+    return result;
+}
+
 static VkShaderStageFlags getShaderStageFlags(bitset64 key, uint16_t binding) {
     VkShaderStageFlags flags = 0;
     if (key.test(binding * 2 + 0)) {
