@@ -204,7 +204,6 @@ bool VulkanPipelineCache::bindPipeline(VkCommandBuffer cmdbuffer) noexcept {
     getOrCreatePipelineLayout()->lastUsed = mCurrentTime;
 
     mBoundPipeline = mPipelineRequirements;
-    mBoundLayout = mLayoutRequirements;
 
     vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cacheEntry->handle);
     return true;
@@ -220,7 +219,7 @@ void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scisso
 VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptorSets() noexcept {
     PipelineLayoutCacheEntry* layoutCacheEntry = getOrCreatePipelineLayout();
 
-    DescriptorCacheEntry descriptorCacheEntry = { .pipelineLayout = mLayoutRequirements };
+    DescriptorCacheEntry descriptorCacheEntry = { .pipelineLayout = mPipelineRequirements.layout };
 
     // Each of the arenas for this particular layout are guaranteed to have the same size. Check
     // the first arena to see if any descriptor sets are available that can be re-claimed. If not,
@@ -515,7 +514,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 }
 
 VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreatePipelineLayout() noexcept {
-    auto iter = mPipelineLayouts.find(mLayoutRequirements);
+    auto iter = mPipelineLayouts.find(mPipelineRequirements.layout);
     if (UTILS_LIKELY(iter != mPipelineLayouts.end())) {
         return &iter.value();
     }
@@ -543,7 +542,7 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
     VkDescriptorSetLayoutBinding sbindings[SAMPLER_BINDING_COUNT];
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
-        binding.stageFlags = getShaderStageFlags(mLayoutRequirements, i);
+        binding.stageFlags = getShaderStageFlags(mPipelineRequirements.layout, i);
         binding.binding = i;
         sbindings[i] = binding;
     }
@@ -573,8 +572,7 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
     if (UTILS_UNLIKELY(result != VK_SUCCESS)) {
         return nullptr;
     }
-    return &mPipelineLayouts.emplace(mLayoutRequirements, cacheEntry).first.value();
-
+    return &mPipelineLayouts.emplace(mPipelineRequirements.layout, cacheEntry).first.value();
 }
 
 void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
@@ -582,7 +580,7 @@ void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
     for (uint32_t ssi = 0; ssi < SHADER_MODULE_COUNT; ssi++) {
         mPipelineRequirements.shaders[ssi] = shaders[ssi];
     }
-    mLayoutRequirements = getPipelineLayoutKey(program.samplerGroupInfo);
+    mPipelineRequirements.layout = getPipelineLayoutKey(program.samplerGroupInfo);
     mSpecializationRequirements = program.bundle.specializationInfos;
 }
 
@@ -700,7 +698,6 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
     mBoundPipeline = {};
-    mBoundLayout = {};
     mBoundDescriptor = {};
     mCurrentScissor = {};
 
@@ -878,13 +875,13 @@ bool VulkanPipelineCache::PipelineLayoutKeyEqual::operator()(const PipelineLayou
     return k1 == k2;
 }
 
-bool VulkanPipelineCache::PipelineEqual::operator()(const VulkanPipelineCache::PipelineKey& k1,
-        const VulkanPipelineCache::PipelineKey& k2) const {
+bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,
+        const PipelineKey& k2) const {
     return 0 == memcmp((const void*) &k1, (const void*) &k2, sizeof(k1));
 }
 
-bool VulkanPipelineCache::DescEqual::operator()(const VulkanPipelineCache::DescriptorKey& k1,
-        const VulkanPipelineCache::DescriptorKey& k2) const {
+bool VulkanPipelineCache::DescEqual::operator()(const DescriptorKey& k1,
+        const DescriptorKey& k2) const {
     for (uint32_t i = 0; i < UBUFFER_BINDING_COUNT; i++) {
         if (k1.uniformBuffers[i] != k2.uniformBuffers[i] ||
             k1.uniformBufferOffsets[i] != k2.uniformBufferOffsets[i] ||

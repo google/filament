@@ -236,9 +236,9 @@ private:
         operator VkVertexInputBindingDescription() const {
             return { binding, stride, (VkVertexInputRate) inputRate };
         }
-        uint16_t    binding;
-        uint16_t    inputRate;
-        uint32_t    stride;
+        uint16_t binding;
+        uint16_t inputRate;
+        uint32_t stride;
     };
 
     // The pipeline key is a POD that represents all currently bound states that form the immutable
@@ -252,9 +252,10 @@ private:
         VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
         RasterState rasterState;                                                  //  16  : 284
         uint32_t padding;                                                         //  4   : 300
+        PipelineLayoutKey layout;                                                 //  8   : 304
     };
 
-    static_assert(sizeof(PipelineKey) == 304, "PipelineKey must not have implicit padding.");
+    static_assert(sizeof(PipelineKey) == 312, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
 
@@ -383,13 +384,11 @@ private:
     const RasterState mDefaultRasterState;
 
     // Current requirements for the pipeline layout, pipeline, and descriptor sets.
-    PipelineLayoutKey mLayoutRequirements = {};
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
     VkSpecializationInfo* mSpecializationRequirements = {};
 
-    // Current bindings for the pipeline layout, pipeline, and descriptor sets.
-    PipelineLayoutKey mBoundLayout = {};
+    // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
     DescriptorKey mBoundDescriptor = {};
 
