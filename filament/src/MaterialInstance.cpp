@@ -196,16 +196,18 @@ void MaterialInstance::setParameter(const char* name, size_t nameLength, Texture
     return upcast(this)->setParameterImpl({ name, nameLength }, upcast(texture), sampler);
 }
 
-void MaterialInstance::setParameter(const char* name, size_t nameLength, RgbType type, float3 color) {
+void MaterialInstance::setParameter(
+        const char* name, size_t nameLength, RgbType type, float3 color) {
     upcast(this)->setParameterImpl<float3>({ name, nameLength }, Color::toLinear(type, color));
 }
 
-void MaterialInstance::setParameter(const char* name, size_t nameLength, RgbaType type, float4 color) {
+void MaterialInstance::setParameter(
+        const char* name, size_t nameLength, RgbaType type, float4 color) {
     upcast(this)->setParameterImpl<float4>({ name, nameLength }, Color::toLinear(type, color));
 }
 
-void MaterialInstance::setScissor(uint32_t left, uint32_t bottom, uint32_t width,
-        uint32_t height) noexcept {
+void MaterialInstance::setScissor(
+        uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) noexcept {
     upcast(this)->setScissor(left, bottom, width, height);
 }
 

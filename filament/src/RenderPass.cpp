@@ -85,6 +85,13 @@ void RenderPass::overridePolygonOffset(backend::PolygonOffset const* polygonOffs
     }
 }
 
+
+void RenderPass::setScissorViewport(backend::Viewport viewport) noexcept {
+    assert_invariant(viewport.width  <= std::numeric_limits<int32_t>::max());
+    assert_invariant(viewport.height <= std::numeric_limits<int32_t>::max());
+    mScissorViewport = viewport;
+}
+
 void RenderPass::overrideScissor(backend::Viewport const* scissor) noexcept {
     if ((mScissorOverride = (scissor != nullptr))) {
         mScissor = *scissor;
@@ -751,7 +758,34 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
                 // this is always taken the first time
                 mi = info.mi;
                 ma = mi->getMaterial();
-                *pScissor = mi->getScissor();
+
+                auto const& scissor = mi->getScissor();
+                if (UTILS_UNLIKELY(mi->hasScissor())) {
+                    // scissor is set, we need to apply the offset/clip
+                    // clang vectorizes this!
+                    constexpr int32_t maxvali = std::numeric_limits<int32_t>::max();
+                    const backend::Viewport scissorViewport = mScissorViewport;
+                    // compute new left/bottom, assume no overflow
+                    int32_t l = scissor.left + scissorViewport.left;
+                    int32_t b = scissor.bottom + scissorViewport.bottom;
+                    // compute right/top without overflowing, scissor.width/height guaranteed
+                    // to convert to int32
+                    int32_t r = (l > maxvali - int32_t(scissor.width)) ?
+                            maxvali : l + int32_t(scissor.width);
+                    int32_t t = (b > maxvali - int32_t(scissor.height)) ?
+                            maxvali : b + int32_t(scissor.height);
+                    // clip to the viewport
+                    l = std::max(l, scissorViewport.left);
+                    b = std::max(b, scissorViewport.bottom);
+                    r = std::min(r, scissorViewport.left + int32_t(scissorViewport.width));
+                    t = std::min(t, scissorViewport.bottom + int32_t(scissorViewport.height));
+                    assert_invariant(r >= l && t >= b);
+                    *pScissor = { l, b, uint32_t(r - l), uint32_t(t - b) };
+                } else {
+                    // no scissor set (common case), 'scissor' has its default value, use that.
+                    *pScissor = scissor;
+                }
+
                 *pPipelinePolygonOffset = mi->getPolygonOffset();
                 pipeline.stencilState = mi->getStencilState();
                 mi->use(driver);
@@ -805,6 +839,7 @@ RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command
           mInstancedUboHandle(pass->mInstancedUboHandle),
           mPolygonOffset(pass->mPolygonOffset),
           mScissor(pass->mScissor),
+          mScissorViewport(pass->mScissorViewport),
           mPolygonOffsetOverride(pass->mPolygonOffsetOverride),
           mScissorOverride(pass->mScissorOverride) {
     assert_invariant(b >= pass->begin());

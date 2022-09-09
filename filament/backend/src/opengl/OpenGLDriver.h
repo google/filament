@@ -341,7 +341,7 @@ private:
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;
 
-    void setViewportScissor(Viewport const& viewportScissor) noexcept;
+    void setScissor(Viewport const& scissor) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
     std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers

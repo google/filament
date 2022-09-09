@@ -222,19 +222,33 @@ public:
         setParameter(name, strlen(name), type, color);
     }
 
-
     /**
-     * Set up a custom scissor rectangle; by default this encompasses the View.
+     * Set-up a custom scissor rectangle; by default it is disabled.
      *
-     * @param left      left coordinate of the scissor box
-     * @param bottom    bottom coordinate of the scissor box
+     * The scissor rectangle gets clipped by the View's viewport, in other words, the scissor
+     * cannot affect fragments outside of the View's Viewport.
+     *
+     * Currently the scissor is not compatible with dynamic resolution and should always be
+     * disabled when dynamic resolution is used.
+     *
+     * @param left      left coordinate of the scissor box relative to the viewport
+     * @param bottom    bottom coordinate of the scissor box relative to the viewport
      * @param width     width of the scissor box
      * @param height    height of the scissor box
+     *
+     * @see unsetScissor
+     * @see View::setViewport
+     * @see View::setDynamicResolutionOptions
      */
     void setScissor(uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) noexcept;
 
     /**
-     * Returns the scissor rectangle to its default setting, which encompasses the View.
+     * Returns the scissor rectangle to its default disabled setting.
+     *
+     * Currently the scissor is not compatible with dynamic resolution and should always be
+     * disabled when dynamic resolution is used.
+     *
+     * @see View::setDynamicResolutionOptions
      */
     void unsetScissor() noexcept;
 

@@ -9,6 +9,8 @@ A new header is inserted each time a *tag* is created.
 - engine: Fix stencil buffer writes with OpenGL backend.
 - gltfio: add new virtual method to MaterialProvider that all plugins must implement
 - gltfio: add an assert for inconsistent sRGB flags among usages of a particular texture
+- engine: improve scissor documentation
+- backend: scissor is no longer clipped to the viewport (done on filament side)
 
 ## v1.27.0
 
