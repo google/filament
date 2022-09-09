@@ -1848,6 +1848,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 mDisposer.acquire(texture);
 
                 // TODO: can this uninitialized check be checked in a higher layer?
+                // This fallback path is very flaky because the dummy texture might not have
+                // matching characteristics. (e.g. if the missing texture is a 3D texture)
                 if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VK_IMAGE_LAYOUT_UNDEFINED)) {
 #ifndef NDEBUG
                     utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";

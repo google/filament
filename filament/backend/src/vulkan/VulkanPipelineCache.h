@@ -182,7 +182,6 @@ public:
 
     // Injects a dummy texture that can be used to clear out old descriptor sets.
     void setDummyTexture(VkImageView imageView) {
-        mDummySamplerInfo.imageView = imageView;
         mDummyTargetInfo.imageView = imageView;
     }
 
@@ -422,8 +421,6 @@ private:
 
     VkDescriptorBufferInfo mDummyBufferInfo = {};
     VkWriteDescriptorSet mDummyBufferWriteInfo = {};
-    VkDescriptorImageInfo mDummySamplerInfo = {};
-    VkWriteDescriptorSet mDummySamplerWriteInfo = {};
     VkDescriptorImageInfo mDummyTargetInfo = {};
     VkWriteDescriptorSet mDummyTargetWriteInfo = {};
 
