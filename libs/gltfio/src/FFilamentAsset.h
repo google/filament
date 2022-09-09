@@ -30,6 +30,7 @@
 #include <filament/VertexBuffer.h>
 
 #include <gltfio/MaterialProvider.h>
+#include <gltfio/TextureProvider.h>
 
 #include <math/mat4.h>
 
@@ -249,7 +250,7 @@ struct FFilamentAsset : public FilamentAsset {
     // If a Filament Texture for the given args already exists, calls setParameter() and returns
     // early. If the Texture doesn't exist yet, stashes binding information for later.
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
-        const cgltf_texture* srcTexture, bool srgb);
+        const cgltf_texture* srcTexture, TextureProvider::TextureFlags flags);
 
     // Calls mi->setParameter() for the given texture slot and optionally adds an edge
     // to the dependency graph used for gradual reveal of entities.
@@ -315,7 +316,7 @@ struct FFilamentAsset : public FilamentAsset {
     struct TextureInfo {
         std::vector<TextureSlot> bindings;
         Texture* texture;
-        bool srgb;
+        TextureProvider::TextureFlags flags;
     };
 
     // Mapping from cgltf_texture to Texture* is required when creating new instances.

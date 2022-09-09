@@ -91,7 +91,8 @@ struct ResourceLoader::Impl {
     void computeTangents(FFilamentAsset* asset);
     void createTextures(FFilamentAsset* asset, bool async);
     void cancelTextureDecoding();
-    Texture* getOrCreateTexture(FFilamentAsset* asset, size_t textureIndex, const TextureSlot& tb);
+    Texture* getOrCreateTexture(FFilamentAsset* asset, size_t textureIndex,
+            TextureProvider::TextureFlags flags);
     ~Impl();
 };
 
@@ -555,18 +556,14 @@ void ResourceLoader::asyncUpdateLoad() {
 }
 
 Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, size_t textureIndex,
-        const TextureSlot& tb) {
+        TextureProvider::TextureFlags flags) {
     const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[textureIndex];
     const cgltf_image* image = srcTexture.basisu_image ?
             srcTexture.basisu_image : srcTexture.image;
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
-    TextureProvider::FlagBits flags = {};
     FFilamentAsset::TextureInfo& info = asset->mTextures[textureIndex];
-    if (info.srgb) {
-        flags |= int(TextureProvider::Flags::sRGB);
-    }
 
     std::string mime = image->mime_type ? image->mime_type : "";
     size_t dataUriSize;
@@ -581,7 +578,6 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, size_t 
     TextureProvider* provider = mTextureProviders[mime];
     if (!provider) {
         slog.e << "Missing texture provider for " << mime << io::endl;
-        asset->mDependencyGraph.markAsError(tb.materialInstance);
         return nullptr;
     }
 
@@ -634,7 +630,6 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, size_t 
         Path fullpath = Path(mGltfPath).getParent() + uri;
         if (!fullpath.exists()) {
             slog.e << "Unable to open " << fullpath << io::endl;
-            asset->mDependencyGraph.markAsError(tb.materialInstance);
             return nullptr;
         }
         using namespace std;
@@ -659,7 +654,6 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, size_t 
         const char* name = srcTexture.name ? srcTexture.name : uri;
         slog.e << "Unable to create texture " << name << ": "
                 << provider->getPushMessage() << io::endl;
-        asset->mDependencyGraph.markAsError(tb.materialInstance);
     } else {
         info.texture = texture;
     }
@@ -679,10 +673,14 @@ void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
     mRemainingTextureDownloads = 0;
     size_t textureIndex = 0;
     for (FFilamentAsset::TextureInfo& info : asset->mTextures) {
-        for (const TextureSlot& slot : info.bindings) {
+        // There might be no bindings yet (e.g. if the user is preloading a zero-instance asset)
+        // in which case we still need to trigger texture creation.
+        getOrCreateTexture(asset, textureIndex, info.flags);
 
-            // Returns null if the user has not yet called addResourceData for the texture.
-            if (Texture* texture = getOrCreateTexture(asset, textureIndex, slot)) {
+        // For each binding to a material instance, check if the texture exists yet; if so,
+        // call setParameter(...) on the material.
+        for (const TextureSlot& slot : info.bindings) {
+            if (Texture* texture = getOrCreateTexture(asset, textureIndex, info.flags)) {
                 asset->applyTextureBinding(textureIndex, slot);
             }
         }

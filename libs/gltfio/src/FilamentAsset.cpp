@@ -99,7 +99,8 @@ const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
 }
 
 void FFilamentAsset::addTextureBinding(MaterialInstance* materialInstance,
-        const char* parameterName, const cgltf_texture* srcTexture, bool srgb) {
+        const char* parameterName, const cgltf_texture* srcTexture,
+        TextureProvider::TextureFlags flags) {
     if (!srcTexture->image && !srcTexture->basisu_image) {
 #ifndef NDEBUG
         slog.w << "Texture is missing image (" << srcTexture->name << ")." << io::endl;
@@ -111,8 +112,8 @@ void FFilamentAsset::addTextureBinding(MaterialInstance* materialInstance,
     TextureInfo& info = mTextures[textureIndex];
 
     // All bindings for a particular glTF texture must have the same transform function.
-    assert_invariant(info.bindings.size() == 0 || info.srgb == srgb);
-    info.srgb = srgb;
+    assert_invariant(info.bindings.size() == 0 || info.flags == flags);
+    info.flags = flags;
 
     const TextureSlot slot = { materialInstance, parameterName };
     if (info.texture) {
