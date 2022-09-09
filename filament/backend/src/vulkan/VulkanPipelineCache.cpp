@@ -65,15 +65,6 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
     mDummyBufferWriteInfo.pBufferInfo = &mDummyBufferInfo;
     mDummyBufferWriteInfo.pTexelBufferView = nullptr;
 
-    mDummySamplerWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    mDummySamplerWriteInfo.pNext = nullptr;
-    mDummySamplerWriteInfo.dstArrayElement = 0;
-    mDummySamplerWriteInfo.descriptorCount = 1;
-    mDummySamplerWriteInfo.pImageInfo = &mDummySamplerInfo;
-    mDummySamplerWriteInfo.pBufferInfo = nullptr;
-    mDummySamplerWriteInfo.pTexelBufferView = nullptr;
-    mDummySamplerWriteInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
     mDummyTargetInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     mDummyTargetWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyTargetWriteInfo.pNext = nullptr;
@@ -98,8 +89,8 @@ void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
 
     // Formulate some dummy objects and dummy descriptor info used only for clearing out unused
     // bindings. This is especially crucial after a texture has been destroyed. Since core Vulkan
-    // does not allow specifying VK_NULL_HANDLE without the robustness2 extension, we are forced to
-    // bind dummy objects.
+    // does not allow specifying VK_NULL_HANDLE without the robustness2 extension, we would need to
+    // change the pipeline layout more frequently if we wanted to get rid of these dummy objects.
 
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -111,26 +102,6 @@ void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
 
     mDummyBufferInfo.buffer = mDummyBuffer;
     mDummyBufferInfo.range = bufferInfo.size;
-    mDummySamplerInfo.imageLayout = mDummyTargetInfo.imageLayout;
-
-    VkSamplerCreateInfo samplerInfo {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_NEAREST,
-        .minFilter = VK_FILTER_NEAREST,
-        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .anisotropyEnable = VK_FALSE,
-        .maxAnisotropy = 1,
-        .compareEnable = VK_FALSE,
-        .compareOp = VK_COMPARE_OP_ALWAYS,
-        .minLod = 0.0f,
-        .maxLod = 1.0f,
-        .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-        .unnormalizedCoordinates = VK_FALSE
-    };
-    vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &mDummySamplerInfo.sampler);
 }
 
 bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
@@ -667,10 +638,6 @@ void VulkanPipelineCache::destroyCache() noexcept {
     }
     mPipelines.clear();
     mBoundPipeline = {};
-    if (mDummySamplerInfo.sampler) {
-        vkDestroySampler(mDevice, mDummySamplerInfo.sampler, VKALLOC);
-        mDummySamplerInfo.sampler = VK_NULL_HANDLE;
-    }
     vmaDestroyBuffer(mAllocator, mDummyBuffer, mDummyMemory);
     mDummyBuffer = VK_NULL_HANDLE;
     mDummyMemory = VK_NULL_HANDLE;
