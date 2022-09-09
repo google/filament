@@ -1862,7 +1862,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 const SamplerParams& samplerParams = boundSampler->s;
                 VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
 
-                VulkanPipelineCache::setUsageFlags(&usage, sampler.binding, samplerGroup.stageFlags);
+                usage = VulkanPipelineCache::getUsageFlags(sampler.binding, samplerGroup.stageFlags, usage);
 
                 samplerInfo[bindingPoint] = {
                     .sampler = vksampler,

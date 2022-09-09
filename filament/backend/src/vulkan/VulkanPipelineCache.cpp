@@ -35,24 +35,31 @@ namespace filament::backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
+static constexpr size_t MAX_VERTEX_SAMPLER_COUNT = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT;
+
 static VkShaderStageFlags getShaderStageFlags(VulkanPipelineCache::UsageFlags key, uint16_t binding) {
+    // NOTE: if you modify this function, you also need to modify getUsageFlags.
     VkShaderStageFlags flags = 0;
-    if (key.test(binding * 2 + 0)) {
+    if (key.test(binding)) {
         flags |= VK_SHADER_STAGE_VERTEX_BIT;
     }
-    if (key.test(binding * 2 + 1)) {
+    if (key.test(MAX_VERTEX_SAMPLER_COUNT + binding)) {
         flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     }
     return flags;
 }
 
-void VulkanPipelineCache::setUsageFlags(UsageFlags* key, uint16_t binding, ShaderStageFlags flags) {
+VulkanPipelineCache::UsageFlags
+VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, UsageFlags src) {
+    // NOTE: if you modify this function, you also need to modify getShaderStageFlags.
     if (any(flags & ShaderStageFlags::VERTEX)) {
-        key->set(binding * 2 + 0);
+        src.set(binding);
     }
     if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        key->set(binding * 2 + 1);
+        src.set(MAX_VERTEX_SAMPLER_COUNT + binding);
     }
+    assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
+    return src;
 }
 
 VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
