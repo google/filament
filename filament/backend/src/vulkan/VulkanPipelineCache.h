@@ -83,7 +83,7 @@ public:
     };
 
     using UsageFlags = utils::bitset64;
-    static void setUsageFlags(UsageFlags* dst, uint16_t binding, ShaderStageFlags stages);
+    static UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags stages, UsageFlags src = {});
 
     #pragma clang diagnostic push
     #pragma clang diagnostic warning "-Wpadded"
@@ -190,9 +190,11 @@ private:
     // PIPELINE LAYOUT CACHE KEY
     // -------------------------
 
-    // The cache key for pipeline layouts represents 32 samplers, each with 2 bits (one for each
-    // shader stage).
     using PipelineLayoutKey = utils::bitset64;
+
+    static_assert(PipelineLayoutKey::BIT_COUNT >=
+            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT +
+            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_FRAGMENT_SAMPLER_COUNT);
 
     struct PipelineLayoutKeyHashFn {
         size_t operator()(const PipelineLayoutKey& key) const;
