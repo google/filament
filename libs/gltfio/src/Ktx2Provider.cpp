@@ -41,7 +41,7 @@ public:
     ~Ktx2Provider();
 
     Texture* pushTexture(const uint8_t* data, size_t byteCount,
-            const char* mimeType, uint64_t flags) final;
+            const char* mimeType, TextureFlags flags) final;
 
     Texture* popTexture() final;
     void updateQueue() final;
@@ -87,12 +87,12 @@ private:
 };
 
 Texture* Ktx2Provider::pushTexture(const uint8_t* data, size_t byteCount,
-            const char* mimeType, FlagBits flags) {
+            const char* mimeType, TextureProvider::TextureFlags flags) {
     using TransferFunction = ktxreader::Ktx2Reader::TransferFunction;
-    const FlagBits sRGB = FlagBits(Flags::sRGB);
 
     auto async = mKtxReader->asyncCreate(data, byteCount,
-            (flags & sRGB) ? TransferFunction::sRGB : TransferFunction::LINEAR);
+            any(flags & TextureProvider::TextureFlags::sRGB) ?
+            TransferFunction::sRGB : TransferFunction::LINEAR);
 
     if (async == nullptr) {
         mRecentPushMessage = "Unable to build Texture object.";

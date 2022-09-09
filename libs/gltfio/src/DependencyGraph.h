@@ -79,12 +79,6 @@ public:
     // Marks the given texture as being fully decoded, with all miplevels initialized.
     void markAsReady(Texture* texture);
 
-    // Marks the material as ready, but due to an error.
-    //
-    // This should be called when it known that at least one of the material's texture
-    // dependencies will never become available.
-    void markAsError(Material* material) { markAsReady(material); }
-
 private:
     struct TextureNode {
         Texture* texture;

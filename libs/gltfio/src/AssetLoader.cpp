@@ -1317,8 +1317,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("glossinessFactor", sgConfig.glossiness_factor);
     }
 
+    const TextureProvider::TextureFlags sRGB = TextureProvider::TextureFlags::sRGB;
+    const TextureProvider::TextureFlags LINEAR = TextureProvider::TextureFlags::NONE;
+
     if (matkey.hasBaseColorTexture) {
-        mAsset->addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, true);
+        mAsset->addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, sRGB);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = baseColorTexture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1331,7 +1334,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         // enabled. Note that KHR_materials_pbrSpecularGlossiness specifies that diffuseTexture and
         // specularGlossinessTexture are both sRGB, whereas the core glTF spec stipulates that
         // metallicRoughness is not sRGB.
-        bool srgb = inputMat->has_pbr_specular_glossiness;
+        TextureProvider::TextureFlags srgb = inputMat->has_pbr_specular_glossiness ? sRGB : LINEAR;
         mAsset->addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = metallicRoughnessTexture.transform;
@@ -1341,7 +1344,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasNormalTexture) {
-        mAsset->addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, false);
+        mAsset->addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, LINEAR);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->normal_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1353,7 +1356,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasOcclusionTexture) {
-        mAsset->addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, false);
+        mAsset->addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, LINEAR);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->occlusion_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1365,7 +1368,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasEmissiveTexture) {
-        mAsset->addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, true);
+        mAsset->addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, sRGB);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->emissive_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1379,7 +1382,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
         if (matkey.hasClearCoatTexture) {
             mAsset->addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture,
-                    false);
+                    LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1388,7 +1391,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         }
         if (matkey.hasClearCoatRoughnessTexture) {
             mAsset->addTextureBinding(mi, "clearCoatRoughnessMap",
-                    ccConfig.clearcoat_roughness_texture.texture, false);
+                    ccConfig.clearcoat_roughness_texture.texture, LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_roughness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1397,7 +1400,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         }
         if (matkey.hasClearCoatNormalTexture) {
             mAsset->addTextureBinding(mi, "clearCoatNormalMap",
-                    ccConfig.clearcoat_normal_texture.texture, false);
+                    ccConfig.clearcoat_normal_texture.texture, LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_normal_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1414,7 +1417,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
         if (matkey.hasSheenColorTexture) {
             mAsset->addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture,
-                    true);
+                    sRGB);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_color_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1423,7 +1426,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         }
         if (matkey.hasSheenRoughnessTexture) {
             mAsset->addTextureBinding(mi, "sheenRoughnessMap",
-                    shConfig.sheen_roughness_texture.texture, false);
+                    shConfig.sheen_roughness_texture.texture, LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1444,7 +1447,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
         if (matkey.hasVolumeThicknessTexture) {
             mAsset->addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture,
-                    false);
+                    LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = vlConfig.thickness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1457,7 +1460,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("transmissionFactor", trConfig.transmission_factor);
         if (matkey.hasTransmissionTexture) {
             mAsset->addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture,
-                    false);
+                    LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = trConfig.transmission_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
