@@ -2340,9 +2340,9 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // EXT_multisampled_render_to_texture emulation).
         // We would need to perform a "backward" resolve, i.e. load the resolved texture into the
         // tile, everything must appear as though the multi-sample buffer was lost.
-        // However Filament specifies that a non multi-sample attachment to a
+        // However, Filament specifies that a non multi-sample attachment to a
         // multi-sample RenderTarget is always discarded. We do this because implementing
-        // the load on Metal is not trivial and it's not a feature we rely on at this time.
+        // the load on Metal is not trivial, and it's not a feature we rely on at this time.
         discardFlags |= rt->gl.resolve;
     }
 
@@ -2509,29 +2509,21 @@ GLsizei OpenGLDriver::getAttachments(AttachmentArray& attachments,
 }
 
 // Sets up a scissor rectangle that automatically gets clipped against the viewport.
-void OpenGLDriver::setViewportScissor(Viewport const& viewportScissor) noexcept {
+void OpenGLDriver::setScissor(Viewport const& scissor) noexcept {
+    constexpr uint32_t maxvalu = std::numeric_limits<int32_t>::max();
+
     auto& gl = mContext;
 
-    // In OpenGL, all four scissor parameters are actually signed, so clamp to MAX_INT32.
-    const int32_t maxval = std::numeric_limits<int32_t>::max();
-    int32_t left = std::min(viewportScissor.left, maxval);
-    int32_t bottom = std::min(viewportScissor.bottom, maxval);
-    uint32_t width = std::min(viewportScissor.width, uint32_t(maxval));
-    uint32_t height = std::min(viewportScissor.height, uint32_t(maxval));
-    // Compute the intersection of the requested scissor rectangle with the current viewport.
-    // Note that the viewport rectangle isn't necessarily equal to the bounds of the current
-    // Filament View (e.g., when post-processing is enabled).
-    OpenGLContext::vec4gli scissor;
-    OpenGLContext::vec4gli viewport = gl.getViewport();
-    scissor.x = std::max((int32_t)left, viewport[0]);
-    scissor.y = std::max((int32_t)bottom, viewport[1]);
-    int32_t right = std::min((int32_t)left + (int32_t)width, viewport[0] + viewport[2]);
-    int32_t top = std::min((int32_t)bottom + (int32_t)height, viewport[1] + viewport[3]);
-    // Compute width / height of the intersected region. If there's no intersection, pass zeroes
-    // rather than negative values to satisfy OpenGL requirements.
-    scissor.z = std::max(0, right - scissor.x);
-    scissor.w = std::max(0, top - scissor.y);
-    gl.setScissor(scissor.x, scissor.y, scissor.z, scissor.w);
+    // TODO: disable scissor when it is bigger than the current surface?
+    if (scissor.left == 0 && scissor.bottom == 0 &&
+        scissor.width >= maxvalu && scissor.height >= maxvalu) {
+        gl.disable(GL_SCISSOR_TEST);
+        return;
+    }
+
+    gl.setScissor(
+            GLint(scissor.left), GLint(scissor.bottom),
+            GLint(scissor.width), GLint(scissor.height));
     gl.enable(GL_SCISSOR_TEST);
 }
 
@@ -3092,7 +3084,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
 
-    setViewportScissor(state.scissor);
+    setScissor(state.scissor);
 
     if (UTILS_LIKELY(instanceCount <= 1)) {
         glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, (GLsizei)rp->count,

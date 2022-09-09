@@ -1321,18 +1321,12 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     // Set scissor-rectangle.
     // In order to do this, we compute the intersection between:
     //  1. the scissor rectangle
-    //  2. the current viewport
-    //  3. the render target attachment dimensions (important, as the scissor can't be set larger)
+    //  2. the render target attachment dimensions (important, as the scissor can't be set larger)
     // fmax/min are used below to guard against NaN and because the MTLViewport/MTLRegion
     // coordinates are doubles.
     MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
     const float sleft = scissor.origin.x, sright = scissor.origin.x + scissor.size.width;
     const float stop = scissor.origin.y, sbottom = scissor.origin.y + scissor.size.height;
-
-    // Viewport extent
-    const MTLViewport& viewport = mContext->currentViewport;
-    const float vleft = viewport.originX, vright = viewport.originX + viewport.width;
-    const float vtop = viewport.originY, vbottom = viewport.originY + viewport.height;
 
     // Attachment extent
     const auto attachmentSize = mContext->currentRenderTarget->getAttachmentSize();
@@ -1340,10 +1334,10 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     const float aright = static_cast<float>(attachmentSize.x);
     const float abottom = static_cast<float>(attachmentSize.y);
 
-    const auto left   = std::fmax(std::fmax(sleft, vleft), aleft);
-    const auto right  = std::fmin(std::fmin(sright, vright), aright);
-    const auto top    = std::fmax(std::fmax(stop, vtop), atop);
-    const auto bottom = std::fmin(std::fmin(sbottom, vbottom), abottom);
+    const auto left   = std::fmax(sleft, aleft);
+    const auto right  = std::fmin(sright, aright);
+    const auto top    = std::fmax(stop, atop);
+    const auto bottom = std::fmin(sbottom, abottom);
 
     MTLScissorRect scissorRect = {
         .x      = static_cast<NSUInteger>(left),

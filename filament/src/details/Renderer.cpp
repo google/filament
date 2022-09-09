@@ -904,6 +904,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 });
     }
 
+    // this makes the viewport relative to xvp
+    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
+    //        know at this point. This will usually be the case when post-process is disabled.
+    // FIXME: we probably should take the dynamic scaling into account too
+    pass.setScissorViewport(hasPostProcess ? xvp : vp);
+
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view,
             desc, config, colorGradingConfigForColor, pass.getExecutor());
