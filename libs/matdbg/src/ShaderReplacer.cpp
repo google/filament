@@ -174,7 +174,14 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
             ShaderType stage, const char* source, size_t sourceLength) {
     assert_invariant(mMaterialTag == ChunkType::MaterialSpirv);
 
-    const EShLanguage shLang = stage == VERTEX ? EShLangVertex : EShLangFragment;
+    auto getShaderStage = [](ShaderType type) {
+        switch (type) {
+            case ShaderType::VERTEX:        return EShLanguage::EShLangVertex;
+            case ShaderType::FRAGMENT:      return EShLanguage::EShLangFragment;
+        }
+    };
+
+    const EShLanguage shLang = getShaderStage(stage);
 
     std::string nullTerminated(source, sourceLength);
     source = nullTerminated.c_str();
@@ -305,10 +312,10 @@ void ShaderIndex::writeChunks(ostream& stream) {
 
 void ShaderIndex::replaceShader(backend::ShaderModel shaderModel, Variant variant,
             backend::ShaderType stage, const char* source, size_t sourceLength) {
-    const uint8_t model = (uint8_t) shaderModel;
+    const uint8_t model = uint8_t(shaderModel);
     for (auto& record : mShaderRecords) {
         if (record.shaderModel == model && record.variantKey == variant.key &&
-                record.stage == stage) {
+                record.stage == uint8_t(stage)) {
             record.shader = std::string(source, sourceLength);
             return;
         }
@@ -378,7 +385,7 @@ void BlobIndex::replaceShader(ShaderModel shaderModel, Variant variant,
     const uint8_t model = (uint8_t) shaderModel;
     for (auto& record : mShaderRecords) {
         if (record.shaderModel == model && record.variantKey == variant.key &&
-                record.stage == stage) {
+                record.stage == uint8_t(stage)) {
 
             // TODO: because a single blob entry might be used by more than one variant, matdbg
             // users may unwittingly edit more than 1 variant when multiple variants have the exact

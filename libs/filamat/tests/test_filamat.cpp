@@ -119,7 +119,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -140,7 +140,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetectedVertex) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::VERTEX, shaderCode, properties);
+    glslTools.findProperties(ShaderType::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -162,7 +162,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -180,7 +180,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssign) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -206,7 +206,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::VERTEX, shaderCode, properties);
+    glslTools.findProperties(ShaderType::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -225,7 +225,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignWithSwizzling) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -249,7 +249,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasing) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -273,7 +273,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasingAndSw
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -302,7 +302,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexInto
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -331,7 +331,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChain) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -351,7 +351,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBaseColor) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -370,7 +370,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -389,7 +389,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::METALLIC)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -408,7 +408,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::REFLECTANCE)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -427,7 +427,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -446,7 +446,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -469,7 +469,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
@@ -490,7 +490,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -510,7 +510,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
@@ -531,7 +531,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::THICKNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -551,7 +551,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_POWER)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -571,7 +571,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -590,7 +590,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY_DIRECTION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -609,7 +609,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -629,7 +629,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SHEEN_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -648,7 +648,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenRoughness) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SHEEN_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -667,7 +667,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -686,7 +686,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBentNormal) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BENT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -705,7 +705,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -724,7 +724,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerWithinInclude) {
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
