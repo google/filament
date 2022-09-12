@@ -22,6 +22,7 @@
 #include <private/filament/EngineEnums.h>
 
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <array>
 
@@ -44,7 +45,7 @@ using SamplerGroupBindingInfoList =
 
 // map of sampler shader binding to sampler shader name
 using SamplerBindingToNameMap =
-        std::array<utils::CString, backend::MAX_SAMPLER_COUNT>;
+        utils::FixedCapacityVector<utils::CString>;
 
 } // namespace filament
 

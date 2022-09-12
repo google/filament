@@ -34,6 +34,9 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
 
     assert_invariant(mActiveSamplerCount == 0);
 
+    mSamplerNamesBindingMap.reserve(MAX_SAMPLER_COUNT);
+    mSamplerNamesBindingMap.resize(MAX_SAMPLER_COUNT);
+
     // Note: the material variant affects only the sampler types, but cannot affect
     // the actual bindings. For this reason it is okay to use the dummyVariant here.
     uint8_t offset = 0;
