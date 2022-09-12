@@ -81,6 +81,9 @@ public:
     /**
      * Creates a Filament texture and pushes it to the asynchronous decoding queue.
      *
+     * The provider synchronously determines the texture dimensions in order to create a Filament
+     * texture object, then populates the miplevels asynchronously.
+     *
      * If construction fails, nothing is pushed to the queue and null is returned. The failure
      * reason can be obtained with getPushMessage(). The given buffer pointer is not held, so the
      * caller can free it immediately. It is also the caller's responsibility to free the returned
