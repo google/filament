@@ -121,6 +121,7 @@ static LightManager::Type getLightType(const cgltf_light_type light) {
         case cgltf_light_type_max_enum:
         case cgltf_light_type_invalid:
             assert_invariant(false && "Invalid light type");
+            return LightManager::Type::DIRECTIONAL;
         case cgltf_light_type_directional:
             return LightManager::Type::DIRECTIONAL;
         case cgltf_light_type_point:
