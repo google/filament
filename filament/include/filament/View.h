@@ -220,7 +220,6 @@ public:
      *
      * Renderable objects can have one or several layers associated to them. Layers are
      * represented with an 8-bits bitmask, where each bit corresponds to a layer.
-     * @see RenderableManager::setLayerMask().
      *
      * This call sets which of those layers are visible. Renderables in invisible layers won't be
      * rendered.
@@ -229,10 +228,23 @@ public:
      * @param values    a bitmask where each bit sets the visibility of the corresponding layer
      *                  (1: visible, 0: invisible), only layers in \p select are affected.
      *
-     * @note By default all layers are visible.
+     * @see RenderableManager::setLayerMask().
+     *
+     * @note By default only layer 0 (bitmask 0x01) is visible.
      * @note This is a convenient way to quickly show or hide sets of Renderable objects.
      */
     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
+
+    /**
+     * Helper function to enable or disable a visibility layer.
+     * @param layer     layer between 0 and 7 to enable or disable
+     * @param enabled   true to enable the layer, false to disable it
+     * @see RenderableManager::setVisibleLayers()
+     */
+    inline void setLayerEnabled(size_t layer, bool enabled) noexcept {
+        const uint8_t mask = 1u << layer;
+        setVisibleLayers(mask, enabled ? mask : 0);
+    }
 
     /**
      * Get the visible layers.
