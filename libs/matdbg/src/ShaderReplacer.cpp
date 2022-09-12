@@ -61,7 +61,7 @@ public:
 
     // Replaces the specified shader text with new content.
     void replaceShader(backend::ShaderModel shaderModel, Variant variant,
-            ShaderType stage, const char* source, size_t sourceLength);
+            ShaderStage stage, const char* source, size_t sourceLength);
 
     bool isEmpty() const { return mShaderRecords.size() == 0; }
 
@@ -81,7 +81,7 @@ public:
 
     // Replaces the specified shader with new content.
     void replaceShader(backend::ShaderModel shaderModel, Variant variant,
-            ShaderType stage, const char* source, size_t sourceLength);
+            ShaderStage stage, const char* source, size_t sourceLength);
 
     bool isEmpty() const { return mDataBlobs.size() == 0 && mShaderRecords.size() == 0; }
 
@@ -117,7 +117,7 @@ ShaderReplacer::~ShaderReplacer() {
 }
 
 bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant variant,
-            ShaderType stage, const char* sourceString, size_t stringLength) {
+            ShaderStage stage, const char* sourceString, size_t stringLength) {
     if (!mOriginalPackage.parse()) {
         return false;
     }
@@ -171,13 +171,13 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
 }
 
 bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
-            ShaderType stage, const char* source, size_t sourceLength) {
+            ShaderStage stage, const char* source, size_t sourceLength) {
     assert_invariant(mMaterialTag == ChunkType::MaterialSpirv);
 
-    auto getShaderStage = [](ShaderType type) {
+    auto getShaderStage = [](ShaderStage type) {
         switch (type) {
-            case ShaderType::VERTEX:        return EShLanguage::EShLangVertex;
-            case ShaderType::FRAGMENT:      return EShLanguage::EShLangFragment;
+            case ShaderStage::VERTEX:        return EShLanguage::EShLangVertex;
+            case ShaderStage::FRAGMENT:      return EShLanguage::EShLangFragment;
         }
     };
 
@@ -311,7 +311,7 @@ void ShaderIndex::writeChunks(ostream& stream) {
 }
 
 void ShaderIndex::replaceShader(backend::ShaderModel shaderModel, Variant variant,
-            backend::ShaderType stage, const char* source, size_t sourceLength) {
+            backend::ShaderStage stage, const char* source, size_t sourceLength) {
     const uint8_t model = uint8_t(shaderModel);
     for (auto& record : mShaderRecords) {
         if (record.shaderModel == model && record.variantKey == variant.key &&
@@ -381,7 +381,7 @@ void BlobIndex::writeChunks(ostream& stream) {
 }
 
 void BlobIndex::replaceShader(ShaderModel shaderModel, Variant variant,
-            ShaderType stage, const char* source, size_t sourceLength) {
+            ShaderStage stage, const char* source, size_t sourceLength) {
     const uint8_t model = (uint8_t) shaderModel;
     for (auto& record : mShaderRecords) {
         if (record.shaderModel == model && record.variantKey == variant.key &&

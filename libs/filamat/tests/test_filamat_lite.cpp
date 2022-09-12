@@ -57,7 +57,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerNothingDetected) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -70,7 +70,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerNothingDetectedinVertex) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::VERTEX, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -85,7 +85,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerDirectAssign) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -100,7 +100,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerDirectAssignVertex) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::VERTEX, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -118,7 +118,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerAssignMultiple) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
     expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
@@ -136,7 +136,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerDirectAssignWithSwizzling) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -152,7 +152,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerNoSpace) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -171,7 +171,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerWhitespace) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
     expected[size_t(MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
@@ -186,7 +186,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerEndOfShader) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -205,7 +205,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerSlashComments) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::METALLIC)] = true;
     expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
@@ -228,7 +228,7 @@ TEST_F(FilamatLite, StaticCodeAnalyzerMultilineComments) {
 
     GLSLToolsLite glslTools;
     MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(ShaderType::FRAGMENT, shaderCode, properties);
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected {false};
     expected[size_t(MaterialBuilder::Property::METALLIC)] = true;
     expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;

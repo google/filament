@@ -46,7 +46,7 @@ public:
     filament::backend::Program getProgram(filament::backend::DriverApi&) noexcept;
 
 private:
-    using ShaderStage = filament::backend::ShaderType;
+    using ShaderStage = filament::backend::ShaderStage;
 
     using Blob = std::vector<char>;
     static Blob transpileShader(ShaderStage stage, std::string shader, Backend backend,

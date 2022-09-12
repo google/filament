@@ -184,8 +184,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(
 
 Program ShaderGenerator::getProgram(filament::backend::DriverApi&) noexcept {
     Program program;
-    program.shader(ShaderType::VERTEX, mVertexBlob.data(), mVertexBlob.size());
-    program.shader(ShaderType::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
+    program.shader(ShaderStage::VERTEX, mVertexBlob.data(), mVertexBlob.size());
+    program.shader(ShaderStage::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
     return program;
 }
 

@@ -514,7 +514,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.featureLevel = mFeatureLevel;
 }
 
-bool MaterialBuilder::findProperties(backend::ShaderType type,
+bool MaterialBuilder::findProperties(backend::ShaderStage type,
         MaterialBuilder::PropertyList& allProperties) noexcept {
 #ifndef FILAMAT_LITE
     GLSLTools glslTools;
@@ -545,18 +545,18 @@ bool MaterialBuilder::findAllProperties() noexcept {
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
-    if (!findProperties(ShaderType::FRAGMENT, allProperties)) {
+    if (!findProperties(ShaderStage::FRAGMENT, allProperties)) {
         return false;
     }
-    if (!findProperties(ShaderType::VERTEX, allProperties)) {
+    if (!findProperties(ShaderStage::VERTEX, allProperties)) {
         return false;
     }
     return true;
 #else
     GLSLToolsLite glslTools;
-    if (glslTools.findProperties(ShaderType::FRAGMENT, mMaterialFragmentCode.getResolved(), mProperties)) {
+    if (glslTools.findProperties(ShaderStage::FRAGMENT, mMaterialFragmentCode.getResolved(), mProperties)) {
         return glslTools.findProperties(
-                ShaderType::VERTEX, mMaterialVertexCode.getResolved(), mProperties);
+                ShaderStage::VERTEX, mMaterialVertexCode.getResolved(), mProperties);
     }
     return false;
 #endif
@@ -577,12 +577,12 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
     }
 
     ShaderModel model = static_cast<ShaderModel>(mSemanticCodeGenParams.shaderModel);
-    std::string shaderCode = peek(ShaderType::VERTEX, mSemanticCodeGenParams, mProperties);
+    std::string shaderCode = peek(ShaderStage::VERTEX, mSemanticCodeGenParams, mProperties);
     bool result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
             targetApi, targetLanguage, info);
     if (!result) return false;
 
-    shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
+    shaderCode = peek(ShaderStage::FRAGMENT, mSemanticCodeGenParams, mProperties);
     result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
             targetApi, targetLanguage, mCustomSurfaceShading, info);
     return result;
@@ -634,9 +634,9 @@ bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
 }
 
 static void showErrorMessage(const char* materialName, filament::Variant variant,
-        MaterialBuilder::TargetApi targetApi, backend::ShaderType shaderType,
+        MaterialBuilder::TargetApi targetApi, backend::ShaderStage shaderType,
         const std::string& shaderCode) {
-    using ShaderType = backend::ShaderType;
+    using ShaderStage = backend::ShaderStage;
     using TargetApi = MaterialBuilder::TargetApi;
     slog.e
             << "Error in \"" << materialName << "\""
@@ -644,7 +644,7 @@ static void showErrorMessage(const char* materialName, filament::Variant variant
             << (targetApi == TargetApi::VULKAN ? ", Vulkan.\n" : ", OpenGL.\n")
             << "=========================\n"
             << "Generated "
-            << (shaderType == ShaderType::VERTEX ? "Vertex Shader\n" : "Fragment Shader\n")
+            << (shaderType == ShaderStage::VERTEX ? "Vertex Shader\n" : "Fragment Shader\n")
             << "=========================\n"
             << shaderCode;
 }
@@ -730,7 +730,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 // directives are optimized away when using the full filamat, so down below we
                 // explicitly remove them when using filamat lite.
                 std::string shader;
-                if (v.stage == backend::ShaderType::VERTEX) {
+                if (v.stage == backend::ShaderStage::VERTEX) {
                     shader = sg.createVertexProgram(
                             shaderModel, targetApi, targetLanguage, info, v.variant,
                             mInterpolation, mVertexDomain);
@@ -738,7 +738,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     GLSLToolsLite glslTools;
                     glslTools.removeGoogleLineDirectives(shader);
 #endif
-                } else if (v.stage == backend::ShaderType::FRAGMENT) {
+                } else if (v.stage == backend::ShaderStage::FRAGMENT) {
                     shader = sg.createFragmentProgram(
                             shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
 #ifdef FILAMAT_LITE
@@ -789,8 +789,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 // NOTE: do not execute expensive work from here on!
                 std::unique_lock<Mutex> lock(entriesLock);
 
-                // below we rely on casting ShaderType to uint8_t
-                static_assert(sizeof(filament::backend::ShaderType) == 1);
+                // below we rely on casting ShaderStage to uint8_t
+                static_assert(sizeof(filament::backend::ShaderStage) == 1);
 
 
                 switch (targetApi) {
@@ -1115,7 +1115,7 @@ bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
              mBlendingMode == BlendingMode::FADE));
 }
 
-std::string MaterialBuilder::peek(backend::ShaderType type,
+std::string MaterialBuilder::peek(backend::ShaderStage type,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
     ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mMaterialFragmentCode.getResolved(),
@@ -1126,7 +1126,7 @@ std::string MaterialBuilder::peek(backend::ShaderType type,
     prepareToBuild(info);
     info.samplerBindings.init(mMaterialDomain, info.sib);
 
-    if (type == backend::ShaderType::VERTEX) {
+    if (type == backend::ShaderStage::VERTEX) {
         return sg.createVertexProgram(ShaderModel(params.shaderModel),
                 params.targetApi, params.targetLanguage, info, {}, mInterpolation, mVertexDomain);
     } else {

@@ -173,7 +173,7 @@ void GLSLTools::shutdown() {
 }
 
 bool GLSLTools::findProperties(
-        filament::backend::ShaderType type,
+        filament::backend::ShaderStage type,
         const std::string& shaderCode,
         MaterialBuilder::PropertyList& properties,
         MaterialBuilder::TargetApi targetApi,
@@ -181,10 +181,10 @@ bool GLSLTools::findProperties(
         ShaderModel model) const noexcept {
     const char* shaderCString = shaderCode.c_str();
 
-    auto getShaderStage = [](ShaderType type) {
+    auto getShaderStage = [](ShaderStage type) {
         switch (type) {
-            case ShaderType::VERTEX:        return EShLanguage::EShLangVertex;
-            case ShaderType::FRAGMENT:      return EShLanguage::EShLangFragment;
+            case ShaderStage::VERTEX:        return EShLanguage::EShLangVertex;
+            case ShaderStage::FRAGMENT:      return EShLanguage::EShLangFragment;
         }
     };
 
@@ -205,7 +205,7 @@ bool GLSLTools::findProperties(
 
     TIntermNode* rootNode = tShader.getIntermediate()->getTreeRoot();
 
-    std::string mainFunction(type == ShaderType::FRAGMENT ?
+    std::string mainFunction(type == ShaderStage::FRAGMENT ?
             "material" : "materialVertex");
 
     TIntermAggregate* functionMaterialDef = ASTUtils::getFunctionByNameOnly(mainFunction, *rootNode);

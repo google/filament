@@ -30,7 +30,7 @@ namespace matdbg {
 struct ShaderInfo {
     backend::ShaderModel shaderModel;
     Variant variant;
-    backend::ShaderType pipelineStage;
+    backend::ShaderStage pipelineStage;
     uint32_t offset;
 };
 

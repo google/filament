@@ -1387,7 +1387,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     id<MTLTexture> texturesToBindVertex[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT] = {};
     id<MTLSamplerState> samplersToBindVertex[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT] = {};
 
-    enumerateSamplerGroups(program, ShaderType::VERTEX,
+    enumerateSamplerGroups(program, ShaderStage::VERTEX,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
                     const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
@@ -1425,7 +1425,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     id<MTLTexture> texturesToBindFragment[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT] = {};
     id<MTLSamplerState> samplersToBindFragment[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT] = {};
 
-    enumerateSamplerGroups(program, ShaderType::FRAGMENT,
+    enumerateSamplerGroups(program, ShaderStage::FRAGMENT,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
                     const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
@@ -1517,11 +1517,11 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::enumerateSamplerGroups(
-        const MetalProgram* program, ShaderType shaderType,
+        const MetalProgram* program, ShaderStage shaderType,
         const std::function<void(const SamplerDescriptor*, size_t)>& f) {
-    auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ?
+    auto& samplerBlockInfo = (shaderType == ShaderStage::VERTEX) ?
             program->vertexSamplerBlockInfo : program->fragmentSamplerBlockInfo;
-    auto maxSamplerCount = (shaderType == ShaderType::VERTEX) ?
+    auto maxSamplerCount = (shaderType == ShaderStage::VERTEX) ?
                            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT :
                            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT;
     for (size_t bindingIdx = 0; bindingIdx != maxSamplerCount; ++bindingIdx) {
