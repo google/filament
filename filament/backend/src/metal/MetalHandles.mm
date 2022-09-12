@@ -415,13 +415,13 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
     //  3 depth
     auto& samplerGroupInfo = program.getSamplerGroupInfo();
     for (size_t shaderType = 0; shaderType != PIPELINE_STAGE_COUNT; ++shaderType) {
-        ShaderType stage = (ShaderType)shaderType;
+        ShaderStage stage = (ShaderStage)shaderType;
         size_t bindingIdx = 0;
 
-        auto getShaderStage = [this](ShaderType type) -> auto& {
+        auto getShaderStage = [this](ShaderStage type) -> auto& {
             switch (type) {
-                case ShaderType::VERTEX:    return vertexSamplerBlockInfo;
-                case ShaderType::FRAGMENT:  return fragmentSamplerBlockInfo;
+                case ShaderStage::VERTEX:    return vertexSamplerBlockInfo;
+                case ShaderStage::FRAGMENT:  return fragmentSamplerBlockInfo;
             }
         };
 
@@ -430,7 +430,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         for (size_t samplerGroupIdx = 0; samplerGroupIdx != SAMPLER_GROUP_COUNT; ++samplerGroupIdx) {
             auto& groupData = samplerGroupInfo[samplerGroupIdx];
             auto stageFlags = groupData.stageFlags;
-            if (!hasShaderType(stageFlags, static_cast<ShaderType>(shaderType))) {
+            if (!hasShaderType(stageFlags, static_cast<ShaderStage>(shaderType))) {
                 continue;
             }
             auto& samplers = groupData.samplers;

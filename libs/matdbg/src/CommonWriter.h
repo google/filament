@@ -141,10 +141,10 @@ const char* toString(bool value) {
 }
 
 inline
-const char* toString(backend::ShaderType stage) noexcept {
+const char* toString(backend::ShaderStage stage) noexcept {
     switch (stage) {
-        case backend::ShaderType::VERTEX: return "vs";
-        case backend::ShaderType::FRAGMENT: return "fs";
+        case backend::ShaderStage::VERTEX: return "vs";
+        case backend::ShaderStage::FRAGMENT: return "fs";
         default: break;
     }
     return "--";

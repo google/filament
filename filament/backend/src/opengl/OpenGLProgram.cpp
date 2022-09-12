@@ -34,7 +34,7 @@ using namespace utils;
 using namespace backend;
 
 static void logCompilationError(utils::io::ostream& out,
-        ShaderType shaderType, const char* name,
+        ShaderStage shaderType, const char* name,
         GLuint shaderId, CString const& sourceCode) noexcept;
 
 static void logProgramLinkError(utils::io::ostream& out,
@@ -120,13 +120,13 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
     // build all shaders
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-        ShaderType type = static_cast<ShaderType>(i);
+        ShaderStage type = static_cast<ShaderStage>(i);
         GLenum glShaderType;
         switch (type) {
-            case ShaderType::VERTEX:
+            case ShaderStage::VERTEX:
                 glShaderType = GL_VERTEX_SHADER;
                 break;
-            case ShaderType::FRAGMENT:
+            case ShaderStage::FRAGMENT:
                 glShaderType = GL_FRAGMENT_SHADER;
                 break;
         }
@@ -287,7 +287,7 @@ bool OpenGLProgram::checkProgramStatus(const char* name,
     // only if the link fails, we check the compilation status
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-        const ShaderType type = static_cast<ShaderType>(i);
+        const ShaderStage type = static_cast<ShaderStage>(i);
         const GLuint shader = shaderIds[i];
         glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
         if (status != GL_TRUE) {
@@ -421,13 +421,13 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
 }
 
 UTILS_NOINLINE
-void logCompilationError(io::ostream& out, ShaderType shaderType,
+void logCompilationError(io::ostream& out, ShaderStage shaderType,
         const char* name, GLuint shaderId, CString const& sourceCode) noexcept {
 
-    auto to_string = [](ShaderType type) -> const char* {
+    auto to_string = [](ShaderStage type) -> const char* {
         switch (type) {
-            case ShaderType::VERTEX:   return "vertex";
-            case ShaderType::FRAGMENT: return "fragment";
+            case ShaderStage::VERTEX:   return "vertex";
+            case ShaderStage::FRAGMENT: return "fragment";
         }
     };
 

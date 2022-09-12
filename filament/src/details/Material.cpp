@@ -388,7 +388,7 @@ Program FMaterial::getProgramBuilderWithVariants(
     ShaderContent& vsBuilder = mEngine.getVertexShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(vsBuilder, sm,
-            vertexVariant, ShaderType::VERTEX);
+            vertexVariant, ShaderStage::VERTEX);
 
     ASSERT_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()),
             "The material '%s' has not been compiled to include the required "
@@ -402,7 +402,7 @@ Program FMaterial::getProgramBuilderWithVariants(
     ShaderContent& fsBuilder = mEngine.getFragmentShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(fsBuilder, sm,
-            fragmentVariant, ShaderType::FRAGMENT);
+            fragmentVariant, ShaderStage::FRAGMENT);
 
     ASSERT_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()),
             "The material '%s' has not been compiled to include the required "
@@ -410,8 +410,8 @@ Program FMaterial::getProgramBuilderWithVariants(
             mName.c_str(), variant.key, fragmentVariant.key);
 
     Program program;
-    program.shader(ShaderType::VERTEX, vsBuilder.data(), vsBuilder.size())
-           .shader(ShaderType::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+    program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
+           .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
            .uniformBlockBindings(mUniformBlockBindings)
            .diagnostics(mName,
                     [this, variant](io::ostream& out) -> io::ostream& {

@@ -139,7 +139,7 @@ public:
     // Use static code analysis on the fragment shader AST to guess properties used in user provided
     // glgl code. Populate properties accordingly.
     bool findProperties(
-            filament::backend::ShaderType type,
+            filament::backend::ShaderStage type,
             const std::string& shaderCode,
             MaterialBuilder::PropertyList& properties,
             MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL,

@@ -181,7 +181,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
 
-    cg.generateProlog(vs, ShaderType::VERTEX, material);
+    cg.generateProlog(vs, ShaderStage::VERTEX, material);
 
     cg.generateQualityDefine(vs, material.quality);
 
@@ -253,34 +253,34 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
             attributes.set(VertexAttribute::MORPH_TANGENTS_3);
         }
     }
-    CodeGenerator::generateShaderInputs(vs, ShaderType::VERTEX, attributes, interpolation);
+    CodeGenerator::generateShaderInputs(vs, ShaderStage::VERTEX, attributes, interpolation);
 
     // custom material variables
     size_t variableIndex = 0;
     for (const auto& variable : mVariables) {
-        CodeGenerator::generateVariable(vs, ShaderType::VERTEX, variable, variableIndex++);
+        CodeGenerator::generateVariable(vs, ShaderStage::VERTEX, variable, variableIndex++);
     }
 
     // materials defines
     generateVertexDomain(vs, vertexDomain);
 
     // uniforms
-    cg.generateUniforms(vs, ShaderType::VERTEX,
+    cg.generateUniforms(vs, ShaderStage::VERTEX,
             UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
-    cg.generateUniforms(vs, ShaderType::VERTEX,
+    cg.generateUniforms(vs, ShaderStage::VERTEX,
             UniformBindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
     if (variant.hasSkinningOrMorphing()) {
-        cg.generateUniforms(vs, ShaderType::VERTEX,
+        cg.generateUniforms(vs, ShaderStage::VERTEX,
                 UniformBindingPoints::PER_RENDERABLE_BONES,
                 UibGenerator::getPerRenderableBonesUib());
-        cg.generateUniforms(vs, ShaderType::VERTEX,
+        cg.generateUniforms(vs, ShaderStage::VERTEX,
                 UniformBindingPoints::PER_RENDERABLE_MORPHING,
                 UibGenerator::getPerRenderableMorphingUib());
         cg.generateSamplers(vs,
                 material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_RENDERABLE_MORPHING),
                 SibGenerator::getPerRenderPrimitiveMorphingSib(variant));
     }
-    cg.generateUniforms(vs, ShaderType::VERTEX,
+    cg.generateUniforms(vs, ShaderStage::VERTEX,
             UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
     CodeGenerator::generateSeparator(vs);
     // TODO: should we generate per-view SIB in the vertex shader?
@@ -289,13 +289,13 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
             material.sib);
 
     // shader code
-    CodeGenerator::generateCommon(vs, ShaderType::VERTEX);
-    CodeGenerator::generateGetters(vs, ShaderType::VERTEX);
-    CodeGenerator::generateCommonMaterial(vs, ShaderType::VERTEX);
+    CodeGenerator::generateCommon(vs, ShaderStage::VERTEX);
+    CodeGenerator::generateGetters(vs, ShaderStage::VERTEX);
+    CodeGenerator::generateCommonMaterial(vs, ShaderStage::VERTEX);
 
     // main entry point
     appendShader(vs, mMaterialVertexCode, mMaterialVertexLineOffset);
-    CodeGenerator::generateShaderMain(vs, ShaderType::VERTEX);
+    CodeGenerator::generateShaderMain(vs, ShaderStage::VERTEX);
 
     CodeGenerator::generateEpilog(vs);
 
@@ -315,7 +315,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     const bool lit = material.isLit;
 
     io::sstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT, material);
+    cg.generateProlog(fs, ShaderStage::FRAGMENT, material);
 
     cg.generateQualityDefine(fs, material.quality);
 
@@ -451,28 +451,28 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     CodeGenerator::generateDefine(fs, "MATERIAL_HAS_CUSTOM_SURFACE_SHADING", material.hasCustomSurfaceShading);
 
-    CodeGenerator::generateShaderInputs(fs, ShaderType::FRAGMENT, material.requiredAttributes, interpolation);
+    CodeGenerator::generateShaderInputs(fs, ShaderStage::FRAGMENT, material.requiredAttributes, interpolation);
 
     // custom material variables
     size_t variableIndex = 0;
     for (const auto& variable : mVariables) {
-        CodeGenerator::generateVariable(fs, ShaderType::FRAGMENT, variable, variableIndex++);
+        CodeGenerator::generateVariable(fs, ShaderStage::FRAGMENT, variable, variableIndex++);
     }
 
     // uniforms and samplers
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+    cg.generateUniforms(fs, ShaderStage::FRAGMENT,
             UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+    cg.generateUniforms(fs, ShaderStage::FRAGMENT,
             UniformBindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+    cg.generateUniforms(fs, ShaderStage::FRAGMENT,
             UniformBindingPoints::LIGHTS, UibGenerator::getLightsUib());
     if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
-        cg.generateUniforms(fs, ShaderType::FRAGMENT,
+        cg.generateUniforms(fs, ShaderStage::FRAGMENT,
                 UniformBindingPoints::SHADOW, UibGenerator::getShadowUib());
     }
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+    cg.generateUniforms(fs, ShaderStage::FRAGMENT,
             UniformBindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib());
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+    cg.generateUniforms(fs, ShaderStage::FRAGMENT,
             UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
     CodeGenerator::generateSeparator(fs);
     cg.generateSamplers(fs,
@@ -485,11 +485,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     fs << "float filament_lodBias;\n";
 
     // shading code
-    CodeGenerator::generateCommon(fs, ShaderType::FRAGMENT);
-    CodeGenerator::generateGetters(fs, ShaderType::FRAGMENT);
-    CodeGenerator::generateCommonMaterial(fs, ShaderType::FRAGMENT);
-    CodeGenerator::generateParameters(fs, ShaderType::FRAGMENT);
-    CodeGenerator::generateFog(fs, ShaderType::FRAGMENT);
+    CodeGenerator::generateCommon(fs, ShaderStage::FRAGMENT);
+    CodeGenerator::generateGetters(fs, ShaderStage::FRAGMENT);
+    CodeGenerator::generateCommonMaterial(fs, ShaderStage::FRAGMENT);
+    CodeGenerator::generateParameters(fs, ShaderStage::FRAGMENT);
+    CodeGenerator::generateFog(fs, ShaderStage::FRAGMENT);
 
     // shading model
     if (filament::Variant::isValidDepthVariant(variant)) {
@@ -500,20 +500,20 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         }
         // these variants are special and are treated as DEPTH variants. Filament will never
         // request that variant for the color pass.
-        CodeGenerator::generateDepthShaderMain(fs, ShaderType::FRAGMENT);
+        CodeGenerator::generateDepthShaderMain(fs, ShaderStage::FRAGMENT);
     } else {
         appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
         if (filament::Variant::isSSRVariant(variant)) {
-            CodeGenerator::generateShaderReflections(fs, ShaderType::FRAGMENT, variant);
+            CodeGenerator::generateShaderReflections(fs, ShaderStage::FRAGMENT, variant);
         } else if (material.isLit) {
-            CodeGenerator::generateShaderLit(fs, ShaderType::FRAGMENT, variant,
+            CodeGenerator::generateShaderLit(fs, ShaderStage::FRAGMENT, variant,
                     material.shading,material.hasCustomSurfaceShading);
         } else {
-            CodeGenerator::generateShaderUnlit(fs, ShaderType::FRAGMENT, variant,
+            CodeGenerator::generateShaderUnlit(fs, ShaderStage::FRAGMENT, variant,
                     material.hasShadowMultiplier);
         }
         // entry point
-        CodeGenerator::generateShaderMain(fs, ShaderType::FRAGMENT);
+        CodeGenerator::generateShaderMain(fs, ShaderStage::FRAGMENT);
     }
 
     CodeGenerator::generateEpilog(fs);
@@ -535,7 +535,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
         MaterialInfo const& material, const filament::Variant::type_t variantKey) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream vs;
-    cg.generateProlog(vs, ShaderType::VERTEX, material);
+    cg.generateProlog(vs, ShaderStage::VERTEX, material);
 
     cg.generateQualityDefine(vs, material.quality);
 
@@ -544,27 +544,27 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
     // custom material variables
     size_t variableIndex = 0;
     for (const auto& variable : mVariables) {
-        CodeGenerator::generateVariable(vs, ShaderType::VERTEX, variable, variableIndex++);
+        CodeGenerator::generateVariable(vs, ShaderStage::VERTEX, variable, variableIndex++);
     }
 
-    CodeGenerator::generatePostProcessInputs(vs, ShaderType::VERTEX);
+    CodeGenerator::generatePostProcessInputs(vs, ShaderStage::VERTEX);
     generatePostProcessMaterialVariantDefines(vs, PostProcessVariant(variantKey));
 
-    cg.generateUniforms(vs, ShaderType::VERTEX,
+    cg.generateUniforms(vs, ShaderStage::VERTEX,
             UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
-    cg.generateUniforms(vs, ShaderType::VERTEX,
+    cg.generateUniforms(vs, ShaderStage::VERTEX,
             UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
 
     cg.generateSamplers(vs,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
-    CodeGenerator::generatePostProcessCommon(vs, ShaderType::VERTEX);
-    CodeGenerator::generatePostProcessGetters(vs, ShaderType::VERTEX);
+    CodeGenerator::generatePostProcessCommon(vs, ShaderStage::VERTEX);
+    CodeGenerator::generatePostProcessGetters(vs, ShaderStage::VERTEX);
 
     appendShader(vs, mMaterialVertexCode, mMaterialVertexLineOffset);
 
-    CodeGenerator::generatePostProcessMain(vs, ShaderType::VERTEX);
+    CodeGenerator::generatePostProcessMain(vs, ShaderStage::VERTEX);
 
     CodeGenerator::generateEpilog(vs);
     return vs.c_str();
@@ -575,7 +575,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
         MaterialInfo const& material, uint8_t variant) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     io::sstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT, material);
+    cg.generateProlog(fs, ShaderStage::FRAGMENT, material);
 
     cg.generateQualityDefine(fs, material.quality);
 
@@ -584,12 +584,12 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
     // custom material variables
     size_t variableIndex = 0;
     for (const auto& variable : mVariables) {
-        CodeGenerator::generateVariable(fs, ShaderType::FRAGMENT, variable, variableIndex++);
+        CodeGenerator::generateVariable(fs, ShaderStage::FRAGMENT, variable, variableIndex++);
     }
 
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+    cg.generateUniforms(fs, ShaderStage::FRAGMENT,
             UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
-    cg.generateUniforms(fs, ShaderType::FRAGMENT,
+    cg.generateUniforms(fs, ShaderStage::FRAGMENT,
             UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
 
     cg.generateSamplers(fs,
@@ -599,13 +599,13 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
     // subpass
     CodeGenerator::generateSubpass(fs, material.subpass);
 
-    CodeGenerator::generatePostProcessCommon(fs, ShaderType::FRAGMENT);
-    CodeGenerator::generatePostProcessGetters(fs, ShaderType::FRAGMENT);
+    CodeGenerator::generatePostProcessCommon(fs, ShaderStage::FRAGMENT);
+    CodeGenerator::generatePostProcessGetters(fs, ShaderStage::FRAGMENT);
 
     // Generate post-process outputs.
     for (const auto& output : mOutputs) {
         if (output.target == MaterialBuilder::OutputTarget::COLOR) {
-            cg.generateOutput(fs, ShaderType::FRAGMENT, output.name, output.location,
+            cg.generateOutput(fs, ShaderStage::FRAGMENT, output.name, output.location,
                     output.qualifier, output.type);
         }
         if (output.target == MaterialBuilder::OutputTarget::DEPTH) {
@@ -613,11 +613,11 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
         }
     }
 
-    CodeGenerator::generatePostProcessInputs(fs, ShaderType::FRAGMENT);
+    CodeGenerator::generatePostProcessInputs(fs, ShaderStage::FRAGMENT);
 
     appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
 
-    CodeGenerator::generatePostProcessMain(fs, ShaderType::FRAGMENT);
+    CodeGenerator::generatePostProcessMain(fs, ShaderStage::FRAGMENT);
     CodeGenerator::generateEpilog(fs);
     return fs.c_str();
 }

@@ -44,7 +44,7 @@ Program& Program::diagnostics(CString const& name,
     return *this;
 }
 
-Program& Program::shader(ShaderType shader, void const* data, size_t size) {
+Program& Program::shader(ShaderStage shader, void const* data, size_t size) {
     ShaderBlob blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
     mShadersSource[size_t(shader)] = std::move(blob);
