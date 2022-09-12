@@ -313,10 +313,14 @@ struct FFilamentAsset : public FilamentAsset {
     SourceHandle mSourceAsset;
 
     // Stores all information related to a single cgltf_texture.
+    // Note that more than one cgltf_texture can map to a single Filament texture,
+    // e.g. if several have the same URL or bufferView. For each Filament texture,
+    // only one of its corresponding TextureInfo slots will have isOwner=true.
     struct TextureInfo {
         std::vector<TextureSlot> bindings;
         Texture* texture;
         TextureProvider::TextureFlags flags;
+        bool isOwner;
     };
 
     // Mapping from cgltf_texture to Texture* is required when creating new instances.

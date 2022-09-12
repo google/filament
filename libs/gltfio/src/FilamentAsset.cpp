@@ -84,7 +84,9 @@ FFilamentAsset::~FFilamentAsset() {
         mEngine->destroy(ib);
     }
     for (auto tx : mTextures) {
-        mEngine->destroy(tx.texture);
+        if (UTILS_LIKELY(tx.isOwner)) {
+            mEngine->destroy(tx.texture);
+        }
     }
     for (auto tb : mMorphTargetBuffers) {
         mEngine->destroy(tb);
