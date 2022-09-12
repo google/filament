@@ -60,19 +60,19 @@ OpenGLContext::OpenGLContext() noexcept {
     glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &gets.max_texture_image_units);
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &gets.max_combined_texture_image_units);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
 
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         initExtensionsGLES();
         if (state.major == 3) {
             assert_invariant(gets.max_texture_image_units >= 16);
-            if (state.minor >= 0) {
-                mShaderModel = ShaderModel::MOBILE;
-            }
+            assert_invariant(gets.max_combined_texture_image_units >= 32);
             if (state.minor >= 1) {
                 features.multisample_texture = true;
                 // figure out our feature level
                 if (gets.max_texture_image_units >= 31 &&
+                    gets.max_combined_texture_image_units >= 62 &&
                     ext.EXT_texture_cube_map_array) {
                     mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
                 }
@@ -82,12 +82,12 @@ OpenGLContext::OpenGLContext() noexcept {
         // OpenGL version
         initExtensionsGL();
         if (state.major == 4) {
-            if (state.minor >= 1) {
-                mShaderModel = ShaderModel::DESKTOP;
-            }
+            assert_invariant(state.minor >= 1);
+            mShaderModel = ShaderModel::DESKTOP;
             if (state.minor >= 3) {
                 // figure out our feature level
-                if (gets.max_texture_image_units >= 31) {
+                if (gets.max_texture_image_units >= 31 &&
+                    gets.max_combined_texture_image_units >= 62) {
                     // cubemap arrays are available as of OpenGL 4.0
                     mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
                 }
@@ -97,8 +97,8 @@ OpenGLContext::OpenGLContext() noexcept {
         // feedback loops are allowed on GL desktop as long as writes are disabled
         bugs.allow_read_only_ancillary_feedback_loop = true;
         assert_invariant(gets.max_texture_image_units >= 16);
+        assert_invariant(gets.max_combined_texture_image_units >= 32);
     }
-
 #ifdef GL_EXT_texture_filter_anisotropic
     if (ext.EXT_texture_filter_anisotropic) {
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);

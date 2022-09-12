@@ -528,6 +528,8 @@ bool ChunkSamplerBlockBindings::unflatten(Unflattener& unflattener,
         return false;
     }
 
+    samplerBindingToNameMap.reserve(count);
+    samplerBindingToNameMap.resize(count);
     for (size_t i = 0; i < count; i++) {
         uint8_t binding;
         if (!unflattener.read(&binding)) {

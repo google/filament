@@ -126,6 +126,7 @@ public:
         GLint max_samples;
         GLint max_uniform_block_size;
         GLint max_texture_image_units;
+        GLint max_combined_texture_image_units;
         GLint uniform_buffer_offset_alignment;
     } gets = {};
 

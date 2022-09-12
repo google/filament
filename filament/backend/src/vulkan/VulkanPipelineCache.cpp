@@ -828,8 +828,12 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
     mDescriptorSets.clear();
 }
 
-size_t VulkanPipelineCache::PipelineLayoutKeyHashFn::operator()(const PipelineLayoutKey& key) const {
-    return key.getValue();
+size_t VulkanPipelineCache::PipelineLayoutKeyHashFn::operator()(
+        const PipelineLayoutKey& key) const {
+    std::hash<uint64_t> hasher;
+    auto h0 = hasher(key.getBitsAt(0));
+    auto h1 = hasher(key.getBitsAt(1));
+    return h0 ^ (h1 << 1);
 }
 
 bool VulkanPipelineCache::PipelineLayoutKeyEqual::operator()(const PipelineLayoutKey& k1,
