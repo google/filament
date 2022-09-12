@@ -893,7 +893,7 @@ struct RasterState {
  * \privatesection
  */
 
-enum ShaderType : uint8_t {
+enum class ShaderType : uint8_t {
     VERTEX = 0,
     FRAGMENT = 1
 };
@@ -908,9 +908,9 @@ enum class ShaderStageFlags : uint8_t {
 
 static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderType type) noexcept {
     switch (type) {
-        case VERTEX:
+        case ShaderType::VERTEX:
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
-        case FRAGMENT:
+        case ShaderType::FRAGMENT:
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::FRAGMENT));
     }
 }

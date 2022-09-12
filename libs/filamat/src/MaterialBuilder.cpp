@@ -789,31 +789,37 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 // NOTE: do not execute expensive work from here on!
                 std::unique_lock<Mutex> lock(entriesLock);
 
-                if (targetApi == TargetApi::OPENGL) {
-                    glslEntry.stage = v.stage;
-                    glslEntry.shader = shader;
+                // below we rely on casting ShaderType to uint8_t
+                static_assert(sizeof(filament::backend::ShaderType) == 1);
 
-                    glslEntries.push_back(glslEntry);
-                }
 
+                switch (targetApi) {
+                    case TargetApi::ALL:
+                        // should never happen
+                        break;
+                    case TargetApi::OPENGL:
+                        glslEntry.stage = uint8_t(v.stage);
+                        glslEntry.shader = shader;
+                        glslEntries.push_back(glslEntry);
+                        break;
+                    case TargetApi::VULKAN:
 #ifndef FILAMAT_LITE
-                if (targetApi == TargetApi::VULKAN) {
-                    assert(!spirv.empty());
-                    spirvEntry.stage = v.stage;
-                    spirvEntry.spirv = std::move(spirv);
-
-                    spirvEntries.push_back(spirvEntry);
-                }
-
-                if (targetApi == TargetApi::METAL) {
-                    assert(!spirv.empty());
-                    assert(msl.length() > 0);
-                    metalEntry.stage = v.stage;
-                    metalEntry.shader = msl;
-
-                    metalEntries.push_back(metalEntry);
-                }
+                        assert(!spirv.empty());
+                        spirvEntry.stage = uint8_t(v.stage);
+                        spirvEntry.spirv = std::move(spirv);
+                        spirvEntries.push_back(spirvEntry);
 #endif
+                        break;
+                    case TargetApi::METAL:
+#ifndef FILAMAT_LITE
+                        assert(!spirv.empty());
+                        assert(msl.length() > 0);
+                        metalEntry.stage = uint8_t(v.stage);
+                        metalEntry.shader = msl;
+                        metalEntries.push_back(metalEntry);
+#endif
+                        break;
+                }
             });
 
             // NOTE: We run the first job separately to work the lack of thread safety

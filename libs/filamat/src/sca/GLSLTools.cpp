@@ -181,8 +181,14 @@ bool GLSLTools::findProperties(
         ShaderModel model) const noexcept {
     const char* shaderCString = shaderCode.c_str();
 
-    TShader tShader(type == FRAGMENT ?
-            EShLanguage::EShLangFragment : EShLanguage::EShLangVertex);
+    auto getShaderStage = [](ShaderType type) {
+        switch (type) {
+            case ShaderType::VERTEX:        return EShLanguage::EShLangVertex;
+            case ShaderType::FRAGMENT:      return EShLanguage::EShLangFragment;
+        }
+    };
+
+    TShader tShader(getShaderStage(type));
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
@@ -199,7 +205,7 @@ bool GLSLTools::findProperties(
 
     TIntermNode* rootNode = tShader.getIntermediate()->getTreeRoot();
 
-    std::string mainFunction(type == FRAGMENT ?
+    std::string mainFunction(type == ShaderType::FRAGMENT ?
             "material" : "materialVertex");
 
     TIntermAggregate* functionMaterialDef = ASTUtils::getFunctionByNameOnly(mainFunction, *rootNode);

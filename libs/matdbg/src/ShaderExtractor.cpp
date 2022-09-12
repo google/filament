@@ -33,7 +33,6 @@ using namespace filament;
 using namespace backend;
 using namespace filaflat;
 using namespace filamat;
-using namespace std;
 using namespace utils;
 
 namespace filament {
@@ -83,7 +82,8 @@ bool ShaderExtractor::getShader(ShaderModel shaderModel,
         return false;
     }
 
-    return mMaterialChunk.getShader(shader, blobDictionary, (uint8_t)shaderModel, variant, stage);
+    return mMaterialChunk.getShader(shader, blobDictionary,
+            uint8_t(shaderModel), variant, uint8_t(stage));
 }
 
 CString ShaderExtractor::spirvToGLSL(const uint32_t* data, size_t wordCount) {
@@ -94,8 +94,8 @@ CString ShaderExtractor::spirvToGLSL(const uint32_t* data, size_t wordCount) {
     emitOptions.version = 410;
     emitOptions.vulkan_semantics = true;
 
-    vector<uint32_t> spirv(data, data + wordCount);
-    CompilerGLSL glslCompiler(move(spirv));
+    std::vector<uint32_t> spirv(data, data + wordCount);
+    CompilerGLSL glslCompiler(std::move(spirv));
     glslCompiler.set_common_options(emitOptions);
 
     return CString(glslCompiler.compile().c_str());
