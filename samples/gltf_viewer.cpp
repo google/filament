@@ -100,7 +100,8 @@ struct App {
         Material* groundMaterial;
 
         Material* overdrawMaterial;
-        static constexpr auto OVERDRAW_VISIBILITY_LAYER = 1u;   // overdraw renderables View layer
+        // use layer 7 because 0, 1 and 2 are used by FilamentApp
+        static constexpr auto OVERDRAW_VISIBILITY_LAYER = 7u;   // overdraw renderables View layer
         static constexpr auto OVERDRAW_LAYERS = 4u;             // unique overdraw colors
         std::array<Entity, OVERDRAW_LAYERS> overdrawVisualizer;
         std::array<MaterialInstance*, OVERDRAW_LAYERS> overdrawMaterialInstances;
