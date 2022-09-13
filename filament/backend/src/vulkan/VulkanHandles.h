@@ -117,18 +117,18 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive {
 };
 
 struct VulkanFence : public HwFence {
-    VulkanFence(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
+    explicit VulkanFence(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
 struct VulkanSync : public HwSync {
-    VulkanSync() {}
-    VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
+    VulkanSync() = default;
+    explicit VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
 struct VulkanTimerQuery : public HwTimerQuery {
-    VulkanTimerQuery(VulkanContext& context);
+    explicit VulkanTimerQuery(VulkanContext& context);
     ~VulkanTimerQuery();
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;

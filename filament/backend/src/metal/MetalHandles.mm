@@ -22,6 +22,8 @@
 
 #include <filament/SwapChain.h>
 
+#include <backend/DriverEnums.h>
+
 #include "private/backend/BackendUtils.h"
 
 #include <utils/Panic.h>
