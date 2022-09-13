@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- gltfio: allow zero-instance assets
+
 ## v1.27.1
 
 - Java: add methods for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()

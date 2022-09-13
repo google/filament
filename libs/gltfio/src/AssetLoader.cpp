@@ -279,8 +279,6 @@ FFilamentAsset* FAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCou
 
 FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t byteCount,
         FilamentInstance** instances, size_t numInstances) {
-    ASSERT_PRECONDITION(numInstances > 0, "Instance count must be 1 or more.");
-
     // This method can be used to load JSON or GLB. By using a default options struct, we are asking
     // cgltf to examine the magic identifier to determine which type of file is being loaded.
     cgltf_options options {};
@@ -510,7 +508,11 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
     // This needs to stay near the end of the method to allow detection of the first instance.
     mAsset->mInstances.push_back(instance);
 
+    // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
+    // be affected by entity transforms. However, upon instance creation we can safely copy over
+    // the asset's bounding box.
     instance->boundingBox = mAsset->mBoundingBox;
+
     return instance;
 }
 
@@ -596,6 +598,9 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
         prims.reserve(mesh->primitives_count);
         prims.resize(mesh->primitives_count);
     }
+
+    Aabb aabb;
+
     for (cgltf_size index = 0, n = mesh->primitives_count; index < n; ++index) {
         Primitive& outputPrim = prims[index];
         const cgltf_primitive& inputPrim = mesh->primitives[index];
@@ -605,17 +610,23 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
             mError = true;
             return;
         }
+
+        // Expand the object-space bounding box.
+        aabb.min = min(outputPrim.aabb.min, aabb.min);
+        aabb.max = max(outputPrim.aabb.max, aabb.max);
      }
+
+    mat4f worldTransform;
+    cgltf_node_transform_world(node, &worldTransform[0][0]);
+
+    const Aabb transformed = aabb.transform(worldTransform);
+    mAsset->mBoundingBox.min = min(mAsset->mBoundingBox.min, transformed.min);
+    mAsset->mBoundingBox.max = max(mAsset->mBoundingBox.max, transformed.max);
  }
 
 void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node* node,
         Entity entity, const char* name) {
     const cgltf_mesh* mesh = node->mesh;
-
-    // Compute the transform relative to the root.
-    auto thisTransform = mTransformManager.getInstance(entity);
-    mat4f worldTransform = mTransformManager.getWorldTransform(thisTransform);
-
     const cgltf_size primitiveCount = mesh->primitives_count;
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
@@ -686,12 +697,6 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     }
     auto& nm = mNodeManager;
     nm.setMorphTargetNames(nm.getInstance(entity), std::move(morphTargetNames));
-
-    const Aabb transformed = aabb.transform(worldTransform);
-
-    // Expand the world-space bounding box.
-    mAsset->mBoundingBox.min = min(mAsset->mBoundingBox.min, transformed.min);
-    mAsset->mBoundingBox.max = max(mAsset->mBoundingBox.max, transformed.max);
 
     if (node->skin) {
        builder.skinning(node->skin->joints_count);

@@ -182,6 +182,9 @@ public class FilamentAsset {
 
     /**
      * Gets the bounding box computed from the supplied min / max values in glTF accessors.
+     *
+     * This does not return a bounding box over all FilamentInstance, it's just a straightforward
+     * AAAB that can be determined at load time from the asset data.
      */
     public @NonNull Box getBoundingBox() {
         float[] box = new float[6];

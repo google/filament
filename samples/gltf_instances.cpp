@@ -89,8 +89,8 @@ static void printUsage(char* name) {
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
         "   --ibl=<path to cmgen IBL>, -i <path>\n"
         "       Override the built-in IBL\n\n"
-        "   --num=<number of instances>, -n <num>\n"
-        "       Number of instances (defaults to 5)\n\n"
+        "   --num=<number of initial instances>, -n <num>\n"
+        "       Number of instances to start with (defaults to 0)\n\n"
         "   --animate=<instance index>, -m <num>\n"
         "       Instance to animate (defaults to all instances)\n\n"
         "   --ubershader, -u\n"
@@ -147,9 +147,6 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->materialSource = UBERSHADER;
                 break;
         }
-    }
-    if (app->instances.empty()) {
-        app->instances.resize(5);
     }
     return optind;
 }
@@ -248,7 +245,7 @@ int main(int argc, char** argv) {
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new ViewerGui(engine, scene, view, app.instanceToAnimate);
+        app.viewer = new ViewerGui(engine, scene, view);
 
         app.materials = (app.materialSource == JITSHADER) ? createJitShaderProvider(engine) :
                 createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
@@ -262,8 +259,10 @@ int main(int argc, char** argv) {
             loadAsset(filename);
         }
 
-        FilamentInstance* const instance = app.instanceToAnimate > -1 ?
-                app.instances[app.instanceToAnimate] : nullptr;
+        FilamentInstance* instance = nullptr;
+        if (app.instanceToAnimate > -1 && app.instanceToAnimate < app.instances.size()) {
+            instance = app.instances[app.instanceToAnimate];
+        }
 
         arrangeIntoCircle();
         loadResources(filename);

@@ -139,6 +139,8 @@ public:
      *
      *    while (Entity e = popRenderable()) { scene.addEntity(e); }
      *
+     * Progressive reveal is not supported for dynamically added instances.
+     *
      * \see ResourceLoader#asyncBeginLoad
      * \see popRenderables()
      */
@@ -170,7 +172,12 @@ public:
     /** Gets the number of resource URIs returned by getResourceUris(). */
     size_t getResourceUriCount() const noexcept;
 
-    /** Gets the bounding box computed from the supplied min / max values in glTF accessors. */
+    /**
+     * Gets the bounding box computed from the supplied min / max values in glTF accessors.
+     *
+     * This does not return a bounding box over all FilamentInstance, it's just a straightforward
+     * AAAB that can be determined at load time from the asset data.
+     */
     filament::Aabb getBoundingBox() const noexcept;
 
     /** Gets the NameComponentManager label for the given entity, if it exists. */
@@ -319,9 +326,11 @@ public:
     void detachMaterialInstances();
 
     /**
-     * Convenience function to get the first instance (which always exists).
+     * Convenience function to get the first instance, or null if it doesn't exist.
      */
-    FilamentInstance* getInstance() noexcept { return getAssetInstances()[0]; }
+    FilamentInstance* getInstance() noexcept {
+        return getAssetInstanceCount() > 0 ? getAssetInstances()[0] : nullptr;
+    }
 
     /*! \cond PRIVATE */
 
