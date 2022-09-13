@@ -36,8 +36,15 @@ size_t DependencyGraph::popRenderables(Entity* result, size_t count) noexcept {
 }
 
 void DependencyGraph::addEdge(Entity entity, MaterialInstance* mi) {
-    mMaterialToEntity[mi].insert(entity);
-    mEntityToMaterial[entity].materials.insert(mi);
+    if (mDisabled) {
+        if (mEntityToMaterial.count(entity) == 0) {
+            mEntityToMaterial[entity] = {};
+            mReadyRenderables.push(entity);
+        }
+    } else {
+        mMaterialToEntity[mi].insert(entity);
+        mEntityToMaterial[entity].materials.insert(mi);
+    }
 }
 
 void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
@@ -62,8 +69,10 @@ void DependencyGraph::commitEdges() {
 
 void DependencyGraph::addEdge(Texture* texture, MaterialInstance* material, const char* parameter) {
     assert_invariant(texture);
-    mTextureToMaterial[texture].insert(material);
-    mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
+    if (!mDisabled) {
+        mTextureToMaterial[texture].insert(material);
+        mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
+    }
 }
 
 void DependencyGraph::checkReadiness(Material* material) {
@@ -86,7 +95,11 @@ void DependencyGraph::checkReadiness(Material* material) {
 
 void DependencyGraph::markAsReady(Texture* texture) {
     assert_invariant(texture);
-    mTextureNodes.at(texture)->ready = true;
+    auto iter = mTextureNodes.find(texture);
+    if (iter == mTextureNodes.end()) {
+        return;
+    }
+    iter.value()->ready = true;
 
     // Iterate over the materials associated with this texture to check if any have become ready.
     // This is O(n2) but the inner loop is always small.
@@ -97,8 +110,12 @@ void DependencyGraph::markAsReady(Texture* texture) {
 }
 
 void DependencyGraph::markAsReady(MaterialInstance* material) {
-    auto& entities = mMaterialToEntity.at(material);
-    for (auto entity : entities) {
+    auto iter = mMaterialToEntity.find(material);
+    if (iter == mMaterialToEntity.end()) {
+        // It's fine if no entities exist yet.
+        return;
+    }
+    for (auto entity : iter->second) {
         auto& status = mEntityToMaterial.at(entity);
         assert_invariant(status.numReadyMaterials <= status.materials.size());
         if (status.numReadyMaterials == status.materials.size()) {
@@ -119,6 +136,15 @@ DependencyGraph::TextureNode* DependencyGraph::getStatus(Texture* texture) {
         return status;
     }
     return iter->second.get();
+}
+
+void DependencyGraph::disableProgressiveReveal() {
+    mDisabled = true;
+    for (auto& [entity, status] : mEntityToMaterial) {
+        if (status.numReadyMaterials < status.materials.size()) {
+            mReadyRenderables.push(entity);
+        }
+    }
 }
 
 } // namespace filament::gltfio
