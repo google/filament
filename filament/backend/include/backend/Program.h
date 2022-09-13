@@ -27,6 +27,7 @@
 #include <backend/DriverEnums.h>
 
 #include <array>
+#include <variant>
 
 namespace filament::backend {
 
@@ -34,12 +35,12 @@ class Program {
 public:
 
     static constexpr size_t SHADER_TYPE_COUNT = 2;
-    static constexpr size_t BINDING_COUNT = CONFIG_BINDING_COUNT;
+    static constexpr size_t UNIFORM_BINDING_COUNT = CONFIG_UNIFORM_BINDING_COUNT;
+    static constexpr size_t SAMPLER_BINDING_COUNT = CONFIG_SAMPLER_BINDING_COUNT;
 
     struct Sampler {
         utils::CString name = {};   // name of the sampler in the shader
-        uint16_t binding = 0;       // binding point of the sampler in the shader
-        bool strict = false;        // if true, this sampler must always have a bound texture
+        uint32_t binding = 0;       // binding point of the sampler in the shader
     };
 
     struct SamplerGroupData {
@@ -47,8 +48,8 @@ public:
         ShaderStageFlags stageFlags = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS;
     };
 
-    using UniformBlockInfo = std::array<const char*, BINDING_COUNT>;
-    using SamplerGroupInfo = std::array<SamplerGroupData, BINDING_COUNT>;
+    using UniformBlockInfo = std::array<utils::CString, UNIFORM_BINDING_COUNT>;
+    using SamplerGroupInfo = std::array<SamplerGroupData, SAMPLER_BINDING_COUNT>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
@@ -75,7 +76,7 @@ public:
     //       not permitted in glsl. The backend needs a way to associate a uniform block
     //       to a binding point.
     Program& uniformBlockBindings(
-            utils::FixedCapacityVector<std::pair<const char*, uint8_t>> const& uniformBlockBindings) noexcept;
+            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& uniformBlockBindings) noexcept;
 
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
@@ -84,16 +85,33 @@ public:
     Program& setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
             Sampler const* samplers, size_t count) noexcept;
 
+    struct SpecializationConstant {
+        uint32_t id;                                // id set in glsl
+        std::variant<int32_t, float, bool> value;   // value and type
+    };
+
+    Program& specializationConstants(
+            utils::FixedCapacityVector<SpecializationConstant> specConstants) noexcept;
+
+
     ShaderSource const& getShadersSource() const noexcept { return mShadersSource; }
     ShaderSource& getShadersSource() noexcept { return mShadersSource; }
 
     UniformBlockInfo const& getUniformBlockBindings() const noexcept { return mUniformBlocks; }
+    UniformBlockInfo& getUniformBlockBindings() noexcept { return mUniformBlocks; }
 
     SamplerGroupInfo const& getSamplerGroupInfo() const { return mSamplerGroups; }
     SamplerGroupInfo& getSamplerGroupInfo() { return mSamplerGroups; }
 
     utils::CString const& getName() const noexcept { return mName; }
     utils::CString& getName() noexcept { return mName; }
+
+    utils::FixedCapacityVector<SpecializationConstant> const& getSpecializationConstants() const noexcept {
+        return mSpecializationConstants;
+    }
+    utils::FixedCapacityVector<SpecializationConstant>& getSpecializationConstants() noexcept {
+        return mSpecializationConstants;
+    }
 
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
@@ -103,6 +121,7 @@ private:
     ShaderSource mShadersSource;
     utils::CString mName;
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
+    utils::FixedCapacityVector<SpecializationConstant> mSpecializationConstants;
 };
 
 } // namespace filament::backend

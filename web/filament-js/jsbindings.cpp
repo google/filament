@@ -1920,14 +1920,11 @@ class_<AssetLoader>("gltfio$AssetLoader")
     .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
-    .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights,
-            bool recomputeBoundingBoxes, bool ignoreBindTransform), {
+    .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights), {
         return new ResourceLoader({
             .engine = engine,
             .gltfPath = nullptr,
-            .normalizeSkinningWeights = normalizeSkinningWeights,
-            .recomputeBoundingBoxes = recomputeBoundingBoxes,
-            .ignoreBindTransform = ignoreBindTransform
+            .normalizeSkinningWeights = normalizeSkinningWeights
         });
     }), allow_raw_pointers())
 

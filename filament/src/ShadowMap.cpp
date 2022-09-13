@@ -228,7 +228,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         }
     }
 
-    mHasVisibleShadows = vertexCount >= 2;
+    mHasVisibleShadows = vertexCount >= 4;
     if (mHasVisibleShadows) {
         // We can't use LISPSM in stable mode
         const bool USE_LISPSM = ENABLE_LISPSM && mEngine.debug.shadowmap.lispsm && !params.options.stable;
@@ -613,6 +613,7 @@ mat4f ShadowMap::computeVsmLightSpaceMatrix(const mat4f& lightSpacePcf,
 // This construct a frustum (similar to glFrustum or frustum), except
 // it looks towards the +y axis, and assumes -1,1 for the left/right and bottom/top planes.
 mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
+    assert_invariant(f > n);
     const float d = 1 / (f - n);
     const float A = (f + n) * d;
     const float B = -2 * n * f * d;
@@ -836,6 +837,23 @@ size_t ShadowMap::intersectFrustumWithBox(
         }
 
         /*
+         * At this point it's possible to have zero vertices (i.e.: no vertices of the box
+         * are in the frustum and no vertices of the frustum are in the box) but both objects
+         * have a non-null intersection, e.g.:
+         *
+         *         +--------+
+         *         |        |
+         *    +----|--------|---+
+         *    |    |        |   |
+         *    |    |        |   |
+         *    |    |        |   |
+         *    +----|--------|---+
+         *         |        |
+         *         +--------+
+         *
+         */
+
+        /*
          * It's not enough here to have all 8 vertices, consider this:
          *
          *                     +
@@ -859,7 +877,9 @@ size_t ShadowMap::intersectFrustumWithBox(
          * However, a special case is if all the vertices of the box are inside the frustum.
          */
 
-        if (someFrustumVerticesAreInTheBox || vertexCount < 8) {
+        if (someFrustumVerticesAreInTheBox && vertexCount >= 8) {
+            // special case, we don't need to calculate any edge intersections
+        } else {
             // c) intersect scene's volume edges with frustum planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsSceneReceiversCorners.vertices, wsFrustumCorners);

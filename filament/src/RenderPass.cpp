@@ -213,8 +213,7 @@ void RenderPass::instanceify() noexcept {
     uint32_t instancedPrimitiveOffset = 0;
 
     // TODO: for the case of instancing we could actually use 128 instead of 64 instances
-    constexpr size_t maxInstanceCount = sizeof(PerRenderableUib) / sizeof(PerRenderableData);
-    static_assert(maxInstanceCount == 64); // just to make sure we don't change by accident
+    constexpr size_t maxInstanceCount = CONFIG_MAX_INSTANCES;
 
     while (curr != last) {
 
@@ -761,28 +760,28 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
 
             // bind per-renderable uniform block. there is no need to attempt to skip this command
             // because the backends already do this.
-            driver.bindUniformBufferRange(+BindingPoints::PER_RENDERABLE,
+            driver.bindUniformBufferRange(+UniformBindingPoints::PER_RENDERABLE,
                     (info.instanceCount > 1) ? mInstancedUboHandle : uboHandle,
                     info.index * sizeof(PerRenderableData),
                     sizeof(PerRenderableUib));
 
             if (UTILS_UNLIKELY(info.skinningHandle)) {
                 // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
-                driver.bindUniformBufferRange(+BindingPoints::PER_RENDERABLE_BONES,
+                driver.bindUniformBufferRange(+UniformBindingPoints::PER_RENDERABLE_BONES,
                         info.skinningHandle,
                         info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
                         sizeof(PerRenderableBoneUib));
                 // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
-                driver.bindSamplers(+BindingPoints::PER_RENDERABLE_MORPHING,
+                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
             }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
                 // Instead of using a UBO per primitive, we could also have a single UBO for all
                 // primitives and use bindUniformBufferRange which might be more efficient.
-                driver.bindUniformBuffer(+BindingPoints::PER_RENDERABLE_MORPHING,
+                driver.bindUniformBuffer(+UniformBindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphWeightBuffer);
-                driver.bindSamplers(+BindingPoints::PER_RENDERABLE_MORPHING,
+                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
             }
 

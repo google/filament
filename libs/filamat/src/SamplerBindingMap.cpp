@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-#include "private/filament/SamplerBindingMap.h"
+#include "SamplerBindingMap.h"
 
-#include "private/filament/SamplerInterfaceBlock.h"
+#include "SibGenerator.h"
 
-#include <private/filament/SibGenerator.h>
+#include <filament/MaterialEnums.h>
+
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/SibStructs.h>
 
 #include <backend/DriverEnums.h>
 
@@ -45,36 +48,58 @@ static const char* to_string(ShaderStageFlags stageFlags) noexcept {
     return nullptr;
 }
 
-void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
-            const char* materialName) {
-    // TODO: Calculate SamplerBindingMap with a material variant.
-    // The dummy variant isn't enough for calculating the binding map.
-    // The material variant affects sampler bindings.
-    const Variant dummyVariant{};
+void SamplerBindingMap::init(MaterialDomain materialDomain,
+        const SamplerInterfaceBlock* perMaterialSib, const char* materialName) {
+
+    assert_invariant(mActiveSamplerCount == 0);
+
+    // Note: the material variant affects only the sampler types, but cannot affect
+    // the actual bindings. For this reason it is okay to use the dummyVariant here.
     uint8_t offset = 0;
     size_t vertexSamplerCount = 0;
     size_t fragmentSamplerCount = 0;
 
-    UTILS_NOUNROLL
-    for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
-        mSamplerBlockOffsets[blockIndex] = offset;
+    auto processSamplerGroup = [&](SamplerBindingPoints bindingPoint){
         SamplerInterfaceBlock const* const sib =
-                (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
-                perMaterialSib : SibGenerator::getSib(BindingPoints(blockIndex), dummyVariant);
+                (bindingPoint == SamplerBindingPoints::PER_MATERIAL_INSTANCE) ?
+                perMaterialSib : SibGenerator::getSib(bindingPoint, {});
         if (sib) {
-            const auto& sibFields = sib->getSamplerInfoList();
             const auto stageFlags = sib->getStageFlags();
-            const size_t samplerCount = sibFields.size();
-            offset += samplerCount;
+            auto const& list = sib->getSamplerInfoList();
+            const size_t samplerCount = list.size();
+
             if (any(stageFlags & ShaderStageFlags::VERTEX)) {
                 vertexSamplerCount += samplerCount;
             }
             if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
                 fragmentSamplerCount += samplerCount;
             }
+
+            mSamplerBlockOffsets[+bindingPoint] = { offset, stageFlags, uint8_t(samplerCount) };
+            for (size_t i = 0; i < samplerCount; i++) {
+                assert_invariant(mSamplerNamesBindingMap[offset + i].empty());
+                mSamplerNamesBindingMap[offset + i] = list[i].uniformName;
+            }
+
+            offset += samplerCount;
         }
+    };
+
+    switch(materialDomain) {
+        case MaterialDomain::SURFACE:
+            UTILS_NOUNROLL
+            for (size_t i = 0; i < Enum::count<SamplerBindingPoints>(); i++) {
+                processSamplerGroup((SamplerBindingPoints)i);
+            }
+            break;
+        case MaterialDomain::POST_PROCESS:
+            processSamplerGroup(SamplerBindingPoints::PER_MATERIAL_INSTANCE);
+            break;
     }
 
+    mActiveSamplerCount = offset;
+
+    // TODO: update this check for feature level 2
     const bool isOverflow = vertexSamplerCount > MAX_VERTEX_SAMPLER_COUNT ||
                             fragmentSamplerCount > MAX_FRAGMENT_SAMPLER_COUNT;
 
@@ -90,10 +115,10 @@ void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
 
 
         UTILS_NOUNROLL
-        for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
+        for (size_t blockIndex = 0; blockIndex < Enum::count<SamplerBindingPoints>(); blockIndex++) {
             SamplerInterfaceBlock const* const sib =
-                    (blockIndex == BindingPoints::PER_MATERIAL_INSTANCE) ?
-                    perMaterialSib : SibGenerator::getSib(BindingPoints(blockIndex), dummyVariant);
+                    (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) ?
+                    perMaterialSib : SibGenerator::getSib(SamplerBindingPoints(blockIndex), {});
             if (sib) {
                 auto const& sibFields = sib->getSamplerInfoList();
                 auto const stageFlagsAsString = to_string(sib->getStageFlags());

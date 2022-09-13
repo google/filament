@@ -23,7 +23,7 @@
 
 #include <filament/Material.h>
 
-#include <private/filament/SamplerBindingMap.h>
+#include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
@@ -226,9 +226,9 @@ private:
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     UniformInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
-    SamplerBindingMap mSamplerBindings;
-    utils::FixedCapacityVector<std::pair<const char*, uint8_t>> mUniformBlockBindings;
-    utils::FixedCapacityVector<utils::CString> mUniformBlockNames;
+    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
+    SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
+    SamplerBindingToNameMap mSamplerBindingToNameMap;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

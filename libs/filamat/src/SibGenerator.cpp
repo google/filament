@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "private/filament/SibGenerator.h"
+#include "SibGenerator.h"
 
 #include "private/filament/Variant.h"
 #include "private/filament/EngineEnums.h"
-
-#include <private/filament/SamplerInterfaceBlock.h>
+#include "private/filament/SamplerInterfaceBlock.h"
+#include "private/filament/SibStructs.h"
 
 namespace filament {
 
@@ -97,11 +97,11 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Vari
     return sib;
 }
 
-SamplerInterfaceBlock const* SibGenerator::getSib(BindingPoints bindingPoint, Variant variant) noexcept {
+SamplerInterfaceBlock const* SibGenerator::getSib(SamplerBindingPoints bindingPoint, Variant variant) noexcept {
     switch (bindingPoint) {
-        case BindingPoints::PER_VIEW:
+        case SamplerBindingPoints::PER_VIEW:
             return &getPerViewSib(variant);
-        case BindingPoints::PER_RENDERABLE_MORPHING:
+        case SamplerBindingPoints::PER_RENDERABLE_MORPHING:
             return &getPerRenderPrimitiveMorphingSib(variant);
         default:
             return nullptr;

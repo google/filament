@@ -47,7 +47,7 @@ public class ResourceLoader {
      */
     public ResourceLoader(@NonNull Engine engine) {
         long nativeEngine = engine.getNativeObject();
-        mNativeObject = nCreateResourceLoader(nativeEngine, false, false, false);
+        mNativeObject = nCreateResourceLoader(nativeEngine, false);
         mNativeStbProvider = nCreateStbProvider(nativeEngine);
         mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
         nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
@@ -60,16 +60,12 @@ public class ResourceLoader {
      *
      * @param engine the engine that gets passed to all builder methods
      * @param normalizeSkinningWeights scale non-conformant skinning weights so they sum to 1
-     * @param recomputeBoundingBoxes use computed bounding boxes rather than the ones in the asset
-     * @param ignoreBindTransform ignore skinned primitives bind transform when compute bounding boxes
      * @throws IllegalAccessException
      * @throws InvocationTargetException
      */
-    public ResourceLoader(@NonNull Engine engine, boolean normalizeSkinningWeights,
-            boolean recomputeBoundingBoxes, boolean ignoreBindTransform) {
+    public ResourceLoader(@NonNull Engine engine, boolean normalizeSkinningWeights) {
         long nativeEngine = engine.getNativeObject();
-        mNativeObject = nCreateResourceLoader(nativeEngine, normalizeSkinningWeights,
-                recomputeBoundingBoxes, ignoreBindTransform);
+        mNativeObject = nCreateResourceLoader(nativeEngine, normalizeSkinningWeights);
         mNativeStbProvider = nCreateStbProvider(nativeEngine);
         mNativeKtx2Provider = nCreateKtx2Provider(nativeEngine);
         nAddTextureProvider(mNativeObject, "image/jpeg", mNativeStbProvider);
@@ -181,7 +177,7 @@ public class ResourceLoader {
     }
 
     private static native long nCreateResourceLoader(long nativeEngine,
-            boolean normalizeSkinningWeights, boolean recomputeBoundingBoxes, boolean ignoreBindTransform);
+            boolean normalizeSkinningWeights);
     private static native void nDestroyResourceLoader(long nativeLoader);
     private static native void nAddResourceData(long nativeLoader, String url, Buffer buffer,
             int remaining);

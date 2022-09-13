@@ -52,6 +52,7 @@ public:
     struct Config {
         filament::Variant variant;
         MaterialBuilder::TargetApi targetApi;
+        MaterialBuilder::TargetLanguage targetLanguage;
         filament::backend::ShaderType shaderType;
         filament::backend::ShaderModel shaderModel;
         filament::MaterialDomain domain;

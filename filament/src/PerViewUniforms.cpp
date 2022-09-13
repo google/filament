@@ -30,7 +30,7 @@
 #include <filament/TextureSampler.h>
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/SibGenerator.h>
+#include <private/filament/SibStructs.h>
 
 #include <math/mat4.h>
 
@@ -369,8 +369,8 @@ void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
 }
 
 void PerViewUniforms::bind(backend::DriverApi& driver) noexcept {
-    driver.bindUniformBuffer(+BindingPoints::PER_VIEW, mUniformBufferHandle);
-    driver.bindSamplers(+BindingPoints::PER_VIEW, mSamplerGroupHandle);
+    driver.bindUniformBuffer(+UniformBindingPoints::PER_VIEW, mUniformBufferHandle);
+    driver.bindSamplers(+SamplerBindingPoints::PER_VIEW, mSamplerGroupHandle);
 }
 
 void PerViewUniforms::unbindSamplers() noexcept {

@@ -29,7 +29,7 @@
 
 #include <filament/MaterialEnums.h>
 #include <private/filament/Variant.h>
-#include <private/filament/SibGenerator.h>
+#include "SibGenerator.h"
 
 #include <utils/Log.h>
 
@@ -55,15 +55,10 @@ UTILS_NOINLINE
 static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
         SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
     const auto stageFlags = sib.getStageFlags();
-
-
-
     if (hasShaderType(stageFlags, config.shaderType)) {
         const auto& infoList = sib.getSamplerInfoList();
         for (const auto& info: infoList) {
-            auto uniformName = SamplerInterfaceBlock::getUniformName(
-                    sib.getName().c_str(), info.name.c_str());
-            map[uniformName.c_str()] = map.size();
+            map[info.uniformName.c_str()] = map.size();
         }
     }
 }
@@ -73,9 +68,9 @@ static BindingIndexMap getBindingIndexMap(const GLSLPostProcessor::Config& confi
     switch (config.domain) {
         case MaterialDomain::SURFACE:
             UTILS_NOUNROLL
-            for (size_t blockIndex = 0; blockIndex < Enum::count<BindingPoints>(); blockIndex++) {
-                if (blockIndex != BindingPoints::PER_MATERIAL_INSTANCE) {
-                    auto const* sib = SibGenerator::getSib(BindingPoints(blockIndex), config.variant);
+            for (size_t blockIndex = 0; blockIndex < Enum::count<SamplerBindingPoints>(); blockIndex++) {
+                if (blockIndex != SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
+                    auto const* sib = SibGenerator::getSib(SamplerBindingPoints(blockIndex), config.variant);
                     if (sib) {
                         generateBindingIndexMap(config, *sib, map);
                     }
@@ -220,14 +215,9 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
 
 bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
         std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
+    using TargetLanguage = MaterialBuilder::TargetLanguage;
 
-    // If TargetApi is Vulkan, then we need post-processing even if there's no optimization.
-    // If we're using framebuffer fetch, we also need to force our compilation target to Vulkan, as
-    // it is only supported in GLSL for Vulkan.
-    using TargetApi = MaterialBuilder::TargetApi;
-    const TargetApi targetApi = (outputSpirv || config.hasFramebufferFetch) ? TargetApi::VULKAN :
-        TargetApi::OPENGL;
-    if (targetApi == TargetApi::OPENGL && mOptimization == MaterialBuilder::Optimization::NONE) {
+    if (config.targetLanguage == TargetLanguage::GLSL) {
         *outputGlsl = inputShader;
         if (mPrintShaders) {
             slog.i << *outputGlsl << io::endl;
@@ -235,16 +225,19 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         return true;
     }
 
-    InternalConfig internalConfig;
+    InternalConfig internalConfig{
+            .glslOutput = outputGlsl,
+            .spirvOutput = outputSpirv,
+            .mslOutput = outputMsl,
+    };
 
-    internalConfig.glslOutput = outputGlsl;
-    internalConfig.spirvOutput = outputSpirv;
-    internalConfig.mslOutput = outputMsl;
-
-    if (config.shaderType == backend::VERTEX) {
-        internalConfig.shLang = EShLangVertex;
-    } else {
-        internalConfig.shLang = EShLangFragment;
+    switch (config.shaderType) {
+        case VERTEX:
+            internalConfig.shLang = EShLangVertex;
+            break;
+        case FRAGMENT:
+            internalConfig.shLang = EShLangFragment;
+            break;
     }
 
     TProgram program;
@@ -257,9 +250,18 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     tShader.setStrings(&shaderCString, 1);
 
     internalConfig.langVersion = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
-    GLSLTools::prepareShaderParser(targetApi, tShader, internalConfig.shLang,
-            internalConfig.langVersion, mOptimization);
-    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
+    GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, tShader,
+            internalConfig.shLang, internalConfig.langVersion);
+
+    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
+    if (config.hasFramebufferFetch) {
+        // FIXME: subpasses require EShMsgVulkanRules, which I think is a mistake.
+        //        SpvRules should be enough.
+        //        I think this could cause the compilation to fail on gl_VertexID.
+        using Type = std::underlying_type_t<EShMessages>;
+        msg = EShMessages(Type(msg) | Type(EShMessages::EShMsgVulkanRules));
+    }
+
     bool ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
     if (!ok) {
         slog.e << tShader.getInfoLog() << io::endl;
@@ -325,15 +327,14 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
 
 void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
-
     using TargetApi = MaterialBuilder::TargetApi;
+    assert_invariant(bool(internalConfig.spirvOutput) == (config.targetApi != TargetApi::OPENGL));
 
     std::string glsl;
     TShader::ForbidIncluder forbidIncluder;
 
-    int version = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
-    const TargetApi targetApi = internalConfig.spirvOutput ? TargetApi::VULKAN : TargetApi::OPENGL;
-    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
+    const int version = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
+    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
     bool ok = tShader.preprocess(&DefaultTBuiltInResource, version, ENoProfile, false, false,
             msg, &glsl, forbidIncluder);
 
@@ -351,8 +352,8 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
         const char* shaderCString = glsl.c_str();
         spirvShader.setStrings(&shaderCString, 1);
-        GLSLTools::prepareShaderParser(targetApi, spirvShader,
-                internalConfig.shLang, internalConfig.langVersion, mOptimization);
+        GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, spirvShader,
+                internalConfig.shLang, internalConfig.langVersion);
         ok = spirvShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
         program.addShader(&spirvShader);
         // Even though we only have a single shader stage, linking is still necessary to finalize

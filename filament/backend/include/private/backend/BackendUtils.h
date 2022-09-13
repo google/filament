@@ -21,15 +21,16 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <string_view>
+
 #include <stddef.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 /**
  * Returns true if the shader string requests the Google-style line directive extension.
  */
-bool requestsGoogleLineDirectivesExtension(const char* shader, size_t length) noexcept;
+bool requestsGoogleLineDirectivesExtension(std::string_view source) noexcept;
 
 /**
  * Edit a GLSL shader string in-place so any Google-style line directives are turned into regular
@@ -65,7 +66,6 @@ size_t getBlockHeight(TextureFormat format) noexcept;
  */
 bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped);
 
-} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILS_H

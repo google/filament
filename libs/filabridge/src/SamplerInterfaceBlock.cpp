@@ -46,7 +46,7 @@ SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::string_view samplerName, Type type, Format format,
         Precision precision, bool multisample) noexcept {
     mEntries.push_back({
-            { samplerName.data(), samplerName.size() },
+            { samplerName.data(), samplerName.size() }, { },
             uint8_t(mEntries.size()), type, format, precision, multisample });
     return *this;
 }
@@ -84,6 +84,7 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
         assert_invariant(i == e.offset);
         SamplerInfo& info = samplersInfoList[i++];
         info = e;
+        info.uniformName = generateUniformName(mName.c_str(), e.name.c_str());
         infoMap[{ info.name.data(), info.name.size() }] = info.offset; // info.name.c_str() guaranteed constant
     }
     assert_invariant(i == samplersInfoList.size());
@@ -97,7 +98,7 @@ const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
     return &mSamplersInfoList[pos->second];
 }
 
-utils::CString SamplerInterfaceBlock::getUniformName(const char* group, const char* sampler) noexcept {
+utils::CString SamplerInterfaceBlock::generateUniformName(const char* group, const char* sampler) noexcept {
     char uniformName[256];
 
     // sampler interface block name

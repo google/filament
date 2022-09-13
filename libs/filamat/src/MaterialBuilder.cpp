@@ -29,7 +29,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
 
-#include <private/filament/SibGenerator.h>
+#include "SibGenerator.h"
 
 #include "MaterialVariants.h"
 
@@ -97,19 +97,19 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
     static_assert(filament::backend::SHADER_MODEL_COUNT == 2);
-    for (const auto shaderModel : {ShaderModel::MOBILE, ShaderModel::DESKTOP}) {
+    for (const auto shaderModel: { ShaderModel::MOBILE, ShaderModel::DESKTOP }) {
         const auto i = static_cast<uint8_t>(shaderModel);
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
         if (any(mTargetApi & TargetApi::OPENGL)) {
-            mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
+            mCodeGenPermutations.push_back({shaderModel, TargetApi::OPENGL, glTargetLanguage});
         }
         if (any(mTargetApi & TargetApi::VULKAN)) {
-            mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
+            mCodeGenPermutations.push_back({shaderModel, TargetApi::VULKAN, TargetLanguage::SPIRV});
         }
         if (any(mTargetApi & TargetApi::METAL)) {
-            mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
+            mCodeGenPermutations.push_back({shaderModel, TargetApi::METAL, TargetLanguage::SPIRV});
         }
     }
 }
@@ -517,8 +517,9 @@ bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
     std::string shaderCodeAllProperties = peek(type, mSemanticCodeGenParams, allProperties);
     // Populate mProperties with the properties set in the shader.
     if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties,
-                mSemanticCodeGenParams.targetApi,
-                ShaderModel(mSemanticCodeGenParams.shaderModel))) {
+            mSemanticCodeGenParams.targetApi,
+            mSemanticCodeGenParams.targetLanguage,
+            mSemanticCodeGenParams.shaderModel)) {
         return false;
     }
     return true;
@@ -561,6 +562,7 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
     GLSLTools glslTools;
 
     TargetApi targetApi = mSemanticCodeGenParams.targetApi;
+    TargetLanguage targetLanguage = mSemanticCodeGenParams.targetLanguage;
     assertSingleTargetApi(targetApi);
 
     if (mEnableFramebufferFetch) {
@@ -570,12 +572,13 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
 
     ShaderModel model = static_cast<ShaderModel>(mSemanticCodeGenParams.shaderModel);
     std::string shaderCode = peek(ShaderType::VERTEX, mSemanticCodeGenParams, mProperties);
-    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi, info);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain,
+            targetApi, targetLanguage, info);
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
-    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi,
-            mCustomSurfaceShading, info);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain,
+            targetApi, targetLanguage, mCustomSurfaceShading, info);
     return result;
 #else
     return true;
@@ -747,6 +750,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 GLSLPostProcessor::Config config{
                         .variant = v.variant,
                         .targetApi = targetApi,
+                        .targetLanguage = targetLanguage,
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
                         .domain = mMaterialDomain,
@@ -972,7 +976,7 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
         return Package::invalidPackage();
     }
 
-    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
+    info.samplerBindings.init(mMaterialDomain, &info.sib, mMaterialName.c_str());
 
     // Create chunk tree.
     ChunkContainer container;
@@ -1030,7 +1034,7 @@ std::string MaterialBuilder::peek(filament::backend::ShaderType type,
 
     MaterialInfo info;
     prepareToBuild(info);
-    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
+    info.samplerBindings.init(mMaterialDomain, &info.sib, mMaterialName.c_str());
 
     if (type == filament::backend::ShaderType::VERTEX) {
         return sg.createVertexProgram(ShaderModel(params.shaderModel),
@@ -1047,35 +1051,37 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
 
     // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)
     using namespace filament;
-    utils::FixedCapacityVector<std::pair<std::string_view, BindingPoints>> list = {
-            { PerViewUib::_name,                  BindingPoints::PER_VIEW },
-            { PerRenderableUib::_name,            BindingPoints::PER_RENDERABLE },
-            { LightsUib::_name,                   BindingPoints::LIGHTS },
-            { ShadowUib::_name,                   BindingPoints::SHADOW },
-            { FroxelRecordUib::_name,             BindingPoints::FROXEL_RECORDS },
-            { PerRenderableBoneUib::_name,        BindingPoints::PER_RENDERABLE_BONES },
-            { PerRenderableMorphingUib::_name,    BindingPoints::PER_RENDERABLE_MORPHING },
-            { info.uib.getName(),                 BindingPoints::PER_MATERIAL_INSTANCE }
+    utils::FixedCapacityVector<std::pair<std::string_view, UniformBindingPoints>> list = {
+            { PerViewUib::_name,               UniformBindingPoints::PER_VIEW },
+            { PerRenderableUib::_name,         UniformBindingPoints::PER_RENDERABLE },
+            { LightsUib::_name,                UniformBindingPoints::LIGHTS },
+            { ShadowUib::_name,                UniformBindingPoints::SHADOW },
+            { FroxelRecordUib::_name,          UniformBindingPoints::FROXEL_RECORDS },
+            { PerRenderableBoneUib::_name,     UniformBindingPoints::PER_RENDERABLE_BONES },
+            { PerRenderableMorphingUib::_name, UniformBindingPoints::PER_RENDERABLE_MORPHING },
+            { info.uib.getName(),              UniformBindingPoints::PER_MATERIAL_INSTANCE }
     };
     container.addChild<MaterialUniformBlockBindingsChunk>(std::move(list));
 
-    // UIB
+    // note: this chunk is needed for Vulkan and GL backends. Metal shouldn't need it (but
+    // still does as of now).
+    container.addChild<MaterialSamplerBlockBindingChunk>(info.samplerBindings);
+
+    // User Material UIB
     container.addChild<MaterialUniformInterfaceBlockChunk>(info.uib);
 
-    // SIB
+    // User Material SIB
     container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
 
-    // Subpass
+    // User Subpass
     container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
+
 
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
-
     container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionMode, static_cast<uint8_t>(mReflectionMode));
@@ -1087,6 +1093,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
 
     uint64_t properties = 0;
+    UTILS_NOUNROLL
     for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {
         if (mProperties[i]) {
             properties |= uint64_t(1u) << i;
@@ -1106,6 +1113,8 @@ void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexce
         container.addSimpleChild<bool>(ChunkType::MaterialShadowMultiplier, mShadowMultiplier);
     }
 
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
     container.addSimpleChild<bool>(ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);
     container.addSimpleChild<uint32_t>(ChunkType::MaterialRequiredAttributes, mRequiredAttributes.getValue());
     container.addSimpleChild<bool>(ChunkType::MaterialSpecularAntiAliasing, mSpecularAntiAliasing);

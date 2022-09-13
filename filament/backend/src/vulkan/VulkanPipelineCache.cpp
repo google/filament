@@ -49,7 +49,7 @@ static VkShaderStageFlags getShaderStageFlags(utils::bitset64 key, uint16_t bind
 utils::bitset64
 static getPipelineLayoutKey(const Program::SamplerGroupInfo& samplerGroupInfo) noexcept {
     utils::bitset64 key = {};
-    for (uint32_t binding = 0; binding < Program::BINDING_COUNT; ++binding) {
+    for (uint32_t binding = 0; binding < Program::SAMPLER_BINDING_COUNT; ++binding) {
         const auto& stageFlags = samplerGroupInfo[binding].stageFlags;
         for (const auto& sampler : samplerGroupInfo[binding].samplers) {
             if (any(stageFlags & ShaderStageFlags::VERTEX)) {
@@ -371,7 +371,9 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     // If we reach this point, we need to create and stash a brand new pipeline object.
     shaderStages[0].module = mPipelineRequirements.shaders[0];
+    shaderStages[0].pSpecializationInfo = mSpecializationRequirements;
     shaderStages[1].module = mPipelineRequirements.shaders[1];
+    shaderStages[1].pSpecializationInfo = mSpecializationRequirements;
 
     // Expand our size-optimized structs into the proper Vk structs.
     uint32_t numVertexAttribs = 0;
@@ -581,6 +583,7 @@ void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
         mPipelineRequirements.shaders[ssi] = shaders[ssi];
     }
     mLayoutRequirements = getPipelineLayoutKey(program.samplerGroupInfo);
+    mSpecializationRequirements = program.bundle.specializationInfos;
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {

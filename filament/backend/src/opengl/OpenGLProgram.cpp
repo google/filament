@@ -51,13 +51,16 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& programBuilder) noexce
 
     OpenGLContext& context = gld.getContext();
 
-    mLazyInitializationData->uniformBlockInfo = programBuilder.getUniformBlockBindings();
+    mLazyInitializationData->uniformBlockInfo = std::move(programBuilder.getUniformBlockBindings());
     mLazyInitializationData->samplerGroupInfo = std::move(programBuilder.getSamplerGroupInfo());
 
     // this cannot fail because we check compilation status after linking the program
     // shaders[] is filled with id of shader stages present.
-    OpenGLProgram::compileShaders(context, programBuilder.getShadersSource(),
-            gl.shaders, mLazyInitializationData->shaderSourceCode);
+    OpenGLProgram::compileShaders(context,
+            std::move(programBuilder.getShadersSource()),
+            programBuilder.getSpecializationConstants(),
+            gl.shaders,
+            mLazyInitializationData->shaderSourceCode);
 
     gld.runAtNextRenderPass(this, [this]() {
         // by this point we must not have a GL program
@@ -98,8 +101,21 @@ OpenGLProgram::~OpenGLProgram() noexcept {
  */
 void OpenGLProgram::compileShaders(OpenGLContext& context,
         Program::ShaderSource shadersSource,
+        utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
         GLuint shaderIds[Program::SHADER_TYPE_COUNT],
         std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
+
+    std::string specificationConstantString;
+    for (auto const& sc : specializationConstants) {
+        specificationConstantString += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
+        specificationConstantString += std::visit([](auto&& arg) {
+            return std::to_string(arg);
+        }, sc.value);
+        specificationConstantString += '\n';
+    }
+    if (!specificationConstantString.empty()) {
+        specificationConstantString += '\n';
+    }
 
     // build all shaders
     UTILS_NOUNROLL
@@ -116,31 +132,67 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
         }
 
         if (UTILS_LIKELY(!shadersSource[i].empty())) {
-            Program::ShaderBlob const& shader = shadersSource[i];
-            std::string_view shaderView(reinterpret_cast<const char*>(shader.data()), shader.size());
-            std::string temp;
+            Program::ShaderBlob& shader = shadersSource[i];
 
-            if (!context.ext.GOOGLE_cpp_style_line_directive) {
-                // If usages of the Google-style line directive are present, remove them, as some
-                // drivers don't allow the quotation marks.
-                if (UTILS_UNLIKELY(requestsGoogleLineDirectivesExtension(
-                        shaderView.data(), shaderView.size()))) {
-                    temp = shaderView; // copy string
-                    removeGoogleLineDirectives(temp.data(), temp.size()); // length is unaffected
-                    shaderView = temp;
-                }
-            }
+            // remove GOOGLE_cpp_style_line_directive
+            std::string_view source = process_GOOGLE_cpp_style_line_directive(context,
+                    reinterpret_cast<char*>(shader.data()), shader.size());
 
-            // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
-            // MacOS doesn't support GL_ARB_shading_language_packing
-            if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
-                if (context.state.major == 4 && context.state.minor == 1 &&
-                        !context.ext.ARB_shading_language_packing) {
-                    if (temp.empty()) {
-                        temp = shaderView; // copy string
-                    }
+            // add support for ARB_shading_language_packing if needed
+            auto const packingFunctions = process_ARB_shading_language_packing(context);
 
-                    std::string unpackHalf2x16{ R"(
+            // split shader source, so we can insert the specification constants and the packing functions
+            auto const [prolog, body] = splitShaderSource(source);
+
+            const std::array<const char*, 4> sources = {
+                    prolog.data(),
+                    specificationConstantString.c_str(),
+                    packingFunctions.data(),
+                    body.data()
+            };
+
+            const std::array<GLint, 4> lengths = {
+                    (GLint)prolog.length(),
+                    (GLint)specificationConstantString.length(),
+                    (GLint)packingFunctions.length(),
+                    (GLint)body.length() - 1 // null terminated
+            };
+
+            GLuint shaderId = glCreateShader(glShaderType);
+            glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+            glCompileShader(shaderId);
+
+#ifndef NDEBUG
+            // for debugging we return the original shader source (without the modifications we
+            // made here), otherwise the line numbers wouldn't match.
+            outShaderSourceCode[i] = { source.data(), source.length() };
+#endif
+
+            shaderIds[i] = shaderId;
+        }
+    }
+}
+
+// If usages of the Google-style line directive are present, remove them, as some
+// drivers don't allow the quotation marks. This happens in-place.
+std::string_view OpenGLProgram::process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
+        char* source, size_t len) noexcept {
+    if (!context.ext.GOOGLE_cpp_style_line_directive) {
+        if (UTILS_UNLIKELY(requestsGoogleLineDirectivesExtension({ source, len }))) {
+            removeGoogleLineDirectives(source, len); // length is unaffected
+        }
+    }
+    return { source, len };
+}
+
+// Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
+// macOS doesn't support GL_ARB_shading_language_packing
+std::string_view OpenGLProgram::process_ARB_shading_language_packing(OpenGLContext& context) noexcept {
+    using namespace std::literals;
+    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
+        if (context.state.major == 4 && context.state.minor == 1 &&
+            !context.ext.ARB_shading_language_packing) {
+            return R"(
 
 // these don't handle denormals, NaNs or inf
 float u16tofp32(highp uint v) {
@@ -175,33 +227,29 @@ highp uint packHalf2x16(vec2 v) {
     highp uint y = fp32tou16(v.y);
     return (y << 16) | x;
 }
-)"};
-                    // a good point for insertion is just before the first occurrence of an uniform block
-                    auto pos = temp.find("layout(std140)");
-                    if (pos != std::string_view::npos) {
-                        temp.insert(pos, unpackHalf2x16);
-                    }
-                    shaderView = temp;
-                }
-            }
-
-            GLuint shaderId = glCreateShader(glShaderType);
-            { // scope for source/length (we don't want them to leak out)
-                const char* const source = shaderView.data();
-
-                // the shader string is null terminated and the length includes the null character
-                const GLint length = (GLint)shaderView.length() - 1;
-                assert_invariant( source[length] == '\0' );
-
-                glShaderSource(shaderId, 1, &source, &length);
-                glCompileShader(shaderId);
-#ifndef NDEBUG
-                outShaderSourceCode[i] = { source, static_cast<size_t>(length) };
-#endif
-            }
-            shaderIds[i] = shaderId;
+)"sv;
         }
     }
+    return ""sv;
+}
+
+// split shader source code in two, the first section goes from the start to the line after the
+// last #extension, and the 2nd part goes from there to the end.
+std::array<std::string_view, 2> OpenGLProgram::splitShaderSource(std::string_view source) noexcept {
+    auto start = source.find("#version");
+    assert_invariant(start != std::string_view::npos);
+
+    auto pos = source.rfind("#extension");
+    if (pos == std::string_view::npos) {
+        pos = start;
+    }
+
+    auto eol = source.find('\n', pos) + 1;
+    assert_invariant(eol != std::string_view::npos);
+
+    std::string_view version = source.substr(start, eol - start);
+    std::string_view body = source.substr(version.length(), source.length() - version.length());
+    return { version, body };
 }
 
 /*
@@ -271,9 +319,7 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
             gl.program, gl.shaders, initializationData->shaderSourceCode);
 
     if (UTILS_LIKELY(mValid)) {
-        initializeProgramState(context, gl.program,
-                initializationData->uniformBlockInfo,
-                initializationData->samplerGroupInfo);
+        initializeProgramState(context, gl.program, *initializationData);
     }
 
     // and destroy all temporary init data
@@ -287,16 +333,15 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
  * checkProgramStatus() has been successfully called.
  */
 void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
-        Program::UniformBlockInfo const& uniformBlockInfo,
-        Program::SamplerGroupInfo const& samplerGroupInfo) noexcept {
+        LazyInitializationData const& lazyInitializationData) noexcept {
 
     // Note: This is only needed, because the layout(binding=) syntax is not permitted in glsl
     // (ES3.0 and GL4.1). The backend needs a way to associate a uniform block to a binding point.
     UTILS_NOUNROLL
-    for (GLuint binding = 0, n = uniformBlockInfo.size(); binding < n; binding++) {
-        const char* name = uniformBlockInfo[binding];
-        if (name) {
-            GLint index = glGetUniformBlockIndex(program, name);
+    for (GLuint binding = 0, n = lazyInitializationData.uniformBlockInfo.size(); binding < n; binding++) {
+        auto const& name = lazyInitializationData.uniformBlockInfo[binding];
+        if (!name.empty()) {
+            GLint index = glGetUniformBlockIndex(program, name.c_str());
             if (index >= 0) {
                 glUniformBlockBinding(program, GLuint(index), binding);
             }
@@ -308,8 +353,8 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     uint8_t tmu = 0;
 
     UTILS_NOUNROLL
-    for (size_t i = 0, c = samplerGroupInfo.size(); i < c; i++) {
-        auto const& samplers = samplerGroupInfo[i].samplers;
+    for (size_t i = 0, c = lazyInitializationData.samplerGroupInfo.size(); i < c; i++) {
+        auto const& samplers = lazyInitializationData.samplerGroupInfo[i].samplers;
         if (samplers.empty()) {
             // this binding point doesn't have any samplers, skip it.
             continue;
@@ -336,7 +381,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         // whole group.
         if (atLeastOneSamplerUsed) {
             // Cache the sampler uniform locations for each interface block
-            mUsedBindingPoints[usedBindingCount] = i;
+            mUsedSamplerBindingPoints[usedBindingCount] = i;
             usedBindingCount++;
         } else {
             tmu -= samplers.size();
@@ -345,12 +390,12 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     mUsedBindingsCount = usedBindingCount;
 }
 
-void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
+void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
     using GLTexture = OpenGLDriver::GLTexture;
 
     // cache a few member variable locally, outside the loop
     auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
-    auto const& UTILS_RESTRICT usedBindingPoints = mUsedBindingPoints;
+    auto const& UTILS_RESTRICT usedBindingPoints = mUsedSamplerBindingPoints;
 
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
         auto const binding = usedBindingPoints[i];

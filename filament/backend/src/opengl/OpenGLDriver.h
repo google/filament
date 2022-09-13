@@ -323,7 +323,7 @@ private:
         return pos->second;
     }
 
-    const std::array<GLSamplerGroup*, Program::BINDING_COUNT>& getSamplerBindings() const {
+    const std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
 
@@ -344,7 +344,7 @@ private:
     void setViewportScissor(Viewport const& viewportScissor) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<GLSamplerGroup*, Program::BINDING_COUNT> mSamplerBindings = {};   // 12 pointers
+    std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;

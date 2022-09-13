@@ -30,8 +30,8 @@ namespace filament::uberz {
 // offset fields into pointers.
 void convertOffsetsToPointers(struct ReadableArchive* archive);
 
-#pragma clang diagnostic push
-#pragma clang diagnostic warning "-Wpadded"
+UTILS_WARNING_PUSH
+UTILS_WARNING_ENABLE_PADDED
 
 // Precompiled set of materials bundled with a list of features flags that each material supports.
 // This is the readable counterpart to WriteableArchive.
@@ -72,7 +72,7 @@ struct ArchiveFlag {
     ArchiveFeature value;
 };
 
-#pragma clang diagnostic pop
+UTILS_WARNING_POP
 
 } // namespace filament::uberz
 

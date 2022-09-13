@@ -72,10 +72,25 @@ public:
     } gl; // 12 bytes
 
 private:
+    // keep these away from of other class attributes
+    struct LazyInitializationData {
+        Program::UniformBlockInfo uniformBlockInfo;
+        Program::SamplerGroupInfo samplerGroupInfo;
+        std::array<utils::CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
+    };
+
     static void compileShaders(OpenGLContext& context,
             Program::ShaderSource shadersSource,
+            utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
             GLuint shaderIds[Program::SHADER_TYPE_COUNT],
             std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
+
+    static std::string_view process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
+            char* source, size_t len) noexcept;
+
+    static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
+
+    static std::array<std::string_view, 2> splitShaderSource(std::string_view source) noexcept;
 
     static GLuint linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept;
 
@@ -86,17 +101,9 @@ private:
     void initialize(OpenGLContext& context);
 
     void initializeProgramState(OpenGLContext& context, GLuint program,
-            Program::UniformBlockInfo const& uniformBlockInfo,
-            Program::SamplerGroupInfo const& samplerGroupInfo) noexcept;
+            LazyInitializationData const& lazyInitializationData) noexcept;
 
-    void updateSamplers(OpenGLDriver* gld) noexcept;
-
-    // keep these away from of other class attributes
-    struct LazyInitializationData {
-        Program::UniformBlockInfo uniformBlockInfo;
-        Program::SamplerGroupInfo samplerGroupInfo;
-        std::array<utils::CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
-    };
+    void updateSamplers(OpenGLDriver* gld) const noexcept;
 
     // number of bindings actually used by this program
     uint8_t mUsedBindingsCount = 0u;
@@ -109,7 +116,7 @@ private:
     union {
         // when mInitialized == true:
         // information about each USED sampler buffer per binding (no gaps)
-        std::array<uint8_t, Program::BINDING_COUNT> mUsedBindingPoints;   // 12 bytes
+        std::array<uint8_t, Program::SAMPLER_BINDING_COUNT> mUsedSamplerBindingPoints;   // 4 bytes
         // when mInitialized == false:
         // lazy initialization data pointer
         LazyInitializationData* mLazyInitializationData;

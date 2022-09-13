@@ -304,8 +304,6 @@ class FilamentViewer extends LitElement {
 
             const config = {
                 normalizeSkinningWeights: true,
-                recomputeBoundingBoxes: false,
-                ignoreBindTransform: false,
                 asyncInterval: 30
             };
 
@@ -333,9 +331,7 @@ class FilamentViewer extends LitElement {
                 this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
 
                 const resourceLoader = new Filament.gltfio$ResourceLoader(this.engine,
-                    config.normalizeSkinningWeights,
-                    config.recomputeBoundingBoxes,
-                    config.ignoreBindTransform);
+                    config.normalizeSkinningWeights);
 
                 const stbProvider = new Filament.gltfio$StbProvider(this.engine);
                 const ktx2Provider = new Filament.gltfio$Ktx2Provider(this.engine);

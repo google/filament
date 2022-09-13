@@ -26,7 +26,8 @@
 #include "details/Texture.h"
 #include "details/Material.h"
 
-#include "private/filament/SibGenerator.h"
+#include <private/filament/SibStructs.h>
+
 #include "filament/RenderableManager.h"
 
 

@@ -37,7 +37,11 @@ static constexpr bool DEBUG_FINISH_HANGS = false;
 
 #include <math.h>
 
-#if !defined(WIN32)
+#if defined(WIN32)
+#    define NOMINMAX
+#    include <windows.h>
+#    include <string>
+# else
 #    include <pthread.h>
 #endif
 
@@ -77,8 +81,15 @@ void JobSystem::setThreadName(const char* name) noexcept {
     pthread_setname_np(pthread_self(), name);
 #elif defined(__APPLE__)
     pthread_setname_np(name);
-#else
-// TODO: implement setting thread name on WIN32
+#elif defined(WIN32)
+    std::string_view u8name(name);
+    size_t size = MultiByteToWideChar(CP_UTF8, 0, u8name.data(), u8name.size(), nullptr, 0);
+
+    std::wstring u16name;
+    u16name.resize(size);
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, u8name.data(), u8name.size(), u16name.data(), u16name.size());
+    
+    SetThreadDescription(GetCurrentThread(), u16name.data());
 #endif
 }
 

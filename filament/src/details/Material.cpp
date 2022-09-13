@@ -16,24 +16,20 @@
 
 #include "details/Material.h"
 
-#include "DFG.h"
 #include "MaterialParser.h"
 
 #include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
 
-#include <private/filament/SibGenerator.h>
-#include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
-#include "backend/Program.h"
-
 #include <backend/DriverEnums.h>
+#include <backend/Program.h>
 
 #include <utils/CString.h>
 #include <utils/Panic.h>
@@ -127,24 +123,6 @@ Material* Material::Builder::build(Engine& engine) {
     return upcast(engine).createMaterial(*this);
 }
 
-static void addSamplerGroup(Program& pb, BindingPoints bindingPoint,
-        SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
-    const size_t samplerCount = sib.getSize();
-    if (samplerCount) {
-        std::vector<Program::Sampler> samplers(samplerCount);
-        auto const& list = sib.getSamplerInfoList();
-        for (size_t i = 0, c = samplerCount; i < c; ++i) {
-            CString uniformName(
-                    SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
-                            list[i].name.c_str()));
-            uint8_t binding = map.getSamplerBinding(bindingPoint, (uint8_t)i);
-            const bool strict = (bindingPoint == filament::BindingPoints::PER_MATERIAL_INSTANCE);
-            samplers[i] = { std::move(uniformName), binding, strict };
-        }
-        pb.setSamplerGroup(+bindingPoint, sib.getStageFlags(), samplers.data(), samplers.size());
-    }
-}
-
 FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         : mEngine(engine),
           mMaterialId(engine.getMaterialId())
@@ -176,16 +154,11 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
     // read the uniform binding list
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> uniformBlockBindings;
-    success = parser->getUniformBlockBindings(&uniformBlockBindings);
+    success = parser->getUniformBlockBindings(&mUniformBlockBindings);
     assert_invariant(success);
-    // store the name in an array (so we can use pointers), and create the uniform block binding
-    // list for the backend (to be used with Program)
-    mUniformBlockNames.reserve(uniformBlockBindings.size());
-    mUniformBlockBindings.reserve(uniformBlockBindings.size());
-    for (auto& item : uniformBlockBindings) {
-        mUniformBlockNames.emplace_back(std::move(item.first));
-        mUniformBlockBindings.emplace_back(mUniformBlockNames.back().c_str(), item.second);
-    }
+
+    success = parser->getSamplerBlockBindings(&mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
+    assert_invariant(success);
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
@@ -200,9 +173,6 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     if (!parser->getSubpasses(&mSubpassInfo)) {
         mSubpassInfo.isValid = false;
     }
-
-    // Populate sampler bindings for the backend that will consume this Material.
-    mSamplerBindings.populate(&mSamplerInterfaceBlock);
 
     parser->getShading(&mShading);
     parser->getMaterialProperties(&mMaterialProperties);
@@ -396,25 +366,11 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     Variant fragmentVariant = Variant::filterVariantFragment(variant);
 
     Program pb{ getProgramBuilderWithVariants(variant, vertexVariant, fragmentVariant) };
-
-    // Always add the morphing sampler group because there is no way
-    // that SamplerBindingMap knows the current variant.
-    addSamplerGroup(pb, BindingPoints::PER_RENDERABLE_MORPHING,
-            SibGenerator::getPerRenderPrimitiveMorphingSib(variant), mSamplerBindings);
-
-    addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variant), mSamplerBindings);
-    addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
-
-    // getSurfaceBindingIndexMap in GLSLPostProcessor.cpp also needs to update if sampler groups are added.
     createAndCacheProgram(std::move(pb), variant);
 }
 
 void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
     Program pb{ getProgramBuilderWithVariants(variant, variant, variant) };
-
-    addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
-
-    // getPostProcessBindingIndexMap in GLSLPostProcessor.cpp also needs to update if sampler groups are added.
     createAndCacheProgram(std::move(pb), variant);
 }
 
@@ -462,6 +418,26 @@ Program FMaterial::getProgramBuilderWithVariants(
                         return out << mName.c_str_safe()
                                    << ", variant=(" << io::hex << variant.key << io::dec << ")";
                     });
+
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < Enum::count<SamplerBindingPoints>(); i++) {
+        SamplerBindingPoints bindingPoint = (SamplerBindingPoints)i;
+        auto const& info = mSamplerGroupBindingInfoList[i];
+        if (info.count) {
+            std::array<Program::Sampler, backend::MAX_SAMPLER_COUNT> samplers{};
+            for (size_t j = 0, c = info.count; j < c; ++j) {
+                uint8_t binding = info.bindingOffset + j;
+                samplers[j] = { mSamplerBindingToNameMap[binding], binding };
+            }
+            program.setSamplerGroup(+bindingPoint, info.shaderStageFlags,
+                    samplers.data(), info.count);
+        }
+    }
+
+    program.specializationConstants({
+            { 0, (int)mEngine.getSupportedFeatureLevel() },
+            { 1, (int)CONFIG_MAX_INSTANCES }
+    });
 
     return program;
 }

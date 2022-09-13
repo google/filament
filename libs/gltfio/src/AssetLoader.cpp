@@ -63,9 +63,25 @@ namespace filament::gltfio {
 
 using SceneMask = NodeManager::SceneMask;
 
-void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins);
-
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
+
+// The default glTF material.
+static constexpr cgltf_material kDefaultMat = {
+    .name = (char*) "Default GLTF material",
+    .has_pbr_metallic_roughness = true,
+    .has_pbr_specular_glossiness = false,
+    .has_clearcoat = false,
+    .has_transmission = false,
+    .has_volume = false,
+    .has_ior = false,
+    .has_specular = false,
+    .has_sheen = false,
+    .pbr_metallic_roughness = {
+        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
+        .metallic_factor = 1.0,
+        .roughness_factor = 1.0,
+    },
+};
 
 // Sometimes a glTF bufferview includes unused data at the end (e.g. in skinning.gltf) so we need to
 // compute the correct size of the vertex buffer. Filament automatically infers the size of
@@ -90,6 +106,76 @@ static const char* getNodeName(const cgltf_node* node, const char* defaultNodeNa
     return defaultNodeName;
 }
 
+static bool primitiveHasVertexColor(const cgltf_primitive* inPrim) {
+    for (int slot = 0; slot < inPrim->attributes_count; slot++) {
+        const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
+        if (inputAttribute.type == cgltf_attribute_type_color) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static LightManager::Type getLightType(const cgltf_light_type light) {
+    switch (light) {
+        case cgltf_light_type_max_enum:
+        case cgltf_light_type_invalid:
+            assert_invariant(false && "Invalid light type");
+            return LightManager::Type::DIRECTIONAL;
+        case cgltf_light_type_directional:
+            return LightManager::Type::DIRECTIONAL;
+        case cgltf_light_type_point:
+            return LightManager::Type::POINT;
+        case cgltf_light_type_spot:
+            return LightManager::Type::FOCUSED_SPOT;
+    }
+}
+
+// MaterialInstanceCache
+// ---------------------
+// Each glTF material definition corresponds to a single MaterialInstance, which are temporarily
+// cached when loading a FilamentInstance. If a given glTF material is referenced by multiple
+// glTF meshes, then their corresponding Filament primitives will share the same Filament
+// MaterialInstance and UvMap. The UvMap is a mapping from each texcoord slot in glTF to one of
+// Filament's 2 texcoord sets.
+//
+// Notes:
+// - The Material objects (used to create instances) are cached in MaterialProvider, not here.
+// - The cache is not responsible for destroying material instances. They are owned by the asset.
+class MaterialInstanceCache {
+public:
+    struct Entry {
+        MaterialInstance* instance;
+        UvMap uvmap;
+    };
+
+    MaterialInstanceCache() {}
+
+    MaterialInstanceCache(const cgltf_data* hierarchy) :
+        mHierarchy(hierarchy),
+        mMaterialInstances(hierarchy->materials_count, Entry{}),
+        mMaterialInstancesWithVertexColor(hierarchy->materials_count, Entry{}) {}
+
+    Entry* getEntry(const cgltf_material** mat, bool vertexColor) {
+        if (*mat) {
+            EntryVector& entries = vertexColor ?
+                    mMaterialInstancesWithVertexColor : mMaterialInstances;
+            const cgltf_material* basePointer = mHierarchy->materials;
+            return &entries[*mat - basePointer];
+        }
+        *mat = &kDefaultMat;
+        return vertexColor ? &mDefaultMaterialInstanceWithVertexColor : &mDefaultMaterialInstance;
+    }
+
+private:
+    using EntryVector = utils::FixedCapacityVector<Entry>;
+    const cgltf_data* mHierarchy = {};
+    EntryVector mMaterialInstances;
+    EntryVector mMaterialInstancesWithVertexColor;
+    Entry mDefaultMaterialInstance = {};
+    Entry mDefaultMaterialInstanceWithVertexColor = {};
+};
+
 struct FAssetLoader : public AssetLoader {
     FAssetLoader(const AssetConfiguration& config) :
             mEntityManager(config.entities ? *config.entities : EntityManager::get()),
@@ -102,8 +188,10 @@ struct FAssetLoader : public AssetLoader {
 
     FFilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
-        FilamentInstance** instances, size_t numInstances);
+            FilamentInstance** instances, size_t numInstances);
     FilamentInstance* createInstance(FFilamentAsset* primary);
+    void importSkins(FFilamentAsset* primary, FFilamentInstance* instance,
+            const cgltf_data* srcAsset);
 
     static void destroy(FAssetLoader** loader) noexcept {
         delete *loader;
@@ -130,10 +218,11 @@ struct FAssetLoader : public AssetLoader {
         return mMaterials.getMaterials();
     }
 
+private:
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
     FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_data* srcAsset);
-    void createEntity(const cgltf_data* srcAsset, const cgltf_node* node, SceneMask scenes,
-            Entity parent, bool enableLight, FFilamentInstance* instance);
+    void recurseEntities(const cgltf_data* srcAsset, const cgltf_node* node, SceneMask scenes,
+            Entity parent, FFilamentInstance* instance);
     void createRenderable(const cgltf_data* srcAsset, const cgltf_node* node, Entity entity,
             const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
@@ -144,12 +233,10 @@ struct FAssetLoader : public AssetLoader {
             const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
-    bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
     void createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh, Entity entity,
             FFilamentInstance* instance);
 
-    static LightManager::Type getLightType(const cgltf_light_type type);
-
+public:
     EntityManager& mEntityManager;
     RenderableManager& mRenderableManager;
     NameComponentManager* const mNameManager;
@@ -164,6 +251,7 @@ struct FAssetLoader : public AssetLoader {
     const char* mDefaultNodeName;
     bool mError = false;
     bool mDiagnosticsEnabled = false;
+    MaterialInstanceCache mMaterialInstanceCache;
 
     // Weak reference to the largest dummy buffer so far in the current loading phase.
     BufferObject* mDummyBufferObject;
@@ -228,16 +316,16 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         slog.e << "There is no scene in the asset." << io::endl;
         return nullptr;
     }
+
+    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
+
     FFilamentInstance* instance = createInstance(primary, srcAsset);
 
-    // Import the skin data. This is normally done by ResourceLoader but dynamically created
-    // instances are a bit special.
-    importSkins(primary->mSourceAsset->hierarchy, instance->nodeMap, instance->skins);
     if (primary->mAnimator) {
         primary->mAnimator->addInstance(instance);
     }
 
-    primary->mDependencyGraph.refinalize();
+    primary->mDependencyGraph.commitEdges();
     return instance;
 }
 
@@ -255,6 +343,8 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
 
     mResult = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager, srcAsset);
     mDummyBufferObject = nullptr;
+
+    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
 
     // It is not an error for a glTF file to have zero scenes.
     mResult->mScenes.clear();
@@ -307,7 +397,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     mResult->mRenderableCount = 0;
 
     // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
-    // buffers and index buffers) and MatInstanceCache (materials and textures) help avoid
+    // buffers and index buffers) and MaterialInstanceCache (materials and textures) help avoid
     // needless duplication of resources.
     for (size_t index = 0; index < numInstances; ++index) {
         if (createInstance(mResult, srcAsset) == nullptr) {
@@ -325,10 +415,10 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
 
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
     // that match the URI. These strings get freed during releaseSourceData().
-    tsl::robin_map<std::string_view, const char*> resourceUris;
+    tsl::robin_set<std::string_view> resourceUris;
     auto addResourceUri = [&resourceUris](const char* uri) {
         if (uri) {
-            resourceUris[uri] = uri;
+            resourceUris.insert(uri);
         }
     };
     for (cgltf_size i = 0, len = srcAsset->buffers_count; i < len; ++i) {
@@ -338,8 +428,8 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         addResourceUri(srcAsset->images[i].uri);
     }
     mResult->mResourceUris.reserve(resourceUris.size());
-    for (const auto& pair : resourceUris) {
-        mResult->mResourceUris.push_back(pair.second);
+    for (std::string_view uri : resourceUris) {
+        mResult->mResourceUris.push_back(uri.data());
     }
 
     if (mError) {
@@ -356,12 +446,9 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
     mTransformManager.create(instanceRoot, rootTransform);
 
     // Create an instance object, which is a just a lightweight wrapper around a vector of
-    // entities and a lazily created animator.
-    FFilamentInstance* instance = new FFilamentInstance;
-    instance->root = instanceRoot;
-    instance->animator = nullptr;
-    instance->owner = primary;
-    primary->mInstances.push_back(instance);
+    // entities and an animator. The creation of animator is triggered from ResourceLoader
+    // because it could require external bin data.
+    FFilamentInstance* instance = new FFilamentInstance(instanceRoot, primary);
 
     // Check if the asset has variants.
     instance->variants.reserve(srcAsset->variants_count);
@@ -371,13 +458,20 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
 
     // For each scene root, recursively create all entities.
     for (const auto& pair : mRootNodes) {
-        createEntity(srcAsset, pair.first, pair.second, instanceRoot, false, instance);
+        recurseEntities(srcAsset, pair.first, pair.second, instanceRoot, instance);
     }
+
+    importSkins(primary, instance, srcAsset);
+
+    // This needs to stay near the end of the method to allow detection of the first instance.
+    primary->mInstances.push_back(instance);
+
+    instance->boundingBox = primary->mBoundingBox;
     return instance;
 }
 
-void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* node,
-        SceneMask scenes, Entity parent, bool enableLight, FFilamentInstance* instance) {
+void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node* node,
+        SceneMask scenes, Entity parent, FFilamentInstance* instance) {
     NodeManager& nm = mNodeManager;
     const Entity entity = mEntityManager.create();
     nm.create(entity);
@@ -409,7 +503,7 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
     // Update the asset's entity list and private node mapping.
     mResult->mEntities.push_back(entity);
     instance->entities.push_back(entity);
-    instance->nodeMap[node] = entity;
+    instance->nodeMap[node - srcAsset->nodes] = entity;
 
     const char* name = getNodeName(node, mDefaultNodeName);
 
@@ -432,7 +526,12 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
         }
     }
 
-    if (node->light && enableLight) {
+    // TODO: refactor loading into 2 passes: the first pass creates all objects that are shared
+    // amongst instances (VertexBuffer, IndexBuffer, etc) while the second pass creates the
+    // lightweight ECS stuff (Renderables, Transformables) for each instance. This will allow
+    // users to create assets with zero instances, which is a feature request from Google.
+
+    if (node->light && mResult->mInstances.empty()) {
         createLight(node->light, entity);
     }
 
@@ -441,7 +540,7 @@ void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* no
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
-        createEntity(srcAsset, node->children[i], scenes, entity, enableLight, instance);
+        recurseEntities(srcAsset, node->children[i], scenes, entity, instance);
     }
 }
 
@@ -453,17 +552,17 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     auto thisTransform = mTransformManager.getInstance(entity);
     mat4f worldTransform = mTransformManager.getWorldTransform(thisTransform);
 
-    cgltf_size nprims = mesh->primitives_count;
-    RenderableManager::Builder builder(nprims);
+    const cgltf_size primitiveCount = mesh->primitives_count;
+    RenderableManager::Builder builder(primitiveCount);
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive), otherwise allocate a new list of
     // pointers for the primitives.
-    auto iter = mResult->mMeshCache.find(mesh);
-    if (iter == mResult->mMeshCache.end()) {
-        mResult->mMeshCache[mesh].resize(nprims);
+    FixedCapacityVector<Primitive>& prims = mResult->mMeshCache[mesh - srcAsset->meshes];
+    if (prims.empty()) {
+        prims = FixedCapacityVector<Primitive>(primitiveCount, Primitive {});
     }
-    Primitive* outputPrim = mResult->mMeshCache[mesh].data();
+    Primitive* outputPrim = prims.data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
 
     Aabb aabb;
@@ -473,7 +572,9 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     builder.morphing(numMorphTargets);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
-    for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim, ++inputPrim) {
+    // The VertexBuffer and IndexBuffer objects are cached for possible re-use, but MaterialInstance
+    // is not.
+    for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
         RenderableManager::PrimitiveType primType;
         if (!getPrimitiveType(inputPrim->type, &primType)) {
             slog.e << "Unsupported primitive type in " << name << io::endl;
@@ -539,8 +640,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     }
 
     // Per the spec, glTF models must have valid mix / max annotations for position attributes.
-    // However in practice these can be missing and we should be as robust as other glTF viewers.
-    // If desired, clients can enable the "recomputeBoundingBoxes" feature in ResourceLoader.
+    // If desired, clients can call "recomputeBoundingBoxes()" in FilamentInstance.
     Box box = Box().set(aabb.min, aabb.max);
     if (box.isEmpty()) {
         slog.w << "Missing bounding box in " << name << io::endl;
@@ -587,7 +687,8 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
                 break;
             }
             bool hasVertexColor = primitiveHasVertexColor(srcPrim);
-            MaterialInstance* mi = createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
+            MaterialInstance* mi =
+                    createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
             assert_invariant(mi);
             if (!mi) {
                 mError = true;
@@ -766,7 +867,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     cgltf_size targetsCount = inPrim->targets_count;
 
     if (targetsCount > MAX_MORPH_TARGETS) {
-        utils::slog.w << "WARNING: Exceeded max morph target count of " << MAX_MORPH_TARGETS << utils::io::endl;
+        utils::slog.w << "WARNING: Exceeded max morph target count of "
+                << MAX_MORPH_TARGETS << utils::io::endl;
         targetsCount = MAX_MORPH_TARGETS;
     }
 
@@ -982,31 +1084,12 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
 
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsset,
         const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
-    intptr_t key = ((intptr_t) inputMat) ^ (vertexColor ? 1 : 0);
-    auto iter = mResult->mMatInstanceCache.find(key);
-    if (iter != mResult->mMatInstanceCache.end()) {
-        *uvmap = iter->second.uvmap;
-        return iter->second.instance;
+    MaterialInstanceCache::Entry* const cacheEntry =
+            mMaterialInstanceCache.getEntry(&inputMat, vertexColor);
+    if (cacheEntry->instance) {
+        *uvmap = cacheEntry->uvmap;
+        return cacheEntry->instance;
     }
-
-    // The default glTF material.
-    static const cgltf_material kDefaultMat = {
-        .name = (char*) "Default GLTF material",
-        .has_pbr_metallic_roughness = true,
-        .has_pbr_specular_glossiness = false,
-        .has_clearcoat = false,
-        .has_transmission = false,
-        .has_volume = false,
-        .has_ior = false,
-        .has_specular = false,
-        .has_sheen = false,
-        .pbr_metallic_roughness = {
-	        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
-	        .metallic_factor = 1.0,
-	        .roughness_factor = 1.0,
-        },
-    };
-    inputMat = inputMat ? inputMat : &kDefaultMat;
 
     auto mrConfig = inputMat->pbr_metallic_roughness;
     auto sgConfig = inputMat->pbr_specular_glossiness;
@@ -1123,7 +1206,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setMaskThreshold(inputMat->alpha_cutoff);
     }
 
-    float3 emissiveFactor(inputMat->emissive_factor[0], inputMat->emissive_factor[1], inputMat->emissive_factor[2]);
+    const float* emissive = &inputMat->emissive_factor[0];
+    float3 emissiveFactor(emissive[0], emissive[1], emissive[2]);
     if (inputMat->has_emissive_strength) {
         emissiveFactor *= inputMat->emissive_strength.emissive_strength;
     }
@@ -1211,7 +1295,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasClearCoatRoughnessTexture) {
-            addTextureBinding(mi, "clearCoatRoughnessMap", ccConfig.clearcoat_roughness_texture.texture, false);
+            addTextureBinding(mi, "clearCoatRoughnessMap",
+                    ccConfig.clearcoat_roughness_texture.texture, false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_roughness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1219,7 +1304,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasClearCoatNormalTexture) {
-            addTextureBinding(mi, "clearCoatNormalMap", ccConfig.clearcoat_normal_texture.texture, false);
+            addTextureBinding(mi, "clearCoatNormalMap",
+                    ccConfig.clearcoat_normal_texture.texture, false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_normal_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1243,7 +1329,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasSheenRoughnessTexture) {
-            addTextureBinding(mi, "sheenRoughnessMap", shConfig.sheen_roughness_texture.texture, false);
+            addTextureBinding(mi, "sheenRoughnessMap",
+                    shConfig.sheen_roughness_texture.texture, false);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1303,7 +1390,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
                 inputMat->emissive_strength.emissive_strength : 1.0f);
     }
 
-    mResult->mMatInstanceCache[key] = {mi, *uvmap};
+    *cacheEntry = { mi, *uvmap };
     return mi;
 }
 
@@ -1315,6 +1402,7 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
 #endif
         return;
     }
+
     TextureSampler dstSampler;
     auto srcSampler = srcTexture->sampler;
     if (srcSampler) {
@@ -1327,43 +1415,46 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
         dstSampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
         dstSampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
 
-        // These defaults are up the implementation but since we try to provide mipmaps,
+        // These defaults are up to the implementation but since we try to provide mipmaps,
         // we might as well use them. In practice the conformance models look awful without
         // using mipmapping by default.
         dstSampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
         dstSampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
     }
 
-    mResult->mTextureSlots.push_back({
-        .texture = srcTexture,
+    const intptr_t textureIndex = srcTexture - mResult->mSourceAsset->hierarchy->textures;
+
+    mResult->addTextureSlot({
+        .sourceTexture = (size_t) textureIndex,
         .materialInstance = materialInstance,
         .materialParameter = parameterName,
         .sampler = dstSampler,
         .srgb = srgb
     });
-    mResult->mDependencyGraph.addEdge(materialInstance, parameterName);
 }
 
-bool FAssetLoader::primitiveHasVertexColor(const cgltf_primitive* inPrim) const {
-    for (int slot = 0; slot < inPrim->attributes_count; slot++) {
-        const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
-        if (inputAttribute.type == cgltf_attribute_type_color) {
-            return true;
+void FAssetLoader::importSkins(FFilamentAsset* primary,
+        FFilamentInstance* instance, const cgltf_data* gltf) {
+    instance->skins.reserve(gltf->skins_count);
+    instance->skins.resize(gltf->skins_count);
+    const auto& nodeMap = instance->nodeMap;
+    for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
+        const cgltf_node& node = gltf->nodes[i];
+        Entity entity = nodeMap[i];
+        if (node.skin && entity) {
+            int skinIndex = node.skin - &gltf->skins[0];
+            instance->skins[skinIndex].targets.insert(entity);
         }
     }
-    return false;
-}
+    for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
+        FFilamentInstance::Skin& dstSkin = instance->skins[i];
+        const cgltf_skin& srcSkin = gltf->skins[i];
 
-LightManager::Type FAssetLoader::getLightType(const cgltf_light_type light) {
-    switch (light) {
-        case cgltf_light_type_max_enum:
-        case cgltf_light_type_invalid:
-        case cgltf_light_type_directional:
-            return LightManager::Type::DIRECTIONAL;
-        case cgltf_light_type_point:
-            return LightManager::Type::POINT;
-        case cgltf_light_type_spot:
-            return LightManager::Type::FOCUSED_SPOT;
+        // Build a list of transformables for this skin, one for each joint.
+        dstSkin.joints = FixedCapacityVector<Entity>(srcSkin.joints_count);
+        for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
+            dstSkin.joints[i] = nodeMap[srcSkin.joints[i] - gltf->nodes];
+        }
     }
 }
 

@@ -5,6 +5,15 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.27.0
+
+- WebGL: reduce max instance count to work around Chrome issues [⚠️ **Recompile Materials**]
+- engine: rework material/shader sampler binding code [⚠️ **Recompile Materials**]
+- gltfio: move the API for `recomputeBoundingBoxes` [⚠️ **API Change**]
+- engine: add support for specialization constants [⚠️ **Recompile Materials**]
+- gltfio: fix spotlight regression
+- gltfio: clear the MaterialInstance cache when creating new instances
+
 ## v1.26.0
 
 - engine: new feature level APIs, see `Engine::getSupportedFeatureLevel()`

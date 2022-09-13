@@ -24,6 +24,7 @@
 
 #include <filament/MaterialChunkType.h>
 
+#include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
@@ -169,6 +170,17 @@ bool MaterialParser::getUniformBlockBindings(
     const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
     Unflattener unflattener(start, end);
     return ChunkUniformBlockBindings::unflatten(unflattener, value);
+}
+
+bool MaterialParser::getSamplerBlockBindings(
+        SamplerGroupBindingInfoList* pSamplerGroupInfoList,
+        SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept {
+    auto type = MaterialSamplerBindings;
+    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
+    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+    Unflattener unflattener(start, end);
+    return ChunkSamplerBlockBindings::unflatten(unflattener,
+            pSamplerGroupInfoList, pSamplerBindingToNameMap);
 }
 
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
@@ -485,5 +497,49 @@ bool ChunkUniformBlockBindings::unflatten(filaflat::Unflattener& unflattener,
     return true;
 }
 
+
+bool ChunkSamplerBlockBindings::unflatten(Unflattener& unflattener,
+        SamplerGroupBindingInfoList* pSamplerGroupBindingInfoList,
+        SamplerBindingToNameMap* pSamplerBindingToNameMap) {
+    assert_invariant(pSamplerGroupBindingInfoList && pSamplerBindingToNameMap);
+    SamplerGroupBindingInfoList& samplerGroupBindingInfoList = *pSamplerGroupBindingInfoList;
+    SamplerBindingToNameMap& samplerBindingToNameMap = *pSamplerBindingToNameMap;
+
+    uint8_t count;
+    if (!unflattener.read(&count)) {
+        return false;
+    }
+    assert_invariant(count == utils::Enum::count<SamplerBindingPoints>());
+
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < count; i++) {
+        if (!unflattener.read(&samplerGroupBindingInfoList[i].bindingOffset)) {
+            return false;
+        }
+        if (!unflattener.read((uint8_t *)&samplerGroupBindingInfoList[i].shaderStageFlags)) {
+            return false;
+        }
+        if (!unflattener.read(&samplerGroupBindingInfoList[i].count)) {
+            return false;
+        }
+    }
+
+    if (!unflattener.read(&count)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        uint8_t binding;
+        if (!unflattener.read(&binding)) {
+            return false;
+        }
+        assert_invariant(binding < backend::MAX_SAMPLER_COUNT);
+        if (!unflattener.read(&samplerBindingToNameMap[binding])) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 } // namespace filament

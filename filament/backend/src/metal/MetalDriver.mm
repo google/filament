@@ -915,6 +915,7 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
 }
 
 void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
+    assert_invariant(index < UNIFORM_BUFFER_COUNT);
     auto* bo = handle_cast<MetalBufferObject>(boh);
     auto* currentBo = mContext->uniformState[index].buffer;
     if (currentBo) {
@@ -930,6 +931,7 @@ void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) 
 
 void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size) {
+    assert_invariant(index < UNIFORM_BUFFER_COUNT);
     auto* bo = handle_cast<MetalBufferObject>(boh);
     auto* currentBo = mContext->uniformState[index].buffer;
     if (currentBo) {
@@ -1317,8 +1319,8 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
 
     // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[Program::BINDING_COUNT] = { nil };
-    NSUInteger offsets[Program::BINDING_COUNT] = { 0 };
+    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
+    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
             MetalBuffer* buffer, uint32_t index) {
@@ -1326,8 +1328,8 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         offsets[index] = state.offset;
     });
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            0, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT, uniformsToBind, offsets,
-            Program::BINDING_COUNT);
+            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
+            uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
 
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
@@ -1428,10 +1430,10 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBindFragment
                                                        withRange:fragmentSamplerRange];
 
-    // Bind the vertex buffers.
+    // Bind the user vertex buffers.
 
-    MetalBuffer* buffers[MAX_VERTEX_BUFFER_COUNT];
-    size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT];
+    MetalBuffer* buffers[MAX_VERTEX_BUFFER_COUNT] = {};
+    size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT] = {};
     size_t bufferIndex = 0;
 
     auto vb = primitive->vertexBuffer;
@@ -1449,14 +1451,14 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     const auto bufferCount = bufferIndex;
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            VERTEX_BUFFER_START, MetalBuffer::Stage::VERTEX, buffers,
+            USER_VERTEX_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX, buffers,
             vertexBufferOffsets, bufferCount);
 
     // Bind the zero buffer, used for missing vertex attributes.
     static const char bytes[16] = { 0 };
     [mContext->currentRenderPassEncoder setVertexBytes:bytes
                                                 length:16
-                                               atIndex:(VERTEX_BUFFER_START + ZERO_VERTEX_BUFFER)];
+                                               atIndex:ZERO_VERTEX_BUFFER_BINDING];
 
     MetalIndexBuffer* indexBuffer = primitive->indexBuffer;
 
@@ -1517,7 +1519,7 @@ void MetalDriver::enumerateSamplerGroups(
 
 void MetalDriver::enumerateBoundUniformBuffers(
         const std::function<void(const UniformBufferState&, MetalBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < Program::BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
         auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;

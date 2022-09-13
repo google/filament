@@ -25,7 +25,6 @@
 
 #include <math/mat4.h>
 
-#include <tsl/robin_map.h>
 #include <tsl/robin_set.h>
 
 #include <vector>
@@ -43,25 +42,10 @@ namespace filament::gltfio {
 struct FFilamentAsset;
 class Animator;
 
-struct Skin {
-    utils::CString name;
-
-    // The inverse bind matrices and joints arrays must have the same count. Each element
-    // corresponds to a single bone. We considered using the ECS to store these, but this would be
-    // complicated because a single node might be used as a bone in more than one skin, and its
-    // inverse bind matrix might be unique in each of these skins.
-    utils::FixedCapacityVector<filament::math::mat4f> inverseBindMatrices;
-    utils::FixedCapacityVector<utils::Entity> joints;
-
-    // The set of all nodes that are influenced by this skin.
-    // This is initially gleaned from the glTF file using the "skin" attribute of each node.
-    tsl::robin_set<utils::Entity, utils::Entity::Hasher> targets;
-};
-
 struct VariantMapping {
     utils::Entity renderable;
     size_t primitiveIndex;
-    filament::MaterialInstance* material;
+    MaterialInstance* material;
 };
 
 struct Variant {
@@ -69,17 +53,37 @@ struct Variant {
     std::vector<VariantMapping> mappings;
 };
 
-using SkinVector = std::vector<Skin>;
-using NodeMap = tsl::robin_map<const cgltf_node*, utils::Entity>;
-
 struct FFilamentInstance : public FilamentInstance {
+    FFilamentInstance(utils::Entity root, FFilamentAsset* owner);
+
+    // The per-instance skin structure caches information to allow animation to be applied
+    // efficiently at run time. Note that shared immutable data, such as the skin name and inverse
+    // bind transforms, are stored in FFilamentAsset.
+    struct Skin {
+        // The list of entities whose transform components define the joints of the skin.
+        utils::FixedCapacityVector<utils::Entity> joints;
+
+        // The set of all entities that are influenced by this skin.
+        // This is initially derived from the glTF, but users can dynamically add or remove targets.
+        tsl::robin_set<utils::Entity, utils::Entity::Hasher> targets;
+    };
+
+    const utils::Entity root;
+    FFilamentAsset* const owner;
+
     std::vector<utils::Entity> entities;
     utils::FixedCapacityVector<Variant> variants;
-    utils::Entity root;
-    Animator* animator;
-    FFilamentAsset* owner;
-    SkinVector skins;
-    NodeMap nodeMap;
+    Animator* animator = nullptr;
+    utils::FixedCapacityVector<Skin> skins;
+
+    // Note that nodeMap is yet another a vector of entities, but unlike the "entities" field, it
+    // may be sparsely populated. This is used as a simple mapping between cgltf_node and Entity,
+    // and therefore has the same size as the number of cgltf_node in the original asset. We
+    // considered using the ECS for this, but we need Node => Entity, not the other way around.
+    // This is discarded after the animator is created.
+    utils::FixedCapacityVector<utils::Entity> nodeMap;
+
+    Aabb boundingBox;
     void createAnimator();
     Animator* getAnimator() const noexcept;
     size_t getSkinCount() const noexcept;
@@ -89,6 +93,7 @@ struct FFilamentInstance : public FilamentInstance {
     void attachSkin(size_t skinIndex, utils::Entity target) noexcept;
     void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
     void applyMaterialVariant(size_t variantIndex) noexcept;
+    void recomputeBoundingBoxes();
 };
 
 FILAMENT_UPCAST(FilamentInstance)

@@ -211,7 +211,6 @@ int main(int argc, char** argv) {
         configuration.engine = app.engine;
         configuration.gltfPath = gltfPath.c_str();
         configuration.normalizeSkinningWeights = true;
-        configuration.recomputeBoundingBoxes = false;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
             app.stbDecoder = createStbProvider(app.engine);
@@ -224,12 +223,6 @@ int main(int argc, char** argv) {
         if (!app.resourceLoader->asyncBeginLoad(app.asset)) {
             std::cerr << "Unable to start loading resources for " << filename << std::endl;
             exit(1);
-        }
-
-        // Load animation data.
-        app.asset->getAnimator();
-        if (app.instanceToAnimate > -1) {
-            app.instances[app.instanceToAnimate]->getAnimator();
         }
 
         auto ibl = FilamentApp::get().getIBL();

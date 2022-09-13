@@ -18,9 +18,12 @@
 #define TNT_FILAMAT_MATERIALINFO_H
 
 #include <backend/DriverEnums.h>
+
+#include "../SamplerBindingMap.h"
+
 #include <filament/MaterialEnums.h>
+
 #include <private/filament/UniformInterfaceBlock.h>
-#include <private/filament/SamplerBindingMap.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 

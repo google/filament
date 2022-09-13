@@ -56,7 +56,7 @@ public:
     VulkanPipelineCache(VulkanPipelineCache const&) = delete;
     VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
 
-    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::BINDING_COUNT;
+    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
     static constexpr uint32_t TARGET_BINDING_COUNT = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
@@ -65,9 +65,6 @@ public:
     // Three descriptor set layouts: uniforms, combined image samplers, and input attachments.
     static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 3;
     static constexpr uint32_t INITIAL_DESCRIPTOR_SET_POOL_SIZE = 512;
-
-    #pragma clang diagnostic push
-    #pragma clang diagnostic warning "-Wpadded"
 
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
@@ -82,7 +79,11 @@ public:
     struct ProgramBundle {
         VkShaderModule vertex;
         VkShaderModule fragment;
+        VkSpecializationInfo* specializationInfos = nullptr;
     };
+
+    #pragma clang diagnostic push
+    #pragma clang diagnostic warning "-Wpadded"
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
     // The following states are omitted because Filament never changes them:
@@ -289,17 +290,17 @@ private:
 
     // Represents all the Vulkan state that comprises a bound descriptor set.
     struct DescriptorKey {
-        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             //   96     0
-        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        //  768    96
-        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; //  192   864
-        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       //   48  1056
-        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         //   48  1104
+        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             //   80     0
+        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        //  768    80
+        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; //  192   848
+        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       //   40  1040
+        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         //   40  1080
     };
-    static_assert(offsetof(DescriptorKey, samplers)              == 96);
-    static_assert(offsetof(DescriptorKey, inputAttachments)      == 864);
-    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1056);
-    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1104);
-    static_assert(sizeof(DescriptorKey) == 1152, "DescriptorKey must not have implicit padding.");
+    static_assert(offsetof(DescriptorKey, samplers)              == 80);
+    static_assert(offsetof(DescriptorKey, inputAttachments)      == 848);
+    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1040);
+    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1080);
+    static_assert(sizeof(DescriptorKey) == 1120, "DescriptorKey must not have implicit padding.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 
@@ -385,6 +386,7 @@ private:
     PipelineLayoutKey mLayoutRequirements = {};
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
+    VkSpecializationInfo* mSpecializationRequirements = {};
 
     // Current bindings for the pipeline layout, pipeline, and descriptor sets.
     PipelineLayoutKey mBoundLayout = {};

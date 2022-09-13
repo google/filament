@@ -73,8 +73,6 @@ class ModelViewer(
         get() = resourceLoader.asyncGetLoadProgress()
 
     var normalizeSkinningWeights = true
-    var recomputeBoundingBoxes = false
-    var ignoreBindTransform = false
 
     var cameraFocalLength = 28f
         set(value) {
@@ -116,7 +114,7 @@ class ModelViewer(
 
         materialProvider = UbershaderProvider(engine)
         assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
-        resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes, ignoreBindTransform)
+        resourceLoader = ResourceLoader(engine, normalizeSkinningWeights)
 
         // Always add a direct light source since it is required for shadowing.
         // We highly recommend adding an indirect light as well.

@@ -41,7 +41,9 @@ UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
         mEntries.push_back({
                 { item.name.data(), item.name.size() },
                 0, uint8_t(item.stride), item.type, item.size, item.precision,
-                { item.structName.data(), item.structName.size() }});
+                { item.structName.data(), item.structName.size() },
+                { item.sizeName.data(), item.sizeName.size() }
+        });
     }
     return *this;
 }
@@ -81,7 +83,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
         offset += padding;
 
         UniformInfo& info = uniformsInfoList[i];
-        info = { e.name, offset, stride, e.type, e.size, e.precision, e.structName };
+        info = { e.name, offset, stride, e.type, e.size, e.precision, e.structName, e.sizeName };
 
         // record this uniform info
         infoMap[{ info.name.data(), info.name.size() }] = i;

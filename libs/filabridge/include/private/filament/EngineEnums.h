@@ -32,23 +32,31 @@ enum class PostProcessVariant : uint8_t {
     TRANSLUCENT
 };
 
-// Binding points for uniform buffers and sampler buffers.
-// Effectively, these are just names.
-enum class BindingPoints : uint8_t {
-    PER_VIEW                   = 0,    // uniforms/samplers updated per view
-    PER_RENDERABLE             = 1,    // uniforms/samplers updated per renderable
+// Binding points for uniform buffers
+enum class UniformBindingPoints : uint8_t {
+    PER_VIEW                   = 0,    // uniforms updated per view
+    PER_RENDERABLE             = 1,    // uniforms updated per renderable
     PER_RENDERABLE_BONES       = 2,    // bones data, per renderable
     PER_RENDERABLE_MORPHING    = 3,    // morphing uniform/sampler updated per render primitive
     LIGHTS                     = 4,    // lights data array
     SHADOW                     = 5,    // punctual shadow data
     FROXEL_RECORDS             = 6,
-    PER_MATERIAL_INSTANCE      = 7,    // uniforms/samplers updates per material
+    PER_MATERIAL_INSTANCE      = 7,    // uniforms updates per material
     // Update utils::Enum::count<>() below when adding values here
-    // These are limited by CONFIG_BINDING_COUNT (currently 12)
+    // These are limited by CONFIG_BINDING_COUNT (currently 10)
+};
+
+// Binding points for sampler buffers.
+enum class SamplerBindingPoints : uint8_t {
+    PER_VIEW                   = 0,    // samplers updated per view
+    PER_RENDERABLE_MORPHING    = 1,    // morphing sampler updated per render primitive
+    PER_MATERIAL_INSTANCE      = 2,    // samplers updates per material
+    // Update utils::Enum::count<>() below when adding values here
+    // These are limited by CONFIG_SAMPLER_BINDING_COUNT (currently 4)
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
-// Values <= 256, use less CPU and GPU resources.
+// It's also limited by the Froxelizer's record buffer data type (uint8_t).
 constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
@@ -61,8 +69,21 @@ constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 14;
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
 
 // The maximum UBO size, in bytes. This value is set to 16 KiB due to the ES3.0 spec.
-// Note that this value constrains the maximum number of skinning bones and morph targets.
+// Note that this value constrains the maximum number of skinning bones, morph targets,
+// instances, and shadow casting spotlights.
 constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 16384;
+
+// The maximum number of instances that Filament automatically creates as an optimization.
+// Use a much smaller number for WebGL as a workaround for the following Chrome issues:
+//     https://crbug.com/1348017 Compiling GLSL is very slow with struct arrays
+//     https://crbug.com/1348363 Lighting looks wrong with D3D11 but not OpenGL
+// Note that __EMSCRIPTEN__ is not defined when running matc, but that's okay because we're
+// actually using a specification constant.
+#if defined(__EMSCRIPTEN__)
+constexpr size_t CONFIG_MAX_INSTANCES = 8;
+#else
+constexpr size_t CONFIG_MAX_INSTANCES = 64;
+#endif
 
 // The maximum number of bones that can be associated with a single renderable.
 // We store 32 bytes per bone. Must be a power-of-two, and must fit within CONFIG_MINSPEC_UBO_SIZE.
@@ -76,15 +97,16 @@ constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
 } // namespace filament
 
 template<>
-struct utils::EnableIntegerOperators<filament::BindingPoints> : public std::true_type {};
+struct utils::EnableIntegerOperators<filament::UniformBindingPoints> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::SamplerBindingPoints> : public std::true_type {};
 
 template<>
-inline constexpr size_t utils::Enum::count<filament::BindingPoints>() { return 8; }
+inline constexpr size_t utils::Enum::count<filament::UniformBindingPoints>() { return 8; }
+template<>
+inline constexpr size_t utils::Enum::count<filament::SamplerBindingPoints>() { return 3; }
 
-static_assert(utils::Enum::count<filament::BindingPoints>() <= filament::backend::CONFIG_BINDING_COUNT);
-
-static_assert(
-        filament::BindingPoints::PER_MATERIAL_INSTANCE == utils::Enum::count<filament::BindingPoints>()-1u,
-        "Dynamically sized sampler buffer must be the last binding point.");
+static_assert(utils::Enum::count<filament::UniformBindingPoints>() <= filament::backend::CONFIG_UNIFORM_BINDING_COUNT);
+static_assert(utils::Enum::count<filament::SamplerBindingPoints>() <= filament::backend::CONFIG_SAMPLER_BINDING_COUNT);
 
 #endif // TNT_FILAMENT_ENGINE_ENUM_H

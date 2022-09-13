@@ -45,8 +45,8 @@ struct TangentsJob {
     // The context of the procedure. These fields are not used by the procedure but are provided as
     // a convenience to clients. You can think of this as a scratch space for clients.
     struct Context {
-        filament::VertexBuffer* const vb;
-        filament::MorphTargetBuffer* const tb;
+        VertexBuffer* const vb;
+        MorphTargetBuffer* const tb;
         const uint8_t slot;
     };
 
@@ -54,7 +54,7 @@ struct TangentsJob {
     // should remember to free it.
     struct OutputParams {
         cgltf_size vertexCount;
-        filament::math::short4* results;
+        math::short4* results;
     };
 
     // Clients might want to track the jobs in an array, so the arguments are bundled into a struct.

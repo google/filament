@@ -67,15 +67,11 @@ struct ResourceLoader::Impl {
     Impl(const ResourceConfiguration& config) :
         mEngine(config.engine),
         mNormalizeSkinningWeights(config.normalizeSkinningWeights),
-        mRecomputeBoundingBoxes(config.recomputeBoundingBoxes),
-        mGltfPath(config.gltfPath ? config.gltfPath : ""),
-        mIgnoreBindTransform(config.ignoreBindTransform) {}
+        mGltfPath(config.gltfPath ? config.gltfPath : "") {}
 
     Engine* const mEngine;
     const bool mNormalizeSkinningWeights;
-    const bool mRecomputeBoundingBoxes;
     const std::string mGltfPath;
-    const bool mIgnoreBindTransform;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
@@ -115,47 +111,6 @@ UploadEvent* uploadUserdata(FFilamentAsset* asset) {
 static void uploadCallback(void* buffer, size_t size, void* user) {
     auto event = (UploadEvent*) user;
     delete event;
-}
-
-void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins) {
-    dstSkins.resize(gltf->skins_count);
-    for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
-        const cgltf_node& node = gltf->nodes[i];
-        if (node.skin) {
-            int skinIndex = node.skin - &gltf->skins[0];
-            Entity entity = nodeMap.at(&node);
-            dstSkins[skinIndex].targets.insert(entity);
-        }
-    }
-    for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
-        Skin& dstSkin = dstSkins[i];
-        const cgltf_skin& srcSkin = gltf->skins[i];
-        if (srcSkin.name) {
-            dstSkin.name = CString(srcSkin.name);
-        }
-
-        // Build a list of transformables for this skin, one for each joint.
-        dstSkin.joints = FixedCapacityVector<Entity>(srcSkin.joints_count);
-        for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
-            auto iter = nodeMap.find(srcSkin.joints[i]);
-            assert_invariant(iter != nodeMap.end());
-            dstSkin.joints[i] = iter->second;
-        }
-
-        // Retain a copy of the inverse bind matrices because the source blob could be evicted later.
-        const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
-        dstSkin.inverseBindMatrices = FixedCapacityVector<mat4f>(srcSkin.joints_count);
-        if (srcMatrices) {
-            auto dstMatrices = (uint8_t*) dstSkin.inverseBindMatrices.data();
-            uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
-            if (!bytes) {
-                slog.w << "Empty animation buffer, have resources been loaded yet?" << io::endl;
-                continue;
-            }
-            auto srcBuffer = (void*) (bytes + srcMatrices->offset + srcMatrices->buffer_view->offset);
-            memcpy(dstMatrices, srcBuffer, srcSkin.joints_count * sizeof(mat4f));
-        }
-    }
 }
 
 static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count) {
@@ -212,8 +167,7 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     };
 
     // Go through every primitive and check if it has a Draco mesh.
-    for (auto& pair : asset->mPrimitives) {
-        const cgltf_primitive* prim = pair.first;
+    for (auto& [prim, vertexBuffer] : asset->mPrimitives) {
         if (!prim->has_draco_mesh_compression) {
             continue;
         }
@@ -222,7 +176,6 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
 
         // If an error occurs, we can simply set the primitive's associated VertexBuffer to null.
         // This does not cause a leak because it is a weak reference.
-        auto& vertexBuffer = pair.second;
 
         // Check if we have already decoded this mesh.
         DracoMesh* mesh = dracoCache->findOrCreateMesh(draco.buffer_view);
@@ -433,21 +386,33 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // tangent generation.
     decodeDracoMeshes(asset);
 
-    // Normalize skinning weights, then "import" each skin into the asset by building a mapping of
-    // skins to their affected entities.
+    // For each skin, optionally normalize skinning weights and store a copy of the bind matrices.
     if (gltf->skins_count > 0) {
         if (pImpl->mNormalizeSkinningWeights) {
             normalizeSkinningWeights(asset);
         }
-        // NOTE: This takes care of up-front instances, but dynamically added instances also
-        // need to import the skin data, which is done in AssetLoader.
-        for (FFilamentInstance* instance : asset->mInstances) {
-            importSkins(gltf, instance->nodeMap, instance->skins);
+        asset->mSkins.reserve(gltf->skins_count);
+        for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
+            const cgltf_skin& srcSkin = gltf->skins[i];
+            CString name;
+            if (srcSkin.name) {
+                name = CString(srcSkin.name);
+            }
+            const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
+            FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
+            if (srcMatrices) {
+                uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
+                assert_invariant(bytes);
+                uint8_t* srcBuffer = bytes + srcMatrices->offset + srcMatrices->buffer_view->offset;
+                memcpy((uint8_t*) inverseBindMatrices.data(),
+                        (const void*) srcBuffer, srcSkin.joints_count * sizeof(mat4f));
+            }
+            FFilamentAsset::Skin skin {
+                .name = std::move(name),
+                .inverseBindMatrices = std::move(inverseBindMatrices),
+            };
+            asset->mSkins.emplace_back(std::move(skin));
         }
-    }
-
-    if (pImpl->mRecomputeBoundingBoxes) {
-        updateBoundingBoxes(asset);
     }
 
     Engine& engine = *pImpl->mEngine;
@@ -527,6 +492,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // we need to generate the contents of a GPU buffer by processing one or more CPU buffer(s).
     pImpl->computeTangents(asset);
 
+    asset->mBufferSlots = {};
+    asset->mPrimitives = {};
+
     // If any decoding jobs are still underway from a previous load, wait for them to finish.
     for (const auto& iter : pImpl->mTextureProviders) {
         iter.second->waitForCompletion();
@@ -537,8 +505,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     pImpl->createTextures(asset, async);
 
     // Non-textured renderables are now considered ready, and we can guarantee that no new
-    // materials or textures will be added. notify the dependency graph.
-    asset->mDependencyGraph.finalize();
+    // materials or textures will be added. Notify the dependency graph.
+    asset->mDependencyGraph.commitEdges();
 
     asset->createAnimators();
 
@@ -587,9 +555,9 @@ void ResourceLoader::asyncUpdateLoad() {
 }
 
 Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
-    const cgltf_texture* srcTexture = tb.texture;
-    const cgltf_image* image = srcTexture->basisu_image ?
-            srcTexture->basisu_image : srcTexture->image;
+    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[tb.sourceTexture];
+    const cgltf_image* image = srcTexture.basisu_image ?
+            srcTexture.basisu_image : srcTexture.image;
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
 
@@ -686,7 +654,7 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     }
 
     if (!texture) {
-        const char* name = srcTexture->name ? srcTexture->name : uri;
+        const char* name = srcTexture.name ? srcTexture.name : uri;
         slog.e << "Unable to create texture " << name << ": "
                 << provider->getPushMessage() << io::endl;
         asset->mDependencyGraph.markAsError(tb.materialInstance);
@@ -707,7 +675,7 @@ void ResourceLoader::Impl::cancelTextureDecoding() {
 void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
     // Create new texture objects if they are not cached and kick off decoding jobs.
     mRemainingTextureDownloads = 0;
-    for (auto slot : asset->mTextureSlots) {
+    for (const TextureSlot& slot : asset->mTextureSlots) {
         if (Texture* texture = getOrCreateTexture(asset, slot)) {
             asset->bindTexture(slot, texture);
         }
@@ -744,29 +712,27 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     // Create a job description for each triangle-based primitive.
     using Params = TangentsJob::Params;
     std::vector<Params> jobParams;
-    for (auto pair : asset->mPrimitives) {
-        if (UTILS_UNLIKELY(pair.first->type != cgltf_primitive_type_triangles)) {
+    for (auto [prim, vb] : asset->mPrimitives) {
+        if (UTILS_UNLIKELY(prim->type != cgltf_primitive_type_triangles)) {
             continue;
         }
-        VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(Params {{ pair.first }, {vb, nullptr, iter->second }});
+            jobParams.emplace_back(Params {{ prim }, {vb, nullptr, iter->second }});
         }
     }
+
     // Create a job description for morph targets.
-    const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
-    for (auto iter : nodeMap) {
-        cgltf_node const* node = iter.first;
-        cgltf_mesh const* mesh = node->mesh;
-        if (UTILS_UNLIKELY(!mesh || !mesh->weights_count)) {
+    for (size_t i = 0, n = asset->mSourceAsset->hierarchy->meshes_count; i < n; ++i) {
+        const cgltf_mesh& mesh = asset->mSourceAsset->hierarchy->meshes[i];
+        const FixedCapacityVector<Primitive>& prims = asset->mMeshCache[i];
+        if (0 == mesh.weights_count) {
             continue;
         }
-        for (cgltf_size pindex = 0, pcount = mesh->primitives_count; pindex < pcount; ++pindex) {
-            const cgltf_primitive& prim = mesh->primitives[pindex];
-            const auto& gltfioPrim = asset->mMeshCache.at(mesh)[pindex];
-            MorphTargetBuffer* tb = gltfioPrim.targets;
-            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++ tindex) {
+        for (cgltf_size pindex = 0, pcount = mesh.primitives_count; pindex < pcount; ++pindex) {
+            const cgltf_primitive& prim = mesh.primitives[pindex];
+            MorphTargetBuffer* tb = prims[pindex].targets;
+            for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++tindex) {
                 const cgltf_morph_target& target = prim.targets[tindex];
                 bool hasNormals = false;
                 for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
@@ -852,178 +818,6 @@ void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
             }
         }
     }
-}
-
-void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
-    SYSTRACE_CALL();
-    auto& rm = pImpl->mEngine->getRenderableManager();
-    auto& tm = pImpl->mEngine->getTransformManager();
-    const NodeMap& nodeMap = asset->mInstances[0]->nodeMap;
-
-    // The purpose of the root node is to give the client a place for custom transforms.
-    // Since it is not part of the source model, it should be ignored when computing the
-    // bounding box.
-    TransformManager::Instance root = tm.getInstance(asset->getRoot());
-    std::vector<Entity> modelRoots(tm.getChildCount(root));
-    tm.getChildren(root, modelRoots.data(), modelRoots.size());
-    for (auto e : modelRoots) {
-        tm.setParent(tm.getInstance(e), 0);
-    }
-
-    auto computeBoundingBox = [](const cgltf_primitive* prim, Aabb* result) {
-        Aabb aabb;
-        for (cgltf_size slot = 0; slot < prim->attributes_count; slot++) {
-            const cgltf_attribute& attr = prim->attributes[slot];
-            const cgltf_accessor* accessor = attr.data;
-            const size_t dim = cgltf_num_components(accessor->type);
-            if (attr.type == cgltf_attribute_type_position && dim >= 3) {
-                std::vector<float> unpacked(accessor->count * dim);
-                cgltf_accessor_unpack_floats(accessor, unpacked.data(), unpacked.size());
-                for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; ++i, j += dim) {
-                    float3 pt(unpacked[j + 0], unpacked[j + 1], unpacked[j + 2]);
-                    aabb.min = min(aabb.min, pt);
-                    aabb.max = max(aabb.max, pt);
-                }
-                break;
-            }
-        }
-        *result = aabb;
-    };
-
-    struct Prim {
-        cgltf_primitive const* prim;
-        Skin const* skin;
-        Entity node;
-    };
-
-    auto computeBoundingBoxSkinned = [&](const Prim& prim, Aabb* result) {
-        FixedCapacityVector<float3> verts;
-        FixedCapacityVector<uint4> joints;
-        FixedCapacityVector<float4> weights;
-        for (cgltf_size slot = 0, n = prim.prim->attributes_count; slot < n; ++slot) {
-            const cgltf_attribute& attr = prim.prim->attributes[slot];
-            const cgltf_accessor& accessor = *attr.data;
-            switch (attr.type) {
-            case cgltf_attribute_type_position:
-                verts = FixedCapacityVector<float3>(accessor.count);
-                cgltf_accessor_unpack_floats(&accessor, &verts.data()->x, accessor.count * 3);
-                break;
-            case cgltf_attribute_type_joints: {
-                FixedCapacityVector<float4> tmp(accessor.count);
-                cgltf_accessor_unpack_floats(&accessor, &tmp.data()->x, accessor.count * 4);
-                joints = FixedCapacityVector<uint4>(accessor.count);
-                for (size_t i = 0, n = accessor.count; i < n; ++i) {
-                    joints[i] = uint4(tmp[i]);
-                }
-                break;
-            }
-            case cgltf_attribute_type_weights:
-                weights = FixedCapacityVector<float4>(accessor.count);
-                cgltf_accessor_unpack_floats(&accessor, &weights.data()->x, accessor.count * 4);
-                break;
-            default:
-                break;
-            }
-        }
-
-        Aabb aabb;
-        TransformManager::Instance transformable = tm.getInstance(prim.node);
-        const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
-        for (size_t i = 0, n = verts.size(); i < n; i++) {
-            float3 point = verts[i];
-            mat4f tmp = mat4f(0.0f);
-            for (size_t j = 0; j < 4; j++) {
-                size_t jointIndex = joints[i][j];
-                Entity jointEntity = prim.skin->joints[jointIndex];
-                mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
-                mat4f inverseBindMatrix = prim.skin->inverseBindMatrices[jointIndex];
-                tmp += weights[i][j] * globalJointTransform * inverseBindMatrix;
-            }
-            mat4f skinMatrix = inverseGlobalTransform * tmp;
-            if (!pImpl->mNormalizeSkinningWeights) {
-                skinMatrix /= skinMatrix[3].w;
-            }
-            float3 skinnedPoint = (point.x * skinMatrix[0] +
-                    point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
-            aabb.min = min(aabb.min, skinnedPoint);
-            aabb.max = max(aabb.max, skinnedPoint);
-        }
-        *result = aabb;
-    };
-
-    // Collect all mesh primitives that we wish to find bounds for. For each mesh primitive, we also
-    // collect the skin it is bound to (nullptr if not skinned) for bounds computation.
-    size_t primCount = 0;
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            primCount += mesh->primitives_count;
-        }
-    }
-    auto primitives = FixedCapacityVector<Prim>::with_capacity(primCount);
-    const cgltf_skin* baseSkin = &asset->mSourceAsset->hierarchy->skins[0];
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
-                primitives.push_back({&mesh->primitives[index], nullptr, iter.second});
-            }
-            if (cgltf_skin* const skin = iter.first->skin; skin) {
-                primitives.back().skin = &asset->mInstances[0]->skins[skin - baseSkin];
-            }
-        }
-    }
-
-    // Kick off a bounding box job for every primitive.
-    FixedCapacityVector<Aabb> bounds(primitives.size());
-    JobSystem* js = &pImpl->mEngine->getJobSystem();
-    JobSystem::Job* parent = js->createJob();
-    for (size_t i = 0; i < primitives.size(); ++i) {
-        Aabb* result = &bounds[i];
-        if (pImpl->mIgnoreBindTransform || primitives[i].skin == nullptr) {
-            cgltf_primitive const* prim = primitives[i].prim;
-            js->run(jobs::createJob(*js, parent, [prim, result, computeBoundingBox] {
-                computeBoundingBox(prim, result);
-            }));
-        } else {
-            const Prim& prim = primitives[i];
-            js->run(jobs::createJob(*js, parent, [&prim, result, computeBoundingBoxSkinned] {
-                computeBoundingBoxSkinned(prim, result);
-            }));
-        }
-    }
-    js->runAndWait(parent);
-
-    // Compute the asset-level bounding box.
-    size_t primIndex = 0;
-    Aabb assetBounds;
-    for (auto iter : nodeMap) {
-        const cgltf_mesh* mesh = iter.first->mesh;
-        if (mesh) {
-            // Find the object-space bounds for the renderable by unioning the bounds of each prim.
-            Aabb aabb;
-            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
-                Aabb primBounds = bounds[primIndex++];
-                aabb.min = min(aabb.min, primBounds.min);
-                aabb.max = max(aabb.max, primBounds.max);
-            }
-            auto renderable = rm.getInstance(iter.second);
-            rm.setAxisAlignedBoundingBox(renderable, Box().set(aabb.min, aabb.max));
-
-            // Transform this bounding box, then update the asset-level bounding box.
-            auto transformable = tm.getInstance(iter.second);
-            const mat4f worldTransform = tm.getWorldTransform(transformable);
-            const Aabb transformed = aabb.transform(worldTransform);
-            assetBounds.min = min(assetBounds.min, transformed.min);
-            assetBounds.max = max(assetBounds.max, transformed.max);
-        }
-    }
-
-    for (auto e : modelRoots) {
-        tm.setParent(tm.getInstance(e), root);
-    }
-
-    asset->mBoundingBox = assetBounds;
 }
 
 } // namespace filament::gltfio

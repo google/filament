@@ -7,10 +7,6 @@
 #define FROXEL_BUFFER_WIDTH         (1u << FROXEL_BUFFER_WIDTH_SHIFT)
 #define FROXEL_BUFFER_WIDTH_MASK    (FROXEL_BUFFER_WIDTH - 1u)
 
-#define RECORD_BUFFER_WIDTH_SHIFT   4u
-#define RECORD_BUFFER_WIDTH         (1u << RECORD_BUFFER_WIDTH_SHIFT)
-#define RECORD_BUFFER_WIDTH_MASK    (RECORD_BUFFER_WIDTH - 1u)
-
 #define LIGHT_TYPE_POINT            0u
 #define LIGHT_TYPE_SPOT             1u
 
@@ -189,8 +185,8 @@ void evaluatePunctualLights(const MaterialInputs material,
     // Each froxel contains how many lights can influence
     // the current fragment. A froxel also contains a record offset that
     // tells us where the indices of those lights are in the records
-    // texture. The records texture contains the indices of the actual
-    // light data in the lightsUniforms uniform buffer
+    // buffer. The records buffer contains the indices of the actual
+    // light data in the lightsUniforms UBO.
 
     uint index = froxel.recordOffset;
     uint end = index + froxel.count;

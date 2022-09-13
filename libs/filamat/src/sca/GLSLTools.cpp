@@ -16,11 +16,7 @@
 
 #include "GLSLTools.h"
 
-#include <cstring>
-
 #include <filament/MaterialEnums.h>
-#include <private/filament/UniformInterfaceBlock.h>
-#include <private/filament/SamplerInterfaceBlock.h>
 #include <filamat/MaterialBuilder.h>
 #include "../shaders/MaterialInfo.h"
 
@@ -52,10 +48,10 @@ GLSLangCleaner::~GLSLangCleaner() {
     SetThreadPoolAllocator(mAllocator);
 }
 
-bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel model,
-        MaterialBuilder::MaterialDomain materialDomain,
-        MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading,
-        MaterialInfo const& info) const noexcept {
+bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
+        filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        bool hasCustomSurfaceShading, MaterialInfo const& info) noexcept {
 
     // Parse to check syntax and semantic.
     const char* shaderCString = shaderCode.c_str();
@@ -65,7 +61,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
 
     GLSLangCleaner cleaner;
     int version = glslangVersionFromShaderModel(model);
-    EShMessages msg = glslangFlagsFromTargetApi(targetApi);
+    EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
         utils::slog.e << "ERROR: Unable to parse fragment shader:" << utils::io::endl;
@@ -141,10 +137,10 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
     return true;
 }
 
-bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel model,
-        MaterialBuilder::MaterialDomain materialDomain,
-        MaterialBuilder::TargetApi targetApi,
-        MaterialInfo const& info) const noexcept {
+bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
+        filament::backend::ShaderModel model,
+        MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& info) noexcept {
 
     // TODO: After implementing post-process vertex shaders, properly analyze them here.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
@@ -159,7 +155,7 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel m
 
     GLSLangCleaner cleaner;
     int version = glslangVersionFromShaderModel(model);
-    EShMessages msg = glslangFlagsFromTargetApi(targetApi);
+    EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
         utils::slog.e << "ERROR: Unable to parse vertex shader" << utils::io::endl;
@@ -205,6 +201,7 @@ bool GLSLTools::findProperties(
         const std::string& shaderCode,
         MaterialBuilder::PropertyList& properties,
         MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage,
         ShaderModel model) const noexcept {
     const char* shaderCString = shaderCode.c_str();
 
@@ -214,7 +211,7 @@ bool GLSLTools::findProperties(
 
     GLSLangCleaner cleaner;
     int version = glslangVersionFromShaderModel(model);
-    EShMessages msg = glslangFlagsFromTargetApi(targetApi);
+    EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     const TBuiltInResource* builtins = &DefaultTBuiltInResource;
     bool ok = tShader.parse(builtins, version, false, msg);
     if (!ok) {
@@ -267,12 +264,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
     }
 
     std::deque<Symbol> symbols;
-    bool ok = findSymbolsUsage(functionName, *rootNode, symbols);
-    if (!ok) {
-        utils::slog.e << "Unable to trace usage of symbols in function '" << functionName
-                << utils::io::endl;
-        return false;
-    }
+    findSymbolsUsage(functionName, *rootNode, symbols);
 
     // Iterate over symbols to see if the parameter we are interested in what written.
     std::string parameterName = functionMaterialParameters.at(parameterIdx).name;
@@ -283,7 +275,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
         }
 
         // This is a direct assignment of the variable. X =
-        if (symbol.getAccesses().size() == 0) {
+        if (symbol.getAccesses().empty()) {
             continue;
         }
 
@@ -295,7 +287,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
 void GLSLTools::scanSymbolForProperty(Symbol& symbol,
         TIntermNode* rootNode,
         MaterialBuilder::PropertyList& properties) const noexcept {
-    for (Access access : symbol.getAccesses()) {
+    for (const Access& access : symbol.getAccesses()) {
         if (access.type == Access::Type::FunctionCall) {
             // Do NOT look into prepareMaterial call.
             if (access.string.find("prepareMaterial(struct") != std::string::npos) {
@@ -340,7 +332,7 @@ void GLSLTools::scanSymbolForProperty(Symbol& symbol,
 }
 
 bool GLSLTools::findSymbolsUsage(const std::string& functionSignature, TIntermNode& root,
-        std::deque<Symbol>& symbols) const noexcept {
+        std::deque<Symbol>& symbols) noexcept {
     TIntermNode* functionAST = ASTUtils::getFunctionBySignature(functionSignature, root);
     ASTUtils::traceSymbols(*functionAST, symbols);
     return true;
@@ -359,27 +351,53 @@ int GLSLTools::glslangVersionFromShaderModel(ShaderModel model) {
     return version;
 }
 
-EShMessages GLSLTools::glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi) {
-    EShMessages msg = EShMessages::EShMsgDefault;
-    if (targetApi == MaterialBuilder::TargetApi::VULKAN) {
-        msg = (EShMessages) (EShMessages::EShMsgVulkanRules | EShMessages::EShMsgSpvRules);
+EShMessages GLSLTools::glslangFlagsFromTargetApi(
+        MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage) {
+    using TargetApi = MaterialBuilder::TargetApi;
+    using TargetLanguage = MaterialBuilder::TargetLanguage;
+
+    switch (targetLanguage) {
+        case TargetLanguage::GLSL:
+            assert_invariant(targetApi == TargetApi::OPENGL);
+            return EShMessages::EShMsgDefault;
+
+        case TargetLanguage::SPIRV:
+            // issue messages for SPIR-V generation
+            using Type = std::underlying_type_t<EShMessages>;
+            auto msg = (Type)EShMessages::EShMsgSpvRules;
+            if (targetApi == TargetApi::VULKAN) {
+                // issue messages for Vulkan-requirements of GLSL for SPIR-V
+                msg |= (Type)EShMessages::EShMsgVulkanRules;
+            }
+            if (targetApi == TargetApi::METAL) {
+                // FIXME: We have to use EShMsgVulkanRules for metal, otherwise compilation will
+                //        choke on gl_VertexIndex.
+                msg |= (Type)EShMessages::EShMsgVulkanRules;
+            }
+            return (EShMessages)msg;
     }
-    return msg;
 }
 
-void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslang::TShader& shader,
-        EShLanguage language, int version, filamat::MaterialBuilder::Optimization optimization) {
-    // We must only setup the SPIRV environment when we actually need to output SPIRV
-    if (optimization == filamat::MaterialBuilder::Optimization::SIZE ||
-            optimization == filamat::MaterialBuilder::Optimization::PERFORMANCE) {
+void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage, glslang::TShader& shader,
+        EShLanguage stage, int version) {
+    // We must only set up the SPIRV environment when we actually need to output SPIRV
+    if (targetLanguage == MaterialBuilder::TargetLanguage::SPIRV) {
         shader.setAutoMapBindings(true);
-        if (targetApi == MaterialBuilder::TargetApi::VULKAN) {
-            shader.setEnvInput(EShSourceGlsl, language, EShClientVulkan, version);
-            shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_0);
-        } else {
-            assert(targetApi == MaterialBuilder::TargetApi::OPENGL);
-            shader.setEnvInput(EShSourceGlsl, language, EShClientOpenGL, version);
-            shader.setEnvClient(EShClientOpenGL, EShTargetOpenGL_450);
+        switch (targetApi) {
+            case MaterialBuilderBase::TargetApi::OPENGL:
+                shader.setEnvInput(EShSourceGlsl, stage, EShClientOpenGL, version);
+                shader.setEnvClient(EShClientOpenGL, EShTargetOpenGL_450);
+                break;
+            case MaterialBuilderBase::TargetApi::VULKAN:
+            case MaterialBuilderBase::TargetApi::METAL:
+                shader.setEnvInput(EShSourceGlsl, stage, EShClientVulkan, version);
+                shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_0);
+                break;
+            case MaterialBuilderBase::TargetApi::ALL:
+                // can't happen
+                break;
         }
         shader.setEnvTarget(EShTargetSpv, EShTargetSpv_1_0);
     }

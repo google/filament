@@ -17,11 +17,11 @@
 #ifndef TNT_FILABRIDGE_SIBGENERATOR_H
 #define TNT_FILABRIDGE_SIBGENERATOR_H
 
-#include <private/filament/Variant.h>
+#include "private/filament/Variant.h"
 
 #include <stdint.h>
 #include <stddef.h>
-#include "EngineEnums.h"
+#include "private/filament/EngineEnums.h"
 
 namespace filament {
 
@@ -31,30 +31,11 @@ class SibGenerator {
 public:
     static SamplerInterfaceBlock const& getPerViewSib(Variant variant) noexcept;
     static SamplerInterfaceBlock const& getPerRenderPrimitiveMorphingSib(Variant variant) noexcept;
-    static SamplerInterfaceBlock const* getSib(filament::BindingPoints bindingPoint, Variant variant) noexcept;
+    static SamplerInterfaceBlock const* getSib(filament::SamplerBindingPoints bindingPoint, Variant variant) noexcept;
     // When adding a sampler block here, make sure to also update
     //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
 };
 
-struct PerViewSib {
-    // indices of each sampler in this SamplerInterfaceBlock (see: getPerViewSib())
-    static constexpr size_t SHADOW_MAP     = 0;     // user defined (1024x1024) DEPTH, array
-    static constexpr size_t FROXELS        = 1;     // 64x2048, RG16 {index, count, reserved}
-    static constexpr size_t IBL_DFG_LUT    = 2;     // user defined (128x128), RGB16F
-    static constexpr size_t IBL_SPECULAR   = 3;     // user defined, user defined, CUBEMAP
-    static constexpr size_t SSAO           = 4;     // variable, RGB8 {AO, [depth]}
-    static constexpr size_t SSR            = 5;     // variable, RGB_11_11_10, mipmapped
-    static constexpr size_t STRUCTURE      = 6;     // variable, DEPTH
+} // namespace filament
 
-    static constexpr size_t SAMPLER_COUNT  = 7;
-};
-
-struct PerRenderPrimitiveMorphingSib {
-    static constexpr size_t POSITIONS      = 0;
-    static constexpr size_t TANGENTS       = 1;
-
-    static constexpr size_t SAMPLER_COUNT  = 2;
-};
-
-}
 #endif // TNT_FILABRIDGE_SIBGENERATOR_H

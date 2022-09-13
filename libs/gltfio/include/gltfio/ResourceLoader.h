@@ -49,14 +49,6 @@ struct ResourceConfiguration {
     //! If true, adjusts skinning weights to sum to 1. Well formed glTF files do not need this,
     //! but it is useful for robustness.
     bool normalizeSkinningWeights;
-
-    //! If true, computes the bounding boxes of all \c POSITION attibutes. Well formed glTF files
-    //! do not need this, but it is useful for robustness.
-    bool recomputeBoundingBoxes;
-
-    //! If true, ignores skinning when computing bounding boxes. Implicitly true for instanced
-    //! assets. Only applicable when recomputeBoundingBoxes is set to true.
-    bool ignoreBindTransform;
 };
 
 /**
@@ -162,7 +154,6 @@ public:
 private:
     bool loadResources(FFilamentAsset* asset, bool async);
     void normalizeSkinningWeights(FFilamentAsset* asset) const;
-    void updateBoundingBoxes(FFilamentAsset* asset) const;
     AssetPool* mPool;
     struct Impl;
     Impl* pImpl;
