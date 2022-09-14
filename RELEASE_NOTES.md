@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - gltfio: allow zero-instance assets
+- gltfio: fix regression with recomputeBoundingBoxes()
 
 ## v1.27.1
 
