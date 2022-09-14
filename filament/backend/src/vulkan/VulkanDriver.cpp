@@ -885,19 +885,28 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
 }
 
 FeatureLevel VulkanDriver::getFeatureLevel() {
-    const auto supportedSamplerCount = std::min(
-            mContext.physicalDeviceProperties.limits.maxDescriptorSetSamplers,
-            mContext.physicalDeviceProperties.limits.maxDescriptorSetSampledImages);
+    const VkPhysicalDeviceLimits& limits = mContext.physicalDeviceProperties.limits;
 
-    const bool imageCubeArray = (bool)mContext.physicalDeviceFeatures.imageCubeArray;
+    // If cubemap arrays are not supported, then this is an FL1 device.
+    if (!mContext.physicalDeviceFeatures.imageCubeArray) {
+        return FeatureLevel::FEATURE_LEVEL_1;
+    }
 
-    if (imageCubeArray) {
-        if (supportedSamplerCount >= 31) {
-            return FeatureLevel::FEATURE_LEVEL_3;
-        }
+    // If the max sampler counts do not meet FL2 standards, then this is an FL1 device.
+    const auto& fl2 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2];
+    if (fl2.MAX_VERTEX_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers ||
+        fl2.MAX_FRAGMENT_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers) {
+        return FeatureLevel::FEATURE_LEVEL_1;
+    }
+
+    // If the max sampler counts do not meet FL3 standards, then this is an FL2 device.
+    const auto& fl3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    if (fl3.MAX_VERTEX_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers ||
+        fl3.MAX_FRAGMENT_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers) {
         return FeatureLevel::FEATURE_LEVEL_2;
     }
-    return FeatureLevel::FEATURE_LEVEL_1;
+
+    return FeatureLevel::FEATURE_LEVEL_3;
 }
 
 math::float2 VulkanDriver::getClipSpaceParams() {
@@ -1843,7 +1852,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         assert_invariant(sb->getSize() == samplers.size());
         size_t samplerIdx = 0;
         for (auto& sampler : samplers) {
-            size_t bindingPoint = sampler.binding;
             const SamplerDescriptor* boundSampler = sb->data() + samplerIdx;
             samplerIdx++;
 
@@ -1858,7 +1866,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 #ifndef NDEBUG
                     utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
                     utils::slog.w << " in material '" << program->name.c_str() << "'";
-                    utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
+                    utils::slog.w << " at binding point " << +sampler.binding << utils::io::endl;
 #endif
                     texture = mContext.emptyTexture;
                 }
@@ -1868,7 +1876,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
                 usage = VulkanPipelineCache::getUsageFlags(sampler.binding, samplerGroup.stageFlags, usage);
 
-                samplerInfo[bindingPoint] = {
+                samplerInfo[sampler.binding] = {
                     .sampler = vksampler,
                     .imageView = texture->getPrimaryImageView(),
                     .imageLayout = texture->getPrimaryImageLayout()
