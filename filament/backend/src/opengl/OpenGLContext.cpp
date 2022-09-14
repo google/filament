@@ -63,6 +63,10 @@ OpenGLContext::OpenGLContext() noexcept {
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &gets.max_combined_texture_image_units);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
 
+    constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    constexpr GLint MAX_VERTEX_SAMPLER_COUNT = caps3.MAX_VERTEX_SAMPLER_COUNT;
+    constexpr GLint MAX_FRAGMENT_SAMPLER_COUNT = caps3.MAX_FRAGMENT_SAMPLER_COUNT;
+
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         initExtensionsGLES();
         if (state.major == 3) {
@@ -71,10 +75,13 @@ OpenGLContext::OpenGLContext() noexcept {
             if (state.minor >= 1) {
                 features.multisample_texture = true;
                 // figure out our feature level
-                if (gets.max_texture_image_units >= 31 &&
-                    gets.max_combined_texture_image_units >= 62 &&
-                    ext.EXT_texture_cube_map_array) {
+                if (ext.EXT_texture_cube_map_array) {
                     mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
+                    if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                        gets.max_combined_texture_image_units >=
+                                (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                        mFeatureLevel = FeatureLevel::FEATURE_LEVEL_3;
+                    }
                 }
             }
         }
@@ -85,11 +92,13 @@ OpenGLContext::OpenGLContext() noexcept {
             assert_invariant(state.minor >= 1);
             mShaderModel = ShaderModel::DESKTOP;
             if (state.minor >= 3) {
+                // cubemap arrays are available as of OpenGL 4.0
+                mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
                 // figure out our feature level
-                if (gets.max_texture_image_units >= 31 &&
-                    gets.max_combined_texture_image_units >= 62) {
-                    // cubemap arrays are available as of OpenGL 4.0
-                    mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
+                if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                    gets.max_combined_texture_image_units >=
+                            (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                    mFeatureLevel = FeatureLevel::FEATURE_LEVEL_3;
                 }
             }
             features.multisample_texture = true;
@@ -213,6 +222,7 @@ OpenGLContext::OpenGLContext() noexcept {
         // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
     }
 
+    slog.v << "Feature level: " << +mFeatureLevel << '\n';
     slog.v << "Active workarounds: " << '\n';
     UTILS_NOUNROLL
     for (auto [enabled, name, _] : mBugDatabase) {

@@ -407,6 +407,8 @@ static bool processFeatureLevel(MaterialBuilder& builder, const JsonishValue& va
         featureLevel = FeatureLevel::FEATURE_LEVEL_1;
     } else if (number->getFloat() == 2.0f) {
         featureLevel = FeatureLevel::FEATURE_LEVEL_2;
+    } else if (number->getFloat() == 3.0f) {
+        featureLevel = FeatureLevel::FEATURE_LEVEL_3;
     } else {
         std::cerr << "featureLevel: invalid value " << number->getFloat() << std::endl;
         return false;

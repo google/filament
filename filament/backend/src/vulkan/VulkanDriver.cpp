@@ -891,9 +891,13 @@ FeatureLevel VulkanDriver::getFeatureLevel() {
 
     const bool imageCubeArray = (bool)mContext.physicalDeviceFeatures.imageCubeArray;
 
-    return (supportedSamplerCount >= 31 && imageCubeArray) ?
-            FeatureLevel::FEATURE_LEVEL_2 :
-            FeatureLevel::FEATURE_LEVEL_1;
+    if (imageCubeArray) {
+        if (supportedSamplerCount >= 31) {
+            return FeatureLevel::FEATURE_LEVEL_3;
+        }
+        return FeatureLevel::FEATURE_LEVEL_2;
+    }
+    return FeatureLevel::FEATURE_LEVEL_1;
 }
 
 math::float2 VulkanDriver::getClipSpaceParams() {
