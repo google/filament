@@ -41,7 +41,6 @@ Animator* FFilamentInstance::getAnimator() const noexcept {
 void FFilamentInstance::createAnimator() {
     assert_invariant(animator == nullptr);
     animator = new Animator(owner, this);
-    nodeMap = {};
 }
 
 size_t FFilamentInstance::getSkinCount() const noexcept {
@@ -219,6 +218,9 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     for (size_t i = 0, n = hierarchy->nodes_count; i < n; ++i) {
         const cgltf_node& node = nodes[i];
         const Entity entity = nodeMap[i];
+        if (entity.isNull()) {
+            continue;
+        }
         if (const cgltf_mesh* mesh = node.mesh; mesh) {
             for (cgltf_size j = 0, nprims = mesh->primitives_count; j < nprims; ++j) {
                 primitives.push_back({
