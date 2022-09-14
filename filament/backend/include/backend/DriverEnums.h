@@ -48,7 +48,7 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB          = 0x4;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
-static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 2.
+static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
 
 // Per feature level caps
@@ -56,8 +56,9 @@ static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bou
 static constexpr struct {
     const size_t MAX_VERTEX_SAMPLER_COUNT;
     const size_t MAX_FRAGMENT_SAMPLER_COUNT;
-} FEATURE_LEVEL_CAPS[3] = {
+} FEATURE_LEVEL_CAPS[4] = {
         {  0,  0 }, // do not use
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
         { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
         { 31, 31 }, // guaranteed by Metal
 };
@@ -74,7 +75,8 @@ static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 4;   // This is guarantee
  */
 enum class FeatureLevel : uint8_t {
     FEATURE_LEVEL_1 = 1,  //!< OpenGL ES 3.0 features (default)
-    FEATURE_LEVEL_2       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
+    FEATURE_LEVEL_2,      //!< OpenGL ES 3.1 features + 16 textures units + cubemap arrays
+    FEATURE_LEVEL_3       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
 };
 
 /**

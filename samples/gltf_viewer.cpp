@@ -136,7 +136,7 @@ static void printUsage(char* name) {
         "       Prints this message\n\n"
         "   --api, -a\n"
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
-        "   --feature-level=<1|2>, -f <1|2>\n"
+        "   --feature-level=<1|2|3>, -f <1|2|3>\n"
         "       Specify the feature level to use. The default is the highest supported feature level.\n\n"
         "   --batch=<path to JSON file or 'default'>, -b\n"
         "       Start automation using the given JSON spec, then quit the app\n\n"
@@ -219,8 +219,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     app->config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
                 } else if (arg == "2") {
                     app->config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_2;
+                } else if (arg == "3") {
+                    app->config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_3;
                 } else {
-                    std::cerr << "Unrecognized feature level. Must be 1 or 2.\n";
+                    std::cerr << "Unrecognized feature level. Must be 1, 2 or 3.\n";
                 }
                 break;
             case 'c':
