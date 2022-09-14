@@ -192,9 +192,7 @@ private:
 
     using PipelineLayoutKey = utils::bitset128;
 
-    static_assert(PipelineLayoutKey::BIT_COUNT >=
-            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT +
-            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_FRAGMENT_SAMPLER_COUNT);
+    static_assert(PipelineLayoutKey::BIT_COUNT >= 2 * MAX_SAMPLER_COUNT);
 
     struct PipelineLayoutKeyHashFn {
         size_t operator()(const PipelineLayoutKey& key) const;
