@@ -1251,6 +1251,9 @@ Material* FAssetLoader::getMaterial(const cgltf_data* srcAsset,
         const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
     cgltf_texture_view baseColorTexture;
     cgltf_texture_view metallicRoughnessTexture;
+    if (UTILS_UNLIKELY(inputMat == nullptr)) {
+        inputMat = &kDefaultMat;
+    }
     MaterialKey matkey = getMaterialKey(srcAsset, inputMat, uvmap, vertexColor,
             &baseColorTexture, &metallicRoughnessTexture);
     Material* material = mMaterials.getMaterial(&matkey, uvmap, inputMat->name);
