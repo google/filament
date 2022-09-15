@@ -48,37 +48,6 @@
 #endif
 #include <cstdint>
 
-namespace {
-
-bool IsInfinity(double x) {
-#ifdef _MSC_VER
-    switch (_fpclass(x)) {
-    case _FPCLASS_NINF:
-    case _FPCLASS_PINF:
-        return true;
-    default:
-        return false;
-    }
-#else
-    return std::isinf(x);
-#endif
-}
-
-bool IsNan(double x) {
-#ifdef _MSC_VER
-    switch (_fpclass(x)) {
-    case _FPCLASS_SNAN:
-    case _FPCLASS_QNAN:
-        return true;
-    default:
-        return false;
-    }
-#else
-  return std::isnan(x);
-#endif
-}
-
-}
 
 namespace glslang {
 
@@ -696,6 +665,8 @@ bool TOutputTraverser::visitUnary(TVisit /* visit */, TIntermUnary* node)
 
     case EOpConstructReference: out.debug << "Construct reference type"; break;
 
+    case EOpDeclare: out.debug << "Declare"; break;
+
 #ifndef GLSLANG_WEB
     case EOpSpirvInst: out.debug << "spirv_instruction"; break;
 #endif
@@ -723,6 +694,7 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
 
     switch (node->getOp()) {
     case EOpSequence:      out.debug << "Sequence\n";       return true;
+    case EOpScope:         out.debug << "Scope\n";       return true;
     case EOpLinkerObjects: out.debug << "Linker Objects\n"; return true;
     case EOpComma:         out.debug << "Comma";            break;
     case EOpFunction:      out.debug << "Function Definition: " << node->getName(); break;
@@ -1099,6 +1071,8 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpExecuteCallableNV:                out.debug << "executeCallableNV"; break;
     case EOpExecuteCallableKHR:               out.debug << "executeCallableKHR"; break;
     case EOpWritePackedPrimitiveIndices4x8NV: out.debug << "writePackedPrimitiveIndices4x8NV"; break;
+    case EOpEmitMeshTasksEXT:                 out.debug << "EmitMeshTasksEXT"; break;
+    case EOpSetMeshOutputsEXT:                out.debug << "SetMeshOutputsEXT"; break;
 
     case EOpRayQueryInitialize:                                            out.debug << "rayQueryInitializeEXT"; break;
     case EOpRayQueryTerminate:                                             out.debug << "rayQueryTerminateEXT"; break;
@@ -1138,7 +1112,7 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     default: out.debug.message(EPrefixError, "Bad aggregation op");
     }
 
-    if (node->getOp() != EOpSequence && node->getOp() != EOpParameters)
+    if (node->getOp() != EOpSequence && node->getOp() != EOpScope && node->getOp() != EOpParameters)
         out.debug << " (" << node->getCompleteString() << ")";
 
     out.debug << "\n";
@@ -1553,12 +1527,12 @@ void TIntermediate::output(TInfoSink& infoSink, bool tree)
             infoSink.debug << "interlock ordering = " << TQualifier::getInterlockOrderingString(interlockOrdering) << "\n";
         break;
 
-    case EShLangMeshNV:
+    case EShLangMesh:
         infoSink.debug << "max_vertices = " << vertices << "\n";
         infoSink.debug << "max_primitives = " << primitives << "\n";
         infoSink.debug << "output primitive = " << TQualifier::getGeometryString(outputPrimitive) << "\n";
         // Fall through
-    case EShLangTaskNV:
+    case EShLangTask:
         // Fall through
     case EShLangCompute:
         infoSink.debug << "local_size = (" << localSize[0] << ", " << localSize[1] << ", " << localSize[2] << ")\n";

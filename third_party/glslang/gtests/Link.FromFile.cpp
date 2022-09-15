@@ -108,6 +108,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"link.multiBlocksValid.1.0.vert", "link.multiBlocksValid.1.1.vert"},
         {"link.tesselation.vert", "link.tesselation.frag"},
         {"link.tesselation.tese", "link.tesselation.tesc"},
+        {"link.redeclareBuiltin.vert", "link.redeclareBuiltin.geom"},
     }))
 );
 // clang-format on

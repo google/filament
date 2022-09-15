@@ -109,7 +109,52 @@ bool verifyIOMapping(std::string& linkingError, glslang::TProgram& program) {
                 success &= outQualifier.layoutLocation == inQualifier.layoutLocation;
             }
             else {
-                success &= false;
+                if (!in.getType()->isStruct()) {
+                    bool found = false;
+                    for (auto outIt : pipeOut) {
+                        if (outIt.second->getType()->isStruct()) {
+                            unsigned int baseLoc = outIt.second->getType()->getQualifier().hasLocation() ?
+                                outIt.second->getType()->getQualifier().layoutLocation :
+                                std::numeric_limits<unsigned int>::max();
+                            for (size_t j = 0; j < outIt.second->getType()->getStruct()->size(); j++) {
+                                baseLoc = (*outIt.second->getType()->getStruct())[j].type->getQualifier().hasLocation() ?
+                                    (*outIt.second->getType()->getStruct())[j].type->getQualifier().layoutLocation : baseLoc;
+                                if (baseLoc != std::numeric_limits<unsigned int>::max()) {
+                                    if (baseLoc == in.getType()->getQualifier().layoutLocation) {
+                                        found = true;
+                                        break;
+                                    }
+                                    baseLoc += glslang::TIntermediate::computeTypeLocationSize(*(*outIt.second->getType()->getStruct())[j].type, EShLangVertex);
+                                }
+                            }
+                            if (found) {
+                                break;
+                            }
+                        }
+                    }
+                    success &= found;
+                }
+                else {
+                    unsigned int baseLoc = in.getType()->getQualifier().hasLocation() ? in.getType()->getQualifier().layoutLocation : -1;
+                    for (size_t j = 0; j < in.getType()->getStruct()->size(); j++) {
+                        baseLoc = (*in.getType()->getStruct())[j].type->getQualifier().hasLocation() ?
+                            (*in.getType()->getStruct())[j].type->getQualifier().layoutLocation : baseLoc;
+                        if (baseLoc != std::numeric_limits<unsigned int>::max()) {
+                            bool isMemberFound = false;
+                            for (auto outIt : pipeOut) {
+                                if (baseLoc == outIt.second->getType()->getQualifier().layoutLocation) {
+                                    isMemberFound = true;
+                                    break;
+                                }
+                            }
+                            if (!isMemberFound) {
+                                success &= false;
+                                break;
+                            }
+                            baseLoc += glslang::TIntermediate::computeTypeLocationSize(*(*in.getType()->getStruct())[j].type, EShLangVertex);
+                        }
+                    }
+                }
             }
         }
     }
@@ -295,6 +340,10 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(std::vector<IoMapData>({
         {{"iomap.crossStage.vert", "iomap.crossStage.frag" }, Semantics::OpenGL},
         {{"iomap.crossStage.2.vert", "iomap.crossStage.2.geom", "iomap.crossStage.2.frag" }, Semantics::OpenGL},
+        {{"iomap.blockOutVariableIn.vert", "iomap.blockOutVariableIn.frag"}, Semantics::OpenGL},
+        {{"iomap.variableOutBlockIn.vert", "iomap.variableOutBlockIn.frag"}, Semantics::OpenGL},
+        {{"iomap.blockOutVariableIn.2.vert", "iomap.blockOutVariableIn.geom"}, Semantics::OpenGL},
+        {{"iomap.variableOutBlockIn.2.vert", "iomap.variableOutBlockIn.geom"}, Semantics::OpenGL},
         // vulkan semantics
         {{"iomap.crossStage.vk.vert", "iomap.crossStage.vk.geom", "iomap.crossStage.vk.frag" }, Semantics::Vulkan},
     }))

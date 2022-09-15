@@ -59,11 +59,13 @@ std::string FileNameAsCustomTestSuffix(
 
 using HlslCompileTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
 using HlslVulkan1_1CompileTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
+using HlslSpv1_6CompileTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
 using HlslCompileAndFlattenTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
 using HlslLegalizeTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
 using HlslDebugTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
 using HlslDX9CompatibleTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
 using HlslLegalDebugTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
+using HlslNonSemanticShaderDebugInfoTest = GlslangTest<::testing::TestWithParam<FileNameEntryPointPair>>;
 
 // Compiling HLSL to pre-legalized SPIR-V under Vulkan semantics. Expected
 // to successfully generate both AST and SPIR-V.
@@ -78,6 +80,13 @@ TEST_P(HlslVulkan1_1CompileTest, FromFile)
 {
     loadFileCompileAndCheck(GlobalTestSettings.testRoot, GetParam().fileName,
                             Source::HLSL, Semantics::Vulkan, glslang::EShTargetVulkan_1_1, glslang::EShTargetSpv_1_3,
+                            Target::BothASTAndSpv, true, GetParam().entryPoint);
+}
+
+TEST_P(HlslSpv1_6CompileTest, FromFile)
+{
+    loadFileCompileAndCheck(GlobalTestSettings.testRoot, GetParam().fileName,
+                            Source::HLSL, Semantics::Vulkan, glslang::EShTargetVulkan_1_3, glslang::EShTargetSpv_1_6,
                             Target::BothASTAndSpv, true, GetParam().entryPoint);
 }
 
@@ -126,6 +135,13 @@ TEST_P(HlslLegalDebugTest, FromFile)
                             Source::HLSL, Semantics::Vulkan, glslang::EShTargetVulkan_1_0, glslang::EShTargetSpv_1_0,
                             Target::Spv, true, GetParam().entryPoint,
                             "/baseResults/", true, true);
+}
+
+TEST_P(HlslNonSemanticShaderDebugInfoTest, FromFile)
+{
+    loadFileCompileAndCheck(GlobalTestSettings.testRoot, GetParam().fileName,
+                            Source::HLSL, Semantics::Vulkan, glslang::EShTargetVulkan_1_0,  glslang::EShTargetSpv_1_0,
+                            Target::Spv, true, GetParam().entryPoint, "/baseResults/", false, false, true);
 }
 
 // clang-format off
@@ -385,6 +401,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.structbuffer.fn2.comp", "main"},
         {"hlsl.structbuffer.rw.frag", "main"},
         {"hlsl.structbuffer.rwbyte.frag", "main"},
+        {"hlsl.structbuffer.rwbyte2.comp", "main"},
         {"hlsl.structin.vert", "main"},
         {"hlsl.structIoFourWay.frag", "main"},
         {"hlsl.structStructName.frag", "main"},
@@ -425,7 +442,8 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.typedef.frag", "PixelShaderFunction"},
         {"hlsl.whileLoop.frag", "PixelShaderFunction"},
         {"hlsl.void.frag", "PixelShaderFunction"},
-        {"hlsl.type.type.conversion.all.frag", "main"}
+        {"hlsl.type.type.conversion.all.frag", "main"},
+        {"hlsl.instance.geom", "GeometryShader"}
     }),
     FileNameAsCustomTestSuffix
 );
@@ -444,6 +462,16 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.wavevote.comp", "CSMain"},
         { "hlsl.type.type.conversion.valid.frag", "main" },
         {"hlsl.int.dot.frag", "main"}
+    }),
+    FileNameAsCustomTestSuffix
+);
+// clang-format on
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    ToSpirv, HlslSpv1_6CompileTest,
+    ::testing::ValuesIn(std::vector<FileNameEntryPointPair>{
+       {"hlsl.spv.1.6.discard.frag", "PixelShaderFunction"}
     }),
     FileNameAsCustomTestSuffix
 );
@@ -507,7 +535,21 @@ INSTANTIATE_TEST_SUITE_P(
     }),
     FileNameAsCustomTestSuffix
 );
+// clang-format on
 
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    ToSpirv, HlslNonSemanticShaderDebugInfoTest,
+    ::testing::ValuesIn(std::vector<FileNameEntryPointPair>{
+        {"spv.debuginfo.hlsl.vert", "main"},
+        {"spv.debuginfo.hlsl.frag", "main"},
+        {"spv.debuginfo.hlsl.comp", "main"},
+        {"spv.debuginfo.hlsl.geom", "main"},
+        {"spv.debuginfo.hlsl.tesc", "main"},
+        {"spv.debuginfo.hlsl.tese", "main"},
+    }),
+    FileNameAsCustomTestSuffix
+);
 // clang-format on
 
 }  // anonymous namespace

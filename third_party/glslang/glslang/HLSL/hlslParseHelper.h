@@ -87,6 +87,7 @@ public:
     void handleFunctionBody(const TSourceLoc&, TFunction&, TIntermNode* functionBody, TIntermNode*& node);
     void remapEntryPointIO(TFunction& function, TVariable*& returnValue, TVector<TVariable*>& inputs, TVector<TVariable*>& outputs);
     void remapNonEntryPointIO(TFunction& function);
+    TIntermNode* handleDeclare(const TSourceLoc&, TIntermTyped*);
     TIntermNode* handleReturnValue(const TSourceLoc&, TIntermTyped*);
     void handleFunctionArgument(TFunction*, TIntermTyped*& arguments, TIntermTyped* newArg);
     TIntermTyped* handleAssign(const TSourceLoc&, TOperator, TIntermTyped* left, TIntermTyped* right);
@@ -94,6 +95,7 @@ public:
     TIntermTyped* handleFunctionCall(const TSourceLoc&, TFunction*, TIntermTyped*);
     TIntermAggregate* assignClipCullDistance(const TSourceLoc&, TOperator, int semanticId, TIntermTyped* left, TIntermTyped* right);
     TIntermTyped* assignPosition(const TSourceLoc&, TOperator, TIntermTyped* left, TIntermTyped* right);
+    TIntermTyped* assignFromFragCoord(const TSourceLoc&, TOperator, TIntermTyped* left, TIntermTyped* right);
     void decomposeIntrinsic(const TSourceLoc&, TIntermTyped*& node, TIntermNode* arguments);
     void decomposeSampleMethods(const TSourceLoc&, TIntermTyped*& node, TIntermNode* arguments);
     void decomposeStructBufferMethods(const TSourceLoc&, TIntermTyped*& node, TIntermNode* arguments);
@@ -242,6 +244,7 @@ protected:
     TIntermSymbol* makeInternalVariableNode(const TSourceLoc&, const char* name, const TType&) const;
     TVariable* declareNonArray(const TSourceLoc&, const TString& identifier, const TType&, bool track);
     void declareArray(const TSourceLoc&, const TString& identifier, const TType&, TSymbol*&, bool track);
+    TIntermNode* executeDeclaration(const TSourceLoc&, TVariable* variable);
     TIntermNode* executeInitializer(const TSourceLoc&, TIntermTyped* initializer, TVariable* variable);
     TIntermTyped* convertInitializerList(const TSourceLoc&, const TType&, TIntermTyped* initializer, TIntermTyped* scalarInit);
     bool isScalarConstructor(const TIntermNode*);
