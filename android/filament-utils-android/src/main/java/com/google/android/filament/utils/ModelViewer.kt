@@ -310,8 +310,8 @@ class ModelViewer(
 
     private fun addDetachListener(view: android.view.View) {
         view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: android.view.View?) {}
-            override fun onViewDetachedFromWindow(v: android.view.View?) {
+            override fun onViewAttachedToWindow(v: android.view.View) {}
+            override fun onViewDetachedFromWindow(v: android.view.View) {
                 uiHelper.detach()
 
                 destroyModel()
