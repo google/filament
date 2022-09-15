@@ -1143,7 +1143,7 @@ Where $F(v,h)$ is the Fresnel term of the cloth specular BRDF in equation $\ref{
 Subsurface scattering is implemented using the wrapped diffuse lighting technique, in its energy conservative form:
 
 $$\begin{equation}
-f_{d}(v,h) = \frac{c_{diff}}{\pi}(1 - F(v,h)) \left< \NoL + \frac{w}{(1 + w)^2} \right> \left< c_{subsurface} + \NoL \right>
+f_{d}(v,h) = \frac{c_{diff}}{\pi}(1 - F(v,h)) \left< \frac{\NoL + w}{(1 + w)^2} \right> \left< c_{subsurface} + \NoL \right>
 \end{equation}$$
 
 Where $w$ is a value between 0 and 1 defining by how much the diffuse light should wrap around the terminator. To avoid introducing another parameter, we fix $w = 0.5$. Note that with wrap diffuse lighting, the diffuse term must not be multiplied by $\NoL$. The effect of this cheap
