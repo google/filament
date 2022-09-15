@@ -41,6 +41,13 @@ size_t write(unsigned char* out, const vector<T>& data) {
 }
 
 void MeshWriter::optimize(Mesh& mesh) {
+    // In debug builds, non-triangular data will assert in meshopt, but we need to have
+    // a safety check here anyway to prevent potential OOB reads in release builds.
+    if (mesh.indices.size() % 3 != 0) {
+        fprintf(stderr, "Mesh must be triangles.\n");
+        exit(1);
+    }
+
     // First, re-order triangles to improve cache locality and reduce the number of VS invocations.
     // Note that assimp already has aiProcess_ImproveCacheLocality, but MeshWriter doesn't know
     // about assimp, and it doesn't hurt to do it again here since this generally runs offline.

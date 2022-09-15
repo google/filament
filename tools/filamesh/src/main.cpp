@@ -192,6 +192,14 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
 
                 for (size_t j = 0; j < numFaces; ++j) {
                     const aiFace& face = faces[j];
+
+                    // Even though assimp triangulated the mesh, it still might have degenerate
+                    // triangles, so we need to do a check here to prevent potential OOB reads.
+                    if (UTILS_UNLIKELY(face.mNumIndices != 3)) {
+                        fprintf(stderr, "assimp error: degenerate triangle.\n");
+                        exit(1);
+                    }
+
                     for (size_t k = 0; k < face.mNumIndices; ++k) {
                         g_mesh.indices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
                     }

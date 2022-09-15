@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: allow zero-instance assets
 - gltfio: fix regression with meshes that have no material
 - gltfio: fix regression with recomputeBoundingBoxes()
+- filamesh / matinfo: fix minor ASAN issues
 
 ## v1.27.1
 
