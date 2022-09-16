@@ -505,7 +505,6 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
 
     importSkins(mAsset, instance, srcAsset);
 
-    // This needs to stay near the end of the method to allow detection of the first instance.
     mAsset->mInstances.push_back(instance);
 
     // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
@@ -572,7 +571,7 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
         }
     }
 
-    if (node->light && mAsset->mInstances.empty()) {
+    if (node->light ) {
         createLight(node->light, entity);
     }
 
