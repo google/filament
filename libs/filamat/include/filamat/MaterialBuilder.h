@@ -24,14 +24,16 @@
 
 #include <atomic>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include <backend/DriverEnums.h>
-#include <backend/TargetBufferInfo.h>
 #include <filament/MaterialEnums.h>
 
 #include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/TargetBufferInfo.h>
 
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
@@ -75,15 +77,15 @@ public:
 
     /*
      * Generally we generate GLSL that will be converted to SPIRV, optimized and then
-     * transpiled to the backend's language such as MSL, ESSL300, ESSL410 or SPIRV, in this
-     * case the generated GLSL uses ESSL310 or ESSL450 and has Vulkan semantics and
+     * transpiled to the backend's language such as MSL, ESSL300, GLSL410 or SPIRV, in this
+     * case the generated GLSL uses ESSL310 or GLSL450 and has Vulkan semantics and
      * TargetLanguage::SPIRV must be used.
      *
      * However, in some cases (e.g. when no optimization is asked) we generate the *final* GLSL
-     * directly, this GLSL must be ESSL300 or ESSL410 and cannot use any Vulkan syntax, for this
+     * directly, this GLSL must be ESSL300 or GLSL410 and cannot use any Vulkan syntax, for this
      * situation we use TargetLanguage::GLSL. In this case TargetApi is guaranteed to be OPENGL.
      *
-     * Note that TargetLanguage::GLSL is not the common case, as it is generally note used in
+     * Note that TargetLanguage::GLSL is not the common case, as it is generally not used in
      * release builds.
      *
      * Also note that glslang performs semantics analysis on whichever GLSL ends up being generated.
@@ -142,7 +144,7 @@ protected:
 
     // Keeps track of how many times MaterialBuilder::init() has been called without a call to
     // MaterialBuilder::shutdown(). Internally, glslang does something similar. We keep track for
-    // ourselves so we can inform the user if MaterialBuilder::init() hasn't been called before
+    // ourselves, so we can inform the user if MaterialBuilder::init() hasn't been called before
     // attempting to build a material.
     static std::atomic<int> materialBuilderClients;
 };
@@ -249,8 +251,8 @@ public:
         std::string name;
         std::string value;
 
-        PreprocessorDefine(const std::string& name, const std::string& value) :
-            name(name), value(value) {}
+        PreprocessorDefine(std::string  name, std::string  value) :
+            name(std::move(name)), value(std::move(value)) {}
     };
     using PreprocessorDefineList = std::vector<PreprocessorDefine>;
 
@@ -311,7 +313,7 @@ public:
     MaterialBuilder& require(VertexAttribute attribute) noexcept;
 
     //! Specify the domain that this material will operate in.
-    MaterialBuilder& materialDomain(filament::MaterialDomain materialDomain) noexcept;
+    MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
 
     /**
      * Set the code content of this material.

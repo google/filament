@@ -78,12 +78,12 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderStage type,
 }
 
 TEST(StaticCodeAnalysisHelper, getFunctionName) {
-    std::string name = getFunctionName("main(");
+    auto name = getFunctionName("main(");
     EXPECT_EQ(name, "main");
 }
 
 TEST(StaticCodeAnalysisHelper, getFunctionNameNoParenthesis) {
-    std::string name = getFunctionName("main");
+    auto name = getFunctionName("main");
     EXPECT_EQ(name, "main");
 }
 
