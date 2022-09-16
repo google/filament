@@ -164,7 +164,7 @@ private:
     // in a function call.
     // Start in the function matching the signature provided and follow all out and inout calls.
     // Does NOT recurse to follow function calls.
-    static bool findSymbolsUsage(const std::string& functionSignature, TIntermNode& root,
+    static bool findSymbolsUsage(std::string_view functionSignature, TIntermNode& root,
             std::deque<Symbol>& symbols) noexcept;
 
 
@@ -172,7 +172,7 @@ private:
     // operations on that parameter. e.g to follow material(in out  MaterialInputs), call
     // findPropertyWritesOperations("material", 0, ...);
     // Does nothing if the parameter is not marked as OUT or INOUT
-    bool findPropertyWritesOperations(const std::string& functionName, size_t parameterIdx,
+    bool findPropertyWritesOperations(std::string_view functionName, size_t parameterIdx,
             TIntermNode* rootNode, MaterialBuilder::PropertyList& properties) const noexcept;
 
     // Look at a symbol access and find out if it affects filament MaterialInput fields. Will follow

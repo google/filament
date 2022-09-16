@@ -32,13 +32,13 @@ namespace ASTUtils {
 
 // Extract the name of a function from its glslang mangled signature. e.g: Returns prepareMaterial
 // for input "prepareMaterial(struct-MaterialInputs-vf4-f1-f1-f1-f1-vf41;".
-std::string getFunctionName(const std::string& functionSignature) noexcept;
+std::string_view getFunctionName(std::string_view functionSignature) noexcept;
 
 // Traverse the AST root, looking for function definition. Returns the Function definition node
 // matching the provided glslang mangled signature. Example of signature inputs:
 // prepareMaterial(struct-MaterialInputs-vf4-f1-f1-f1-f1-vf41;
 // main(
-glslang::TIntermAggregate* getFunctionBySignature(const std::string& functionSignature,
+glslang::TIntermAggregate* getFunctionBySignature(std::string_view functionSignature,
         TIntermNode& root) noexcept;
 
 // Traverse the AST root, looking for function definition. Returns the Function definition node
@@ -48,12 +48,12 @@ glslang::TIntermAggregate* getFunctionBySignature(const std::string& functionSig
 // This function is useful when looking for a function with variable signature. e.g: prepareMaterial
 // and material functions take a struct which can vary in size depending on the property of the
 // material processed.
-glslang::TIntermAggregate* getFunctionByNameOnly(const std::string& functionName, TIntermNode& root)
+glslang::TIntermAggregate* getFunctionByNameOnly(std::string_view functionName, TIntermNode& root)
         noexcept;
 
 // Recursively traverse the AST function node provided, looking for a call to the specified
 // function. Traverse all function calls found in each function.
-bool isFunctionCalled(const std::string& functionName, TIntermNode& functionNode,
+bool isFunctionCalled(std::string_view functionName, TIntermNode& functionNode,
         TIntermNode& rootNode) noexcept;
 
 // Traverse the function node provided and record all symbol writes operation and all function call
