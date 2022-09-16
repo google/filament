@@ -105,7 +105,7 @@ private:
     /*! \endcond */
 
     // If "instance" is null, then this is the primary animator.
-    Animator(FFilamentAsset* asset, FFilamentInstance* instance);
+    Animator(FFilamentAsset const* asset, FFilamentInstance* instance);
     ~Animator();
 
     Animator(const Animator& animator) = delete;

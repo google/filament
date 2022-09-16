@@ -70,7 +70,7 @@ struct Animation {
 struct AnimatorImpl {
     vector<Animation> animations;
     BoneVector boneMatrices;
-    FFilamentAsset* asset = nullptr;
+    FFilamentAsset const* asset = nullptr;
     FFilamentInstance* instance = nullptr;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
@@ -176,7 +176,7 @@ static bool validateAnimation(const cgltf_animation& anim) {
     return true;
 }
 
-Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
+Animator::Animator(FFilamentAsset const* asset, FFilamentInstance* instance) {
     assert(asset->mResourcesLoaded && asset->mSourceAsset);
     mImpl = new AnimatorImpl();
     mImpl->asset = asset;

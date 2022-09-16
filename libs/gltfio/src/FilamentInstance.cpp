@@ -28,7 +28,7 @@ using namespace utils;
 
 namespace filament::gltfio {
 
-FFilamentInstance::FFilamentInstance(Entity root, FFilamentAsset* owner) :
+FFilamentInstance::FFilamentInstance(Entity root, FFilamentAsset const* owner) :
     root(root),
     owner(owner),
     nodeMap(owner->mSourceAsset->hierarchy->nodes_count, Entity()) {}
@@ -285,7 +285,7 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     boundingBox = assetBounds;
 }
 
-FilamentAsset* FilamentInstance::getAsset() const noexcept {
+FilamentAsset const* FilamentInstance::getAsset() const noexcept {
     return upcast(this)->owner;
 }
 
