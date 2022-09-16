@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - gltfio: punctual lights are now duplicated when adding new asset instances
+- gltfio: FilamentInstance getAsset method now returns an immutable asset
 - gltfio: allow zero-instance assets
 - gltfio: fix regression with meshes that have no material
 - gltfio: fix regression with recomputeBoundingBoxes()

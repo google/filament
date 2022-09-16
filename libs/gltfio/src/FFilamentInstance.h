@@ -54,7 +54,7 @@ struct Variant {
 };
 
 struct FFilamentInstance : public FilamentInstance {
-    FFilamentInstance(utils::Entity root, FFilamentAsset* owner);
+    FFilamentInstance(utils::Entity root, FFilamentAsset const* owner);
 
     // The per-instance skin structure caches information to allow animation to be applied
     // efficiently at run time. Note that shared immutable data, such as the skin name and inverse
@@ -69,7 +69,7 @@ struct FFilamentInstance : public FilamentInstance {
     };
 
     const utils::Entity root;
-    FFilamentAsset* const owner;
+    FFilamentAsset const* owner;
 
     std::vector<utils::Entity> entities;
     utils::FixedCapacityVector<Variant> variants;
