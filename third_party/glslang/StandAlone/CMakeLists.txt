@@ -104,24 +104,48 @@ if(WIN32)
 endif()
 
 if(ENABLE_GLSLANG_INSTALL)
-    install(TARGETS glslangValidator EXPORT glslangValidatorTargets
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(EXPORT glslangValidatorTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+    install(TARGETS glslangValidator EXPORT glslang-targets)
+
+    # Backward compatibility
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/glslangValidatorTargets.cmake" "
+        message(WARNING \"Using `glslangValidatorTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
+
+        if (NOT TARGET glslang::glslangValidator)
+            include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+        endif()
+
+        add_library(glslangValidator ALIAS glslang::glslangValidator)
+    ")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/glslangValidatorTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
 
     if(ENABLE_SPVREMAPPER)
-        install(TARGETS spirv-remap EXPORT spirv-remapTargets
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-        install(EXPORT spirv-remapTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+        install(TARGETS spirv-remap EXPORT glslang-targets)
+
+        # Backward compatibility
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/spirv-remapTargets.cmake" "
+            message(WARNING \"Using `spirv-remapTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
+
+            if (NOT TARGET glslang::spirv-remap)
+                include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+            endif()
+
+            add_library(spirv-remap ALIAS glslang::spirv-remap)
+        ")
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/spirv-remapTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
     endif()
 
-    if(BUILD_SHARED_LIBS)
-        install(TARGETS glslang-default-resource-limits EXPORT glslang-default-resource-limitsTargets
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    else()
-        install(TARGETS glslang-default-resource-limits EXPORT glslang-default-resource-limitsTargets
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
-    install(EXPORT glslang-default-resource-limitsTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+    install(TARGETS glslang-default-resource-limits EXPORT glslang-targets)
+
+    # Backward compatibility
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/glslang-default-resource-limitsTargets.cmake" "
+        message(WARNING \"Using `glslang-default-resource-limitsTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
+
+        if (NOT TARGET glslang::glslang-default-resource-limits)
+            include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+        endif()
+
+        add_library(glslang-default-resource-limits ALIAS glslang::glslang-default-resource-limits)
+    ")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/glslang-default-resource-limitsTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+
 endif()

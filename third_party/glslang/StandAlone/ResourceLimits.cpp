@@ -134,6 +134,15 @@ const TBuiltInResource DefaultTBuiltInResource = {
     /* .maxTaskWorkGroupSizeY_NV = */ 1,
     /* .maxTaskWorkGroupSizeZ_NV = */ 1,
     /* .maxMeshViewCountNV = */ 4,
+    /* .maxMeshOutputVerticesEXT = */ 256,
+    /* .maxMeshOutputPrimitivesEXT = */ 256,
+    /* .maxMeshWorkGroupSizeX_EXT = */ 128,
+    /* .maxMeshWorkGroupSizeY_EXT = */ 128,
+    /* .maxMeshWorkGroupSizeZ_EXT = */ 128,
+    /* .maxTaskWorkGroupSizeX_EXT = */ 128,
+    /* .maxTaskWorkGroupSizeY_EXT = */ 128,
+    /* .maxTaskWorkGroupSizeZ_EXT = */ 128,
+    /* .maxMeshViewCountEXT = */ 4,
     /* .maxDualSourceDrawBuffersEXT = */ 1,
 
     /* .limits = */ {
@@ -244,6 +253,15 @@ std::string GetDefaultTBuiltInResourceString()
             << "MaxTaskWorkGroupSizeY_NV "                  << DefaultTBuiltInResource.maxTaskWorkGroupSizeY_NV << "\n"
             << "MaxTaskWorkGroupSizeZ_NV "                  << DefaultTBuiltInResource.maxTaskWorkGroupSizeZ_NV << "\n"
             << "MaxMeshViewCountNV "                        << DefaultTBuiltInResource.maxMeshViewCountNV << "\n"
+            << "MaxMeshOutputVerticesEXT "                  << DefaultTBuiltInResource.maxMeshOutputVerticesEXT << "\n"
+            << "MaxMeshOutputPrimitivesEXT "                << DefaultTBuiltInResource.maxMeshOutputPrimitivesEXT << "\n"
+            << "MaxMeshWorkGroupSizeX_EXT "                 << DefaultTBuiltInResource.maxMeshWorkGroupSizeX_EXT << "\n"
+            << "MaxMeshWorkGroupSizeY_EXT "                 << DefaultTBuiltInResource.maxMeshWorkGroupSizeY_EXT << "\n"
+            << "MaxMeshWorkGroupSizeZ_EXT "                 << DefaultTBuiltInResource.maxMeshWorkGroupSizeZ_EXT << "\n"
+            << "MaxTaskWorkGroupSizeX_EXT "                 << DefaultTBuiltInResource.maxTaskWorkGroupSizeX_EXT << "\n"
+            << "MaxTaskWorkGroupSizeY_EXT "                 << DefaultTBuiltInResource.maxTaskWorkGroupSizeY_EXT << "\n"
+            << "MaxTaskWorkGroupSizeZ_EXT "                 << DefaultTBuiltInResource.maxTaskWorkGroupSizeZ_EXT << "\n"
+            << "MaxMeshViewCountEXT "                       << DefaultTBuiltInResource.maxMeshViewCountEXT << "\n"
             << "MaxDualSourceDrawBuffersEXT "               << DefaultTBuiltInResource.maxDualSourceDrawBuffersEXT << "\n"
             << "nonInductiveForLoops "                      << DefaultTBuiltInResource.limits.nonInductiveForLoops << "\n"
             << "whileLoops "                                << DefaultTBuiltInResource.limits.whileLoops << "\n"
@@ -469,6 +487,24 @@ void DecodeResourceLimits(TBuiltInResource* resources, char* config)
             resources->maxTaskWorkGroupSizeZ_NV = value;
         else if (tokenStr == "MaxMeshViewCountNV")
             resources->maxMeshViewCountNV = value;
+        else if (tokenStr == "MaxMeshOutputVerticesEXT")
+            resources->maxMeshOutputVerticesEXT = value;
+        else if (tokenStr == "MaxMeshOutputPrimitivesEXT")
+            resources->maxMeshOutputPrimitivesEXT = value;
+        else if (tokenStr == "MaxMeshWorkGroupSizeX_EXT")
+            resources->maxMeshWorkGroupSizeX_EXT = value;
+        else if (tokenStr == "MaxMeshWorkGroupSizeY_EXT")
+            resources->maxMeshWorkGroupSizeY_EXT = value;
+        else if (tokenStr == "MaxMeshWorkGroupSizeZ_EXT")
+            resources->maxMeshWorkGroupSizeZ_EXT = value;
+        else if (tokenStr == "MaxTaskWorkGroupSizeX_EXT")
+            resources->maxTaskWorkGroupSizeX_EXT = value;
+        else if (tokenStr == "MaxTaskWorkGroupSizeY_EXT")
+            resources->maxTaskWorkGroupSizeY_EXT = value;
+        else if (tokenStr == "MaxTaskWorkGroupSizeZ_EXT")
+            resources->maxTaskWorkGroupSizeZ_EXT = value;
+        else if (tokenStr == "MaxMeshViewCountEXT")
+            resources->maxMeshViewCountEXT = value;
         else if (tokenStr == "nonInductiveForLoops")
             resources->limits.nonInductiveForLoops = (value != 0);
         else if (tokenStr == "whileLoops")

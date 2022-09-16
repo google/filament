@@ -383,7 +383,7 @@ TFunction::TFunction(const TFunction& copyOf) : TSymbol(copyOf)
     for (unsigned int i = 0; i < copyOf.parameters.size(); ++i) {
         TParameter param;
         parameters.push_back(param);
-        parameters.back().copyParam(copyOf.parameters[i]);
+        (void)parameters.back().copyParam(copyOf.parameters[i]);
     }
 
     extensions = nullptr;
@@ -426,12 +426,7 @@ TSymbolTableLevel* TSymbolTableLevel::clone() const
     symTableLevel->thisLevel = thisLevel;
     symTableLevel->retargetedSymbols.clear();
     for (auto &s : retargetedSymbols) {
-        // Extra constructions to make sure they use the correct allocator pool
-        TString newFrom;
-        newFrom = s.first;
-        TString newTo;
-        newTo = s.second;
-        symTableLevel->retargetedSymbols.push_back({std::move(newFrom), std::move(newTo)});
+        symTableLevel->retargetedSymbols.push_back({s.first, s.second});
     }
     std::vector<bool> containerCopied(anonId, false);
     tLevel::const_iterator iter;
@@ -462,11 +457,7 @@ TSymbolTableLevel* TSymbolTableLevel::clone() const
         TSymbol* sym = symTableLevel->find(s.second);
         if (!sym)
             continue;
-
-        // Need to declare and assign so newS is using the correct pool allocator
-        TString newS;
-        newS = s.first;
-        symTableLevel->insert(newS, sym);
+        symTableLevel->insert(s.first, sym);
     }
 
     return symTableLevel;
