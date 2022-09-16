@@ -3428,7 +3428,7 @@ bool HlslGrammar::acceptCompoundStatement(TIntermNode*& retStatement)
         }
     }
     if (compoundStatement)
-        compoundStatement->setOperator(EOpSequence);
+        compoundStatement->setOperator(intermediate.getDebugInfo() ? EOpScope : EOpSequence);
 
     retStatement = compoundStatement;
 

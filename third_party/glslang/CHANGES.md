@@ -3,6 +3,41 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 11.11.0 2022-08-11
+
+### Other changes
+* Add OpSource support to C interface
+* Deprecate samplerBuffer for spirv1.6 and later
+* Add support for SPV_AMD_shader_early_and_late_fragment_tests
+
+## 11.10.0 2022-06-02
+
+### Other changes
+* Generate OpLine before OpFunction
+* Add support for VK_EXT_fragment_shader_barycentric
+* Add whitelist filtering for debug comments in SPIRV-Remap
+* Add support for GL_EXT_ray_cull_mask
+
+## 11.9.0 2022-04-06
+
+### Other changes
+* Add GLSL version override functionality
+* Add eliminate-dead-input-components to -Os
+* Add enhanced-msgs option
+* Explicitly use Python 3 for builds
+
+## 11.8.0 2022-01-27
+
+### Other changes
+* Add support for SPIR-V 1.6
+* Add support for Vulkan 1.3
+* Add --hlsl-dx-position-w option
+
+## 11.7.0 2021-11-11
+
+### Other changes
+* Add support for targeting Vulkan 1.2 in the C API
+
 ## 11.6.0 2021-08-25
 
 ### Other changes

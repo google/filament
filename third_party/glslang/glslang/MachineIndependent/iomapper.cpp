@@ -203,11 +203,7 @@ struct TResolverUniformAdaptor {
 
     inline void operator()(std::pair<const TString, TVarEntryInfo>& entKey) {
         TVarEntryInfo& ent = entKey.second;
-        ent.newLocation = -1;
-        ent.newComponent = -1;
-        ent.newBinding = -1;
-        ent.newSet = -1;
-        ent.newIndex = -1;
+        ent.clearNewAssignments();
         const bool isValid = resolver.validateBinding(stage, ent);
         if (isValid) {
             resolver.resolveSet(ent.stage, ent);
@@ -281,11 +277,7 @@ struct TResolverInOutAdaptor {
     inline void operator()(std::pair<const TString, TVarEntryInfo>& entKey)
     {
         TVarEntryInfo& ent = entKey.second;
-        ent.newLocation = -1;
-        ent.newComponent = -1;
-        ent.newBinding = -1;
-        ent.newSet = -1;
-        ent.newIndex = -1;
+        ent.clearNewAssignments();
         const bool isValid = resolver.validateInOut(ent.stage, ent);
         if (isValid) {
             resolver.resolveInOutLocation(stage, ent);
@@ -514,6 +506,24 @@ struct TSymbolValidater
                         return;
                     }
                     else {
+                        // Deal with input/output pairs where one is a block member but the other is loose,
+                        // e.g. with ARB_separate_shader_objects
+                        if (type1.getBasicType() == EbtBlock &&
+                            type1.isStruct() && !type2.isStruct()) {
+                            // Iterate through block members tracking layout
+                            glslang::TString name;
+                            type1.getStruct()->begin()->type->appendMangledName(name);
+                            if (name == mangleName2
+                                && type1.getQualifier().layoutLocation == type2.getQualifier().layoutLocation) return;
+                        }
+                        if (type2.getBasicType() == EbtBlock &&
+                            type2.isStruct() && !type1.isStruct()) {
+                            // Iterate through block members tracking layout
+                            glslang::TString name;
+                            type2.getStruct()->begin()->type->appendMangledName(name);
+                            if (name == mangleName1
+                                && type1.getQualifier().layoutLocation == type2.getQualifier().layoutLocation) return;
+                        }
                         TString err = "Invalid In/Out variable type : " + entKey.first;
                         infoSink.info.message(EPrefixInternalError, err.c_str());
                         hadError = true;
@@ -827,7 +837,7 @@ int TDefaultIoResolverBase::resolveUniformLocation(EShLanguage /*stage*/, TVarEn
     }
     // no locations added if already present, a built-in variable, a block, or an opaque
     if (type.getQualifier().hasLocation() || type.isBuiltIn() || type.getBasicType() == EbtBlock ||
-        type.isAtomic() || (type.containsOpaque() && referenceIntermediate.getSpv().openGl == 0)) {
+        type.isAtomic() || type.isSpirvType() || (type.containsOpaque() && referenceIntermediate.getSpv().openGl == 0)) {
         return ent.newLocation = -1;
     }
     // no locations on blocks of built-in variables
@@ -855,8 +865,8 @@ int TDefaultIoResolverBase::resolveInOutLocation(EShLanguage stage, TVarEntryInf
         return ent.newLocation = -1;
     }
 
-    // no locations added if already present, or a built-in variable
-    if (type.getQualifier().hasLocation() || type.isBuiltIn()) {
+    // no locations added if already present, a built-in variable, or a variable with SPIR-V decorate
+    if (type.getQualifier().hasLocation() || type.isBuiltIn() || type.getQualifier().hasSprivDecorate()) {
         return ent.newLocation = -1;
     }
 
@@ -942,8 +952,8 @@ int TDefaultGlslIoResolver::resolveInOutLocation(EShLanguage stage, TVarEntryInf
     if (type.getQualifier().hasLocation()) {
         return ent.newLocation = type.getQualifier().layoutLocation;
     }
-    // no locations added if already present, or a built-in variable
-    if (type.isBuiltIn()) {
+    // no locations added if already present, a built-in variable, or a variable with SPIR-V decorate
+    if (type.isBuiltIn() || type.getQualifier().hasSprivDecorate()) {
         return ent.newLocation = -1;
     }
     // no locations on blocks of built-in variables
@@ -1024,7 +1034,8 @@ int TDefaultGlslIoResolver::resolveUniformLocation(EShLanguage /*stage*/, TVarEn
     } else {
         // no locations added if already present, a built-in variable, a block, or an opaque
         if (type.getQualifier().hasLocation() || type.isBuiltIn() || type.getBasicType() == EbtBlock ||
-            type.isAtomic() || (type.containsOpaque() && referenceIntermediate.getSpv().openGl == 0)) {
+            type.isAtomic() || type.isSpirvType() ||
+            (type.containsOpaque() && referenceIntermediate.getSpv().openGl == 0)) {
             return ent.newLocation = -1;
         }
         // no locations on blocks of built-in variables
@@ -1651,6 +1662,10 @@ bool TGlslIoMapper::doMap(TIoMapResolver* resolver, TInfoSink& infoSink) {
                     if (size <= int(autoPushConstantMaxSize)) {
                         qualifier.setBlockStorage(EbsPushConstant);
                         qualifier.layoutPacking = autoPushConstantBlockPacking;
+                        // Push constants don't have set/binding etc. decorations, remove those.
+                        qualifier.layoutSet = TQualifier::layoutSetEnd;
+                        at->second.clearNewAssignments();
+
                         upgraded = true;
                     }
                 }
@@ -1658,10 +1673,14 @@ bool TGlslIoMapper::doMap(TIoMapResolver* resolver, TInfoSink& infoSink) {
             // If it's been upgraded to push_constant, then remove it from the uniformVector
             // so it doesn't get a set/binding assigned to it.
             if (upgraded) {
-                auto at = std::find_if(uniformVector.begin(), uniformVector.end(),
-                                       [this](const TVarLivePair& p) { return p.first == autoPushConstantBlockName; });
-                if (at != uniformVector.end())
-                    uniformVector.erase(at);
+                while (1) {
+                    auto at = std::find_if(uniformVector.begin(), uniformVector.end(),
+                                           [this](const TVarLivePair& p) { return p.first == autoPushConstantBlockName; });
+                    if (at != uniformVector.end())
+                        uniformVector.erase(at);
+                    else
+                        break;
+                }
             }
         }
         for (size_t stage = 0; stage < EShLangCount; stage++) {
