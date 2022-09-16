@@ -77,6 +77,7 @@ static BindingIndexMap getBindingIndexMap(const GLSLPostProcessor::Config& confi
                 }
             }
         case MaterialDomain::POST_PROCESS:
+        case MaterialDomain::COMPUTE:
             break;
     }
     generateBindingIndexMap(config, config.materialInfo->sib, map);

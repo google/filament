@@ -62,21 +62,22 @@ public:
     static utils::io::sstream& generateSeparator(utils::io::sstream& out);
 
     // generate prolog for the given shader
-    utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderStage type,
+    utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderStage stage,
             MaterialInfo const& material) const;
 
     static utils::io::sstream& generateEpilog(utils::io::sstream& out);
 
     // generate common functions for the given shader
-    static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderStage type);
     static utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderStage type);
 
     static utils::io::sstream& generateFog(utils::io::sstream& out, ShaderStage type);
 
     // generate the shader's main()
-    static utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateComputeMain(utils::io::sstream& out);
 
     // generate the shader's code for the lit shading model
     static utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderStage type,
@@ -109,7 +110,7 @@ public:
     static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderStage type);
 
     // generate uniforms
-    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderStage type,
+    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderStage stage,
             filament::UniformBindingPoints binding, const filament::UniformInterfaceBlock& uib) const;
 
     // generate samplers
@@ -136,14 +137,14 @@ public:
             const char* name, uint32_t id, std::variant<int, float, bool> value) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage type);
-    static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderStage type);
 
     static void fixupExternalSamplers(
             std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
 
 private:
-    filament::backend::Precision getDefaultPrecision(ShaderStage type) const;
+    filament::backend::Precision getDefaultPrecision(ShaderStage stage) const;
     filament::backend::Precision getDefaultUniformPrecision() const;
 
     static const char* getUniformPrecisionQualifier(filament::backend::UniformType type,

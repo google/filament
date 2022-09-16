@@ -95,6 +95,7 @@ const char* toString(MaterialDomain domain) noexcept {
     switch (domain) {
         case MaterialDomain::SURFACE: return "surface";
         case MaterialDomain::POST_PROCESS: return "post process";
+        case MaterialDomain::COMPUTE: return "compute";
     }
     return "--";
 }

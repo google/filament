@@ -77,6 +77,7 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
             }
             break;
         case MaterialDomain::POST_PROCESS:
+        case MaterialDomain::COMPUTE:
             processSamplerGroup(SamplerBindingPoints::PER_MATERIAL_INSTANCE);
             break;
     }

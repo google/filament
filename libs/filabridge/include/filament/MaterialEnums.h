@@ -160,6 +160,7 @@ static constexpr size_t MAX_CUSTOM_ATTRIBUTES = 8;
 enum class MaterialDomain : uint8_t {
     SURFACE         = 0, //!< shaders applied to renderables
     POST_PROCESS    = 1, //!< shaders applied to rendered buffers
+    COMPUTE         = 2, //!< compute shader
 };
 
 /**

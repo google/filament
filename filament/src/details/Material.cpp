@@ -349,9 +349,11 @@ void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
         case MaterialDomain::SURFACE:
             getSurfaceProgramSlow(variant);
             break;
-
         case MaterialDomain::POST_PROCESS:
             getPostProcessProgramSlow(variant);
+            break;
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
             break;
     }
 }

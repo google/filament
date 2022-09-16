@@ -39,7 +39,7 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, ShaderStage type,
+utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, ShaderStage stage,
         MaterialInfo const& material) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
@@ -74,6 +74,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     // #included code. This way, glslang reports errors more accurately.
     out << "#extension GL_GOOGLE_cpp_style_line_directive : enable\n\n";
 
+    if (stage == ShaderStage::COMPUTE) {
+        out << "layout(local_size_x = " << material.groupSize.x
+            << ", local_size_y = " <<  material.groupSize.y
+            << ", local_size_z = " <<  material.groupSize.z
+            << ") in;\n\n";
+    }
+
     if (mTargetApi == TargetApi::VULKAN) {
         out << "#define TARGET_VULKAN_ENVIRONMENT\n";
     }
@@ -103,7 +110,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
-    Precision defaultPrecision = getDefaultPrecision(type);
+    Precision defaultPrecision = getDefaultPrecision(stage);
     const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
@@ -118,23 +125,33 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecificationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
 
     out << '\n';
-    out << SHADERS_COMMON_TYPES_GLSL_DATA;
+    out << SHADERS_COMMON_DEFINES_GLSL_DATA;
+
+    if (stage != ShaderStage::COMPUTE) {
+        out << '\n';
+        out << SHADERS_COMMON_TYPES_GLSL_DATA;
+    }
 
     out << "\n";
     return out;
 }
 
-Precision CodeGenerator::getDefaultPrecision(ShaderStage type) const {
-    if (type == ShaderStage::VERTEX) {
-        return Precision::HIGH;
-    } else if (type == ShaderStage::FRAGMENT) {
-        if (mShaderModel < ShaderModel::DESKTOP) {
-            return Precision::MEDIUM;
-        } else {
+Precision CodeGenerator::getDefaultPrecision(ShaderStage stage) const {
+    switch (stage) {
+        case ShaderStage::VERTEX:
             return Precision::HIGH;
-        }
+            break;
+        case ShaderStage::FRAGMENT:
+            if (mShaderModel < ShaderModel::DESKTOP) {
+                return Precision::MEDIUM;
+            } else {
+                return Precision::HIGH;
+            }
+            break;
+        case ShaderStage::COMPUTE:
+            return Precision::HIGH;
+            break;
     }
-    return Precision::HIGH;
 }
 
 Precision CodeGenerator::getDefaultUniformPrecision() const {
@@ -150,11 +167,17 @@ io::sstream& CodeGenerator::generateEpilog(io::sstream& out) {
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderStage type) {
-    if (type == ShaderStage::VERTEX) {
-        out << SHADERS_MAIN_VS_DATA;
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_MAIN_FS_DATA;
+io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderStage stage) {
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << SHADERS_MAIN_VS_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << SHADERS_MAIN_FS_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            out << SHADERS_MAIN_CS_DATA;
+            break;
     }
     return out;
 }
@@ -315,7 +338,7 @@ const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precis
     return getPrecisionQualifier(precision, defaultPrecision);
 }
 
-io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage type,
+io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage,
         UniformBindingPoints binding, const UniformInterfaceBlock& uib) const {
     auto const& infos = uib.getUniformInfoList();
     if (infos.empty()) {
@@ -327,7 +350,7 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage type,
     instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
 
     Precision uniformPrecision = getDefaultUniformPrecision();
-    Precision defaultPrecision = getDefaultPrecision(type);
+    Precision defaultPrecision = getDefaultPrecision(stage);
 
     // This constant must match the equivalent in MetalState.h.
     static constexpr uint32_t METAL_UNIFORM_BUFFER_BINDING_START = 17u;
@@ -503,7 +526,7 @@ utils::io::sstream& CodeGenerator::generateSpecificationConstant(utils::io::sstr
     if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
         std::visit([&](auto&& arg) {
             out << "layout (constant_id = " << id << ") const "
-                << types[value.index()] << " " << name << " = " << arg << ";\n";
+                << types[value.index()] << " " << name << " = " << arg << ";\n\n";
         }, value);
     } else {
         std::visit([&](auto&& arg) {
@@ -511,7 +534,7 @@ utils::io::sstream& CodeGenerator::generateSpecificationConstant(utils::io::sstr
                 << "#define SPIRV_CROSS_CONSTANT_ID_" << id << " " << arg << '\n'
                 << "#endif" << '\n'
                 << "const " << types[value.index()] << " " << name << " = SPIRV_CROSS_CONSTANT_ID_" << id
-                << ";\n";
+                << ";\n\n";
         }, value);
     }
     return out;
@@ -556,14 +579,23 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderStage type) {
+io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderStage stage) {
+
     out << SHADERS_COMMON_MATH_GLSL_DATA;
-    out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
-    if (type == ShaderStage::VERTEX) {
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_COMMON_SHADING_FS_DATA;
-        out << SHADERS_COMMON_GRAPHICS_FS_DATA;
-        out << SHADERS_COMMON_MATERIAL_FS_DATA;
+
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
+            out << SHADERS_COMMON_SHADING_FS_DATA;
+            out << SHADERS_COMMON_GRAPHICS_FS_DATA;
+            out << SHADERS_COMMON_MATERIAL_FS_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            // TODO: figure out if we need some common files here
+            break;
     }
     return out;
 }
@@ -604,8 +636,7 @@ io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderSt
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out,
-        ShaderStage type) {
+io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out, ShaderStage type) {
     out << SHADERS_COMMON_GETTERS_GLSL_DATA;
     if (type == ShaderStage::VERTEX) {
         out << SHADERS_POST_PROCESS_GETTERS_VS_DATA;
@@ -614,12 +645,18 @@ io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out,
     return out;
 }
 
-io::sstream& CodeGenerator::generateGetters(io::sstream& out, ShaderStage type) {
+io::sstream& CodeGenerator::generateGetters(io::sstream& out, ShaderStage stage) {
     out << SHADERS_COMMON_GETTERS_GLSL_DATA;
-    if (type == ShaderStage::VERTEX) {
-        out << SHADERS_GETTERS_VS_DATA;
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_GETTERS_FS_DATA;
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << SHADERS_GETTERS_VS_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << SHADERS_GETTERS_FS_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            out << SHADERS_GETTERS_CS_DATA;
+            break;
     }
     return out;
 }

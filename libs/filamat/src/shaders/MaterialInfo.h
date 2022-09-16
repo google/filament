@@ -65,6 +65,7 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::SamplerBindingMap samplerBindings;
     filament::ShaderQuality quality;
     filament::backend::FeatureLevel featureLevel;
+    filament::math::uint3 groupSize;
 };
 
 }

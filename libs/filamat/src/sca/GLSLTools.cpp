@@ -54,13 +54,52 @@ static std::string_view getMaterialFunctionName(MaterialBuilder::MaterialDomain 
             return "material";
         case MaterialBuilder::MaterialDomain::POST_PROCESS:
             return "postProcess";
+        case MaterialBuilder::MaterialDomain::COMPUTE:
+            return "compute";
     }
 };
+
+bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
+        filament::backend::ShaderModel model, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialInfo const& info) noexcept {
+
+    // Parse to check syntax and semantic.
+    const char* shaderCString = shaderCode.c_str();
+
+    TShader tShader(EShLanguage::EShLangCompute);
+    tShader.setStrings(&shaderCString, 1);
+
+    GLSLangCleaner cleaner;
+    int version = glslangVersionFromShaderModel(model);
+    EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
+    bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
+    if (!ok) {
+        utils::slog.e << "ERROR: Unable to parse compute shader:" << utils::io::endl;
+        utils::slog.e << tShader.getInfoLog() << utils::io::flush;
+        return false;
+    }
+
+    auto materialFunctionName = getMaterialFunctionName(filament::MaterialDomain::COMPUTE);
+
+    TIntermNode* root = tShader.getIntermediate()->getTreeRoot();
+    // Check there is a material function definition in this shader.
+    TIntermNode* materialFctNode = ASTUtils::getFunctionByNameOnly(materialFunctionName, *root);
+    if (materialFctNode == nullptr) {
+        utils::slog.e << "ERROR: Invalid compute shader:" << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
+        return false;
+    }
+
+    return true;
+}
 
 bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
         filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         bool hasCustomSurfaceShading, MaterialInfo const& info) noexcept {
+
+    assert_invariant(materialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
 
     // Parse to check syntax and semantic.
     const char* shaderCString = shaderCode.c_str();
@@ -130,6 +169,8 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
         filament::backend::ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& info) noexcept {
+
+    assert_invariant(materialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
 
     // TODO: After implementing post-process vertex shaders, properly analyze them here.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {

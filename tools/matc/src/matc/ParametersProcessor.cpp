@@ -15,15 +15,19 @@
  */
 
 #include "ParametersProcessor.h"
-#include "backend/DriverEnums.h"
+
+#include <filamat/Enums.h>
+
+#include <private/filament/Variant.h>
+
+#include <backend/DriverEnums.h>
+
+#include <math/vec3.h>
 
 #include <algorithm>
 #include <iostream>
 
 #include <ctype.h>
-#include <private/filament/Variant.h>
-
-#include <filamat/Enums.h>
 
 using namespace filamat;
 using namespace utils;
@@ -417,6 +421,36 @@ static bool processFeatureLevel(MaterialBuilder& builder, const JsonishValue& va
     return true;
 }
 
+static bool processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+
+    filament::math::uint3 groupSize{ 1, 1, 1 };
+    size_t index = 0;
+
+    for (auto value : jsonArray->getElements()) {
+        if (index >= 3) {
+            std::cerr << "groupSize: must be an array no larger than 3" << std::endl;
+            return false;
+        }
+        if (value->getType() == JsonishValue::Type::NUMBER) {
+            JsonishNumber const* const number = value->toJsonNumber();
+            float aFloat = number->getFloat();
+            if (aFloat > 0 && floor(aFloat) == aFloat) {
+                groupSize[index] = uint32_t(floor(aFloat));
+            } else {
+                std::cerr << "groupSize: invalid value " << aFloat << std::endl;
+                return false;
+            }
+            index++;
+            continue;
+        }
+        std::cerr << "groupSize must be an array of NUMBERs." << std::endl;
+        return false;
+    }
+    builder.groupSize(groupSize);
+    return true;
+}
+
 static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
@@ -670,6 +704,7 @@ static bool processDomain(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::MaterialDomain> strToEnum {
         { "surface",            MaterialBuilder::MaterialDomain::SURFACE },
         { "postprocess",        MaterialBuilder::MaterialDomain::POST_PROCESS },
+        { "compute",            MaterialBuilder::MaterialDomain::COMPUTE },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {
@@ -805,6 +840,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["quality"]                       = { &processQuality, Type::STRING };
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };
     mParameters["featureLevel"]                  = { &processFeatureLevel, Type::NUMBER };
+    mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

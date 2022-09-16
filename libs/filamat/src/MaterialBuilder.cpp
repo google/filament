@@ -256,6 +256,11 @@ MaterialBuilder& MaterialBuilder::require(VertexAttribute attribute) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::groupSize(filament::math::uint3 groupSize) noexcept {
+    mGroupSize = groupSize;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) noexcept {
     mMaterialDomain = materialDomain;
     return *this;
@@ -512,6 +517,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.instanced = mInstanced;
     info.vertexDomainDeviceJittered = mVertexDomainDeviceJittered;
     info.featureLevel = mFeatureLevel;
+    info.groupSize = mGroupSize;
 }
 
 bool MaterialBuilder::findProperties(backend::ShaderStage type,
@@ -576,15 +582,22 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
         targetApi = TargetApi::VULKAN;
     }
 
-    ShaderModel model = static_cast<ShaderModel>(mSemanticCodeGenParams.shaderModel);
-    std::string shaderCode = peek(ShaderStage::VERTEX, mSemanticCodeGenParams, mProperties);
-    bool result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
-            targetApi, targetLanguage, info);
-    if (!result) return false;
-
-    shaderCode = peek(ShaderStage::FRAGMENT, mSemanticCodeGenParams, mProperties);
-    result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
-            targetApi, targetLanguage, mCustomSurfaceShading, info);
+    bool result = false;
+    ShaderModel model = mSemanticCodeGenParams.shaderModel;
+    if (mMaterialDomain == filament::MaterialDomain::COMPUTE) {
+        std::string shaderCode = peek(ShaderStage::COMPUTE, mSemanticCodeGenParams, mProperties);
+        result = GLSLTools::analyzeComputeShader(shaderCode, model,
+                targetApi, targetLanguage, info);
+    } else {
+        std::string shaderCode = peek(ShaderStage::VERTEX, mSemanticCodeGenParams, mProperties);
+        result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
+                targetApi, targetLanguage, info);
+        if (result) {
+            shaderCode = peek(ShaderStage::FRAGMENT, mSemanticCodeGenParams, mProperties);
+            result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
+                    targetApi, targetLanguage, mCustomSurfaceShading, info);
+        }
+    }
     return result;
 #else
     return true;
@@ -734,18 +747,18 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     shader = sg.createVertexProgram(
                             shaderModel, targetApi, targetLanguage, info, v.variant,
                             mInterpolation, mVertexDomain);
-#ifdef FILAMAT_LITE
-                    GLSLToolsLite glslTools;
-                    glslTools.removeGoogleLineDirectives(shader);
-#endif
                 } else if (v.stage == backend::ShaderStage::FRAGMENT) {
                     shader = sg.createFragmentProgram(
                             shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
-#ifdef FILAMAT_LITE
-                    GLSLToolsLite glslTools;
-                    glslTools.removeGoogleLineDirectives(shader);
-#endif
+                } else if (v.stage == backend::ShaderStage::COMPUTE) {
+                    shader = sg.createComputeProgram(
+                            shaderModel, targetApi, targetLanguage, info, v.variant);
                 }
+
+#ifdef FILAMAT_LITE
+                GLSLToolsLite glslTools;
+                glslTools.removeGoogleLineDirectives(shader);
+#endif
 
                 std::string* pGlsl = nullptr;
                 if (targetApiNeedsGlsl) {
@@ -966,6 +979,8 @@ error:
         output(VariableQualifier::OUT, OutputTarget::COLOR, OutputType::FLOAT4, "color");
     }
 
+    // TODO: maybe check MaterialDomain::COMPUTE has outputs
+
     // Resolve all the #include directives within user code.
     if (!mMaterialFragmentCode.resolveIncludes(mIncludeCallback, mFileName) ||
         !mMaterialVertexCode.resolveIncludes(mIncludeCallback, mFileName)) {
@@ -1016,9 +1031,20 @@ error:
     info.useLegacyMorphing = mUseLegacyMorphing;
 
     // Generate all shaders and write the shader chunks.
-    const auto variants = mMaterialDomain == MaterialDomain::SURFACE ?
-        determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier) :
-        determinePostProcessVariants();
+
+    std::vector<Variant> variants;
+    switch (mMaterialDomain) {
+        case MaterialDomain::SURFACE:
+            variants = determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier);
+            break;
+        case MaterialDomain::POST_PROCESS:
+            variants = determinePostProcessVariants();
+            break;
+        case MaterialDomain::COMPUTE:
+            variants = determineComputeVariants();
+            break;
+    }
+
     success = generateShaders(jobSystem, variants, container, info);
     if (!success) {
         // Return an empty package to signal a failure to build the material.
@@ -1117,23 +1143,31 @@ bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
              mBlendingMode == BlendingMode::FADE));
 }
 
-std::string MaterialBuilder::peek(backend::ShaderStage type,
+std::string MaterialBuilder::peek(backend::ShaderStage stage,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
-    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mMaterialFragmentCode.getResolved(),
-            mMaterialFragmentCode.getLineOffset(), mMaterialVertexCode.getResolved(),
-            mMaterialVertexCode.getLineOffset(), mMaterialDomain);
+    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines,
+            mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
+            mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
+            mMaterialDomain);
 
     MaterialInfo info;
     prepareToBuild(info);
     info.samplerBindings.init(mMaterialDomain, info.sib);
 
-    if (type == backend::ShaderStage::VERTEX) {
-        return sg.createVertexProgram(ShaderModel(params.shaderModel),
-                params.targetApi, params.targetLanguage, info, {}, mInterpolation, mVertexDomain);
-    } else {
-        return sg.createFragmentProgram(ShaderModel(params.shaderModel), params.targetApi,
-                params.targetLanguage, info, {}, mInterpolation);
+    switch (stage) {
+        case backend::ShaderStage::VERTEX:
+            return sg.createVertexProgram(
+                    params.shaderModel, params.targetApi, params.targetLanguage,
+                    info, {}, mInterpolation, mVertexDomain);
+        case backend::ShaderStage::FRAGMENT:
+            return sg.createFragmentProgram(
+                    params.shaderModel, params.targetApi, params.targetLanguage,
+                    info, {}, mInterpolation);
+        case backend::ShaderStage::COMPUTE:
+            return sg.createComputeProgram(
+                    params.shaderModel, params.targetApi, params.targetLanguage,
+                    info, {});
     }
 }
 
@@ -1168,21 +1202,22 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     // User Material SIB
     container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
 
-    // User Subpass
-    container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
+    if (mMaterialDomain != MaterialDomain::COMPUTE) {
+        // User Subpass
+        container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
 
-
-    container.addSimpleChild<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
-    container.addSimpleChild<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionMode, static_cast<uint8_t>(mReflectionMode));
-    container.addSimpleChild<bool>(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
-    container.addSimpleChild<bool>(ChunkType::MaterialColorWrite, mColorWrite);
-    container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
-    container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
-    container.addSimpleChild<bool>(ChunkType::MaterialInstanced, mInstanced);
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
+        container.addSimpleChild<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
+        container.addSimpleChild<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
+        container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
+        container.addSimpleChild<uint8_t>(ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
+        container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionMode, static_cast<uint8_t>(mReflectionMode));
+        container.addSimpleChild<bool>(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
+        container.addSimpleChild<bool>(ChunkType::MaterialColorWrite, mColorWrite);
+        container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
+        container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
+        container.addSimpleChild<bool>(ChunkType::MaterialInstanced, mInstanced);
+        container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
+    }
 
     uint64_t properties = 0;
     UTILS_NOUNROLL

@@ -32,10 +32,9 @@ public:
     bool close() noexcept  override;
 
 private:
-    class NullBuffer : public std::streambuf
-    {
+    class NullBuffer : public std::streambuf {
     public:
-        int overflow(int c) { return c; }
+        int overflow(int c) override { return c; }
     };
     NullBuffer mNull;
     std::ostream mNullStream;
@@ -44,7 +43,7 @@ private:
 class MockInput : public matc::Config::Input {
 public:
     MockInput(uint8_t* data, size_t size);
-    ~MockInput();
+    ~MockInput() override;
     ssize_t open() noexcept override;
     std::unique_ptr<const char[]> read() noexcept override;
     bool close() noexcept override;

@@ -133,7 +133,12 @@ public:
             MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
             MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& info) noexcept;
 
-    // Public for unit tests.
+    static bool analyzeComputeShader(const std::string& shaderCode,
+            filament::backend::ShaderModel model, MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialInfo const& info) noexcept;
+
+        // Public for unit tests.
     using Property = MaterialBuilder::Property;
     using ShaderModel = filament::backend::ShaderModel;
     // Use static code analysis on the fragment shader AST to guess properties used in user provided

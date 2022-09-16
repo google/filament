@@ -40,6 +40,8 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+#include <math/vec3.h>
+
 namespace utils {
 class JobSystem;
 }
@@ -565,6 +567,9 @@ public:
      */
     MaterialBuilder& useLegacyMorphing() noexcept;
 
+    //! specify compute kernel group size
+    MaterialBuilder& groupSize(filament::math::uint3 groupSize) noexcept;
+
     /**
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
@@ -757,6 +762,8 @@ private:
     float mMaskThreshold = 0.4f;
     float mSpecularAntiAliasingVariance = 0.15f;
     float mSpecularAntiAliasingThreshold = 0.2f;
+
+    filament::math::uint3 mGroupSize = { 1, 1, 1 };
 
     bool mShadowMultiplier = false;
     bool mTransparentShadow = false;
