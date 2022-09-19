@@ -83,11 +83,11 @@ private:
     MetalContext& mContext;
 };
 
-template <typename P>
-static inline P align(P p, size_t alignment) noexcept {
+template <typename TYPE>
+static inline TYPE align(TYPE p, size_t alignment) noexcept {
     // alignment must be a power-of-two
     assert(alignment && !(alignment & alignment-1));
-    return (P)((p + alignment - 1) & ~(alignment - 1));
+    return (TYPE)((p + alignment - 1) & ~(alignment - 1));
 }
 
 /**
@@ -97,6 +97,8 @@ static inline P align(P p, size_t alignment) noexcept {
  *
  * If there are no slots available when a new allocation is requested, MetalRingBuffer falls back to
  * allocating a new id<MTLBuffer> per allocation until a slot is freed.
+ *
+ * All methods must be called from the Metal backend thread.
  */
 class MetalRingBuffer {
 public:
@@ -131,6 +133,7 @@ public:
      */
     std::tuple<id<MTLBuffer>, NSUInteger> createNewAllocation(id<MTLCommandBuffer> cmdBuffer) {
         const auto occupiedSlots = mOccupiedSlots.load(std::memory_order_relaxed);
+        assert_invariant(occupiedSlots <= mSlotCount);
         if (UTILS_UNLIKELY(occupiedSlots == mSlotCount)) {
             // We don't have any room left, so we fall back to creating a one-off buffer.
             mAuxBuffer = [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions];
