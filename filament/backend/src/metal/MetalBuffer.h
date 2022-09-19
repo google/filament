@@ -135,7 +135,10 @@ public:
         const auto occupiedSlots = mOccupiedSlots.load(std::memory_order_relaxed);
         assert_invariant(occupiedSlots <= mSlotCount);
         if (UTILS_UNLIKELY(occupiedSlots == mSlotCount)) {
-            // We don't have any room left, so we fall back to creating a one-off buffer.
+            // We don't have any room left, so we fall back to creating a one-off aux buffer.
+            // If we already have an aux buffer, it will get freed here, unless it has been retained
+            // by a MTLCommandBuffer. In that case, it will be freed when the command buffer
+            // finishes executing.
             mAuxBuffer = [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions];
             assert_invariant(mAuxBuffer);
             return {mAuxBuffer, 0};
