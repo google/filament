@@ -137,11 +137,10 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
     samplerDescriptor.tAddressMode = getAddressMode(params.wrapT);
     samplerDescriptor.rAddressMode = getAddressMode(params.wrapR);
     samplerDescriptor.maxAnisotropy = 1u << params.anisotropyLog2;
-    samplerDescriptor.lodMaxClamp = (float) state.maxLod;
-    samplerDescriptor.lodMinClamp = (float) state.minLod;
     samplerDescriptor.compareFunction =
             params.compareMode == SamplerCompareMode::NONE ?
                 MTLCompareFunctionNever : getCompareFunction(params.compareFunc);
+    samplerDescriptor.supportArgumentBuffers = YES;
 
 #if defined(IOS)
     // Older Apple devices (and the simulator) don't support setting a comparison function in
@@ -154,6 +153,39 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
 #endif
 
     return [device newSamplerStateWithDescriptor:samplerDescriptor];
+}
+
+id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
+        const ArgumentEncoderState &state) noexcept {
+    const auto& textureTypes = state.textureTypes;
+    const auto& count = textureTypes.size();
+    assert_invariant(count > 0);
+
+    // Metal has separate data types for textures versus samplers, so the argument buffer layout
+    // alternates between texture and sampler, i.e.:
+    // textureA
+    // samplerA
+    // textureB
+    // samplerB
+    // etc
+    NSMutableArray<MTLArgumentDescriptor*>* arguments =
+            [NSMutableArray arrayWithCapacity:(count * 2)];
+    for (size_t i = 0; i < count; i++) {
+        MTLArgumentDescriptor* textureArgument = [MTLArgumentDescriptor argumentDescriptor];
+        textureArgument.index = i * 2 + 0;
+        textureArgument.dataType = MTLDataTypeTexture;
+        textureArgument.textureType = textureTypes[i];
+        textureArgument.access = MTLArgumentAccessReadOnly;
+        [arguments addObject:textureArgument];
+
+        MTLArgumentDescriptor* samplerArgument = [MTLArgumentDescriptor argumentDescriptor];
+        samplerArgument.index = i * 2 + 1;
+        samplerArgument.dataType = MTLDataTypeSampler;
+        textureArgument.access = MTLArgumentAccessReadOnly;
+        [arguments addObject:samplerArgument];
+    }
+
+    return [device newArgumentEncoderWithArguments:arguments];
 }
 
 } // namespace backend

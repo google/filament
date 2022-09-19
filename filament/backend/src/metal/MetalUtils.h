@@ -30,6 +30,14 @@ id<MTLTexture> createTextureViewWithSwizzle(id<MTLTexture> texture,
         MTLTextureSwizzleChannels swizzle);
 
 /**
+ * Creates a texture view of the passed-in texture with the given lod range (inclusive). If the
+ * range represents all mip levels, simply returns texture.
+ * lodMax must be greater than or equal to lodMin.
+ */
+id<MTLTexture> createTextureViewWithLodRange(id<MTLTexture> texture, NSUInteger lodMin,
+        NSUInteger lodMax);
+
+/**
  * Creates a texture view of the passed-in texture with the given layer.
  *
  * The returned MTLTexture will have a type of MTLTextureType2D.

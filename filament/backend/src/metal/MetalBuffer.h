@@ -26,7 +26,7 @@
 
 #include <utils/compiler.h>
 
-#include <tuple>
+#include <utility>
 
 namespace filament::backend {
 
@@ -131,7 +131,7 @@ public:
      *                  ring buffer allocation will be freed.
      * @return the id<MTLBuffer> and offset for the new allocation
      */
-    std::tuple<id<MTLBuffer>, NSUInteger> createNewAllocation(id<MTLCommandBuffer> cmdBuffer) {
+    std::pair<id<MTLBuffer>, NSUInteger> createNewAllocation(id<MTLCommandBuffer> cmdBuffer) {
         const auto occupiedSlots = mOccupiedSlots.load(std::memory_order_relaxed);
         assert_invariant(occupiedSlots <= mSlotCount);
         if (UTILS_UNLIKELY(occupiedSlots == mSlotCount)) {
@@ -163,7 +163,7 @@ public:
      *                  ring buffer allocation will be freed.
      * @return the id<MTLBuffer> and offset for the current allocation
      */
-    std::tuple<id<MTLBuffer>, NSUInteger> getCurrentAllocation() const {
+    std::pair<id<MTLBuffer>, NSUInteger> getCurrentAllocation() const {
         if (UTILS_UNLIKELY(mAuxBuffer)) {
             return { mAuxBuffer, 0 };
         }

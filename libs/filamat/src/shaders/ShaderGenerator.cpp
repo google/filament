@@ -298,7 +298,8 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
                 UibGenerator::getPerRenderableMorphingUib());
         cg.generateSamplers(vs,
                 material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_RENDERABLE_MORPHING),
-                SibGenerator::getPerRenderPrimitiveMorphingSib(variant));
+                SibGenerator::getPerRenderPrimitiveMorphingSib(variant),
+                SamplerBindingPoints::PER_RENDERABLE_MORPHING);
     }
     cg.generateUniforms(vs, ShaderStage::VERTEX,
             UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
@@ -306,7 +307,8 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     // TODO: should we generate per-view SIB in the vertex shader?
     cg.generateSamplers(vs,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+            material.sib,
+            SamplerBindingPoints::PER_MATERIAL_INSTANCE);
 
     // shader code
     CodeGenerator::generateCommon(vs, ShaderStage::VERTEX);
@@ -500,10 +502,12 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     CodeGenerator::generateSeparator(fs);
     cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_VIEW),
-            SibGenerator::getPerViewSib(variant));
+            SibGenerator::getPerViewSib(variant),
+            SamplerBindingPoints::PER_VIEW);
     cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+            material.sib,
+            SamplerBindingPoints::PER_MATERIAL_INSTANCE);
 
     fs << "float filament_lodBias;\n";
 
@@ -610,7 +614,8 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
 
     cg.generateSamplers(vs,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+            material.sib,
+            SamplerBindingPoints::PER_MATERIAL_INSTANCE);
 
     CodeGenerator::generatePostProcessCommon(vs, ShaderStage::VERTEX);
     CodeGenerator::generatePostProcessGetters(vs, ShaderStage::VERTEX);
@@ -647,7 +652,8 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
 
     cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+            material.sib,
+            SamplerBindingPoints::PER_MATERIAL_INSTANCE);
 
     // subpass
     CodeGenerator::generateSubpass(fs, material.subpass);

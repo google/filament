@@ -119,7 +119,7 @@ public:
 
     // generate samplers
     utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,
-            const filament::SamplerInterfaceBlock& sib) const;
+            const filament::SamplerInterfaceBlock& sib, filament::SamplerBindingPoints bindingPoint) const;
 
     // generate subpass
     static utils::io::sstream& generateSubpass(utils::io::sstream& out,
@@ -158,6 +158,10 @@ public:
 
     static void fixupExternalSamplers(
             std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
+
+    // These constants must match the equivalent in MetalState.h.
+    static constexpr uint32_t METAL_UNIFORM_BUFFER_BINDING_START = 17u;
+    static constexpr uint32_t METAL_SAMPLER_GROUP_BINDING_START = 27u;
 
 private:
     filament::backend::Precision getDefaultPrecision(ShaderStage stage) const;

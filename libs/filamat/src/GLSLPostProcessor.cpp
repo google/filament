@@ -25,6 +25,7 @@
 
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
+#include "shaders/CodeGenerator.h"
 #include "shaders/MaterialInfo.h"
 
 #include <filament/MaterialEnums.h>
@@ -51,37 +52,27 @@ namespace msl {  // this is only used for MSL
 
 using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 
-UTILS_NOINLINE
-static void generateBindingIndexMap(const GLSLPostProcessor::Config& config,
-        SamplerInterfaceBlock const& sib, BindingIndexMap& map) {
-    const auto stageFlags = sib.getStageFlags();
-    if (hasShaderType(stageFlags, config.shaderType)) {
-        const auto& infoList = sib.getSamplerInfoList();
-        for (const auto& info: infoList) {
-            map[info.uniformName.c_str()] = map.size();
-        }
-    }
-}
-
-static BindingIndexMap getBindingIndexMap(const GLSLPostProcessor::Config& config) {
-    BindingIndexMap map;
+template<typename F>
+static void forEachSib(const GLSLPostProcessor::Config& config, F fn) {
+    const auto& samplerBindings = config.materialInfo->samplerBindings;
     switch (config.domain) {
         case MaterialDomain::SURFACE:
             UTILS_NOUNROLL
-            for (size_t blockIndex = 0; blockIndex < Enum::count<SamplerBindingPoints>(); blockIndex++) {
-                if (blockIndex != SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
-                    auto const* sib = SibGenerator::getSib(SamplerBindingPoints(blockIndex), config.variant);
-                    if (sib) {
-                        generateBindingIndexMap(config, *sib, map);
-                    }
+            for (uint8_t blockIndex = 0; blockIndex < CONFIG_SAMPLER_BINDING_COUNT; blockIndex++) {
+                if (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
+                    continue;
+                }
+                auto const* sib =
+                        SibGenerator::getSib((SamplerBindingPoints)blockIndex, config.variant);
+                if (sib && hasShaderType(sib->getStageFlags(), config.shaderType)) {
+                    fn(blockIndex, sib);
                 }
             }
         case MaterialDomain::POST_PROCESS:
         case MaterialDomain::COMPUTE:
             break;
     }
-    generateBindingIndexMap(config, config.materialInfo->sib, map);
-    return map;
+    fn((uint8_t) SamplerBindingPoints::PER_MATERIAL_INSTANCE, &config.materialInfo->sib);
 }
 
 }; // namespace msl
@@ -172,34 +163,98 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
         }
     }
 
+    mslOptions.argument_buffers = true;
+
+    // Necessary to keep all argument buffers the same size across material variants.
+    mslOptions.pad_argument_buffer_resources = true;
+
     mslCompiler.set_msl_options(mslOptions);
 
     auto executionModel = mslCompiler.get_execution_model();
 
-    // The index will be used to remap based on BindingIndexMap and
-    // the result becomes a [[buffer(index)]], [[texture(index)]] or [[sampler(index)]].
-    auto updateResourceBinding = [executionModel, &mslCompiler]
+    // Metal Descriptor Sets
+    // Descriptor set       Name                    Binding
+    // ----------------------------------------------------------------------
+    // 0                    Uniforms                Individual bindings
+    // 1-4                  Sampler groups          [[buffer(27-30)]]
+    // 5-7                  Unused
+    //
+    // Here we enumerate each sampler in each sampler group and map it to a Metal resource. Each
+    // sampler group is its own descriptor set, and each descriptor set becomes an argument buffer.
+    //
+    // For example, in GLSL, we might have the following:
+    // layout( set = 1, binding = 0 ) uniform sampler2D textureA;
+    // layout( set = 1, binding = 1 ) uniform sampler2D textureB;
+    //
+    // This becomes the following MSL argument buffer:
+    // struct spvDescriptorSetBuffer1 {
+    //     texture2d<float> textureA [[id(0)]];
+    //     sampler textureASmplr [[id(1)]];
+    //     texture2d<float> textureB [[id(2)]];
+    //     sampler textureBSmplr [[id(3)]];
+    // };
+    //
+    // Which is then bound to the vertex/fragment functions:
+    // constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(27)]]
+    forEachSib(config, [&executionModel, &mslCompiler](uint8_t bindingPoint, const SamplerInterfaceBlock* sib) {
+        const auto& infoList = sib->getSamplerInfoList();
+        for (const auto& info: infoList) {
+            // A MSLResourceBinding tells SPIRV-Cross how to map a sampler2D with a given set and
+            // binding to Metal resources.
+            // For example, textureB in the above example has:
+            //   bindingPoint = 0      (it's the first sampler group)
+            //   set = 1               (bindingPoint + 1, the first descriptor set is for uniforms)
+            //   offset = 1            (it's the second sampler in the sampler group)
+            // The equivalent MSL texture argument is assigned the [[id(2)]] binding and its sampler
+            // resource assigned the [[id(3)]] binding (controlled via msl_texture and msl_sampler).
+            MSLResourceBinding newBinding;
+            newBinding.basetype = SPIRType::BaseType::SampledImage;
+            newBinding.stage = executionModel;
+            newBinding.desc_set = bindingPoint + 1;
+            newBinding.binding = info.offset;
+            newBinding.count = 1;
+            newBinding.msl_texture = info.offset * 2;
+            newBinding.msl_sampler = info.offset * 2 + 1;
+            mslCompiler.add_msl_resource_binding(newBinding);
+        }
+        // This final MSLResourceBinding is how we control the [[buffer(n)]] binding of the argument
+        // buffer itself;
+        MSLResourceBinding argBufferBinding;
+        // the baseType doesn't matter, but can't be UNKNOWN
+        argBufferBinding.basetype = SPIRType::BaseType::Float;
+        argBufferBinding.stage = executionModel;
+        argBufferBinding.desc_set = bindingPoint + 1;
+        argBufferBinding.binding = kArgumentBufferBinding;
+        argBufferBinding.count = 1;
+        argBufferBinding.msl_buffer =
+                CodeGenerator::METAL_SAMPLER_GROUP_BINDING_START + bindingPoint;
+        mslCompiler.add_msl_resource_binding(argBufferBinding);
+    });
+
+    auto updateResourceBindingDefault = [executionModel, &mslCompiler]
             (const auto& resource, const BindingIndexMap* map = nullptr) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
         MSLResourceBinding newBinding;
+        newBinding.basetype = SPIRType::BaseType::Void;
         newBinding.stage = executionModel;
         newBinding.desc_set = set;
         newBinding.binding = binding;
+        newBinding.count = 1;
         newBinding.msl_texture =
         newBinding.msl_sampler =
-        newBinding.msl_buffer = map ? map->at(mslCompiler.get_name(resource.id)) : binding;
+        newBinding.msl_buffer = binding;
         mslCompiler.add_msl_resource_binding(newBinding);
     };
 
     auto resources = mslCompiler.get_shader_resources();
-    auto bindingIndexMap = getBindingIndexMap(config);
-    for (const auto& resource : resources.sampled_images) {
-        updateResourceBinding(resource, &bindingIndexMap);
-    }
     for (const auto& resource : resources.uniform_buffers) {
-        updateResourceBinding(resource);
+        updateResourceBindingDefault(resource);
     }
+
+    // Descriptor set 0 is uniforms. The add_discrete_descriptor_set call here prevents the uniforms
+    // from becoming argument buffers.
+    mslCompiler.add_discrete_descriptor_set(0);
 
     *outMsl = mslCompiler.compile();
     *outMsl = minifier.removeWhitespace(*outMsl);
