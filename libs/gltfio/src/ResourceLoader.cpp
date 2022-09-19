@@ -521,8 +521,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     // materials or textures will be added. Notify the dependency graph.
     asset->mDependencyGraph.commitEdges();
 
-    asset->createAnimators();
-
     return true;
 }
 

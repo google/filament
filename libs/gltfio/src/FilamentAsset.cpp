@@ -37,10 +37,9 @@ FFilamentAsset::~FFilamentAsset() {
     // Free transient load-time data if they haven't been freed yet.
     releaseSourceData();
 
-    // Destroy all instance objects and their animators. Instance entities / components are
+    // Destroy all instance objects. Instance entities / components are
     // destroyed later in this method because they are owned by the asset.
     for (FFilamentInstance* instance : mInstances) {
-        delete instance->animator;
         delete instance;
     }
 
@@ -71,9 +70,6 @@ FFilamentAsset::~FFilamentAsset() {
         }
     }
 
-    for (auto mi : mMaterialInstances) {
-        mEngine->destroy(mi);
-    }
     for (auto vb : mVertexBuffers) {
         mEngine->destroy(vb);
     }
@@ -154,14 +150,6 @@ void FFilamentAsset::applyTextureBinding(size_t textureIndex, const TextureSlot&
     }
 }
 
-void FFilamentAsset::createAnimators() {
-    assert_invariant(mAnimator == nullptr);
-    mAnimator = new Animator(this, nullptr);
-    for (FFilamentInstance* instance : mInstances) {
-        instance->createAnimator();
-    }
-}
-
 const char* FFilamentAsset::getMorphTargetNameAt(utils::Entity entity,
         size_t targetIndex) const noexcept {
     if (!mResourcesLoaded) {
@@ -183,29 +171,6 @@ size_t FFilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcep
 
     const auto& names = mNodeManager->getMorphTargetNames(mNodeManager->getInstance(entity));
     return names.size();
-}
-
-size_t FFilamentAsset::getMaterialVariantCount() const noexcept {
-    return mVariants.size();
-}
-
-const char* FFilamentAsset::getMaterialVariantName(size_t variantIndex) const noexcept {
-    if (variantIndex >= mVariants.size()) {
-        return nullptr;
-    }
-    return mVariants[variantIndex].name.c_str();
-}
-
-void FFilamentAsset::applyMaterialVariant(size_t variantIndex) noexcept {
-    if (variantIndex >= mVariants.size()) {
-        return;
-    }
-    const std::vector<VariantMapping>& mappings = mVariants[variantIndex].mappings;
-    RenderableManager& rm = mEngine->getRenderableManager();
-    for (const auto& mapping : mappings) {
-        RenderableManager::Instance instance = rm.getInstance(mapping.renderable);
-        rm.setMaterialInstanceAt(instance, mapping.primitiveIndex, mapping.material);
-    }
 }
 
 Entity FFilamentAsset::getWireframe() noexcept {
@@ -295,7 +260,7 @@ size_t FFilamentAsset::getEntitiesByPrefix(const char* prefix, Entity* entities,
 }
 
 void FFilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities,
-        size_t count, SceneMask sceneFilter) {
+        size_t count, SceneMask sceneFilter) const {
     auto& nm = *mNodeManager;
     for (size_t ei = 0; ei < count; ++ei) {
         const Entity entity = entities[ei];
@@ -312,10 +277,6 @@ void FilamentAsset::detachFilamentComponents() noexcept {
 
 bool FilamentAsset::areFilamentComponentsDetached() const noexcept {
     return upcast(this)->mDetachedFilamentComponents;
-}
-
-void FilamentAsset::detachMaterialInstances() {
-    upcast(this)->detachMaterialInstances();
 }
 
 size_t FilamentAsset::getEntityCount() const noexcept {
@@ -362,18 +323,6 @@ Entity FilamentAsset::popRenderable() noexcept {
 
 size_t FilamentAsset::popRenderables(Entity* result, size_t count) noexcept {
     return upcast(this)->popRenderables(result, count);
-}
-
-size_t FilamentAsset::getMaterialInstanceCount() const noexcept {
-    return upcast(this)->getMaterialInstanceCount();
-}
-
-const MaterialInstance* const* FilamentAsset::getMaterialInstances() const noexcept {
-    return upcast(this)->getMaterialInstances();
-}
-
-MaterialInstance* const* FilamentAsset::getMaterialInstances() noexcept {
-    return upcast(this)->getMaterialInstances();
 }
 
 size_t FilamentAsset::getResourceUriCount() const noexcept {
@@ -423,18 +372,6 @@ size_t FilamentAsset::getMorphTargetCountAt(utils::Entity entity) const noexcept
     return upcast(this)->getMorphTargetCountAt(entity);
 }
 
-const char* FilamentAsset::getMaterialVariantName(size_t variantIndex) const noexcept {
-    return upcast(this)->getMaterialVariantName(variantIndex);
-}
-
-void FilamentAsset::applyMaterialVariant(size_t variantIndex) noexcept {
-    return upcast(this)->applyMaterialVariant(variantIndex);
-}
-
-size_t FilamentAsset::getMaterialVariantCount() const noexcept {
-    return upcast(this)->getMaterialVariantCount();
-}
-
 Entity FilamentAsset::getWireframe() noexcept {
     return upcast(this)->getWireframe();
 }
@@ -468,7 +405,7 @@ const char* FilamentAsset::getSceneName(size_t sceneIndex) const noexcept {
 }
 
 void FilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
-        SceneMask sceneFilter) {
+        SceneMask sceneFilter) const {
     upcast(this)->addEntitiesToScene(targetScene, entities, count, sceneFilter);
 }
 

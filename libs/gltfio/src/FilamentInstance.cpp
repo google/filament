@@ -33,6 +33,13 @@ FFilamentInstance::FFilamentInstance(Entity root, FFilamentAsset const* owner) :
     owner(owner),
     nodeMap(owner->mSourceAsset->hierarchy->nodes_count, Entity()) {}
 
+FFilamentInstance::~FFilamentInstance() {
+    delete animator;
+    for (auto mi : mMaterialInstances) {
+        owner->mEngine->destroy(mi);
+    }
+}
+
 Animator* FFilamentInstance::getAnimator() const noexcept {
     assert_invariant(animator);
     return animator;
@@ -80,18 +87,6 @@ void FFilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
         return;
     }
     skins[skinIndex].targets.erase(target);
-}
-
-void FFilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
-    if (variantIndex >= variants.size()) {
-        return;
-    }
-    const auto& mappings = variants[variantIndex].mappings;
-    RenderableManager& rm = owner->mEngine->getRenderableManager();
-    for (const auto& mapping : mappings) {
-        auto renderable = rm.getInstance(mapping.renderable);
-        rm.setMaterialInstanceAt(renderable, mapping.primitiveIndex, mapping.material);
-    }
 }
 
 void FFilamentInstance::recomputeBoundingBoxes() {
@@ -285,6 +280,57 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     boundingBox = assetBounds;
 }
 
+size_t FFilamentInstance::getMaterialVariantCount() const noexcept {
+    return variants.size();
+}
+
+const char* FFilamentInstance::getMaterialVariantName(size_t variantIndex) const noexcept {
+    if (variantIndex >= variants.size()) {
+        return nullptr;
+    }
+    return variants[variantIndex].name.c_str();
+}
+
+void FFilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
+    if (variantIndex >= variants.size()) {
+        return;
+    }
+    const auto& mappings = variants[variantIndex].mappings;
+    RenderableManager& rm = owner->mEngine->getRenderableManager();
+    for (const auto& mapping : mappings) {
+        auto renderable = rm.getInstance(mapping.renderable);
+        rm.setMaterialInstanceAt(renderable, mapping.primitiveIndex, mapping.material);
+    }
+}
+
+void FilamentInstance::detachMaterialInstances() {
+    upcast(this)->detachMaterialInstances();
+}
+
+size_t FilamentInstance::getMaterialInstanceCount() const noexcept {
+    return upcast(this)->getMaterialInstanceCount();
+}
+
+const MaterialInstance* const* FilamentInstance::getMaterialInstances() const noexcept {
+    return upcast(this)->getMaterialInstances();
+}
+
+MaterialInstance* const* FilamentInstance::getMaterialInstances() noexcept {
+    return upcast(this)->getMaterialInstances();
+}
+
+const char* FilamentInstance::getMaterialVariantName(size_t variantIndex) const noexcept {
+    return upcast(this)->getMaterialVariantName(variantIndex);
+}
+
+void FilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
+    return upcast(this)->applyMaterialVariant(variantIndex);
+}
+
+size_t FilamentInstance::getMaterialVariantCount() const noexcept {
+    return upcast(this)->getMaterialVariantCount();
+}
+
 FilamentAsset const* FilamentInstance::getAsset() const noexcept {
     return upcast(this)->owner;
 }
@@ -300,10 +346,6 @@ const Entity* FilamentInstance::getEntities() const noexcept {
 
 Entity FilamentInstance::getRoot() const noexcept {
     return upcast(this)->root;
-}
-
-void FilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
-    return upcast(this)->applyMaterialVariant(variantIndex);
 }
 
 Animator* FilamentInstance::getAnimator() noexcept {

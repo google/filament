@@ -141,7 +141,9 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     size_t getRenderableEntityCount() const noexcept {
-        return mRenderableCount;
+        // Note that mRenderableCount is a "predicted" number of renderables, so if this is a
+        // zero-instance asset, then we need to explicitly return zero.
+        return mEntities.empty() ? 0 : mRenderableCount;
     }
 
     const utils::Entity* getCameraEntities() const noexcept {
@@ -158,18 +160,6 @@ struct FFilamentAsset : public FilamentAsset {
 
     size_t popRenderables(utils::Entity* entities, size_t count) noexcept {
         return mDependencyGraph.popRenderables(entities, count);
-    }
-
-    size_t getMaterialInstanceCount() const noexcept {
-        return mMaterialInstances.size();
-    }
-
-    const MaterialInstance* const* getMaterialInstances() const noexcept {
-        return mMaterialInstances.data();
-    }
-
-    MaterialInstance* const* getMaterialInstances() noexcept {
-        return mMaterialInstances.data();
     }
 
     size_t getResourceUriCount() const noexcept {
@@ -202,12 +192,6 @@ struct FFilamentAsset : public FilamentAsset {
 
     size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
 
-    size_t getMaterialVariantCount() const noexcept;
-
-    const char* getMaterialVariantName(size_t variantIndex) const noexcept;
-
-    void applyMaterialVariant(size_t variantIndex) noexcept;
-
     utils::Entity getWireframe() noexcept;
 
     Engine* getEngine() const noexcept {
@@ -235,14 +219,10 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     void addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
-            SceneMask sceneFilter);
+            SceneMask sceneFilter) const;
 
     void detachFilamentComponents() noexcept {
         mDetachedFilamentComponents = true;
-    }
-
-    void detachMaterialInstances() {
-        mMaterialInstances.clear();
     }
 
     // end public API
@@ -255,8 +235,6 @@ struct FFilamentAsset : public FilamentAsset {
     // Calls mi->setParameter() for the given texture slot and optionally adds an edge
     // to the dependency graph used for gradual reveal of entities.
     void applyTextureBinding(size_t textureIndex,const TextureSlot& tb, bool addDependency = true);
-
-    void createAnimators();
 
     struct Skin {
         utils::CString name;
@@ -271,13 +249,11 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<utils::Entity> mLightEntities;
     std::vector<utils::Entity> mCameraEntities;
     size_t mRenderableCount = 0;
-    std::vector<MaterialInstance*> mMaterialInstances;
     std::vector<VertexBuffer*> mVertexBuffers;
     std::vector<BufferObject*> mBufferObjects;
     std::vector<IndexBuffer*> mIndexBuffers;
     std::vector<MorphTargetBuffer*> mMorphTargetBuffers;
     utils::FixedCapacityVector<Skin> mSkins;
-    utils::FixedCapacityVector<Variant> mVariants;
     utils::FixedCapacityVector<utils::CString> mScenes;
     Aabb mBoundingBox;
     utils::Entity mRoot;
