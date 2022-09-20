@@ -29,7 +29,7 @@
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 
 #include <backend/DriverEnums.h>
@@ -111,7 +111,7 @@ public:
 
     // generate uniforms
     utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderStage stage,
-            filament::UniformBindingPoints binding, const filament::UniformInterfaceBlock& uib) const;
+            filament::UniformBindingPoints binding, const filament::BufferInterfaceBlock& uib) const;
 
     // generate samplers
     utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,
@@ -167,7 +167,7 @@ private:
     TargetLanguage mTargetLanguage;
 
     // return type name of uniform  (e.g.: "vec3", "vec4", "float")
-    static char const* getUniformTypeName(filament::UniformInterfaceBlock::UniformInfo const& info) noexcept;
+    static char const* getUniformTypeName(filament::BufferInterfaceBlock::FieldInfo const& info) noexcept;
 
     // return type name of output  (e.g.: "vec3", "vec4", "float")
     static char const* getOutputTypeName(MaterialBuilder::OutputType type) noexcept;
@@ -175,7 +175,7 @@ private:
     // return qualifier for the specified interpolation mode
     static char const* getInterpolationQualifier(filament::Interpolation interpolation) noexcept;
 
-    static bool hasPrecision(filament::UniformInterfaceBlock::Type type) noexcept;
+    static bool hasPrecision(filament::BufferInterfaceBlock::Type type) noexcept;
 };
 
 } // namespace filamat

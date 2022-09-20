@@ -34,7 +34,7 @@ class Material;
 class Texture;
 class TextureSampler;
 class UniformBuffer;
-class UniformInterfaceBlock;
+class BufferInterfaceBlock;
 
 class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
     template<size_t N>

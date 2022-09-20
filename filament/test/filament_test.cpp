@@ -32,7 +32,7 @@
 #include <filament/Material.h>
 #include <filament/Engine.h>
 
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
 #include <private/backend/BackendUtils.h>
 
@@ -279,30 +279,30 @@ TEST(FilamentTest, TransformManager) {
 
 TEST(FilamentTest, UniformInterfaceBlock) {
 
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
 
     b.name("TestUniformInterfaceBlock");
     b.add({
-            { "a_float_0",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_float_1",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_float_2",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_float_3",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_vec4_0",   0, UniformInterfaceBlock::Type::FLOAT4 },
-            { "a_float_4",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_float_5",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_float_6",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_vec3_0",   0, UniformInterfaceBlock::Type::FLOAT3 },
-            { "a_float_7",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_float[3]", 3, UniformInterfaceBlock::Type::FLOAT },
-            { "a_float_8",  0, UniformInterfaceBlock::Type::FLOAT },
-            { "a_mat3_0",   0, UniformInterfaceBlock::Type::MAT3 },
-            { "a_mat4_0",   0, UniformInterfaceBlock::Type::MAT4 },
-            { "a_mat3[3]",  3, UniformInterfaceBlock::Type::MAT3 }
+            { "a_float_0",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_1",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_2",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_3",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_vec4_0",   0, BufferInterfaceBlock::Type::FLOAT4 },
+            { "a_float_4",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_5",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_6",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_vec3_0",   0, BufferInterfaceBlock::Type::FLOAT3 },
+            { "a_float_7",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float[3]", 3, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_8",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_mat3_0",   0, BufferInterfaceBlock::Type::MAT3 },
+            { "a_mat4_0",   0, BufferInterfaceBlock::Type::MAT4 },
+            { "a_mat3[3]",  3, BufferInterfaceBlock::Type::MAT3 }
         });
 
 
-    UniformInterfaceBlock ib(b.build());
-    auto const& info = ib.getUniformInfoList();
+    BufferInterfaceBlock ib(b.build());
+    auto const& info = ib.getFieldInfoList();
 
     // test that 4 floats are packed together
     EXPECT_EQ(0, info[0].offset);
@@ -402,27 +402,27 @@ TEST(FilamentTest, UniformBuffer) {
         EXPECT_EQ(offsetof(ubo, m1)/4, info[13].offset);
     };
 
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
     b.name("TestUniformBuffer");
     b.add({
-        { "a_float_0", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_float_1", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_float_2", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_float_3", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_vec4_0",  0, UniformInterfaceBlock::Type::FLOAT4 },
-        { "a_float_4", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_float_5", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_float_6", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_vec3_0",  0, UniformInterfaceBlock::Type::FLOAT3 },
-        { "a_float_7", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_float[3]",3, UniformInterfaceBlock::Type::FLOAT },
-        { "a_float_8", 0, UniformInterfaceBlock::Type::FLOAT },
-        { "a_mat3_0",  0, UniformInterfaceBlock::Type::MAT3 },
-        { "a_mat4_0",  0, UniformInterfaceBlock::Type::MAT4 },
+        { "a_float_0", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_1", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_2", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_3", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_vec4_0",  0, BufferInterfaceBlock::Type::FLOAT4 },
+        { "a_float_4", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_5", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_6", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_vec3_0",  0, BufferInterfaceBlock::Type::FLOAT3 },
+        { "a_float_7", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float[3]",3, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_8", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_mat3_0",  0, BufferInterfaceBlock::Type::MAT3 },
+        { "a_mat4_0",  0, BufferInterfaceBlock::Type::MAT4 },
     });
-    UniformInterfaceBlock ib(b.build());
+    BufferInterfaceBlock ib(b.build());
 
-    CHECK2(ib.getUniformInfoList());
+    CHECK2(ib.getFieldInfoList());
 
     EXPECT_EQ(sizeof(ubo), ib.getSize());
 
@@ -464,46 +464,46 @@ TEST(FilamentTest, UniformBuffer) {
 }
 
 TEST(FilamentTest, UniformBufferSize1) {
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
     b.name("UniformBufferSize1");
     b.add({
-            { "f4a", 0, UniformInterfaceBlock::Type::FLOAT4 }, // offset = 0
-            { "f4b", 0, UniformInterfaceBlock::Type::FLOAT4 }, // offset = 16
-            { "f1a", 0, UniformInterfaceBlock::Type::FLOAT },  // offset = 32
-            { "f1b", 0, UniformInterfaceBlock::Type::FLOAT },  // offset = 36
+            { "f4a", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 0
+            { "f4b", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 16
+            { "f1a", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 32
+            { "f1b", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 36
     });
-    UniformInterfaceBlock uib(b.build());
+    BufferInterfaceBlock uib(b.build());
     UniformBuffer buffer(uib.getSize());
 
     float4 f4(1.0f);
-    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
     float f1(1.0f);
-    ssize_t f1_offset = uib.getUniformOffset("f1b", 0);
+    ssize_t f1_offset = uib.getFieldOffset("f1b", 0);
     buffer.setUniformArray(f1_offset, &f1, 1);
 
     buffer.invalidate();
 }
 
 TEST(FilamentTest, UniformBufferSize2) {
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
     b.name("UniformBufferSize2");
     b.add({
-            { "f4a", 0, UniformInterfaceBlock::Type::FLOAT4 }, // offset = 0
-            { "f4b", 0, UniformInterfaceBlock::Type::FLOAT4 }, // offset = 16
-            { "f1a", 0, UniformInterfaceBlock::Type::FLOAT },  // offset = 32
-            { "f2a", 0, UniformInterfaceBlock::Type::FLOAT2 }, // offset = 36
+            { "f4a", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 0
+            { "f4b", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 16
+            { "f1a", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 32
+            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 36
     });
-    UniformInterfaceBlock uib(b.build());
+    BufferInterfaceBlock uib(b.build());
     UniformBuffer buffer(uib.getSize());
 
     float4 f4(1.0f);
-    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
     float2 f2(1.0f);
-    ssize_t f2_offset = uib.getUniformOffset("f2a", 0);
+    ssize_t f2_offset = uib.getFieldOffset("f2a", 0);
     buffer.setUniformArray(f2_offset, &f2, 1);
 
     buffer.invalidate();

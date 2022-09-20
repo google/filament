@@ -26,7 +26,7 @@
 
 #include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 
@@ -131,7 +131,7 @@ bool MaterialParser::getName(utils::CString* cstring) const noexcept {
    return unflattener.read(cstring);
 }
 
-bool MaterialParser::getUIB(UniformInterfaceBlock* uib) const noexcept {
+bool MaterialParser::getUIB(BufferInterfaceBlock* uib) const noexcept {
     auto type = MaterialUib;
     const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
     const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
@@ -316,9 +316,9 @@ bool MaterialParser::getShader(ShaderContent& shader,
 
 
 bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
-        filament::UniformInterfaceBlock* uib) {
+        filament::BufferInterfaceBlock* uib) {
 
-    UniformInterfaceBlock::Builder builder = UniformInterfaceBlock::Builder();
+    BufferInterfaceBlock::Builder builder = BufferInterfaceBlock::Builder();
 
     CString name;
     if (!unflattener.read(&name)) {
@@ -358,8 +358,8 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
         // a size of 1 means not an array
         builder.add({{{ fieldName.data(), fieldName.size() },
                       uint32_t(fieldSize == 1 ? 0 : fieldSize),
-                      UniformInterfaceBlock::Type(fieldType),
-                      UniformInterfaceBlock::Precision(fieldPrecision) }});
+                      BufferInterfaceBlock::Type(fieldType),
+                      BufferInterfaceBlock::Precision(fieldPrecision) }});
     }
 
     *uib = builder.build();

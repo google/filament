@@ -27,7 +27,7 @@
 
 #include <filamat/Enums.h>
 
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
 
@@ -450,7 +450,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 
     // Build the per-material sampler block and uniform block.
     SamplerInterfaceBlock::Builder sbb;
-    UniformInterfaceBlock::Builder ibb;
+    BufferInterfaceBlock::Builder ibb;
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
         if (param.isSampler()) {

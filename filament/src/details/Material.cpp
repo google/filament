@@ -26,7 +26,7 @@
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
@@ -329,8 +329,8 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
-    return mUniformInterfaceBlock.hasUniform(name) ||
-            mSamplerInterfaceBlock.hasSampler(name) ||
+    return mUniformInterfaceBlock.hasField(name) ||
+           mSamplerInterfaceBlock.hasSampler(name) ||
             mSubpassInfo.name == utils::CString(name);
 }
 
@@ -338,9 +338,9 @@ bool FMaterial::isSampler(const char* name) const noexcept {
     return mSamplerInterfaceBlock.hasSampler(name);
 }
 
-UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
+BufferInterfaceBlock::FieldInfo const* FMaterial::reflect(
         std::string_view name) const noexcept {
-    return mUniformInterfaceBlock.getUniformInfo(name);
+    return mUniformInterfaceBlock.getFieldInfo(name);
 }
 
 void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
@@ -454,7 +454,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexce
 size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
     count = std::min(count, getParameterCount());
 
-    const auto& uniforms = mUniformInterfaceBlock.getUniformInfoList();
+    const auto& uniforms = mUniformInterfaceBlock.getFieldInfoList();
     size_t i = 0;
     size_t uniformCount = std::min(count, size_t(uniforms.size()));
     for ( ; i < uniformCount; i++) {

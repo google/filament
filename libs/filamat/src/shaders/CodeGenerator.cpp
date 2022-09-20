@@ -339,8 +339,8 @@ const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precis
 }
 
 io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage,
-        UniformBindingPoints binding, const UniformInterfaceBlock& uib) const {
-    auto const& infos = uib.getUniformInfoList();
+        UniformBindingPoints binding, const BufferInterfaceBlock& uib) const {
+    auto const& infos = uib.getFieldInfoList();
     if (infos.empty()) {
         return out;
     }
@@ -776,8 +776,8 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
     }
 }
 
-char const* CodeGenerator::getUniformTypeName(UniformInterfaceBlock::UniformInfo const& info) noexcept {
-    using Type = UniformInterfaceBlock::Type;
+char const* CodeGenerator::getUniformTypeName(BufferInterfaceBlock::FieldInfo const& info) noexcept {
+    using Type = BufferInterfaceBlock::Type;
     switch (info.type) {
         case Type::BOOL:   return "bool";
         case Type::BOOL2:  return "bvec2";
@@ -882,7 +882,7 @@ char const* CodeGenerator::getPrecisionQualifier(Precision precision,
 }
 
 /* static */
-bool CodeGenerator::hasPrecision(UniformInterfaceBlock::Type type) noexcept {
+bool CodeGenerator::hasPrecision(BufferInterfaceBlock::Type type) noexcept {
     switch (type) {
         case UniformType::BOOL:
         case UniformType::BOOL2:

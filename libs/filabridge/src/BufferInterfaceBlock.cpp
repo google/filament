@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/filament/UniformInterfaceBlock.h"
+#include "private/filament/BufferInterfaceBlock.h"
 
 #include <utils/Panic.h>
 #include <utils/compiler.h>
@@ -25,17 +25,17 @@ using namespace utils;
 
 namespace filament {
 
-UniformInterfaceBlock::Builder::Builder() noexcept = default;
-UniformInterfaceBlock::Builder::~Builder() noexcept = default;
+BufferInterfaceBlock::Builder::Builder() noexcept = default;
+BufferInterfaceBlock::Builder::~Builder() noexcept = default;
 
-UniformInterfaceBlock::Builder&
-UniformInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
+BufferInterfaceBlock::Builder&
+BufferInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
     mName = { interfaceBlockName.data(), interfaceBlockName.size() };
     return *this;
 }
 
-UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
-        std::initializer_list<UniformBlockEntry> list) {
+BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::add(
+        std::initializer_list<InterfaceBlockEntry> list) {
     mEntries.reserve(mEntries.size() + list.size());
     for (auto const& item : list) {
         mEntries.push_back({
@@ -48,24 +48,24 @@ UniformInterfaceBlock::Builder& UniformInterfaceBlock::Builder::add(
     return *this;
 }
 
-UniformInterfaceBlock UniformInterfaceBlock::Builder::build() {
-    return UniformInterfaceBlock(*this);
+BufferInterfaceBlock BufferInterfaceBlock::Builder::build() {
+    return BufferInterfaceBlock(*this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UniformInterfaceBlock::UniformInterfaceBlock() = default;
-UniformInterfaceBlock::UniformInterfaceBlock(UniformInterfaceBlock&& rhs) noexcept = default;
-UniformInterfaceBlock& UniformInterfaceBlock::operator=(UniformInterfaceBlock&& rhs) noexcept = default;
-UniformInterfaceBlock::~UniformInterfaceBlock() noexcept = default;
+BufferInterfaceBlock::BufferInterfaceBlock() = default;
+BufferInterfaceBlock::BufferInterfaceBlock(BufferInterfaceBlock&& rhs) noexcept = default;
+BufferInterfaceBlock& BufferInterfaceBlock::operator=(BufferInterfaceBlock&& rhs) noexcept = default;
+BufferInterfaceBlock::~BufferInterfaceBlock() noexcept = default;
 
-UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
-    : mName(builder.mName), mUniformsInfoList(builder.mEntries.size())
+BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
+    : mName(builder.mName), mFieldInfoList(builder.mEntries.size())
 {
     auto& infoMap = mInfoMap;
     infoMap.reserve(builder.mEntries.size());
 
-    auto& uniformsInfoList = mUniformsInfoList;
+    auto& uniformsInfoList = mFieldInfoList;
 
     uint32_t i = 0;
     uint16_t offset = 0;
@@ -82,7 +82,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
         size_t padding = (alignment - (offset % alignment)) % alignment;
         offset += padding;
 
-        UniformInfo& info = uniformsInfoList[i];
+        FieldInfo& info = uniformsInfoList[i];
         info = { e.name, offset, stride, e.type, e.size, e.precision, e.structName, e.sizeName };
 
         // record this uniform info
@@ -97,21 +97,21 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
     mSize = sizeof(uint32_t) * ((offset + 3) & ~3);
 }
 
-ssize_t UniformInterfaceBlock::getUniformOffset(std::string_view name, size_t index) const {
-    auto const* info = getUniformInfo(name);
+ssize_t BufferInterfaceBlock::getFieldOffset(std::string_view name, size_t index) const {
+    auto const* info = getFieldInfo(name);
     assert_invariant(info);
     return (ssize_t)info->getBufferOffset(index);
 }
 
-UniformInterfaceBlock::UniformInfo const* UniformInterfaceBlock::getUniformInfo(
+BufferInterfaceBlock::FieldInfo const* BufferInterfaceBlock::getFieldInfo(
         std::string_view name) const {
     auto pos = mInfoMap.find(name);
     ASSERT_PRECONDITION(pos != mInfoMap.end(),
             "uniform named \"%.*s\" not found", name.size(), name.data());
-    return &mUniformsInfoList[pos->second];
+    return &mFieldInfoList[pos->second];
 }
 
-uint8_t UTILS_NOINLINE UniformInterfaceBlock::baseAlignmentForType(UniformInterfaceBlock::Type type) noexcept {
+uint8_t UTILS_NOINLINE BufferInterfaceBlock::baseAlignmentForType(BufferInterfaceBlock::Type type) noexcept {
     switch (type) {
         case Type::BOOL:
         case Type::FLOAT:
@@ -138,7 +138,7 @@ uint8_t UTILS_NOINLINE UniformInterfaceBlock::baseAlignmentForType(UniformInterf
     }
 }
 
-uint8_t UTILS_NOINLINE UniformInterfaceBlock::strideForType(UniformInterfaceBlock::Type type, uint32_t stride) noexcept {
+uint8_t UTILS_NOINLINE BufferInterfaceBlock::strideForType(BufferInterfaceBlock::Type type, uint32_t stride) noexcept {
     switch (type) {
         case Type::BOOL:
         case Type::INT:
