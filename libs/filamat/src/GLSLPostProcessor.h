@@ -53,7 +53,7 @@ public:
         filament::Variant variant;
         MaterialBuilder::TargetApi targetApi;
         MaterialBuilder::TargetLanguage targetLanguage;
-        filament::backend::ShaderType shaderType;
+        filament::backend::ShaderStage shaderType;
         filament::backend::ShaderModel shaderModel;
         filament::MaterialDomain domain;
         const filamat::MaterialInfo* materialInfo;

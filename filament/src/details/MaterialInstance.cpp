@@ -152,11 +152,11 @@ void FMaterialInstance::setParameter(std::string_view name,
 }
 
 void FMaterialInstance::setParameterImpl(std::string_view name,
-        Texture const* texture, TextureSampler const& sampler) {
+        FTexture const* texture, TextureSampler const& sampler) {
 
 #ifndef NDEBUG
     // Per GLES3.x specification, depth texture can't be filtered unless in compare mode.
-    if (isDepthFormat(texture->getFormat())) {
+    if (texture && isDepthFormat(texture->getFormat())) {
         if (sampler.getCompareMode() == SamplerCompareMode::NONE) {
             SamplerMinFilter minFilter = sampler.getMinFilter();
             SamplerMagFilter magFilter = sampler.getMagFilter();
@@ -174,7 +174,11 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
     }
 #endif
 
-    setParameter(name, upcast(texture)->getHwHandle(), sampler.getSamplerParams());
+    Handle<HwTexture> handle{};
+    if (UTILS_LIKELY(texture)) {
+        handle = texture->getHwHandle();
+    }
+    setParameter(name, handle, sampler.getSamplerParams());
 }
 
 void FMaterialInstance::setMaskThreshold(float threshold) noexcept {

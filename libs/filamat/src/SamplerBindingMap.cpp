@@ -21,35 +21,16 @@
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/SibStructs.h>
 
 #include <backend/DriverEnums.h>
-
-#include <utils/Log.h>
 
 namespace filament {
 
 using namespace utils;
 using namespace backend;
 
-// we can't use operator<< because it's defined in libbackend, which is only a header dependency
-static const char* to_string(ShaderStageFlags stageFlags) noexcept {
-    using namespace backend;
-    switch (stageFlags) {
-        case ShaderStageFlags::NONE:
-            return "{ }";
-        case ShaderStageFlags::VERTEX:
-            return "{ vertex }";
-        case ShaderStageFlags::FRAGMENT:
-            return "{ fragment }";
-        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:
-            return "{ vertex | fragment }";
-    }
-    return nullptr;
-}
-
 void SamplerBindingMap::init(MaterialDomain materialDomain,
-        const SamplerInterfaceBlock* perMaterialSib, const char* materialName) {
+        SamplerInterfaceBlock const& perMaterialSib) {
 
     assert_invariant(mActiveSamplerCount == 0);
 
@@ -62,7 +43,7 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
     auto processSamplerGroup = [&](SamplerBindingPoints bindingPoint){
         SamplerInterfaceBlock const* const sib =
                 (bindingPoint == SamplerBindingPoints::PER_MATERIAL_INSTANCE) ?
-                perMaterialSib : SibGenerator::getSib(bindingPoint, {});
+                &perMaterialSib : SibGenerator::getSib(bindingPoint, {});
         if (sib) {
             const auto stageFlags = sib->getStageFlags();
             auto const& list = sib->getSamplerInfoList();
@@ -99,38 +80,22 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
 
     mActiveSamplerCount = offset;
 
-    // TODO: update this check for feature level 2
-    const bool isOverflow = vertexSamplerCount > MAX_VERTEX_SAMPLER_COUNT ||
-                            fragmentSamplerCount > MAX_FRAGMENT_SAMPLER_COUNT;
+    // we shouldn't be using more total samplers than supported
+    assert_invariant(vertexSamplerCount + fragmentSamplerCount <= MAX_SAMPLER_COUNT);
 
-    // If an overflow occurred, go back through and list all sampler names. This is helpful to
-    // material authors who need to understand where the samplers are coming from.
-    if (UTILS_UNLIKELY(isOverflow)) {
-        slog.e << "WARNING: Exceeded max sampler count of " << MAX_SAMPLER_COUNT;
-        if (materialName) {
-            slog.e << " (" << materialName << ")";
-        }
-        slog.e << io::endl;
-        offset = 0;
+    // Here we cannot check for overflow for a given feature level because we don't know
+    // what feature level the backend will support. We only know the feature level declared
+    // by the material. However, we can at least assert for the highest feature level.
 
+    constexpr size_t MAX_VERTEX_SAMPLER_COUNT =
+            backend::FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT;
 
-        UTILS_NOUNROLL
-        for (size_t blockIndex = 0; blockIndex < Enum::count<SamplerBindingPoints>(); blockIndex++) {
-            SamplerInterfaceBlock const* const sib =
-                    (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) ?
-                    perMaterialSib : SibGenerator::getSib(SamplerBindingPoints(blockIndex), {});
-            if (sib) {
-                auto const& sibFields = sib->getSamplerInfoList();
-                auto const stageFlagsAsString = to_string(sib->getStageFlags());
-                for (auto const& sInfo : sibFields) {
-                    slog.e << "  " << +offset << " " << sInfo.name.c_str()
-                        << " " <<  stageFlagsAsString << '\n';
-                    offset++;
-                }
-                flush(slog.e);
-            }
-        }
-    }
+    assert_invariant(vertexSamplerCount <= MAX_VERTEX_SAMPLER_COUNT);
+
+    constexpr size_t MAX_FRAGMENT_SAMPLER_COUNT =
+            backend::FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_FRAGMENT_SAMPLER_COUNT;
+
+    assert_invariant(fragmentSamplerCount <= MAX_FRAGMENT_SAMPLER_COUNT);
 }
 
 } // namespace filament

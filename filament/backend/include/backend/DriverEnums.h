@@ -48,10 +48,19 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB          = 0x4;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
-static constexpr size_t MAX_VERTEX_SAMPLER_COUNT    = 16;   // This is guaranteed by OpenGL ES.
-static constexpr size_t MAX_FRAGMENT_SAMPLER_COUNT  = 16;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT           = 32;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
+
+// Per feature level caps
+// Use (int)FeatureLevel to index this array
+static constexpr struct {
+    const size_t MAX_VERTEX_SAMPLER_COUNT;
+    const size_t MAX_FRAGMENT_SAMPLER_COUNT;
+} FEATURE_LEVEL_CAPS[3] = {
+        {  0,  0 }, // do not use
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
+        { 31, 31 }, // guaranteed by Metal
+};
 
 static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
         "The number of buffer objects that can be attached to a VertexBuffer must be "
@@ -884,7 +893,7 @@ struct RasterState {
  * \privatesection
  */
 
-enum ShaderType : uint8_t {
+enum class ShaderStage : uint8_t {
     VERTEX = 0,
     FRAGMENT = 1
 };
@@ -897,11 +906,11 @@ enum class ShaderStageFlags : uint8_t {
     ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT
 };
 
-static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderType type) noexcept {
+static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
     switch (type) {
-        case VERTEX:
+        case ShaderStage::VERTEX:
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
-        case FRAGMENT:
+        case ShaderStage::FRAGMENT:
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::FRAGMENT));
     }
 }
@@ -1050,6 +1059,8 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
 template<> struct utils::EnableBitMaskOperators<filament::backend::StencilFace>
         : public std::true_type {};
 template<> struct utils::EnableIntegerOperators<filament::backend::TextureCubemapFace>
+        : public std::true_type {};
+template<> struct utils::EnableIntegerOperators<filament::backend::FeatureLevel>
         : public std::true_type {};
 
 #if !defined(NDEBUG)

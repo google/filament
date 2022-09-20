@@ -236,6 +236,10 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
             width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
             TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
+
+#ifndef NDEBUG
+    mContext->aliveTextures.insert(th.getId());
+#endif
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -248,6 +252,10 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
 
     construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
             width, height, depth, usage, r, g, b, a);
+
+#ifndef NDEBUG
+    mContext->aliveTextures.insert(th.getId());
+#endif
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -270,6 +278,10 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
             metalTexture.textureType, filamentMetalType);
     construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
         width, height, depth, usage, metalTexture);
+
+#ifndef NDEBUG
+    mContext->aliveTextures.insert(th.getId());
+#endif
 }
 
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
@@ -497,6 +509,10 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     if (!th) {
         return;
     }
+
+#ifndef NDEBUG
+    mContext->aliveTextures.erase(th.getId());
+#endif
 
     // Unbind this texture from any sampler groups that currently reference it.
     for (auto* metalSamplerGroup : mContext->samplerGroups) {
@@ -818,9 +834,29 @@ bool MetalDriver::canGenerateMipmaps() {
     return true;
 }
 
-void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        BufferDescriptor&& data) {
+void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescriptor&& data) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateSamplerGroup must be called outside of a render pass.");
+
     auto sb = handle_cast<MetalSamplerGroup>(sbh);
+
+#ifndef NDEBUG
+    // In debug builds, verify that all the textures in the sampler group are still alive.
+    // These bugs lead to memory corruption and can be difficult to track down.
+    auto const* const samplers = (SamplerDescriptor const*) data.buffer;
+    for (size_t s = 0; s < data.size / sizeof(SamplerDescriptor); s++) {
+        if (!samplers[s].t) {
+            continue;
+        }
+        auto iter = mContext->aliveTextures.find(samplers[s].t.getId());
+        if (iter == mContext->aliveTextures.end()) {
+            utils::slog.e << "updateSamplerGroup: texture #"
+                          << (int) s << " is dead, texture handle = "
+                          << samplers[s].t << utils::io::endl;
+        }
+        assert_invariant(iter != mContext->aliveTextures.end());
+    }
+#endif
 
     // FIXME: we shouldn't be using SamplerGroup here, instead the backend should create
     //        a descriptor or any internal data-structure that represents the textures/samplers.
@@ -1285,18 +1321,12 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     // Set scissor-rectangle.
     // In order to do this, we compute the intersection between:
     //  1. the scissor rectangle
-    //  2. the current viewport
-    //  3. the render target attachment dimensions (important, as the scissor can't be set larger)
+    //  2. the render target attachment dimensions (important, as the scissor can't be set larger)
     // fmax/min are used below to guard against NaN and because the MTLViewport/MTLRegion
     // coordinates are doubles.
     MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
     const float sleft = scissor.origin.x, sright = scissor.origin.x + scissor.size.width;
     const float stop = scissor.origin.y, sbottom = scissor.origin.y + scissor.size.height;
-
-    // Viewport extent
-    const MTLViewport& viewport = mContext->currentViewport;
-    const float vleft = viewport.originX, vright = viewport.originX + viewport.width;
-    const float vtop = viewport.originY, vbottom = viewport.originY + viewport.height;
 
     // Attachment extent
     const auto attachmentSize = mContext->currentRenderTarget->getAttachmentSize();
@@ -1304,10 +1334,10 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     const float aright = static_cast<float>(attachmentSize.x);
     const float abottom = static_cast<float>(attachmentSize.y);
 
-    const auto left   = std::fmax(std::fmax(sleft, vleft), aleft);
-    const auto right  = std::fmin(std::fmin(sright, vright), aright);
-    const auto top    = std::fmax(std::fmax(stop, vtop), atop);
-    const auto bottom = std::fmin(std::fmin(sbottom, vbottom), abottom);
+    const auto left   = std::fmax(sleft, aleft);
+    const auto right  = std::fmin(sright, aright);
+    const auto top    = std::fmax(stop, atop);
+    const auto bottom = std::fmin(sbottom, abottom);
 
     MTLScissorRect scissorRect = {
         .x      = static_cast<NSUInteger>(left),
@@ -1354,15 +1384,15 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         return mContext->samplerStateCache.getOrCreateState(s);
     };
 
-    id<MTLTexture> texturesToBindVertex[MAX_VERTEX_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindVertex[MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLTexture> texturesToBindVertex[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindVertex[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT] = {};
 
-    enumerateSamplerGroups(program, ShaderType::VERTEX,
+    enumerateSamplerGroups(program, ShaderStage::VERTEX,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindVertex, &samplersToBindVertex](
                     const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_VERTEX_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
-        if (binding >= MAX_VERTEX_SAMPLER_COUNT) {
+        if (binding >= FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT) {
             return;
         }
 
@@ -1386,21 +1416,21 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         }
     }
 
-    NSRange vertexSamplerRange = NSMakeRange(0, MAX_VERTEX_SAMPLER_COUNT);
+    NSRange vertexSamplerRange = NSMakeRange(0, FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT);
     [mContext->currentRenderPassEncoder setVertexTextures:texturesToBindVertex
                                                 withRange:vertexSamplerRange];
     [mContext->currentRenderPassEncoder setVertexSamplerStates:samplersToBindVertex
                                                      withRange:vertexSamplerRange];
 
-    id<MTLTexture> texturesToBindFragment[MAX_FRAGMENT_SAMPLER_COUNT] = {};
-    id<MTLSamplerState> samplersToBindFragment[MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLTexture> texturesToBindFragment[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT] = {};
+    id<MTLSamplerState> samplersToBindFragment[FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT] = {};
 
-    enumerateSamplerGroups(program, ShaderType::FRAGMENT,
+    enumerateSamplerGroups(program, ShaderStage::FRAGMENT,
             [this, &getTextureToBind, &getSamplerToBind, &texturesToBindFragment, &samplersToBindFragment](
                     const SamplerDescriptor* sampler, uint8_t binding) {
         // We currently only support a max of MAX_FRAGMENT_SAMPLER_COUNT samplers. Ignore any additional
         // samplers that may be bound.
-        if (binding >= MAX_FRAGMENT_SAMPLER_COUNT) {
+        if (binding >= FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT) {
             return;
         }
 
@@ -1424,7 +1454,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         }
     }
 
-    NSRange fragmentSamplerRange = NSMakeRange(0, MAX_FRAGMENT_SAMPLER_COUNT);
+    NSRange fragmentSamplerRange = NSMakeRange(0, FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT);
     [mContext->currentRenderPassEncoder setFragmentTextures:texturesToBindFragment
                                                   withRange:fragmentSamplerRange];
     [mContext->currentRenderPassEncoder setFragmentSamplerStates:samplersToBindFragment
@@ -1487,12 +1517,13 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::enumerateSamplerGroups(
-        const MetalProgram* program, ShaderType shaderType,
+        const MetalProgram* program, ShaderStage shaderType,
         const std::function<void(const SamplerDescriptor*, size_t)>& f) {
-    auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ?
+    auto& samplerBlockInfo = (shaderType == ShaderStage::VERTEX) ?
             program->vertexSamplerBlockInfo : program->fragmentSamplerBlockInfo;
-    auto maxSamplerCount = (shaderType == ShaderType::VERTEX) ?
-            MAX_VERTEX_SAMPLER_COUNT : MAX_FRAGMENT_SAMPLER_COUNT;
+    auto maxSamplerCount = (shaderType == ShaderStage::VERTEX) ?
+                           FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_VERTEX_SAMPLER_COUNT :
+                           FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_1].MAX_FRAGMENT_SAMPLER_COUNT;
     for (size_t bindingIdx = 0; bindingIdx != maxSamplerCount; ++bindingIdx) {
         auto& blockInfo = samplerBlockInfo[bindingIdx];
         if (blockInfo.samplerGroup == UINT8_MAX) {

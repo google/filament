@@ -88,18 +88,6 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
         return false;
     }
 
-    switch (info.featureLevel) {
-        case FeatureLevel::FEATURE_LEVEL_1:
-            // TODO: feature level checks
-            //  - check no more than 9 samplers are used by the user and 16 total
-            //  - check cubemap arrays are not used
-            break;
-        case FeatureLevel::FEATURE_LEVEL_2:
-            // TODO: feature level checks
-            //  - check no more than 12 samplers are used by the user and 31 total
-            break;
-    }
-
     // If this is a post-process material, at this point we've successfully met all the
     // requirements.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
@@ -172,18 +160,6 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
         return false;
     }
 
-    switch (info.featureLevel) {
-        case FeatureLevel::FEATURE_LEVEL_1:
-            // TODO: feature level checks
-            //  - check no more than 9 samplers are used by the user and 16 total
-            //  - check cubemap arrays are not used
-            break;
-        case FeatureLevel::FEATURE_LEVEL_2:
-            // TODO: feature level checks
-            //  - check no more than 12 samplers are used by the user and 31 total
-            break;
-    }
-
     return true;
 }
 
@@ -197,7 +173,7 @@ void GLSLTools::shutdown() {
 }
 
 bool GLSLTools::findProperties(
-        filament::backend::ShaderType type,
+        filament::backend::ShaderStage type,
         const std::string& shaderCode,
         MaterialBuilder::PropertyList& properties,
         MaterialBuilder::TargetApi targetApi,
@@ -205,8 +181,14 @@ bool GLSLTools::findProperties(
         ShaderModel model) const noexcept {
     const char* shaderCString = shaderCode.c_str();
 
-    TShader tShader(type == FRAGMENT ?
-            EShLanguage::EShLangFragment : EShLanguage::EShLangVertex);
+    auto getShaderStage = [](ShaderStage type) {
+        switch (type) {
+            case ShaderStage::VERTEX:        return EShLanguage::EShLangVertex;
+            case ShaderStage::FRAGMENT:      return EShLanguage::EShLangFragment;
+        }
+    };
+
+    TShader tShader(getShaderStage(type));
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
@@ -223,7 +205,7 @@ bool GLSLTools::findProperties(
 
     TIntermNode* rootNode = tShader.getIntermediate()->getTreeRoot();
 
-    std::string mainFunction(type == FRAGMENT ?
+    std::string mainFunction(type == ShaderStage::FRAGMENT ?
             "material" : "materialVertex");
 
     TIntermAggregate* functionMaterialDef = ASTUtils::getFunctionByNameOnly(mainFunction, *rootNode);

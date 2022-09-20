@@ -25,6 +25,7 @@
 #include <utils/Log.h>
 #include <utils/NameComponentManager.h>
 
+#include "GltfEnums.h"
 #include "Wireframe.h"
 
 using namespace filament;
@@ -83,7 +84,9 @@ FFilamentAsset::~FFilamentAsset() {
         mEngine->destroy(ib);
     }
     for (auto tx : mTextures) {
-        mEngine->destroy(tx);
+        if (UTILS_LIKELY(tx.isOwner)) {
+            mEngine->destroy(tx.texture);
+        }
     }
     for (auto tb : mMorphTargetBuffers) {
         mEngine->destroy(tb);
@@ -95,6 +98,60 @@ const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
         return mAssetExtras.c_str();
     }
     return mNodeManager->getExtras(mNodeManager->getInstance(entity)).c_str();
+}
+
+void FFilamentAsset::addTextureBinding(MaterialInstance* materialInstance,
+        const char* parameterName, const cgltf_texture* srcTexture,
+        TextureProvider::TextureFlags flags) {
+    if (!srcTexture->image && !srcTexture->basisu_image) {
+#ifndef NDEBUG
+        slog.w << "Texture is missing image (" << srcTexture->name << ")." << io::endl;
+#endif
+        return;
+    }
+
+    const size_t textureIndex = (size_t) (srcTexture - mSourceAsset->hierarchy->textures);
+    TextureInfo& info = mTextures[textureIndex];
+
+    // All bindings for a particular glTF texture must have the same transform function.
+    assert_invariant(info.bindings.size() == 0 || info.flags == flags);
+    info.flags = flags;
+
+    const TextureSlot slot = { materialInstance, parameterName };
+    if (info.texture) {
+        applyTextureBinding(textureIndex, slot, false);
+    } else {
+        mDependencyGraph.addEdge(materialInstance, parameterName);
+        info.bindings.push_back(slot);
+    }
+}
+
+void FFilamentAsset::applyTextureBinding(size_t textureIndex, const TextureSlot& tb,
+        bool addDependency) {
+    const TextureInfo& info = mTextures[textureIndex];
+    assert_invariant(info.texture);
+    const cgltf_sampler* srcSampler = mSourceAsset->hierarchy->textures[textureIndex].sampler;
+    TextureSampler sampler;
+    if (srcSampler) {
+        sampler.setWrapModeS(getWrapMode(srcSampler->wrap_s));
+        sampler.setWrapModeT(getWrapMode(srcSampler->wrap_t));
+        sampler.setMagFilter(getMagFilter(srcSampler->mag_filter));
+        sampler.setMinFilter(getMinFilter(srcSampler->min_filter));
+    } else {
+        // These defaults are stipulated by the spec:
+        sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
+        sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
+
+        // These defaults are up to the implementation but since we try to provide mipmaps,
+        // we might as well use them. In practice the conformance models look awful without
+        // using mipmapping by default.
+        sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
+        sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
+    }
+    tb.materialInstance->setParameter(tb.materialParameter, info.texture, sampler);
+    if (addDependency) {
+        mDependencyGraph.addEdge(info.texture, tb.materialInstance, tb.materialParameter);
+    }
 }
 
 void FFilamentAsset::createAnimators() {
@@ -162,8 +219,9 @@ void FFilamentAsset::releaseSourceData() noexcept {
     // To ensure that all possible memory is freed, we reassign to new containers rather than
     // calling clear(). With many container types, clearing is a fast operation that merely frees
     // the storage for the items but not the actual container.
-    mTextureBindings = {};
-    mTextureSlots = {};
+    for (auto& info : mTextures) {
+        info.bindings = {};
+    }
     mMeshCache = {};
     mResourceUris = {};
     mSourceAsset.reset();

@@ -105,6 +105,32 @@ namespace {
         }
     }
 
+    // Read strings from a file
+    void read(std::vector<std::string>& strings, const std::string& inFilename, int verbosity)
+    {
+        std::ifstream fp;
+
+        if (verbosity > 0)
+            logHandler(std::string("  reading: ") + inFilename);
+
+        strings.clear();
+        fp.open(inFilename, std::fstream::in);
+
+        if (fp.fail())
+            errHandler("error opening file for read: ");
+
+        std::string line;
+        while (std::getline(fp, line))
+        {
+            // Ignore empty lines and lines starting with the comment marker '#'.
+            if (line.length() == 0 || line[0] == '#') {
+                continue;
+            }
+
+            strings.push_back(line);
+        }
+    }
+
     void write(std::vector<SpvWord>& spv, const std::string& outFile, int verbosity)
     {
         if (outFile.empty())
@@ -144,6 +170,7 @@ namespace {
             << " [--dce (all|types|funcs)]"
             << " [--opt (all|loadstore)]"
             << " [--strip-all | --strip all | -s]"
+            << " [--strip-white-list]"
             << " [--do-everything]"
             << " --input | -i file1 [file2...] --output|-o DESTDIR"
             << std::endl;
@@ -156,16 +183,18 @@ namespace {
 
     // grind through each SPIR in turn
     void execute(const std::vector<std::string>& inputFile, const std::string& outputDir,
-        int opts, int verbosity)
+                 const std::string& whiteListFile, int opts, int verbosity)
     {
+        std::vector<std::string> whiteListStrings;
+        if(!whiteListFile.empty())
+            read(whiteListStrings, whiteListFile, verbosity);
+
         for (auto it = inputFile.cbegin(); it != inputFile.cend(); ++it) {
             const std::string &filename = *it;
             std::vector<SpvWord> spv;
             read(spv, filename, verbosity);
-            spv::spirvbin_t(verbosity).remap(spv, opts);
-
+            spv::spirvbin_t(verbosity).remap(spv, whiteListStrings, opts);
             const std::string outfile = outputDir + path_sep_char() + basename(filename);
-
             write(spv, outfile, verbosity);
         }
 
@@ -176,6 +205,7 @@ namespace {
     // Parse command line options
     void parseCmdLine(int argc, char** argv, std::vector<std::string>& inputFile,
         std::string& outputDir,
+        std::string& stripWhiteListFile,
         int& options,
         int& verbosity)
     {
@@ -245,6 +275,9 @@ namespace {
                     options = options | spv::spirvbin_t::STRIP;
                     ++a;
                 }
+            } else if (arg == "--strip-white-list") {
+                ++a;
+                stripWhiteListFile = argv[a++];
             } else if (arg == "--dce") {
                 // Parse comma (or colon, etc) separated list of things to dce
                 ++a;
@@ -315,6 +348,7 @@ int main(int argc, char** argv)
 {
     std::vector<std::string> inputFile;
     std::string              outputDir;
+    std::string              whiteListFile;
     int                      opts;
     int                      verbosity;
 
@@ -329,13 +363,13 @@ int main(int argc, char** argv)
     if (argc < 2)
         usage(argv[0]);
 
-    parseCmdLine(argc, argv, inputFile, outputDir, opts, verbosity);
+    parseCmdLine(argc, argv, inputFile, outputDir, whiteListFile, opts, verbosity);
 
     if (outputDir.empty())
         usage(argv[0], "Output directory required");
 
     // Main operations: read, remap, and write.
-    execute(inputFile, outputDir, opts, verbosity);
+    execute(inputFile, outputDir, whiteListFile, opts, verbosity);
 
     // If we get here, everything went OK!  Nothing more to be done.
 }

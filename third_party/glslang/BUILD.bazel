@@ -146,6 +146,7 @@ genrule(
         "SPIRV/GLSL.ext.NV.h",
         "SPIRV/GLSL.std.450.h",
         "SPIRV/NonSemanticDebugPrintf.h",
+        "SPIRV/NonSemanticShaderDebugInfo100.h",
         "SPIRV/spirv.hpp",
     ],
     outs = [
@@ -155,6 +156,7 @@ genrule(
         "include/SPIRV/GLSL.ext.NV.h",
         "include/SPIRV/GLSL.std.450.h",
         "include/SPIRV/NonSemanticDebugPrintf.h",
+        "include/SPIRV/NonSemanticShaderDebugInfo100.h",
         "include/SPIRV/spirv.hpp",
     ],
     cmd_bash = "mkdir -p $(@D)/include/SPIRV && cp $(SRCS) $(@D)/include/SPIRV/",

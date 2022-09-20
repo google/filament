@@ -42,6 +42,7 @@ class JavaMaterialProvider : public MaterialProvider {
 
     jmethodID mMaterialKeyConstructor;
     jmethodID mCreateMaterialInstance;
+    jmethodID mGetMaterial;
     jmethodID mGetMaterials;
     jmethodID mNeedsDummyData;
     jmethodID mDestroyMaterials;
@@ -71,6 +72,10 @@ public:
         mCreateMaterialInstance = env->GetMethodID(providerClass, "createMaterialInstance",
                 "(L" JAVA_MATERIAL_KEY ";[ILjava/lang/String;Ljava/lang/String;)Lcom/google/android/filament/MaterialInstance;");
         assert_invariant(mCreateMaterialInstance);
+
+        mGetMaterial = env->GetMethodID(providerClass, "getMaterial",
+                "(L" JAVA_MATERIAL_KEY ";[ILjava/lang/String;)Lcom/google/android/filament/Material;");
+        assert_invariant(mGetMaterial);
 
         mGetMaterials = env->GetMethodID(providerClass, "getMaterials",
                 "()[Lcom/google/android/filament/Material;");
@@ -103,7 +108,7 @@ public:
         jstring stringExtras = extras ? mEnv->NewStringUTF(extras) : nullptr;
 
         // Allocate space for the output argument.
-        jintArray uvMapArray = mEnv->NewIntArray(8);
+        jintArray uvMapArray = mEnv->NewIntArray(uvmap->size());
 
         // Call the Java-based material provider.
         jobject materialInstance = mEnv->CallObjectMethod(mJavaProvider, mCreateMaterialInstance,
@@ -137,6 +142,49 @@ public:
         }
 
         return (MaterialInstance*) mEnv->CallLongMethod(materialInstance, mMaterialInstanceGetNativeObject);
+    }
+
+    Material* getMaterial(MaterialKey* config, UvMap* uvmap, const char* label) override {
+        // Create a Java object for the material key and copy the native fields into it.
+        jobject javaKey = mEnv->NewObject(mMaterialKeyClass, mMaterialKeyConstructor);
+
+        auto& helper = MaterialKeyHelper::get();
+        helper.copy(mEnv, javaKey, *config);
+
+        // Convert the optional label into a Java string.
+        jstring stringLabel = label ? mEnv->NewStringUTF(label) : nullptr;
+
+        // Allocate space for the output argument.
+        jintArray uvMapArray = mEnv->NewIntArray(uvmap->size());
+
+        // Call the Java-based material provider.
+        jobject material = mEnv->CallObjectMethod(mJavaProvider, mGetMaterial,
+                javaKey, uvMapArray, stringLabel);
+
+        // Copy the UvMap results from the JVM array into the native array.
+        if (uvmap) {
+            jint* elements = mEnv->GetIntArrayElements(uvMapArray, nullptr);
+            for (size_t i = 0; i < uvmap->size(); i++) {
+                (*uvmap)[i] = (UvSet) elements[i];
+            }
+            mEnv->ReleaseIntArrayElements(uvMapArray, elements, JNI_ABORT);
+        }
+
+        // The config parameter is an in-out parameter so we need to copy the results from Java.
+        helper.copy(mEnv, *config, javaKey);
+
+        mEnv->DeleteLocalRef(javaKey);
+        mEnv->DeleteLocalRef(uvMapArray);
+
+        if (stringLabel) {
+            mEnv->DeleteLocalRef(stringLabel);
+        }
+
+        if (material == nullptr) {
+            return nullptr;
+        }
+
+        return (Material*) mEnv->CallLongMethod(material, mMaterialGetNativeObject);
     }
 
     const Material* const* getMaterials() const noexcept override {

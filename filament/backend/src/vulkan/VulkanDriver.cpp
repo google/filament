@@ -1220,7 +1220,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .framebuffer = vkfb,
 
         // The renderArea field constrains the LoadOp, but scissoring does not.
-        // Therefore we do not set the scissor rect here, we only need it in draw().
+        // Therefore, we do not set the scissor rect here, we only need it in draw().
         .renderArea = { .offset = {}, .extent = extent }
     };
 
@@ -1728,7 +1728,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     Handle<HwProgram> programHandle = pipelineState.program;
     RasterState rasterState = pipelineState.rasterState;
     PolygonOffset depthOffset = pipelineState.polygonOffset;
-    const Viewport& viewportScissor = pipelineState.scissor;
+    const Viewport& scissorBox = pipelineState.scissor;
 
     auto* program = handle_cast<VulkanProgram*>(programHandle);
     mDisposer.acquire(program);
@@ -1822,7 +1822,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
 
-    VkDescriptorImageInfo iInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
+    VkDescriptorImageInfo samplerInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
+    VulkanPipelineCache::UsageFlags usage;
 
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
@@ -1847,6 +1848,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 mDisposer.acquire(texture);
 
                 // TODO: can this uninitialized check be checked in a higher layer?
+                // This fallback path is very flaky because the dummy texture might not have
+                // matching characteristics. (e.g. if the missing texture is a 3D texture)
                 if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VK_IMAGE_LAYOUT_UNDEFINED)) {
 #ifndef NDEBUG
                     utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
@@ -1859,17 +1862,18 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 const SamplerParams& samplerParams = boundSampler->s;
                 VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
 
-                iInfo[bindingPoint] = {
+                usage = VulkanPipelineCache::getUsageFlags(sampler.binding, samplerGroup.stageFlags, usage);
+
+                samplerInfo[bindingPoint] = {
                     .sampler = vksampler,
                     .imageView = texture->getPrimaryImageView(),
                     .imageLayout = texture->getPrimaryImageLayout()
                 };
-
             }
         }
     }
 
-    mPipelineCache.bindSamplers(iInfo);
+    mPipelineCache.bindSamplers(samplerInfo, usage);
 
     // Bind new descriptor sets if they need to change.
     // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error
@@ -1879,16 +1883,21 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     }
 
     // Set scissoring.
-    // Compute the intersection of the requested scissor rectangle with the current viewport.
-    const int32_t x = std::max(viewportScissor.left, (int32_t)mContext.viewport.x);
-    const int32_t y = std::max(viewportScissor.bottom, (int32_t)mContext.viewport.y);
-    const int32_t right = std::min(viewportScissor.left + (int32_t)viewportScissor.width,
-            (int32_t)(mContext.viewport.x + mContext.viewport.width));
-    const int32_t top = std::min(viewportScissor.bottom + (int32_t)viewportScissor.height,
-            (int32_t)(mContext.viewport.y + mContext.viewport.height));
+    // clamp left-bottom to 0,0 and avoid overflows
+    constexpr int32_t maxvali  = std::numeric_limits<int32_t>::max();
+    constexpr uint32_t maxvalu  = std::numeric_limits<int32_t>::max();
+    int32_t l = scissorBox.left;
+    int32_t b = scissorBox.bottom;
+    uint32_t w = std::min(maxvalu, scissorBox.width);
+    uint32_t h = std::min(maxvalu, scissorBox.height);
+    int32_t r = (l > int32_t(maxvalu - w)) ? maxvali : l + int32_t(w);
+    int32_t t = (b > int32_t(maxvalu - h)) ? maxvali : b + int32_t(h);
+    l = std::max(0, l);
+    b = std::max(0, b);
+    assert_invariant(r >= l && t >= b);
     VkRect2D scissor{
-            .offset = { std::max(0, x), std::max(0, y) },
-            .extent = { (uint32_t)right - x, (uint32_t)top - y }
+            .offset = { l, b },
+            .extent = { uint32_t(r - l), uint32_t(t - b) }
     };
 
     rt->transformClientRectToPlatform(&scissor);

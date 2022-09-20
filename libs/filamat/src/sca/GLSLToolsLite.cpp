@@ -76,7 +76,7 @@ static std::string stripComments(const std::string& code) {
 }
 
 bool GLSLToolsLite::findProperties(
-        filament::backend::ShaderType type,
+        filament::backend::ShaderStage type,
         const utils::CString& material,
         MaterialBuilder::PropertyList& properties) const noexcept {
     if (material.empty()) {

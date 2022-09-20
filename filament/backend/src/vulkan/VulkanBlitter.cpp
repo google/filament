@@ -376,7 +376,8 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
         .imageLayout = getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT)
     };
 
-    mPipelineCache.bindSamplers(samplers);
+    mPipelineCache.bindSamplers(samplers,
+            VulkanPipelineCache::getUsageFlags(0, ShaderStageFlags::FRAGMENT));
 
     auto previousUbo = mPipelineCache.getUniformBufferBinding(0);
     mPipelineCache.bindUniformBuffer(0, mParamsBuffer->getGpuBuffer());

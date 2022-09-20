@@ -49,7 +49,7 @@ RenderPass::RenderPass(RenderPass const& rhs) = default;
 RenderPass::~RenderPass() noexcept = default;
 
 RenderPass::Command* RenderPass::append(size_t count) noexcept {
-    // this is like a "in-place" realloc(). Works only with LinearAllocator.
+    // this is like an "in-place" realloc(). Works only with LinearAllocator.
     Command* const curr = mCommandArena.alloc<Command>(count);
     assert_invariant(curr);
     assert_invariant(mCommandBegin == nullptr || curr == mCommandEnd);
@@ -83,6 +83,13 @@ void RenderPass::overridePolygonOffset(backend::PolygonOffset const* polygonOffs
     if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
         mPolygonOffset = *polygonOffset;
     }
+}
+
+
+void RenderPass::setScissorViewport(backend::Viewport viewport) noexcept {
+    assert_invariant(viewport.width  <= std::numeric_limits<int32_t>::max());
+    assert_invariant(viewport.height <= std::numeric_limits<int32_t>::max());
+    mScissorViewport = viewport;
 }
 
 void RenderPass::overrideScissor(backend::Viewport const* scissor) noexcept {
@@ -448,6 +455,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdDepth.primitive.rasterState.alphaToCoverage = false;
     }
 
+    const float cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
+
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Check if this renderable passes the visibilityMask. If it doesn't, encode SENTINEL
         // commands (no-op).
@@ -463,11 +472,11 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             continue;
         }
 
-        // Signed distance from camera to object's center. Positive distances are in front of
+        // Signed distance from camera plane to object's center. Positive distances are in front of
         // the camera. Some objects with a center behind the camera can still be visible
         // so their distance will be negative (this happens a lot for the shadow map).
 
-        // Using the center is not very good with large AABBs. Instead we can try to use
+        // Using the center is not very good with large AABBs. Instead, we can try to use
         // the closest point on the bounding sphere instead:
         //      d = soaWorldAABBCenter[i] - cameraPosition;
         //      d -= normalize(d) * length(soaWorldAABB[i].halfExtent);
@@ -476,9 +485,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         // Code below is equivalent to:
         // float3 d = soaWorldAABBCenter[i] - cameraPosition;
         // float distance = dot(d, cameraForward);
-        // but saves a couple of instruction, because part of the math is done outside of the loop.
-        float distance = dot(soaWorldAABBCenter[i], cameraForward) - dot(cameraPosition, cameraForward);
-
+        // but saves a couple of instruction, because part of the math is done outside the loop.
+        float distance = dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward;
 
         // We negate the distance to the camera in order to create a bit pattern that will
         // be sorted properly, this works because:
@@ -502,7 +510,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdColor.primitive.index = (uint16_t)i;
         cmdColor.primitive.instanceCount = soaInstanceCount[i];
 
-        // if we are already a SSR variant, the SRE bit is already set,
+        // if we are already an SSR variant, the SRE bit is already set,
         // there is no harm setting it again
         static_assert(Variant::SPECIAL_SSR & Variant::SRE);
         variant.setShadowReceiver(
@@ -750,7 +758,34 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
                 // this is always taken the first time
                 mi = info.mi;
                 ma = mi->getMaterial();
-                *pScissor = mi->getScissor();
+
+                auto const& scissor = mi->getScissor();
+                if (UTILS_UNLIKELY(mi->hasScissor())) {
+                    // scissor is set, we need to apply the offset/clip
+                    // clang vectorizes this!
+                    constexpr int32_t maxvali = std::numeric_limits<int32_t>::max();
+                    const backend::Viewport scissorViewport = mScissorViewport;
+                    // compute new left/bottom, assume no overflow
+                    int32_t l = scissor.left + scissorViewport.left;
+                    int32_t b = scissor.bottom + scissorViewport.bottom;
+                    // compute right/top without overflowing, scissor.width/height guaranteed
+                    // to convert to int32
+                    int32_t r = (l > maxvali - int32_t(scissor.width)) ?
+                            maxvali : l + int32_t(scissor.width);
+                    int32_t t = (b > maxvali - int32_t(scissor.height)) ?
+                            maxvali : b + int32_t(scissor.height);
+                    // clip to the viewport
+                    l = std::max(l, scissorViewport.left);
+                    b = std::max(b, scissorViewport.bottom);
+                    r = std::min(r, scissorViewport.left + int32_t(scissorViewport.width));
+                    t = std::min(t, scissorViewport.bottom + int32_t(scissorViewport.height));
+                    assert_invariant(r >= l && t >= b);
+                    *pScissor = { l, b, uint32_t(r - l), uint32_t(t - b) };
+                } else {
+                    // no scissor set (common case), 'scissor' has its default value, use that.
+                    *pScissor = scissor;
+                }
+
                 *pPipelinePolygonOffset = mi->getPolygonOffset();
                 pipeline.stencilState = mi->getStencilState();
                 mi->use(driver);
@@ -804,6 +839,7 @@ RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command
           mInstancedUboHandle(pass->mInstancedUboHandle),
           mPolygonOffset(pass->mPolygonOffset),
           mScissor(pass->mScissor),
+          mScissorViewport(pass->mScissorViewport),
           mPolygonOffsetOverride(pass->mPolygonOffsetOverride),
           mScissorOverride(pass->mScissorOverride) {
     assert_invariant(b >= pass->begin());

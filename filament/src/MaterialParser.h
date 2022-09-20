@@ -99,7 +99,7 @@ public:
     bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
 
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
-            Variant variant, backend::ShaderType stage) noexcept;
+            Variant variant, backend::ShaderStage stage) noexcept;
 
 private:
     struct MaterialParserDetails {

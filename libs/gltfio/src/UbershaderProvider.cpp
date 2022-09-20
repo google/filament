@@ -38,7 +38,30 @@ io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs);
 
 namespace {
 
-using CullingMode = MaterialInstance::CullingMode;
+static void prepareConfig(MaterialKey* config, const char* label) {
+    if (config->hasVolume && config->hasSheen) {
+        slog.w << "Volume and sheen are not supported together in ubershader mode,"
+                  " removing sheen (" << label << ")." << io::endl;
+        config->hasSheen = false;
+    }
+
+    if (config->hasTransmission && config->hasSheen) {
+        slog.w << "Transmission and sheen are not supported together in ubershader mode,"
+                  " removing sheen (" << label << ")." << io::endl;
+        config->hasSheen = false;
+    }
+
+    const bool clearCoatConflict = config->hasVolume || config->hasTransmission || config->hasSheen;
+
+    // Due to sampler overload, disable transmission if necessary and print a friendly warning.
+    if (config->hasClearCoat && clearCoatConflict) {
+        slog.w << "Volume, transmission and sheen are not supported in ubershader mode for clearcoat"
+                  " materials (" << label << ")." << io::endl;
+        config->hasVolume = false;
+        config->hasTransmission = false;
+        config->hasSheen = false;
+    }
+}
 
 class UbershaderProvider : public MaterialProvider {
 public:
@@ -47,6 +70,8 @@ public:
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label, const char* extras) override;
+
+    Material* getMaterial(MaterialKey* config, UvMap* uvmap, const char* label) override;
 
     size_t getMaterialsCount() const noexcept override;
     const Material* const* getMaterials() const noexcept override;
@@ -140,6 +165,20 @@ Material* UbershaderProvider::getMaterial(const MaterialKey& config) const {
     return nullptr;
 }
 
+Material* UbershaderProvider::getMaterial(MaterialKey* config, UvMap* uvmap, const char* label) {
+    prepareConfig(config, label);
+    constrainMaterial(config, uvmap);
+    Material* material = getMaterial(*config);
+    if (material == nullptr) {
+#ifndef NDEBUG
+        slog.w << "Using fallback material for " << label << "." << io::endl;
+#endif
+        material = mMaterials.getDefaultMaterial();
+    }
+    return material;
+}
+
+
 MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
         const char* label, const char* extras) {
     // Diagnostics are not supported with LOAD_UBERSHADERS, please use GENERATE_SHADERS instead.
@@ -147,41 +186,11 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         return nullptr;
     }
 
-    if (config->hasVolume && config->hasSheen) {
-        slog.w << "Volume and sheen are not supported together in ubershader mode,"
-                  " removing sheen (" << label << ")." << io::endl;
-        config->hasSheen = false;
-    }
+    Material* material = getMaterial(config, uvmap, label);
 
-    if (config->hasTransmission && config->hasSheen) {
-        slog.w << "Transmission and sheen are not supported together in ubershader mode,"
-                  " removing sheen (" << label << ")." << io::endl;
-        config->hasSheen = false;
-    }
-
-    const bool clearCoatConflict = config->hasVolume || config->hasTransmission || config->hasSheen;
-
-    // Due to sampler overload, disable transmission if necessary and print a friendly warning.
-    if (config->hasClearCoat && clearCoatConflict) {
-        slog.w << "Volume, transmission and sheen are not supported in ubershader mode for clearcoat"
-                  " materials (" << label << ")." << io::endl;
-        config->hasVolume = false;
-        config->hasTransmission = false;
-        config->hasSheen = false;
-    }
-
-    constrainMaterial(config, uvmap);
     auto getUvIndex = [uvmap](uint8_t srcIndex, bool hasTexture) -> int {
         return hasTexture ? int(uvmap->at(srcIndex)) - 1 : -1;
     };
-    Material* material = getMaterial(*config);
-
-    if (material == nullptr) {
-#ifndef NDEBUG
-        slog.w << "Using fallback material for " << label << "." << io::endl;
-#endif
-        material = mMaterials.getDefaultMaterial();
-    }
 
     MaterialInstance* mi = material->createInstance(label);
     mi->setParameter("baseColorIndex",
@@ -193,7 +202,11 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
     mi->setParameter("emissiveIndex", getUvIndex(config->emissiveUV, config->hasEmissiveTexture));
 
     mi->setDoubleSided(config->doubleSided);
-    mi->setCullingMode(config->doubleSided ? CullingMode::NONE : CullingMode::BACK);
+
+    mi->setCullingMode(config->doubleSided ?
+            MaterialInstance::CullingMode::NONE :
+            MaterialInstance::CullingMode::BACK);
+
     mi->setTransparencyMode(config->doubleSided ?
             MaterialInstance::TransparencyMode::TWO_PASSES_TWO_SIDES :
             MaterialInstance::TransparencyMode::DEFAULT);

@@ -82,6 +82,9 @@ public:
         VkSpecializationInfo* specializationInfos = nullptr;
     };
 
+    using UsageFlags = utils::bitset64;
+    static UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags stages, UsageFlags src = {});
+
     #pragma clang diagnostic push
     #pragma clang diagnostic warning "-Wpadded"
 
@@ -150,7 +153,7 @@ public:
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
             VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
-    void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT]) noexcept;
+    void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT], UsageFlags flags) noexcept;
     void bindInputAttachment(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;
     void bindVertexArray(const VertexArray& varray) noexcept;
 
@@ -179,7 +182,6 @@ public:
 
     // Injects a dummy texture that can be used to clear out old descriptor sets.
     void setDummyTexture(VkImageView imageView) {
-        mDummySamplerInfo.imageView = imageView;
         mDummyTargetInfo.imageView = imageView;
     }
 
@@ -188,9 +190,11 @@ private:
     // PIPELINE LAYOUT CACHE KEY
     // -------------------------
 
-    // The cache key for pipeline layouts represents 32 samplers, each with 2 bits (one for each
-    // shader stage).
     using PipelineLayoutKey = utils::bitset64;
+
+    static_assert(PipelineLayoutKey::BIT_COUNT >=
+            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT +
+            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_FRAGMENT_SAMPLER_COUNT);
 
     struct PipelineLayoutKeyHashFn {
         size_t operator()(const PipelineLayoutKey& key) const;
@@ -236,9 +240,9 @@ private:
         operator VkVertexInputBindingDescription() const {
             return { binding, stride, (VkVertexInputRate) inputRate };
         }
-        uint16_t    binding;
-        uint16_t    inputRate;
-        uint32_t    stride;
+        uint16_t binding;
+        uint16_t inputRate;
+        uint32_t stride;
     };
 
     // The pipeline key is a POD that represents all currently bound states that form the immutable
@@ -252,9 +256,10 @@ private:
         VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
         RasterState rasterState;                                                  //  16  : 284
         uint32_t padding;                                                         //  4   : 300
+        PipelineLayoutKey layout;                                                 //  8   : 304
     };
 
-    static_assert(sizeof(PipelineKey) == 304, "PipelineKey must not have implicit padding.");
+    static_assert(sizeof(PipelineKey) == 312, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
 
@@ -383,13 +388,11 @@ private:
     const RasterState mDefaultRasterState;
 
     // Current requirements for the pipeline layout, pipeline, and descriptor sets.
-    PipelineLayoutKey mLayoutRequirements = {};
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
     VkSpecializationInfo* mSpecializationRequirements = {};
 
-    // Current bindings for the pipeline layout, pipeline, and descriptor sets.
-    PipelineLayoutKey mBoundLayout = {};
+    // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
     DescriptorKey mBoundDescriptor = {};
 
@@ -420,8 +423,6 @@ private:
 
     VkDescriptorBufferInfo mDummyBufferInfo = {};
     VkWriteDescriptorSet mDummyBufferWriteInfo = {};
-    VkDescriptorImageInfo mDummySamplerInfo = {};
-    VkWriteDescriptorSet mDummySamplerWriteInfo = {};
     VkDescriptorImageInfo mDummyTargetInfo = {};
     VkWriteDescriptorSet mDummyTargetWriteInfo = {};
 

@@ -26,6 +26,7 @@ set(MATERIAL_SRCS
         materials/heightfield.mat
         materials/image.mat
         materials/mirror.mat
+        materials/overdraw.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
@@ -183,6 +184,7 @@ set_target_properties(gltf-demo-resources PROPERTIES FOLDER Samples/Resources)
 set(GLTF_DEMO_RESOURCES
     ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
     ${MATERIAL_DIR}/groundShadow.filamat
+    ${MATERIAL_DIR}/overdraw.filamat
 )
 
 get_resgen_vars(${RESOURCE_DIR} gltf_demo)

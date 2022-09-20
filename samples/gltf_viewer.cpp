@@ -53,6 +53,7 @@
 #include <imgui.h>
 #include <filagui/ImGuiExtensions.h>
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -97,6 +98,15 @@ struct App {
         VertexBuffer* groundVertexBuffer;
         IndexBuffer* groundIndexBuffer;
         Material* groundMaterial;
+
+        Material* overdrawMaterial;
+        // use layer 7 because 0, 1 and 2 are used by FilamentApp
+        static constexpr auto OVERDRAW_VISIBILITY_LAYER = 7u;   // overdraw renderables View layer
+        static constexpr auto OVERDRAW_LAYERS = 4u;             // unique overdraw colors
+        std::array<Entity, OVERDRAW_LAYERS> overdrawVisualizer;
+        std::array<MaterialInstance*, OVERDRAW_LAYERS> overdrawMaterialInstances;
+        VertexBuffer* fullScreenTriangleVertexBuffer;
+        IndexBuffer* fullScreenTriangleIndexBuffer;
     } scene;
 
     // zero-initialized so that the first time through is always dirty.
@@ -126,6 +136,8 @@ static void printUsage(char* name) {
         "       Prints this message\n\n"
         "   --api, -a\n"
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
+        "   --feature-level=<1|2>, -f <1|2>\n"
+        "       Specify the feature level to use. The default is the highest supported feature level.\n\n"
         "   --batch=<path to JSON file or 'default'>, -b\n"
         "       Start automation using the given JSON spec, then quit the app\n\n"
         "   --headless, -e\n"
@@ -166,10 +178,11 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:ev";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:ev";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,          nullptr, 'h' },
         { "api",          required_argument,    nullptr, 'a' },
+        { "feature-level",required_argument,    nullptr, 'f' },
         { "batch",        required_argument,    nullptr, 'b' },
         { "headless",     no_argument,          nullptr, 'e' },
         { "ibl",          required_argument,    nullptr, 'i' },
@@ -199,6 +212,15 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     app->config.backend = Engine::Backend::METAL;
                 } else {
                     std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                }
+                break;
+            case 'f':
+                if (arg == "1") {
+                    app->config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
+                } else if (arg == "2") {
+                    app->config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_2;
+                } else {
+                    std::cerr << "Unrecognized feature level. Must be 1 or 2.\n";
                 }
                 break;
             case 'c':
@@ -348,6 +370,80 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
+static constexpr float4 sFullScreenTriangleVertices[3] = {
+        { -1.0f, -1.0f, 1.0f, 1.0f },
+        {  3.0f, -1.0f, 1.0f, 1.0f },
+        { -1.0f,  3.0f, 1.0f, 1.0f }
+};
+
+static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
+
+static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App& app) {
+    Material* material = Material::Builder()
+            .package(GLTF_DEMO_OVERDRAW_DATA, GLTF_DEMO_OVERDRAW_SIZE)
+            .build(*engine);
+
+    const float3 overdrawColors[App::Scene::OVERDRAW_LAYERS] = {
+            {0.0f, 0.0f, 1.0f},     // blue         (overdrawn 1 time)
+            {0.0f, 1.0f, 0.0f},     // green        (overdrawn 2 times)
+            {1.0f, 0.0f, 1.0f},     // magenta      (overdrawn 3 times)
+            {1.0f, 0.0f, 0.0f}      // red          (overdrawn 4+ times)
+    };
+
+    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+        MaterialInstance* matInstance = material->createInstance();
+        // TODO: move this to the material definition.
+        matInstance->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::E);
+        // The stencil value represents the number of times the fragment has been written to.
+        // We want 0-1 writes to be the regular color. Overdraw visualization starts at 2+ writes,
+        // which represents a fragment overdrawn 1 time.
+        matInstance->setStencilReferenceValue(i + 2);
+        matInstance->setParameter("color", overdrawColors[i]);
+        app.scene.overdrawMaterialInstances[i] = matInstance;
+    }
+    auto& lastMi = app.scene.overdrawMaterialInstances[App::Scene::OVERDRAW_LAYERS - 1];
+    // This seems backwards, but it isn't. The comparison function compares:
+    // the reference value (left side) <= stored stencil value (right side)
+    lastMi->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::LE);
+
+    VertexBuffer* vertexBuffer = VertexBuffer::Builder()
+            .vertexCount(3)
+            .bufferCount(1)
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
+            .build(*engine);
+
+    vertexBuffer->setBufferAt(
+            *engine, 0, { sFullScreenTriangleVertices, sizeof(sFullScreenTriangleVertices) });
+
+    IndexBuffer* indexBuffer = IndexBuffer::Builder()
+            .indexCount(3)
+            .bufferType(IndexBuffer::IndexType::USHORT)
+            .build(*engine);
+
+    indexBuffer->setBuffer(*engine,
+            { sFullScreenTriangleIndices, sizeof(sFullScreenTriangleIndices) });
+
+    auto& em = EntityManager::get();
+    const auto& matInstances = app.scene.overdrawMaterialInstances;
+    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+        Entity overdrawEntity = em.create();
+        RenderableManager::Builder(1)
+                .boundingBox({{}, {1.0f, 1.0f, 1.0f}})
+                .material(0, matInstances[i])
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 3)
+                .culling(false)
+                .priority(7u)   // ensure the overdraw primitives are drawn last
+                .layerMask(0xFF, 1u << App::Scene::OVERDRAW_VISIBILITY_LAYER)
+                .build(*engine, overdrawEntity);
+        scene->addEntity(overdrawEntity);
+        app.scene.overdrawVisualizer[i] = overdrawEntity;
+    }
+
+    app.scene.overdrawMaterial = material;
+    app.scene.fullScreenTriangleVertexBuffer = vertexBuffer;
+    app.scene.fullScreenTriangleIndexBuffer = indexBuffer;
+}
+
 static void onClick(App& app, View* view, ImVec2 pos) {
     view->pick(pos.x, pos.y, [&app](View::PickingQueryResult const& result){
         if (const char* name = app.asset->getName(result.renderable); name) {
@@ -444,6 +540,14 @@ int main(int argc, char** argv) {
 
         app.asset->releaseSourceData();
 
+        // Enable stencil writes on all material instances.
+        const size_t matInstanceCount = app.asset->getMaterialInstanceCount();
+        MaterialInstance* const* const instances = app.asset->getMaterialInstances();
+        for (int mi = 0; mi < matInstanceCount; mi++) {
+            instances[mi]->setStencilWrite(true);
+            instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
+        }
+
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
@@ -520,6 +624,7 @@ int main(int argc, char** argv) {
         app.viewer->setAsset(app.asset);
 
         createGroundPlane(engine, scene, app);
+        createOverdrawVisualizerEntities(engine, scene, app);
 
         app.viewer->setUiCallback([&app, scene, view, engine] () {
             auto& automation = *app.automationEngine;
@@ -654,6 +759,19 @@ int main(int argc, char** argv) {
                 if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
                     ImGui::Checkbox("Enable LiSPSM", lispsm);
                 }
+
+                const auto overdrawVisibilityBit = (1u << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                bool visualizeOverdraw = view->getVisibleLayers() & overdrawVisibilityBit;
+                // TODO: enable after stencil buffer supported is added for Vulkan.
+                const bool overdrawDisabled = engine->getBackend() == backend::Backend::VULKAN;
+                ImGui::BeginDisabled(overdrawDisabled);
+                ImGui::Checkbox(!overdrawDisabled ? "Visualize overdraw"
+                                                  : "Visualize overdraw (disabled for Vulkan)",
+                        &visualizeOverdraw);
+                ImGui::EndDisabled();
+                view->setVisibleLayers(overdrawVisibilityBit,
+                        (uint8_t)visualizeOverdraw << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                view->setStencilBufferEnabled(visualizeOverdraw);
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -677,6 +795,20 @@ int main(int argc, char** argv) {
         engine->destroy(app.scene.groundIndexBuffer);
         engine->destroy(app.scene.groundMaterial);
         engine->destroy(app.colorGrading);
+
+        engine->destroy(app.scene.fullScreenTriangleVertexBuffer);
+        engine->destroy(app.scene.fullScreenTriangleIndexBuffer);
+
+        auto& em = EntityManager::get();
+        for (auto e : app.scene.overdrawVisualizer) {
+            engine->destroy(e);
+            em.destroy(e);
+        }
+
+        for (auto mi : app.scene.overdrawMaterialInstances) {
+            engine->destroy(mi);
+        }
+        engine->destroy(app.scene.overdrawMaterial);
 
         delete app.viewer;
         delete app.materials;
@@ -755,7 +887,7 @@ int main(int argc, char** argv) {
         // This applies clear options, the skybox mask, and some camera settings.
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
-        applySettings(app.viewer->getSettings().viewer, &camera, skybox, renderer);
+        applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
 
         // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
@@ -783,7 +915,7 @@ int main(int argc, char** argv) {
             .materials = app.asset->getMaterialInstances(),
             .materialCount = app.asset->getMaterialInstanceCount(),
         };
-        app.automationEngine->tick(content, ImGui::GetIO().DeltaTime);
+        app.automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
     };
 
     FilamentApp& filamentApp = FilamentApp::get();

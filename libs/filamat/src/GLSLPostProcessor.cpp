@@ -232,10 +232,10 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     };
 
     switch (config.shaderType) {
-        case VERTEX:
+        case ShaderStage::VERTEX:
             internalConfig.shLang = EShLangVertex;
             break;
-        case FRAGMENT:
+        case ShaderStage::FRAGMENT:
             internalConfig.shLang = EShLangFragment;
             break;
     }
@@ -269,7 +269,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     }
 
     // add texture lod bias
-    if (config.shaderType == backend::FRAGMENT &&
+    if (config.shaderType == backend::ShaderStage::FRAGMENT &&
         config.domain == MaterialDomain::SURFACE) {
         GLSLTools::textureLodBias(tShader);
     }

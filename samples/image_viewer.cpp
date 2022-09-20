@@ -215,7 +215,7 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     app.scene.defaultTexture = texture;
 }
 
-static void loadImage(App& app, Engine* engine, Path filename) {
+static void loadImage(App& app, Engine* engine, const Path& filename) {
     if (app.scene.imageTexture) {
         engine->destroy(app.scene.imageTexture);
         app.scene.imageTexture = nullptr;
@@ -260,7 +260,8 @@ static void loadImage(App& app, Engine* engine, Path filename) {
             size_t(w * h * channels * sizeof(float)),
             channels == 3 ? Texture::Format::RGB : Texture::Format::RGBA,
             Texture::Type::FLOAT,
-            freeCallback
+            freeCallback,
+            image
     );
 
     texture->setImage(*engine, 0, std::move(buffer));
@@ -333,7 +334,7 @@ int main(int argc, char** argv) {
         // This applies clear options, the skybox mask, and some camera settings.
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
-        applySettings(app.viewer->getSettings().viewer, &camera, skybox, renderer);
+        applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
 
         // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
@@ -351,10 +352,10 @@ int main(int argc, char** argv) {
 
         if (app.showImage) {
             Texture *texture = app.scene.imageTexture;
-            float srcWidth = texture->getWidth();
-            float srcHeight = texture->getHeight();
-            float dstWidth = view->getViewport().width;
-            float dstHeight = view->getViewport().height;
+            float srcWidth = (float) texture->getWidth();
+            float srcHeight = (float) texture->getHeight();
+            float dstWidth = (float) view->getViewport().width;
+            float dstHeight = (float) view->getViewport().height;
 
             float srcRatio = srcWidth / srcHeight;
             float dstRatio = dstWidth / dstHeight;

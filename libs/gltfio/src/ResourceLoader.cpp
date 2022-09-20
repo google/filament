@@ -63,6 +63,13 @@ using FilepathTextureCache = tsl::robin_map<std::string, Texture*>;
 using UriDataCache = tsl::robin_map<std::string, gltfio::ResourceLoader::BufferDescriptor>;
 using TextureProviderList = tsl::robin_map<std::string, TextureProvider*>;
 
+enum class CacheResult {
+    ERROR,
+    NOT_READY,
+    FOUND,
+    MISS,
+};
+
 struct ResourceLoader::Impl {
     Impl(const ResourceConfiguration& config) :
         mEngine(config.engine),
@@ -91,7 +98,8 @@ struct ResourceLoader::Impl {
     void computeTangents(FFilamentAsset* asset);
     void createTextures(FFilamentAsset* asset, bool async);
     void cancelTextureDecoding();
-    Texture* getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb);
+    std::pair<Texture*, CacheResult> getOrCreateTexture(FFilamentAsset* asset, size_t textureIndex,
+            TextureProvider::TextureFlags flags);
     ~Impl();
 };
 
@@ -538,7 +546,11 @@ float ResourceLoader::asyncGetLoadProgress() const {
         pushedCount += iter.second->getPushedCount();
         poppedCount += iter.second->getPoppedCount();
     }
+
+    // Textures that haven't been fully downloaded are not yet pushed into one of the
+    // decoding queues, so here we include them in the total "pending" count.
     const size_t pendingCount = pushedCount + pImpl->mRemainingTextureDownloads;
+
     return pendingCount == 0 ? 1 : (float(poppedCount) / pendingCount);
 }
 
@@ -554,17 +566,13 @@ void ResourceLoader::asyncUpdateLoad() {
     }
 }
 
-Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const TextureSlot& tb) {
-    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[tb.sourceTexture];
+std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset,
+        size_t textureIndex, TextureProvider::TextureFlags flags) {
+    const cgltf_texture& srcTexture = asset->mSourceAsset->hierarchy->textures[textureIndex];
     const cgltf_image* image = srcTexture.basisu_image ?
             srcTexture.basisu_image : srcTexture.image;
     const cgltf_buffer_view* bv = image->buffer_view;
     const char* uri = image->uri;
-
-    TextureProvider::FlagBits flags = {};
-    if (tb.srgb) {
-        flags |= int(TextureProvider::Flags::sRGB);
-    }
 
     std::string mime = image->mime_type ? image->mime_type : "";
     size_t dataUriSize;
@@ -579,11 +587,8 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     TextureProvider* provider = mTextureProviders[mime];
     if (!provider) {
         slog.e << "Missing texture provider for " << mime << io::endl;
-        asset->mDependencyGraph.markAsError(tb.materialInstance);
-        return nullptr;
+        return {};
     }
-
-    Texture* texture = nullptr;
 
     // Check if the texture slot uses BufferView data.
     if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
@@ -591,11 +596,12 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
         const size_t offset = bv ? bv->offset : 0;
         const uint8_t* sourceData = offset + (const uint8_t*) *bufferViewData;
         if (auto iter = mBufferTextureCache.find(sourceData); iter != mBufferTextureCache.end()) {
-            return iter->second;
+            return {iter->second, CacheResult::FOUND};
         }
         const uint32_t totalSize = uint32_t(bv ? bv->size : 0);
-        if ((texture = provider->pushTexture(sourceData, totalSize, mime.c_str(), flags))) {
+        if (Texture* texture = provider->pushTexture(sourceData, totalSize, mime.c_str(), flags); texture) {
             mBufferTextureCache[sourceData] = texture;
+            return {texture, CacheResult::MISS};
         }
     }
 
@@ -605,10 +611,12 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     else if (dataUriContent) {
         if (auto iter = mBufferTextureCache.find(uri); iter != mBufferTextureCache.end()) {
             free((void*)dataUriContent);
-            return iter->second;
+            return {iter->second, CacheResult::FOUND};
         }
-        if ((texture = provider->pushTexture(dataUriContent, dataUriSize, mime.c_str(), flags))) {
+        if (Texture* texture = provider->pushTexture(dataUriContent, dataUriSize, mime.c_str(), flags); texture) {
+            free((void*)dataUriContent);
             mBufferTextureCache[uri] = texture;
+            return {texture, CacheResult::MISS};
         }
         free((void*)dataUriContent);
     }
@@ -617,23 +625,23 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
     else if (auto iter = mUriDataCache.find(uri); iter != mUriDataCache.end()) {
         const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
         if (auto iter = mBufferTextureCache.find(sourceData); iter != mBufferTextureCache.end()) {
-            return iter->second;
+            return {iter->second, CacheResult::FOUND};
         }
-        if ((texture = provider->pushTexture(sourceData, iter->second.size, mime.c_str(), flags))) {
+        if (Texture* texture = provider->pushTexture(sourceData, iter->second.size, mime.c_str(), flags); texture) {
             mBufferTextureCache[sourceData] = texture;
+            return {texture, CacheResult::MISS};
         }
     }
 
     // Finally, try the file system.
     else if constexpr (GLTFIO_USE_FILESYSTEM) {
         if (auto iter = mFilepathTextureCache.find(uri); iter != mFilepathTextureCache.end()) {
-            return iter->second;
+            return {iter->second, CacheResult::FOUND};
         }
         Path fullpath = Path(mGltfPath).getParent() + uri;
         if (!fullpath.exists()) {
             slog.e << "Unable to open " << fullpath << io::endl;
-            asset->mDependencyGraph.markAsError(tb.materialInstance);
-            return nullptr;
+            return {};
         }
         using namespace std;
         ifstream filest(fullpath, std::ifstream::in | std::ifstream::binary);
@@ -642,27 +650,20 @@ Texture* ResourceLoader::Impl::getOrCreateTexture(FFilamentAsset* asset, const T
         buffer.reserve((size_t) filest.tellg());
         filest.seekg(0, ios::beg);
         buffer.assign((istreambuf_iterator<char>(filest)), istreambuf_iterator<char>());
-        if ((texture = provider->pushTexture(buffer.data(), buffer.size(), mime.c_str(), flags))) {
+        if (Texture* texture = provider->pushTexture(buffer.data(), buffer.size(), mime.c_str(), flags); texture) {
             mFilepathTextureCache[uri] = texture;
+            return {texture, CacheResult::MISS};
         }
 
     } else {
         // If we reach here, the app has not yet called addResourceData() for this texture,
         // perhaps because it is still being downloaded.
-        mRemainingTextureDownloads++;
-        return nullptr;
+        return {nullptr, CacheResult::NOT_READY};
     }
 
-    if (!texture) {
-        const char* name = srcTexture.name ? srcTexture.name : uri;
-        slog.e << "Unable to create texture " << name << ": "
-                << provider->getPushMessage() << io::endl;
-        asset->mDependencyGraph.markAsError(tb.materialInstance);
-    } else {
-        asset->attachTexture(texture);
-    }
-
-    return texture;
+    const char* name = srcTexture.name ? srcTexture.name : uri;
+    slog.e << "Unable to create texture " << name << ": " << provider->getPushMessage() << io::endl;
+    return {};
 }
 
 void ResourceLoader::Impl::cancelTextureDecoding() {
@@ -673,11 +674,29 @@ void ResourceLoader::Impl::cancelTextureDecoding() {
 }
 
 void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
-    // Create new texture objects if they are not cached and kick off decoding jobs.
     mRemainingTextureDownloads = 0;
-    for (const TextureSlot& slot : asset->mTextureSlots) {
-        if (Texture* texture = getOrCreateTexture(asset, slot)) {
-            asset->bindTexture(slot, texture);
+
+    // Create new texture objects if they are not cached and kick off decoding jobs.
+    for (size_t textureIndex = 0, n = asset->mTextures.size(); textureIndex < n; ++textureIndex) {
+        FFilamentAsset::TextureInfo& info = asset->mTextures[textureIndex];
+        auto [texture, cacheResult] = getOrCreateTexture(asset, textureIndex, info.flags);
+        if (texture == nullptr) {
+            if (cacheResult == CacheResult::NOT_READY) {
+                mRemainingTextureDownloads++;
+            }
+            continue;
+        }
+
+        // If this cgtf_texture slot is being initialized, copy the Texture into the slot
+        // and note if the Texture was created or re-used.
+        if (info.texture == nullptr) {
+            info.texture = texture;
+            info.isOwner = cacheResult == CacheResult::MISS;
+        }
+
+        // For each binding to a material instance, call setParameter(...) on the material.
+        for (const TextureSlot& slot : info.bindings) {
+            asset->applyTextureBinding(textureIndex, slot);
         }
     }
 

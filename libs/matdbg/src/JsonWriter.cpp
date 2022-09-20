@@ -123,7 +123,7 @@ static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
         string variantString = formatVariantString(item.variant, domain);
-        string ps = (item.pipelineStage == backend::ShaderType::VERTEX) ? "vertex  " : "fragment";
+        string ps = (item.pipelineStage == backend::ShaderStage::VERTEX) ? "vertex  " : "fragment";
         json
                 << "    {"
                 << "\"index\": \"" << std::setw(2) << i << "\", "

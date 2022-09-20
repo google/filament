@@ -34,7 +34,7 @@
 set(SOURCES ossource.cpp ../osinclude.h)
 
 add_library(OSDependent STATIC ${SOURCES})
-set_property(TARGET OSDependent PROPERTY FOLDER ThirdParty/glslang)
+set_property(TARGET OSDependent PROPERTY FOLDER glslang)
 set_property(TARGET OSDependent PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # MinGW GCC complains about function pointer casts to void*.
@@ -48,7 +48,17 @@ if(WIN32)
 endif()
 
 if(ENABLE_GLSLANG_INSTALL)
-    install(TARGETS OSDependent EXPORT OSDependentTargets
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-	install(EXPORT OSDependentTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+    install(TARGETS OSDependent EXPORT glslang-targets)
+
+    # Backward compatibility
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/OSDependentTargets.cmake" "
+        message(WARNING \"Using `OSDependentTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
+
+        if (NOT TARGET glslang::OSDependent)
+            include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+        endif()
+
+        add_library(OSDependent ALIAS glslang::OSDependent)
+    ")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/OSDependentTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
 endif()

@@ -83,11 +83,12 @@ std::unordered_map<std::string, UniformType>& Enums::getMap<UniformType>() noexc
 };
 
 std::unordered_map<std::string, SamplerType> Enums::mStringToSamplerType = {
-        { "sampler2d",       SamplerType::SAMPLER_2D },
-        { "sampler2dArray",  SamplerType::SAMPLER_2D_ARRAY },
-        { "sampler3d",       SamplerType::SAMPLER_3D },
-        { "samplerCubemap",  SamplerType::SAMPLER_CUBEMAP },
-        { "samplerExternal", SamplerType::SAMPLER_EXTERNAL },
+        { "sampler2d",           SamplerType::SAMPLER_2D },
+        { "sampler2dArray",      SamplerType::SAMPLER_2D_ARRAY },
+        { "sampler3d",           SamplerType::SAMPLER_3D },
+        { "samplerCubemap",      SamplerType::SAMPLER_CUBEMAP },
+        { "samplerExternal",     SamplerType::SAMPLER_EXTERNAL },
+        { "samplerCubemapArray", SamplerType::SAMPLER_CUBEMAP_ARRAY },
 };
 
 template <>

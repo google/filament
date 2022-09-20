@@ -42,7 +42,7 @@ public:
     ~StbProvider();
 
     Texture* pushTexture(const uint8_t* data, size_t byteCount,
-            const char* mimeType, uint64_t flags) final;
+            const char* mimeType, TextureFlags flags) final;
 
     Texture* popTexture() final;
     void updateQueue() final;
@@ -87,7 +87,7 @@ private:
 };
 
 Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
-            const char* mimeType, FlagBits flags) {
+            const char* mimeType, TextureFlags flags) {
     int width, height, numComponents;
     if (!stbi_info_from_memory(data, byteCount, &width, &height, &numComponents)) {
         mRecentPushMessage = std::string("Unable to parse texture: ") + stbi_failure_reason();
@@ -95,13 +95,12 @@ Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
     }
 
     using InternalFormat = Texture::InternalFormat;
-    const FlagBits sRGB = FlagBits(Flags::sRGB);
 
     Texture* texture = Texture::Builder()
             .width(width)
             .height(height)
             .levels(0xff)
-            .format((flags & sRGB) ? InternalFormat::SRGB8_A8 : InternalFormat::RGBA8)
+            .format(any(flags & TextureFlags::sRGB) ? InternalFormat::SRGB8_A8 : InternalFormat::RGBA8)
             .build(*mEngine);
 
     if (texture == nullptr) {

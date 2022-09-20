@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #include <utils/compiler.h>
+#include <utils/BitmaskEnum.h>
 
 namespace filament {
     class Engine;
@@ -71,14 +72,17 @@ namespace filament::gltfio {
 class UTILS_PUBLIC TextureProvider {
 public:
     using Texture = filament::Texture;
-    using FlagBits = uint64_t;
 
-    enum class Flags {
+    enum class TextureFlags : uint64_t {
+        NONE = 0,
         sRGB = 1 << 0,
     };
 
     /**
      * Creates a Filament texture and pushes it to the asynchronous decoding queue.
+     *
+     * The provider synchronously determines the texture dimensions in order to create a Filament
+     * texture object, then populates the miplevels asynchronously.
      *
      * If construction fails, nothing is pushed to the queue and null is returned. The failure
      * reason can be obtained with getPushMessage(). The given buffer pointer is not held, so the
@@ -86,7 +90,7 @@ public:
      * Texture object, but it is only safe to do so after it has been popped from the queue.
      */
     virtual Texture* pushTexture(const uint8_t* data, size_t byteCount,
-            const char* mimeType, FlagBits flags) = 0;
+            const char* mimeType, TextureFlags flags) = 0;
 
     /**
      * Checks if any texture is ready to be removed from the asynchronous decoding queue, and if so
@@ -176,5 +180,8 @@ TextureProvider* createStbProvider(filament::Engine* engine);
 TextureProvider* createKtx2Provider(filament::Engine* engine);
 
 } // namespace filament::gltfio
+
+template<> struct utils::EnableBitMaskOperators<filament::gltfio::TextureProvider::TextureFlags>
+        : public std::true_type {};
 
 #endif // GLTFIO_TEXTUREPROVIDER_H

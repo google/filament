@@ -156,10 +156,11 @@ public class AutomationEngine {
      * This is when settings get applied, screenshots are (optionally) exported, and the internal
      * test counter is potentially incremented.
      *
+     * @param engine        The filament Engine of interest.
      * @param content       Contains the Filament View, Materials, and Renderer that get modified.
      * @param deltaTime     The amount of time that has passed since the previous tick in seconds.
      */
-    public void tick(@NonNull ViewerContent content, float deltaTime) {
+    public void tick(@NonNull Engine engine, @NonNull ViewerContent content, float deltaTime) {
         if (content.view == null || content.renderer == null) {
             throw new IllegalStateException("Must provide a View and Renderer");
         }
@@ -172,7 +173,7 @@ public class AutomationEngine {
         }
         long nativeView = content.view.getNativeObject();
         long nativeRenderer = content.renderer.getNativeObject();
-        nTick(mNativeObject, nativeView, nativeMaterialInstances, nativeRenderer, deltaTime);
+        nTick(mNativeObject, engine.getNativeObject(), nativeView, nativeMaterialInstances, nativeRenderer, deltaTime);
     }
 
     /**
@@ -184,10 +185,12 @@ public class AutomationEngine {
      * This updates the stashed Settings object, then pushes those settings to the given
      * Filament objects. Clients can optionally call getColorGrading() after calling this method.
      *
+     * @param engine        Filament Engine to use.
      * @param settingsJson  Contains the JSON string with a set of changes that need to be pushed.
      * @param content       Contains a set of Filament objects that you want to mutate.
      */
-    public void applySettings(@NonNull String settingsJson, @NonNull ViewerContent content) {
+    public void applySettings(@NonNull Engine engine, @NonNull String settingsJson,
+        @NonNull ViewerContent content) {
         if (content.view == null || content.renderer == null) {
             throw new IllegalStateException("Must provide a View and Renderer");
         }
@@ -206,7 +209,8 @@ public class AutomationEngine {
         long nativeLm = content.lightManager.getNativeObject();
         long nativeScene = content.scene.getNativeObject();
         long nativeRenderer = content.renderer.getNativeObject();
-        nApplySettings(mNativeObject, settingsJson, nativeView, nativeMaterialInstances,
+        nApplySettings(mNativeObject, engine.getNativeObject(),
+                settingsJson, nativeView, nativeMaterialInstances,
                 nativeIbl, content.sunlight, content.assetLights, nativeLm, nativeScene,
                 nativeRenderer);
     }
@@ -267,9 +271,10 @@ public class AutomationEngine {
             int minFrameCount, boolean verbose);
     private static native void nStartRunning(long nativeObject);
     private static native void nStartBatchMode(long nativeObject);
-    private static native void nTick(long nativeObject, long view, long[] materials, long renderer,
-            float deltaTime);
-    private static native void nApplySettings(long nativeObject, String jsonSettings, long view,
+    private static native void nTick(long nativeObject, long nativeEngine,
+            long view, long[] materials, long renderer, float deltaTime);
+    private static native void nApplySettings(long nativeObject, long nativeEngine,
+            String jsonSettings, long view,
             long[] materials, long ibl, int sunlight, int[] assetLights, long lightManager,
             long scene, long renderer);
     private static native void nGetViewerOptions(long nativeObject, Object result);

@@ -30,6 +30,7 @@
 #include <filament/VertexBuffer.h>
 
 #include <gltfio/MaterialProvider.h>
+#include <gltfio/TextureProvider.h>
 
 #include <math/mat4.h>
 
@@ -87,11 +88,8 @@ struct BufferSlot {
 // Since material instances are not typically shared between FilamentInstance, the slots are a
 // unified list across all instances that exist before creation of Texture objects.
 struct TextureSlot {
-    size_t sourceTexture; // index into cgltf_texture
     MaterialInstance* materialInstance;
     const char* materialParameter;
-    TextureSampler sampler;
-    bool srgb;
 };
 
 // MeshCache
@@ -117,7 +115,7 @@ struct FFilamentAsset : public FilamentAsset {
             mEngine(engine), mNameManager(names), mEntityManager(entityManager),
             mNodeManager(nodeManager),
             mSourceAsset(new SourceAsset {(cgltf_data*)srcAsset}),
-            mTextureBindings(srcAsset->textures_count, 0),
+            mTextures(srcAsset->textures_count),
             mMeshCache(srcAsset->meshes_count) {}
 
     ~FFilamentAsset();
@@ -249,32 +247,14 @@ struct FFilamentAsset : public FilamentAsset {
 
     // end public API
 
-    void attachTexture(Texture* texture) {
-        mTextures.push_back(texture);
-    }
+    // If a Filament Texture for the given args already exists, calls setParameter() and returns
+    // early. If the Texture doesn't exist yet, stashes binding information for later.
+    void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
+        const cgltf_texture* srcTexture, TextureProvider::TextureFlags flags);
 
-    void bindTexture(const TextureSlot& tb, Texture* texture) {
-        assert_invariant(texture);
-        tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
-        mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
-        mTextureBindings[tb.sourceTexture] = texture;
-    }
-
-    // If a Filament Texture already exists for the given slot, go ahead and bind it to the
-    // given material instance. (This can occur when creating new FilamentInstances)
-    // Otherwise, stash the binding information so that ResourceLoader can trigger the bind.
-    void addTextureSlot(const TextureSlot& tb) {
-        if (mResourcesLoaded) {
-            Texture* texture = mTextureBindings[tb.sourceTexture];
-            assert_invariant(texture);
-            tb.materialInstance->setParameter(tb.materialParameter, texture, tb.sampler);
-            // Intentionally omit adding a dependency graph edge here. We do not need progressive
-            // reveal for multiple FilamentInstance.
-        } else {
-            mTextureSlots.push_back(tb);
-            mDependencyGraph.addEdge(tb.materialInstance, tb.materialParameter);
-        }
-    }
+    // Calls mi->setParameter() for the given texture slot and optionally adds an edge
+    // to the dependency graph used for gradual reveal of entities.
+    void applyTextureBinding(size_t textureIndex,const TextureSlot& tb, bool addDependency = true);
 
     void createAnimators();
 
@@ -296,7 +276,6 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<BufferObject*> mBufferObjects;
     std::vector<IndexBuffer*> mIndexBuffers;
     std::vector<MorphTargetBuffer*> mMorphTargetBuffers;
-    std::vector<Texture*> mTextures;
     utils::FixedCapacityVector<Skin> mSkins;
     utils::FixedCapacityVector<Variant> mVariants;
     utils::FixedCapacityVector<utils::CString> mScenes;
@@ -333,8 +312,19 @@ struct FFilamentAsset : public FilamentAsset {
     using SourceHandle = std::shared_ptr<SourceAsset>;
     SourceHandle mSourceAsset;
 
+    // Stores all information related to a single cgltf_texture.
+    // Note that more than one cgltf_texture can map to a single Filament texture,
+    // e.g. if several have the same URL or bufferView. For each Filament texture,
+    // only one of its corresponding TextureInfo slots will have isOwner=true.
+    struct TextureInfo {
+        std::vector<TextureSlot> bindings;
+        Texture* texture;
+        TextureProvider::TextureFlags flags;
+        bool isOwner;
+    };
+
     // Mapping from cgltf_texture to Texture* is required when creating new instances.
-    utils::FixedCapacityVector<Texture*> mTextureBindings;
+    utils::FixedCapacityVector<TextureInfo> mTextures;
 
     // Resource URIs can be queried by the end user.
     utils::FixedCapacityVector<const char*> mResourceUris;
@@ -344,7 +334,6 @@ struct FFilamentAsset : public FilamentAsset {
 
     // Asset information that is produced by AssetLoader and consumed by ResourceLoader:
     std::vector<BufferSlot> mBufferSlots;
-    std::vector<TextureSlot> mTextureSlots;
     std::vector<std::pair<const cgltf_primitive*, VertexBuffer*> > mPrimitives;
 };
 

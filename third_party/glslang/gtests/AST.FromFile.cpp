@@ -233,8 +233,10 @@ INSTANTIATE_TEST_SUITE_P(
         "precise_struct_block.vert",
         "maxClipDistances.vert",
         "findFunction.frag",
+        "noMatchingFunction.frag",
         "constantUnaryConversion.comp",
         "xfbUnsizedArray.error.vert",
+        "xfbUnsizedArray.error.tese",
         "glsl.140.layoutOffset.error.vert",
         "glsl.430.layoutOffset.error.vert",
         "glsl.450.subgroup.frag",
@@ -284,8 +286,16 @@ INSTANTIATE_TEST_SUITE_P(
         "textureoffset_sampler2darrayshadow.vert",
         "atomicAdd.comp",
         "GL_ARB_gpu_shader5.u2i.vert",
+        "textureQueryLOD.frag",
         "atomicCounterARBOps.vert",
-        "GL_EXT_shader_integer_mix.vert"
+        "GL_EXT_shader_integer_mix.vert",
+        "GL_ARB_draw_instanced.vert",
+        "GL_ARB_fragment_coord_conventions.vert",
+        "BestMatchFunction.vert",
+        "EndStreamPrimitive.geom",
+        "floatBitsToInt.vert",
+        "coord_conventions.frag",
+        "gl_FragCoord.frag"
     })),
     FileNameAsCustomTestSuffix
 );

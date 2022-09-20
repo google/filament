@@ -45,7 +45,7 @@ protected:
     FrameGraph& mFrameGraph;
     std::unordered_set<FrameGraphHandle::Index> mDeclaredHandles;
 public:
-    PassNode(FrameGraph& fg) noexcept;
+    explicit PassNode(FrameGraph& fg) noexcept;
     PassNode(PassNode&& rhs) noexcept;
     PassNode(PassNode const&) = delete;
     PassNode& operator=(PassNode const&) = delete;
@@ -109,7 +109,7 @@ private:
 
 class PresentPassNode : public PassNode {
 public:
-    PresentPassNode(FrameGraph& fg) noexcept;
+    explicit PresentPassNode(FrameGraph& fg) noexcept;
     PresentPassNode(PresentPassNode&& rhs) noexcept;
     ~PresentPassNode() noexcept override;
     PresentPassNode(PresentPassNode const&) = delete;

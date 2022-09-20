@@ -89,7 +89,7 @@ bool getMetalShaderInfo(ChunkContainer container, ShaderInfo* info) {
         *info++ = {
                 .shaderModel = ShaderModel(shaderModelValue),
                 .variant = variant,
-                .pipelineStage = ShaderType(pipelineStageValue),
+                .pipelineStage = ShaderStage(pipelineStageValue),
                 .offset = offsetValue
         };
     }
@@ -136,7 +136,7 @@ bool getGlShaderInfo(ChunkContainer container, ShaderInfo* info) {
         *info++ = {
             .shaderModel = ShaderModel(shaderModelValue),
             .variant = variant,
-            .pipelineStage = ShaderType(pipelineStageValue),
+            .pipelineStage = ShaderStage(pipelineStageValue),
             .offset = offsetValue
         };
     }
@@ -182,7 +182,7 @@ bool getVkShaderInfo(ChunkContainer container, ShaderInfo* info) {
         *info++ = {
             .shaderModel = ShaderModel(shaderModelValue),
             .variant = variant,
-            .pipelineStage = ShaderType(pipelineStageValue),
+            .pipelineStage = ShaderStage(pipelineStageValue),
             .offset = dictionaryIndex
         };
     }

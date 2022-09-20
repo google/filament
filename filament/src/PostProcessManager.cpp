@@ -1951,11 +1951,13 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                     render(hwDstRT, pipeline, driver);
 
                     // prepare the next level
-                    mi->setParameter("source", parity ? hwOut : hwStage, {
-                            .filterMag = SamplerMagFilter::LINEAR,
-                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                    });
-                    mi->setParameter("level", float(i));
+                    if (i != inoutBloomOptions.levels - 1) {
+                        mi->setParameter("source", parity ? hwOut : hwStage, {
+                                .filterMag = SamplerMagFilter::LINEAR,
+                                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                        });
+                        mi->setParameter("level", float(i));
+                    }
                 }
             });
 

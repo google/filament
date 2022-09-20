@@ -415,13 +415,22 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
     //  3 depth
     auto& samplerGroupInfo = program.getSamplerGroupInfo();
     for (size_t shaderType = 0; shaderType != PIPELINE_STAGE_COUNT; ++shaderType) {
+        ShaderStage stage = (ShaderStage)shaderType;
         size_t bindingIdx = 0;
-        auto& samplerBlockInfo = (shaderType == ShaderType::VERTEX) ? vertexSamplerBlockInfo
-                                                                    : fragmentSamplerBlockInfo;
+
+        auto getShaderStage = [this](ShaderStage type) -> auto& {
+            switch (type) {
+                case ShaderStage::VERTEX:    return vertexSamplerBlockInfo;
+                case ShaderStage::FRAGMENT:  return fragmentSamplerBlockInfo;
+            }
+        };
+
+        auto& samplerBlockInfo = getShaderStage(stage);
+
         for (size_t samplerGroupIdx = 0; samplerGroupIdx != SAMPLER_GROUP_COUNT; ++samplerGroupIdx) {
             auto& groupData = samplerGroupInfo[samplerGroupIdx];
             auto stageFlags = groupData.stageFlags;
-            if (!hasShaderType(stageFlags, static_cast<ShaderType>(shaderType))) {
+            if (!hasShaderType(stageFlags, static_cast<ShaderStage>(shaderType))) {
                 continue;
             }
             auto& samplers = groupData.samplers;

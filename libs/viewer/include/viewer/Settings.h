@@ -76,11 +76,11 @@ using GuardBandOptions = filament::View::GuardBandOptions;
 using LightManager = filament::LightManager;
 
 // These functions push all editable property values to their respective Filament objects.
-void applySettings(const ViewSettings& settings, View* dest);
-void applySettings(const MaterialSettings& settings, MaterialInstance* dest);
-void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
+void applySettings(Engine* engine, const ViewSettings& settings, View* dest);
+void applySettings(Engine* engine, const MaterialSettings& settings, MaterialInstance* dest);
+void applySettings(Engine* engine, const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
         utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view);
-void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
+void applySettings(Engine* engine, const ViewerOptions& settings, Camera* camera, Skybox* skybox,
         Renderer* renderer);
 
 // Creates a new ColorGrading object based on the given settings.

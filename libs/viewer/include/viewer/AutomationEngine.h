@@ -158,7 +158,7 @@ public:
      * @param content       Contains the Filament View, Materials, and Renderer that get modified.
      * @param deltaTime     The amount of time that has passed since the previous tick in seconds.
      */
-    void tick(const ViewerContent& content, float deltaTime);
+    void tick(Engine* engine, const ViewerContent& content, float deltaTime);
 
     /**
      * Mutates a set of client-owned Filament objects according to a JSON string.
@@ -173,7 +173,7 @@ public:
      * @param jsonLength Number of characters in the json string.
      * @param content    Contains a set of Filament objects that you want to mutate.
      */
-    void applySettings(const char* json, size_t jsonLength, const ViewerContent& content);
+    void applySettings(Engine* engine, const char* json, size_t jsonLength, const ViewerContent& content);
 
     /**
      * Gets a color grading object that corresponds to the latest settings.

@@ -5,6 +5,16 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.27.1
+
+- Java: add methods for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()
+- engine: Fix stencil buffer writes with OpenGL backend.
+- gltfio: add new virtual method to MaterialProvider that all plugins must implement
+- gltfio: add an assert for inconsistent sRGB flags among usages of a particular texture
+- engine: improve scissor documentation
+- backend: scissor is no longer clipped to the viewport (done on filament side)
+- samples: add debug overdraw visualization to gltf_viewer
+
 ## v1.27.0
 
 - WebGL: reduce max instance count to work around Chrome issues [⚠️ **Recompile Materials**]

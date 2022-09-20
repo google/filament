@@ -84,7 +84,7 @@ typedef TVector<const char*> TExtensionList;
 class TSymbol {
 public:
     POOL_ALLOCATOR_NEW_DELETE(GetThreadPoolAllocator())
-    explicit TSymbol(const TString *n) :  name(n), extensions(0), writable(true) { }
+    explicit TSymbol(const TString *n) :  name(n), uniqueId(0), extensions(0), writable(true) { }
     virtual TSymbol* clone() const = 0;
     virtual ~TSymbol() { }  // rely on all symbol owned memory coming from the pool
 
@@ -224,7 +224,7 @@ struct TParameter {
     TString *name;
     TType* type;
     TIntermTyped* defaultValue;
-    void copyParam(const TParameter& param)
+    TParameter& copyParam(const TParameter& param)
     {
         if (param.name)
             name = NewPoolTString(param.name->c_str());
@@ -232,6 +232,7 @@ struct TParameter {
             name = 0;
         type = param.type->clone();
         defaultValue = param.defaultValue;
+        return *this;
     }
     TBuiltInVariable getDeclaredBuiltIn() const { return type->getQualifier().declaredBuiltIn; }
 };

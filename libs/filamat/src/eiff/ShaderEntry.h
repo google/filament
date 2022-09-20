@@ -32,6 +32,7 @@ struct TextEntry {
     std::string shader;
 };
 
+
 struct SpirvEntry {
     uint8_t shaderModel;
     filament::Variant::type_t variantKey;

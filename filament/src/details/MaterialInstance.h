@@ -70,21 +70,22 @@ public:
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
     backend::SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
 
-    void setScissor(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
-        mScissorRect = { left, bottom,
-                std::min(width, (uint32_t)std::numeric_limits<int32_t>::max()),
-                std::min(height, (uint32_t)std::numeric_limits<int32_t>::max())
-        };
+    void setScissor(uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) noexcept {
+        constexpr uint32_t maxvalu = std::numeric_limits<int32_t>::max();
+        mScissorRect = { int32_t(left), int32_t(bottom),
+                std::min(width, maxvalu), std::min(height, maxvalu) };
+        mHasScissor = true;
     }
 
     void unsetScissor() noexcept {
-        mScissorRect = { 0, 0,
-                (uint32_t)std::numeric_limits<int32_t>::max(),
-                (uint32_t)std::numeric_limits<int32_t>::max()
-        };
+        constexpr uint32_t maxvalu = std::numeric_limits<int32_t>::max();
+        mScissorRect = { 0, 0, maxvalu, maxvalu };
+        mHasScissor = false;
     }
 
     backend::Viewport const& getScissor() const noexcept { return mScissorRect; }
+
+    bool hasScissor() const noexcept { return mHasScissor; }
 
     backend::CullingMode getCullingMode() const noexcept { return mCulling; }
 
@@ -212,7 +213,7 @@ private:
     void setParameterImpl(std::string_view name, const T* value, size_t count);
 
     void setParameterImpl(std::string_view name,
-            Texture const* texture, TextureSampler const& sampler);
+            FTexture const* texture, TextureSampler const& sampler);
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
@@ -230,6 +231,7 @@ private:
     backend::CullingMode mCulling;
     bool mColorWrite;
     bool mDepthWrite;
+    bool mHasScissor = false;
     backend::StencilState mStencilState = {};
     backend::RasterState::DepthFunc mDepthFunc;
     TransparencyMode mTransparencyMode;

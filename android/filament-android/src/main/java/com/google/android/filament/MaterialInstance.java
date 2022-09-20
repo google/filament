@@ -402,19 +402,40 @@ public class MaterialInstance {
     }
 
     /**
-     * Set up a custom scissor rectangle; by default this encompasses the View.
+     * Set-up a custom scissor rectangle; by default it is disabled.
      *
-     * @param left      left coordinate of the scissor box
-     * @param bottom    bottom coordinate of the scissor box
+     * <p>
+     * The scissor rectangle gets clipped by the View's viewport, in other words, the scissor
+     * cannot affect fragments outside of the View's Viewport.
+     * </p>
+     *
+     * <p>
+     * Currently the scissor is not compatible with dynamic resolution and should always be
+     * disabled when dynamic resolution is used.
+     * </p>
+     *
+     * @param left      left coordinate of the scissor box relative to the viewport
+     * @param bottom    bottom coordinate of the scissor box relative to the viewport
      * @param width     width of the scissor box
      * @param height    height of the scissor box
+     *
+     * @see #unsetScissor
+     * @see View#setViewport
+     * @see View#setDynamicResolutionOptions
      */
     public void setScissor(@IntRange(from = 0) int left, @IntRange(from = 0) int bottom,
             @IntRange(from = 0) int width, @IntRange(from = 0) int height) {
         nSetScissor(getNativeObject(), left, bottom, width, height);
     }
 
-    /** Returns the scissor rectangle to its default setting, which encompasses the View. */
+    /**
+     * Returns the scissor rectangle to its default disabled setting.
+     * <p>
+     * Currently the scissor is not compatible with dynamic resolution and should always be
+     * disabled when dynamic resolution is used.
+     * </p>
+     * @see View#setDynamicResolutionOptions
+     */
     public void unsetScissor() {
         nUnsetScissor(getNativeObject());
     }

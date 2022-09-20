@@ -279,6 +279,9 @@ public:
     // if non-null, overrides the material's polygon offset
     void overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept;
 
+    // a box that both offsets the viewport and clips it
+    void setScissorViewport(backend::Viewport viewport) noexcept;
+
     // if non-null, overrides the material's scissor
     void overrideScissor(backend::Viewport const* scissor) noexcept;
 
@@ -336,6 +339,7 @@ public:
         const backend::Handle<backend::HwBufferObject> mInstancedUboHandle;
         const backend::PolygonOffset mPolygonOffset;
         const backend::Viewport mScissor;
+        const backend::Viewport mScissorViewport;
         const bool mPolygonOffsetOverride : 1;
         const bool mScissorOverride : 1;
 
@@ -447,6 +451,10 @@ private:
 
     // value of scissor override
     backend::Viewport mScissor{};
+
+    backend::Viewport mScissorViewport{ 0, 0,
+            std::numeric_limits<int32_t>::max(),
+            std::numeric_limits<int32_t>::max() };
 
     // a vector for our custom commands
     mutable Executor::CustomCommandVector mCustomCommands;
