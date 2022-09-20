@@ -79,7 +79,7 @@ protected:
     }
 
     inline void skipUntilEndOfLine() {
-        while (*mCursor != '\n' && hasMore()) {
+        while (hasMore() && *mCursor != '\n') {
             consume();
         }
     }
