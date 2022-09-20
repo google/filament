@@ -370,7 +370,45 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage
                 break;
         }
     }
-    out << "std140) uniform " << blockName << " {\n";
+    switch (uib.getAlignment()) {
+        case BufferInterfaceBlock::Alignment::std140:
+            out << "std140";
+            break;
+        case BufferInterfaceBlock::Alignment::std430:
+            out << "std430";
+            break;
+    }
+
+    out << ") ";
+
+    switch (uib.getTarget()) {
+        case BufferInterfaceBlock::Target::UNIFORM:
+            out << "uniform ";
+            break;
+        case BufferInterfaceBlock::Target::SSBO:
+            out << "buffer ";
+            break;
+    }
+
+    out << blockName << " ";
+
+    if (uib.getTarget() == BufferInterfaceBlock::Target::SSBO) {
+        uint8_t qualifiers = uib.getQualifier();
+        while (qualifiers) {
+            uint8_t mask = 1u << utils::ctz(unsigned(qualifiers));
+            switch (BufferInterfaceBlock::Qualifier(qualifiers & mask)) {
+                case BufferInterfaceBlock::Qualifier::COHERENT:  out << "coherent "; break;
+                case BufferInterfaceBlock::Qualifier::WRITEONLY: out << "writeonly "; break;
+                case BufferInterfaceBlock::Qualifier::READONLY:  out << "readonly "; break;
+                case BufferInterfaceBlock::Qualifier::VOLATILE:  out << "volatile "; break;
+                case BufferInterfaceBlock::Qualifier::RESTRICT:  out << "restrict "; break;
+            }
+            qualifiers &= ~mask;
+        }
+    }
+
+    out << "{\n";
+
     for (auto const& info : infos) {
         char const* const type = getUniformTypeName(info);
         char const* const precision = getUniformPrecisionQualifier(info.type, info.precision,
@@ -378,9 +416,13 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage
         out << "    " << precision;
         if (precision[0] != '\0') out << " ";
         out << type << " " << info.name.c_str();
-        if (info.size > 0) {
+        if (info.isArray) {
             if (info.sizeName.empty()) {
-                out << "[" << info.size << "]";
+                if (info.size) {
+                    out << "[" << info.size << "]";
+                } else {
+                    out << "[]";
+                }
             } else {
                 out << "[" << info.sizeName.c_str() << "]";
             }

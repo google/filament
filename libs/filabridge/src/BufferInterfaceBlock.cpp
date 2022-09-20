@@ -34,13 +34,31 @@ BufferInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
     return *this;
 }
 
+BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::alignment(
+        BufferInterfaceBlock::Alignment alignment) {
+    mAlignment = alignment;
+    return *this;
+}
+
+BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::target(
+        BufferInterfaceBlock::Target target) {
+    mTarget = target;
+    return *this;
+}
+
+BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::qualifier(
+        BufferInterfaceBlock::Qualifier qualifier) {
+    mQualifiers |= uint8_t(qualifier);
+    return *this;
+}
+
 BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::add(
         std::initializer_list<InterfaceBlockEntry> list) {
     mEntries.reserve(mEntries.size() + list.size());
     for (auto const& item : list) {
         mEntries.push_back({
                 { item.name.data(), item.name.size() },
-                0, uint8_t(item.stride), item.type, item.size, item.precision,
+                0, uint8_t(item.stride), item.type, item.size > 0, item.size, item.precision,
                 { item.structName.data(), item.structName.size() },
                 { item.sizeName.data(), item.sizeName.size() }
         });
@@ -48,7 +66,36 @@ BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::add(
     return *this;
 }
 
+BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::addVariableSizedArray(
+        BufferInterfaceBlock::InterfaceBlockEntry const& item) {
+    mEntries.push_back({
+            { item.name.data(), item.name.size() },
+            0, uint8_t(item.stride), item.type, true, 0, item.precision,
+            { item.structName.data(), item.structName.size() },
+            { item.sizeName.data(), item.sizeName.size() }
+    });
+    return *this;
+}
+
 BufferInterfaceBlock BufferInterfaceBlock::Builder::build() {
+    // look for the first variable-size array
+    auto pos = std::find_if(mEntries.begin(), mEntries.end(),
+            [](FieldInfo const& item) -> bool {
+        return item.isArray && !item.size;
+    });
+
+    // if there is one, check it's the last entry
+    ASSERT_PRECONDITION(pos == mEntries.end() || pos == mEntries.end() - 1,
+            "the variable-size array must be the last entry");
+
+    // if we have a variable size array, we can't be a UBO
+    ASSERT_PRECONDITION(pos == mEntries.end() || mTarget == Target::SSBO,
+            "variable size arrays not supported for UBOs");
+
+    // std430 not available for UBOs
+    ASSERT_PRECONDITION(mAlignment == Alignment::std140 || mTarget == Target::SSBO,
+            "UBOs must use std140");
+
     return BufferInterfaceBlock(*this);
 }
 
@@ -60,7 +107,10 @@ BufferInterfaceBlock& BufferInterfaceBlock::operator=(BufferInterfaceBlock&& rhs
 BufferInterfaceBlock::~BufferInterfaceBlock() noexcept = default;
 
 BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
-    : mName(builder.mName), mFieldInfoList(builder.mEntries.size())
+    : mName(builder.mName),
+      mFieldInfoList(builder.mEntries.size()),
+      mAlignment(builder.mAlignment),
+      mTarget(builder.mTarget)
 {
     auto& infoMap = mInfoMap;
     infoMap.reserve(builder.mEntries.size());
@@ -71,11 +121,15 @@ BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
     uint16_t offset = 0;
     for (auto const& e : builder.mEntries) {
         size_t alignment = baseAlignmentForType(e.type);
-        uint8_t stride = strideForType(e.type, e.stride);
-        if (e.size > 0) { // this is an array
-            // round the alignment up to that of a float4
-            alignment = (alignment + 3) & ~3;
-            stride = (stride + uint8_t(3)) & ~uint8_t(3);
+        size_t stride = strideForType(e.type, e.stride);
+
+        if (e.isArray) { // this is an array
+            if (builder.mAlignment == Alignment::std140) {
+                // in std140 arrays are aligned to float4
+                alignment = 4;
+            }
+            // the stride of an array is always rounded to its alignment (which is POT)
+            stride = (stride + alignment - 1) & ~(alignment - 1);
         }
 
         // calculate the offset for this uniform
@@ -83,7 +137,8 @@ BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
         offset += padding;
 
         FieldInfo& info = uniformsInfoList[i];
-        info = { e.name, offset, stride, e.type, e.size, e.precision, e.structName, e.sizeName };
+        info = { e.name, offset, uint8_t(stride), e.type, e.isArray, e.size,
+                 e.precision, e.structName, e.sizeName };
 
         // record this uniform info
         infoMap[{ info.name.data(), info.name.size() }] = i;

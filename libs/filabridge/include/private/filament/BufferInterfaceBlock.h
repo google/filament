@@ -64,6 +64,7 @@ public:
         uint16_t offset;            // offset in "uint32_t" of this field in the buffer
         uint8_t stride;             // stride in "uint32_t" to the next element
         Type type;                  // type of this field
+        bool isArray;               // true if the field is an array
         uint32_t size;              // size of the array in elements, or 0 if not an array
         Precision precision;        // precision of this field
         utils::CString structName;  // name of this field structure if type is STRUCT
@@ -75,6 +76,24 @@ public:
         }
     };
 
+    enum class Alignment : uint8_t {
+        std140,
+        std430
+    };
+
+    enum class Target : uint8_t  {
+        UNIFORM,
+        SSBO
+    };
+
+    enum class Qualifier : uint8_t {
+        COHERENT  = 0x01,
+        WRITEONLY = 0x02,
+        READONLY  = 0x04,
+        VOLATILE  = 0x08,
+        RESTRICT  = 0x10
+    };
+
     class Builder {
     public:
         Builder() noexcept;
@@ -83,15 +102,29 @@ public:
         // Give a name to this buffer interface block
         Builder& name(std::string_view interfaceBlockName);
 
+        // Buffer target
+        Builder& target(Target target);
+
+        // build and return the BufferInterfaceBlock
+        Builder& alignment(Alignment alignment);
+
+        // add a qualifier
+        Builder& qualifier(Qualifier qualifier);
+
         // a list of this buffer's fields
         Builder& add(std::initializer_list<InterfaceBlockEntry> list);
 
-        // build and return the BufferInterfaceBlock
+        // add a variable-sized array. must be the last entry.
+        Builder& addVariableSizedArray(InterfaceBlockEntry const& item);
+
         BufferInterfaceBlock build();
     private:
         friend class BufferInterfaceBlock;
         utils::CString mName;
         std::vector<FieldInfo> mEntries;
+        Alignment mAlignment = Alignment::std140;
+        Target mTarget = Target::UNIFORM;
+        uint8_t mQualifiers = 0;
     };
 
     // name of this BufferInterfaceBlock interface block
@@ -116,6 +149,12 @@ public:
 
     bool isEmpty() const noexcept { return mFieldInfoList.empty(); }
 
+    Alignment getAlignment() const noexcept { return mAlignment; }
+
+    Target getTarget() const noexcept { return mTarget; }
+
+    uint8_t getQualifier() const noexcept { return mQualifiers; }
+
 private:
     friend class Builder;
 
@@ -128,6 +167,9 @@ private:
     utils::FixedCapacityVector<FieldInfo> mFieldInfoList;
     std::unordered_map<std::string_view , uint32_t> mInfoMap;
     uint32_t mSize = 0; // size in bytes rounded to multiple of 4
+    Alignment mAlignment = Alignment::std140;
+    Target mTarget = Target::UNIFORM;
+    uint8_t mQualifiers = 0;
 };
 
 } // namespace filament
