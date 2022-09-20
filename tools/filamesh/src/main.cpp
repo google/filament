@@ -369,6 +369,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    if (g_mesh.parts.empty()) {
+        std::cerr << "The mesh doesn't have any parts." << std::endl;
+        return 1;
+    }
+
     uint32_t materialCount = scene->mNumMaterials;
 
     for (uint32_t i = 0; i < materialCount; i++) {
