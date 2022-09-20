@@ -14,6 +14,7 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(HDRS
         include/filamat/Enums.h
+        include/filamat/IncludeCallback.h
         include/filamat/MaterialBuilder.h
         include/filamat/Package.h)
 

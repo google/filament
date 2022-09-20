@@ -19,14 +19,6 @@
 #ifndef TNT_FILAMAT_MATERIAL_PACKAGE_BUILDER_H
 #define TNT_FILAMAT_MATERIAL_PACKAGE_BUILDER_H
 
-#include <cstddef>
-#include <cstdint>
-
-#include <atomic>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <filament/MaterialEnums.h>
 
 #include <filamat/IncludeCallback.h>
@@ -41,6 +33,14 @@
 #include <utils/CString.h>
 
 #include <math/vec3.h>
+
+#include <atomic>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 class JobSystem;
@@ -139,9 +139,9 @@ protected:
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
     const CodeGenParams mSemanticCodeGenParams = {
-        .shaderModel = ShaderModel::MOBILE,
-        .targetApi = TargetApi::OPENGL,
-        .targetLanguage = TargetLanguage::SPIRV
+            .shaderModel = ShaderModel::MOBILE,
+            .targetApi = TargetApi::OPENGL,
+            .targetLanguage = TargetLanguage::SPIRV
     };
 
     // Keeps track of how many times MaterialBuilder::init() has been called without a call to
@@ -153,7 +153,7 @@ protected:
 
 // Utility function that looks at an Engine backend to determine TargetApi
 inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
-            filament::backend::Backend backend) noexcept {
+        filament::backend::Backend backend) noexcept {
     using filament::backend::Backend;
     using TargetApi = MaterialBuilderBase::TargetApi;
     switch (backend) {
@@ -254,7 +254,7 @@ public:
         std::string value;
 
         PreprocessorDefine(std::string  name, std::string  value) :
-            name(std::move(name)), value(std::move(value)) {}
+                name(std::move(name)), value(std::move(value)) {}
     };
     using PreprocessorDefineList = std::vector<PreprocessorDefine>;
 
@@ -315,7 +315,7 @@ public:
     MaterialBuilder& require(VertexAttribute attribute) noexcept;
 
     //! Specify the domain that this material will operate in.
-    MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
+    MaterialBuilder& materialDomain(MaterialBuilder::MaterialDomain materialDomain) noexcept;
 
     /**
      * Set the code content of this material.
@@ -583,16 +583,16 @@ public:
     /**
      * Add a subpass parameter to this material.
      */
-    MaterialBuilder& parameter(SubpassType subpassType, SamplerFormat format, ParameterPrecision
-            precision, const char* name) noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType, SamplerFormat format, const char* name)
-        noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType, ParameterPrecision precision,
-            const char* name) noexcept;
+    MaterialBuilder& parameter(SubpassType subpassType,
+            SamplerFormat format, ParameterPrecision precision, const char* name) noexcept;
+    MaterialBuilder& parameter(SubpassType subpassType,
+            SamplerFormat format, const char* name) noexcept;
+    MaterialBuilder& parameter(SubpassType subpassType,
+            ParameterPrecision precision, const char* name) noexcept;
     MaterialBuilder& parameter(SubpassType subpassType, const char* name) noexcept;
 
     struct Parameter {
-        Parameter() noexcept : parameterType(INVALID) {}
+        Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p)
@@ -629,8 +629,8 @@ public:
         Output() noexcept = default;
         Output(const char* outputName, VariableQualifier qualifier, OutputTarget target,
                 OutputType type, int location) noexcept
-            : name(outputName), qualifier(qualifier), target(target), type(type),
-            location(location) { }
+                : name(outputName), qualifier(qualifier), target(target), type(type),
+                  location(location) { }
 
         utils::CString name;
         VariableQualifier qualifier;

@@ -16,24 +16,18 @@
 
 #include "filamat/MaterialBuilder.h"
 
-#include <atomic>
-#include <utility>
-#include <vector>
-
-#include <utils/JobSystem.h>
-#include <utils/Log.h>
-#include <utils/Mutex.h>
-#include <utils/Panic.h>
-
 #include <filamat/Enums.h>
 
-#include <private/filament/BufferInterfaceBlock.h>
-#include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UibStructs.h>
-
+#include "Includes.h"
+#include "MaterialVariants.h"
 #include "SibGenerator.h"
 
-#include "MaterialVariants.h"
+#ifndef FILAMAT_LITE
+#   include "GLSLPostProcessor.h"
+#   include "sca/GLSLTools.h"
+#else
+#   include "sca/GLSLToolsLite.h"
+#endif
 
 #include "shaders/MaterialInfo.h"
 #include "shaders/ShaderGenerator.h"
@@ -48,14 +42,18 @@
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
 
-#include "Includes.h"
+#include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
-#ifndef FILAMAT_LITE
-#include "GLSLPostProcessor.h"
-#include "sca/GLSLTools.h"
-#else
-#include "sca/GLSLToolsLite.h"
-#endif
+#include <utils/JobSystem.h>
+#include <utils/Log.h>
+#include <utils/Mutex.h>
+#include <utils/Panic.h>
+
+#include <atomic>
+#include <utility>
+#include <vector>
 
 
 namespace filamat {
@@ -67,7 +65,7 @@ std::atomic<int> MaterialBuilderBase::materialBuilderClients(0);
 
 inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
     // Assert that a single bit is set.
-    UTILS_UNUSED uint8_t bits = (uint8_t) api;
+    UTILS_UNUSED uint8_t bits = (uint8_t)api;
     assert(bits && !(bits & bits - 1u));
 }
 
@@ -86,7 +84,7 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
 
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
     TargetLanguage glTargetLanguage = mOptimization > MaterialBuilder::Optimization::PREPROCESSOR ?
-            TargetLanguage::SPIRV : TargetLanguage::GLSL;
+                                      TargetLanguage::SPIRV : TargetLanguage::GLSL;
     if (vulkanSemantics) {
         // Currently GLSLPostProcessor.cpp is incapable of compiling SPIRV to GLSL without
         // running the optimizer. For now we just activate the optimizer in that case.
@@ -261,7 +259,8 @@ MaterialBuilder& MaterialBuilder::groupSize(filament::math::uint3 groupSize) noe
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) noexcept {
+MaterialBuilder& MaterialBuilder::materialDomain(
+        MaterialBuilder::MaterialDomain materialDomain) noexcept {
     mMaterialDomain = materialDomain;
     return *this;
 }
@@ -465,7 +464,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
             const uint8_t attachmentIndex = 0;
             const uint8_t binding = 0;
             info.subpass = { CString("MaterialParams"), param.name, param.subpassType,
-                param.format, param.precision, attachmentIndex, binding };
+                             param.format, param.precision, attachmentIndex, binding };
         }
     }
 
@@ -627,14 +626,14 @@ bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
         const CString& fileName) noexcept {
     if (!mCode.empty()) {
         ResolveOptions options {
-            .insertLineDirectives = true,
-            .insertLineDirectiveCheck = true
+                .insertLineDirectives = true,
+                .insertLineDirectiveCheck = true
         };
         IncludeResult source {
-            .includeName = fileName,
-            .text = mCode,
-            .lineNumberOffset = getLineOffset(),
-            .name = CString("")
+                .includeName = fileName,
+                .text = mCode,
+                .lineNumberOffset = getLineOffset(),
+                .name = CString("")
         };
         if (!::filamat::resolveIncludes(source, std::move(callback), options)) {
             return false;
@@ -1078,7 +1077,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         auto const* stage = to_string(sib.getStageFlags());
         for (auto const& sampler: samplers) {
             slog.e << "\"" << sampler.name.c_str() << "\" "
-                    << Enums::toString(sampler.type).c_str() << " " << stage << '\n';
+                   << Enums::toString(sampler.type).c_str() << " " << stage << '\n';
         }
         flush(slog.e);
     };
