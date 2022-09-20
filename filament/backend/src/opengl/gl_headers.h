@@ -90,15 +90,15 @@
 
 #if defined(GL_ES_VERSION_2_0)
 #ifdef GL_EXT_disjoint_timer_query
-#       define GL_TIME_ELAPSED              0x88BF
+#       define GL_TIME_ELAPSED              GL_TIME_ELAPSED_EXT
 #endif
 
 #ifdef GL_EXT_clip_control
 #   ifndef GL_LOWER_LEFT
-#      define GL_LOWER_LEFT                 0x8CA1
+#      define GL_LOWER_LEFT                 GL_LOWER_LEFT_EXT
 #   endif
 #   ifndef GL_ZERO_TO_ONE
-#      define GL_ZERO_TO_ONE                0x935F
+#      define GL_ZERO_TO_ONE                GL_ZERO_TO_ONE_EXT
 #   endif
 #endif
 
@@ -108,22 +108,48 @@
 
 // Prevent lots of #ifdef's between desktop and mobile
 
-#if !defined(GL_KHR_debug)
-#   define GL_DEBUG_OUTPUT                   0x92E0
-#   define GL_DEBUG_OUTPUT_SYNCHRONOUS       0x8242
+#if defined(GL_KHR_debug)
+#   ifndef GL_DEBUG_OUTPUT
+#      define GL_DEBUG_OUTPUT                   GL_DEBUG_OUTPUT_KHR
+#   endif
+#   ifndef GL_DEBUG_OUTPUT_SYNCHRONOUS
+#      define GL_DEBUG_OUTPUT_SYNCHRONOUS       GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR
+#   endif
 
-#   define GL_DEBUG_SEVERITY_HIGH            0x9146
-#   define GL_DEBUG_SEVERITY_MEDIUM          0x9147
-#   define GL_DEBUG_SEVERITY_LOW             0x9148
-#   define GL_DEBUG_SEVERITY_NOTIFICATION    0x826B
+#   ifndef GL_DEBUG_SEVERITY_HIGH
+#      define GL_DEBUG_SEVERITY_HIGH            GL_DEBUG_SEVERITY_HIGH_KHR
+#   endif
+#   ifndef GL_DEBUG_SEVERITY_MEDIUM
+#      define GL_DEBUG_SEVERITY_MEDIUM          GL_DEBUG_SEVERITY_MEDIUM_KHR
+#   endif
+#   ifndef GL_DEBUG_SEVERITY_LOW
+#      define GL_DEBUG_SEVERITY_LOW             GL_DEBUG_SEVERITY_LOW_KHR
+#   endif
+#   ifndef GL_DEBUG_SEVERITY_NOTIFICATION
+#      define GL_DEBUG_SEVERITY_NOTIFICATION    GL_DEBUG_SEVERITY_NOTIFICATION_KHR
+#   endif
 
-#   define GL_DEBUG_TYPE_MARKER              0x8268
-#   define GL_DEBUG_TYPE_ERROR               0x824C
-#   define GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR 0x824D
-#   define GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR  0x824E
-#   define GL_DEBUG_TYPE_PORTABILITY         0x824F
-#   define GL_DEBUG_TYPE_PERFORMANCE         0x8250
-#   define GL_DEBUG_TYPE_OTHER               0x8251
+#   ifndef GL_DEBUG_TYPE_MARKER
+#      define GL_DEBUG_TYPE_MARKER              GL_DEBUG_TYPE_MARKER_KHR
+#   endif
+#   ifndef GL_DEBUG_TYPE_ERROR
+#      define GL_DEBUG_TYPE_ERROR               GL_DEBUG_TYPE_ERROR_KHR
+#   endif
+#   ifndef GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR
+#      define GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR
+#   endif
+#   ifndef GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR
+#      define GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR  GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR
+#   endif
+#   ifndef GL_DEBUG_TYPE_PORTABILITY
+#      define GL_DEBUG_TYPE_PORTABILITY         GL_DEBUG_TYPE_PORTABILITY_KHR
+#   endif
+#   ifndef GL_DEBUG_TYPE_PERFORMANCE
+#      define GL_DEBUG_TYPE_PERFORMANCE         GL_DEBUG_TYPE_PERFORMANCE_KHR
+#   endif
+#   ifndef GL_DEBUG_TYPE_OTHER
+#      define GL_DEBUG_TYPE_OTHER               GL_DEBUG_TYPE_OTHER_KHR
+#   endif
 
 #   define glDebugMessageCallback            glDebugMessageCallbackKHR
 #endif
