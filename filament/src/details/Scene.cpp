@@ -106,7 +106,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
         // so we don't need to check for that, but we need to check it's alive
         auto ri = rcm.getInstance(e);
         auto li = lcm.getInstance(e);
-        if (!ri & !li) {
+        if (!ri && !li) {
             continue;
         }
 
