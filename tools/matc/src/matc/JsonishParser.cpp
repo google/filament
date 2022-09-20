@@ -26,13 +26,12 @@
 
 namespace matc {
 
-static std::string resolveEscapes(const std::string&& s) {
+static std::string resolveEscapes(const std::string& s) {
     std::string out;
     out.reserve(s.length());
 
     bool inEscape = false;
-    for (size_t i = 0; i < s.length(); i++) {
-        char c = s[i];
+    for (char c : s) {
         if (inEscape) {
             switch (c) {
                 case '\\':
@@ -85,8 +84,8 @@ static std::string resolveEscapes(const std::string&& s) {
     return out;
 }
 
-JsonishString::JsonishString(const std::string&& string) : JsonishValue(STRING) {
-    mString = resolveEscapes(std::move(string));
+JsonishString::JsonishString(const std::string& string) : JsonishValue(STRING) {
+    mString = resolveEscapes(string);
 }
 
 std::unique_ptr<JsonishObject> JsonishParser::parse() noexcept {
@@ -263,7 +262,7 @@ JsonishValue* JsonishParser::parseString() noexcept {
     } else {
         tmp = std::string(strLexeme->getStart(), strLexeme->getSize());
     }
-    return new JsonishString(std::move(tmp));
+    return new JsonishString(tmp);
 }
 
 JsonishValue* JsonishParser::parseValue() noexcept {
