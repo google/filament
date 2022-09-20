@@ -252,7 +252,13 @@ JsonishValue* JsonishParser::parseString() noexcept {
     JsonishValue* arrValue;
     if (arrLexeme && arrLexeme->getType() == ARRAY_START && (arrValue = parseArray())) {
         delete arrValue;
-        size_t length = mLexemes[mCursor].getStart() - strLexeme->getStart();
+
+        const JsonLexeme* next = peekNextLexemeType();
+        if (!next) {
+            return nullptr;
+        }
+
+        size_t length = next->getStart() - strLexeme->getStart();
         tmp = std::string(strLexeme->getStart(), length);
     } else {
         tmp = std::string(strLexeme->getStart(), strLexeme->getSize());
