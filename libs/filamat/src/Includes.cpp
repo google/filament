@@ -261,9 +261,16 @@ std::vector<FoundInclude> parseForIncludes(const utils::CString& source) {
         const size_t nameStart = result;
 
         // Increment until we reach the next "
-        while (sourceString[result] != '"') {
+        while (result < sourceString.length() && sourceString[result] != '"') {
             result++;
         }
+
+        // check we're not at the end of the line -- this would be a malformed include directive.
+        if (result >= sourceString.length()) {
+            result = sourceString.find("#include", result);
+            continue;
+        }
+
 
         const size_t nameEnd = result - 1;
 
