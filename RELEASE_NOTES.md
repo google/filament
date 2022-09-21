@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- engine: LiSPSM is now a user settable option
+
 ## v1.27.2
 
 - gltfio: punctual lights are now duplicated when adding new asset instances
