@@ -392,7 +392,8 @@ struct ArgumentEncoderState {
         : textureTypes(std::move(types)) {}
 
     bool operator==(const ArgumentEncoderState& rhs) const noexcept {
-        return std::equal(textureTypes.begin(), textureTypes.end(), rhs.textureTypes.begin());
+        return std::equal(textureTypes.begin(), textureTypes.end(), rhs.textureTypes.begin(),
+                rhs.textureTypes.end());
     }
 
     bool operator!=(const ArgumentEncoderState& rhs) const noexcept {
