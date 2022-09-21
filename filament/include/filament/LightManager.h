@@ -266,8 +266,28 @@ public:
          * Controls whether the shadow map should be optimized for resolution or stability.
          * When set to true, all resolution enhancing features that can affect stability are
          * disabling, resulting in significantly lower resolution shadows, albeit stable ones.
+         *
+         * Setting this flag to true always disables LiSPSM (see below).
+         *
+         * @see lispsm
          */
         bool stable = false;
+
+        /**
+         * LiSPSM, or light-space perspective shadow-mapping is a technique allowing to better
+         * optimize the use of the shadow-map texture. When enabled the effective resolution of
+         * shadows is greatly improved and yields result similar to using cascades without the
+         * extra cost. LiSPSM comes with some drawbacks however, in particular it is incompatible
+         * with blurring because it effectively affects the blur kernel size.
+         *
+         * Blurring is only an issue when using ShadowType::VSM with a large blur or with
+         * ShadowType::PCSS however.
+         *
+         * If these blurring artifacts become problematic, this flag can be used to disable LiSPSM.
+         *
+         * @see stable
+         */
+        bool lispsm = true;
 
         /**
          * Constant bias in depth-resolution units by which shadows are moved away from the
