@@ -780,6 +780,7 @@ size_t ShadowMap::intersectFrustumWithBox(
         float3 const* UTILS_RESTRICT wsFrustumCorners,
         Aabb const& UTILS_RESTRICT wsBox)
 {
+    constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
     size_t vertexCount = 0;
 
     /*
@@ -808,11 +809,10 @@ size_t ShadowMap::intersectFrustumWithBox(
             vertexCount++;
         }
     }
-    const bool someFrustumVerticesAreInTheBox = vertexCount > 0;
-    constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
 
     // at this point if we have 8 vertices, we can skip the rest
     if (vertexCount < 8) {
+        const size_t frustumVerticesInsideBoxCount = vertexCount;
         float4 const* wsFrustumPlanes = wsFrustum.getNormalizedPlanes();
 
         // b) add the scene's vertices that are known to be inside the view frustum
@@ -832,7 +832,7 @@ size_t ShadowMap::intersectFrustumWithBox(
             if ((l <= EPSILON) && (b <= EPSILON) &&
                 (r <= EPSILON) && (t <= EPSILON) &&
                 (f <= EPSILON) && (n <= EPSILON)) {
-                ++vertexCount;
+                vertexCount++;
             }
         }
 
@@ -877,9 +877,8 @@ size_t ShadowMap::intersectFrustumWithBox(
          * However, a special case is if all the vertices of the box are inside the frustum.
          */
 
-        if (someFrustumVerticesAreInTheBox && vertexCount >= 8) {
-            // special case, we don't need to calculate any edge intersections
-        } else {
+        const size_t boxVerticesInsideFrustumCount = vertexCount - frustumVerticesInsideBoxCount;
+        if (boxVerticesInsideFrustumCount < 8) {
             // c) intersect scene's volume edges with frustum planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsSceneReceiversCorners.vertices, wsFrustumCorners);
@@ -887,6 +886,9 @@ size_t ShadowMap::intersectFrustumWithBox(
             // d) intersect frustum edges with the scene's volume planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsFrustumCorners, wsSceneReceiversCorners.vertices);
+        } else {
+            // by construction vertexCount must be 8 here
+            assert_invariant(vertexCount == 8);
         }
     }
 
