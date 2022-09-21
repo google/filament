@@ -17,6 +17,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: material instances and variants are now accessed via `FilamentInstance` [⚠️ **API Change**]
 - gltfio: the animator can now only be accessed via `FilamentInstance` [⚠️ **API Change**]
 - engine: fix "stable" shadows and make the default cascade splits logarithmic.
+- engine: Add new quality options to EVSM shadows + rendering fixes
 
 ## v1.27.2
 

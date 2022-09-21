@@ -124,6 +124,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 0-3: cascade count
     // bit 4: visualize cascades
     // bit 8-11: cascade has visible shadows
+    // bit 31: elvsm
     uint32_t cascades;
     float shadowBulbRadiusLs;           // light radius in light-space
     float shadowBias;                   // normal bias
@@ -256,6 +257,7 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         float texelSizeAtOneMeter;
         float bulbRadiusLs;
         float nearOverFarMinusNear;
+        bool elvsm;
     };
     ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
 };

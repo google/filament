@@ -53,10 +53,10 @@ class PerViewUniforms {
     using LightManagerInstance = utils::EntityInstance<LightManager>;
     using TextureHandle = backend::Handle<backend::HwTexture>;
 
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCF  = 0u;
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_VSM  = 1u;
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCF   = 0u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_EVSM  = 1u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_DPCF  = 2u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCSS  = 3u;
 
 public:
     explicit PerViewUniforms(FEngine& engine) noexcept;
@@ -93,7 +93,7 @@ public:
             math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
 
-    void prepareShadowMapping() noexcept;
+    void prepareShadowMapping(bool highPrecision) noexcept;
 
     void prepareDirectionalLight(float exposure,
             math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;

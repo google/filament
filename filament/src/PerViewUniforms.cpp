@@ -288,9 +288,11 @@ void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
-void PerViewUniforms::prepareShadowMapping() noexcept {
+void PerViewUniforms::prepareShadowMapping(bool highPrecision) noexcept {
     auto& s = mUniforms.edit();
-    s.vsmExponent = 5.54f;  // fp16: max 5.54f, fp32: max 42.0
+    constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
+    constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
+    s.vsmExponent = highPrecision ? high : low;
 }
 
 void PerViewUniforms::prepareShadowSampling(PerViewUib& uniforms,
@@ -302,11 +304,14 @@ void PerViewUniforms::prepareShadowSampling(PerViewUib& uniforms,
     uniforms.ssContactShadowDistance    = shadowMappingUniforms.ssContactShadowDistance;
     uniforms.directionalShadows         = shadowMappingUniforms.directionalShadows;
     uniforms.cascades                   = shadowMappingUniforms.cascades;
+    uniforms.cascades                  |= uint32_t(shadowMappingUniforms.elvsm) << 31u;
 }
 
 void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms,
         VsmShadowOptions const& options) noexcept {
+    constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
+    constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
     SamplerMinFilter filterMin = SamplerMinFilter::LINEAR;
     if (options.anisotropy > 0 || options.mipmapping) {
         filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
@@ -318,8 +323,8 @@ void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
                     .anisotropyLog2 = options.anisotropy,
             }});
     auto& s = mUniforms.edit();
-    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_VSM;
-    s.vsmExponent = 5.54f;  // fp16: max 5.54f, fp32: max 42.0
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSM;
+    s.vsmExponent = options.highPrecision ? high : low;
     s.vsmDepthScale = options.minVarianceScale * 0.01f * s.vsmExponent;
     s.vsmLightBleedReduction = options.lightBleedReduction;
     PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);

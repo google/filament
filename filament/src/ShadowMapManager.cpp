@@ -121,8 +121,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
     constexpr size_t MAX_SHADOW_LAYERS =
             CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS;
 
-    const TextureFormat vsmTextureFormat = TextureFormat::RG16F;
-
     // make a copy here, because it's a very small structure
     const TextureAtlasRequirements textureRequirements = mTextureAtlasRequirements;
     assert_invariant(textureRequirements.layers <= MAX_SHADOW_LAYERS);
@@ -179,7 +177,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         .depth = textureRequirements.layers,
                         .levels = textureRequirements.levels,
                         .type = SamplerType::SAMPLER_2D_ARRAY,
-                        .format = view.hasVSM() ? vsmTextureFormat : mTextureFormat
+                        .format = textureRequirements.format
                 });
                 // This pass must be declared as having a side effect because it never gets a
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
@@ -187,14 +185,14 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
             },
             [&view](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 // set uniforms needed to render this ShadowMap
-                view.prepareShadowMap();
+                view.prepareShadowMap(view.getVsmShadowOptions().highPrecision);
             });
 
     // -------------------------------------------------------------------------------------------
 
     const float vsmMoment2 = std::numeric_limits<half>::max();
     const float vsmMoment1 = std::sqrt(vsmMoment2);
-    const float4 vsmClearColor{ vsmMoment1, vsmMoment2, 0.0f, 0.0f };
+    const float4 vsmClearColor{ vsmMoment1, vsmMoment2, -vsmMoment1, vsmMoment2 };
 
     struct ShadowPassData {
         FrameGraphId<FrameGraphTexture> tempBlurSrc{};  // temporary shadowmap when blurring
@@ -227,14 +225,14 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         auto depth = builder.createTexture("Temporary VSM Depth Texture", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
                                 .samples = options->vsm.msaaSamples,
-                                .format = mTextureFormat,
+                                .format = TextureFormat::DEPTH16,
                         });
 
                         // Temporary (resolved) texture used to render the shadowmap when blurring
                         // is needed -- it'll be used as the source of the blur.
                         data.tempBlurSrc = builder.createTexture("Temporary Shadowmap", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
-                                .format = vsmTextureFormat
+                                .format = textureRequirements.format
                         });
 
                         depth = builder.write(depth,
@@ -392,6 +390,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         mShadowMappingUniforms.shadowBias = normalBias * wsTexelSize;
         mShadowMappingUniforms.shadowBulbRadiusLs =
                 mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
+        mShadowMappingUniforms.elvsm = options.vsm.elvsm;
     }
 
     // Adjust the near and far planes to tightly bound the scene.
@@ -560,6 +559,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             s.shadows[i].lightFromWorldZ = shadowMap.getLightFromWorldZ();
             s.shadows[i].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
             s.shadows[i].nearOverFarMinusNear = float(n / (f - n));
+            s.shadows[i].elvsm = options->vsm.elvsm;
             s.shadows[i].bulbRadiusLs =
                     mSoftShadowOptions.penumbraScale * options->shadowBulbRadius / wsTexelSizeAtOneMeter;
 
@@ -590,15 +590,18 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     // The directional shadow cascades start on layer 0, followed by spotlights.
     uint8_t layer = 0;
     uint32_t maxDimension = 0;
+    bool elvsm = false;
     for (auto& entry : mCascadeShadowMaps) {
         // Shadow map size should be the same for all cascades.
         auto const& options = entry.getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
+        elvsm = elvsm || options->vsm.elvsm;
         entry.setLayer(layer++);
     }
     for (auto& entry : mSpotShadowMaps) {
         auto const& options = entry.getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
+        elvsm = elvsm || options->vsm.elvsm;
         entry.setLayer(layer++);
     }
 
@@ -608,6 +611,23 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     auto const& vsmShadowOptions = view.getVsmShadowOptions();
     const bool useMipmapping = view.hasVSM() &&
                                ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
+
+    TextureFormat format = TextureFormat::DEPTH16;
+    if (view.hasVSM()) {
+        if (vsmShadowOptions.highPrecision) {
+            if (elvsm) {
+                format = TextureFormat::RGBA32F;
+            } else {
+                format = TextureFormat::RG32F;
+            }
+        } else {
+            if (elvsm) {
+                format = TextureFormat::RGBA16F;
+            } else {
+                format = TextureFormat::RG16F;
+            }
+        }
+    }
 
     mSoftShadowOptions = view.getSoftShadowOptions();
 
@@ -622,7 +642,8 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     mTextureAtlasRequirements = {
             (uint16_t)maxDimension,
             layersNeeded,
-            mipLevels
+            mipLevels,
+            format
     };
 }
 

@@ -54,6 +54,7 @@ struct ShadowMappingUniforms {
     float ssContactShadowDistance;
     uint32_t directionalShadows;
     uint32_t cascades;
+    bool elvsm;
 };
 
 class ShadowMapManager {
@@ -197,17 +198,13 @@ private:
         uint16_t size = 0;
         uint8_t layers = 0;
         uint8_t levels = 0;
+        backend::TextureFormat format = backend::TextureFormat::DEPTH16;
     } mTextureAtlasRequirements;
 
     SoftShadowOptions mSoftShadowOptions;
 
     CascadeSplits::Params mCascadeSplitParams;
     CascadeSplits mCascadeSplits;
-
-    // 16-bits seems enough.
-    // TODO: make it an option.
-    // TODO: iOS does not support the DEPTH16 texture format.
-    backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
 
     mutable TypedUniformBuffer<ShadowUib> mShadowUb;
     backend::Handle<backend::HwBufferObject> mShadowUbh;

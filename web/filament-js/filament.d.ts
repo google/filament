@@ -1668,6 +1668,13 @@ export interface View$VsmShadowOptions {
      */
     mipmapping?: boolean;
     /**
+     * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
+     * precision is rarely needed, but it does reduces light leaks as well as "fading"
+     * of the shadows in some situations. Setting highPrecision to true for a single
+     * shadow map will double the memory usage of all shadow maps.
+     */
+    highPrecision?: boolean;
+    /**
      * VSM minimum variance scale, must be positive.
      */
     minVarianceScale?: number;
