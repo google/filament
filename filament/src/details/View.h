@@ -148,7 +148,7 @@ public:
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadowMap() const noexcept;
+    void prepareShadowMap(bool highPrecision) const noexcept;
 
     void cleanupRenderPasses() const noexcept;
     void froxelize(FEngine& engine, math::mat4f const& viewMatrix) const noexcept;

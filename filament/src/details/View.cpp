@@ -702,8 +702,8 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     }
 }
 
-void FView::prepareShadowMap() const noexcept {
-    mPerViewUniforms.prepareShadowMapping();
+void FView::prepareShadowMap(bool highPrecision) const noexcept {
+    mPerViewUniforms.prepareShadowMapping(highPrecision);
 }
 
 void FView::cleanupRenderPasses() const noexcept {

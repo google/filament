@@ -4,7 +4,7 @@
 
 // Keep this in sync with PerViewUniforms.h
 #define SHADOW_SAMPLING_RUNTIME_PCF     0u
-#define SHADOW_SAMPLING_RUNTIME_VSM     1u
+#define SHADOW_SAMPLING_RUNTIME_EVSM    1u
 #define SHADOW_SAMPLING_RUNTIME_DPCF    2u
 #define SHADOW_SAMPLING_RUNTIME_PCSS    3u
 
@@ -443,7 +443,7 @@ float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
     return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
 }
 
-float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
+float ShadowSample_VSM(const bool ELVSM, const mediump sampler2DArray shadowMap,
         const uint layer, const highp vec4 shadowPosition) {
 
     // note: shadowPosition.z is in linear light-space normalized to [0, 1]
@@ -457,11 +457,13 @@ float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
 
     // EVSM depth warping
     depth = depth * 2.0 - 1.0;
+    depth = frameUniforms.vsmExponent * depth;
 
-    depth = exp(frameUniforms.vsmExponent * depth);
+    depth = exp(depth);
     float p = evaluateShadowVSM(moments.xy, depth);
-    // enable for full EVSM (needed for large blurs). RGBA16F needed.
-    //p = min(p, evaluateShadowVSM(moments.zw, -1.0/depth));
+    if (ELVSM) {
+        p = min(p, evaluateShadowVSM(moments.zw, -1.0 / depth));
+    }
     return p;
 }
 
@@ -507,21 +509,24 @@ float shadow(const bool DIRECTIONAL,
 
     highp vec4 shadowPosition;
     highp float zLight = 0.0;
+    bool elvsm = false;
 
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
         shadowPosition = getCascadeLightSpacePosition(cascade);
+        elvsm = bool((frameUniforms.cascades >> 31u) & 1u);
 #endif
     } else {
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
         zLight = dot(shadowUniforms.shadows[index].lightFromWorldZ, vec4(getWorldPosition(), 1.0));
         shadowPosition = getSpotLightSpacePosition(index, zLight);
+        elvsm = shadowUniforms.shadows[index].elvsm;
 #endif
     }
 
-    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_VSM) {
-        return ShadowSample_VSM(shadowMap, layer, shadowPosition);
+    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
+        return ShadowSample_VSM(elvsm, shadowMap, layer, shadowPosition);
     }
 
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_DPCF) {

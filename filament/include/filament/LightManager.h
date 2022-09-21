@@ -349,6 +349,14 @@ public:
             uint8_t msaaSamples = 1;
 
             /**
+             * When elvsm is set to true, "Exponential Layered VSM without Layers" are used. It is
+             * an improvement to the default EVSM which suffers important light leaks. Enabling
+             * ELVSM for a single shadowmap doubles the memory usage of all shadow maps.
+             * ELVSM is mostly useful when large blurs are used.
+             */
+            bool elvsm = false;
+
+            /**
              * Blur width for the VSM blur. Zero do disable.
              * The maximum value is 125.
              */

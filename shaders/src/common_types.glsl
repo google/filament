@@ -8,6 +8,7 @@ struct ShadowData {
     float texelSizeAtOneMeter;
     float bulbRadiusLs;
     float nearOverFarMinusNear;
+    bool elvsm;
 };
 
 struct BoneData {
