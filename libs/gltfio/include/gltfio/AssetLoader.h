@@ -107,10 +107,13 @@ struct AssetConfiguration {
  * // Add renderables to the scene.
  * scene->addEntities(asset->getEntities(), asset->getEntityCount());
  *
+ * // Extract the animator interface from the FilamentInstance.
+ * auto animator = asset->getInstance()->getAnimator();
+ *
  * // Execute the render loop and play the first animation.
  * do {
- *      asset->getAnimator()->applyAnimation(0, time);
- *      asset->getAnimator()->updateBoneMatrices();
+ *      animator->applyAnimation(0, time);
+ *      animator->updateBoneMatrices();
  *      if (renderer->beginFrame(swapChain)) {
  *          renderer->render(view);
  *          renderer->endFrame();

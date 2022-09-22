@@ -383,10 +383,6 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
 
     FFilamentInstance* instance = createInstance(srcAsset);
 
-    if (primary->mAnimator) {
-        primary->mAnimator->addInstance(instance);
-    }
-
     primary->mDependencyGraph.commitEdges();
     return instance;
 }
@@ -534,6 +530,8 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
 
     importSkins(mAsset, instance, srcAsset);
 
+    // Now that all entities have been created, the instance can create the animator component.
+    // Note that it may need to defer actual creation until external buffers are fully loaded.
     instance->createAnimator();
 
     mAsset->mInstances.push_back(instance);

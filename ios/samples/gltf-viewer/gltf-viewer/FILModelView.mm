@@ -207,7 +207,7 @@ const float kSensitivity = 100.0f;
 
     _scene->addEntities(_asset->getEntities(), _asset->getEntityCount());
     _resourceLoader->loadResources(_asset);
-    _animator = _asset->getAnimator();
+    _animator = _asset->getInstance()->getAnimator();
     _asset->releaseSourceData();
 }
 
@@ -234,7 +234,7 @@ const float kSensitivity = 100.0f;
     }
 
     _resourceLoader->loadResources(_asset);
-    _animator = _asset->getAnimator();
+    _animator = _asset->getInstance()->getAnimator();
     _asset->releaseSourceData();
 
     _scene->addEntities(_asset->getEntities(), _asset->getEntityCount());
