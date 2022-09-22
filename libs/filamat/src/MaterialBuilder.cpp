@@ -186,13 +186,6 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
 }
 
 MaterialBuilder& MaterialBuilder::parameter(
-        UniformType type, ParameterPrecision precision, const char* name) noexcept {
-    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
-    mParameters[mParameterCount++] = { name, type, 1, precision };
-    return *this;
-}
-
-MaterialBuilder& MaterialBuilder::parameter(
         UniformType type, size_t size, ParameterPrecision precision, const char* name) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, type, size, precision };
@@ -200,23 +193,15 @@ MaterialBuilder& MaterialBuilder::parameter(
 }
 
 MaterialBuilder& MaterialBuilder::parameter(
+        UniformType type, ParameterPrecision precision, const char* name) noexcept {
+    return parameter(type, 1, precision, name);
+}
+
+
+MaterialBuilder& MaterialBuilder::parameter(
         SamplerType samplerType, SamplerFormat format, ParameterPrecision precision, const char* name) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, samplerType, format, precision };
-    return *this;
-}
-
-MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerFormat format,
-        ParameterPrecision precision, const char* name) noexcept {
-    ASSERT_PRECONDITION(format == SamplerFormat::FLOAT,
-            "Subpass parameters must have FLOAT format.");
-
-    auto subpassCount = std::count_if(std::begin(mParameters), std::end(mParameters),
-            [](const auto& p) { return p.isSubpass(); });
-
-    ASSERT_POSTCONDITION(subpassCount < MAX_SUBPASS_COUNT, "Too many subpasses");
-    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
-    mParameters[mParameterCount++] = { name, subpassType, format, precision };
     return *this;
 }
 
@@ -235,18 +220,29 @@ MaterialBuilder& MaterialBuilder::parameter(
     return parameter(samplerType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
 }
 
-MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerFormat format,
-        const char* name) noexcept {
-    return parameter(subpassType, format, ParameterPrecision::DEFAULT, name);
+
+MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
+        ParameterPrecision precision, const char* name) noexcept {
+    ASSERT_PRECONDITION(format == SamplerFormat::FLOAT,
+            "Subpass parameters must have FLOAT format.");
+
+    ASSERT_POSTCONDITION(mSubpassCount < MAX_SUBPASS_COUNT, "Too many subpasses");
+    mSubpasses[mSubpassCount++] = { name, subpassType, format, precision };
+    return *this;
 }
 
-MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, ParameterPrecision precision,
+MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
         const char* name) noexcept {
-    return parameter(subpassType, SamplerFormat::FLOAT, precision, name);
+    return subpass(subpassType, format, ParameterPrecision::DEFAULT, name);
 }
 
-MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, const char* name) noexcept {
-    return parameter(subpassType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
+MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, ParameterPrecision precision,
+        const char* name) noexcept {
+    return subpass(subpassType, SamplerFormat::FLOAT, precision, name);
+}
+
+MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, const char* name) noexcept {
+    return subpass(subpassType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
 }
 
 MaterialBuilder& MaterialBuilder::require(VertexAttribute attribute) noexcept {
@@ -452,20 +448,25 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     BufferInterfaceBlock::Builder ibb;
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
+        assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
             sbb.add({ param.name.data(), param.name.size() },
                     param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
             ibb.add({{{ param.name.data(), param.name.size() },
                       uint32_t(param.size == 1u ? 0u : param.size), param.uniformType, param.precision }});
-        } else if (param.isSubpass()) {
-            // For now, we only support a single subpass for attachment 0.
-            // Subpasses belong to the "MaterialParams" block.
-            const uint8_t attachmentIndex = 0;
-            const uint8_t binding = 0;
-            info.subpass = { CString("MaterialParams"), param.name, param.subpassType,
-                             param.format, param.precision, attachmentIndex, binding };
         }
+    }
+
+    for (size_t i = 0, c = mSubpassCount; i < c; i++) {
+        auto const& param = mSubpasses[i];
+        assert_invariant(param.isSubpass());
+        // For now, we only support a single subpass for attachment 0.
+        // Subpasses belong to the "MaterialParams" block.
+        const uint8_t attachmentIndex = 0;
+        const uint8_t binding = 0;
+        info.subpass = { CString("MaterialParams"), param.name, param.subpassType,
+                         param.format, param.precision, attachmentIndex, binding };
     }
 
     if (mSpecularAntiAliasing) {

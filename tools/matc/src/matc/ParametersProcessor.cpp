@@ -213,30 +213,6 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         } else {
             builder.parameter(type, nameString.c_str());
         }
-    } else if (Enums::isValid<SubpassType>(typeString)) {
-        if (arraySize > 0) {
-            std::cerr << "parameters: the parameter with name '" << nameString << "'"
-                    << " is an array of subpasses of size " << arraySize << ". Arrays of subpasses"
-                    << " are currently not supported." << std::endl;
-            return false;
-        }
-
-        MaterialBuilder::SubpassType type = Enums::toEnum<SubpassType>(typeString);
-        if (precisionValue && formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, format, precision, nameString.c_str());
-        } else if (formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            builder.parameter(type, format, nameString.c_str());
-        } else if (precisionValue) {
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, precision, nameString.c_str());
-        } else {
-            builder.parameter(type, nameString.c_str());
-        }
     } else {
         std::cerr << "parameters: the type '" << typeString
                << "' for parameter with name '" << nameString << "' is neither a valid uniform "
@@ -257,6 +233,109 @@ static bool processParameters(MaterialBuilder& builder, const JsonishValue& v) {
             continue;
         }
         std::cerr << "parameters must be an array of OBJECTs." << std::endl;
+        return false;
+    }
+    return ok;
+}
+
+
+static bool processSubpass(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+
+    const JsonishValue* typeValue = jsonObject.getValue("type");
+    if (!typeValue) {
+        std::cerr << "subpasses: entry without key 'type'." << std::endl;
+        return false;
+    }
+    if (typeValue->getType() != JsonishValue::STRING) {
+        std::cerr << "subpasses: type value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* nameValue = jsonObject.getValue("name");
+    if (!nameValue) {
+        std::cerr << "subpasses: entry without 'name' key." << std::endl;
+        return false;
+    }
+    if (nameValue->getType() != JsonishValue::STRING) {
+        std::cerr << "subpasses: name value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* precisionValue = jsonObject.getValue("precision");
+    if (precisionValue) {
+        if (precisionValue->getType() != JsonishValue::STRING) {
+            std::cerr << "subpasses: precision must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto precisionString = precisionValue->toJsonString();
+        if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
+            return logEnumIssue("subpasses", *precisionString, Enums::map<ParameterPrecision>());
+        }
+    }
+
+    const JsonishValue* formatValue = jsonObject.getValue("format");
+    if (formatValue) {
+        if (formatValue->getType() != JsonishValue::STRING) {
+            std::cerr << "subpasses: format must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto formatString = formatValue->toJsonString();
+        if (!Enums::isValid<SamplerFormat>(formatString->getString())){
+            return logEnumIssue("subpasses", *formatString, Enums::map<SamplerFormat>());
+        }
+    }
+
+    auto typeString = typeValue->toJsonString()->getString();
+    auto nameString = nameValue->toJsonString()->getString();
+
+    size_t arraySize = extractArraySize(typeString);
+
+    if (Enums::isValid<SubpassType>(typeString)) {
+        if (arraySize > 0) {
+            std::cerr << "subpasses: the parameter with name '" << nameString << "'"
+                      << " is an array of subpasses of size " << arraySize << ". Arrays of subpasses"
+                      << " are currently not supported." << std::endl;
+            return false;
+        }
+
+        MaterialBuilder::SubpassType type = Enums::toEnum<SubpassType>(typeString);
+        if (precisionValue && formatValue) {
+            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
+            auto precision =
+                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
+            builder.subpass(type, format, precision, nameString.c_str());
+        } else if (formatValue) {
+            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
+            builder.subpass(type, format, nameString.c_str());
+        } else if (precisionValue) {
+            auto precision =
+                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
+            builder.subpass(type, precision, nameString.c_str());
+        } else {
+            builder.subpass(type, nameString.c_str());
+        }
+    } else {
+        std::cerr << "subpasses: the type '" << typeString
+                  << "' for parameter with name '" << nameString << "' is neither a valid uniform "
+                  << "type nor a valid sampler type." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+static bool processSubpasses(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+
+    bool ok = true;
+    for (auto value : jsonArray->getElements()) {
+        if (value->getType() == JsonishValue::Type::OBJECT) {
+            ok &= processSubpass(builder, *value->toJsonObject());
+            continue;
+        }
+        std::cerr << "subpasses must be an array of OBJECTs." << std::endl;
         return false;
     }
     return ok;
@@ -805,6 +884,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["name"]                          = { &processName, Type::STRING };
     mParameters["interpolation"]                 = { &processInterpolation, Type::STRING };
     mParameters["parameters"]                    = { &processParameters, Type::ARRAY };
+    mParameters["subpasses"]                     = { &processSubpasses, Type::ARRAY };
     mParameters["variables"]                     = { &processVariables, Type::ARRAY };
     mParameters["requires"]                      = { &processRequires, Type::ARRAY };
     mParameters["blending"]                      = { &processBlending, Type::STRING };

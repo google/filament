@@ -583,13 +583,13 @@ public:
     /**
      * Add a subpass parameter to this material.
      */
-    MaterialBuilder& parameter(SubpassType subpassType,
+    MaterialBuilder& subpass(SubpassType subpassType,
             SamplerFormat format, ParameterPrecision precision, const char* name) noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType,
+    MaterialBuilder& subpass(SubpassType subpassType,
             SamplerFormat format, const char* name) noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType,
+    MaterialBuilder& subpass(SubpassType subpassType,
             ParameterPrecision precision, const char* name) noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType, const char* name) noexcept;
+    MaterialBuilder& subpass(SubpassType subpassType, const char* name) noexcept;
 
     struct Parameter {
         Parameter() noexcept: parameterType(INVALID) {}
@@ -663,12 +663,19 @@ public:
     static constexpr size_t MAX_PARAMETERS_COUNT = 48;
     static constexpr size_t MAX_SUBPASS_COUNT = 1;
     using ParameterList = Parameter[MAX_PARAMETERS_COUNT];
+    using SubpassList = Parameter[MAX_SUBPASS_COUNT];
 
     // returns the number of parameters declared in this material
     uint8_t getParameterCount() const noexcept { return mParameterCount; }
 
     // returns a list of at least getParameterCount() parameters
     const ParameterList& getParameters() const noexcept { return mParameters; }
+
+    // returns the number of parameters declared in this material
+    uint8_t getSubpassCount() const noexcept { return mSubpassCount; }
+
+    // returns a list of at least getParameterCount() parameters
+    const SubpassList& getSubPasses() const noexcept { return mSubpasses; }
 
     filament::UserVariantFilterMask getVariantFilter() const { return mVariantFilter; }
 
@@ -740,6 +747,7 @@ private:
 
     PropertyList mProperties;
     ParameterList mParameters;
+    SubpassList mSubpasses;
     VariableList mVariables;
     OutputList mOutputs;
 
@@ -769,6 +777,7 @@ private:
     bool mTransparentShadow = false;
 
     uint8_t mParameterCount = 0;
+    uint8_t mSubpassCount = 0;
 
     bool mDoubleSided = false;
     bool mDoubleSidedCapability = false;
