@@ -292,7 +292,7 @@ class FilamentViewer extends LitElement {
                 this.assetRoot = this.asset.getRoot();
                 this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
                 this.asset.loadResources();
-                this.animator = this.asset.getAnimator();
+                this.animator = this.asset.getInstance().getAnimator();
                 this.animationStartTime = Date.now();
                 this._updateOverlay();
             });
@@ -318,7 +318,7 @@ class FilamentViewer extends LitElement {
                         resourceLoader.delete();
                         stbProvider.delete();
                         ktx2Provider.delete();
-                        this.animator = this.asset.getAnimator();
+                        this.animator = this.asset.getInstance().getAnimator();
                         this.animationStartTime = Date.now();
                     }
                 }, config.asyncInterval);
@@ -371,7 +371,7 @@ class FilamentViewer extends LitElement {
             const basePath = '' + new URL(this.src, document.location);
 
             this.asset.loadResources(() => {
-                this.animator = this.asset.getAnimator();
+                this.animator = this.asset.getInstance().getAnimator();
                 this.animationStartTime = Date.now();
                 this._applyMaterialVariant();
             }, null, basePath);
@@ -432,14 +432,15 @@ class FilamentViewer extends LitElement {
         if (!this.hasAttribute("materialVariant")) {
             return;
         }
-        const names = this.asset.getMaterialVariantNames();
+        const instance = this.asset.getInstance();
+        const names = instance.getMaterialVariantNames();
         const index = this.materialVariant;
         if (index < 0 || index >= names.length) {
             console.error(`Material variant ${index} does not exist in this asset.`);
             return;
         }
         console.info(this.src, `Applying material variant: ${names[index]}`);
-        this.asset.applyMaterialVariant(index);
+        instance.applyMaterialVariant(index);
     }
 }
 

@@ -14,6 +14,8 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fix interpretation of occlusion strength
 - engine: minsdk is now 21 instead of 19. This allows the use of OpenGL ES 3.1
 - gltfio: fix ubershader issues with assignment of dummy textures
+- gltfio: material instances and variants are now accessed via `FilamentInstance` [⚠️ **API Change**]
+- gltfio: the animator can now only be accessed via `FilamentInstance` [⚠️ **API Change**]
 
 ## v1.27.2
 
