@@ -207,16 +207,6 @@ public:
     const char* getExtras(Entity entity = {}) const noexcept;
 
     /**
-     * Returns the animation engine.
-     *
-     * The animator is owned by the asset and should not be manually deleted.
-     * Must be called after loadResources or asyncBeginLoad, otherwise returns null.
-     * If the asset is instanced, this returns a "primary" animator that controls all instances.
-     * To animate each instance individually, use \see FilamentInstance.
-     */
-    Animator* getAnimator() const noexcept;
-
-    /**
      * Gets the morph target name at the given index in the given entity.
      */
     const char* getMorphTargetNameAt(Entity entity, size_t targetIndex) const noexcept;

@@ -43,7 +43,6 @@ FFilamentAsset::~FFilamentAsset() {
         delete instance;
     }
 
-    delete mAnimator;
     delete mWireframe;
 
     // Destroy name components.
@@ -357,10 +356,6 @@ size_t FilamentAsset::getEntitiesByPrefix(const char* prefix, Entity* entities,
 
 const char* FilamentAsset::getExtras(Entity entity) const noexcept {
     return upcast(this)->getExtras(entity);
-}
-
-Animator* FilamentAsset::getAnimator() const noexcept {
-    return upcast(this)->getAnimator();
 }
 
 const char* FilamentAsset::getMorphTargetNameAt(utils::Entity entity,

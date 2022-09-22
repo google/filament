@@ -281,7 +281,6 @@ public:
      * By default, this is an identity matrix.
      *
      * @param shift     x and y translation added to the projection matrix, specified in NDC
-     * @param shift     x and y translation added to the projection matrix, specified in NDC
      *                  coordinates, that is, if the translation must be specified in pixels,
      *                  shift must be scaled by 1.0 / { viewport.width, viewport.height }.
      *

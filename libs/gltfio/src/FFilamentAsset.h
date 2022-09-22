@@ -70,7 +70,6 @@ namespace utils {
 
 namespace filament::gltfio {
 
-class Animator;
 class Wireframe;
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
@@ -186,8 +185,6 @@ struct FFilamentAsset : public FilamentAsset {
     size_t getEntitiesByPrefix(const char* prefix, utils::Entity* entities,
             size_t maxCount) const noexcept;
 
-    Animator* getAnimator() const noexcept { return mAnimator; }
-
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
     size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
@@ -258,7 +255,6 @@ struct FFilamentAsset : public FilamentAsset {
     Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
-    Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;
 
     // Indicates if resource decoding has started (not necessarily finished)
