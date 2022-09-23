@@ -151,7 +151,16 @@ public:
             MaterialBuilder::TargetLanguage targetLanguage = MaterialBuilder::TargetLanguage::GLSL,
             ShaderModel model = ShaderModel::DESKTOP) const noexcept;
 
-    static int glslangVersionFromShaderModel(filament::backend::ShaderModel model);
+    // use 100 for ES environment, 110 for desktop; this is the GLSL version, not SPIR-V or Vulkan
+    // this is intended to be used with glslang's parse() method, which will figure out the actual
+    // version.
+    static int getGlslDefaultVersion(filament::backend::ShaderModel model);
+
+    // The shading language version. Corresponds to #version $VALUE.
+    // returns the version and a boolean (true for essl, false for glsl)
+    static std::pair<int, bool> getShadingLanguageVersion(
+            filament::backend::ShaderModel model,
+            filament::backend::FeatureLevel featureLevel);
 
     static EShMessages glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi,
             MaterialBuilder::TargetLanguage targetLanguage);

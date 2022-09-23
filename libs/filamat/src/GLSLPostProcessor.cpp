@@ -99,15 +99,6 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
 
 GLSLPostProcessor::~GLSLPostProcessor() = default;
 
-static uint32_t glslVersionFromShaderModel(ShaderModel model) {
-    switch (model) {
-        case ShaderModel::MOBILE:
-            return 300;
-        case ShaderModel::DESKTOP:
-            return 410;
-    }
-}
-
 static bool filterSpvOptimizerMessage(spv_message_level_t level) {
 #ifdef NDEBUG
     // In release builds, only log errors.
@@ -253,7 +244,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     const char* shaderCString = inputShader.c_str();
     tShader.setStrings(&shaderCString, 1);
 
-    internalConfig.langVersion = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
+    internalConfig.langVersion = GLSLTools::getGlslDefaultVersion(config.shaderModel);
     GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, tShader,
             internalConfig.shLang, internalConfig.langVersion);
 
@@ -337,7 +328,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     std::string glsl;
     TShader::ForbidIncluder forbidIncluder;
 
-    const int version = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
+    const int version = GLSLTools::getGlslDefaultVersion(config.shaderModel);
     EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
     bool ok = tShader.preprocess(&DefaultTBuiltInResource, version, ENoProfile, false, false,
             msg, &glsl, forbidIncluder);
@@ -407,15 +398,17 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     // Transpile back to GLSL
     if (internalConfig.glslOutput) {
         CompilerGLSL::Options glslOptions;
-        glslOptions.es = config.shaderModel == ShaderModel::MOBILE;
-        glslOptions.version = glslVersionFromShaderModel(config.shaderModel);
+        auto version = GLSLTools::getShadingLanguageVersion(
+                config.shaderModel, config.featureLevel);
+        glslOptions.es = version.second;
+        glslOptions.version = version.first;
         glslOptions.enable_420pack_extension = glslOptions.version >= 420;
         glslOptions.fragment.default_float_precision = glslOptions.es ?
                 CompilerGLSL::Options::Precision::Mediump : CompilerGLSL::Options::Precision::Highp;
         glslOptions.fragment.default_int_precision = glslOptions.es ?
                 CompilerGLSL::Options::Precision::Mediump : CompilerGLSL::Options::Precision::Highp;
 
-        CompilerGLSL glslCompiler(move(spirv));
+        CompilerGLSL glslCompiler(std::move(spirv));
         glslCompiler.set_common_options(glslOptions);
 
         if (!glslOptions.es) {

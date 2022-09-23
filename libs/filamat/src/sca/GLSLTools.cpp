@@ -71,7 +71,7 @@ bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
-    int version = glslangVersionFromShaderModel(model);
+    const int version = getGlslDefaultVersion(model);
     EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
@@ -108,7 +108,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
-    int version = glslangVersionFromShaderModel(model);
+    const int version = getGlslDefaultVersion(model);
     EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
@@ -184,7 +184,7 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
-    int version = glslangVersionFromShaderModel(model);
+    const int version = getGlslDefaultVersion(model);
     EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
@@ -235,7 +235,7 @@ bool GLSLTools::findProperties(
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
-    int version = glslangVersionFromShaderModel(model);
+    const int version = getGlslDefaultVersion(model);
     EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     const TBuiltInResource* builtins = &DefaultTBuiltInResource;
     bool ok = tShader.parse(builtins, version, false, msg);
@@ -363,17 +363,28 @@ bool GLSLTools::findSymbolsUsage(std::string_view functionSignature, TIntermNode
     return true;
 }
 
-int GLSLTools::glslangVersionFromShaderModel(ShaderModel model) {
-    int version = 110;
+// use 100 for ES environment, 110 for desktop; this is the GLSL version, not SPIR-V or Vulkan
+// this is intended to be used with glslang's parse() method, which will figure out the actual
+// version.
+int GLSLTools::getGlslDefaultVersion(ShaderModel model) {
+        switch (model) {
+        case ShaderModel::MOBILE:
+            return 100;
+        case ShaderModel::DESKTOP:
+            return 110;
+    }
+}
+
+// The shading language version. Corresponds to #version $VALUE.
+std::pair<int, bool> GLSLTools::getShadingLanguageVersion(ShaderModel model,
+        filament::backend::FeatureLevel featureLevel) {
+    using FeatureLevel = filament::backend::FeatureLevel;
     switch (model) {
         case ShaderModel::MOBILE:
-            version = 100;
-            break;
+            return { featureLevel >= FeatureLevel::FEATURE_LEVEL_2 ? 310 : 300, true };
         case ShaderModel::DESKTOP:
-            version = 110;
-            break;
+            return { featureLevel >= FeatureLevel::FEATURE_LEVEL_2 ? 430 : 410, false };
     }
-    return version;
 }
 
 EShMessages GLSLTools::glslangFlagsFromTargetApi(
