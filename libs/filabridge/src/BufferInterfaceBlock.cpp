@@ -68,6 +68,7 @@ BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::add(
 
 BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::addVariableSizedArray(
         BufferInterfaceBlock::InterfaceBlockEntry const& item) {
+    mHasVariableSizeArray = true;
     mEntries.push_back({
             { item.name.data(), item.name.size() },
             0, uint8_t(item.stride), item.type, true, 0, item.precision,
@@ -97,6 +98,10 @@ BufferInterfaceBlock BufferInterfaceBlock::Builder::build() {
             "UBOs must use std140");
 
     return BufferInterfaceBlock(*this);
+}
+
+bool BufferInterfaceBlock::Builder::hasVariableSizeArray() const {
+    return mHasVariableSizeArray;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

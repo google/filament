@@ -289,7 +289,8 @@ static void setup(Engine* engine, View*, Scene* scene) {
     shader += "}\n";
 
     MaterialBuilder::init();
-    MaterialBuilder builder = MaterialBuilder()
+    MaterialBuilder builder;
+    builder
             .name("DefaultMaterial")
             .targetApi(MaterialBuilder::TargetApi::ALL)
 #ifndef NDEBUG

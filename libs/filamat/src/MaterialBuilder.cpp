@@ -210,6 +210,12 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
     return parameter(name, samplerType, SamplerFormat::FLOAT, precision);
 }
 
+MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) noexcept {
+    ASSERT_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT, "Too many buffers");
+    mBuffers.emplace_back(std::move(bib));
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
         ParameterPrecision precision, const char* name) noexcept {
     ASSERT_PRECONDITION(format == SamplerFormat::FLOAT,

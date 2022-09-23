@@ -123,6 +123,9 @@ public:
         Builder& addVariableSizedArray(InterfaceBlockEntry const& item);
 
         BufferInterfaceBlock build();
+
+        bool hasVariableSizeArray() const;
+
     private:
         friend class BufferInterfaceBlock;
         utils::CString mName;
@@ -130,6 +133,7 @@ public:
         Alignment mAlignment = Alignment::std140;
         Target mTarget = Target::UNIFORM;
         uint8_t mQualifiers = 0;
+        bool mHasVariableSizeArray = false;
     };
 
     // name of this BufferInterfaceBlock interface block

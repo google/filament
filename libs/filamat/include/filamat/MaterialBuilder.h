@@ -24,6 +24,8 @@
 #include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
 
+#include <private/filament/BufferInterfaceBlock.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
@@ -138,7 +140,7 @@ protected:
     std::vector<CodeGenParams> mCodeGenPermutations;
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
-    const CodeGenParams mSemanticCodeGenParams = {
+    static constexpr const CodeGenParams mSemanticCodeGenParams = {
             .shaderModel = ShaderModel::MOBILE,
             .targetApi = TargetApi::OPENGL,
             .targetLanguage = TargetLanguage::SPIRV
@@ -201,6 +203,12 @@ inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
 class UTILS_PUBLIC MaterialBuilder : public MaterialBuilderBase {
 public:
     MaterialBuilder();
+
+    MaterialBuilder(const MaterialBuilder& rhs) = delete;
+    MaterialBuilder& operator=(const MaterialBuilder& rhs) = delete;
+
+    MaterialBuilder(MaterialBuilder&& rhs) noexcept = default;
+    MaterialBuilder& operator=(MaterialBuilder&& rhs) noexcept = default;
 
     static constexpr size_t MATERIAL_VARIABLES_COUNT = 4;
     enum class Variable : uint8_t {
@@ -290,6 +298,9 @@ public:
     /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             ParameterPrecision precision) noexcept;
+
+
+    MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
 
     //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
@@ -649,8 +660,10 @@ public:
 
     static constexpr size_t MAX_PARAMETERS_COUNT = 48;
     static constexpr size_t MAX_SUBPASS_COUNT = 1;
+    static constexpr size_t MAX_BUFFERS_COUNT = 4;
     using ParameterList = Parameter[MAX_PARAMETERS_COUNT];
     using SubpassList = Parameter[MAX_SUBPASS_COUNT];
+    using BufferList = std::vector<filament::BufferInterfaceBlock>;
 
     // returns the number of parameters declared in this material
     uint8_t getParameterCount() const noexcept { return mParameterCount; }
@@ -737,6 +750,7 @@ private:
     SubpassList mSubpasses;
     VariableList mVariables;
     OutputList mOutputs;
+    BufferList mBuffers;
 
     ShaderQuality mShaderQuality = ShaderQuality::DEFAULT;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;

@@ -314,23 +314,23 @@ std::string shaderFromKey(const MaterialKey& config) {
     return shader;
 }
 
-static Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
+Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
         const char* name, bool optimizeShaders) {
     std::string shader = shaderFromKey(config);
     processShaderString(&shader, uvmap, config);
-    MaterialBuilder builder = MaterialBuilder()
-            .name(name)
-            .flipUV(false)
-            .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::SIMPLE)
-            .specularAntiAliasing(true)
-            .clearCoatIorChange(false)
-            .material(shader.c_str())
-            .doubleSided(config.doubleSided)
-            .transparencyMode(config.doubleSided ?
-                    MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES :
-                    MaterialBuilder::TransparencyMode::DEFAULT)
-            .reflectionMode(MaterialBuilder::ReflectionMode::SCREEN_SPACE)
-            .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
+    MaterialBuilder builder;
+    builder.name(name)
+           .flipUV(false)
+           .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::SIMPLE)
+           .specularAntiAliasing(true)
+           .clearCoatIorChange(false)
+           .material(shader.c_str())
+           .doubleSided(config.doubleSided)
+           .transparencyMode(config.doubleSided ?
+           MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES :
+           MaterialBuilder::TransparencyMode::DEFAULT)
+           .reflectionMode(MaterialBuilder::ReflectionMode::SCREEN_SPACE)
+           .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
 
     if (!optimizeShaders) {
         builder.optimization(MaterialBuilder::Optimization::NONE);

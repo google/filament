@@ -200,7 +200,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     }
 
     MaterialBuilder::init();
-    MaterialBuilder builder = MaterialBuilder()
+    MaterialBuilder builder;
+    builder
             .name("DefaultMaterial")
             .targetApi(MaterialBuilder::TargetApi::ALL)
 #ifndef NDEBUG
