@@ -62,6 +62,11 @@ public:
         Builder();
         ~Builder() noexcept;
 
+        Builder(Builder const& rhs) = default;
+        Builder(Builder&& rhs) noexcept = default;
+        Builder& operator=(Builder const& rhs) = default;
+        Builder& operator=(Builder&& rhs) noexcept = default;
+
         struct ListEntry { // NOLINT(cppcoreguidelines-pro-type-member-init)
             std::string_view name;          // name of this sampler
             Type type;                      // type of this sampler

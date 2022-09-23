@@ -126,8 +126,8 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderUniform
         JNIEnv* env, jclass, jlong nativeBuilder, jint uniformType, jint precision, jstring name_) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* name = env->GetStringUTFChars(name_, nullptr);
-    builder->parameter((MaterialBuilder::UniformType) uniformType,
-            (MaterialBuilder::ParameterPrecision) precision, name);
+    builder->parameter(name, (MaterialBuilder::UniformType) uniformType,
+            (MaterialBuilder::ParameterPrecision) precision);
     env->ReleaseStringUTFChars(name_, name);
 }
 
@@ -137,8 +137,8 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderUniform
         jstring name_) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* name = env->GetStringUTFChars(name_, nullptr);
-    builder->parameter((MaterialBuilder::UniformType) uniformType, (size_t) size,
-            (MaterialBuilder::ParameterPrecision) precision, name);
+    builder->parameter(name, (size_t) size, (MaterialBuilder::UniformType) uniformType,
+            (MaterialBuilder::ParameterPrecision) precision);
     env->ReleaseStringUTFChars(name_, name);
 }
 
@@ -148,9 +148,8 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSampler
         jint precision, jstring name_) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* name = env->GetStringUTFChars(name_, nullptr);
-    builder->parameter((MaterialBuilder::SamplerType) samplerType,
-            (MaterialBuilder::SamplerFormat) format, (MaterialBuilder::ParameterPrecision) precision,
-            name);
+    builder->parameter(name, (MaterialBuilder::SamplerType) samplerType,
+            (MaterialBuilder::SamplerFormat) format, (MaterialBuilder::ParameterPrecision) precision);
     env->ReleaseStringUTFChars(name_, name);
 }
 

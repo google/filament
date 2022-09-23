@@ -207,9 +207,9 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .optimization(MaterialBuilderBase::Optimization::NONE)
 #endif
             .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap")
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "basecolorMap")
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "roughnessMap")
+            .parameter("normalMap", MaterialBuilder::SamplerType::SAMPLER_2D)
+            .parameter("basecolorMap", MaterialBuilder::SamplerType::SAMPLER_2D)
+            .parameter("roughnessMap", MaterialBuilder::SamplerType::SAMPLER_2D)
             .material(R"SHADER(
                 void material(inout MaterialInputs material) {
                     vec2 uv = getUV0() * 2.0;

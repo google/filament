@@ -399,7 +399,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     for (auto& map: g_maps) {
         if (map.texture != nullptr) {
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, map.parameterName);
+            builder.parameter(map.parameterName, MaterialBuilder::SamplerType::SAMPLER_2D);
         }
     }
 

@@ -185,41 +185,30 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::parameter(
-        UniformType type, size_t size, ParameterPrecision precision, const char* name) noexcept {
+MaterialBuilder& MaterialBuilder::parameter(const char* name, size_t size, UniformType type,
+        ParameterPrecision precision) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, type, size, precision };
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::parameter(
-        UniformType type, ParameterPrecision precision, const char* name) noexcept {
-    return parameter(type, 1, precision, name);
+MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType type,
+        ParameterPrecision precision) noexcept {
+    return parameter(name, 1, type, precision);
 }
 
 
-MaterialBuilder& MaterialBuilder::parameter(
-        SamplerType samplerType, SamplerFormat format, ParameterPrecision precision, const char* name) noexcept {
+MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
+        SamplerFormat format, ParameterPrecision precision) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, samplerType, format, precision };
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::parameter(
-        SamplerType samplerType, SamplerFormat format, const char* name) noexcept {
-    return parameter(samplerType, format, ParameterPrecision::DEFAULT, name);
+MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
+        ParameterPrecision precision) noexcept {
+    return parameter(name, samplerType, SamplerFormat::FLOAT, precision);
 }
-
-MaterialBuilder& MaterialBuilder::parameter(
-        SamplerType samplerType, ParameterPrecision precision, const char* name) noexcept {
-    return parameter(samplerType, SamplerFormat::FLOAT, precision, name);
-}
-
-MaterialBuilder& MaterialBuilder::parameter(
-        SamplerType samplerType, const char* name) noexcept {
-    return parameter(samplerType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
-}
-
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
         ParameterPrecision precision, const char* name) noexcept {

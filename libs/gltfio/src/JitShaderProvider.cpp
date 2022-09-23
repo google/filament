@@ -347,16 +347,16 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     }
 
     if (config.enableDiagnostics) {
-        builder.parameter(MaterialBuilder::UniformType::BOOL, "enableDiagnostics");
+        builder.parameter("enableDiagnostics", MaterialBuilder::UniformType::BOOL);
     }
 
     // BASE COLOR
-    builder.parameter(MaterialBuilder::UniformType::FLOAT4, "baseColorFactor");
+    builder.parameter("baseColorFactor", MaterialBuilder::UniformType::FLOAT4);
     if (config.hasBaseColorTexture) {
-        builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap");
+        builder.parameter("baseColorMap", MaterialBuilder::SamplerType::SAMPLER_2D);
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3,
-                    MaterialBuilder::ParameterPrecision::HIGH, "baseColorUvMatrix");
+            builder.parameter("baseColorUvMatrix", MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH);
         }
     }
     if (config.hasVertexColors) {
@@ -364,99 +364,99 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     }
 
     // METALLIC-ROUGHNESS
-    builder.parameter(MaterialBuilder::UniformType::FLOAT, "metallicFactor");
-    builder.parameter(MaterialBuilder::UniformType::FLOAT, "roughnessFactor");
+    builder.parameter("metallicFactor", MaterialBuilder::UniformType::FLOAT);
+    builder.parameter("roughnessFactor", MaterialBuilder::UniformType::FLOAT);
     if (config.hasMetallicRoughnessTexture) {
-        builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "metallicRoughnessMap");
+        builder.parameter("metallicRoughnessMap", MaterialBuilder::SamplerType::SAMPLER_2D);
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3,
-                    MaterialBuilder::ParameterPrecision::HIGH, "metallicRoughnessUvMatrix");
+            builder.parameter("metallicRoughnessUvMatrix", MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH);
         }
     }
 
     // SPECULAR-GLOSSINESS
     if (config.useSpecularGlossiness) {
-        builder.parameter(MaterialBuilder::UniformType::FLOAT, "glossinessFactor");
-        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "specularFactor");
+        builder.parameter("glossinessFactor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("specularFactor", MaterialBuilder::UniformType::FLOAT3);
     }
 
     // NORMAL MAP
     // In the glTF spec normalScale is in normalTextureInfo; in cgltf it is part of texture_view.
-    builder.parameter(MaterialBuilder::UniformType::FLOAT, "normalScale");
+    builder.parameter("normalScale", MaterialBuilder::UniformType::FLOAT);
     if (config.hasNormalTexture) {
-        builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap");
+        builder.parameter("normalMap", MaterialBuilder::SamplerType::SAMPLER_2D);
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3,
-                    MaterialBuilder::ParameterPrecision::HIGH, "normalUvMatrix");
+            builder.parameter("normalUvMatrix", MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH);
         }
     }
 
     // AMBIENT OCCLUSION
     // In the glTF spec aoStrength is in occlusionTextureInfo; in cgltf it is part of texture_view.
-    builder.parameter(MaterialBuilder::UniformType::FLOAT, "aoStrength");
+    builder.parameter("aoStrength", MaterialBuilder::UniformType::FLOAT);
     if (config.hasOcclusionTexture) {
-        builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "occlusionMap");
+        builder.parameter("occlusionMap", MaterialBuilder::SamplerType::SAMPLER_2D);
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3,
-                    MaterialBuilder::ParameterPrecision::HIGH, "occlusionUvMatrix");
+            builder.parameter("occlusionUvMatrix", MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH);
         }
     }
 
     // EMISSIVE
-    builder.parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
-    builder.parameter(MaterialBuilder::UniformType::FLOAT, "emissiveStrength");
+    builder.parameter("emissiveFactor", MaterialBuilder::UniformType::FLOAT3);
+    builder.parameter("emissiveStrength", MaterialBuilder::UniformType::FLOAT);
     if (config.hasEmissiveTexture) {
-        builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "emissiveMap");
+        builder.parameter("emissiveMap", MaterialBuilder::SamplerType::SAMPLER_2D);
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3,
-                    MaterialBuilder::ParameterPrecision::HIGH, "emissiveUvMatrix");
+            builder.parameter("emissiveUvMatrix", MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH);
         }
     }
 
     // CLEAR COAT
     if (config.hasClearCoat) {
-        builder.parameter(MaterialBuilder::UniformType::FLOAT, "clearCoatFactor");
-        builder.parameter(MaterialBuilder::UniformType::FLOAT, "clearCoatRoughnessFactor");
+        builder.parameter("clearCoatFactor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("clearCoatRoughnessFactor", MaterialBuilder::UniformType::FLOAT);
         if (config.hasClearCoatTexture) {
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatMap");
+            builder.parameter("clearCoatMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3,
-                        MaterialBuilder::ParameterPrecision::HIGH, "clearCoatUvMatrix");
+                builder.parameter("clearCoatUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
         if (config.hasClearCoatRoughnessTexture) {
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatRoughnessMap");
+            builder.parameter("clearCoatRoughnessMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3,
-                        MaterialBuilder::ParameterPrecision::HIGH, "clearCoatRoughnessUvMatrix");
+                builder.parameter("clearCoatRoughnessUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
         if (config.hasClearCoatNormalTexture) {
-            builder.parameter(MaterialBuilder::UniformType::FLOAT, "clearCoatNormalScale");
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap");
+            builder.parameter("clearCoatNormalScale", MaterialBuilder::UniformType::FLOAT);
+            builder.parameter("clearCoatNormalMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3,
-                        MaterialBuilder::ParameterPrecision::HIGH, "clearCoatNormalUvMatrix");
+                builder.parameter("clearCoatNormalUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
     }
 
     // SHEEN
     if (config.hasSheen) {
-        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "sheenColorFactor");
-        builder.parameter(MaterialBuilder::UniformType::FLOAT,  "sheenRoughnessFactor");
+        builder.parameter("sheenColorFactor", MaterialBuilder::UniformType::FLOAT3);
+        builder.parameter("sheenRoughnessFactor", MaterialBuilder::UniformType::FLOAT);
         if (config.hasSheenColorTexture) {
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenColorMap");
+            builder.parameter("sheenColorMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3,
-                        MaterialBuilder::ParameterPrecision::HIGH, "sheenColorUvMatrix");
+                builder.parameter("sheenColorUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
         if (config.hasSheenRoughnessTexture) {
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenRoughnessMap");
+            builder.parameter("sheenRoughnessMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3,
-                        MaterialBuilder::ParameterPrecision::HIGH, "sheenRoughnessUvMatrix");
+                builder.parameter("sheenRoughnessUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
     }
@@ -472,12 +472,12 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         // window pane, but a poor job of rendering a glass full of liquid.
         builder.refractionType(RefractionType::THIN);
 
-        builder.parameter(MaterialBuilder::UniformType::FLOAT, "transmissionFactor");
+        builder.parameter("transmissionFactor", MaterialBuilder::UniformType::FLOAT);
         if (config.hasTransmissionTexture) {
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "transmissionMap");
+            builder.parameter("transmissionMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3,
-                        MaterialBuilder::ParameterPrecision::HIGH, "transmissionUvMatrix");
+                builder.parameter("transmissionUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
 
@@ -507,14 +507,14 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         // Override thin transmission if both extensions are used
         builder.refractionType(RefractionType::SOLID);
 
-        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "volumeAbsorption");
-        builder.parameter(MaterialBuilder::UniformType::FLOAT,  "volumeThicknessFactor");
+        builder.parameter("volumeAbsorption", MaterialBuilder::UniformType::FLOAT3);
+        builder.parameter("volumeThicknessFactor", MaterialBuilder::UniformType::FLOAT);
 
         if (config.hasVolumeThicknessTexture) {
-            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "volumeThicknessMap");
+            builder.parameter("volumeThicknessMap", MaterialBuilder::SamplerType::SAMPLER_2D);
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3,
-                        MaterialBuilder::ParameterPrecision::HIGH, "volumeThicknessUvMatrix");
+                builder.parameter("volumeThicknessUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
 
@@ -523,7 +523,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
 
     // IOR
     if (config.hasIOR) {
-        builder.parameter(MaterialBuilder::UniformType::FLOAT, "ior");
+        builder.parameter("ior", MaterialBuilder::UniformType::FLOAT);
     }
 
     if (config.unlit) {

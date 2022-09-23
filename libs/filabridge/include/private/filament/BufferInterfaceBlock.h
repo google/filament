@@ -99,6 +99,11 @@ public:
         Builder() noexcept;
         ~Builder() noexcept;
 
+        Builder(Builder const& rhs) = default;
+        Builder(Builder&& rhs) noexcept = default;
+        Builder& operator=(Builder const& rhs) = default;
+        Builder& operator=(Builder&& rhs) noexcept = default;
+
         // Give a name to this buffer interface block
         Builder& name(std::string_view interfaceBlockName);
 

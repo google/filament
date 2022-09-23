@@ -185,9 +185,9 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                     Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
         }
         if (arraySize == 0) {
-            builder.parameter(type, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, precision);
         } else {
-            builder.parameter(type, arraySize, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), arraySize, type, precision);
         }
     } else if (Enums::isValid<SamplerType>(typeString)) {
         if (arraySize > 0) {
@@ -202,16 +202,16 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
             auto precision =
                     Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, format, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, format, precision);
         } else if (formatValue) {
             auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            builder.parameter(type, format, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, format);
         } else if (precisionValue) {
             auto precision =
                     Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, precision);
         } else {
-            builder.parameter(type, nameString.c_str());
+            builder.parameter(nameString.c_str(), type);
         }
     } else {
         std::cerr << "parameters: the type '" << typeString

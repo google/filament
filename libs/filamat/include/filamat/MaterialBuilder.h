@@ -271,38 +271,25 @@ public:
     MaterialBuilder& interpolation(Interpolation interpolation) noexcept;
 
     //! Add a parameter (i.e., a uniform) to this material.
-    MaterialBuilder& parameter(UniformType type, ParameterPrecision precision,
-            const char* name) noexcept;
-
-    //! Add a parameter (i.e., a uniform) to this material.
-    MaterialBuilder& parameter(UniformType type, const char* name) noexcept {
-        return parameter(type, ParameterPrecision::DEFAULT, name);
-    }
+    MaterialBuilder& parameter(const char* name, UniformType type,
+            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
 
     //! Add a parameter array to this material.
-    MaterialBuilder& parameter(UniformType type, size_t size,
-            ParameterPrecision precision, const char* name) noexcept;
-
-    //! Add a parameter array to this material.
-    MaterialBuilder& parameter(UniformType type, size_t size, const char* name) noexcept {
-        return parameter(type, size, ParameterPrecision::DEFAULT, name);
-    }
+    MaterialBuilder& parameter(const char* name, size_t size, UniformType type,
+            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
 
     /**
      * Add a sampler parameter to this material.
      *
-     * When SamplerType::SAMPLER_EXTERNAL is specifed, format and precision are ignored.
+     * When SamplerType::SAMPLER_EXTERNAL is specified, format and precision are ignored.
      */
-    MaterialBuilder& parameter(SamplerType samplerType, SamplerFormat format,
-            ParameterPrecision precision, const char* name) noexcept;
+    MaterialBuilder& parameter(const char* name, SamplerType samplerType,
+            SamplerFormat format = SamplerFormat::FLOAT,
+            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
+
     /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(SamplerType samplerType, SamplerFormat format,
-            const char* name) noexcept;
-    /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(SamplerType samplerType, ParameterPrecision precision,
-            const char* name) noexcept;
-    /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(SamplerType samplerType, const char* name) noexcept;
+    MaterialBuilder& parameter(const char* name, SamplerType samplerType,
+            ParameterPrecision precision) noexcept;
 
     //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
