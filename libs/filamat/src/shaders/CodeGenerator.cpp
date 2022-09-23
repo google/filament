@@ -338,15 +338,31 @@ const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precis
     return getPrecisionQualifier(precision, defaultPrecision);
 }
 
+utils::io::sstream& CodeGenerator::generateBuffers(utils::io::sstream& out,
+        MaterialInfo::BufferContainer const& buffers) const {
+    uint32_t binding = 0;
+    for (auto const* buffer : buffers) {
+        generateBufferInterfaceBlock(out, ShaderStage::COMPUTE, binding, *buffer);
+        binding++;
+    }
+    return out;
+}
+
 io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage,
         UniformBindingPoints binding, const BufferInterfaceBlock& uib) const {
+    return generateBufferInterfaceBlock(out, stage, +binding, uib);
+}
+
+io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage stage,
+        uint32_t binding, const BufferInterfaceBlock& uib) const {
     auto const& infos = uib.getFieldInfoList();
     if (infos.empty()) {
         return out;
     }
 
-    const std::string_view blockName = uib.getName();
-    std::string instanceName(uib.getName());
+    std::string blockName{ uib.getName() };
+    std::string instanceName{ uib.getName() };
+    blockName.front() = char(std::toupper((unsigned char)blockName.front()));
     instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
 
     Precision uniformPrecision = getDefaultUniformPrecision();
@@ -356,17 +372,21 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage
     static constexpr uint32_t METAL_UNIFORM_BUFFER_BINDING_START = 17u;
 
     out << "\nlayout(";
-    // TODO: at feature level 2, GLSL should support the binding qualifier
-    if (mTargetLanguage == TargetLanguage::SPIRV) {
-        const auto bindingIndex = (uint32_t) binding; // avoid char output
+    if (mTargetLanguage == TargetLanguage::SPIRV ||
+        mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
         switch (mTargetApi) {
             case TargetApi::METAL:
-                out << "binding = " << METAL_UNIFORM_BUFFER_BINDING_START + bindingIndex << ", ";
+                out << "binding = " << METAL_UNIFORM_BUFFER_BINDING_START + binding << ", ";
                 break;
 
-            default:
+            case TargetApi::OPENGL:
+                // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
             case TargetApi::VULKAN:
-                out << "binding = " << bindingIndex << ", ";
+                out << "binding = " << binding << ", ";
+                break;
+
+            case TargetApi::ALL:
+                // nonsensical, shouldn't happen.
                 break;
         }
     }
@@ -526,7 +546,7 @@ void CodeGenerator::fixupExternalSamplers(
     // This method should only be called on shaders that have external samplers but since
     // they may have been removed by previous optimization steps, we check again here
     if (hasExternalSampler) {
-        // Find the #version line so we can insert the #extension directive
+        // Find the #version line, so we can insert the #extension directive
         size_t index = shader.find("#version");
         index += 8;
 
@@ -636,6 +656,7 @@ io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderStage stage) 
             out << SHADERS_COMMON_MATERIAL_FS_DATA;
             break;
         case ShaderStage::COMPUTE:
+            out << '\n';
             // TODO: figure out if we need some common files here
             break;
     }

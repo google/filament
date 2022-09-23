@@ -24,8 +24,6 @@
 #include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
 
-#include <private/filament/BufferInterfaceBlock.h>
-
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
@@ -46,6 +44,10 @@
 
 namespace utils {
 class JobSystem;
+}
+
+namespace filament {
+class BufferInterfaceBlock;
 }
 
 namespace filamat {
@@ -203,6 +205,7 @@ inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
 class UTILS_PUBLIC MaterialBuilder : public MaterialBuilderBase {
 public:
     MaterialBuilder();
+    ~MaterialBuilder();
 
     MaterialBuilder(const MaterialBuilder& rhs) = delete;
     MaterialBuilder& operator=(const MaterialBuilder& rhs) = delete;
@@ -663,7 +666,7 @@ public:
     static constexpr size_t MAX_BUFFERS_COUNT = 4;
     using ParameterList = Parameter[MAX_PARAMETERS_COUNT];
     using SubpassList = Parameter[MAX_SUBPASS_COUNT];
-    using BufferList = std::vector<filament::BufferInterfaceBlock>;
+    using BufferList = std::vector<std::unique_ptr<filament::BufferInterfaceBlock>>;
 
     // returns the number of parameters declared in this material
     uint8_t getParameterCount() const noexcept { return mParameterCount; }

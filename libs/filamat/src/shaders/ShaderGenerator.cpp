@@ -198,7 +198,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
 
     io::sstream vs;
 
-    const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, material.featureLevel);
     const bool lit = material.isLit;
 
     cg.generateProlog(vs, ShaderStage::VERTEX, material);
@@ -334,7 +334,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
                 variant.key);
     }
 
-    const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, material.featureLevel);
     const bool lit = material.isLit;
 
     io::sstream fs;
@@ -548,7 +548,8 @@ std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, filament::Variant variant) const noexcept {
     assert_invariant(mMaterialDomain == MaterialBuilder::MaterialDomain::COMPUTE);
-    const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
+    assert_invariant(material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, material.featureLevel);
     io::sstream s;
 
     cg.generateProlog(s, ShaderStage::COMPUTE, material);
@@ -565,7 +566,9 @@ std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
-    // TODO: generate SSBO
+    // generate SSBO
+    cg.generateBuffers(s, material.buffers);
+
     // TODO: generate images
 
     CodeGenerator::generateCommon(s, ShaderStage::COMPUTE);
@@ -583,7 +586,7 @@ std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel
 std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, const filament::Variant::type_t variantKey) const noexcept {
-    const CodeGenerator cg(sm, targetApi, targetLanguage);
+    const CodeGenerator cg(sm, targetApi, targetLanguage, material.featureLevel);
     io::sstream vs;
     cg.generateProlog(vs, ShaderStage::VERTEX, material);
 
@@ -623,7 +626,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
 std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variant) const noexcept {
-    const CodeGenerator cg(sm, targetApi, targetLanguage);
+    const CodeGenerator cg(sm, targetApi, targetLanguage, material.featureLevel);
     io::sstream fs;
     cg.generateProlog(fs, ShaderStage::FRAGMENT, material);
 

@@ -21,6 +21,8 @@
 #include <string>
 #include <variant>
 
+#include "MaterialInfo.h"
+
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
@@ -42,14 +44,21 @@
 namespace filamat {
 
 class UTILS_PRIVATE CodeGenerator {
+    using ShaderModel = filament::backend::ShaderModel;
     using ShaderStage = filament::backend::ShaderStage;
+    using FeatureLevel = filament::backend::FeatureLevel;
     using TargetApi = MaterialBuilder::TargetApi;
     using TargetLanguage = MaterialBuilder::TargetLanguage;
     using ShaderQuality = MaterialBuilder::ShaderQuality;
 public:
-    CodeGenerator(filament::backend::ShaderModel shaderModel,
-            TargetApi targetApi, TargetLanguage targetLanguage) noexcept
-            : mShaderModel(shaderModel), mTargetApi(targetApi), mTargetLanguage(targetLanguage) {
+    CodeGenerator(ShaderModel shaderModel,
+            TargetApi targetApi,
+            TargetLanguage targetLanguage,
+            FeatureLevel featureLevel) noexcept
+            : mShaderModel(shaderModel),
+              mTargetApi(targetApi),
+              mTargetLanguage(targetLanguage),
+              mFeatureLevel(featureLevel) {
         if (targetApi == TargetApi::ALL) {
             utils::slog.e << "Must resolve target API before codegen." << utils::io::endl;
             std::terminate();
@@ -77,7 +86,6 @@ public:
     // generate the shader's main()
     static utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderStage type);
-    static utils::io::sstream& generateComputeMain(utils::io::sstream& out);
 
     // generate the shader's code for the lit shading model
     static utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderStage type,
@@ -109,10 +117,6 @@ public:
     // generate no-op shader for depth prepass
     static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderStage type);
 
-    // generate uniforms
-    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderStage stage,
-            filament::UniformBindingPoints binding, const filament::BufferInterfaceBlock& uib) const;
-
     // generate samplers
     utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,
             const filament::SamplerInterfaceBlock& sib) const;
@@ -120,6 +124,18 @@ public:
     // generate subpass
     static utils::io::sstream& generateSubpass(utils::io::sstream& out,
             filament::SubpassInfo subpass);
+
+    // generate uniforms
+    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderStage stage,
+            filament::UniformBindingPoints binding, const filament::BufferInterfaceBlock& uib) const;
+
+    // generate buffers
+    utils::io::sstream& generateBuffers(utils::io::sstream& out,
+            MaterialInfo::BufferContainer const& buffers) const;
+
+    // generate an interface block
+    utils::io::sstream& generateBufferInterfaceBlock(utils::io::sstream& out, ShaderStage stage,
+            uint32_t binding, const filament::BufferInterfaceBlock& uib) const;
 
     // generate material properties getters
     static utils::io::sstream& generateMaterialProperty(utils::io::sstream& out,
@@ -162,9 +178,10 @@ private:
     static char const* getPrecisionQualifier(filament::backend::Precision precision,
             filament::backend::Precision defaultPrecision) noexcept;
 
-    filament::backend::ShaderModel mShaderModel;
+    ShaderModel mShaderModel;
     TargetApi mTargetApi;
     TargetLanguage mTargetLanguage;
+    FeatureLevel mFeatureLevel;
 
     // return type name of uniform  (e.g.: "vec3", "vec4", "float")
     static char const* getUniformTypeName(filament::BufferInterfaceBlock::FieldInfo const& info) noexcept;

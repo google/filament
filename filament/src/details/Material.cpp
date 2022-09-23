@@ -110,8 +110,12 @@ Material* Material::Builder::build(Engine& engine) {
         materialParser->getName(&name);
         slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
         switch (shaderModel) {
-            case ShaderModel::MOBILE: slog.e << "mobile.\n"; break;
-            case ShaderModel::DESKTOP: slog.e << "desktop.\n"; break;
+            case ShaderModel::MOBILE:
+                slog.e << "mobile.\n";
+                break;
+            case ShaderModel::DESKTOP:
+                slog.e << "desktop.\n";
+                break;
         }
         slog.e << "Compiled material contains shader models 0x"
                 << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
@@ -158,7 +162,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     success = parser->getUniformBlockBindings(&mUniformBlockBindings);
     assert_invariant(success);
 
-    success = parser->getSamplerBlockBindings(&mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
+    success = parser->getSamplerBlockBindings(&mSamplerGroupBindingInfoList,
+            &mSamplerBindingToNameMap);
     assert_invariant(success);
 
 #if FILAMENT_ENABLE_MATDBG

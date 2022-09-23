@@ -18,6 +18,7 @@
 
 #include <filamat/Enums.h>
 
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/Variant.h>
 
 #include <backend/DriverEnums.h>

@@ -121,6 +121,8 @@ MaterialBuilder::MaterialBuilder() : mMaterialName("Unnamed") {
     mShaderModels.reset();
 }
 
+MaterialBuilder::~MaterialBuilder() = default;
+
 void MaterialBuilderBase::init() {
     materialBuilderClients++;
 #ifndef FILAMAT_LITE
@@ -212,7 +214,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
 
 MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) noexcept {
     ASSERT_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT, "Too many buffers");
-    mBuffers.emplace_back(std::move(bib));
+    mBuffers.emplace_back(std::make_unique<filament::BufferInterfaceBlock>(std::move(bib)));
     return *this;
 }
 
@@ -253,6 +255,12 @@ MaterialBuilder& MaterialBuilder::groupSize(filament::math::uint3 groupSize) noe
 MaterialBuilder& MaterialBuilder::materialDomain(
         MaterialBuilder::MaterialDomain materialDomain) noexcept {
     mMaterialDomain = materialDomain;
+    if (mMaterialDomain == MaterialDomain::COMPUTE) {
+        // compute implies feature level 2
+        if (mFeatureLevel < FeatureLevel::FEATURE_LEVEL_2) {
+            mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
+        }
+    }
     return *this;
 }
 
@@ -462,6 +470,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         const uint8_t binding = 0;
         info.subpass = { CString("MaterialParams"), param.name, param.subpassType,
                          param.format, param.precision, attachmentIndex, binding };
+    }
+
+    for (auto const& buffer : mBuffers) {
+        info.buffers.emplace_back(buffer.get());
     }
 
     if (mSpecularAntiAliasing) {
