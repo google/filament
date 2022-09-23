@@ -19,7 +19,9 @@ package com.google.android.filament.gltfio;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
+import com.google.android.filament.MaterialInstance;
 
 /**
  * Provides access to a hierarchy of entities that have been instanced from a glTF asset.
@@ -146,11 +148,39 @@ public class FilamentInstance {
         nApplyMaterialVariant(mNativeObject, variantIndex);
     }
 
+    public @NonNull MaterialInstance[] getMaterialInstances() {
+        final int count = nGetMaterialInstanceCount(mNativeObject);
+        MaterialInstance[] result = new MaterialInstance[count];
+        long[] natives = new long[count];
+        nGetMaterialInstances(mNativeObject, natives);
+        Engine engine = mAsset.getEngine();
+        for (int i = 0; i < count; i++) {
+            result[i] = new MaterialInstance(engine, natives[i]);
+        }
+        return result;
+    }
+
+    /**
+     * Returns the names of all material variants.
+     */
+    public @NonNull String[] getMaterialVariantNames() {
+        String[] names = new String[nGetMaterialVariantCount(mNativeObject)];
+        nGetMaterialVariantNames(mNativeObject, names);
+        return names;
+    }
+
     private static native int nGetRoot(long nativeInstance);
     private static native int nGetEntityCount(long nativeInstance);
     private static native void nGetEntities(long nativeInstance, int[] result);
     private static native long nGetAnimator(long nativeInstance);
+
+    private static native int nGetMaterialInstanceCount(long nativeAsset);
+    private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
+
     private static native void nApplyMaterialVariant(long nativeInstance, int variantIndex);
+    private static native int nGetMaterialVariantCount(long nativeAsset);
+    private static native void nGetMaterialVariantNames(long nativeAsset, String[] result);
+
     private static native void nGetJointsAt(long nativeInstance, int skinIndex, int[] result);
     private static native int nGetSkinCount(long nativeInstance);
     private static native void nGetSkinNames(long nativeInstance, String[] result);

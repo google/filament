@@ -417,7 +417,7 @@ class MainActivity : Activity() {
 
     // Just for testing purposes, this releases the current model and reloads the default model.
     inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
-        override fun onDoubleTap(e: MotionEvent?): Boolean {
+        override fun onDoubleTap(e: MotionEvent): Boolean {
             modelViewer.destroyModel()
             createDefaultRenderables()
             return super.onDoubleTap(e)

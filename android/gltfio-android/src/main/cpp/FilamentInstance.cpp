@@ -20,6 +20,7 @@
 
 #include <algorithm>
 
+using namespace filament;
 using namespace filament::gltfio;
 using namespace utils;
 
@@ -60,6 +61,44 @@ Java_com_google_android_filament_gltfio_FilamentInstance_nApplyMaterialVariant(J
         jlong nativeInstance, jint variantIndex) {
     FilamentInstance* instance = (FilamentInstance*) nativeInstance;
     instance->applyMaterialVariant(variantIndex);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentInstance_nGetMaterialVariantCount(JNIEnv*, jclass,
+        jlong nativeInstance) {
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    return (jint) instance->getMaterialVariantCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentInstance_nGetMaterialVariantNames(JNIEnv* env, jclass,
+        jlong nativeInstance, jobjectArray result) {
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    for (int i = 0; i < instance->getMaterialVariantCount(); ++i) {
+        const char* name = instance->getMaterialVariantName(i);
+        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(name));
+    }
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentInstance_nGetMaterialInstanceCount(JNIEnv*, jclass,
+        jlong nativeInstance) {
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    return instance->getMaterialInstanceCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentInstance_nGetMaterialInstances(JNIEnv* env, jclass,
+        jlong nativeInstance, jlongArray result) {
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    jsize available = env->GetArrayLength(result);
+    jsize count = std::min(available, (jsize) instance->getMaterialInstanceCount());
+    jlong* dst = env->GetLongArrayElements(result, nullptr);
+    const MaterialInstance * const* src = instance->getMaterialInstances();
+    for (jsize i = 0; i < count; i++) {
+        dst[i] = (jlong) src[i];
+    }
+    env->ReleaseLongArrayElements(result, dst, 0);
 }
 
 extern "C" JNIEXPORT void JNICALL
