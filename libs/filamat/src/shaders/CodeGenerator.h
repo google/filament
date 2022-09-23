@@ -118,8 +118,9 @@ public:
     static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderStage type);
 
     // generate samplers
-    utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,
-            const filament::SamplerInterfaceBlock& sib, filament::SamplerBindingPoints bindingPoint) const;
+    utils::io::sstream& generateSamplers(utils::io::sstream& out,
+            filament::SamplerBindingPoints bindingPoint, uint8_t firstBinding,
+            const filament::SamplerInterfaceBlock& sib) const;
 
     // generate subpass
     static utils::io::sstream& generateSubpass(utils::io::sstream& out,

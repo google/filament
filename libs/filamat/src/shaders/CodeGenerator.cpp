@@ -452,8 +452,8 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
 }
 
 io::sstream& CodeGenerator::generateSamplers(
-        io::sstream& out, uint8_t firstBinding, const SamplerInterfaceBlock& sib,
-        SamplerBindingPoints bindingPoint) const {
+        io::sstream& out, SamplerBindingPoints bindingPoint, uint8_t firstBinding,
+        const SamplerInterfaceBlock& sib) const {
     auto const& infos = sib.getSamplerInfoList();
     if (infos.empty()) {
         return out;
