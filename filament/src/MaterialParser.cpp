@@ -124,33 +124,29 @@ bool MaterialParser::getFeatureLevel(uint8_t* value) const noexcept {
 }
 
 bool MaterialParser::getName(utils::CString* cstring) const noexcept {
-   ChunkType type = ChunkType::MaterialName;
-   const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
-   const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+   auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialName);
+    if (start == end) return false;
    Unflattener unflattener(start, end);
    return unflattener.read(cstring);
 }
 
 bool MaterialParser::getUIB(BufferInterfaceBlock* uib) const noexcept {
-    auto type = MaterialUib;
-    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialUib);
+    if (start == end) return false;
     Unflattener unflattener(start, end);
     return ChunkUniformInterfaceBlock::unflatten(unflattener, uib);
 }
 
 bool MaterialParser::getSIB(SamplerInterfaceBlock* sib) const noexcept {
-    auto type = MaterialSib;
-    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSib);
+    if (start == end) return false;
     Unflattener unflattener(start, end);
     return ChunkSamplerInterfaceBlock::unflatten(unflattener, sib);
 }
 
 bool MaterialParser::getSubpasses(SubpassInfo* subpass) const noexcept {
-    auto type = MaterialSubpass;
-    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSubpass);
+    if (start == end) return false;
     Unflattener unflattener(start, end);
     return ChunkSubpassInterfaceBlock::unflatten(unflattener, subpass);
 }
@@ -165,9 +161,8 @@ bool MaterialParser::getMaterialProperties(uint64_t* value) const noexcept {
 
 bool MaterialParser::getUniformBlockBindings(
         utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* value) const noexcept {
-    auto type = MaterialUniformBindings;
-    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialUniformBindings);
+    if (start == end) return false;
     Unflattener unflattener(start, end);
     return ChunkUniformBlockBindings::unflatten(unflattener, value);
 }
@@ -175,9 +170,8 @@ bool MaterialParser::getUniformBlockBindings(
 bool MaterialParser::getSamplerBlockBindings(
         SamplerGroupBindingInfoList* pSamplerGroupInfoList,
         SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept {
-    auto type = MaterialSamplerBindings;
-    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSamplerBindings);
+    if (start == end) return false;
     Unflattener unflattener(start, end);
     return ChunkSamplerBlockBindings::unflatten(unflattener,
             pSamplerGroupInfoList, pSamplerBindingToNameMap);

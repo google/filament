@@ -160,10 +160,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     // read the uniform binding list
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> uniformBlockBindings;
     success = parser->getUniformBlockBindings(&mUniformBlockBindings);
-    assert_invariant(success);
+    assert_invariant(success || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2);
 
-    success = parser->getSamplerBlockBindings(&mSamplerGroupBindingInfoList,
-            &mSamplerBindingToNameMap);
+    success = parser->getSamplerBlockBindings(
+            &mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
     assert_invariant(success);
 
 #if FILAMENT_ENABLE_MATDBG

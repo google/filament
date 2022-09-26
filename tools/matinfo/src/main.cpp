@@ -194,7 +194,8 @@ static bool read(const filaflat::ChunkContainer& container, filamat::ChunkType t
         return false;
     }
 
-    filaflat::Unflattener unflattener(container.getChunkStart(type), container.getChunkEnd(type));
+    auto [start, end] = container.getChunkRange(type);
+    filaflat::Unflattener unflattener(start, end);
     return unflattener.read(value);
 }
 
@@ -219,7 +220,7 @@ static std::map<int, std::string> transpileSpirvToLines(const std::vector<uint32
     emitOptions.vulkan_semantics = true;
     emitOptions.emit_line_directives = true;
 
-    CompilerGLSL glslCompiler(move(spirv));
+    CompilerGLSL glslCompiler(spirv);
     glslCompiler.set_common_options(emitOptions);
     std::string transpiled = glslCompiler.compile();
 

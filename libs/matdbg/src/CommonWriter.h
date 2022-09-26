@@ -38,8 +38,8 @@ static bool read(const filaflat::ChunkContainer& container, filamat::ChunkType t
     if (!container.hasChunk(type)) {
         return false;
     }
-
-    filaflat::Unflattener unflattener(container.getChunkStart(type), container.getChunkEnd(type));
+    auto [start, end] = container.getChunkRange(type);
+    filaflat::Unflattener unflattener(start, end);
     return unflattener.read(value);
 }
 

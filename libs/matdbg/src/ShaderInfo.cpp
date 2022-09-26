@@ -26,22 +26,20 @@
 
 #include <backend/DriverEnums.h>
 
-namespace filament {
-namespace matdbg {
+namespace filament::matdbg {
 
-using namespace filament;
 using namespace backend;
 using namespace filaflat;
 using namespace filamat;
-using namespace std;
 using namespace utils;
 
-size_t getShaderCount(ChunkContainer container, filamat::ChunkType type) {
+size_t getShaderCount(const ChunkContainer& container, ChunkType type) {
     if (!container.hasChunk(type)) {
         return 0;
     }
 
-    Unflattener unflattener(container.getChunkStart(type), container.getChunkEnd(type));
+    auto [start, end] = container.getChunkRange(type);
+    Unflattener unflattener(start, end);
 
     uint64_t shaderCount = 0;
     if (!unflattener.read(&shaderCount) || shaderCount == 0) {
@@ -50,14 +48,13 @@ size_t getShaderCount(ChunkContainer container, filamat::ChunkType type) {
     return shaderCount;
 }
 
-bool getMetalShaderInfo(ChunkContainer container, ShaderInfo* info) {
-    if (!container.hasChunk(filamat::ChunkType::MaterialMetal)) {
+bool getMetalShaderInfo(const ChunkContainer& container, ShaderInfo* info) {
+    if (!container.hasChunk(ChunkType::MaterialMetal)) {
         return true;
     }
 
-    Unflattener unflattener(
-            container.getChunkStart(filamat::ChunkType::MaterialMetal),
-            container.getChunkEnd(filamat::ChunkType::MaterialMetal));
+    auto [start, end] = container.getChunkRange(ChunkType::MaterialMetal);
+    Unflattener unflattener(start, end);
 
     uint64_t shaderCount = 0;
     if (!unflattener.read(&shaderCount) || shaderCount == 0) {
@@ -97,14 +94,13 @@ bool getMetalShaderInfo(ChunkContainer container, ShaderInfo* info) {
     return true;
 }
 
-bool getGlShaderInfo(ChunkContainer container, ShaderInfo* info) {
-    if (!container.hasChunk(filamat::ChunkType::MaterialGlsl)) {
+bool getGlShaderInfo(const ChunkContainer& container, ShaderInfo* info) {
+    if (!container.hasChunk(ChunkType::MaterialGlsl)) {
         return true;
     }
 
-    Unflattener unflattener(
-            container.getChunkStart(filamat::ChunkType::MaterialGlsl),
-            container.getChunkEnd(filamat::ChunkType::MaterialGlsl));
+    auto [start, end] = container.getChunkRange(ChunkType::MaterialGlsl);
+    Unflattener unflattener(start, end);
 
     uint64_t shaderCount;
     if (!unflattener.read(&shaderCount) || shaderCount == 0) {
@@ -143,14 +139,13 @@ bool getGlShaderInfo(ChunkContainer container, ShaderInfo* info) {
     return true;
 }
 
-bool getVkShaderInfo(ChunkContainer container, ShaderInfo* info) {
-    if (!container.hasChunk(filamat::ChunkType::MaterialSpirv)) {
+bool getVkShaderInfo(const ChunkContainer& container, ShaderInfo* info) {
+    if (!container.hasChunk(ChunkType::MaterialSpirv)) {
         return true;
     }
 
-    Unflattener unflattener(
-            container.getChunkStart(filamat::ChunkType::MaterialSpirv),
-            container.getChunkEnd(filamat::ChunkType::MaterialSpirv));
+    auto [start, end] = container.getChunkRange(ChunkType::MaterialSpirv);
+    Unflattener unflattener(start, end);
 
     uint64_t shaderCount;
     if (!unflattener.read(&shaderCount) || shaderCount == 0) {
@@ -189,5 +184,4 @@ bool getVkShaderInfo(ChunkContainer container, ShaderInfo* info) {
     return true;
 }
 
-} // namespace matdbg
 } // namespace filament

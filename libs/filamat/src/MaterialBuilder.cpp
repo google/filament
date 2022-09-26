@@ -1186,19 +1186,22 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
 
-    // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)
     using namespace filament;
-    FixedCapacityVector<std::pair<std::string_view, UniformBindingPoints>> list = {
-            { PerViewUib::_name,               UniformBindingPoints::PER_VIEW },
-            { PerRenderableUib::_name,         UniformBindingPoints::PER_RENDERABLE },
-            { LightsUib::_name,                UniformBindingPoints::LIGHTS },
-            { ShadowUib::_name,                UniformBindingPoints::SHADOW },
-            { FroxelRecordUib::_name,          UniformBindingPoints::FROXEL_RECORDS },
-            { PerRenderableBoneUib::_name,     UniformBindingPoints::PER_RENDERABLE_BONES },
-            { PerRenderableMorphingUib::_name, UniformBindingPoints::PER_RENDERABLE_MORPHING },
-            { info.uib.getName(),              UniformBindingPoints::PER_MATERIAL_INSTANCE }
-    };
-    container.addChild<MaterialUniformBlockBindingsChunk>(std::move(list));
+
+    if (info.featureLevel <= FeatureLevel::FEATURE_LEVEL_1) {
+        // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)
+        FixedCapacityVector<std::pair<std::string_view, UniformBindingPoints>> list = {
+                { PerViewUib::_name,               UniformBindingPoints::PER_VIEW },
+                { PerRenderableUib::_name,         UniformBindingPoints::PER_RENDERABLE },
+                { LightsUib::_name,                UniformBindingPoints::LIGHTS },
+                { ShadowUib::_name,                UniformBindingPoints::SHADOW },
+                { FroxelRecordUib::_name,          UniformBindingPoints::FROXEL_RECORDS },
+                { PerRenderableBoneUib::_name,     UniformBindingPoints::PER_RENDERABLE_BONES },
+                { PerRenderableMorphingUib::_name, UniformBindingPoints::PER_RENDERABLE_MORPHING },
+                { info.uib.getName(),              UniformBindingPoints::PER_MATERIAL_INSTANCE }
+        };
+        container.addChild<MaterialUniformBlockBindingsChunk>(std::move(list));
+    }
 
     // note: this chunk is needed for Vulkan and GL backends. Metal shouldn't need it (but
     // still does as of now).

@@ -159,9 +159,8 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         return true;
     }
 
-    Unflattener uib(
-            container.getChunkStart(ChunkType::MaterialUib),
-            container.getChunkEnd(ChunkType::MaterialUib));
+    auto [startUib, endUib] = container.getChunkRange(ChunkType::MaterialUib);
+    Unflattener uib(startUib, endUib);
 
     CString name;
     if (!uib.read(&name)) {
@@ -173,9 +172,8 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         return false;
     }
 
-    Unflattener sib(
-            container.getChunkStart(ChunkType::MaterialSib),
-            container.getChunkEnd(ChunkType::MaterialSib));
+    auto [startSib, endSib] = container.getChunkRange(ChunkType::MaterialSib);
+    Unflattener sib(startSib, endSib);
 
     if (!sib.read(&name)) {
         return false;
@@ -258,9 +256,8 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
 
     // Subpasses are optional.
     if (container.hasChunk(ChunkType::MaterialSubpass)) {
-        Unflattener subpasses(
-                container.getChunkStart(ChunkType::MaterialSubpass),
-                container.getChunkEnd(ChunkType::MaterialSubpass));
+        auto [start, end] = container.getChunkRange(ChunkType::MaterialSubpass);
+        Unflattener subpasses(start, end);
 
         CString name;
         if (!subpasses.read(&name)) {

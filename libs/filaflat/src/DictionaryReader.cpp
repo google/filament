@@ -34,9 +34,8 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
         ChunkContainer::Type dictionaryTag,
         BlobDictionary& dictionary) {
 
-    Unflattener unflattener(
-            container.getChunkStart(dictionaryTag),
-            container.getChunkEnd(dictionaryTag));
+    auto [start, end] = container.getChunkRange(dictionaryTag);
+    Unflattener unflattener(start, end);
 
     if (dictionaryTag == ChunkType::DictionarySpirv) {
         uint32_t compressionScheme;
