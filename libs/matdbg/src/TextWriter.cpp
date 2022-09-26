@@ -254,8 +254,16 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
                 << endl;
     }
 
+    text << endl;
+
+    return true;
+}
+
+static bool printSubpassesInfo(ostream& text, const ChunkContainer& container) {
+
     // Subpasses are optional.
     if (container.hasChunk(ChunkType::MaterialSubpass)) {
+        text << "Sub-passes:" << endl;
         auto [start, end] = container.getChunkRange(ChunkType::MaterialSubpass);
         Unflattener subpasses(start, end);
 
@@ -305,10 +313,8 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
                     << toString(SamplerFormat(fieldFormat))
                     << endl;
         }
+        text << endl;
     }
-
-    text << endl;
-
     return true;
 }
 
@@ -398,6 +404,9 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printParametersInfo(text, container)) {
+        return false;
+    }
+    if (!printSubpassesInfo(text, container)) {
         return false;
     }
     if (!printGlslInfo(text, container)) {

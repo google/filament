@@ -1213,6 +1213,10 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     // User Material SIB
     container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
 
+    // TODO: should we write the SSBO info? this would only be needed if we wanted to provide
+    //       an interface to set [get?] values in the buffer. But we can do that easily
+    //       with a c-struct (what about kotlin/java?). tbd.
+
     if (mMaterialDomain != MaterialDomain::COMPUTE) {
         // User Subpass
         container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
@@ -1228,16 +1232,16 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
         container.addSimpleChild<bool>(ChunkType::MaterialInstanced, mInstanced);
         container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
-    }
 
-    uint64_t properties = 0;
-    UTILS_NOUNROLL
-    for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {
-        if (mProperties[i]) {
-            properties |= uint64_t(1u) << i;
+        uint64_t properties = 0;
+        UTILS_NOUNROLL
+        for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {
+            if (mProperties[i]) {
+                properties |= uint64_t(1u) << i;
+            }
         }
+        container.addSimpleChild<uint64_t>(ChunkType::MaterialProperties, properties);
     }
-    container.addSimpleChild<uint64_t>(ChunkType::MaterialProperties, properties);
 }
 
 void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexcept {
