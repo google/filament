@@ -567,6 +567,11 @@ public:
             MorphTargetBuffer* morphTargetBuffer);
 
     /**
+     * Get a MorphTargetBuffer to the given primitive or null if it doesn't exist.
+     */
+    MorphTargetBuffer* getMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
+
+    /**
      * Gets the number of morphing in the given entity.
      */
     size_t getMorphTargetCount(Instance instance) const noexcept;

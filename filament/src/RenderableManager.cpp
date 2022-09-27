@@ -144,6 +144,11 @@ void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
             upcast(morphTargetBuffer), offset, count);
 }
 
+MorphTargetBuffer* RenderableManager::getMorphTargetBufferAt(Instance instance, uint8_t level,
+        size_t primitiveIndex) const noexcept {
+    return upcast(this)->getMorphTargetBufferAt(instance, level, primitiveIndex);
+}
+
 size_t RenderableManager::getMorphTargetCount(Instance instance) const noexcept {
     return upcast(this)->getMorphTargetCount(instance);
 }
