@@ -59,6 +59,10 @@ public:
             MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation) const noexcept;
 
+    std::string createComputeProgram(filament::backend::ShaderModel shaderModel,
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialInfo const& material, filament::Variant variant) const noexcept;
+
     /**
      * When a GLSL shader is optimized we run it through an intermediate SPIR-V
      * representation. Unfortunately external samplers cannot be used with SPIR-V
@@ -84,7 +88,7 @@ private:
     MaterialBuilder::OutputList mOutputs;
     MaterialBuilder::MaterialDomain mMaterialDomain;
     MaterialBuilder::PreprocessorDefineList mDefines;
-    utils::CString mMaterialFragmentCode;
+    utils::CString mMaterialFragmentCode;   // fragment or compute code
     utils::CString mMaterialVertexCode;
     size_t mMaterialLineOffset;
     size_t mMaterialVertexLineOffset;

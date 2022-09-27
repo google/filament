@@ -273,8 +273,11 @@ void NoopDriver::commit(Handle<HwSwapChain> sch) {
 void NoopDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh) {
 }
 
-void NoopDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> ubh,
-        uint32_t offset, uint32_t size) {
+void NoopDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
+        Handle<HwBufferObject> ubh, uint32_t offset, uint32_t size) {
+}
+
+void NoopDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
 }
 
 void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
@@ -301,6 +304,11 @@ void NoopDriver::readPixels(Handle<HwRenderTarget> src,
     scheduleDestroy(std::move(p));
 }
 
+void NoopDriver::readBufferSubData(backend::BufferObjectHandle boh,
+        uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
+    scheduleDestroy(std::move(p));
+}
+
 void NoopDriver::blit(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect,
@@ -309,6 +317,9 @@ void NoopDriver::blit(TargetBufferFlags buffers,
 
 void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
         uint32_t instanceCount) {
+}
+
+void NoopDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
 }
 
 void NoopDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

@@ -55,6 +55,7 @@ public:
         MaterialBuilder::TargetLanguage targetLanguage;
         filament::backend::ShaderStage shaderType;
         filament::backend::ShaderModel shaderModel;
+        filament::backend::FeatureLevel featureLevel;
         filament::MaterialDomain domain;
         const filamat::MaterialInfo* materialInfo;
         bool hasFramebufferFetch;
@@ -74,7 +75,8 @@ private:
         SpirvBlob* spirvOutput = nullptr;
         std::string* mslOutput = nullptr;
         EShLanguage shLang = EShLangFragment;
-        int langVersion = 0;
+        // use 100 for ES environment, 110 for desktop
+         int langVersion = 0;
         ShaderMinifier minifier;
     };
 

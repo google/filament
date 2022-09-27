@@ -26,7 +26,7 @@
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
@@ -110,8 +110,12 @@ Material* Material::Builder::build(Engine& engine) {
         materialParser->getName(&name);
         slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
         switch (shaderModel) {
-            case ShaderModel::MOBILE: slog.e << "mobile.\n"; break;
-            case ShaderModel::DESKTOP: slog.e << "desktop.\n"; break;
+            case ShaderModel::MOBILE:
+                slog.e << "mobile.\n";
+                break;
+            case ShaderModel::DESKTOP:
+                slog.e << "desktop.\n";
+                break;
         }
         slog.e << "Compiled material contains shader models 0x"
                 << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
@@ -156,9 +160,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     // read the uniform binding list
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> uniformBlockBindings;
     success = parser->getUniformBlockBindings(&mUniformBlockBindings);
-    assert_invariant(success);
+    assert_invariant(success || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2);
 
-    success = parser->getSamplerBlockBindings(&mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
+    success = parser->getSamplerBlockBindings(
+            &mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
     assert_invariant(success);
 
 #if FILAMENT_ENABLE_MATDBG
@@ -329,8 +334,8 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
-    return mUniformInterfaceBlock.hasUniform(name) ||
-            mSamplerInterfaceBlock.hasSampler(name) ||
+    return mUniformInterfaceBlock.hasField(name) ||
+           mSamplerInterfaceBlock.hasSampler(name) ||
             mSubpassInfo.name == utils::CString(name);
 }
 
@@ -338,9 +343,9 @@ bool FMaterial::isSampler(const char* name) const noexcept {
     return mSamplerInterfaceBlock.hasSampler(name);
 }
 
-UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
+BufferInterfaceBlock::FieldInfo const* FMaterial::reflect(
         std::string_view name) const noexcept {
-    return mUniformInterfaceBlock.getUniformInfo(name);
+    return mUniformInterfaceBlock.getFieldInfo(name);
 }
 
 void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
@@ -349,9 +354,11 @@ void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
         case MaterialDomain::SURFACE:
             getSurfaceProgramSlow(variant);
             break;
-
         case MaterialDomain::POST_PROCESS:
             getPostProcessProgramSlow(variant);
+            break;
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
             break;
     }
 }
@@ -452,7 +459,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexce
 size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
     count = std::min(count, getParameterCount());
 
-    const auto& uniforms = mUniformInterfaceBlock.getUniformInfoList();
+    const auto& uniforms = mUniformInterfaceBlock.getFieldInfoList();
     size_t i = 0;
     size_t uniformCount = std::min(count, size_t(uniforms.size()));
     for ( ; i < uniformCount; i++) {

@@ -406,11 +406,16 @@ DECL_DRIVER_API_N(bindUniformBuffer,
         uint32_t, index,
         backend::BufferObjectHandle, ubh)
 
-DECL_DRIVER_API_N(bindUniformBufferRange,
+DECL_DRIVER_API_N(bindBufferRange,
+        BufferObjectBinding, bindingType,
         uint32_t, index,
         backend::BufferObjectHandle, ubh,
         uint32_t, offset,
         uint32_t, size)
+
+DECL_DRIVER_API_N(unbindBuffer,
+        BufferObjectBinding, bindingType,
+        uint32_t, index)
 
 DECL_DRIVER_API_N(bindSamplers,
         uint32_t, index,
@@ -444,6 +449,12 @@ DECL_DRIVER_API_N(readPixels,
         uint32_t, height,
         backend::PixelBufferDescriptor&&, data)
 
+DECL_DRIVER_API_N(readBufferSubData,
+        backend::BufferObjectHandle, src,
+        uint32_t, offset,
+        uint32_t, size,
+        backend::BufferDescriptor&&, data)
+
 /*
  * Rendering operations
  * --------------------
@@ -461,6 +472,11 @@ DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,
         backend::RenderPrimitiveHandle, rph,
         uint32_t, instanceCount)
+
+DECL_DRIVER_API_N(dispatchCompute,
+        backend::ProgramHandle, program,
+        math::uint3, workGroupCount)
+
 
 #pragma clang diagnostic pop
 

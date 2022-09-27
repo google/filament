@@ -289,7 +289,8 @@ static void setup(Engine* engine, View*, Scene* scene) {
     shader += "}\n";
 
     MaterialBuilder::init();
-    MaterialBuilder builder = MaterialBuilder()
+    MaterialBuilder builder;
+    builder
             .name("DefaultMaterial")
             .targetApi(MaterialBuilder::TargetApi::ALL)
 #ifndef NDEBUG
@@ -301,20 +302,20 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     if (hasNormalMap) {
         builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap");
+                .require(VertexAttribute::UV0)
+                .parameter("normalMap", MaterialBuilder::SamplerType::SAMPLER_2D);
     }
 
     if (hasClearCoatNormalMap) {
         builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap");
+                .require(VertexAttribute::UV0)
+                .parameter("clearCoatNormalMap", MaterialBuilder::SamplerType::SAMPLER_2D);
     }
 
     if (hasBaseColorMap) {
         builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap");
+                .require(VertexAttribute::UV0)
+                .parameter("baseColorMap", MaterialBuilder::SamplerType::SAMPLER_2D);
     }
 
     Package pkg = builder.build(engine->getJobSystem());

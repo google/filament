@@ -26,7 +26,7 @@
 namespace filament {
 class SamplerBindingMap;
 class SamplerInterfaceBlock;
-class UniformInterfaceBlock;
+class BufferInterfaceBlock;
 struct SubpassInfo;
 } // namespace filament
 
@@ -34,13 +34,13 @@ namespace filamat {
 
 class MaterialUniformInterfaceBlockChunk final : public Chunk {
 public:
-    explicit MaterialUniformInterfaceBlockChunk(filament::UniformInterfaceBlock const& uib);
+    explicit MaterialUniformInterfaceBlockChunk(filament::BufferInterfaceBlock const& uib);
     ~MaterialUniformInterfaceBlockChunk() final = default;
 
 private:
     void flatten(Flattener&) final;
 
-    filament::UniformInterfaceBlock const& mUib;
+    filament::BufferInterfaceBlock const& mUib;
 };
 
 // ------------------------------------------------------------------------------------------------

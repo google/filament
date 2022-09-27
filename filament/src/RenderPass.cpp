@@ -795,14 +795,16 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
 
             // bind per-renderable uniform block. there is no need to attempt to skip this command
             // because the backends already do this.
-            driver.bindUniformBufferRange(+UniformBindingPoints::PER_RENDERABLE,
+            driver.bindBufferRange(BufferObjectBinding::UNIFORM,
+                    +UniformBindingPoints::PER_RENDERABLE,
                     (info.instanceCount > 1) ? mInstancedUboHandle : uboHandle,
                     info.index * sizeof(PerRenderableData),
                     sizeof(PerRenderableUib));
 
             if (UTILS_UNLIKELY(info.skinningHandle)) {
                 // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
-                driver.bindUniformBufferRange(+UniformBindingPoints::PER_RENDERABLE_BONES,
+                driver.bindBufferRange(BufferObjectBinding::UNIFORM,
+                        +UniformBindingPoints::PER_RENDERABLE_BONES,
                         info.skinningHandle,
                         info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
                         sizeof(PerRenderableBoneUib));

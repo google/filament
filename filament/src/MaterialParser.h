@@ -40,7 +40,7 @@ class Unflattener;
 
 namespace filament {
 
-class UniformInterfaceBlock;
+class BufferInterfaceBlock;
 class SamplerInterfaceBlock;
 struct SubpassInfo;
 
@@ -63,7 +63,7 @@ public:
     bool getMaterialVersion(uint32_t* value) const noexcept;
     bool getFeatureLevel(uint8_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
-    bool getUIB(UniformInterfaceBlock* uib) const noexcept;
+    bool getUIB(BufferInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getSubpasses(SubpassInfo* subpass) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
@@ -144,7 +144,7 @@ private:
 };
 
 struct ChunkUniformInterfaceBlock {
-    static bool unflatten(filaflat::Unflattener& unflattener, UniformInterfaceBlock* uib);
+    static bool unflatten(filaflat::Unflattener& unflattener, BufferInterfaceBlock* uib);
 };
 
 struct ChunkSamplerInterfaceBlock {

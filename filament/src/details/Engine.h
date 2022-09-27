@@ -45,7 +45,7 @@
 #include "private/backend/DriverApi.h"
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>

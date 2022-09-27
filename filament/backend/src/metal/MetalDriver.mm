@@ -965,8 +965,14 @@ void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) 
     };
 }
 
-void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> boh,
-        uint32_t offset, uint32_t size) {
+void MetalDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
+        Handle<HwBufferObject> boh,  uint32_t offset, uint32_t size) {
+
+    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
+                     bindingType == BufferObjectBinding::UNIFORM);
+
+    // TODO: implement BufferObjectBinding::SHADER_STORAGE case
+
     assert_invariant(index < UNIFORM_BUFFER_COUNT);
     auto* bo = handle_cast<MetalBufferObject>(boh);
     auto* currentBo = mContext->uniformState[index].buffer;
@@ -979,6 +985,10 @@ void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> 
             .offset = offset,
             .bound = true
     };
+}
+
+void MetalDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
+    // TODO: implement unbindBuffer()
 }
 
 void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
@@ -1106,6 +1116,12 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                         mipmapLevel:0];
         scheduleDestroy(std::move(*p));
     }];
+}
+
+void MetalDriver::readBufferSubData(backend::BufferObjectHandle boh,
+        uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
+    // TODO: implement readBufferSubData
+    scheduleDestroy(std::move(p));
 }
 
 void MetalDriver::blit(TargetBufferFlags buffers,
@@ -1500,6 +1516,10 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
                                                   indexBuffer:metalIndexBuffer
                                             indexBufferOffset:primitive->offset
                                                 instanceCount:instanceCount];
+}
+
+void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+    // FIXME: implement me
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

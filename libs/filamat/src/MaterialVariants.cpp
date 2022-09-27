@@ -59,4 +59,12 @@ std::vector<Variant> determinePostProcessVariants() {
     return variants;
 }
 
+std::vector<Variant> determineComputeVariants() {
+    // TODO: should we have variants for compute shaders?
+    std::vector<Variant> variants;
+    filament::Variant variant(0);
+    variants.emplace_back(variant, filament::backend::ShaderStage::COMPUTE);
+    return variants;
+}
+
 } // namespace filamat

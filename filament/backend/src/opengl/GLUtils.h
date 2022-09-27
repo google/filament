@@ -119,6 +119,8 @@ constexpr inline GLenum getBufferBindingType(BufferObjectBinding bindingType) no
             return GL_ARRAY_BUFFER;
         case BufferObjectBinding::UNIFORM:
             return GL_UNIFORM_BUFFER;
+        case BufferObjectBinding::SHADER_STORAGE:
+            return GL_SHADER_STORAGE_BUFFER;
     }
 }
 

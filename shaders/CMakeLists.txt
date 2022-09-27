@@ -14,6 +14,7 @@ set(SHADERS
         src/ambient_occlusion.fs
         src/attributes.vs
         src/brdf.fs
+        src/common_defines.glsl
         src/common_getters.glsl
         src/common_graphics.fs
         src/common_lighting.fs
@@ -24,12 +25,14 @@ set(SHADERS
         src/common_types.glsl
         src/depth_main.fs
         src/fog.fs
+        src/getters.cs
         src/getters.fs
         src/getters.vs
         src/light_directional.fs
         src/light_indirect.fs
         src/light_reflections.fs
         src/light_punctual.fs
+        src/main.cs
         src/main.fs
         src/main.vs
         src/material_inputs.fs
