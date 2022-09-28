@@ -512,8 +512,8 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
 
     auto& gl = mContext;
 
-    bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-    gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
 
     switch (t->gl.target) {
         case GL_TEXTURE_2D:
@@ -1871,8 +1871,8 @@ void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint
     auto& gl = mContext;
 
     GLTexture* t = handle_cast<GLTexture *>(th);
-    bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-    gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
 
     // Must fit within int8_t.
     assert_invariant(minLevel <= 0x7f && maxLevel <= 0x7f);
@@ -1908,8 +1908,8 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
     assert_invariant(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
     // Note: glGenerateMimap can also fail if the internal format is not both
     // color-renderable and filterable (i.e.: doesn't work for depth)
-    bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-    gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
 
     t->gl.baseLevel = 0;
     t->gl.maxLevel = static_cast<int8_t>(t->levels - 1);
@@ -1956,8 +1956,8 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             // fallthrough...
         case SamplerType::SAMPLER_2D:
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
             assert_invariant(t->gl.target == GL_TEXTURE_2D);
             glTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
@@ -1965,8 +1965,8 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             break;
         case SamplerType::SAMPLER_3D:
             assert_invariant(zoffset + depth <= std::max(1u, t->depth >> level));
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
             assert_invariant(t->gl.target == GL_TEXTURE_3D);
             glTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
@@ -1976,8 +1976,8 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             assert_invariant(zoffset + depth <= t->depth);
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
             assert_invariant(t->gl.target == GL_TEXTURE_2D_ARRAY ||
                     t->gl.target == GL_TEXTURE_CUBE_MAP_ARRAY);
             glTexSubImage3D(t->gl.target, GLint(level),
@@ -1986,8 +1986,8 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert_invariant(t->gl.target == GL_TEXTURE_CUBE_MAP);
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
 
             assert_invariant(width == height);
             const size_t faceSize = PixelBufferDescriptor::computeDataSize(
@@ -2050,8 +2050,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
             // fallthrough...
         case SamplerType::SAMPLER_2D:
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
             assert_invariant(t->gl.target == GL_TEXTURE_2D);
             glCompressedTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
@@ -2059,8 +2059,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
                     t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_3D:
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
             assert_invariant(t->gl.target == GL_TEXTURE_3D);
             glCompressedTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
@@ -2078,8 +2078,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert_invariant(t->gl.target == GL_TEXTURE_CUBE_MAP);
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
 
             assert_invariant(width == height);
             const size_t faceSize = PixelBufferDescriptor::computeDataSize(
@@ -2139,8 +2139,8 @@ void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
         assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
         assert_invariant(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
 
-        bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
-        gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+        gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
 
 #ifdef GL_OES_EGL_image
         glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, static_cast<GLeglImageOES>(image));
@@ -2940,7 +2940,7 @@ void OpenGLDriver::endFrame(uint32_t frameId) {
     // at least do some minimal safety things here, such as resetting the VAO to 0.
     auto& gl = mContext;
     gl.bindVertexArray(nullptr);
-    for (int unit = OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1; unit >= 0; unit--) {
+    for (int unit = OpenGLContext::DUMMY_TEXTURE_BINDING; unit >= 0; unit--) {
         gl.bindTexture(unit, GL_TEXTURE_2D, 0);
     }
     gl.disable(GL_CULL_FACE);
@@ -3101,8 +3101,8 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
     auto& gl = mContext;
     if (texture && any(texture->usage & TextureUsage::SAMPLEABLE)) {
         if (targetLevel < texture->gl.baseLevel || targetLevel > texture->gl.maxLevel) {
-            bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, texture);
-            gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+            bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, texture);
+            gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
             if (targetLevel < texture->gl.baseLevel) {
                 texture->gl.baseLevel = targetLevel;
                 glTexParameteri(texture->gl.target, GL_TEXTURE_BASE_LEVEL, targetLevel);
