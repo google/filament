@@ -1063,7 +1063,7 @@ void MetalDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t inde
 
     // TODO: implement BufferObjectBinding::SHADER_STORAGE case
 
-    assert_invariant(index < Program::UNIFORM_BUFFER_COUNT);
+    assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
     auto* bo = handle_cast<MetalBufferObject>(boh);
     auto* currentBo = mContext->uniformState[index].buffer;
     if (currentBo) {

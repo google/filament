@@ -562,7 +562,7 @@ std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel
     cg.generateUniforms(s, ShaderStage::COMPUTE,
             UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
 
-    cg.generateSamplers(s,
+    cg.generateSamplers(s, SamplerBindingPoints::PER_MATERIAL_INSTANCE,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
