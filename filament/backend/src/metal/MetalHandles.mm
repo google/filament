@@ -396,57 +396,9 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
     // All stages of the program have compiled successfully, this is a valid program.
     isValid = true;
 
-    // This calculates Metal resource binding indices. Filament's sampler bindings range from 0-31
-    // across both vertex and fragment stages. However, Metal binding indices must be < 16, with a
-    // separate binding "namespace" for each stage. So, we recompute binding indices for each shader
-    // stage. This logic should match updateResourceBinding in GLSLPostProcessor.cpp
-    // This is an example how binding indices each of shader stages is generated from sampler's
-    // bindings. Below is sampler's bindings.
-    //  0 shadowMap { fragment }
-    //  1 structure { fragment }
-    //  2 targets { vertex }
-    //  3 color { vertex | fragment }
-    //  4 depth { vertex | fragment }
-    // Below is generated vertex sampler binding indices.
-    //  0 targets
-    //  1 color
-    //  2 depth
-    // Below is generated fragment sampler binding indices.
-    //  0 shadowMap
-    //  1 structure
-    //  2 color
-    //  3 depth
-    auto& samplerGroupInfo = program.getSamplerGroupInfo();
-    for (size_t shaderType = 0; shaderType != PIPELINE_STAGE_COUNT; ++shaderType) {
-        ShaderStage stage = (ShaderStage)shaderType;
-        size_t bindingIdx = 0;
-
-        auto getShaderStage = [this](ShaderStage type) -> auto& {
-            switch (type) {
-                case ShaderStage::VERTEX:    return vertexSamplerBlockInfo;
-                case ShaderStage::FRAGMENT:  return fragmentSamplerBlockInfo;
-                case ShaderStage::COMPUTE:
-                    // FIXME: implement ShaderStage::COMPUTE
-                    std::terminate();
-            }
-        };
-
-        auto& samplerBlockInfo = getShaderStage(stage);
-
-        for (size_t samplerGroupIdx = 0; samplerGroupIdx != SAMPLER_GROUP_COUNT; ++samplerGroupIdx) {
-            auto& groupData = samplerGroupInfo[samplerGroupIdx];
-            auto stageFlags = groupData.stageFlags;
-            if (!hasShaderType(stageFlags, static_cast<ShaderStage>(shaderType))) {
-                continue;
-            }
-            auto& samplers = groupData.samplers;
-            for (size_t samplerIdx = 0, c = samplers.size(); samplerIdx != c; ++samplerIdx) {
-                samplerBlockInfo[bindingIdx].samplerGroup = samplerGroupIdx;
-                samplerBlockInfo[bindingIdx].sampler = samplerIdx;
-                ++bindingIdx;
-            }
-        }
-    }
+    // Save this program's SamplerGroupInfo, it's used during draw calls to bind sampler groups to
+    // the appropriate stage(s).
+    samplerGroupInfo = program.getSamplerGroupInfo();
 }
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
@@ -561,14 +513,33 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context) {
     texture = metalTexture;
-    minLod = 0;
-    maxLod = levels - 1;
+    updateLodRange(0, levels - 1);
 }
 
 MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }
 
+id<MTLTexture> MetalTexture::getMtlTextureForRead() noexcept {
+    if (lodTextureView) {
+        return lodTextureView;
+    }
+    // The texture's swizzle remains constant throughout its lifetime, however its LOD range can
+    // change. We'll cache the LOD view, and set lodTextureView to nil if minLod or maxLod is
+    // updated.
+    id<MTLTexture> t = swizzledTextureView ? swizzledTextureView : texture;
+    if (!t) {
+        return nil;
+    }
+    if (UTILS_UNLIKELY(minLod > maxLod)) {
+        // If the texture does not have any available LODs, provide a view of only level 0.
+        // Filament should prevent this from ever occurring.
+        lodTextureView = createTextureViewWithLodRange(t, 0, 0);
+        return lodTextureView;
+    }
+    lodTextureView = createTextureViewWithLodRange(t, minLod, maxLod);
+    return lodTextureView;
+}
 
 MTLPixelFormat MetalTexture::decidePixelFormat(MetalContext* context, TextureFormat format) {
     const MTLPixelFormat metalFormat = getMetalFormat(context, format);
@@ -688,6 +659,13 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
     }
 
     updateLodRange(level);
+}
+
+void MetalTexture::generateMipmaps() noexcept {
+    id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(&context) blitCommandEncoder];
+    [blitEncoder generateMipmapsForTexture:texture];
+    [blitEncoder endEncoding];
+    updateLodRange(0, texture.mipmapLevelCount - 1);
 }
 
 void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
@@ -810,8 +788,87 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
 }
 
 void MetalTexture::updateLodRange(uint32_t level) {
+    assert_invariant(!isInRenderPass(&context));
     minLod = std::min(minLod, level);
     maxLod = std::max(maxLod, level);
+    lodTextureView = nil;
+}
+
+void MetalTexture::updateLodRange(uint32_t min, uint32_t max) {
+    assert_invariant(!isInRenderPass(&context));
+    assert_invariant(min <= max);
+    minLod = std::min(minLod, min);
+    maxLod = std::max(maxLod, max);
+    lodTextureView = nil;
+}
+
+void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e) {
+    encoder = e;
+
+    // The number of slots in the ring buffer we use to manage argument buffer allocations.
+    // This number was chosen to avoid running out of slots and having to allocate a "fallback"
+    // buffer when SamplerGroups are updated multiple times a frame. This value can reduced after
+    // auditing Filament's calls to updateSamplerGroup, which should be as few times as possible.
+    // For example, the bloom downsample pass should be refactored to maintain two separate
+    // MaterialInstances instead of "ping ponging" between two texture bindings, which causes a
+    // single SamplerGroup to be updated many times a frame.
+    static constexpr auto METAL_ARGUMENT_BUFFER_SLOTS = 32;
+
+    MTLSizeAndAlign argBufferLayout;
+    argBufferLayout.size = encoder.encodedLength;
+    argBufferLayout.align = encoder.alignment;
+    // Chances are, even though the MTLArgumentEncoder might change, the required size and alignment
+    // probably won't. So we can re-use the previous ring buffer.
+    if (UTILS_UNLIKELY(!argBuffer || !argBuffer->canAccomodateLayout(argBufferLayout))) {
+        argBuffer = std::make_unique<MetalRingBuffer>(encoder.device, MTLResourceStorageModeShared,
+                argBufferLayout, METAL_ARGUMENT_BUFFER_SLOTS);
+    } else {
+        argBuffer->createNewAllocation(cmdBuffer);
+    }
+
+    auto [buffer, offset] = argBuffer->getCurrentAllocation();
+    [encoder setArgumentBuffer:buffer offset:offset];
+
+    // Clear all textures and samplers.
+    assert_invariant(textureHandles.size() == textures.size());
+    assert_invariant(textures.size() == samplers.size());
+    for (size_t s = 0; s < textureHandles.size(); s++) {
+        textureHandles[s] = {};
+        textures[s] = nil;
+        samplers[s] = nil;
+    }
+
+    finalized = false;
+}
+
+void MetalSamplerGroup::mutate(id<MTLCommandBuffer> cmdBuffer) {
+    assert_invariant(finalized);    // only makes sense to mutate if this sampler group is finalized
+    assert_invariant(argBuffer);
+    auto [buffer, offset] = argBuffer->createNewAllocation(cmdBuffer);
+    [encoder setArgumentBuffer:buffer offset:offset];
+
+    // Re-encode all textures and samplers.
+    for (size_t s = 0; s < size; s++) {
+        [encoder setTexture:textures[s] atIndex:(s * 2 + 0)];
+        [encoder setSamplerState:samplers[s] atIndex:(s * 2 + 1)];
+    }
+
+    finalized = false;
+}
+
+void MetalSamplerGroup::useResources(id<MTLRenderCommandEncoder> renderPassEncoder) {
+    assert_invariant(finalized);
+    if (@available(iOS 13, *)) {
+        // TODO: pass only the appropriate stages to useResources.
+        [renderPassEncoder useResources:textures.data()
+                                  count:textures.size()
+                                  usage:MTLResourceUsageRead | MTLResourceUsageSample
+                                 stages:MTLRenderStageFragment | MTLRenderStageVertex];
+    } else {
+        [renderPassEncoder useResources:textures.data()
+                                  count:textures.size()
+                                  usage:MTLResourceUsageRead | MTLResourceUsageSample];
+    }
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,

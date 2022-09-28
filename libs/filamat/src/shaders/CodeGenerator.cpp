@@ -368,9 +368,6 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     Precision uniformPrecision = getDefaultUniformPrecision();
     Precision defaultPrecision = getDefaultPrecision(stage);
 
-    // This constant must match the equivalent in MetalState.h.
-    static constexpr uint32_t METAL_UNIFORM_BUFFER_BINDING_START = 17u;
-
     out << "\nlayout(";
     if (mTargetLanguage == TargetLanguage::SPIRV ||
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
@@ -455,7 +452,8 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
 }
 
 io::sstream& CodeGenerator::generateSamplers(
-        io::sstream& out, uint8_t firstBinding, const SamplerInterfaceBlock& sib) const {
+        io::sstream& out, SamplerBindingPoints bindingPoint, uint8_t firstBinding,
+        const SamplerInterfaceBlock& sib) const {
     auto const& infos = sib.getSamplerInfoList();
     if (infos.empty()) {
         return out;
@@ -472,21 +470,28 @@ io::sstream& CodeGenerator::generateSamplers(
         char const* const precision = getPrecisionQualifier(info.precision, Precision::DEFAULT);
         if (mTargetLanguage == TargetLanguage::SPIRV) {
             const uint32_t bindingIndex = (uint32_t) firstBinding + info.offset;
-            out << "layout(binding = " << bindingIndex;
+            switch (mTargetApi) {
+                // For Vulkan, we place uniforms in set 0 (the default set) and samplers in set 1. This
+                // allows the sampler bindings to live in a separate "namespace" that starts at zero.
+                // Note that the set specifier is not covered by the desktop GLSL spec, including
+                // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
+                case TargetApi::VULKAN:
+                    out << "layout(binding = " << bindingIndex << ", set = 1) ";
+                    break;
 
-            // For Vulkan, we place uniforms in set 0 (the default set) and samplers in set 1. This
-            // allows the sampler bindings to live in a separate "namespace" that starts at zero.
-            // Note that the set specifier is not covered by the desktop GLSL spec, including
-            // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
-            if (mTargetApi == TargetApi::VULKAN ||
-            // For Metal, the sampler binding index must less than 16. But we generate sampler binding
-            // index sequentially regardless binding shader stages, so it could be greater than 15.
-            // To avoid this problem, we have to re-calculate resource binding indices each of shader stages.
-                mTargetApi == TargetApi::METAL) {
-                out << ", set = 1";
+                // For Metal, each sampler group gets its own descriptor set, each of which will
+                // become an argument buffer. The first descriptor set is reserved for uniforms,
+                // hence the +1 here.
+                case TargetApi::METAL:
+                    out << "layout(binding = " << (uint32_t) info.offset
+                        << ", set = " << (uint32_t) bindingPoint + 1 << ") ";
+                    break;
+
+                default:
+                case TargetApi::OPENGL:
+                    out << "layout(binding = " << bindingIndex << ") ";
+                    break;
             }
-
-            out << ") ";
         }
         out << "uniform " << precision << " " << typeName << " " << info.uniformName.c_str();
         out << ";\n";

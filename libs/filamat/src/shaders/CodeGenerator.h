@@ -118,7 +118,8 @@ public:
     static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderStage type);
 
     // generate samplers
-    utils::io::sstream& generateSamplers(utils::io::sstream& out, uint8_t firstBinding,
+    utils::io::sstream& generateSamplers(utils::io::sstream& out,
+            filament::SamplerBindingPoints bindingPoint, uint8_t firstBinding,
             const filament::SamplerInterfaceBlock& sib) const;
 
     // generate subpass
@@ -158,6 +159,12 @@ public:
 
     static void fixupExternalSamplers(
             std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
+
+    // These constants must match the equivalent in MetalState.h.
+    // These values represent the starting index for uniform and sampler group [[buffer(n)]]
+    // bindings. See the chart at the top of MetalState.h.
+    static constexpr uint32_t METAL_UNIFORM_BUFFER_BINDING_START = 17u;
+    static constexpr uint32_t METAL_SAMPLER_GROUP_BINDING_START = 27u;
 
 private:
     filament::backend::Precision getDefaultPrecision(ShaderStage stage) const;
