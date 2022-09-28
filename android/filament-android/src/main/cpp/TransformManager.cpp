@@ -127,7 +127,7 @@ Java_com_google_android_filament_TransformManager_nGetChildren(JNIEnv* env,
     // (which it is), but still.
     tm->getChildren((TransformManager::Instance) i,
             reinterpret_cast<Entity *>(entities), (size_t) count);
-    env->ReleaseIntArrayElements(outEntities_, entities, JNI_ABORT);
+    env->ReleaseIntArrayElements(outEntities_, entities, 0);
 }
 
 extern "C" JNIEXPORT void JNICALL

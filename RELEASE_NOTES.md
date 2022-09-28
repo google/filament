@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - engine: LiSPSM is now a user settable option
+- Java: Fix TransformManager.getChildren()
 
 ## v1.27.2
 
