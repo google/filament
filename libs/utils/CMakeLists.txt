@@ -42,7 +42,8 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
 )
 
-set(DIST_LINUX_HDRS
+# Use our custom mutex/condition only on ANDROID
+set(DIST_ANDROID_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET_LINUX}/Mutex.h
 )
 
@@ -123,8 +124,8 @@ endif()
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
-if (LINUX OR ANDROID)
-    install(FILES ${DIST_LINUX_HDRS} DESTINATION include/${TARGET_LINUX})
+if (ANDROID)
+    install(FILES ${DIST_ANDROID_HDRS} DESTINATION include/${TARGET_LINUX})
 else()
     install(FILES ${DIST_GENERIC_HDRS} DESTINATION include/${TARGET_GENERIC})
 endif()
