@@ -161,6 +161,8 @@ public:
             std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
 
     // These constants must match the equivalent in MetalState.h.
+    // These values represent the starting index for uniform and sampler group [[buffer(n)]]
+    // bindings. See the chart at the top of MetalState.h.
     static constexpr uint32_t METAL_UNIFORM_BUFFER_BINDING_START = 17u;
     static constexpr uint32_t METAL_SAMPLER_GROUP_BINDING_START = 27u;
 
