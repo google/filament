@@ -133,8 +133,8 @@ fragment {
         if (materialParams.aoIndex > -1) {
             highp float2 uv = uvs[materialParams.aoIndex];
             uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;
-            material.ambientOcclusion = texture(materialParams_occlusionMap, uv).r *
-                    materialParams.aoStrength;
+            float occlusion = texture(materialParams_occlusionMap, uv).r;
+            material.ambientOcclusion = 1.0 + materialParams.aoStrength * (occlusion - 1.0);
         }
         if (materialParams.emissiveIndex > -1) {
             highp float2 uv = uvs[materialParams.emissiveIndex];

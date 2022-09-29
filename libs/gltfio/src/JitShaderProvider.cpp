@@ -194,8 +194,8 @@ std::string shaderFromKey(const MaterialKey& config) {
                 shader += "aoUV = (vec3(aoUV, 1.0) * materialParams.occlusionUvMatrix).xy;\n";
             }
             shader += R"SHADER(
-                material.ambientOcclusion = texture(materialParams_occlusionMap, aoUV).r *
-                        materialParams.aoStrength;
+                float occlusion = texture(materialParams_occlusionMap, aoUV).r;
+                material.ambientOcclusion = 1.0 + materialParams.aoStrength * (occlusion - 1.0);
             )SHADER";
         }
         if (config.hasEmissiveTexture) {

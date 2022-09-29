@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - engine: LiSPSM is now a user settable option
 - Java: Fix TransformManager.getChildren()
 - Metal: newer devices are no longer limited to 16 samplers per Material.
+- gltfio: fix interpretation of occlusion strength
 
 ## v1.27.2
 
