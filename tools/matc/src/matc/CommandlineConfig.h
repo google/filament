@@ -30,7 +30,7 @@ public:
     explicit FilesystemOutput(const char* path) : mPath(path) {
     }
 
-    virtual ~FilesystemOutput() {}
+    ~FilesystemOutput() override = default;
 
     bool open() noexcept override {
         mFile.open(mPath.c_str(), std::ofstream::out | std::ofstream::binary);
@@ -60,7 +60,7 @@ public:
     explicit FilesystemInput(const char* path) : mPath(path) {
     }
 
-    virtual ~FilesystemInput() {}
+    ~FilesystemInput() override = default;
 
     ssize_t open() noexcept override {
         mFile.open(mPath.c_str(), std::ifstream::binary | std::ios::ate);
@@ -101,7 +101,7 @@ class CommandlineConfig : public Config {
 public:
 
     CommandlineConfig(int argc, char** argv);
-    virtual ~CommandlineConfig() {
+    ~CommandlineConfig() override {
         delete mInput;
         delete mOutput;
     };
