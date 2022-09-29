@@ -92,6 +92,9 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
             mContext->highestSupportedGpuFamily.mac   >= 2;     // newer macOS GPUs
     }
 
+    // In order to support memoryless render targets, an Apple GPU is needed.
+    mContext->supportsMemorylessRenderTargets = mContext->highestSupportedGpuFamily.apple >= 1;
+
     mContext->maxColorRenderTargets = 4;
     if (mContext->highestSupportedGpuFamily.apple >= 2 ||
         mContext->highestSupportedGpuFamily.mac >= 1) {
@@ -191,6 +194,18 @@ void MetalDriver::endFrame(uint32_t frameId) {
 
     assert_invariant(mContext->groupMarkers.empty());
 
+    // If we exceeded memoryless limits, turn it off for the rest of the lifetime of the driver.
+    if (mContext->supportsMemorylessRenderTargets && mContext->memorylessLimitsReached) {
+        for (MetalTexture* texture : mContext->textures) {
+            // Release memoryless MTLTexture-s, which are currently only the MSAA sidecars.
+            // Creation of new render targets is going to trigger the re-allocation of sidecars,
+            // with private storage mode from now on. Here, at the end of the frame,
+            // all render targets that have textures with sidecars are assumed to be destroyed.
+            texture->msaaSidecar = nil;
+        }
+        mContext->supportsMemorylessRenderTargets = false;
+    }
+
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, mContext->signpostId, "Frame encoding");
 #endif
@@ -236,13 +251,10 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
-            width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
-
-#ifndef NDEBUG
-    mContext->aliveTextures.insert(th.getId());
-#endif
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+            target, levels, format, samples, width, height, depth, usage,
+            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
+            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -253,12 +265,8 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
-            width, height, depth, usage, r, g, b, a);
-
-#ifndef NDEBUG
-    mContext->aliveTextures.insert(th.getId());
-#endif
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+            target, levels, format, samples, width, height, depth, usage, r, g, b, a));
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -279,12 +287,8 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     ASSERT_PRECONDITION(metalTexture.textureType == filamentMetalType,
             "Imported id<MTLTexture> type (%d) != Filament texture type (%d)",
             metalTexture.textureType, filamentMetalType);
-    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
-        width, height, depth, usage, metalTexture);
-
-#ifndef NDEBUG
-    mContext->aliveTextures.insert(th.getId());
-#endif
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+        target, levels, format, samples, width, height, depth, usage, metalTexture));
 }
 
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
@@ -515,10 +519,7 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
 
-#ifndef NDEBUG
-    mContext->aliveTextures.erase(th.getId());
-#endif
-
+    mContext->textures.erase(handle_cast<MetalTexture>(th));
     destruct_handle<MetalTexture>(th);
 }
 
@@ -847,13 +848,13 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
         if (!samplers[s].t) {
             continue;
         }
-        auto iter = mContext->aliveTextures.find(samplers[s].t.getId());
-        if (iter == mContext->aliveTextures.end()) {
+        auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
+        if (iter == mContext->textures.end()) {
             utils::slog.e << "updateSamplerGroup: texture #"
                           << (int) s << " is dead, texture handle = "
                           << samplers[s].t << utils::io::endl;
         }
-        assert_invariant(iter != mContext->aliveTextures.end());
+        assert_invariant(iter != mContext->textures.end());
     }
 #endif
 
@@ -1307,13 +1308,13 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
         if (!handles[s]) {
             continue;
         }
-        auto iter = mContext->aliveTextures.find(handles[s].getId());
-        if (iter == mContext->aliveTextures.end()) {
+        auto iter = mContext->textures.find(handle_cast<MetalTexture>(handles[s]));
+        if (iter == mContext->textures.end()) {
             utils::slog.e << "finalizeSamplerGroup: texture #"
                           << (int) s << " is dead, texture handle = "
                           << handles[s] << utils::io::endl;
         }
-        assert_invariant(iter != mContext->aliveTextures.end());
+        assert_invariant(iter != mContext->textures.end());
     }
 #endif
 
