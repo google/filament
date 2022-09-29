@@ -51,15 +51,16 @@ static void prepareConfig(MaterialKey* config, const char* label) {
         config->hasSheen = false;
     }
 
-    const bool clearCoatConflict = config->hasVolume || config->hasTransmission || config->hasSheen;
+    const bool clearCoatConflict = config->hasVolume || config->hasTransmission || config->hasSheen || config->hasIOR;
 
     // Due to sampler overload, disable transmission if necessary and print a friendly warning.
     if (config->hasClearCoat && clearCoatConflict) {
-        slog.w << "Volume, transmission and sheen are not supported in ubershader mode for clearcoat"
+        slog.w << "Volume, transmission, sheen and IOR are not supported in ubershader mode for clearcoat"
                   " materials (" << label << ")." << io::endl;
         config->hasVolume = false;
         config->hasTransmission = false;
         config->hasSheen = false;
+        config->hasIOR = false;
     }
 }
 
@@ -213,8 +214,7 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
 
     // Initially, assume that the clear coat texture can be honored.  This is changed to false when
     // running into a sampler count limitation. TODO: check if these constraints can now be relaxed.
-    bool clearCoatNeedsTexture = true;
-
+    bool clearCoatNeedsTexture = config->hasClearCoatTexture;
     bool volumeThicknessNeedsTexture = false;
 
     mat3f identity;
