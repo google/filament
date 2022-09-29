@@ -141,6 +141,21 @@ void ArchiveCache::destroyMaterials() {
     mMaterials.clear();
 }
 
+FeatureMap ArchiveCache::getFeatureMap(Material* material) const {
+    FeatureMap features;
+    for (size_t specIndex = 0; specIndex < mMaterials.size(); ++specIndex) {
+        if (material == mMaterials[specIndex]) {
+            const ArchiveSpec& spec = mArchive->specs[specIndex];
+            for (uint64_t j = 0; j < spec.flagsCount; ++j) {
+                const ArchiveFlag& flag = spec.flags[j];
+                features[flag.name] = flag.value;
+            }
+            break;
+        }
+    }
+    return features;
+}
+
 ArchiveCache::~ArchiveCache() {
     assert_invariant(mMaterials.size() == 0 &&
         "Please call destroyMaterials explicitly to ensure correct destruction order");

@@ -22,6 +22,8 @@
 
 #include <tsl/robin_map.h>
 
+#include <string_view>
+
 #include <uberz/ReadableArchive.h>
 
 #include <utils/CString.h>
@@ -30,6 +32,7 @@
 namespace filament::gltfio {
 
     struct ArchiveRequirements;
+    using FeatureMap = tsl::robin_map<std::string_view, uberz::ArchiveFeature>;
 
     // Stores a set of Filament materials and knows how to choose a suitable material when given a
     // set of requirements. Used by gltfio; users do not need to access this class directly.
@@ -44,6 +47,7 @@ namespace filament::gltfio {
         const Material* const* getMaterials() const noexcept { return mMaterials.data(); }
         size_t getMaterialsCount() const noexcept { return mMaterials.size(); }
         void destroyMaterials();
+        FeatureMap getFeatureMap(Material* material) const;
 
     private:
         Engine& mEngine;
