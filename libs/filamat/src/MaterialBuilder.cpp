@@ -1058,11 +1058,12 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
 
     const auto userSamplerCount = info.sib.getSize();
     switch (info.featureLevel) {
-        case FeatureLevel::FEATURE_LEVEL_1: {
+        case FeatureLevel::FEATURE_LEVEL_1:
+        case FeatureLevel::FEATURE_LEVEL_2: {
             // TODO: we need constants somewhere for these values
             if (userSamplerCount > 9) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
-                       << "\" has feature level " << (int)info.featureLevel
+                       << "\" has feature level " << +info.featureLevel
                        << " and is using more than 9 samplers." << io::endl;
                 logSamplerOverflow(info.sib);
                 return false;
@@ -1074,18 +1075,18 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                         return sampler.type == SamplerType::SAMPLER_CUBEMAP_ARRAY;
                     })) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
-                       << "\" has feature level " << (int)info.featureLevel
+                       << "\" has feature level " << +info.featureLevel
                        << " and uses a samplerCubemapArray." << io::endl;
                 logSamplerOverflow(info.sib);
                 return false;
             }
             break;
         }
-        case FeatureLevel::FEATURE_LEVEL_2: {
+        case FeatureLevel::FEATURE_LEVEL_3: {
             // TODO: we need constants somewhere for these values
             if (userSamplerCount > 12) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
-                       << "\" has feature level " << (int)info.featureLevel
+                       << "\" has feature level " << +info.featureLevel
                        << " and is using more than 12 samplers" << io::endl;
                 logSamplerOverflow(info.sib);
                 return false;

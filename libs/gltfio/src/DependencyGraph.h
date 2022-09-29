@@ -79,6 +79,10 @@ public:
     // Marks the given texture as being fully decoded, with all miplevels initialized.
     void markAsReady(Texture* texture);
 
+    // Causes the dependency graph to enter a disabled state, whereby adding Entity <=> Material
+    // edges will immediately mark the entity as ready without actually growing the graph.
+    void disableProgressiveReveal();
+
 private:
     struct TextureNode {
         Texture* texture;
@@ -110,6 +114,7 @@ private:
     tsl::robin_map<Texture*, std::unique_ptr<TextureNode>> mTextureNodes;
 
     std::queue<Entity> mReadyRenderables;
+    bool mDisabled = false;
 };
 
 } // namespace filament::gltfio

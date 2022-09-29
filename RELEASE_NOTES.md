@@ -5,6 +5,15 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.27.2
+
+- gltfio: punctual lights are now duplicated when adding new asset instances
+- gltfio: FilamentInstance getAsset method now returns an immutable asset
+- gltfio: allow zero-instance assets
+- gltfio: fix regression with meshes that have no material
+- gltfio: fix regression with recomputeBoundingBoxes()
+- filamesh / matinfo: fix minor ASAN issues
+
 ## v1.27.1
 
 - Java: add methods for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()

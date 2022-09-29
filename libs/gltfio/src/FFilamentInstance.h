@@ -54,7 +54,7 @@ struct Variant {
 };
 
 struct FFilamentInstance : public FilamentInstance {
-    FFilamentInstance(utils::Entity root, FFilamentAsset* owner);
+    FFilamentInstance(utils::Entity root, FFilamentAsset const* owner);
 
     // The per-instance skin structure caches information to allow animation to be applied
     // efficiently at run time. Note that shared immutable data, such as the skin name and inverse
@@ -69,7 +69,7 @@ struct FFilamentInstance : public FilamentInstance {
     };
 
     const utils::Entity root;
-    FFilamentAsset* const owner;
+    FFilamentAsset const* owner;
 
     std::vector<utils::Entity> entities;
     utils::FixedCapacityVector<Variant> variants;
@@ -80,7 +80,6 @@ struct FFilamentInstance : public FilamentInstance {
     // may be sparsely populated. This is used as a simple mapping between cgltf_node and Entity,
     // and therefore has the same size as the number of cgltf_node in the original asset. We
     // considered using the ECS for this, but we need Node => Entity, not the other way around.
-    // This is discarded after the animator is created.
     utils::FixedCapacityVector<utils::Entity> nodeMap;
 
     Aabb boundingBox;

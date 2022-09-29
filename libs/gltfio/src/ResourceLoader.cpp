@@ -331,6 +331,11 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
     asset->mResourcesLoaded = true;
 
+    // At this point, any entities that are created in the future (i.e. dynamically added instances)
+    // will not need the progressive feature to be enabled. This simplifies the dependency graph and
+    // prevents it from growing.
+    asset->mDependencyGraph.disableProgressiveReveal();
+
     // Clear our texture caches. Previous calls to loadResources may have populated these, but the
     // Texture objects could have since been destroyed.
     pImpl->mBufferTextureCache.clear();

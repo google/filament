@@ -98,7 +98,7 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
     uint8_t featureLevel;
     if (read(container, MaterialFeatureLevel, &featureLevel)) {
         text << "    " << setw(alignment) << left << "Feature level: ";
-        text << featureLevel << endl;
+        text << +featureLevel << endl;
     }
 
     CString name;

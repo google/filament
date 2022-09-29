@@ -135,12 +135,13 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
     uint8_t featureLevel = 1;
     parser->getFeatureLevel(&featureLevel);
-    assert_invariant(featureLevel <= 2);
+    assert_invariant(featureLevel <= 3);
     mFeatureLevel = [featureLevel]() -> FeatureLevel {
         switch (featureLevel) {
             default:
             case 1: return FeatureLevel::FEATURE_LEVEL_1;
             case 2: return FeatureLevel::FEATURE_LEVEL_2;
+            case 3: return FeatureLevel::FEATURE_LEVEL_3;
         }
     }();
 

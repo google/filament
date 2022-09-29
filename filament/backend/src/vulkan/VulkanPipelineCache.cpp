@@ -35,15 +35,14 @@ namespace filament::backend {
 
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
-static constexpr size_t MAX_VERTEX_SAMPLER_COUNT = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT;
-
 static VkShaderStageFlags getShaderStageFlags(VulkanPipelineCache::UsageFlags key, uint16_t binding) {
     // NOTE: if you modify this function, you also need to modify getUsageFlags.
+    assert_invariant(binding < MAX_SAMPLER_COUNT);
     VkShaderStageFlags flags = 0;
     if (key.test(binding)) {
         flags |= VK_SHADER_STAGE_VERTEX_BIT;
     }
-    if (key.test(MAX_VERTEX_SAMPLER_COUNT + binding)) {
+    if (key.test(MAX_SAMPLER_COUNT + binding)) {
         flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     }
     return flags;
@@ -52,11 +51,12 @@ static VkShaderStageFlags getShaderStageFlags(VulkanPipelineCache::UsageFlags ke
 VulkanPipelineCache::UsageFlags
 VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, UsageFlags src) {
     // NOTE: if you modify this function, you also need to modify getShaderStageFlags.
+    assert_invariant(binding < MAX_SAMPLER_COUNT);
     if (any(flags & ShaderStageFlags::VERTEX)) {
         src.set(binding);
     }
     if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        src.set(MAX_VERTEX_SAMPLER_COUNT + binding);
+        src.set(MAX_SAMPLER_COUNT + binding);
     }
     assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
     return src;
@@ -828,8 +828,12 @@ void VulkanPipelineCache::growDescriptorPool() noexcept {
     mDescriptorSets.clear();
 }
 
-size_t VulkanPipelineCache::PipelineLayoutKeyHashFn::operator()(const PipelineLayoutKey& key) const {
-    return key.getValue();
+size_t VulkanPipelineCache::PipelineLayoutKeyHashFn::operator()(
+        const PipelineLayoutKey& key) const {
+    std::hash<uint64_t> hasher;
+    auto h0 = hasher(key.getBitsAt(0));
+    auto h1 = hasher(key.getBitsAt(1));
+    return h0 ^ (h1 << 1);
 }
 
 bool VulkanPipelineCache::PipelineLayoutKeyEqual::operator()(const PipelineLayoutKey& k1,

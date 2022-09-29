@@ -82,7 +82,7 @@ public:
         VkSpecializationInfo* specializationInfos = nullptr;
     };
 
-    using UsageFlags = utils::bitset64;
+    using UsageFlags = utils::bitset128;
     static UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags stages, UsageFlags src = {});
 
     #pragma clang diagnostic push
@@ -190,11 +190,9 @@ private:
     // PIPELINE LAYOUT CACHE KEY
     // -------------------------
 
-    using PipelineLayoutKey = utils::bitset64;
+    using PipelineLayoutKey = utils::bitset128;
 
-    static_assert(PipelineLayoutKey::BIT_COUNT >=
-            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT +
-            FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_FRAGMENT_SAMPLER_COUNT);
+    static_assert(PipelineLayoutKey::BIT_COUNT >= 2 * MAX_SAMPLER_COUNT);
 
     struct PipelineLayoutKeyHashFn {
         size_t operator()(const PipelineLayoutKey& key) const;
@@ -256,10 +254,10 @@ private:
         VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
         RasterState rasterState;                                                  //  16  : 284
         uint32_t padding;                                                         //  4   : 300
-        PipelineLayoutKey layout;                                                 //  8   : 304
+        PipelineLayoutKey layout;                                                 // 16   : 304
     };
 
-    static_assert(sizeof(PipelineKey) == 312, "PipelineKey must not have implicit padding.");
+    static_assert(sizeof(PipelineKey) == 320, "PipelineKey must not have implicit padding.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
 
@@ -296,16 +294,16 @@ private:
     // Represents all the Vulkan state that comprises a bound descriptor set.
     struct DescriptorKey {
         VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];             //   80     0
-        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        //  768    80
-        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; //  192   848
-        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       //   40  1040
+        DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];        // 1488    80
+        DescriptorImageInfo inputAttachments[TARGET_BINDING_COUNT]; //  192  1568
+        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];       //   40  1760
         uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];         //   40  1080
     };
     static_assert(offsetof(DescriptorKey, samplers)              == 80);
-    static_assert(offsetof(DescriptorKey, inputAttachments)      == 848);
-    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1040);
-    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1080);
-    static_assert(sizeof(DescriptorKey) == 1120, "DescriptorKey must not have implicit padding.");
+    static_assert(offsetof(DescriptorKey, inputAttachments)      == 1568);
+    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1760);
+    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1800);
+    static_assert(sizeof(DescriptorKey) == 1840, "DescriptorKey must not have implicit padding.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 

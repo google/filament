@@ -34,6 +34,9 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
 
     assert_invariant(mActiveSamplerCount == 0);
 
+    mSamplerNamesBindingMap.reserve(MAX_SAMPLER_COUNT);
+    mSamplerNamesBindingMap.resize(MAX_SAMPLER_COUNT);
+
     // Note: the material variant affects only the sampler types, but cannot affect
     // the actual bindings. For this reason it is okay to use the dummyVariant here.
     uint8_t offset = 0;
@@ -88,12 +91,12 @@ void SamplerBindingMap::init(MaterialDomain materialDomain,
     // by the material. However, we can at least assert for the highest feature level.
 
     constexpr size_t MAX_VERTEX_SAMPLER_COUNT =
-            backend::FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_VERTEX_SAMPLER_COUNT;
+            backend::FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3].MAX_VERTEX_SAMPLER_COUNT;
 
     assert_invariant(vertexSamplerCount <= MAX_VERTEX_SAMPLER_COUNT);
 
     constexpr size_t MAX_FRAGMENT_SAMPLER_COUNT =
-            backend::FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2].MAX_FRAGMENT_SAMPLER_COUNT;
+            backend::FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3].MAX_FRAGMENT_SAMPLER_COUNT;
 
     assert_invariant(fragmentSamplerCount <= MAX_FRAGMENT_SAMPLER_COUNT);
 }

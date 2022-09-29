@@ -315,11 +315,14 @@ private:
 using bitset8 = bitset<uint8_t>;
 using bitset32 = bitset<uint32_t>;
 using bitset64 = bitset<uint64_t>;
+using bitset128 = bitset<uint64_t, 2>;
 using bitset256 = bitset<uint64_t, 4>;
 
-static_assert(sizeof(bitset8) == sizeof(uint8_t), "bitset8 isn't 8 bits!");
-static_assert(sizeof(bitset32) == sizeof(uint32_t), "bitset32 isn't 32 bits!");
-static_assert(sizeof(bitset64) == sizeof(uint64_t), "bitset64 isn't 64 bits!");
+static_assert(sizeof(bitset8) == 1, "bitset8 isn't 8 bits!");
+static_assert(sizeof(bitset32) == 4, "bitset32 isn't 32 bits!");
+static_assert(sizeof(bitset64) == 8, "bitset64 isn't 64 bits!");
+static_assert(sizeof(bitset128) == 16, "bitset128 isn't 128 bits!");
+static_assert(sizeof(bitset256) == 32, "bitset256 isn't 256 bits!");
 
 } // namespace utils
 

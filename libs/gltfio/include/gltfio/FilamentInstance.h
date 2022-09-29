@@ -41,7 +41,7 @@ public:
     /**
      * Gets the owner of this instance.
      */
-    FilamentAsset* getAsset() const noexcept;
+    FilamentAsset const* getAsset() const noexcept;
 
     /**
      * Gets the list of entities in this instance, one for each glTF node. All of these have a

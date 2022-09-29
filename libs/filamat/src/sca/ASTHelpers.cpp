@@ -31,18 +31,18 @@ namespace ASTUtils {
 // e.g: prepareMaterial(struct-MaterialInputs-vf4-vf41;
 class FunctionDefinitionFinder : public TIntermTraverser {
 public:
-    explicit FunctionDefinitionFinder(const std::string& functionName, bool useFQN = true)
-            : mFunctionName (functionName), mUseFQN(useFQN) {
+    explicit FunctionDefinitionFinder(std::string_view functionName, bool useFQN = true)
+            : mFunctionName(functionName), mUseFQN(useFQN) {
     }
 
     bool visitAggregate(TVisit, TIntermAggregate* node) override {
         if (node->getOp() == EOpFunction) {
             bool match;
             if (mUseFQN) {
-                match = std::string(node->getName().c_str()) == mFunctionName.c_str();
+                match = node->getName() == mFunctionName;
             } else {
-                std::string prospectFunctionName = getFunctionName(node->getName().c_str());
-                std::string cleanedFunctionName = getFunctionName(mFunctionName);
+                std::string_view prospectFunctionName = getFunctionName(node->getName());
+                std::string_view cleanedFunctionName = getFunctionName(mFunctionName);
                 match = prospectFunctionName == cleanedFunctionName;
             }
             if (match) {
@@ -57,7 +57,7 @@ public:
         return mFunctionDefinitionNode;
     }
 private:
-    const std::string& mFunctionName;
+    const std::string_view mFunctionName;
     bool mUseFQN;
     TIntermAggregate* mFunctionDefinitionNode = nullptr;
 };
@@ -67,7 +67,7 @@ private:
 // child function call nodes.
 class FunctionCallFinder : public TIntermTraverser {
 public:
-    FunctionCallFinder(const std::string& functionName, TIntermNode& root) :
+    FunctionCallFinder(std::string_view functionName, TIntermNode& root) :
             mFunctionName(functionName), mRoot(root) {}
 
     bool functionWasCalled() const noexcept {
@@ -78,7 +78,7 @@ public:
         if (node->getOp() != EOpFunctionCall) {
             return true;
         }
-        std::string functionCalledName = node->getName().c_str();
+        std::string_view functionCalledName = node->getName();
         if (functionCalledName == mFunctionName) {
             mFunctionFound = true;
         } else {
@@ -95,7 +95,7 @@ public:
     }
 
 private:
-    const std::string& mFunctionName;
+    const std::string_view mFunctionName;
     TIntermNode& mRoot;
     bool mFunctionFound = false;
 };
@@ -223,8 +223,8 @@ private:
     std::deque<Symbol>& mEvents;
 };
 
-std::string getFunctionName(const std::string& functionSignature) noexcept {
-  auto indexParenthesis = functionSignature.find("(");
+std::string_view getFunctionName(std::string_view functionSignature) noexcept {
+  auto indexParenthesis = functionSignature.find('(');
   return functionSignature.substr(0, indexParenthesis);
 }
 
@@ -298,7 +298,7 @@ public:
     }
 };
 
-glslang::TIntermAggregate* getFunctionBySignature(const std::string& functionSignature,
+glslang::TIntermAggregate* getFunctionBySignature(std::string_view functionSignature,
         TIntermNode& rootNode)
         noexcept {
     FunctionDefinitionFinder functionDefinitionFinder(functionSignature);
@@ -306,14 +306,14 @@ glslang::TIntermAggregate* getFunctionBySignature(const std::string& functionSig
     return functionDefinitionFinder.getFunctionDefinitionNode();
 }
 
-glslang::TIntermAggregate* getFunctionByNameOnly(const std::string& functionName,
+glslang::TIntermAggregate* getFunctionByNameOnly(std::string_view functionName,
         TIntermNode& rootNode) noexcept {
     FunctionDefinitionFinder functionDefinitionFinder(functionName, false);
     rootNode.traverse(&functionDefinitionFinder);
     return functionDefinitionFinder.getFunctionDefinitionNode();
 }
 
-bool isFunctionCalled(const std::string& functionName, TIntermNode& functionNode,
+bool isFunctionCalled(std::string_view functionName, TIntermNode& functionNode,
         TIntermNode& rootNode) noexcept {
     FunctionCallFinder traverser(functionName, rootNode);
     functionNode.traverse(&traverser);

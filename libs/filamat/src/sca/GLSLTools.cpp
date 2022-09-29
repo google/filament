@@ -48,6 +48,15 @@ GLSLangCleaner::~GLSLangCleaner() {
     SetThreadPoolAllocator(mAllocator);
 }
 
+static std::string_view getMaterialFunctionName(MaterialBuilder::MaterialDomain domain) noexcept {
+    switch (domain) {
+        case MaterialBuilder::MaterialDomain::SURFACE:
+            return "material";
+        case MaterialBuilder::MaterialDomain::POST_PROCESS:
+            return "postProcess";
+    }
+};
+
 bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
         filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
@@ -69,15 +78,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
         return false;
     }
 
-    auto getMaterialFunctionName = [](MaterialBuilder::MaterialDomain domain) {
-        switch (domain) {
-            case MaterialBuilder::MaterialDomain::SURFACE:
-                return "material";
-            case MaterialBuilder::MaterialDomain::POST_PROCESS:
-                return "postProcess";
-        }
-    };
-    const char* materialFunctionName = getMaterialFunctionName(materialDomain);
+    auto materialFunctionName = getMaterialFunctionName(materialDomain);
 
     TIntermNode* root = tShader.getIntermediate()->getTreeRoot();
     // Check there is a material function definition in this shader.
@@ -103,7 +104,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
         return false;
     }
 
-    std::string prepareMaterialSignature = prepareMaterialNode->getName().c_str();
+    std::string_view prepareMaterialSignature = prepareMaterialNode->getName();
     bool prepareMaterialCalled = isFunctionCalled(prepareMaterialSignature,
             *materialFctNode, *root);
     if (!prepareMaterialCalled) {
@@ -205,15 +206,15 @@ bool GLSLTools::findProperties(
 
     TIntermNode* rootNode = tShader.getIntermediate()->getTreeRoot();
 
-    std::string mainFunction(type == ShaderStage::FRAGMENT ?
+    std::string_view mainFunction(type == ShaderStage::FRAGMENT ?
             "material" : "materialVertex");
 
     TIntermAggregate* functionMaterialDef = ASTUtils::getFunctionByNameOnly(mainFunction, *rootNode);
-    std::string materialFullyQualifiedName = functionMaterialDef->getName().c_str();
+    std::string_view materialFullyQualifiedName = functionMaterialDef->getName();
     return findPropertyWritesOperations(materialFullyQualifiedName, 0, rootNode, properties);
 }
 
-bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, size_t parameterIdx,
+bool GLSLTools::findPropertyWritesOperations(std::string_view functionName, size_t parameterIdx,
         TIntermNode* rootNode, MaterialBuilder::PropertyList& properties) const noexcept {
 
     glslang::TIntermAggregate* functionMaterialDef =
@@ -313,7 +314,7 @@ void GLSLTools::scanSymbolForProperty(Symbol& symbol,
     }
 }
 
-bool GLSLTools::findSymbolsUsage(const std::string& functionSignature, TIntermNode& root,
+bool GLSLTools::findSymbolsUsage(std::string_view functionSignature, TIntermNode& root,
         std::deque<Symbol>& symbols) noexcept {
     TIntermNode* functionAST = ASTUtils::getFunctionBySignature(functionSignature, root);
     ASTUtils::traceSymbols(*functionAST, symbols);

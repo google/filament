@@ -106,9 +106,9 @@ static const char* getNodeName(const cgltf_node* node, const char* defaultNodeNa
     return defaultNodeName;
 }
 
-static bool primitiveHasVertexColor(const cgltf_primitive* inPrim) {
-    for (int slot = 0; slot < inPrim->attributes_count; slot++) {
-        const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
+static bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
+    for (int slot = 0; slot < inPrim.attributes_count; slot++) {
+        const cgltf_attribute& inputAttribute = inPrim.attributes[slot];
         if (inputAttribute.type == cgltf_attribute_type_color) {
             return true;
         }
@@ -223,7 +223,7 @@ private:
     void createRootAsset(const cgltf_data* srcAsset);
     void recursePrimitives(const cgltf_data* srcAsset, const cgltf_node* rootNode);
     void createPrimitives(const cgltf_data* srcAsset, const cgltf_node* node, const char* name);
-    bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const char* name);
+    bool createPrimitive(const cgltf_primitive& inPrim, Primitive* outPrim, const char* name);
 
     // Methods used during subsequent traverals (creation of entities, renderables, etc)
     void createInstances(const cgltf_data* srcAsset, size_t numInstances);
@@ -279,8 +279,6 @@ FFilamentAsset* FAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCou
 
 FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t byteCount,
         FilamentInstance** instances, size_t numInstances) {
-    ASSERT_PRECONDITION(numInstances > 0, "Instance count must be 1 or more.");
-
     // This method can be used to load JSON or GLB. By using a default options struct, we are asking
     // cgltf to examine the magic identifier to determine which type of file is being loaded.
     cgltf_options options {};
@@ -450,6 +448,7 @@ void FAssetLoader::recursePrimitives(const cgltf_data* srcAsset, const cgltf_nod
 
     if (node->mesh) {
         createPrimitives(srcAsset, node, name);
+        mAsset->mRenderableCount++;
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
@@ -458,8 +457,6 @@ void FAssetLoader::recursePrimitives(const cgltf_data* srcAsset, const cgltf_nod
 }
 
 void FAssetLoader::createInstances(const cgltf_data* srcAsset, size_t numInstances) {
-    mAsset->mRenderableCount = 0;
-
     // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
     // buffers and index buffers) and MaterialInstanceCache (materials and textures) help avoid
     // needless duplication of resources.
@@ -507,10 +504,13 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
 
     importSkins(mAsset, instance, srcAsset);
 
-    // This needs to stay near the end of the method to allow detection of the first instance.
     mAsset->mInstances.push_back(instance);
 
+    // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
+    // be affected by entity transforms. However, upon instance creation we can safely copy over
+    // the asset's bounding box.
     instance->boundingBox = mAsset->mBoundingBox;
+
     return instance;
 }
 
@@ -570,7 +570,7 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
         }
     }
 
-    if (node->light && mAsset->mInstances.empty()) {
+    if (node->light ) {
         createLight(node->light, entity);
     }
 
@@ -596,26 +596,35 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
         prims.reserve(mesh->primitives_count);
         prims.resize(mesh->primitives_count);
     }
+
+    Aabb aabb;
+
     for (cgltf_size index = 0, n = mesh->primitives_count; index < n; ++index) {
         Primitive& outputPrim = prims[index];
         const cgltf_primitive& inputPrim = mesh->primitives[index];
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim.vertices && !createPrimitive(&inputPrim, &outputPrim, name)) {
+        if (!outputPrim.vertices && !createPrimitive(inputPrim, &outputPrim, name)) {
             mError = true;
             return;
         }
+
+        // Expand the object-space bounding box.
+        aabb.min = min(outputPrim.aabb.min, aabb.min);
+        aabb.max = max(outputPrim.aabb.max, aabb.max);
      }
+
+    mat4f worldTransform;
+    cgltf_node_transform_world(node, &worldTransform[0][0]);
+
+    const Aabb transformed = aabb.transform(worldTransform);
+    mAsset->mBoundingBox.min = min(mAsset->mBoundingBox.min, transformed.min);
+    mAsset->mBoundingBox.max = max(mAsset->mBoundingBox.max, transformed.max);
  }
 
 void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node* node,
         Entity entity, const char* name) {
     const cgltf_mesh* mesh = node->mesh;
-
-    // Compute the transform relative to the root.
-    auto thisTransform = mTransformManager.getInstance(entity);
-    mat4f worldTransform = mTransformManager.getWorldTransform(thisTransform);
-
     const cgltf_size primitiveCount = mesh->primitives_count;
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
@@ -650,7 +659,7 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
 
         // Create a material instance for this primitive or fetch one from the cache.
         UvMap uvmap {};
-        bool hasVertexColor = primitiveHasVertexColor(inputPrim);
+        bool hasVertexColor = primitiveHasVertexColor(*inputPrim);
         MaterialInstance* mi = createMaterialInstance(srcAsset, inputPrim->material, &uvmap,
                 hasVertexColor);
         assert_invariant(mi);
@@ -687,12 +696,6 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     auto& nm = mNodeManager;
     nm.setMorphTargetNames(nm.getInstance(entity), std::move(morphTargetNames));
 
-    const Aabb transformed = aabb.transform(worldTransform);
-
-    // Expand the world-space bounding box.
-    mAsset->mBoundingBox.min = min(mAsset->mBoundingBox.min, transformed.min);
-    mAsset->mBoundingBox.max = max(mAsset->mBoundingBox.max, transformed.max);
-
     if (node->skin) {
        builder.skinning(node->skin->joints_count);
     }
@@ -727,18 +730,16 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         }
         mRenderableManager.setMorphWeights(renderable, weights.data(), size);
     }
-
-    ++mAsset->mRenderableCount;
 }
 
 void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh,
         Entity entity, FFilamentInstance* instance) {
     UvMap uvmap {};
     for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
-        const cgltf_primitive* srcPrim = &mesh->primitives[prim];
-        for (size_t i = 0, m = srcPrim->mappings_count; i < m; i++) {
-            const size_t variantIndex = srcPrim->mappings[i].variant;
-            const cgltf_material* material = srcPrim->mappings[i].material;
+        const cgltf_primitive& srcPrim = mesh->primitives[prim];
+        for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
+            const size_t variantIndex = srcPrim.mappings[i].variant;
+            const cgltf_material* material = srcPrim.mappings[i].material;
             assert_invariant(variantIndex < mAsset->mVariants.size());
             if (variantIndex >= mAsset->mVariants.size()) {
                 mError = true;
@@ -759,10 +760,10 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
     }
 }
 
-bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
+bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* outPrim,
         const char* name) {
     Material* material = getMaterial(mAsset->mSourceAsset->hierarchy,
-                inPrim->material, &outPrim->uvmap, primitiveHasVertexColor(inPrim));
+                inPrim.material, &outPrim->uvmap, primitiveHasVertexColor(inPrim));
     AttributeBitset requiredAttributes = material->getRequiredAttributes();
 
     // TODO: populate a mapping of Texture Index => [MaterialInstance, const char*] slots.
@@ -778,7 +779,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     // In glTF, each primitive may or may not have an index buffer.
     IndexBuffer* indices = nullptr;
-    const cgltf_accessor* accessor = inPrim->indices;
+    const cgltf_accessor* accessor = inPrim.indices;
     if (accessor) {
         IndexBuffer::IndexType indexType;
         if (!getIndexType(accessor->component_type, &indexType)) {
@@ -794,9 +795,9 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         BufferSlot slot = { accessor };
         slot.indexBuffer = indices;
         addBufferSlot(slot);
-    } else if (inPrim->attributes_count > 0) {
+    } else if (inPrim.attributes_count > 0) {
         // If a primitive does not have an index buffer, generate a trivial one now.
-        const uint32_t vertexCount = inPrim->attributes[0].data->count;
+        const uint32_t vertexCount = inPrim.attributes[0].data->count;
 
         indices = IndexBuffer::Builder()
             .indexCount(vertexCount)
@@ -822,8 +823,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     const size_t firstSlot = mAsset->mBufferSlots.size();
     int slot = 0;
 
-    for (cgltf_size aindex = 0; aindex < inPrim->attributes_count; aindex++) {
-        const cgltf_attribute& attribute = inPrim->attributes[aindex];
+    for (cgltf_size aindex = 0; aindex < inPrim.attributes_count; aindex++) {
+        const cgltf_attribute& attribute = inPrim.attributes[aindex];
         const int index = attribute.index;
         const cgltf_attribute_type atype = attribute.type;
         const cgltf_accessor* accessor = attribute.data;
@@ -928,7 +929,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         addBufferSlot({&mAsset->mGenerateNormals, atype, slot++});
     }
 
-    cgltf_size targetsCount = inPrim->targets_count;
+    cgltf_size targetsCount = inPrim.targets_count;
 
     if (targetsCount > MAX_MORPH_TARGETS) {
         utils::slog.w << "WARNING: Exceeded max morph target count of "
@@ -937,7 +938,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
-        const cgltf_morph_target& morphTarget = inPrim->targets[targetIndex];
+        const cgltf_morph_target& morphTarget = inPrim.targets[targetIndex];
         for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
             const cgltf_attribute& attribute = morphTarget.attributes[aindex];
             const cgltf_accessor* accessor = attribute.data;
@@ -1021,7 +1022,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     outPrim->indices = indices;
     outPrim->vertices = vertices;
-    mAsset->mPrimitives.push_back({inPrim, vertices});
+    mAsset->mPrimitives.push_back({&inPrim, vertices});
     mAsset->mVertexBuffers.push_back(vertices);
 
     for (size_t i = firstSlot; i < mAsset->mBufferSlots.size(); ++i) {
@@ -1037,7 +1038,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         mAsset->mMorphTargetBuffers.push_back(targets);
         const cgltf_accessor* previous = nullptr;
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
-            const cgltf_morph_target& inTarget = inPrim->targets[tindex];
+            const cgltf_morph_target& inTarget = inPrim.targets[tindex];
             for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
                 const cgltf_attribute& attribute = inTarget.attributes[aindex];
                 const cgltf_accessor* accessor = attribute.data;
@@ -1246,6 +1247,9 @@ Material* FAssetLoader::getMaterial(const cgltf_data* srcAsset,
         const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
     cgltf_texture_view baseColorTexture;
     cgltf_texture_view metallicRoughnessTexture;
+    if (UTILS_UNLIKELY(inputMat == nullptr)) {
+        inputMat = &kDefaultMat;
+    }
     MaterialKey matkey = getMaterialKey(srcAsset, inputMat, uvmap, vertexColor,
             &baseColorTexture, &metallicRoughnessTexture);
     Material* material = mMaterials.getMaterial(&matkey, uvmap, inputMat->name);

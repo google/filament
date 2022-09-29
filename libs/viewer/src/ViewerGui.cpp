@@ -457,7 +457,9 @@ void ViewerGui::updateRootTransform() {
     auto root = tcm.getInstance(mAsset->getRoot());
     filament::math::mat4f transform;
     if (mSettings.viewer.autoScaleEnabled) {
-        transform = fitIntoUnitCube(mAsset->getInstance()->getBoundingBox(), 4);
+        FilamentInstance* instance = mAsset->getInstance();
+        Aabb aabb = instance ? instance->getBoundingBox() : mAsset->getBoundingBox();
+        transform = fitIntoUnitCube(aabb, 4);
     }
     tcm.setTransform(root, transform);
 }
