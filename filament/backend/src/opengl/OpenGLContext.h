@@ -28,6 +28,7 @@
 
 #include <array>
 #include <set>
+#include <tuple>
 #include <utility>
 
 namespace filament::backend {
