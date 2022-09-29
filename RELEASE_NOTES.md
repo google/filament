@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.28.0
+
 - engine: LiSPSM is now a user settable option
 - engine: get the morph target buffer to the given primitive
 - Java: Fix TransformManager.getChildren()
