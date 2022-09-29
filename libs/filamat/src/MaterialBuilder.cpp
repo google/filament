@@ -1061,7 +1061,7 @@ error:
 
     // Flatten all chunks in the container into a Package.
     Package package(container.getSize());
-    Flattener f(package);
+    Flattener f{ package.getData() };
     container.flatten(f);
 
     return package;
