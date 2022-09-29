@@ -19,13 +19,12 @@
 
 #include <utils/Panic.h>
 
-#include <assert.h>
 #include <map>
-#include <stdint.h>
-#include <string.h>
 #include <vector>
 
-#include "filamat/Package.h"
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
 
 using namespace utils;
 
@@ -33,8 +32,7 @@ namespace filamat {
 
 class Flattener {
 public:
-    Flattener(Package& package) : Flattener(package.getData()) {}
-    Flattener(uint8_t* dst) : mCursor(dst), mStart(dst){}
+    explicit Flattener(uint8_t* dst) : mCursor(dst), mStart(dst){}
 
     static Flattener& getDryRunner() {
         static Flattener dryRunner = Flattener(nullptr);
