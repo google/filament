@@ -64,9 +64,12 @@ highp vec2 computeDepthMomentsVSM(const highp float depth) {
     moments.x = depth;
 
     // compute the 2nd moment over the pixel extents.
-    highp float dx = dFdx(depth);
-    highp float dy = dFdy(depth);
-    moments.y = depth * depth + 0.25 * (dx * dx + dy * dy);
+    moments.y = depth * depth;
+
+    // the local linear approximation is not correct with a warped depth
+    //highp float dx = dFdx(depth);
+    //highp float dy = dFdy(depth);
+    //moments.y += 0.25 * (dx * dx + dy * dy);
 
     return moments;
 }
