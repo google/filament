@@ -397,11 +397,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         Renderer* renderer = window->getRenderer();
 
         if (preRender) {
-            for (auto const& view : window->mViews) {
-                if (view.get() != window->mUiView) {
-                    preRender(mEngine, view->getView(), mScene, renderer);
-                }
-            }
+            preRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
         }
 
         if (renderer->beginFrame(window->getSwapChain())) {
@@ -412,11 +408,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 renderer->render(view->getView());
             }
             if (postRender) {
-                for (auto const& view : window->mViews) {
-                    if (view.get() != window->mUiView) {
-                        postRender(mEngine, view->getView(), mScene, renderer);
-                    }
-                }
+                postRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
             }
             renderer->endFrame();
 
@@ -602,7 +594,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     if (config.splitView) {
         mViews.emplace_back(mDepthView = new CView(*mRenderer, "Depth View"));
         mViews.emplace_back(mGodView = new GodView(*mRenderer, "God View"));
-        mViews.emplace_back(mOrthoView = new CView(*mRenderer, "Ortho View"));
+        mViews.emplace_back(mOrthoView = new CView(*mRenderer, "Shadow View"));
     }
     mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
 
@@ -613,23 +605,23 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
             .build(config.cameraMode);
     mDebugCameraMan = CameraManipulator::Builder()
             .targetPosition(0, 0, -4)
-            .build(camutils::Mode::ORBIT);
+            .flightMoveDamping(15.0)
+            .build(config.cameraMode);
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
     if (config.splitView) {
         // Depth view always uses the main camera
         mDepthView->setCamera(mMainCamera);
+        mDepthView->setCameraManipulator(mMainCameraMan);
 
         // The god view uses the main camera for culling, but the debug camera for viewing
         mGodView->setCamera(mMainCamera);
         mGodView->setGodCamera(mDebugCamera);
+        mGodView->setCameraManipulator(mDebugCameraMan);
 
         // Ortho view obviously uses an ortho camera
         mOrthoView->setCamera( (Camera *)mMainView->getView()->getDirectionalLightCamera() );
-
-        mDepthView->setCameraManipulator(mMainCameraMan);
-        mGodView->setCameraManipulator(mDebugCameraMan);
     }
 
     // configure the cameras
@@ -803,8 +795,6 @@ void FilamentApp::Window::configureCamerasForWindow() {
     double far = 100;
     mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
-    mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
-    mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {
