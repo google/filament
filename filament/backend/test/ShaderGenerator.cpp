@@ -22,7 +22,11 @@
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
+#include "../src/GLSLPostProcessor.h"
+
 #include "builtinResource.h"
+
+#include <utils/FixedCapacityVector.h>
 
 #include <iostream>
 #include <utility>
@@ -59,38 +63,6 @@ void SpvToGlsl(const SpirvBlob* spirv, std::string* outGlsl) {
     *outGlsl = glslCompiler.compile();
 }
 
-void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
-    CompilerMSL mslCompiler(*spirv);
-    mslCompiler.set_msl_options(CompilerMSL::Options {
-        .msl_version = CompilerMSL::Options::make_msl_version(1, 1)
-    });
-
-    auto executionModel = mslCompiler.get_execution_model();
-
-    auto duplicateResourceBinding = [executionModel, &mslCompiler](const auto& resource) {
-        auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-        auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
-        MSLResourceBinding newBinding;
-        newBinding.stage = executionModel;
-        newBinding.desc_set = set;
-        newBinding.binding = binding;
-        newBinding.msl_texture = binding;
-        newBinding.msl_sampler = binding;
-        newBinding.msl_buffer = binding;
-        mslCompiler.add_msl_resource_binding(newBinding);
-    };
-
-    auto resources = mslCompiler.get_shader_resources();
-    for (const auto& resource : resources.sampled_images) {
-        duplicateResourceBinding(resource);
-    }
-    for (const auto& resource : resources.uniform_buffers) {
-        duplicateResourceBinding(resource);
-    }
-
-    *outMsl = mslCompiler.compile();
-}
-
 } // anonymous namespace
 
 void ShaderGenerator::init() {
@@ -102,15 +74,16 @@ void ShaderGenerator::shutdown() {
 }
 
 ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment,
-        Backend backend, bool isMobile) noexcept
+        Backend backend, bool isMobile, const filament::SamplerInterfaceBlock* sib) noexcept
         : mBackend(backend),
-          mVertexBlob(transpileShader(ShaderStage::VERTEX, std::move(vertex), backend, isMobile)),
+          mVertexBlob(transpileShader(ShaderStage::VERTEX, std::move(vertex), backend, isMobile, sib)),
           mFragmentBlob(transpileShader(ShaderStage::FRAGMENT, std::move(fragment), backend,
-                  isMobile)) {
+                  isMobile, sib)) {
 }
 
 ShaderGenerator::Blob ShaderGenerator::transpileShader(
-        ShaderStage stage, std::string shader, Backend backend, bool isMobile) noexcept {
+        ShaderStage stage, std::string shader, Backend backend, bool isMobile,
+        const filament::SamplerInterfaceBlock* sib) noexcept {
     TProgram program;
     const EShLanguage language = stage == ShaderStage::VERTEX ? EShLangVertex : EShLangFragment;
     TShader tShader(language);
@@ -173,7 +146,10 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(
         }
         return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::METAL) {
-        SpvToMsl(&spirv, &result);
+        const auto sm = isMobile ? ShaderModel::MOBILE : ShaderModel::DESKTOP;
+        filamat::SibVector sibs = filamat::SibVector::with_capacity(1);
+        if (sib) { sibs.emplace_back(0, sib); }
+        filamat::GLSLPostProcessor::spirvToMsl(&spirv, &result, sm, false, sibs, nullptr);
         return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::VULKAN) {
         return { (uint8_t*)spirv.data(), (uint8_t*)(spirv.data() + spirv.size()) };

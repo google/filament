@@ -19,6 +19,7 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
+#include "private/filament/SamplerInterfaceBlock.h"
 #include "private/backend/SamplerGroup.h"
 
 #include <math/half.h>
@@ -72,7 +73,6 @@ std::string fragmentUpdateImage3DTemplate (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-// This parameter is ignored for other backends.
 layout(location = 0, set = 1) uniform {samplerType} tex;
 
 float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
@@ -94,7 +94,6 @@ std::string fragmentUpdateImageMip (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-// This parameter is ignored for other backends.
 layout(location = 0, set = 1) uniform sampler2D tex;
 
 void main() {
@@ -345,10 +344,15 @@ TEST_F(BackendTest, UpdateImage2D) {
         auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
         // Create a program.
+        SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+                .name("backend_test_sib")
+                .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+                .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+                .build();
         ProgramHandle program;
         std::string fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
         Program prog = shaderGen.getProgram(api);
         Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
         prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
@@ -425,9 +429,14 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("backend_test_sib")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentTemplate);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
     Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
     prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
@@ -511,9 +520,14 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("backend_test_sib")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_3D, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
     Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
     prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
@@ -583,9 +597,14 @@ TEST_F(BackendTest, UpdateImage3D) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("backend_test_sib")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_3D, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
     Program prog = shaderGen.getProgram(api);
     Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
     prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));

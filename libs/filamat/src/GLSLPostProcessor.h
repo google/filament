@@ -26,6 +26,8 @@
 
 #include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
 
+#include <utils/FixedCapacityVector.h>
+
 #include "ShaderMinifier.h"
 
 #include <ShaderLang.h>
@@ -34,9 +36,15 @@
 
 #include <memory>
 
+namespace filament {
+class SamplerInterfaceBlock;
+};
+
 namespace filamat {
 
 using SpirvBlob = std::vector<uint32_t>;
+using BindingPointAndSib = std::pair<uint8_t, const filament::SamplerInterfaceBlock*>;
+using SibVector = utils::FixedCapacityVector<BindingPointAndSib>;
 
 class GLSLPostProcessor {
 public:
@@ -69,6 +77,11 @@ public:
             SpirvBlob* outputSpirv,
             std::string* outputMsl);
 
+    // public so backend_test can also use it
+    static void spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
+            filament::backend::ShaderModel shaderModel, bool useFramebufferFetch,
+            const SibVector& sibs, const ShaderMinifier* minifier);
+
 private:
     struct InternalConfig {
         std::string* glslOutput = nullptr;
@@ -97,8 +110,6 @@ private:
     static void registerPerformancePasses(spvtools::Optimizer& optimizer, Config const& config);
 
     void optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const;
-    static void spirvToToMsl(const SpirvBlob* spirv, std::string* outMsl, const Config& config,
-            ShaderMinifier& minifier);
 
     const MaterialBuilder::Optimization mOptimization;
     const bool mPrintShaders;

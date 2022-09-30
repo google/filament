@@ -52,9 +52,7 @@ namespace msl {  // this is only used for MSL
 
 using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 
-template<typename F>
-static void forEachSib(const GLSLPostProcessor::Config& config, F fn) {
-    const auto& samplerBindings = config.materialInfo->samplerBindings;
+static void collectSibs(const GLSLPostProcessor::Config& config, SibVector& sibs) {
     switch (config.domain) {
         case MaterialDomain::SURFACE:
             UTILS_NOUNROLL
@@ -65,14 +63,15 @@ static void forEachSib(const GLSLPostProcessor::Config& config, F fn) {
                 auto const* sib =
                         SibGenerator::getSib((SamplerBindingPoints)blockIndex, config.variant);
                 if (sib && hasShaderType(sib->getStageFlags(), config.shaderType)) {
-                    fn(blockIndex, sib);
+                    sibs.emplace_back(blockIndex, sib);
                 }
             }
         case MaterialDomain::POST_PROCESS:
         case MaterialDomain::COMPUTE:
             break;
     }
-    fn((uint8_t) SamplerBindingPoints::PER_MATERIAL_INSTANCE, &config.materialInfo->sib);
+    sibs.emplace_back((uint8_t) SamplerBindingPoints::PER_MATERIAL_INSTANCE,
+            &config.materialInfo->sib);
 }
 
 }; // namespace msl
@@ -136,8 +135,9 @@ static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const
     return oss.str();
 }
 
-void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl,
-        const Config &config, ShaderMinifier& minifier) {
+void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
+        filament::backend::ShaderModel shaderModel, bool useFramebufferFetch, const SibVector& sibs,
+        const ShaderMinifier* minifier) {
 
     using namespace msl;
 
@@ -146,19 +146,19 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
     mslCompiler.set_common_options(options);
 
     const CompilerMSL::Options::Platform platform =
-        config.shaderModel == ShaderModel::MOBILE ?
+        shaderModel == ShaderModel::MOBILE ?
             CompilerMSL::Options::Platform::iOS : CompilerMSL::Options::Platform::macOS;
 
     CompilerMSL::Options mslOptions = {};
     mslOptions.platform = platform,
-    mslOptions.msl_version = config.shaderModel == ShaderModel::MOBILE ?
+    mslOptions.msl_version = shaderModel == ShaderModel::MOBILE ?
         CompilerMSL::Options::make_msl_version(2, 0) : CompilerMSL::Options::make_msl_version(2, 2);
 
-    if (config.hasFramebufferFetch) {
+    if (useFramebufferFetch) {
         mslOptions.use_framebuffer_fetch_subpasses = true;
         // On macOS, framebuffer fetch is only available starting with MSL 2.3. Filament will only
         // use framebuffer fetch materials on devices that support it.
-        if (config.shaderModel == ShaderModel::DESKTOP) {
+        if (shaderModel == ShaderModel::DESKTOP) {
             mslOptions.msl_version = CompilerMSL::Options::make_msl_version(2, 3);
         }
     }
@@ -196,7 +196,7 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
     //
     // Which is then bound to the vertex/fragment functions:
     // constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(27)]]
-    forEachSib(config, [&executionModel, &mslCompiler](uint8_t bindingPoint, const SamplerInterfaceBlock* sib) {
+    for (auto [bindingPoint, sib] : sibs) {
         const auto& infoList = sib->getSamplerInfoList();
         for (const auto& info: infoList) {
             // A MSLResourceBinding tells SPIRV-Cross how to map a sampler2D with a given set and
@@ -229,7 +229,7 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
         argBufferBinding.msl_buffer =
                 CodeGenerator::METAL_SAMPLER_GROUP_BINDING_START + bindingPoint;
         mslCompiler.add_msl_resource_binding(argBufferBinding);
-    });
+    }
 
     auto updateResourceBindingDefault = [executionModel, &mslCompiler]
             (const auto& resource, const BindingIndexMap* map = nullptr) {
@@ -257,7 +257,9 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
     mslCompiler.add_discrete_descriptor_set(0);
 
     *outMsl = mslCompiler.compile();
-    *outMsl = minifier.removeWhitespace(*outMsl);
+    if (minifier) {
+        *outMsl = minifier->removeWhitespace(*outMsl);
+    }
 }
 
 bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
@@ -341,8 +343,11 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 GlslangToSpv(*program.getIntermediate(internalConfig.shLang),
                         *internalConfig.spirvOutput, &options);
                 if (internalConfig.mslOutput) {
-                    spirvToToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config,
-                            internalConfig.minifier);
+                    auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
+                    msl::collectSibs(config, sibs);
+                    spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
+                            config.shaderModel, config.hasFramebufferFetch, sibs,
+                            &internalConfig.minifier);
                 }
             } else {
                 slog.e << "GLSL post-processor invoked with optimization level NONE"
@@ -420,8 +425,10 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 
     if (internalConfig.mslOutput) {
-        spirvToToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config,
-                internalConfig.minifier);
+        auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
+        msl::collectSibs(config, sibs);
+        spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
+                config.hasFramebufferFetch, sibs, &internalConfig.minifier);
     }
 
     if (internalConfig.glslOutput) {
@@ -447,7 +454,10 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     }
 
     if (internalConfig.mslOutput) {
-        spirvToToMsl(&spirv, internalConfig.mslOutput, config, internalConfig.minifier);
+        auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
+        msl::collectSibs(config, sibs);
+        spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,
+                sibs, &internalConfig.minifier);
     }
 
     // Transpile back to GLSL
