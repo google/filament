@@ -93,6 +93,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
     }
 
     // In order to support memoryless render targets, an Apple GPU is needed.
+    // Available starting macOS 11.0, the first version to run on Apple GPUs.
+    // On iOS, it's available on all OS versions.
     mContext->supportsMemorylessRenderTargets = mContext->highestSupportedGpuFamily.apple >= 1;
 
     mContext->maxColorRenderTargets = 4;

@@ -901,7 +901,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && color[i].getSampleCount() == 1) {
             auto& sidecar = color[i].metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(*context, color[i].getPixelFormat(),
+                sidecar = createMultisampledTexture(color[i].getPixelFormat(),
                         color[i].metalTexture->width, color[i].metalTexture->height, samples);
             }
         }
@@ -926,7 +926,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && depth.getSampleCount() == 1) {
             auto& sidecar = depth.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(*context, depth.getPixelFormat(),
+                sidecar = createMultisampledTexture(depth.getPixelFormat(),
                         depth.metalTexture->width, depth.metalTexture->height, samples);
             }
         }
@@ -951,7 +951,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && stencil.getSampleCount() == 1) {
             auto& sidecar = stencil.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(*context, stencil.getPixelFormat(),
+                sidecar = createMultisampledTexture(stencil.getPixelFormat(),
                         stencil.metalTexture->width, stencil.metalTexture->height, samples);
             }
         }
@@ -1135,8 +1135,8 @@ MTLStoreAction MetalRenderTarget::getStoreAction(const RenderPassParams& params,
     return MTLStoreActionStore;
 }
 
-id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MetalContext& context,
-        MTLPixelFormat format, uint32_t width, uint32_t height, uint8_t samples) {
+id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MTLPixelFormat format,
+        uint32_t width, uint32_t height, uint8_t samples) const {
     MTLTextureDescriptor* descriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
                                                                width:width
@@ -1147,13 +1147,13 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MetalContext& contex
     descriptor.usage = MTLTextureUsageRenderTarget;
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
-    if (context.supportsMemorylessRenderTargets) {
+    if (context->supportsMemorylessRenderTargets) {
         if (@available(macOS 11.0, *)) {
             descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
         }
     }
 
-    return [context.device newTextureWithDescriptor:descriptor];
+    return [context->device newTextureWithDescriptor:descriptor];
 }
 
 math::uint2 MetalRenderTarget::getAttachmentSize() noexcept {

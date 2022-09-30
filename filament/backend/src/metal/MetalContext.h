@@ -25,6 +25,7 @@
 #include <QuartzCore/QuartzCore.h>
 
 #include <array>
+#include <atomic>
 #include <stack>
 
 #if defined(FILAMENT_METAL_PROFILING)
