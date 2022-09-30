@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- gltfio: fix reloading crash in ubershader mode
+
 ## v1.28.0
 
 - engine: LiSPSM is now a user settable option
