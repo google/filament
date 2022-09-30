@@ -598,12 +598,12 @@ export class gltfio$FilamentAsset {
     public getCameraEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;
-    public getMaterialInstances(): Vector<MaterialInstance>;
-    public getResourceUris(): Vector<string>;
+    public getInstance(): gltfio$FilamentInstance;
+    public geAssetInstances(): gltfio$FilamentInstance[];
+    public getResourceUris(): string[];
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;
-    public getAnimator(): gltfio$Animator;
     public getWireframe(): Entity;
     public getEngine(): Engine;
     public releaseSourceData(): void;
@@ -617,6 +617,10 @@ export class gltfio$FilamentInstance {
     public getSkinNames(): Vector<string>;
     public attachSkin(skinIndex: number, entity: Entity): void;
     public detachSkin(skinIndex: number, entity: Entity): void;
+    public getMaterialInstances(): Vector<MaterialInstance>;
+    public detachMaterialInstances(): void;
+    public getMaterialVariantNames(): string[];
+    public applyMaterialVariant(index: number): void;
 }
 
 export class gltfio$Animator {

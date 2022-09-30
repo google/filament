@@ -708,6 +708,17 @@ void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level
     }
 }
 
+MorphTargetBuffer* FRenderableManager::getMorphTargetBufferAt(Instance instance, uint8_t level,
+        size_t primitiveIndex) const noexcept {
+    if (instance) {
+        const Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
+        if (primitiveIndex < morphTargets.size()) {
+            return morphTargets[primitiveIndex].buffer;
+        }
+    }
+    return nullptr;
+}
+
 size_t FRenderableManager::getMorphTargetCount(Instance instance) const noexcept {
     if (instance) {
         const MorphWeights& morphWeights = mManager[instance].morphWeights;

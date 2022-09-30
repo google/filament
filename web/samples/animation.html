@@ -44,12 +44,12 @@ class App {
             // Dynamically enable two-sided lighting for testing purposes.
             const entities = asset.getEntities();
             const rm = engine.getRenderableManager();
-            const instance = rm.getInstance(entities[0]);
-            rm.getMaterialInstanceAt(instance, 0).setDoubleSided(true)
-            instance.delete();
+            const renderable = rm.getInstance(entities[0]);
+            rm.getMaterialInstanceAt(renderable, 0).setDoubleSided(true)
+            renderable.delete();
 
             scene.addEntities(entities);
-            this.animator = asset.getAnimator();
+            this.animator = asset.getInstance().getAnimator();
             this.animationStartTime = Date.now();
         };
         asset.loadResources(onDone);

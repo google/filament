@@ -55,6 +55,29 @@ struct Variant {
 
 struct FFilamentInstance : public FilamentInstance {
     FFilamentInstance(utils::Entity root, FFilamentAsset const* owner);
+    ~FFilamentInstance();
+
+    size_t getMaterialInstanceCount() const noexcept {
+        return mMaterialInstances.size();
+    }
+
+    const MaterialInstance* const* getMaterialInstances() const noexcept {
+        return mMaterialInstances.data();
+    }
+
+    MaterialInstance* const* getMaterialInstances() noexcept {
+        return mMaterialInstances.data();
+    }
+
+    void detachMaterialInstances() {
+        mMaterialInstances.clear();
+    }
+
+    void applyMaterialVariant(size_t variantIndex) noexcept;
+
+    size_t getMaterialVariantCount() const noexcept;
+
+    const char* getMaterialVariantName(size_t variantIndex) const noexcept;
 
     // The per-instance skin structure caches information to allow animation to be applied
     // efficiently at run time. Note that shared immutable data, such as the skin name and inverse
@@ -83,6 +106,9 @@ struct FFilamentInstance : public FilamentInstance {
     utils::FixedCapacityVector<utils::Entity> nodeMap;
 
     Aabb boundingBox;
+
+    utils::FixedCapacityVector<MaterialInstance*> mMaterialInstances;
+
     void createAnimator();
     Animator* getAnimator() const noexcept;
     size_t getSkinCount() const noexcept;
@@ -91,7 +117,6 @@ struct FFilamentInstance : public FilamentInstance {
     const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
     void attachSkin(size_t skinIndex, utils::Entity target) noexcept;
     void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
-    void applyMaterialVariant(size_t variantIndex) noexcept;
     void recomputeBoundingBoxes();
 };
 

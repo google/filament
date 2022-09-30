@@ -1793,13 +1793,7 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
 
     .function("popRenderable", &FilamentAsset::popRenderable)
 
-    .function("applyMaterialVariant", &FilamentAsset::applyMaterialVariant)
-
-    .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<const MaterialInstance*>,
-            (FilamentAsset* self), {
-        const filament::MaterialInstance* const* ptr = self->getMaterialInstances();
-        return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
-    }), allow_raw_pointers())
+    .function("getInstance", &FilamentAsset::getInstance, allow_raw_pointers())
 
     .function("_getAssetInstances", EMBIND_LAMBDA(std::vector<FilamentInstance*>,
             (FilamentAsset* self), {
@@ -1816,14 +1810,6 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return retval;
     }), allow_raw_pointers())
 
-    .function("_getMaterialVariantNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentAsset* self), {
-        std::vector<std::string> retval(self->getMaterialVariantCount());
-        for (size_t i = 0, len = retval.size(); i < len; ++i) {
-            retval[i] = self->getMaterialVariantName(i);
-        }
-        return retval;
-    }), allow_raw_pointers())
-
     .function("getBoundingBox", &FilamentAsset::getBoundingBox)
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getName(entity));
@@ -1831,7 +1817,6 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("getExtras", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getExtras(entity));
     }), allow_raw_pointers())
-    .function("getAnimator", &FilamentAsset::getAnimator, allow_raw_pointers())
     .function("getWireframe", &FilamentAsset::getWireframe)
     .function("getEngine", &FilamentAsset::getEngine, allow_raw_pointers())
     .function("releaseSourceData", &FilamentAsset::releaseSourceData);
@@ -1843,7 +1828,7 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
         return EntityVector(ptr, ptr + self->getEntityCount());
     }), allow_raw_pointers())
     .function("getRoot", &FilamentInstance::getRoot)
-    .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
+
     .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers())
 
     .function("getSkinNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentInstance* self), {
@@ -1855,7 +1840,23 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
     }), allow_raw_pointers())
 
     .function("attachSkin", &FilamentInstance::attachSkin)
-    .function("detachSkin", &FilamentInstance::detachSkin);
+    .function("detachSkin", &FilamentInstance::detachSkin)
+
+    .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
+
+    .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<const MaterialInstance*>,
+            (FilamentInstance* self), {
+        const MaterialInstance* const* ptr = self->getMaterialInstances();
+        return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
+    }), allow_raw_pointers())
+
+    .function("_getMaterialVariantNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentInstance* self), {
+        std::vector<std::string> retval(self->getMaterialVariantCount());
+        for (size_t i = 0, len = retval.size(); i < len; ++i) {
+            retval[i] = self->getMaterialVariantName(i);
+        }
+        return retval;
+    }), allow_raw_pointers());
 
 // These little wrappers exist to get around RTTI requirements in embind.
 

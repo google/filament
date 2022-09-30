@@ -25,9 +25,9 @@ namespace matc {
 
 class Compiler {
 public:
-    virtual ~Compiler() {}
+    virtual ~Compiler() = default;
 
-    bool start(const Config& config) {
+    bool compile(const Config& config) {
         if (!checkParameters(config)) {
             return false;
         }

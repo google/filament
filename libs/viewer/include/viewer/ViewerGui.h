@@ -69,7 +69,7 @@ public:
      * Upon construction, the simple viewer may create some additional Filament objects (such as
      * light sources) that it owns.
      */
-    ViewerGui(filament::Engine* engine, filament::Scene* scene, filament::View* view,
+    ViewerGui(Engine* engine, Scene* scene, View* view,
             int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
 
     /**
@@ -78,17 +78,17 @@ public:
     ~ViewerGui();
 
     /**
-     * Sets the viewer's current asset.
+     * Sets the viewer's current asset and instance.
      *
      * The viewer does not claim ownership over the asset or its entities. Clients should use
      * AssetLoader and ResourceLoader to load an asset before passing it in.
      *
      * This method does not add renderables to the scene; see populateScene().
      *
-     * @param asset The asset to view.
-     * @param instanceToAnimate Optional instance from which to get the animator.
+     * @param instance The asset to view.
+     * @param instance The instance to view.
      */
-    void setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnimate = nullptr);
+    void setAsset(FilamentAsset* asset, FilamentInstance* instance);
 
     /**
      * Adds the asset's ready-to-render entities into the scene.
@@ -108,13 +108,15 @@ public:
     /**
      * Sets or changes the current scene's IBL to allow the UI manipulate it.
      */
-    void setIndirectLight(filament::IndirectLight* ibl, filament::math::float3 const* sh3);
+    void setIndirectLight(IndirectLight* ibl, math::float3 const* sh3);
 
     /**
      * Applies the currently-selected glTF animation to the transformation hierarchy and updates
      * the bone matrices on all renderables.
+     *
+     * If an instance is provided, animation is applied to it rather than the "set" instance.
      */
-    void applyAnimation(double currentTime);
+    void applyAnimation(double currentTime, FilamentInstance* instance = nullptr);
 
     /**
      * Constructs ImGui controls for the current frame and responds to everything that the user has
@@ -135,7 +137,7 @@ public:
      * its callback. Note that the first call might be slower since it requires the creation of the
      * internal ImGuiHelper instance.
      */
-    void renderUserInterface(float timeStepInSeconds, filament::View* guiView, float pixelRatio);
+    void renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio);
 
     /**
      * Event-passing methods, useful only when ViewerGui manages its own instance of ImGuiHelper.
@@ -210,7 +212,7 @@ public:
 
     /**
      * Adjusts the intensity of the IBL.
-     * See also filament::IndirectLight::setIntensity().
+     * See also IndirectLight::setIntensity().
      * Defaults to 30000.0.
      */
     void setIBLIntensity(float brightness) { mSettings.lighting.iblIntensity = brightness; }
@@ -239,9 +241,9 @@ private:
     void sceneSelectionUI();
 
     // Immutable properties set from the constructor.
-    filament::Engine* const mEngine;
-    filament::Scene* const mScene;
-    filament::View* const mView;
+    Engine* const mEngine;
+    Scene* const mScene;
+    View* const mView;
     const utils::Entity mSunlight;
 
     // Lazily instantiated fields.
@@ -249,8 +251,8 @@ private:
 
     // Properties that can be changed from the application.
     FilamentAsset* mAsset = nullptr;
-    Animator* mAnimator = nullptr;
-    filament::IndirectLight* mIndirectLight = nullptr;
+    FilamentInstance* mInstance = nullptr;
+    IndirectLight* mIndirectLight = nullptr;
     std::function<void()> mCustomUI;
 
     // Properties that can be changed from the UI.
@@ -283,7 +285,7 @@ private:
 };
 
 UTILS_PUBLIC
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset);
+math::mat4f fitIntoUnitCube(const Aabb& bounds, float zoffset);
 
 } // namespace viewer
 } // namespace filament
