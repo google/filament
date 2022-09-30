@@ -1046,7 +1046,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
-                // don't use auto for those, b/c the can't resolve them
+                // don't use auto for those, b/c the ide can't resolve them
                 using FGTD = FrameGraphTexture::Descriptor;
                 using FGTSD = FrameGraphTexture::SubResourceDescriptor;
 
