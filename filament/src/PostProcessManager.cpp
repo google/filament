@@ -1062,7 +1062,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 using namespace std::literals;
                 std::string_view materialName;
                 const bool is2dArray = inDesc.type == SamplerType::SAMPLER_2D_ARRAY;
-                switch (backend::getFormatSize(outDesc.format)) {
+                switch (backend::getFormatComponentCount(outDesc.format)) {
                     case 1: materialName  = is2dArray ?
                             "separableGaussianBlur1L"sv : "separableGaussianBlur1"sv;   break;
                     case 2: materialName  = is2dArray ?
