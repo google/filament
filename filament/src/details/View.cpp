@@ -296,7 +296,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     // Find all shadow-casting spotlights.
     size_t shadowCastingSpotCount = 0;
 
-    // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spot light shadows. Any additional
+    // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spotlight shadows. Any additional
     // shadow-casting spotlights are ignored.
     for (size_t l = FScene::DIRECTIONAL_LIGHTS_COUNT; l < lightData.size(); l++) {
 
