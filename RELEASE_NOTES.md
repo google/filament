@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - gltfio: fix reloading crash in ubershader mode
+- Vulkan: improve performance in the readPixels path
 
 ## v1.28.0
 
