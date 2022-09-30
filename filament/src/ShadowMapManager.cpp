@@ -324,11 +324,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                 const float sigma = (blurWidth + 1.0f) / 6.0f;
                 size_t kernelWidth = std::ceil((blurWidth - 5.0f) / 4.0f);
                 kernelWidth = kernelWidth * 4 + 5;
-                const float ratio = float(kernelWidth + 1) / sigma;
                 ppm.gaussianBlurPass(fg,
                         shadowPass->tempBlurSrc,
                         shadowPass->output,
-                        false, kernelWidth, ratio);
+                        false, kernelWidth, sigma);
             }
 
             // If the shadow texture has more than one level, mipmapping was requested, either directly
