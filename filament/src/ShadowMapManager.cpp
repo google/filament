@@ -367,6 +367,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             }
     };
 
+    bool hasVisibleShadows = false;
     if (!mCascadeShadowMaps.empty()) {
         // Even if we have more than one cascade, we cull directional shadow casters against the
         // entire camera frustum, as if we only had a single cascade.
@@ -375,87 +376,94 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
         shadowMap.updateDirectional(lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
 
-        Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
-        FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
-                VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
+        hasVisibleShadows = shadowMap.hasVisibleShadows();
 
-        // Set shadowBias, using the first directional cascade.
-        // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
-        // note: normalBias is set to zero for VSM
-        const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
-        // Texel size is constant for directional light (although that's not true when LISPSM
-        // is used, but in that case we're pretending it is).
-        const float wsTexelSize = shadowMap.getTexelSizAtOneMeterWs();
-        mShadowMappingUniforms.shadowBias = normalBias * wsTexelSize;
-        mShadowMappingUniforms.shadowBulbRadiusLs =
-                mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
-        mShadowMappingUniforms.elvsm = options.vsm.elvsm;
+        if (hasVisibleShadows) {
+            Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
+            FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
+                    VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
+
+            // Set shadowBias, using the first directional cascade.
+            // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
+            // note: normalBias is set to zero for VSM
+            const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
+            // Texel size is constant for directional light (although that's not true when LISPSM
+            // is used, but in that case we're pretending it is).
+            const float wsTexelSize = shadowMap.getTexelSizAtOneMeterWs();
+            mShadowMappingUniforms.shadowBias = normalBias * wsTexelSize;
+            mShadowMappingUniforms.shadowBulbRadiusLs =
+                    mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
+            mShadowMappingUniforms.elvsm = options.vsm.elvsm;
+        }
     }
-
-    // Adjust the near and far planes to tightly bound the scene.
-    float vsNear = -cameraInfo.zn;
-    float vsFar = -cameraInfo.zf;
-    if (engine.debug.shadowmap.tightly_bound_scene && !params.options.stable) {
-        vsNear = std::min(vsNear, sceneInfo.vsNearFar.x);
-        vsFar = std::max(vsFar, sceneInfo.vsNearFar.y);
-    }
-
-    const size_t cascadeCount = mCascadeShadowMaps.size();
-
-    // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
-    // The first split position is the near plane; the last split position is the far plane.
-    std::array<float, CascadeSplits::SPLIT_COUNT> splitPercentages{};
-    splitPercentages[cascadeCount] = 1.0f;
-    for (size_t i = 1 ; i < cascadeCount; i++) {
-        splitPercentages[i] = options.cascadeSplitPositions[i - 1];
-    }
-
-    const CascadeSplits::Params p {
-        .proj = cameraInfo.cullingProjection,
-        .near = vsNear,
-        .far = vsFar,
-        .cascadeCount = cascadeCount,
-        .splitPositions = splitPercentages
-    };
-    if (p != mCascadeSplitParams) {
-        mCascadeSplits = CascadeSplits{ p };
-        mCascadeSplitParams = p;
-    }
-
-    const CascadeSplits& splits = mCascadeSplits;
-
-    // The split positions uniform is a float4. To save space, we chop off the first split position
-    // (which is the near plane, and doesn't need to be communicated to the shaders).
-    static_assert(CONFIG_MAX_SHADOW_CASCADES <= 5,
-            "At most, a float4 can fit 4 split positions for 5 shadow cascades");
-    float4 wsSplitPositionUniform{ -std::numeric_limits<float>::infinity() };
-    std::copy(splits.beginWs() + 1, splits.endWs(), &wsSplitPositionUniform[0]);
-
-    float csSplitPosition[CONFIG_MAX_SHADOW_CASCADES + 1];
-    std::copy(splits.beginCs(), splits.endCs(), csSplitPosition);
-
-    mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
     ShadowTechnique shadowTechnique{};
     uint32_t directionalShadowsMask = 0;
     uint32_t cascadeHasVisibleShadows = 0;
-    for (size_t i = 0, c = mCascadeShadowMaps.size(); i < c; i++) {
-        auto& entry = mCascadeShadowMaps[i];
 
-        // Compute the frustum for the directional light.
-        ShadowMap& shadowMap = entry.getShadowMap();
-        assert_invariant(entry.getLightIndex() == 0);
+    if (hasVisibleShadows) {
+        // Adjust the near and far planes to tightly bound the scene.
+        float vsNear = -cameraInfo.zn;
+        float vsFar = -cameraInfo.zf;
+        if (engine.debug.shadowmap.tightly_bound_scene && !params.options.stable) {
+            vsNear = std::min(vsNear, sceneInfo.vsNearFar.x);
+            vsFar = std::max(vsFar, sceneInfo.vsNearFar.y);
+        }
 
-        sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
+        const size_t cascadeCount = mCascadeShadowMaps.size();
 
-        shadowMap.updateDirectional(lightData, 0,
-                cameraInfo, shadowMapInfo,
-                *scene, sceneInfo);
+        // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
+        // The first split position is the near plane; the last split position is the far plane.
+        std::array<float, CascadeSplits::SPLIT_COUNT> splitPercentages{};
+        splitPercentages[cascadeCount] = 1.0f;
+        for (size_t i = 1; i < cascadeCount; i++) {
+            splitPercentages[i] = options.cascadeSplitPositions[i - 1];
+        }
 
-        if (shadowMap.hasVisibleShadows()) {
-            mShadowMappingUniforms.lightFromWorldMatrix[i] = shadowMap.getLightSpaceMatrix();
-            shadowTechnique |= ShadowTechnique::SHADOW_MAP;
-            cascadeHasVisibleShadows |= 0x1u << i;
+        const CascadeSplits::Params p{
+                .proj = cameraInfo.cullingProjection,
+                .near = vsNear,
+                .far = vsFar,
+                .cascadeCount = cascadeCount,
+                .splitPositions = splitPercentages
+        };
+        if (p != mCascadeSplitParams) {
+            mCascadeSplits = CascadeSplits{ p };
+            mCascadeSplitParams = p;
+        }
+
+        const CascadeSplits& splits = mCascadeSplits;
+
+        // The split positions uniform is a float4. To save space, we chop off the first split position
+        // (which is the near plane, and doesn't need to be communicated to the shaders).
+        static_assert(CONFIG_MAX_SHADOW_CASCADES <= 5,
+                "At most, a float4 can fit 4 split positions for 5 shadow cascades");
+        float4 wsSplitPositionUniform{ -std::numeric_limits<float>::infinity() };
+        std::copy(splits.beginWs() + 1, splits.endWs(), &wsSplitPositionUniform[0]);
+
+        float csSplitPosition[CONFIG_MAX_SHADOW_CASCADES + 1];
+        std::copy(splits.beginCs(), splits.endCs(), csSplitPosition);
+
+        mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
+
+        for (size_t i = 0, c = mCascadeShadowMaps.size(); i < c; i++) {
+            auto& entry = mCascadeShadowMaps[i];
+
+            // Compute the frustum for the directional light.
+            ShadowMap& shadowMap = entry.getShadowMap();
+            assert_invariant(entry.getLightIndex() == 0);
+
+            sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
+
+            shadowMap.updateDirectional(lightData, 0,
+                    cameraInfo, shadowMapInfo,
+                    *scene, sceneInfo);
+
+            if (shadowMap.hasVisibleShadows()) {
+                mShadowMappingUniforms.lightFromWorldMatrix[i] = shadowMap.getLightSpaceMatrix();
+                shadowTechnique |= ShadowTechnique::SHADOW_MAP;
+                cascadeHasVisibleShadows |= 0x1u << i;
+            }
         }
     }
 

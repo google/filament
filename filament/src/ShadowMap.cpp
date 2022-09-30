@@ -157,6 +157,11 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
     size_t vertexCount = intersectFrustumWithBox(wsClippedShadowReceiverVolume,
             wsFrustum, wsViewFrustumVertices, wsShadowReceiversVolume);
 
+    if (UTILS_UNLIKELY(vertexCount < 4)) {
+        mHasVisibleShadows = false;
+        return;
+    }
+
     /*
      *  compute scene zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
      *  (near/far correspond to max/min because the light looks down the -z axis).
@@ -235,161 +240,160 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         }
     }
 
-    mHasVisibleShadows = vertexCount >= 4;
-    if (mHasVisibleShadows) {
-        // We can't use LISPSM in stable mode
-        const bool useLispsm = params.options.lispsm && !params.options.stable;
+    mHasVisibleShadows = true;
 
-        /*
-         * Compute the light's projection matrix
-         * (directional/point lights, i.e. projection to use, including znear/zfar clip planes)
-         */
+    // We can't use LISPSM in stable mode
+    const bool useLispsm = params.options.lispsm && !params.options.stable;
 
-        // The light's projection, ortho for directional lights, perspective otherwise
-        const mat4f Mp = directionalLightFrustum(znear, zfar);
+    /*
+     * Compute the light's projection matrix
+     * (directional/point lights, i.e. projection to use, including znear/zfar clip planes)
+     */
 
-        const mat4f MpMv(Mp * Mv);
+    // The light's projection, ortho for directional lights, perspective otherwise
+    const mat4f Mp = directionalLightFrustum(znear, zfar);
 
-        /*
-         * Compute warping (optional, improve quality)
-         */
+    const mat4f MpMv(Mp * Mv);
 
-        mat4f LMpMv = MpMv;
+    /*
+     * Compute warping (optional, improve quality)
+     */
 
-        // Compute the LiSPSM warping
-        mat4f W, Wp;
-        mat4f L; // Rotation matrix in light space
-        if (useLispsm) {
-            // Orient the shadow map in the direction of the view vector by constructing a
-            // rotation matrix in light space around the z-axis, that aligns the y-axis with the camera's
-            // forward vector (V) -- this gives the wrap direction, vp, for LiSPSM.
-            const float3 wsCameraFwd = camera.getForwardVector();
-            const float3 lsCameraFwd = Mv.upperLeft() * wsCameraFwd;
-            // If the light and view vector are parallel, this rotation becomes
-            // meaningless. Just use identity.
-            // (LdotV == (Mv*V).z, because L = {0,0,1} in light-space)
-            if (UTILS_LIKELY(std::abs(lsCameraFwd.z) < 0.9997f)) { // this is |dot(L, V)|
-                const float3 vp{ normalize(lsCameraFwd.xy), 0 }; // wrap direction in light-space
-                L[0].xyz = cross(vp, float3{ 0, 0, 1 });
-                L[1].xyz = vp;
-                L[2].xyz = { 0, 0, 1 };
-                L = transpose(L);
-            }
+    mat4f LMpMv = MpMv;
 
-            LMpMv = L * MpMv;
-
-            W = applyLISPSM(Wp, camera, params, LMpMv,
-                    wsClippedShadowReceiverVolume, vertexCount, direction);
+    // Compute the LiSPSM warping
+    mat4f W, Wp;
+    mat4f L; // Rotation matrix in light space
+    if (useLispsm) {
+        // Orient the shadow map in the direction of the view vector by constructing a
+        // rotation matrix in light space around the z-axis, that aligns the y-axis with the camera's
+        // forward vector (V) -- this gives the wrap direction, vp, for LiSPSM.
+        const float3 wsCameraFwd = camera.getForwardVector();
+        const float3 lsCameraFwd = Mv.upperLeft() * wsCameraFwd;
+        // If the light and view vector are parallel, this rotation becomes
+        // meaningless. Just use identity.
+        // (LdotV == (Mv*V).z, because L = {0,0,1} in light-space)
+        if (UTILS_LIKELY(std::abs(lsCameraFwd.z) < 0.9997f)) { // this is |dot(L, V)|
+            const float3 vp{ normalize(lsCameraFwd.xy), 0 }; // wrap direction in light-space
+            L[0].xyz = cross(vp, float3{ 0, 0, 1 });
+            L[1].xyz = vp;
+            L[2].xyz = { 0, 0, 1 };
+            L = transpose(L);
         }
 
-        /*
-         * Compute focusing matrix (optional, greatly improves quality)
-         */
+        LMpMv = L * MpMv;
 
-        // construct the warped light-space
-        const mat4f WLMpMv = W * LMpMv;
-
-        // 2) Now we find the x-y bounds of our convex-hull (view volume & shadow receivers)
-        //    in light space, so we can "focus" the shadow map to the interesting area.
-        //    This is the most important step to increase the quality of the shadow map.
-        //
-        //   In LiPSM mode, we're using the warped space here.
-
-        Aabb bounds;
-        if (params.options.stable && viewVolumeBoundingSphere.w > 0) {
-            bounds = compute2DBounds(Mv, viewVolumeBoundingSphere);
-        } else {
-            bounds = compute2DBounds(WLMpMv, wsClippedShadowReceiverVolume.data(), vertexCount);
-        }
-        lsLightFrustumBounds.min.xy = bounds.min.xy;
-        lsLightFrustumBounds.max.xy = bounds.max.xy;
-
-        if (params.options.stable) {
-            // in stable mode we can't do anything that can change the scaling of the texture
-        } else {
-            // For directional lights, we further constraint the light frustum to the
-            // intersection of the shadow casters & shadow receivers in light-space.
-            // ** This relies on the 1-texel shadow map border **
-            if (mEngine.debug.shadowmap.focus_shadowcasters) {
-                intersectWithShadowCasters(lsLightFrustumBounds, WLMpMv, wsShadowCastersVolume);
-            }
-        }
-
-        if (UTILS_UNLIKELY((lsLightFrustumBounds.min.x >= lsLightFrustumBounds.max.x) ||
-                           (lsLightFrustumBounds.min.y >= lsLightFrustumBounds.max.y))) {
-            // this could happen if the only thing visible is a perfectly horizontal or
-            // vertical thin line
-            mHasVisibleShadows = false;
-            return;
-        }
-
-        assert_invariant(lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x);
-        assert_invariant(lsLightFrustumBounds.min.y < lsLightFrustumBounds.max.y);
-
-        // compute focus scale and offset
-        float2 s = 2.0f / float2(lsLightFrustumBounds.max.xy - lsLightFrustumBounds.min.xy);
-        float2 o =   -s * float2(lsLightFrustumBounds.max.xy + lsLightFrustumBounds.min.xy) * 0.5f;
-
-        if (params.options.stable) {
-            // Use the world origin as reference point, fixed w.r.t. the camera
-            snapLightFrustum(s, o, Mv, -camera.getWorldOffset(),
-                    1.0f / mShadowMapInfo.shadowDimension);
-        }
-
-        const mat4f F(mat4f::row_major_init {
-                 s.x,  0.0f, 0.0f, o.x,
-                 0.0f, s.y,  0.0f, o.y,
-                 0.0f, 0.0f, 1.0f, 0.0f,
-                 0.0f, 0.0f, 0.0f, 1.0f,
-        });
-
-        /*
-         * Final shadow map transform
-         */
-
-        // Final shadow transform
-        const mat4f S = F * WLMpMv;
-
-        // Computes St the transform to use in the shader to access the shadow map texture
-        // i.e. it transforms a world-space vertex to a texture coordinate in the shadowmap
-        const mat4 MbMt = getTextureCoordsMapping();
-        const mat4f St = mat4f(MbMt * S);
-
-        // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
-        // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
-        // if Wp[3][1] is 0, then LISPSM was cancelled.
-        if (useLispsm && Wp[3][1] != 0.0f) {
-            mTexelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F));
-        } else {
-            // We know we're using an ortho projection
-            mTexelSizeAtOneMeterWs = texelSizeWorldSpace(St.upperLeft());
-        }
-        if (!mShadowMapInfo.vsm) {
-            mLightSpace = St;
-        } else {
-            mLightSpace = computeVsmLightSpaceMatrix(St, Mv, znear, zfar);
-        }
-
-        // We apply the constant bias in world space (as opposed to light-space) to account
-        // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
-        // by baking it in the shadow-map itself.
-        const float constantBias = mShadowMapInfo.vsm ? 0.0f : params.options.constantBias;
-        const mat4f b = mat4f::translation(direction * constantBias);
-
-        // It's important to set the light camera's model matrix separately from its projection, so
-        // that the cameraPosition uniform gets set correctly.
-        // mLightSpace is used in the shader to access the shadow map texture, and has the model
-        // matrix baked in.
-
-        // The model matrix below is in fact inverted to get the view matrix and passed to the
-        // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
-        // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
-        mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
-        mCamera->setCustomProjection(mat4(F * W * L * Mp), znear, zfar);
-
-        // for the debug camera, we need to undo the world origin
-        mDebugCamera->setCustomProjection(mat4(S * b * camera.worldOrigin), znear, zfar);
+        W = applyLISPSM(Wp, camera, params, LMpMv,
+                wsClippedShadowReceiverVolume, vertexCount, direction);
     }
+
+    /*
+     * Compute focusing matrix (optional, greatly improves quality)
+     */
+
+    // construct the warped light-space
+    const mat4f WLMpMv = W * LMpMv;
+
+    // 2) Now we find the x-y bounds of our convex-hull (view volume & shadow receivers)
+    //    in light space, so we can "focus" the shadow map to the interesting area.
+    //    This is the most important step to increase the quality of the shadow map.
+    //
+    //   In LiPSM mode, we're using the warped space here.
+
+    Aabb bounds;
+    if (params.options.stable && viewVolumeBoundingSphere.w > 0) {
+        bounds = compute2DBounds(Mv, viewVolumeBoundingSphere);
+    } else {
+        bounds = compute2DBounds(WLMpMv, wsClippedShadowReceiverVolume.data(), vertexCount);
+    }
+    lsLightFrustumBounds.min.xy = bounds.min.xy;
+    lsLightFrustumBounds.max.xy = bounds.max.xy;
+
+    if (params.options.stable) {
+        // in stable mode we can't do anything that can change the scaling of the texture
+    } else {
+        // For directional lights, we further constraint the light frustum to the
+        // intersection of the shadow casters & shadow receivers in light-space.
+        // ** This relies on the 1-texel shadow map border **
+        if (mEngine.debug.shadowmap.focus_shadowcasters) {
+            intersectWithShadowCasters(lsLightFrustumBounds, WLMpMv, wsShadowCastersVolume);
+        }
+    }
+
+    if (UTILS_UNLIKELY((lsLightFrustumBounds.min.x >= lsLightFrustumBounds.max.x) ||
+                       (lsLightFrustumBounds.min.y >= lsLightFrustumBounds.max.y))) {
+        // this could happen if the only thing visible is a perfectly horizontal or
+        // vertical thin line
+        mHasVisibleShadows = false;
+        return;
+    }
+
+    assert_invariant(lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x);
+    assert_invariant(lsLightFrustumBounds.min.y < lsLightFrustumBounds.max.y);
+
+    // compute focus scale and offset
+    float2 s = 2.0f / float2(lsLightFrustumBounds.max.xy - lsLightFrustumBounds.min.xy);
+    float2 o =   -s * float2(lsLightFrustumBounds.max.xy + lsLightFrustumBounds.min.xy) * 0.5f;
+
+    if (params.options.stable) {
+        // Use the world origin as reference point, fixed w.r.t. the camera
+        snapLightFrustum(s, o, Mv, -camera.getWorldOffset(),
+                1.0f / mShadowMapInfo.shadowDimension);
+    }
+
+    const mat4f F(mat4f::row_major_init {
+             s.x,  0.0f, 0.0f, o.x,
+             0.0f, s.y,  0.0f, o.y,
+             0.0f, 0.0f, 1.0f, 0.0f,
+             0.0f, 0.0f, 0.0f, 1.0f,
+    });
+
+    /*
+     * Final shadow map transform
+     */
+
+    // Final shadow transform
+    const mat4f S = F * WLMpMv;
+
+    // Computes St the transform to use in the shader to access the shadow map texture
+    // i.e. it transforms a world-space vertex to a texture coordinate in the shadowmap
+    const mat4 MbMt = getTextureCoordsMapping();
+    const mat4f St = mat4f(MbMt * S);
+
+    // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
+    // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
+    // if Wp[3][1] is 0, then LISPSM was cancelled.
+    if (useLispsm && Wp[3][1] != 0.0f) {
+        mTexelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F));
+    } else {
+        // We know we're using an ortho projection
+        mTexelSizeAtOneMeterWs = texelSizeWorldSpace(St.upperLeft());
+    }
+    if (!mShadowMapInfo.vsm) {
+        mLightSpace = St;
+    } else {
+        mLightSpace = computeVsmLightSpaceMatrix(St, Mv, znear, zfar);
+    }
+
+    // We apply the constant bias in world space (as opposed to light-space) to account
+    // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
+    // by baking it in the shadow-map itself.
+    const float constantBias = mShadowMapInfo.vsm ? 0.0f : params.options.constantBias;
+    const mat4f b = mat4f::translation(direction * constantBias);
+
+    // It's important to set the light camera's model matrix separately from its projection, so
+    // that the cameraPosition uniform gets set correctly.
+    // mLightSpace is used in the shader to access the shadow map texture, and has the model
+    // matrix baked in.
+
+    // The model matrix below is in fact inverted to get the view matrix and passed to the
+    // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
+    // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
+    mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
+    mCamera->setCustomProjection(mat4(F * W * L * Mp), znear, zfar);
+
+    // for the debug camera, we need to undo the world origin
+    mDebugCamera->setCustomProjection(mat4(S * b * camera.worldOrigin), znear, zfar);
 }
 
 void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
@@ -894,8 +898,10 @@ size_t ShadowMap::intersectFrustumWithBox(
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsFrustumCorners, wsSceneReceiversCorners.vertices);
         } else {
-            // by construction vertexCount must be 8 here
-            assert_invariant(vertexCount == 8);
+            // by construction vertexCount should be 8 here, but it can be more because
+            // step (b) above can classify a point as inside the frustum that isn't quite.
+            assert_invariant(vertexCount >= 8);
+            vertexCount = 8;
         }
     }
 
