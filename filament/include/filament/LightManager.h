@@ -226,7 +226,7 @@ public:
          * @see ShadowCascades::computeLogSplits
          * @see ShadowCascades::computePracticalSplits
          */
-        float cascadeSplitPositions[3] = { 0.25f, 0.50f, 0.75f };
+        float cascadeSplitPositions[3] = { 0.125f, 0.25f, 0.50f };
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.

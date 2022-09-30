@@ -240,7 +240,7 @@ public class LightManager {
          */
         @NonNull
         @Size(min = 3)
-        public float[] cascadeSplitPositions = { 0.25f, 0.50f, 0.75f };
+        public float[] cascadeSplitPositions = { 0.125f, 0.25f, 0.50f };
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
