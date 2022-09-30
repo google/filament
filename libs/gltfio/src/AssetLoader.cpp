@@ -399,6 +399,7 @@ void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     }
     #endif
 
+    mDummyBufferObject = nullptr;
     mAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager, srcAsset);
 
     // It is not an error for a glTF file to have zero scenes.
