@@ -25,6 +25,7 @@
 #include <QuartzCore/QuartzCore.h>
 
 #include <array>
+#include <atomic>
 #include <stack>
 
 #if defined(FILAMENT_METAL_PROFILING)
@@ -43,6 +44,7 @@ class MetalBufferPool;
 class MetalRenderTarget;
 class MetalSamplerGroup;
 class MetalSwapChain;
+class MetalTexture;
 class MetalTimerQueryInterface;
 struct MetalUniformBuffer;
 struct MetalIndexBuffer;
@@ -58,8 +60,11 @@ struct MetalContext {
     id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
 
+    std::atomic<bool> memorylessLimitsReached = false;
+
     // Supported features.
     bool supportsTextureSwizzling = false;
+    bool supportsMemorylessRenderTargets = false;
     uint8_t maxColorRenderTargets = 4;
     struct {
         uint8_t common;
@@ -94,8 +99,9 @@ struct MetalContext {
     // Keeps track of sampler groups we've finalized for the current render pass.
     tsl::robin_set<MetalSamplerGroup*> finalizedSamplerGroups;
 
-    // Keeps track of all alive sampler groups.
+    // Keeps track of all alive sampler groups, textures.
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;
+    tsl::robin_set<MetalTexture*> textures;
 
     MetalBufferPool* bufferPool;
 
@@ -126,10 +132,6 @@ struct MetalContext {
     // Logging and profiling.
     os_log_t log;
     os_signpost_id_t signpostId;
-#endif
-
-#ifndef NDEBUG
-    tsl::robin_set<HandleBase::HandleId> aliveTextures;
 #endif
 };
 
