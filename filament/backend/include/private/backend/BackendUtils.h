@@ -50,6 +50,11 @@ void removeGoogleLineDirectives(char* shader, size_t length) noexcept;
 size_t getFormatSize(TextureFormat format) noexcept;
 
 /**
+ * Returns the number of component (1 to 4) for the given format.
+ */
+size_t getFormatComponentCount(TextureFormat format) noexcept;
+
+/**
  * For compressed texture formats, returns the number of horizontal texels per block. Otherwise
  * returns 0.
  */
