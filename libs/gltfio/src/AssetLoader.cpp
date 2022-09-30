@@ -303,9 +303,6 @@ public:
     bool mError = false;
     bool mDiagnosticsEnabled = false;
     MaterialInstanceCache mMaterialInstanceCache;
-
-    // Weak reference to the largest dummy buffer so far in the current loading phase.
-    BufferObject* mDummyBufferObject = nullptr;
 };
 
 FILAMENT_UPCAST(AssetLoader)
@@ -1085,15 +1082,13 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
 
     if (needsDummyData) {
         const uint32_t requiredSize = sizeof(ubyte4) * vertexCount;
-        if (mDummyBufferObject == nullptr || requiredSize > mDummyBufferObject->getByteCount()) {
-            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
-            mAsset->mBufferObjects.push_back(mDummyBufferObject);
-            uint32_t* dummyData = (uint32_t*) malloc(requiredSize);
-            memset(dummyData, 0xff, requiredSize);
-            VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
-            mDummyBufferObject->setBuffer(mEngine, std::move(bd));
-        }
-        vertices->setBufferObjectAt(mEngine, slot, mDummyBufferObject);
+        auto dummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
+        mAsset->mBufferObjects.push_back(dummyBufferObject);
+        uint32_t* dummyData = (uint32_t*) malloc(requiredSize);
+        memset(dummyData, 0xff, requiredSize);
+        VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
+        dummyBufferObject->setBuffer(mEngine, std::move(bd));
+        vertices->setBufferObjectAt(mEngine, slot, dummyBufferObject);
     }
 
     return true;
