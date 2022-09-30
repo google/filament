@@ -109,17 +109,19 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
 #endif
 
     // Adjust the camera's projection for the light's shadowFar
-    mat4f cullingProjection(camera.cullingProjection);
-    if (params.options.shadowFar > 0.0f) {
-        float n = camera.zn;
-        float f = params.options.shadowFar;
-        // orthographic projection
-        assert_invariant(std::abs(cullingProjection[2].w) <= std::numeric_limits<float>::epsilon());
-        cullingProjection[2].z = 2.0f / (n - f);
-        cullingProjection[3].z = (f + n) / (n - f);
-    }
+    const mat4f cullingProjection{ [&](auto p) {
+        if (params.options.shadowFar > 0.0f) {
+            float n = camera.zn;
+            float f = params.options.shadowFar;
+            // orthographic projection
+            assert_invariant(std::abs(p[2].w) <= std::numeric_limits<float>::epsilon());
+            p[2].z =    2.0f / (n - f);
+            p[3].z = (f + n) / (n - f);
+        }
+        return p;
+    }(camera.cullingProjection) };
 
-    auto direction = lightData.elementAt<FScene::DIRECTION>(index);
+    const auto direction = lightData.elementAt<FScene::DIRECTION>(index);
 
     /*
      * Compute the light's model matrix
@@ -204,7 +206,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
     }
 
     float4 viewVolumeBoundingSphere = {};
-    if (params.options.stable) {
+    if (UTILS_UNLIKELY(params.options.stable)) {
         // In stable mode, the light frustum size must be fixed, so we can choose either the
         // whole view frustum, or the whole scene bounding volume. We simply pick whichever
         // is smaller.
@@ -217,6 +219,16 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         viewVolumeBoundingSphere = computeBoundingSphere(wsViewFrustumVertices, 8);
 
         if (shadowReceiverVolumeBoundingSphere.w < viewVolumeBoundingSphere.w) {
+
+            // When using the shadowReceiver volume, we don't have to use its enclosing sphere
+            // because (we assume) the scene volume doesn't change. Seen from the light it only
+            // changes when the light moves or rotates, and it is acceptable in that case to have
+            // non "stable" shadows (the shadow will never be stable when the light moves).
+            //
+            // On the other hand, when using the view volume, we must use a sphere because otherwise
+            // its projection's bounds in light space change with the camera, leading to unstable
+            // shadows with camera movement.
+
             viewVolumeBoundingSphere.w = 0;
             std::copy_n(wsShadowReceiversVolume.getCorners().data(), 8,
                     wsClippedShadowReceiverVolume.data());

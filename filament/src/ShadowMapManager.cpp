@@ -397,7 +397,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     // Adjust the near and far planes to tightly bound the scene.
     float vsNear = -cameraInfo.zn;
     float vsFar = -cameraInfo.zf;
-    if (engine.debug.shadowmap.tightly_bound_scene) {
+    if (engine.debug.shadowmap.tightly_bound_scene && !params.options.stable) {
         vsNear = std::min(vsNear, sceneInfo.vsNearFar.x);
         vsFar = std::max(vsFar, sceneInfo.vsNearFar.y);
     }
