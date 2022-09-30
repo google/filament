@@ -990,8 +990,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             float x1 = float(i * 2);
             float k0 = std::exp(-alpha * x0 * x0);
             float k1 = std::exp(-alpha * x1 * x1);
+
+            // k * textureLod(..., o) with bilinear sampling is equivalent to:
+            //      k * (s[0] * (1 - o) + s[1] * o)
+            // solve:
+            //      k0 = k * (1 - o)
+            //      k1 = k * o
+
             float k = k0 + k1;
-            float o = k0 / k;
+            float o = k1 / k;
             kernel[i].x = k;
             kernel[i].y = o;
             totalWeight += (k0 + k1) * 2.0f;
