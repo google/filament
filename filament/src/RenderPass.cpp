@@ -378,12 +378,14 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
     // the list twice)
 
     // compute how much maximum storage we need
-    uint32_t offset = FScene::getPrimitiveCount(soa, range.first);
     // double the color pass for transparent objects that need to render twice
     const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
     const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
-    offset *= uint32_t(colorPass * 2 + depthPass);
-    Command* const curr = commands + offset;
+    const size_t commandsPerPrimitive = uint32_t(colorPass * 2 + depthPass);
+    const size_t offsetBegin = FScene::getPrimitiveCount(soa, range.first) * commandsPerPrimitive;
+    const size_t offsetEnd   = FScene::getPrimitiveCount(soa, range.last) * commandsPerPrimitive;
+    Command* curr = commands + offsetBegin;
+    Command* const last = commands + offsetEnd;
 
     /*
      * The switch {} below is to coerce the compiler into generating different versions of
@@ -396,23 +398,31 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
 
     switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
-            generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
+            curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         case CommandTypeFlags::DEPTH:
-            generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
+            curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
             break;
         default:
             // we should never end-up here
             break;
     }
+
+    assert_invariant(curr <= last);
+
+    // commands may have been skipped, cancel all of them.
+    while (curr != last) {
+        curr->key = uint64_t(Pass::SENTINEL);
+        ++curr;
+    }
 }
 
 /* static */
 template<uint32_t commandTypeFlags>
 UTILS_NOINLINE
-void RenderPass::generateCommandsImpl(uint32_t extraFlags,
+RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
@@ -458,17 +468,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     const float cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
 
     for (uint32_t i = range.first; i < range.last; ++i) {
-        // Check if this renderable passes the visibilityMask. If it doesn't, encode SENTINEL
-        // commands (no-op).
+        // Check if this renderable passes the visibilityMask.
         if (UTILS_UNLIKELY(!(soaVisibilityMask[i] & visibilityMask))) {
-            // We need to encode a SENTINEL for each command that would have been generated
-            // otherwise. Color passes get 2 commands per primitive; depth passes get 1.
-            const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
-            const size_t commandsToEncode = (isColorPass * 2 + isDepthPass) * primitives.size();
-            for (size_t j = 0; j < commandsToEncode; j++) {
-                curr->key = uint64_t(Pass::SENTINEL);
-                ++curr;
-            }
             continue;
         }
 
@@ -541,6 +542,11 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
             auto const& primitive = primitives[pi];
+            // handle the case where this primitive is empty / no-op
+            if (primitive.getPrimitiveType() == PrimitiveType::NONE) {
+                continue;
+            }
+
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
@@ -597,9 +603,6 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // draw this command AFTER THE NEXT ONE
                     key |= makeField(1, BLEND_TWO_PASS_MASK, BLEND_TWO_PASS_SHIFT);
 
-                    // handle the case where this primitive is empty / no-op
-                    key |= select(primitive.getPrimitiveType() == PrimitiveType::NONE);
-
                     // correct for TransparencyMode::DEFAULT -- i.e. cancel the command
                     key |= select(mode == TransparencyMode::DEFAULT);
 
@@ -629,14 +632,9 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
                     cmdColor.key &= ~Z_BUCKET_MASK;
                     cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
-
-                    curr->key = uint64_t(Pass::SENTINEL);
-                    ++curr;
                 }
 
                 *curr = cmdColor;
-                // handle the case where this primitive is empty / no-op
-                curr->key |= select(primitive.getPrimitiveType() == PrimitiveType::NONE);
                 ++curr;
             }
 
@@ -666,13 +664,11 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                             | writeDepthForShadowCasters;
                 *curr = cmdDepth;
-
-                // handle the case where this primitive is empty / no-op
-                curr->key |= select(primitive.getPrimitiveType() == PrimitiveType::NONE);
                 ++curr;
             }
         }
     }
+    return curr;
 }
 
 void RenderPass::updateSummedPrimitiveCounts(
