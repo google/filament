@@ -394,7 +394,7 @@ private:
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     template<uint32_t commandTypeFlags>
-    static inline void generateCommandsImpl(uint32_t, Command* commands,
+    static inline Command* generateCommandsImpl(uint32_t extraFlags, Command* curr,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
