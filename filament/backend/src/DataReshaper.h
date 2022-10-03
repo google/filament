@@ -135,9 +135,11 @@ public:
             case UBYTE:
                 switch (srcType) {
                     case UBYTE:
-                        reshaper = (dst->format == PixelDataFormat::RGBA &&
-                                dstChannelCount == srcChannelCount && !swizzle)
-                                ? copyImage : reshapeImage<uint8_t, uint8_t>;
+                        reshaper = reshapeImage<uint8_t, uint8_t>;
+                        if (dst->format == PixelDataFormat::RGBA &&
+                                dstChannelCount == srcChannelCount && !swizzle) {
+                            reshaper = copyImage;
+                        }
                         break;
                     case FLOAT: reshaper = reshapeImage<uint8_t, float>; break;
                     case INT: reshaper = reshapeImage<uint8_t, int32_t>; break;
