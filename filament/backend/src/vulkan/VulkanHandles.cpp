@@ -49,14 +49,9 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         HwProgram(builder.getName()), context(context) {
     auto const& blobs = builder.getShadersSource();
     VkShaderModule* modules[2] = { &bundle.vertex, &bundle.fragment };
-    bool missing = false;
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         const auto& blob = blobs[i];
         VkShaderModule* module = modules[i];
-        if (blob.empty()) {
-            missing = true;
-            continue;
-        }
         VkShaderModuleCreateInfo moduleInfo = {};
         moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         moduleInfo.codeSize = blob.size();
@@ -104,13 +99,6 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         }
 
         bundle.specializationInfos = pInfo;
-    }
-
-    // Output a warning because it's okay to encounter empty blobs, but it's not okay to use
-    // this program handle in a draw call.
-    if (missing) {
-        utils::slog.w << "Missing SPIR-V shader: " << this->name.c_str() << utils::io::endl;
-        return;
     }
 
     // Make a copy of the binding map

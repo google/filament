@@ -13,6 +13,7 @@ A new header is inserted each time a *tag* is created.
 - Metal: newer devices are no longer limited to 16 samplers per Material.
 - gltfio: fix interpretation of occlusion strength
 - engine: minsdk is now 21 instead of 19. This allows the use of OpenGL ES 3.1
+- Vulkan: fix black screen regression
 
 ## v1.27.2
 
