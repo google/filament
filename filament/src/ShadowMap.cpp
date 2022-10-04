@@ -67,11 +67,21 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
+void ShadowMap::initialize(size_t lightIndex, uint16_t shadowIndex,
+        LightManager::ShadowOptions const* options) {
+    mLightIndex = lightIndex;
+    mShadowIndex = shadowIndex;
+    mOptions = options;
+}
+
 void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
-        FScene::VisibleMaskType visibilityMask, RenderPass* const pass) noexcept {
+        FScene::VisibleMaskType visibilityMask,
+        CameraInfo const& cameraInfo,
+        RenderPass* const pass) noexcept {
     const backend::Viewport disabledScissor{ 0, 0,
             (uint32_t)std::numeric_limits<int32_t>::max(),
             (uint32_t)std::numeric_limits<int32_t>::max() };
+    pass->setCamera(cameraInfo);
     pass->setVisibilityMask(visibilityMask);
     pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
     pass->overridePolygonOffset(&mShadowMapInfo.polygonOffset);
@@ -87,7 +97,7 @@ mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 position
 
 void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t index,
         filament::CameraInfo const& camera,
-        const ShadowMapInfo& shadowMapInfo, FScene const& scene,
+        ShadowMapInfo const& shadowMapInfo, FScene const& scene,
         SceneInfo& sceneInfo) noexcept {
 
     mShadowMapInfo = shadowMapInfo;
@@ -133,7 +143,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
     const mat4f MvAtOrigin = getDirectionalLightViewMatrix(direction);
 
     // Compute scene-dependent values shared across all cascades
-    ShadowMap::updateSceneInfo(MvAtOrigin, scene, sceneInfo);
+    ShadowMap::updateSceneInfoDirectional(MvAtOrigin, scene, sceneInfo);
 
     const Aabb wsShadowCastersVolume = sceneInfo.wsShadowCastersVolume;
     const Aabb wsShadowReceiversVolume = sceneInfo.wsShadowReceiversVolume;
@@ -399,7 +409,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
 void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
         filament::CameraInfo const& camera,
         const ShadowMapInfo& shadowMapInfo,
-        FScene const& scene, SceneInfo& sceneInfo) noexcept {
+        FScene const& scene, SceneInfo sceneInfo) noexcept {
 
     mShadowMapInfo = shadowMapInfo;
 
@@ -422,7 +432,7 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
     const mat4f Mv = getDirectionalLightViewMatrix(direction, position);
 
     // find decent near/far
-    ShadowMap::updateSceneInfo(Mv, scene, sceneInfo, mShadowMapInfo.spotIndex);
+    ShadowMap::updateSceneInfoSpot(Mv, scene, sceneInfo);
     // FIXME: we need a configuration for minimum near plane (for now hardcoded to 1cm)
     float nearPlane = std::max(0.01f, -sceneInfo.lsNearFar.x);
     float farPlane  = std::min(radius, -sceneInfo.lsNearFar.y);
@@ -1089,8 +1099,9 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
     }
 }
 
-void ShadowMap::initSceneInfo(FScene const& scene, mat4f const& viewMatrix,
-        ShadowMap::SceneInfo& sceneInfo) {
+void ShadowMap::initSceneInfo(ShadowMap::SceneInfo& sceneInfo,
+        uint8_t visibleLayers, FScene const& scene, mat4f const& viewMatrix) {
+    sceneInfo.visibleLayers = visibleLayers;
     sceneInfo.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
 
     // We assume the light is at the origin to compute the SceneInfo. This is consumed later by
@@ -1118,8 +1129,8 @@ void ShadowMap::initSceneInfo(FScene const& scene, mat4f const& viewMatrix,
     );
 }
 
-void ShadowMap::updateSceneInfo(const mat4f& Mv, FScene const& scene,
-        ShadowMap::SceneInfo& sceneInfo) {
+void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene const& scene,
+        SceneInfo& sceneInfo) {
     sceneInfo.lsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     visitScene(scene, sceneInfo.visibleLayers,
             [&](Aabb caster, Culler::result_type) {
@@ -1132,13 +1143,13 @@ void ShadowMap::updateSceneInfo(const mat4f& Mv, FScene const& scene,
     );
 }
 
-void ShadowMap::updateSceneInfo(const mat4f& Mv, FScene const& scene,
-        ShadowMap::SceneInfo& sceneInfo, uint16_t index) {
+void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
+        SceneInfo& sceneInfo) {
     sceneInfo.lsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     sceneInfo.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     visitScene(scene, sceneInfo.visibleLayers,
             [&](Aabb caster, Culler::result_type mask) {
-                if (mask & VISIBLE_SPOT_SHADOW_RENDERABLE_N(index)) {
+                if (mask & VISIBLE_DYN_SHADOW_RENDERABLE) {
                     float2 nf = ShadowMap::computeNearFar(Mv, caster);
                     sceneInfo.lsNearFar.x = std::max(sceneInfo.lsNearFar.x, nf.x);  // near
                     sceneInfo.lsNearFar.y = std::min(sceneInfo.lsNearFar.y, nf.y);  // far

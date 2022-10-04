@@ -24,6 +24,7 @@
 
 #include "backend/DriverApiForward.h"
 #include "private/backend/SamplerGroup.h"
+#include "math/mat4.h"
 
 #include <math/mat4.h>
 #include <math/vec4.h>
@@ -40,9 +41,7 @@ class RenderPass;
 // +------------------------------------------------------+
 // VISIBLE_RENDERABLE                                     X
 // VISIBLE_DIR_SHADOW_RENDERABLE                        X
-// VISIBLE_SPOT_SHADOW_RENDERABLE_0                   X
-// VISIBLE_SPOT_SHADOW_RENDERABLE_1                 X
-// ...
+// VISIBLE_DYN_SHADOW_RENDERABLE                      X
 
 // A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
 // PCF shadows: only shadow casters
@@ -50,22 +49,10 @@ class RenderPass;
 
 static constexpr size_t VISIBLE_RENDERABLE_BIT              = 0u;
 static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT   = 1u;
-
-static constexpr size_t VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(size_t n) { return n + 2; }
+static constexpr size_t VISIBLE_DYN_SHADOW_RENDERABLE_BIT   = 2u;
 
 static constexpr Culler::result_type VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
-static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) {
-    return 1u << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(n);
-}
-
-// ORing of all the VISIBLE_SPOT_SHADOW_RENDERABLE bits
-static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE =
-        (0xFFu >> (sizeof(Culler::result_type) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
-
-// Because we're using a uint16_t for the visibility mask, we're limited to 14 spot light shadows.
-// (2 of the bits are used for visible renderables + directional light shadow casters).
-static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= sizeof(Culler::result_type) * 8 - 2,
-        "CONFIG_MAX_SHADOW_CASTING_SPOTS cannot be higher than 14.");
+static constexpr Culler::result_type VISIBLE_DYN_SHADOW_RENDERABLE = 1u << VISIBLE_DYN_SHADOW_RENDERABLE_BIT;
 
 class ShadowMap {
 public:
@@ -91,9 +78,6 @@ public:
         // e.g., for a texture dimension of 512, shadowDimension would be 510
         uint16_t shadowDimension = 0;
 
-        // This spot shadowmap index.
-        uint16_t spotIndex = 0;
-
         // whether we're using vsm
         bool vsm = false;
 
@@ -102,18 +86,15 @@ public:
     };
 
     struct SceneInfo {
-        explicit SceneInfo(uint8_t visibleLayers) noexcept : visibleLayers(visibleLayers) { }
-
-        // The near and far planes, in clip space, to use for this shadow map
+        // scratch data: The near and far planes, in clip space, to use for this shadow map
         math::float2 csNearFar = { -1.0f, 1.0f };
 
-        // The following fields are set by computeSceneCascadeParams.
-
-        // light's near/far expressed in light-space, calculated from the scene's content
-        // assuming the light is at the origin.
+        // scratch data: light's near/far expressed in light-space, calculated from the scene's
+        // content assuming the light is at the origin.
         math::float2 lsNearFar{};
 
-        // Viewing camera's near/far expressed in view-space, calculated from the scene's content
+        // scratch data: Viewing camera's near/far expressed in view-space, calculated from the
+        // scene's content.
         math::float2 vsNearFar{};
 
         // World-space shadow-casters volume
@@ -128,20 +109,25 @@ public:
     static math::mat4f getDirectionalLightViewMatrix(
             math::float3 direction, math::float3 position = {}) noexcept;
 
+    void initialize(size_t lightIndex, uint16_t shadowIndex,
+            LightManager::ShadowOptions const* options);
+
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
     void updateDirectional(const FScene::LightSoa& lightData, size_t index,
             filament::CameraInfo const& camera,
-            const ShadowMapInfo& shadowMapInfo, FScene const& scene,
+            ShadowMapInfo const& shadowMapInfo, FScene const& scene,
             SceneInfo& sceneInfo) noexcept;
 
     void updateSpot(const FScene::LightSoa& lightData, size_t index,
             filament::CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, FScene const& scene,
-            SceneInfo& sceneInfo) noexcept;
+            SceneInfo sceneInfo) noexcept;
 
     void render(FScene const& scene, utils::Range<uint32_t> range,
-            FScene::VisibleMaskType visibilityMask, RenderPass* pass) noexcept;
+            FScene::VisibleMaskType visibilityMask,
+            CameraInfo const& cameraInfo,
+            RenderPass* pass) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
@@ -164,15 +150,21 @@ public:
 
     // Call once per frame to populate the SceneInfo struct, then pass to update().
     // This computes values constant across all shadow maps.
-    static void initSceneInfo(FScene const& scene, math::mat4f const& viewMatrix,
-            ShadowMap::SceneInfo& sceneInfo);
+    static void initSceneInfo(ShadowMap::SceneInfo& sceneInfo, uint8_t visibleLayers,
+            FScene const& scene, math::mat4f const& viewMatrix);
 
     // Update SceneInfo struct for a given light
-    static void updateSceneInfo(const math::mat4f& Mv, FScene const& scene,
-            ShadowMap::SceneInfo& sceneInfo);
+    static void updateSceneInfoDirectional(const math::mat4f& Mv, FScene const& scene,
+            SceneInfo& sceneInfo);
 
-    static void updateSceneInfo(const math::mat4f& Mv, FScene const& scene,
-            ShadowMap::SceneInfo& sceneInfo, uint16_t index);
+    static void updateSceneInfoSpot(const math::mat4f& Mv, FScene const& scene,
+            SceneInfo& sceneInfo);
+
+    LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
+    size_t getLightIndex() const { return mLightIndex; }
+    uint16_t getShadowIndex() const { return mShadowIndex; }
+    void setLayer(uint8_t layer) noexcept { mLayer = layer; }
+    uint8_t getLayer() const noexcept { return mLayer; }
 
 private:
     struct Segment {
@@ -270,16 +262,22 @@ private:
     FCamera* mCamera = nullptr;                 //  8
     FCamera* mDebugCamera = nullptr;            //  8
     math::mat4f mLightSpace;                    // 64
-    float mTexelSizeAtOneMeterWs = 0.0f;        //  4
-    math::float4 mLightFromWorldZ{};
+    math::float4 mLightFromWorldZ{};            // 16
 
-    // set-up in update()
     ShadowMapInfo mShadowMapInfo;               // 20
-    bool mHasVisibleShadows = false;            //  1
 
     FEngine& mEngine;                           //  8
+    float mTexelSizeAtOneMeterWs = 0.0f;        //  4
+    bool mHasVisibleShadows = false;            //  1
     const bool mClipSpaceFlipped;               //  1
     const bool mTextureSpaceFlipped;            //  1
+
+    // The data below technically belongs to ShadowMapManager, but it simplifies allocations
+    // to store it here. This data is always associated with this shadow map anyway.
+    LightManager::ShadowOptions const* mOptions = nullptr;
+    uint32_t mLightIndex = 0;   // which light are we shadowing
+    uint16_t mShadowIndex = 0;  // our index in the shadowMap vector
+    uint8_t mLayer = 0;         // our layer in the shadowMap texture
 };
 
 } // namespace filament

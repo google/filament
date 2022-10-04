@@ -49,6 +49,14 @@ ShadowMapManager::ShadowMapManager(FEngine& engine) { // NOLINT(cppcoreguideline
             &engine.debug.shadowmap.tightly_bound_scene);
 }
 
+ShadowMapManager::~ShadowMapManager() {
+    // destroy the ShadowMap array in-place
+    UTILS_NOUNROLL
+    for (auto& entry : mShadowMapCache) {
+        std::destroy_at(std::launder(reinterpret_cast<ShadowMap*>(&entry)));
+    }
+}
+
 void ShadowMapManager::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mShadowUbh);
@@ -58,13 +66,6 @@ void ShadowMapManager::terminate(FEngine& engine) {
     }
 }
 
-ShadowMapManager::~ShadowMapManager() {
-    // destroy the ShadowMap array in-place
-    UTILS_NOUNROLL
-    for (auto& entry : mShadowMapCache) {
-        std::destroy_at(std::launder(reinterpret_cast<ShadowMap*>(&entry)));
-    }
-}
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::update(FEngine& engine, FView& view,
         CameraInfo const& cameraInfo,
@@ -73,22 +74,15 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(FEngine& engine, FVie
 
     calculateTextureRequirements(engine, view, lightData);
 
-    ShadowMap::SceneInfo sceneInfo(view.getVisibleLayers());
-
     // Compute scene-dependent values shared across all shadow maps
-    ShadowMap::initSceneInfo(*view.getScene(), cameraInfo.view, sceneInfo);
+    ShadowMap::initSceneInfo(mSceneInfo,
+            view.getVisibleLayers(), *view.getScene(), cameraInfo.view);
 
     shadowTechnique |= updateCascadeShadowMaps(
-            engine, view, cameraInfo, renderableData, lightData, sceneInfo);
+            engine, view, cameraInfo, renderableData, lightData, mSceneInfo);
 
     shadowTechnique |= updateSpotShadowMaps(
-            engine, view, cameraInfo, renderableData, lightData, sceneInfo);
-
-    if (mShadowUb.isDirty()) {
-        DriverApi& driver = engine.getDriverApi();
-        driver.updateBufferObject(mShadowUbh,
-                mShadowUb.toBufferDescriptor(driver), 0);
-    }
+            engine, lightData);
 
     return shadowTechnique;
 }
@@ -102,8 +96,9 @@ void ShadowMapManager::setShadowCascades(size_t lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     assert_invariant(options->shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
     for (size_t c = 0; c < options->shadowCascades; c++) {
-        auto* shadowMap = getCascadeShadowMap(c);
-        mCascadeShadowMaps.emplace_back(shadowMap, lightIndex, options);
+        auto* pShadowMap = getCascadeShadowMap(c);
+        pShadowMap->initialize(lightIndex, c, options);
+        mCascadeShadowMaps.push_back(pShadowMap);
     }
 }
 
@@ -111,67 +106,48 @@ void ShadowMapManager::addSpotShadowMap(size_t lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     const size_t c = mSpotShadowMaps.size();
     assert_invariant(c < CONFIG_MAX_SHADOW_CASTING_SPOTS);
-    auto* shadowMap = getSpotShadowMap(c);
-    mSpotShadowMaps.emplace_back(shadowMap, lightIndex, options);
+    auto* pShadowMap = getSpotShadowMap(c);
+    pShadowMap->initialize(lightIndex, c, options);
+    mSpotShadowMaps.push_back(pShadowMap);
 }
 
 FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine& engine,
-        RenderPass const& pass, FView& view) noexcept {
+        RenderPass const& pass, FView& view, CameraInfo const& mainCameraInfo) noexcept {
 
     constexpr size_t MAX_SHADOW_LAYERS =
             CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS;
+
+    const float moment2 = std::numeric_limits<half>::max();
+    const float moment1 = std::sqrt(moment2);
+    const float4 vsmClearColor{ moment1, moment2, -moment1, moment2 };
+
+    FScene* scene = view.getScene();
+    assert_invariant(scene);
 
     // make a copy here, because it's a very small structure
     const TextureAtlasRequirements textureRequirements = mTextureAtlasRequirements;
     assert_invariant(textureRequirements.layers <= MAX_SHADOW_LAYERS);
 
-    struct ShadowPass {
-        ShadowMapEntry const* shadowMapEntry;
-        utils::Range<uint32_t> range;
-        FScene::VisibleMaskType visibilityMask;
-    };
-
-    auto passList = utils::FixedCapacityVector<ShadowPass>::with_capacity(MAX_SHADOW_LAYERS);
-
-    FScene* scene = view.getScene();
-    assert_invariant(scene);
-
-    // these loops create a list of the shadow maps that need to be rendered (i.e. that have
-    // visible shadows).
-
-    // Directional, cascaded shadowmaps
-    auto const directionalShadowCastersRange = view.getVisibleDirectionalShadowCasters();
-    if (!directionalShadowCastersRange.empty()) {
-        for (const auto& map : mCascadeShadowMaps) {
-            if (map.hasVisibleShadows()) {
-                passList.push_back({
-                    &map, directionalShadowCastersRange, VISIBLE_DIR_SHADOW_RENDERABLE });
-            }
-        }
-    }
-
-    // Spotlight shadowmaps
-    auto const spotShadowCastersRange = view.getVisibleSpotShadowCasters();
-    if (!spotShadowCastersRange.empty()) {
-        for (size_t i = 0, c = mSpotShadowMaps.size(); i < c; i++) {
-            const auto& map = mSpotShadowMaps[i];
-            if (map.hasVisibleShadows()) {
-                passList.push_back({
-                    &map, spotShadowCastersRange, VISIBLE_SPOT_SHADOW_RENDERABLE_N(i) });
-            }
-        }
-    }
-
-    assert_invariant(passList.size() <= textureRequirements.layers);
-
+    // -------------------------------------------------------------------------------------------
+    // Prepare Shadow Pass
     // -------------------------------------------------------------------------------------------
 
     struct PrepareShadowPassData {
-        FrameGraphId<FrameGraphTexture> shadows;        // the actual shadowmap
+        struct ShadowPass {
+            mutable RenderPass pass;
+            ShadowMap* shadowMap;
+            utils::Range<uint32_t> range;
+            FScene::VisibleMaskType visibilityMask;
+        };
+        // the actual shadow map atlas (currently a 2D texture array)
+        FrameGraphId<FrameGraphTexture> shadows;
+        // a RenderPass per shadow map
+        utils::FixedCapacityVector<ShadowPass> passList;
     };
 
     auto& prepareShadowPass = fg.addPass<PrepareShadowPassData>("Prepare Shadow Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
+                data.passList.reserve(MAX_SHADOW_LAYERS);
                 data.shadows = builder.createTexture("Shadowmap", {
                         .width = textureRequirements.size, .height = textureRequirements.size,
                         .depth = textureRequirements.layers,
@@ -179,20 +155,92 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         .type = SamplerType::SAMPLER_2D_ARRAY,
                         .format = textureRequirements.format
                 });
+
+                // these loops create a list of the shadow maps that might need to be rendered
+                auto& passList = data.passList;
+
+                // Directional, cascaded shadow maps
+                auto const directionalShadowCastersRange = view.getVisibleDirectionalShadowCasters();
+                if (!directionalShadowCastersRange.empty()) {
+                    for (auto* pShadowMap : mCascadeShadowMaps) {
+                        // for the directional light, we already know if it has visible shadows.
+                        if (pShadowMap->hasVisibleShadows()) {
+                            passList.push_back({
+                                    pass, pShadowMap, directionalShadowCastersRange,
+                                    VISIBLE_DIR_SHADOW_RENDERABLE });
+                        }
+                    }
+                }
+
+                // Spotlight shadow maps
+                auto const spotShadowCastersRange = view.getVisibleSpotShadowCasters();
+                if (!spotShadowCastersRange.empty()) {
+                    for (auto* pShadowMap : mSpotShadowMaps) {
+                        passList.push_back({
+                                pass, pShadowMap, spotShadowCastersRange,
+                                VISIBLE_DYN_SHADOW_RENDERABLE });
+                    }
+                }
+
+                assert_invariant(passList.size() <= textureRequirements.layers);
+
                 // This pass must be declared as having a side effect because it never gets a
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
-            [&view](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [this, &engine, &view, scene, &mainCameraInfo](
+                    FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 // set uniforms needed to render this ShadowMap
                 view.prepareShadowMap(view.getVsmShadowOptions().highPrecision);
+
+                // Note: we could almost parallel_for the loop below, the problem currently is
+                // that updatePrimitivesLod() updates temporary global state.
+                // prepareSpotShadowMap() also update the visibility of renderable. These two
+                // pieces of state are needed only until shadowMap.render() returns.
+                // Conceptually, we could store this out-of-band.
+
+                // Generate a RenderPass for each shadow map
+                for (auto const& entry : data.passList) {
+                    ShadowMap& shadowMap = *entry.shadowMap;
+
+                    // for spot shadow map, we need to do the culling
+                    if (entry.visibilityMask == VISIBLE_DYN_SHADOW_RENDERABLE) {
+                        prepareSpotShadowMap(shadowMap, engine, view, mainCameraInfo,
+                                scene->getRenderableData(), entry.range,
+                                scene->getLightData(), mSceneInfo);
+                    }
+
+                    if (shadowMap.hasVisibleShadows()) {
+                        // cameraInfo only valid after calling update
+                        const CameraInfo cameraInfo(shadowMap.getCamera());
+
+                        // updatePrimitivesLod must be run before RenderPass::appendCommands.
+                        view.updatePrimitivesLod(engine,
+                                cameraInfo, scene->getRenderableData(), entry.range);
+
+                        // generate and sort the commands for rendering the shadow map
+                        // TODO: this loop can generate a lot of commands. investigate if
+                        //       we could compact or reduce the number of commands.
+                        //       - we could move this into the execute of each pass, but
+                        //         then we would have to update the UBO each time.
+                        //       - we could also always use the same commands for all
+                        //         shadow maps, but then we'd generate a lot of
+                        //         unneeded draw call.
+                        shadowMap.render(*scene, entry.range, entry.visibilityMask,
+                                cameraInfo, &entry.pass);
+                    }
+                }
+
+                // Finally update our UBO in one batch
+                if (mShadowUb.isDirty()) {
+                    driver.updateBufferObject(mShadowUbh,
+                            mShadowUb.toBufferDescriptor(driver), 0);
+                }
             });
 
     // -------------------------------------------------------------------------------------------
-
-    const float vsmMoment2 = std::numeric_limits<half>::max();
-    const float vsmMoment1 = std::sqrt(vsmMoment2);
-    const float4 vsmClearColor{ vsmMoment1, vsmMoment2, -vsmMoment1, vsmMoment2 };
+    // Shadow Passes
+    // -------------------------------------------------------------------------------------------
 
     struct ShadowPassData {
         FrameGraphId<FrameGraphTexture> tempBlurSrc{};  // temporary shadowmap when blurring
@@ -201,11 +249,14 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
         uint32_t shadowRt{};
     };
 
-    auto& ppm = engine.getPostProcessManager();
-
-    for (auto const& entry : passList) {
-        const auto layer = entry.shadowMapEntry->getLayer();
-        const auto* options = entry.shadowMapEntry->getShadowOptions();
+    auto const& passList = prepareShadowPass.getData().passList;
+    for (auto const& entry: passList) {
+        if (!entry.shadowMap->hasVisibleShadows()) {
+            continue;
+        }
+        
+        const auto layer = entry.shadowMap->getLayer();
+        const auto* options = entry.shadowMap->getShadowOptions();
 
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
@@ -260,7 +311,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                                     .clearColor = vsmClearColor,
                                     .samples = options->vsm.msaaSamples,
                                     .clearFlags = TargetBufferFlags::COLOR
-                                                  | TargetBufferFlags::DEPTH
+                                            | TargetBufferFlags::DEPTH
                             });
                         }
                     } else {
@@ -274,22 +325,23 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                     // finally, create the shadowmap render target -- one per layer.
                     data.shadowRt = builder.declareRenderPass("Shadow RT", renderTargetDesc);
                 },
-                [=, &engine, &view](FrameGraphResources const& resources,
+                [=, &entry, &view](FrameGraphResources const& resources,
                         auto const& data, DriverApi& driver) {
 
-                    ShadowMap& shadowMap = entry.shadowMapEntry->getShadowMap();
+                    // Note: we capture entry by reference here. That's actually okay because
+                    // `entry` lives in `PrepareShadowPassData` which is guaranteed to still
+                    // be alive when we execute here (all passes stay alive until the FrameGraph
+                    // is destroyed).
+                    // It wouldn't work to capture by copy because entry.pass wouldn't be
+                    // initialized, as this happens in an `execute` block.
+
+                    ShadowMap const& shadowMap = *entry.shadowMap;
                     const CameraInfo cameraInfo(shadowMap.getCamera());
 
-                    // updatePrimitivesLod must be run before RenderPass::appendCommands.
-                    view.updatePrimitivesLod(engine, cameraInfo, scene->getRenderableData(), entry.range);
-
-                    // generate and sort the commands for rendering the shadow map
-                    RenderPass entryPass(pass);
-                    shadowMap.render(*scene, entry.range, entry.visibilityMask, &entryPass);
-
-                    const auto& executor = entryPass.getExecutor();
+                    const auto& executor = entry.pass.getExecutor();
                     const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
+                    // set uniforms relative to the camera
                     view.prepareCamera(cameraInfo);
 
                     // We set a viewport with a 1-texel border for when we index outside the
@@ -317,8 +369,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                 });
 
 
-        // now emit the blurring passes
+        // now emit the blurring passes if needed
         if (view.hasVSM()) {
+            auto& ppm = engine.getPostProcessManager();
+
             const float blurWidth = options->vsm.blurWidth;
             if (blurWidth > 0.0f) {
                 const float sigma = (blurWidth + 1.0f) / 6.0f;
@@ -371,8 +425,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     if (!mCascadeShadowMaps.empty()) {
         // Even if we have more than one cascade, we cull directional shadow casters against the
         // entire camera frustum, as if we only had a single cascade.
-        ShadowMapEntry& entry = mCascadeShadowMaps[0];
-        ShadowMap& shadowMap = entry.getShadowMap();
+        ShadowMap& shadowMap = *mCascadeShadowMaps[0];
 
         shadowMap.updateDirectional(lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
 
@@ -447,11 +500,11 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
         for (size_t i = 0, c = mCascadeShadowMaps.size(); i < c; i++) {
-            auto& entry = mCascadeShadowMaps[i];
+            assert_invariant(mCascadeShadowMaps[i]);
 
             // Compute the frustum for the directional light.
-            ShadowMap& shadowMap = entry.getShadowMap();
-            assert_invariant(entry.getLightIndex() == 0);
+            ShadowMap& shadowMap = *mCascadeShadowMaps[i];
+            assert_invariant(shadowMap.getLightIndex() == 0);
 
             sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
 
@@ -495,86 +548,134 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     return shadowTechnique;
 }
 
-ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,
-        FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
-        FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept {
+void ShadowMapManager::updateSpotVisibilityMasks(
+        uint8_t visibleLayers,
+        uint8_t const* UTILS_RESTRICT layers,
+        FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
+        Culler::result_type* UTILS_RESTRICT visibleMask, size_t count) {
+    // __restrict__ seems to only be taken into account as function parameters. This is very
+    // important here, otherwise, this loop doesn't get vectorized.
+    // This is vectorized 16x.
+    count = (count + 0xFu) & ~0xFu; // capacity guaranteed to be multiple of 16
+    for (size_t i = 0; i < count; ++i) {
+        const Culler::result_type mask = visibleMask[i];
+        const FRenderableManager::Visibility v = visibility[i];
+        const bool inVisibleLayer = layers[i] & visibleLayers;
 
+        const bool visSpotShadowRenderable = v.castShadows && inVisibleLayer &&
+                (!v.culling || (mask & VISIBLE_DYN_SHADOW_RENDERABLE));
+
+        using Type = Culler::result_type;
+
+        visibleMask[i] &= ~Type(VISIBLE_DYN_SHADOW_RENDERABLE);
+        visibleMask[i] |= Type(visSpotShadowRenderable << VISIBLE_DYN_SHADOW_RENDERABLE_BIT);
+    }
+}
+
+void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
+        FEngine& engine, FView& view, CameraInfo const& cameraInfo,
+        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+        FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept {
     auto& lcm = engine.getLightManager();
 
-    // shadow-map shadows for point/spotlights
-    ShadowTechnique shadowTechnique{};
+    // compute the frustum for this light
+    const size_t lightIndex = shadowMap.getLightIndex();
+    const FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(lightIndex);
+    FLightManager::ShadowParams params = lcm.getShadowParams(li);
+    FLightManager::ShadowOptions const* const options = shadowMap.getShadowOptions();
+    const ShadowMap::ShadowMapInfo shadowMapInfo{
+            .atlasDimension = mTextureAtlasRequirements.size,
+            .textureDimension = uint16_t(options->mapSize),
+            .shadowDimension = uint16_t(options->mapSize - 2u),
+            .vsm = view.hasVSM(),
+            .polygonOffset = { // handle reversed Z
+                    .slope    = view.hasVSM() ? 0.0f : -params.options.polygonOffsetSlope,
+                    .constant = view.hasVSM() ? 0.0f : -params.options.polygonOffsetConstant
+            }
+    };
+
+    // for spotlights, we cull shadow casters first because we already know the frustum,
+    // this will help us find better near/far plane later
+    const auto position = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).xyz;
+    const auto direction = lightData.elementAt<FScene::DIRECTION>(lightIndex);
+    const auto radius = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).w;
+    const auto outerConeAngle = lcm.getSpotLightOuterCone(li);
+
+    // compute shadow map frustum for culling
+    const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, position);
+    const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, 0.01f, radius);
+    const mat4f MpMv(math::highPrecisionMultiply(Mp, Mv));
+    const Frustum frustum(MpMv);
+
+    // Cull shadow casters
+    float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
+    float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
+    FScene::VisibleMaskType* visibleArray = renderableData.data<FScene::VISIBLE_MASK>();
+    Culler::intersects(
+            visibleArray + range.first,
+            frustum,
+            worldAABBCenter + range.first,
+            worldAABBExtent + range.first,
+            range.size(),
+            VISIBLE_DYN_SHADOW_RENDERABLE_BIT);
+
+    // update their visibility mask
+    uint8_t const* layers = renderableData.data<FScene::LAYERS>();
+    auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
+    updateSpotVisibilityMasks(
+            view.getVisibleLayers(),
+            layers + range.first,
+            visibility + range.first,
+            visibleArray + range.first,
+            range.size());
+
+    // update the shadow map frustum/camera
+    shadowMap.updateSpot(lightData, lightIndex,
+            cameraInfo, shadowMapInfo,
+            *view.getScene(), sceneInfo);
+
+    // and if we need to generate it, update all the UBO data
+    if (shadowMap.hasVisibleShadows()) {
+        const size_t shadowIndex = shadowMap.getShadowIndex();
+        const float wsTexelSizeAtOneMeter = shadowMap.getTexelSizAtOneMeterWs();
+        // note: normalBias is set to zero for VSM
+        const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
+
+        auto& s = mShadowUb.edit();
+        const double n = shadowMap.getCamera().getNear();
+        const double f = shadowMap.getCamera().getCullingFar();
+        s.shadows[shadowIndex].lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
+        s.shadows[shadowIndex].direction = direction;
+        s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
+        s.shadows[shadowIndex].lightFromWorldZ = shadowMap.getLightFromWorldZ();
+        s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
+        s.shadows[shadowIndex].nearOverFarMinusNear = float(n / (f - n));
+        s.shadows[shadowIndex].elvsm = options->vsm.elvsm;
+        s.shadows[shadowIndex].bulbRadiusLs =
+                mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
+                / wsTexelSizeAtOneMeter;
+    }
+}
+
+ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,
+        FScene::LightSoa& lightData) noexcept {
+
     FScene::ShadowInfo* const shadowInfo = lightData.data<FScene::SHADOW_INFO>();
-    for (size_t i = 0, c = mSpotShadowMaps.size(); i < c; i++) {
-        auto& entry = mSpotShadowMaps[i];
 
-        // compute the frustum for this light
-        ShadowMap& shadowMap = entry.getShadowMap();
-        const size_t lightIndex = entry.getLightIndex();
-        const FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(lightIndex);
-        FLightManager::ShadowParams params = lcm.getShadowParams(li);
+    ShadowTechnique shadowTechnique{};
+    if (!mSpotShadowMaps.empty()) {
+        shadowTechnique |= ShadowTechnique::SHADOW_MAP;
+        for (auto const* pShadowMap : mSpotShadowMaps) {
+            const size_t lightIndex = pShadowMap->getLightIndex();
+            shadowInfo[lightIndex].castsShadows = true;     // FIXME: is that set correctly?
+            shadowInfo[lightIndex].index = pShadowMap->getShadowIndex();
+            shadowInfo[lightIndex].layer = pShadowMap->getLayer();
 
-        FLightManager::ShadowOptions const* const options = entry.getShadowOptions();
-        const ShadowMap::ShadowMapInfo shadowMapInfo{
-                .atlasDimension = mTextureAtlasRequirements.size,
-                .textureDimension = uint16_t(options->mapSize),
-                .shadowDimension = uint16_t(options->mapSize - 2u),
-                .spotIndex = uint16_t(i),
-                .vsm = view.hasVSM(),
-                .polygonOffset = { // handle reversed Z
-                        .slope    = view.hasVSM() ? 0.0f : -params.options.polygonOffsetSlope,
-                        .constant = view.hasVSM() ? 0.0f : -params.options.polygonOffsetConstant
-                }
-        };
-
-        // for spotlights, we cull shadow casters first because we already know the frustum,
-        // this will help us find better near/far plane later
-
-        const auto position  = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).xyz;
-        const auto direction = lightData.elementAt<FScene::DIRECTION>(lightIndex);
-        const auto radius    = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).w;
-        const auto outerConeAngle = lcm.getSpotLightOuterCone(li);
-
-        const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, position);
-        const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f,
-                1.0f, 0.01f, radius);
-        const mat4f MpMv(math::highPrecisionMultiply(Mp, Mv));
-        const Frustum frustum(MpMv);
-
-        // Cull shadow casters
-        FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
-                VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(i));
-
-        shadowMap.updateSpot(lightData, lightIndex,
-                cameraInfo, shadowMapInfo,
-                *view.getScene(), sceneInfo);
-
-        if (shadowMap.hasVisibleShadows()) {
-            shadowInfo[lightIndex].castsShadows = true;
-            shadowInfo[lightIndex].index = i;
-            shadowInfo[lightIndex].layer = entry.getLayer();
-
-            const float wsTexelSizeAtOneMeter = shadowMap.getTexelSizAtOneMeterWs();
-            // note: normalBias is set to zero for VSM
-            const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
-
-            auto& s = mShadowUb.edit();
-            const double n = shadowMap.getCamera().getNear();
-            const double f = shadowMap.getCamera().getCullingFar();
-            s.shadows[i].lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
-            s.shadows[i].direction = direction;
-            s.shadows[i].normalBias = normalBias * wsTexelSizeAtOneMeter;
-            s.shadows[i].lightFromWorldZ = shadowMap.getLightFromWorldZ();
-            s.shadows[i].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
-            s.shadows[i].nearOverFarMinusNear = float(n / (f - n));
-            s.shadows[i].elvsm = options->vsm.elvsm;
-            s.shadows[i].bulbRadiusLs =
-                    mSoftShadowOptions.penumbraScale * options->shadowBulbRadius / wsTexelSizeAtOneMeter;
-
-            shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         }
     }
 
     // screen-space contact shadows for point/spotlights
+    auto& lcm = engine.getLightManager();
     auto *pLightInstances = lightData.data<FScene::LIGHT_INSTANCE>();
     for (size_t i = 0, c = lightData.size(); i < c; i++) {
         // screen-space contact shadows
@@ -598,18 +699,18 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     uint8_t layer = 0;
     uint32_t maxDimension = 0;
     bool elvsm = false;
-    for (auto& entry : mCascadeShadowMaps) {
+    for (auto* pShadowMap : mCascadeShadowMaps) {
         // Shadow map size should be the same for all cascades.
-        auto const& options = entry.getShadowOptions();
+        auto const& options = pShadowMap->getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
         elvsm = elvsm || options->vsm.elvsm;
-        entry.setLayer(layer++);
+        pShadowMap->setLayer(layer++);
     }
-    for (auto& entry : mSpotShadowMaps) {
-        auto const& options = entry.getShadowOptions();
+    for (auto& pShadowMap : mSpotShadowMaps) {
+        auto const& options = pShadowMap->getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
         elvsm = elvsm || options->vsm.elvsm;
-        entry.setLayer(layer++);
+        pShadowMap->setLayer(layer++);
     }
 
     const uint8_t layersNeeded = layer;

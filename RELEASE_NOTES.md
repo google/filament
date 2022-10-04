@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fix reloading crash in ubershader mode
 - Vulkan: improve performance in the readPixels path
 - Vulkan: fix black screen regression
+- engine: raise the spot shadows limit to 64, from 14.
 
 ## v1.28.0
 

@@ -166,7 +166,7 @@ public:
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FrameGraph& fg, FEngine& engine,
-            FEngine::DriverApi& driver, RenderPass const& pass) noexcept;
+            CameraInfo const& cameraInfo, RenderPass const& pass) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
@@ -467,7 +467,7 @@ private:
     static FScene::RenderableSoa::iterator partition(
             FScene::RenderableSoa::iterator begin,
             FScene::RenderableSoa::iterator end,
-            uint8_t mask) noexcept;
+            Culler::result_type mask, Culler::result_type value) noexcept;
 
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwBufferObject> mLightUbh;

@@ -80,7 +80,7 @@ public:
     void setShadowCascades(size_t lightIndex, LightManager::ShadowOptions const* options) noexcept;
     void addSpotShadowMap(size_t lightIndex, LightManager::ShadowOptions const* options) noexcept;
 
-    // Updates all of the shadow maps and performs culling.
+    // Updates all the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
     ShadowMapManager::ShadowTechnique update(FEngine& engine, FView& view,
             CameraInfo const& cameraInfo,
@@ -88,7 +88,7 @@ public:
 
     // Renders all the shadow maps.
     FrameGraphId<FrameGraphTexture> render(FrameGraph& fg, FEngine& engine,
-            RenderPass const& pass, FView& view) noexcept;
+            RenderPass const& pass, FView& view, CameraInfo const& mainCameraInfo) noexcept;
 
     ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {
         assert_invariant(cascade < CONFIG_MAX_SHADOW_CASCADES);
@@ -114,9 +114,9 @@ public:
         return mShadowMappingUniforms;
     }
 
-    auto& getShadowUniforms() const { return mShadowUb; }
-
     auto& getShadowUniformsHandle() const { return mShadowUbh; }
+
+    bool hasSpotShadows() const { return !mSpotShadowMaps.empty(); }
 
 private:
     ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
@@ -124,36 +124,21 @@ private:
             FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept;
 
     ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
-            FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept;
+            FScene::LightSoa& lightData) noexcept;
 
-    void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
+    void calculateTextureRequirements(FEngine& engine, FView& view,
+            FScene::LightSoa& lightData) noexcept;
 
-    class ShadowMapEntry {
-    public:
-        ShadowMapEntry() = default;
-        ShadowMapEntry(ShadowMap* shadowMap, size_t light,
-                LightManager::ShadowOptions const* options) :
-                mShadowMap(shadowMap), mOptions(options), mLightIndex(light) {
-        }
+    void prepareSpotShadowMap(ShadowMap& shadowMap,
+            FEngine& engine, FView& view, CameraInfo const& cameraInfo,
+            FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+            FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
-        explicit operator bool() const { return mShadowMap != nullptr; }
-
-        void setLayer(uint8_t layer) noexcept { mLayer = layer; }
-        uint8_t getLayer() const noexcept { return mLayer; }
-
-        LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
-        ShadowMap& getShadowMap() const { return *mShadowMap; }
-        size_t getLightIndex() const { return mLightIndex; }
-
-        bool hasVisibleShadows() const { return mShadowMap->hasVisibleShadows(); }
-
-    private:
-        ShadowMap* mShadowMap = nullptr;
-        LightManager::ShadowOptions const* mOptions = nullptr;
-        uint32_t mLightIndex = 0;
-        uint8_t mLayer = 0;
-    };
+    static void updateSpotVisibilityMasks(
+            uint8_t visibleLayers,
+            uint8_t const* UTILS_RESTRICT layers,
+            FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
+            Culler::result_type* UTILS_RESTRICT visibleMask, size_t count);
 
     class CascadeSplits {
     public:
@@ -211,12 +196,14 @@ private:
 
     ShadowMappingUniforms mShadowMappingUniforms;
 
-    utils::FixedCapacityVector<ShadowMapEntry> mCascadeShadowMaps{
-            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
+    ShadowMap::SceneInfo mSceneInfo;
+
+    utils::FixedCapacityVector<ShadowMap*> mCascadeShadowMaps{
+            utils::FixedCapacityVector<ShadowMap*>::with_capacity(
                     CONFIG_MAX_SHADOW_CASCADES) };
 
-    utils::FixedCapacityVector<ShadowMapEntry> mSpotShadowMaps{
-            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
+    utils::FixedCapacityVector<ShadowMap*> mSpotShadowMaps{
+            utils::FixedCapacityVector<ShadowMap*>::with_capacity(
                     CONFIG_MAX_SHADOW_CASTING_SPOTS) };
 
     // inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.

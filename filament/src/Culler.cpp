@@ -86,7 +86,10 @@ void Culler::intersects(
             visible &= fast::signbit(dot) << bit;
         }
 
-        results[i] |= result_type(visible);
+        auto r = results[i];
+        r &= ~result_type(1u << bit);
+        r |= result_type(visible);
+        results[i] = r;
     }
 }
 
@@ -101,22 +104,20 @@ bool Culler::intersects(Frustum const& frustum, Box const& box) noexcept {
     Culler::result_type results[MODULO];
     centers[0] = box.center;
     extents[0] = box.halfExtent;
-    results[0] = 0;
     Culler::intersects(results, frustum, centers, extents, MODULO, 0);
-    return bool(results[0]);
+    return bool(results[0] & 1);
 }
 
 /*
- * returns whether an sphere intersects with the frustum
+ * returns whether a sphere intersects with the frustum
  */
 bool Culler::intersects(Frustum const& frustum, float4 const& sphere) noexcept {
     // The main intersection routine assumes multiples of 8 items
     float4 spheres[MODULO];
     Culler::result_type results[MODULO];
     spheres[0] = sphere;
-    results[0] = 0;
     Culler::intersects(results, frustum, spheres, MODULO);
-    return bool(results[0]);
+    return bool(results[0] & 1);
 }
 
 // For testing...
