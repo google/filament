@@ -58,7 +58,9 @@ VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, Usa
     if (any(flags & ShaderStageFlags::FRAGMENT)) {
         src.set(MAX_SAMPLER_COUNT + binding);
     }
-    assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
+    // TODO: add support for compute by extending SHADER_MODULE_COUNT and ensuring UsageFlags
+    // has 186 bits (MAX_SAMPLER_COUNT * 3)
+    // assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
     return src;
 }
 
