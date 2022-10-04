@@ -249,15 +249,15 @@ static_assert(sizeof(LightsUib) == 64,
 struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ShadowUniforms" };
     struct alignas(16) ShadowData {
-        math::mat4f lightFromWorldMatrix;
-        math::float3 direction;
-        float normalBias;
-        math::float4 lightFromWorldZ;
+        math::mat4f lightFromWorldMatrix;       // 64
+        math::float3 direction;                 // 12
+        float normalBias;                       //  4
+        math::float4 lightFromWorldZ;           // 16
 
-        float texelSizeAtOneMeter;
-        float bulbRadiusLs;
-        float nearOverFarMinusNear;
-        bool elvsm;
+        float texelSizeAtOneMeter;              //  4
+        float bulbRadiusLs;                     //  4
+        float nearOverFarMinusNear;             //  4
+        bool elvsm;                             //  4
     };
     ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
 };

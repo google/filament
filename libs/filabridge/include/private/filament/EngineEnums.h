@@ -61,12 +61,19 @@ constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
 // The maximum number of spotlights in a scene that can cast shadows.
-// There is currently a limit to 14 spot shadow due to how we store the culling result
-// (see View.h).
-constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 14;
+// There is currently a limit to 142 spot shadow, as we are limited to 146 shadowmaps in totality.
+// Several factors are contributing to this limit:
+// - minspec for 2d texture arrays layer is 256
+// - we're using uint8_t to store the number of layers (255 max)
+// - minspec for UBOs is 16KiB, which currently can hold a maximum of 146 entries
+// - we need to reserve 4 entries for the cascaded shadow map
+// We use 64, which is a reasonable value.
+constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 64;
 
 // The maximum number of shadow cascades that can be used for directional lights.
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
+
+static_assert(CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS <= 146);
 
 // The maximum UBO size, in bytes. This value is set to 16 KiB due to the ES3.0 spec.
 // Note that this value constrains the maximum number of skinning bones, morph targets,

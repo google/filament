@@ -656,7 +656,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         RenderPass shadowPass(pass);
         shadowPass.setVariant(shadowVariant);
-        auto shadows = view.renderShadowMaps(fg, engine, driver, shadowPass);
+        auto shadows = view.renderShadowMaps(fg, engine, cameraInfo, shadowPass);
         blackboard["shadows"] = shadows;
     }
 
