@@ -120,6 +120,8 @@ static ssize_t extractArraySize(std::string& type) {
         return 0;
     }
 
+    const std::string typeWithSizeStr = type;
+
     // Remove the [...] bit
     type.erase(start);
 
@@ -129,7 +131,7 @@ static ssize_t extractArraySize(std::string& type) {
     }
 
     // Return the size (we already validated this part of the string contains only digits)
-    return (ssize_t)std::stoul(type.c_str() + start + 1, nullptr);
+    return std::stoul(typeWithSizeStr.c_str() + start + 1, nullptr);
 }
 
 static bool processParameter(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
