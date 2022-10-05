@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <algorithm>
 #include <array>        // note: this is safe, see how std::array is used below (inline / private)
 #include <cstddef>
 #include <utility>

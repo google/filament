@@ -241,8 +241,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         data.output = builder.write(data.output,
                                 FrameGraphTexture::Usage::COLOR_ATTACHMENT);
 
-                        renderTargetDesc.attachments.color[0] = data.output;
-                        renderTargetDesc.attachments.depth = depth;
+                        renderTargetDesc.attachments.content.color[0] = data.output;
+                        renderTargetDesc.attachments.content.depth = depth;
                         renderTargetDesc.clearFlags =
                                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
                         // we need to clear the shadow map with the max EVSM moments
@@ -253,21 +253,19 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                             data.tempBlurSrc = builder.write(data.tempBlurSrc,
                                     FrameGraphTexture::Usage::COLOR_ATTACHMENT);
 
-                            data.blurRt = builder.declareRenderPass("Temp Shadow RT", {
-                                    .attachments = {
-                                            .color = { data.tempBlurSrc },
-                                            .depth = depth },
-                                    .clearColor = vsmClearColor,
-                                    .samples = options->vsm.msaaSamples,
-                                    .clearFlags = TargetBufferFlags::COLOR
-                                                  | TargetBufferFlags::DEPTH
-                            });
+                            FrameGraphRenderPass::Descriptor descr;
+                            descr.attachments.content.color[0] = data.tempBlurSrc;
+                            descr.attachments.content.depth = depth;
+                            descr.clearColor = vsmClearColor;
+                            descr.samples = options->vsm.msaaSamples;
+                            descr.clearFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+                            data.blurRt = builder.declareRenderPass("Temp Shadow RT", descr);
                         }
                     } else {
                         // the shadowmap layer
                         data.output = builder.write(data.output,
                                 FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                        renderTargetDesc.attachments.depth = data.output;
+                        renderTargetDesc.attachments.content.depth = data.output;
                         renderTargetDesc.clearFlags = TargetBufferFlags::DEPTH;
                     }
 

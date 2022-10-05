@@ -142,10 +142,10 @@ protected:
     std::vector<CodeGenParams> mCodeGenPermutations;
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
-    static constexpr const CodeGenParams mSemanticCodeGenParams = {
-            .shaderModel = ShaderModel::MOBILE,
-            .targetApi = TargetApi::OPENGL,
-            .targetLanguage = TargetLanguage::SPIRV
+    const CodeGenParams mSemanticCodeGenParams = {
+        (int) ShaderModel::GL_ES_30,
+        TargetApi::OPENGL,
+        TargetLanguage::SPIRV
     };
 
     // Keeps track of how many times MaterialBuilder::init() has been called without a call to

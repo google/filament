@@ -694,10 +694,9 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
         // We have a limitation of 255 spot + 255 point lights per froxel.
         // note: initializer list for union cannot have more than one element
-        FroxelEntry entry{
-                .offset = offset,
-                .count = (uint8_t)std::min(size_t(255), b.lights.count()),
-        };
+        FroxelEntry entry;
+        entry.offset = offset;
+        entry.count = (uint8_t)std::min(size_t(255), b.lights.count());
         const size_t lightCount = entry.count;
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
@@ -707,7 +706,8 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.
             do {
-                froxels[i] = { .offset = 0, .count = allLightsCount };
+              froxels[i].offset = 0;
+              froxels[i].count = allLightsCount;
                 if (records[i].lights.none()) {
                     froxels[i].u32 = 0;
                 }

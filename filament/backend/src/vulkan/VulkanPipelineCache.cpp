@@ -594,12 +594,12 @@ void VulkanPipelineCache::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
 void VulkanPipelineCache::unbindImageView(VkImageView imageView) noexcept {
     for (auto& sampler : mDescriptorRequirements.samplers) {
         if (sampler.imageView == imageView) {
-            sampler = {};
+            sampler = DescriptorImageInfo();
         }
     }
     for (auto& target : mDescriptorRequirements.inputAttachments) {
         if (target.imageView == imageView) {
-            target = {};
+            target = DescriptorImageInfo();
         }
     }
 }

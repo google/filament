@@ -60,7 +60,7 @@ struct ShadowMappingUniforms {
 class ShadowMapManager {
 public:
 
-    using ShadowMappingUniforms = ShadowMappingUniforms;
+    using ShadowMappingUniforms = filament::ShadowMappingUniforms;
 
     enum class ShadowTechnique : uint8_t {
         NONE = 0x0u,

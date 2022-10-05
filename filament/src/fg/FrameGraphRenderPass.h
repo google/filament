@@ -33,13 +33,14 @@ namespace filament {
 struct FrameGraphRenderPass {
     static constexpr size_t ATTACHMENT_COUNT = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2;
     struct Attachments {
+        struct Content {
+            FrameGraphId<FrameGraphTexture> color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
+            FrameGraphId<FrameGraphTexture> depth;
+            FrameGraphId<FrameGraphTexture> stencil;
+        };
         union {
             FrameGraphId<FrameGraphTexture> array[ATTACHMENT_COUNT] = {};
-            struct {
-                FrameGraphId<FrameGraphTexture> color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
-                FrameGraphId<FrameGraphTexture> depth;
-                FrameGraphId<FrameGraphTexture> stencil;
-            };
+            Content content;
         };
     };
 

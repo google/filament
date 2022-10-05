@@ -386,10 +386,11 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                             FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 }
 
-                builder.declareRenderPass("Structure Target", {
-                        .attachments = { .color = { data.picking }, .depth = data.depth },
-                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
-                });
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.picking;
+                descr.attachments.content.depth = data.depth;
+                descr.clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+                builder.declareRenderPass("Structure Target", descr);
             },
             [=, renderPass = pass](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
@@ -423,9 +424,10 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                             .level = uint8_t(i)
                     });
                     out = builder.write(out, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                    data.rt[i - 1] = builder.declareRenderPass("Structure mip target", {
-                            .attachments = { .depth = out }
-                    });
+
+                    FrameGraphRenderPass::Descriptor descr;
+                    descr.attachments.content.depth = out;
+                    data.rt[i - 1] = builder.declareRenderPass("Structure mip target", descr);
                 }
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
@@ -437,6 +439,12 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 for (size_t level = 0; level < levelCount - 1; level++) {
                     auto out = resources.getRenderPassInfo(level);
                     driver.setMinMaxLevels(in, level, level);
+
+                    auto& material = getPostProcessMaterial("mipmapDepth");
+                    FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
+                    SamplerParams depthSamplerParams{};
+                    depthSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+                    mi->setParameter("depth", in, depthSamplerParams);
                     mi->setParameter("level", uint32_t(level));
                     commitAndRender(out, material, driver);
                 }
@@ -501,9 +509,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 // finally declare our render target
-                builder.declareRenderPass("Reflections Target", {
-                        .attachments = { .color = { data.reflections }, .depth = data.depth },
-                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH });
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.reflections;
+                descr.attachments.content.depth = data.depth;
+                descr.clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+                builder.declareRenderPass("Reflections Target", descr);
 
                 // get the structure buffer
                 assert_invariant(structure);
@@ -666,7 +676,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 data.output = builder.createTexture("Depth Texture Copy", desc);
                 data.output = builder.write(data.output,
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                builder.declareRenderPass("Depth Copy RenderTarget", {{ .depth = data.output }});
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.depth = data.output;
+                builder.declareRenderPass("Depth Copy RenderTarget", descr);
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -719,11 +732,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
                 depthAttachment = builder.read(depthAttachment,
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                builder.declareRenderPass("SSAO Target", {
-                        .attachments = { .color = { data.ao, data.bn }, .depth = depthAttachment },
-                        .clearColor = { 1.0f },
-                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
-                });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.ao;
+                descr.attachments.content.color[1] = data.bn;
+                descr.attachments.content.depth = depthAttachment;
+                descr.clearColor = { 1.0f };
+                descr.clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1;
+                builder.declareRenderPass("SSAO Target", descr);
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -757,8 +773,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                             getPostProcessMaterial("sao");
 
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("depth", depth, {
-                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                SamplerParams depthSamplerParams{};
+                depthSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+                mi->setParameter("depth", depth, depthSamplerParams);
                 mi->setParameter("screenFromViewMatrix",
                         mat4f(screenFromClipMatrix * cameraInfo.projection));
                 mi->setParameter("resolution",
@@ -875,11 +892,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 // We need to clear the buffers because we are skipping pixels at infinity (skybox)
                 data.blurred = builder.write(data.blurred, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
 
-                builder.declareRenderPass("Blurred target", {
-                        .attachments = { .color = { data.ao, data.bn }, .depth = depth },
-                        .clearColor = { 1.0f },
-                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
-                });
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.ao;
+                descr.attachments.content.color[1] = data.bn;
+                descr.attachments.content.depth = depth;
+                descr.clearColor = { 1.0f };
+                descr.clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1;
+                builder.declareRenderPass("Blurred target", descr);
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -1083,10 +1102,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 
                 // horizontal pass
 
-                mi->setParameter("source", hwIn, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
+                SamplerParams sourceSamplerParams{};
+                sourceSamplerParams.filterMag = SamplerMagFilter::LINEAR;
+                sourceSamplerParams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+                mi->setParameter("source", hwIn, sourceSamplerParams);
                 mi->setParameter("level", float(inSubDesc.level));
                 mi->setParameter("layer", float(inSubDesc.layer));
                 mi->setParameter("reinhard", reinhard ? uint32_t(1) : uint32_t(0));
@@ -1105,10 +1124,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 assert_invariant(width == hwOutRT.params.viewport.width);
                 assert_invariant(height == hwOutRT.params.viewport.height);
 
-                mi->setParameter("source", hwTemp, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
-                });
+                SamplerParams sourceSamplerParams2{};
+                sourceSamplerParams2.filterMin = SamplerMinFilter::LINEAR;
+                sourceSamplerParams2.filterMag = SamplerMagFilter::LINEAR; /* level is always 0 */
+                mi->setParameter("source", hwTemp, sourceSamplerParams2);
                 mi->setParameter("level", 0.0f);
                 mi->setParameter("layer", 0.0f);
                 mi->setParameter("axis", float2{ 0, 1.0f / tempDesc.height });
@@ -1476,23 +1495,29 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
 
-                data.outColor = builder.createTexture("dof downsample output", {
-                        .width  = width, .height = height, .levels = mipmapCount, .format = format
-                });
-                data.outCoc = builder.createTexture("dof CoC output", {
-                        .width  = width, .height = height, .levels = mipmapCount,
-                        .format = TextureFormat::R16F,
-                        .swizzle = {
-                                // the next stage expects min/max CoC in the red/green channel
-                                .r = backend::TextureSwizzle::CHANNEL_0,
-                                .g = backend::TextureSwizzle::CHANNEL_0 },
-                });
+                FrameGraphTexture::Descriptor dofTexDescr;
+                dofTexDescr.width = width;
+                dofTexDescr.height = height;
+                dofTexDescr.levels = mipmapCount;
+                dofTexDescr.format = format;
+                data.outColor = builder.createTexture("dof downsample output", dofTexDescr);
+
+                FrameGraphTexture::Descriptor cocTexDescr;
+                cocTexDescr.width = width;
+                cocTexDescr.height = height;
+                cocTexDescr.levels = mipmapCount;
+                cocTexDescr.format = TextureFormat::R16F;
+                // the next stage expects min/max CoC in the red/green channel
+                cocTexDescr.swizzle.r = backend::TextureSwizzle::CHANNEL_0;
+                cocTexDescr.swizzle.g = backend::TextureSwizzle::CHANNEL_0;
+                data.outCoc = builder.createTexture("dof CoC output", cocTexDescr);
                 data.outColor = builder.write(data.outColor, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.outCoc   = builder.write(data.outCoc,   FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass("DoF Target", { .attachments = {
-                                .color = { data.outColor, data.outCoc }
-                        }
-                });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.outColor;
+                descr.attachments.content.color[1] = data.outCoc;
+                builder.declareRenderPass("DoF Target", descr);
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto const& out = resources.getRenderPassInfo();
@@ -1502,8 +1527,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                         getPostProcessMaterial("dofCoc") :
                         getPostProcessMaterial("dofDownsample");
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
-                mi->setParameter("depth", depth, { .filterMin = SamplerMinFilter::NEAREST });
+                SamplerParams colorSamplerParams{};
+                colorSamplerParams.filterMin = SamplerMinFilter::NEAREST;
+                mi->setParameter("color", color, colorSamplerParams);
+                SamplerParams depthSamplerParams{};
+                depthSamplerParams.filterMin = SamplerMinFilter::NEAREST;
+                mi->setParameter("depth", depth, depthSamplerParams);
                 mi->setParameter("cocParams", cocParams);
                 mi->setParameter("cocClamp", float2{
                     -(dofOptions.maxForegroundCOC ? dofOptions.maxForegroundCOC : DOF_DEFAULT_MAX_COC),
@@ -1541,10 +1570,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     inOutColor = builder.write(inOutColor, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                     inOutCoc   = builder.write(inOutCoc,   FrameGraphTexture::Usage::COLOR_ATTACHMENT);
 
-                    data.rp[i] = builder.declareRenderPass("DoF Target", { .attachments = {
-                                .color = { inOutColor, inOutCoc  }
-                        }
-                    });
+                    FrameGraphRenderPass::Descriptor descr;
+                    descr.attachments.content.color[0] = data.inOutColor;
+                    descr.attachments.content.color[1] = data.inOutCoc;
+
+                    data.rp[i] = builder.declareRenderPass("DoF Target", descr);
                 }
             },
             [=](FrameGraphResources const& resources,
@@ -1556,8 +1586,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofMipmap");
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("color", inOutColor, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->setParameter("coc",   inOutCoc,   { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+
+                SamplerParams colorSamplerParams{};
+                colorSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+                mi->setParameter("color", inOutColor, colorSamplerParams);
+                SamplerParams cocSamplerParams{};
+                cocSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+                mi->setParameter("coc",   inOutCoc,   cocSamplerParams);
                 mi->use(driver);
 
                 const PipelineState pipeline(material.getPipelineState(mEngine, variant));
@@ -1628,7 +1663,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                             getPostProcessMaterial("dofTilesSwizzle") :
                             getPostProcessMaterial("dofTiles");
                     FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                    mi->setParameter("cocMinMax", inCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
+                    SamplerParams cocMinMaxSamplerParams{};
+                    cocMinMaxSamplerParams.filterMin = SamplerMinFilter::NEAREST;
+                    mi->setParameter("cocMinMax", inCocMinMax, cocMinMaxSamplerParams);
                     mi->setParameter("texelSize", float2{ 1.0f / inputDesc.width, 1.0f / inputDesc.height });
                     commitAndRender(out, material, driver);
                 });
@@ -1660,7 +1697,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     auto inTilesCocMinMax = resources.getTexture(data.inTilesCocMinMax);
                     auto const& material = getPostProcessMaterial("dofDilate");
                     FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                    mi->setParameter("tiles", inTilesCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
+                    SamplerParams tilesSamplerParams{};
+                    tilesSamplerParams.filterMin = SamplerMinFilter::NEAREST;
+                    mi->setParameter("tiles", inTilesCocMinMax, tilesSamplerParams);
                     commitAndRender(out, material, driver);
                 });
         return ppDoFDilate->outTilesCocMinMax;
@@ -1703,9 +1742,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 });
                 data.outColor  = builder.write(data.outColor, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.outAlpha  = builder.write(data.outAlpha, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass("DoF Target", {
-                        .attachments = { .color = { data.outColor, data.outAlpha }}
-                });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.outColor;
+                descr.attachments.content.color[1] = data.outAlpha;
+
+                builder.declareRenderPass("DoF Target", descr);
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto const& out = resources.getRenderPassInfo();
@@ -1719,14 +1761,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 auto const& material = getPostProcessMaterial("dof");
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
                 // it's not safe to use bilinear filtering in the general case (causes artifacts around edges)
+
+                SamplerParams colorSamplerParams{};
+                colorSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
                 mi->setParameter("color", color,
-                        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                        colorSamplerParams);
+
+                SamplerParams colorLinearSamplerParams{};
+                colorLinearSamplerParams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
                 mi->setParameter("colorLinear", color,
-                        { .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+                        colorLinearSamplerParams);
+
+                SamplerParams cocSamplerParams{};
+                cocSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
                 mi->setParameter("coc", coc,
-                        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                        cocSamplerParams);
+
+                SamplerParams tilesSamplerParams{};
+                tilesSamplerParams.filterMin = SamplerMinFilter::NEAREST;
                 mi->setParameter("tiles", tilesCocMinMax,
-                        { .filterMin = SamplerMinFilter::NEAREST });
+                        tilesSamplerParams);
                 mi->setParameter("cocToTexelScale", float2{
                         bokehAspectRatio / (inputDesc.width  * dofResolution),
                                      1.0 / (inputDesc.height * dofResolution)
@@ -1765,9 +1819,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 data.outAlpha = builder.createTexture("dof alpha output", fg.getDescriptor(data.inAlpha));
                 data.outColor = builder.write(data.outColor, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.outAlpha = builder.write(data.outAlpha, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass("DoF Target", {
-                        .attachments = { .color = { data.outColor, data.outAlpha }}
-                });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.outColor;
+                descr.attachments.content.color[1] = data.outAlpha;
+
+                builder.declareRenderPass("DoF Target", descr);
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto const& out = resources.getRenderPassInfo();
@@ -1778,9 +1835,19 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofMedian");
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("dof",   inColor,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->setParameter("alpha", inAlpha,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->setParameter("tiles", tilesCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
+
+                SamplerParams dofSamplerParams{};
+                dofSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+                mi->setParameter("dof",   inColor,        dofSamplerParams);
+
+                SamplerParams alphaSamplerParams{};
+                alphaSamplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+                mi->setParameter("alpha", inAlpha,        alphaSamplerParams);
+
+                SamplerParams tilesSamplerParams{};
+                tilesSamplerParams.filterMin = SamplerMinFilter::NEAREST;
+                mi->setParameter("tiles", tilesCocMinMax, tilesSamplerParams);
+
                 commitAndRender(out, material, driver);
             });
 
@@ -1825,10 +1892,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofCombine");
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
-                mi->setParameter("dof",   dof,   { .filterMag = SamplerMagFilter::NEAREST });
-                mi->setParameter("alpha", alpha, { .filterMag = SamplerMagFilter::NEAREST });
-                mi->setParameter("tiles", tilesCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
+
+                SamplerParams colorSamplerParams{};
+                colorSamplerParams.filterMin = SamplerMinFilter::NEAREST;
+                mi->setParameter("color", color, colorSamplerParams);
+
+                SamplerParams dofSamplerParams{};
+                dofSamplerParams.filterMag = SamplerMagFilter::NEAREST;
+                mi->setParameter("dof",   dof,   dofSamplerParams);
+
+                SamplerParams alphaSamplerParams{};
+                alphaSamplerParams.filterMag = SamplerMagFilter::NEAREST;
+                mi->setParameter("alpha", alpha, alphaSamplerParams);
+
+                SamplerParams tilesSamplerParams{};
+                tilesSamplerParams.filterMin = SamplerMinFilter::NEAREST;
+                mi->setParameter("tiles", tilesCocMinMax, tilesSamplerParams);
+
                 commitAndRender(out, material, driver);
             });
 
@@ -1930,20 +2010,18 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                 auto hwOut = resources.getTexture(data.out);
                 auto hwStage = resources.getTexture(data.stage);
 
-                auto const& material = getPostProcessMaterial("bloomDownsample");
-                auto const* ma = material.getMaterial(mEngine);
+                mi->use(driver);
 
-                FMaterialInstance* mis[] = {
-                        ma->createInstance("bloomDownsample-ping"),
-                        ma->createInstance("bloomDownsample-pong"),
-                        ma->createInstance("bloomDownsample-first"),
-                };
+                SamplerParams samplerParams{};
+                samplerParams.filterMag = SamplerMagFilter::LINEAR;
+                samplerParams.filterMin = SamplerMinFilter::LINEAR;
 
-                mis[0]->setParameter("source", hwOut, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
-
+                mi->setParameter("source", hwIn, samplerParams);
+                mi->setParameter("level", 0.0f);
+                mi->setParameter("threshold", inoutBloomOptions.threshold ? 1.0f : 0.0f);
+                mi->setParameter("invHighlight",
+                        std::isinf(inoutBloomOptions.highlight) ? 0.0f : 1.0f
+                                                                            / inoutBloomOptions.highlight);
                 mis[1]->setParameter("source", hwStage, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -1971,19 +2049,13 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                     render(hwDstRT, pipeline, driver);
                 }
 
-                for (size_t i = 1; i < inoutBloomOptions.levels; i++) {
-                    const size_t parity = 1u - (i & 0x1u);
-                    auto hwDstRT = resources.getRenderPassInfo(parity ? data.outRT[i] : data.stageRT[i]);
-                    hwDstRT.params.flags.discardStart = TargetBufferFlags::COLOR;
-                    hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-                    mis[parity]->setParameter("level", float(i - 1));
-                    mis[parity]->commit(driver);
-                    mis[parity]->use(driver);
-                    render(hwDstRT, pipeline, driver);
-                }
 
-                for (auto& mi : mis) {
-                    mEngine.destroy(mi);
+                    // prepare the next level
+                    SamplerParams samplerParamsi{};
+                    samplerParamsi.filterMag = SamplerMagFilter::LINEAR;
+                    samplerParamsi.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+                    mi->setParameter("source", parity ? hwOut : hwStage, samplerParamsi);
+                    mi->setParameter("level", float(i));
                 }
             });
 
@@ -2045,10 +2117,14 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
                     auto w = FTexture::valueForLevel(i - 1, outDesc.width);
                     auto h = FTexture::valueForLevel(i - 1, outDesc.height);
-                    mis[parity]->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
-                    mis[parity]->setParameter("level", float(i));
-                    mis[parity]->commit(driver);
-                    mis[parity]->use(driver);
+
+                    mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
+                    SamplerParams sourceSamplerParams{};
+                    sourceSamplerParams.filterMag = SamplerMagFilter::LINEAR;
+                    sourceSamplerParams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+                    mi->setParameter("source", parity ? hwStage : hwOut, sourceSamplerParams);
+                    mi->setParameter("level", float(i));
+                    mi->commit(driver);
                     render(hwDstRT, pipeline, driver);
                 }
 
@@ -2100,10 +2176,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
                 auto const& material = getPostProcessMaterial("flare");
                 FMaterialInstance* mi = material.getMaterialInstance(mEngine);
 
-                mi->setParameter("color", in, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
+                SamplerParams colorSamplerParams{};
+                colorSamplerParams.filterMag = SamplerMagFilter::LINEAR;
+                colorSamplerParams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+                mi->setParameter("color", in, colorSamplerParams);
 
                 mi->setParameter("level", 1.0f);    // adjust with resolution
                 mi->setParameter("aspectRatio", float2{ aspectRatio, 1.0f / aspectRatio });
@@ -2163,14 +2239,16 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
     auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
     FMaterialInstance* mi = material.getMaterialInstance(mEngine);
 
-    mi->setParameter("lut", colorGrading->getHwHandle(), {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR,
-            .wrapS = SamplerWrapMode::CLAMP_TO_EDGE,
-            .wrapT = SamplerWrapMode::CLAMP_TO_EDGE,
-            .wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
-            .anisotropyLog2 = 0
-    });
+    SamplerParams samplerParams{};
+    samplerParams.filterMag = SamplerMagFilter::LINEAR,
+    samplerParams.filterMin = SamplerMinFilter::LINEAR,
+    samplerParams.wrapS = SamplerWrapMode::CLAMP_TO_EDGE,
+    samplerParams.wrapT = SamplerWrapMode::CLAMP_TO_EDGE,
+    samplerParams.wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
+        samplerParams.anisotropyLog2 = 0;
+
+    mi->setParameter("lut", colorGrading->getHwHandle(), samplerParams);
+
     const float lutDimension = float(colorGrading->getDimension());
     mi->setParameter("lutSize", float2{
         0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
@@ -2234,9 +2312,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.inout = builder.read(inout, FrameGraphTexture::Usage::SUBPASS_INPUT);
                 data.inout = builder.write(data.inout, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass("Uncompress target", {
-                        .attachments = { .color = { data.inout }}
-                });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.inout;
+
+                builder.declareRenderPass("Uncompress target", descr);
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 customResolvePrepareSubpass(driver, CustomResolveOp::UNCOMPRESS);
@@ -2334,33 +2414,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 auto const& material = getPostProcessMaterial("colorGrading");
                 FMaterialInstance* mi = material.getMaterialInstance(mEngine);
 
-                mi->setParameter("lut", colorGrading->getHwHandle(), {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
-                });
+                SamplerParams samplerParams{};
+                samplerParams.filterMag = SamplerMagFilter::LINEAR;
+                samplerParams.filterMin = SamplerMinFilter::LINEAR;
+                mi->setParameter("lut", colorGrading->getHwHandle(), samplerParams);
+
                 const float lutDimension = float(colorGrading->getDimension());
                 mi->setParameter("lutSize", float2{
                         0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
                 });
                 mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
-                mi->setParameter("bloomBuffer", bloomTexture, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR /* always read base level in shader */
-                });
-                mi->setParameter("flareBuffer", flareTexture, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
-                });
-                mi->setParameter("dirtBuffer", dirtTexture, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
-                });
-                mi->setParameter("starburstBuffer", starburstTexture, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR,
-                        .wrapS = SamplerWrapMode::REPEAT,
-                        .wrapT = SamplerWrapMode::REPEAT
-                });
+                mi->setParameter("bloomBuffer", bloomTexture, samplerParams);
+                mi->setParameter("flareBuffer", flareTexture, samplerParams);
+                mi->setParameter("dirtBuffer", dirtTexture, samplerParams);
+
+                SamplerParams samplerParams2{};
+                samplerParams2.filterMag = SamplerMagFilter::LINEAR;
+                samplerParams2.filterMag = SamplerMagFilter::LINEAR;
+                samplerParams2.wrapS = SamplerWrapMode::REPEAT;
+                samplerParams2.wrapT = SamplerWrapMode::REPEAT;
+
+                mi->setParameter("starburstBuffer", starburstTexture, samplerParams2);
 
                 // Bloom params
                 float4 bloomParameters{
@@ -2429,10 +2503,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("fxaa");
                 FMaterialInstance* mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("colorBuffer", texture, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
-                });
+
+                SamplerParams colorSamplerParams{};
+                colorSamplerParams.filterMag = SamplerMagFilter::LINEAR;
+                colorSamplerParams.filterMin = SamplerMinFilter::LINEAR;
+                mi->setParameter("colorBuffer", texture, colorSamplerParams);
                 mi->setParameter("viewport", float4{
                         (float)vp.left   / inDesc.width,
                         (float)vp.bottom / inDesc.height,
@@ -2530,9 +2605,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                     data.output = builder.read(data.output, FrameGraphTexture::Usage::SUBPASS_INPUT);
                 }
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass("TAA target", {
-                        .attachments = { .color = { data.output, data.tonemappedOutput }}
-                });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.output;
+                descr.attachments.content.color[1] = data.tonemappedOutput;
+                builder.declareRenderPass("TAA target", descr);
             },
             [=, &current](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
 
@@ -2577,10 +2654,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("color",  color, {});  // nearest
                 mi->setParameter("depth",  depth, {});  // nearest
                 mi->setParameter("alpha", taaOptions.feedback);
-                mi->setParameter("history", history, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
-                });
+
+                SamplerParams historySamplerParams{};
+                historySamplerParams.filterMag = SamplerMagFilter::LINEAR;
+                historySamplerParams.filterMin = SamplerMinFilter::LINEAR;
+                mi->setParameter("history", history, historySamplerParams);
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
                         historyProjection *
@@ -2652,11 +2730,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 // target from data.input in the execute closure, because data.input may refer to
                 // an imported render target and in this case data.input won't resolve to an actual
                 // HwTexture handle. Using a RenderPass works because data.input will resolve
-                // to the actual imported render target and will have the correct viewport.
-                builder.declareRenderPass("opaque blit input", {
-                        .attachments = { .color = { data.input }},
-                        .viewport = vp
-                });
+                // to the actual imported render target and will have the correct viewport
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.input;
+                descr.viewport = vp;
+
+                builder.declareRenderPass("opaque blit input", descr);
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto out = resources.getRenderPassInfo(0);
@@ -2716,9 +2795,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                 }
 
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass(builder.getName(data.output), {
-                        .attachments = { .color = { data.output }, .depth = { data.depth }},
-                        .clearFlags = TargetBufferFlags::DEPTH });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.output;
+                descr.attachments.content.depth = { data.depth };
+                descr.clearFlags = TargetBufferFlags::DEPTH;
+
+                builder.declareRenderPass(builder.getName(data.output), descr);
             },
             [this, twoPassesEASU, dsrOptions, vp, translucent, filter](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -2766,9 +2849,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                     splitEasuMaterial = &getPostProcessMaterial("fsr_easu_mobileF");
                     auto* mi = splitEasuMaterial->getMaterialInstance(mEngine);
                     setEasuUniforms(mi, inputDesc, outputDesc);
-                    mi->setParameter("color", color, {
-                        .filterMag = SamplerMagFilter::LINEAR
-                    });
+
+                    SamplerParams colorSamplerParams{};
+                    colorSamplerParams.filterMag = SamplerMagFilter::LINEAR;
+                    mi->setParameter("color", color, colorSamplerParams);
                     mi->setParameter("resolution",
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
@@ -2785,10 +2869,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                     if (dsrOptions.quality != QualityLevel::LOW) {
                         setEasuUniforms(mi, inputDesc, outputDesc);
                     }
-                    mi->setParameter("color", color, {
-                        .filterMag = (dsrOptions.quality == QualityLevel::LOW) ?
-                                filter : SamplerMagFilter::LINEAR
-                    });
+
+                    SamplerParams samplerParams{};
+                    samplerParams.filterMag = (dsrOptions.quality == QualityLevel::LOW) ?
+                                                  filter : SamplerMagFilter::LINEAR;
+                    mi->setParameter("color", color, samplerParams);
                     mi->setParameter("resolution",
                             float4{ outputDesc.width, outputDesc.height,
                                     1.0f / outputDesc.width, 1.0f / outputDesc.height });
@@ -2912,8 +2997,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevelNoCheck(Fram
                 FrameGraphRenderPass::Descriptor rpDesc;
 
                 auto& rpDescAttachment = isDepthFormat(desc.format) ?
-                                   rpDesc.attachments.depth :
-                                   rpDesc.attachments.color[0];
+                                   rpDesc.attachments.content.depth :
+                                   rpDesc.attachments.content.color[0];
 
                 data.usage = isDepthFormat(desc.format) ?
                              FrameGraphTexture::Usage::DEPTH_ATTACHMENT :
@@ -2972,15 +3057,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 const char* name = builder.getName(input);
                 data.in = builder.sample(input);
 
-                auto out = builder.createSubresource(data.in, "Mip level", {
-                        .level = uint8_t(level + 1), .layer = layer });
+                FrameGraphTexture::SubResourceDescriptor subResDescr;
+                subResDescr.level = uint8_t(level + 1);
+                subResDescr.layer = layer;
+
+                auto out = builder.createSubresource(data.in, "Mip level", subResDescr);
 
                 out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass(name, {
-                    .attachments = { .color = { out }},
-                    .clearColor = clearColor,
-                    .clearFlags = TargetBufferFlags::COLOR
-                });
+
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = out;
+                descr.clearColor = clearColor;
+                descr.clearFlags = TargetBufferFlags::COLOR;
+
+                builder.declareRenderPass(name, descr);
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -3003,10 +3093,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 pipeline.scissor = { 1u, 1u, dim - 2u, dim - 2u };
 
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("color", in, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
+
+                SamplerParams samplerParams{};
+                samplerParams.filterMag = SamplerMagFilter::LINEAR;
+                samplerParams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+                mi->setParameter("color", in, samplerParams);
                 mi->setParameter("level", uint32_t(level));
                 mi->setParameter("layer", uint32_t(layer));
                 mi->setParameter("uvscale", 1.0f / dim);

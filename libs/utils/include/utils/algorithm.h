@@ -18,7 +18,7 @@
 #define TNT_UTILS_ALGORITHM_H
 
 #include <utils/compiler.h>
-
+#include <cstddef>
 #include <type_traits>      // for std::enable_if
 
 #include <limits.h>

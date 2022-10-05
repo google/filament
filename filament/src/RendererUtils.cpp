@@ -153,12 +153,13 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                  * be (the imported resource viewport is set to 'vp', see  how 'fgViewRenderTarget'
                  * is initialized in this file).
                  */
-                builder.declareRenderPass("Color Pass Target", {
-                        .attachments = { .color = { data.color, data.output },
-                                .depth = data.depth,
-                                .stencil = data.stencil },
-                                .samples = config.msaa,
-                        .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags });
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.color;
+                descr.attachments.content.color[1] = data.output;
+                descr.attachments.content.depth = data.depth;
+                descr.samples = config.msaa;
+                descr.clearFlags = clearColorFlags | clearDepthFlags;
+                builder.declareRenderPass("Color Pass Target", descr);
 
                 data.clearColor = config.clearColor;
                 data.clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags;

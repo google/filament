@@ -123,8 +123,8 @@ class VulkanCommands {
         VulkanCommandBuffer* mCurrent = nullptr;
         VkSemaphore mSubmissionSignal = {};
         VkSemaphore mInjectedSignal = {};
-        VulkanCommandBuffer mStorage[CAPACITY] = {};
-        VkSemaphore mSubmissionSignals[CAPACITY] = {};
+        VulkanCommandBuffer mStorage[CAPACITY];
+        VkSemaphore mSubmissionSignals[CAPACITY];
         size_t mAvailableCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;
 };

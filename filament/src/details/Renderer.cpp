@@ -790,9 +790,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.picking = builder.read(picking,
                             FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                    builder.declareRenderPass("Picking Resolve Target", {
-                            .attachments = { .color = { data.picking }}
-                    });
+
+                    FrameGraphRenderPass::Descriptor descr;
+                    descr.attachments.content.color[0] = data.picking;
+                    builder.declareRenderPass("Picking Resolve Target", descr);
                     builder.sideEffect();
                 },
                 [=, &view](FrameGraphResources const& resources,

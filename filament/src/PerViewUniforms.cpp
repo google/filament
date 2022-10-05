@@ -56,8 +56,10 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
 
     if (engine.getDFG().isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
-        mSamplers.setSampler(PerViewSib::IBL_DFG_LUT,
-                { engine.getDFG().getTexture(), sampler.getSamplerParams() });
+        backend::SamplerDescriptor s;
+        s.t = engine.getDFG().getTexture();
+        s.s = sampler.getSamplerParams();
+        mSamplers.setSampler(PerViewSib::IBL_DFG_LUT, std::move(s));
     }
 }
 
@@ -163,10 +165,13 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,
             && options.resolution < 1.0f;
 
     // LINEAR filtering is only needed when AO is enabled and low-quality upsampling is used.
-    mSamplers.setSampler(PerViewSib::SSAO, { ssao, {
-        .filterMag = options.enabled && !highQualitySampling ?
-                SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
-    }});
+
+    backend::SamplerDescriptor sampler;
+    sampler.t = ssao;
+    sampler.s.filterMag = options.enabled && !highQualitySampling ?
+    SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST;
+    
+    mSamplers.setSampler(PerViewSib::SSAO, std::move(sampler));
 
     const float edgeDistance = 1.0f / options.bilateralThreshold;
     auto& s = mUniforms.edit();
@@ -183,10 +188,13 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
         float refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
-    mSamplers.setSampler(PerViewSib::SSR, { ssr, {
-        .filterMag = SamplerMagFilter::LINEAR,
-        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-    }});
+
+    
+    backend::SamplerDescriptor sampler;
+    sampler.t = ssr;
+    sampler.s.filterMag = SamplerMagFilter::LINEAR;
+    sampler.s.filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
+    mSamplers.setSampler(PerViewSib::SSR, std::move(sampler));
 
     auto& s = mUniforms.edit();
     s.refractionLodOffset = refractionLodOffset;
@@ -198,10 +206,12 @@ void PerViewUniforms::prepareHistorySSR(Handle<HwTexture> ssr,
         math::mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
-    mSamplers.setSampler(PerViewSib::SSR, { ssr, {
-        .filterMag = SamplerMagFilter::LINEAR,
-        .filterMin = SamplerMinFilter::LINEAR
-    }});
+
+    backend::SamplerDescriptor sampler;
+    sampler.t = ssr;
+    sampler.s.filterMag = SamplerMagFilter::LINEAR;
+    sampler.s.filterMin = SamplerMinFilter::LINEAR;
+    mSamplers.setSampler(PerViewSib::SSR, std::move(sampler));
 
     auto& s = mUniforms.edit();
     s.ssrReprojection = historyProjection;
@@ -214,7 +224,9 @@ void PerViewUniforms::prepareHistorySSR(Handle<HwTexture> ssr,
 
 void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {
     // sampler must be NEAREST
-    mSamplers.setSampler(PerViewSib::STRUCTURE, { structure, {}});
+    backend::SamplerDescriptor sampler;
+    sampler.t = structure;
+    mSamplers.setSampler(PerViewSib::STRUCTURE, std::move(sampler));
 }
 
 void PerViewUniforms::prepareDirectionalLight(
@@ -273,18 +285,22 @@ void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
     if (!reflection) {
         reflection = engine.getDummyCubemap()->getHwHandle();
     }
-    mSamplers.setSampler(PerViewSib::IBL_SPECULAR, {
-            reflection, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-            }});
+
+    
+    backend::SamplerDescriptor sampler;
+    sampler.t = reflection;
+    sampler.s.filterMag = SamplerMagFilter::LINEAR;
+    sampler.s.filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
+    mSamplers.setSampler(PerViewSib::IBL_SPECULAR, std::move(sampler));
 }
 
 void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     auto& s = mUniforms.edit();
     froxelizer.updateUniforms(s);
     float f = froxelizer.getLightFar();
-    mSamplers.setSampler(PerViewSib::FROXELS, { froxelizer.getFroxelTexture() });
+    backend::SamplerDescriptor sampler;
+    sampler.t = froxelizer.getFroxelTexture();
+    mSamplers.setSampler(PerViewSib::FROXELS, std::move(sampler));
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
@@ -316,12 +332,14 @@ void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
     if (options.anisotropy > 0 || options.mipmapping) {
         filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
     }
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, {
-            texture, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = filterMin,
-                    .anisotropyLog2 = options.anisotropy,
-            }});
+
+    backend::SamplerDescriptor sampler;
+    sampler.t = texture;
+    sampler.s.filterMag = SamplerMagFilter::LINEAR;
+    sampler.s.filterMin = filterMin;
+    sampler.s.anisotropyLog2 = options.anisotropy;
+    mSamplers.setSampler(PerViewSib::SHADOW_MAP, std::move(sampler));
+    
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSM;
     s.vsmExponent = options.highPrecision ? high : low;
@@ -332,13 +350,14 @@ void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
 
 void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, {
-            texture, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR,
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
-                    .compareFunc = SamplerCompareFunc::GE
-            }});
+
+    backend::SamplerDescriptor sampler;
+    sampler.t = texture;
+    sampler.s.filterMag = SamplerMagFilter::LINEAR;
+    sampler.s.filterMin = SamplerMinFilter::LINEAR;
+    sampler.s.compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE;
+    sampler.s.compareFunc = SamplerCompareFunc::GE;
+    mSamplers.setSampler(PerViewSib::SHADOW_MAP, std::move(sampler));
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
     PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
@@ -347,7 +366,9 @@ void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture,
 void PerViewUniforms::prepareShadowDPCF(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms,
         SoftShadowOptions const& options) noexcept {
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {}});
+    backend::SamplerDescriptor sampler;
+    sampler.t = texture;
+    mSamplers.setSampler(PerViewSib::SHADOW_MAP, std::move(sampler));
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
@@ -357,7 +378,9 @@ void PerViewUniforms::prepareShadowDPCF(Handle<HwTexture> texture,
 void PerViewUniforms::prepareShadowPCSS(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms,
         SoftShadowOptions const& options) noexcept {
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {}});
+    backend::SamplerDescriptor sampler;
+    sampler.t = texture;
+    mSamplers.setSampler(PerViewSib::SHADOW_MAP, std::move(sampler));
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;

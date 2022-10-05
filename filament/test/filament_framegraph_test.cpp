@@ -341,7 +341,9 @@ TEST_F(FrameGraphTest, Basic) {
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.depth = builder.create<FrameGraphTexture>("Depth Buffer", {.width=16, .height=32});
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                builder.declareRenderPass("Depth target", { .attachments = { .depth = data.depth }});
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.depth = data.depth;
+                builder.declareRenderPass("Depth target", descr);
                 EXPECT_TRUE(fg.isValid(data.depth));
             },
             [=](FrameGraphResources const& resources, auto const& data, backend::DriverApi& driver) {
@@ -372,10 +374,13 @@ TEST_F(FrameGraphTest, Basic) {
                 data.gbuf1 = builder.write(data.gbuf1, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.gbuf2 = builder.write(data.gbuf2, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.gbuf3 = builder.write(data.gbuf3, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass("Gbuffer target", { .attachments = {
-                        .color = { data.gbuf1, data.gbuf2, data.gbuf3 },
-                        .depth = data.depth
-                }});
+                FrameGraphRenderPass::Descriptor descr;
+                descr.attachments.content.color[0] = data.gbuf1;
+                descr.attachments.content.color[1] = data.gbuf2;
+                descr.attachments.content.color[2] = data.gbuf3;
+                descr.attachments.content.depth = data.depth;
+            
+                builder.declareRenderPass("Gbuffer target", descr);
 
                 EXPECT_TRUE(fg.isValid(data.depth));
             },

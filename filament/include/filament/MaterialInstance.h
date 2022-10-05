@@ -16,7 +16,7 @@
 
 #ifndef TNT_FILAMENT_MATERIALINSTANCE_H
 #define TNT_FILAMENT_MATERIALINSTANCE_H
-
+#include <cstring>
 #include <filament/FilamentAPI.h>
 #include <filament/Color.h>
 

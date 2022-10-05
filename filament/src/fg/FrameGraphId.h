@@ -86,7 +86,7 @@ template<typename RESOURCE>
 class FrameGraphId : public FrameGraphHandle {
 public:
     using FrameGraphHandle::FrameGraphHandle;
-    FrameGraphId() noexcept = default;
+    FrameGraphId() {}
     explicit FrameGraphId(FrameGraphHandle r) : FrameGraphHandle(r) { }
 };
 

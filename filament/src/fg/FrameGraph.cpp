@@ -51,8 +51,12 @@ uint32_t FrameGraph::Builder::declareRenderPass(const char* name,
 FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
         FrameGraphId<FrameGraphTexture> color, uint32_t* index) {
     color = write(color);
+
+  FrameGraphRenderPass::Descriptor descr;
+  descr.attachments.content.color[0] = color;
+
     uint32_t id = declareRenderPass(getName(color),
-            { .attachments = { .color = { color }}});
+            descr);
     if (index) *index = id;
     return color;
 }
