@@ -802,6 +802,24 @@ void MetalTexture::updateLodRange(uint32_t min, uint32_t max) {
     lodTextureView = nil;
 }
 
+void MetalSamplerGroup::finalize() {
+    assert_invariant(encoder);
+    // TODO: we should be able to encode textures and samplers inside setFinalizedTexture and
+    // setFinalizedSampler as they become available, but Metal doesn't seem to like this; the arg
+    // buffer gets encoded incorrectly. This warrants more investigation.
+
+    auto [buffer, offset] = argBuffer->getCurrentAllocation();
+    [encoder setArgumentBuffer:buffer offset:offset];
+
+    // Encode all textures and samplers.
+    for (size_t s = 0; s < size; s++) {
+        [encoder setTexture:textures[s] atIndex:(s * 2 + 0)];
+        [encoder setSamplerState:samplers[s] atIndex:(s * 2 + 1)];
+    }
+
+    finalized = true;
+}
+
 void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e) {
     encoder = e;
 
@@ -826,9 +844,6 @@ void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEnco
         argBuffer->createNewAllocation(cmdBuffer);
     }
 
-    auto [buffer, offset] = argBuffer->getCurrentAllocation();
-    [encoder setArgumentBuffer:buffer offset:offset];
-
     // Clear all textures and samplers.
     assert_invariant(textureHandles.size() == textures.size());
     assert_invariant(textures.size() == samplers.size());
@@ -844,15 +859,7 @@ void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEnco
 void MetalSamplerGroup::mutate(id<MTLCommandBuffer> cmdBuffer) {
     assert_invariant(finalized);    // only makes sense to mutate if this sampler group is finalized
     assert_invariant(argBuffer);
-    auto [buffer, offset] = argBuffer->createNewAllocation(cmdBuffer);
-    [encoder setArgumentBuffer:buffer offset:offset];
-
-    // Re-encode all textures and samplers.
-    for (size_t s = 0; s < size; s++) {
-        [encoder setTexture:textures[s] atIndex:(s * 2 + 0)];
-        [encoder setSamplerState:samplers[s] atIndex:(s * 2 + 1)];
-    }
-
+    argBuffer->createNewAllocation(cmdBuffer);
     finalized = false;
 }
 
