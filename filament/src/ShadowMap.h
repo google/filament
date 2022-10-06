@@ -56,6 +56,13 @@ static constexpr Culler::result_type VISIBLE_DYN_SHADOW_RENDERABLE = 1u << VISIB
 
 class ShadowMap {
 public:
+
+    enum class ShadowType : uint8_t {
+        DIRECTIONAL,
+        SPOT,
+        POINT
+    };
+
     explicit ShadowMap(FEngine& engine) noexcept;
 
     // ShadowMap is not copyable for now
@@ -109,7 +116,10 @@ public:
     static math::mat4f getDirectionalLightViewMatrix(
             math::float3 direction, math::float3 position = {}) noexcept;
 
-    void initialize(size_t lightIndex, uint16_t shadowIndex,
+    static math::mat4f getPointLightViewMatrix(backend::TextureCubemapFace face,
+            math::float3 position) noexcept;
+
+    void initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex,
             LightManager::ShadowOptions const* options);
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
@@ -123,6 +133,11 @@ public:
             filament::CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, FScene const& scene,
             SceneInfo sceneInfo) noexcept;
+
+    void updatePoint(const FScene::LightSoa& lightData, size_t index,
+            filament::CameraInfo const& camera, const ShadowMapInfo& shadowMapInfo,
+            FScene const& scene,
+            SceneInfo sceneInfo, uint8_t face) noexcept;
 
     void render(FScene const& scene, utils::Range<uint32_t> range,
             FScene::VisibleMaskType visibilityMask,
@@ -165,6 +180,10 @@ public:
     uint16_t getShadowIndex() const { return mShadowIndex; }
     void setLayer(uint8_t layer) noexcept { mLayer = layer; }
     uint8_t getLayer() const noexcept { return mLayer; }
+    bool isDirectionalShadow() const noexcept { return mShadowType == ShadowType::DIRECTIONAL; }
+    bool isSpotShadow() const noexcept { return mShadowType == ShadowType::SPOT; }
+    bool isPointShadow() const noexcept { return mShadowType == ShadowType::POINT; }
+    ShadowType getShadowType() const noexcept { return mShadowType; }
 
 private:
     struct Segment {
@@ -278,6 +297,7 @@ private:
     uint32_t mLightIndex = 0;   // which light are we shadowing
     uint16_t mShadowIndex = 0;  // our index in the shadowMap vector
     uint8_t mLayer = 0;         // our layer in the shadowMap texture
+    ShadowType mShadowType = ShadowType::DIRECTIONAL;
 };
 
 } // namespace filament
