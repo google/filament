@@ -186,6 +186,8 @@ private:
         size_t mSplitCount;
     };
 
+    FEngine& mEngine;
+
     // Atlas requirements, updated in ShadowMapManager::update(),
     // consumed in ShadowMapManager::render()
     struct TextureAtlasRequirements {
