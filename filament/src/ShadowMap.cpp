@@ -421,9 +421,6 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
     auto outerConeAngle = lcm.getSpotLightOuterCone(li);
     const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
 
-    // TODO: correctly compute if this spot light has any visible shadows.
-    mHasVisibleShadows = true;
-
     /*
      * Compute the light model matrix.
      */
@@ -433,9 +430,13 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
 
     // find decent near/far
     ShadowMap::updateSceneInfoSpot(Mv, scene, sceneInfo);
+
+    // if the scene was empty, near > far
+    mHasVisibleShadows = -sceneInfo.lsNearFar[0] < -sceneInfo.lsNearFar[1];
+
     // FIXME: we need a configuration for minimum near plane (for now hardcoded to 1cm)
-    float nearPlane = std::max(0.01f, -sceneInfo.lsNearFar.x);
-    float farPlane  = std::min(radius, -sceneInfo.lsNearFar.y);
+    float nearPlane = std::max(0.01f, -sceneInfo.lsNearFar[0]);
+    float farPlane  = std::min(radius, -sceneInfo.lsNearFar[1]);
 
     float outerConeAngleDegrees = outerConeAngle * f::RAD_TO_DEG;
     const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2.0f, 1.0f, nearPlane, farPlane);
