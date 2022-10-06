@@ -290,11 +290,11 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
         assert_invariant(shadowOptions.shadowCascades >= 1 &&
                 shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
-        mShadowMapManager.setShadowCascades(0, &shadowOptions);
+        mShadowMapManager.setDirectionalShadowMap(0, &shadowOptions);
     }
 
     // Find all shadow-casting spotlights.
-    size_t shadowCastingSpotCount = 0;
+    size_t shadowLayerCount = 0;
 
     // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spotlight shadows. Any additional
     // shadow-casting spotlights are ignored.
@@ -313,14 +313,16 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
             continue; // doesn't cast shadows
         }
 
-        if (UTILS_LIKELY(!lcm.isSpotLight(li))) {
-            continue; // is not a spot-li (we're not supporting point-lights yet)
+        const auto& shadowOptions = lcm.getShadowOptions(li);
+        mShadowMapManager.addShadowMap(l, lcm.isSpotLight(li), &shadowOptions);
+
+        if (lcm.isSpotLight(li)) {
+            shadowLayerCount += 6;
+        } else {
+            shadowLayerCount += 1;
         }
 
-        const auto& shadowOptions = lcm.getShadowOptions(li);
-        mShadowMapManager.addSpotShadowMap(l, &shadowOptions);
-        ++shadowCastingSpotCount;
-        if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {
+        if (shadowLayerCount > CONFIG_MAX_SHADOWMAP_PUNCTUAL - 1) {
             break; // we ran out of spotlight shadow casting
         }
     }

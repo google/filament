@@ -152,21 +152,20 @@ Light getLight(const uint lightIndex) {
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
     light.NoL = saturate(dot(shading_normal, light.l));
     light.worldPosition = positionFalloff.xyz;
-    light.castsShadows = false;
-    light.contactShadows = false;
-    light.shadowIndex = 0u;
-    light.shadowLayer = 0u;
     light.channels = channels;
-
-    uint type = typeShadow & 0x1u;
-    if (type == LIGHT_TYPE_SPOT) {
+    light.contactShadows = bool(typeShadow & 0x10u);
+#if defined(VARIANT_HAS_SHADOWING)
+#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
+    light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
+    light.shadowLayer = (typeShadow >> 16u) & 0xFFu;
+    light.castsShadows   = bool(channels & 0x10000u);
+    light.type = (typeShadow & 0x1u);
+    if (light.type == LIGHT_TYPE_SPOT) {
         light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
-        light.contactShadows = bool(typeShadow & 0x10u);
-        light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
-        light.shadowLayer = (typeShadow >> 16u) & 0xFFu;
-        light.castsShadows   = bool(channels & 0x10000u);
+        light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
     }
-
+#endif
+#endif
     return light;
 }
 
@@ -210,7 +209,20 @@ void evaluatePunctualLights(const MaterialInputs material,
 #if defined(VARIANT_HAS_SHADOWING)
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
-                visibility = shadow(false, light_shadowMap, light.shadowLayer, light.shadowIndex, 0u);
+                uint layer = light.shadowLayer;
+                highp vec4 shadowPosition;
+                if (light.type == LIGHT_TYPE_POINT) {
+                    // point-light shadows are sampled from a direction
+                    highp vec3 r = getWorldPosition() - light.worldPosition;
+                    highp vec4 nf = shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ;
+                    // getShadowPosition returns zLight which is needed for PCSS/DPCF
+                    shadowPosition = getShadowPosition(r, nf, layer, light.zLight);
+                } else {
+                    // getShadowPosition needs zLight for applying the normal bias
+                    shadowPosition = getShadowPosition(false, light.shadowIndex, 0u, light.zLight);
+                }
+                visibility = shadow(false, light_shadowMap, layer, light.shadowIndex,
+                        shadowPosition, light.zLight);
             }
             if (light.contactShadows && visibility > 0.0) {
                 if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {

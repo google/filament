@@ -27,9 +27,7 @@
 
 #include <private/filament/EngineEnums.h>
 
-#include <private/backend/DriverApi.h>
-#include "backend/DriverApiForward.h"
-
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
@@ -62,6 +60,8 @@ public:
 
     using ShadowMappingUniforms = ShadowMappingUniforms;
 
+    using ShadowType = ShadowMap::ShadowType;
+
     enum class ShadowTechnique : uint8_t {
         NONE = 0x0u,
         SHADOW_MAP = 0x1u,
@@ -77,8 +77,11 @@ public:
     // Reset shadow map layout.
     void reset() noexcept;
 
-    void setShadowCascades(size_t lightIndex, LightManager::ShadowOptions const* options) noexcept;
-    void addSpotShadowMap(size_t lightIndex, LightManager::ShadowOptions const* options) noexcept;
+    void setDirectionalShadowMap(size_t lightIndex,
+            LightManager::ShadowOptions const* options) noexcept;
+
+    void addShadowMap(size_t lightIndex, bool spotlight,
+            LightManager::ShadowOptions const* options) noexcept;
 
     // Updates all the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
@@ -99,14 +102,14 @@ public:
         return const_cast<ShadowMapManager*>(this)->getCascadeShadowMap(cascade);
     }
 
-    ShadowMap* getSpotShadowMap(size_t spot) noexcept {
-        assert_invariant(spot < CONFIG_MAX_SHADOW_CASTING_SPOTS);
+    ShadowMap* getPointOrSpotShadowMap(size_t index) noexcept {
+        assert_invariant(index < CONFIG_MAX_SHADOWMAP_PUNCTUAL);
         return std::launder(reinterpret_cast<ShadowMap*>(
-                &mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + spot]));
+                &mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + index]));
     }
 
-    ShadowMap const* getSpotShadowMap(size_t spot) const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getSpotShadowMap(spot);
+    ShadowMap const* getPointOrSpotShadowMap(size_t spot) const noexcept {
+        return const_cast<ShadowMapManager*>(this)->getPointOrSpotShadowMap(spot);
     }
 
     // valid after calling update() above
@@ -130,9 +133,15 @@ private:
             FScene::LightSoa& lightData) noexcept;
 
     void prepareSpotShadowMap(ShadowMap& shadowMap,
-            FEngine& engine, FView& view, CameraInfo const& cameraInfo,
+            FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
             FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
+
+    void preparePointShadowMap(ShadowMap& map,
+            FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
+            FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+            FScene::LightSoa& lightData, uint8_t face,
+            ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
     static void updateSpotVisibilityMasks(
             uint8_t visibleLayers,
@@ -204,14 +213,13 @@ private:
 
     utils::FixedCapacityVector<ShadowMap*> mSpotShadowMaps{
             utils::FixedCapacityVector<ShadowMap*>::with_capacity(
-                    CONFIG_MAX_SHADOW_CASTING_SPOTS) };
+                    CONFIG_MAX_SHADOWMAP_PUNCTUAL) };
 
     // inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
     // because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
-    // Each ShadowMap is currently 128 bytes.
+    // Each ShadowMap is currently 32 bytes.
     using ShadowMapStorage = std::aligned_storage<sizeof(ShadowMap), alignof(ShadowMap)>::type;
-    std::array<ShadowMapStorage,
-            CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS> mShadowMapCache;
+    std::array<ShadowMapStorage, CONFIG_MAX_SHADOW_LAYERS> mShadowMapCache;
 };
 
 } // namespace filament
