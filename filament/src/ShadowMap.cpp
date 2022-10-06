@@ -40,14 +40,13 @@ using namespace backend;
 // do this only if depth-clamp is available
 static constexpr bool USE_DEPTH_CLAMP = false;
 
-ShadowMap::ShadowMap(FEngine& engine) noexcept :
-        mEngine(engine),
-        mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN),
-        mTextureSpaceFlipped(engine.getBackend() == Backend::METAL) {
+ShadowMap::ShadowMap(FEngine& engine) noexcept
+        : mShadowType(ShadowType::DIRECTIONAL),
+          mHasVisibleShadows(false) {
     Entity entities[2];
     engine.getEntityManager().create(2, entities);
-    mCamera = mEngine.createCamera(entities[0]);
-    mDebugCamera = mEngine.createCamera((entities[1]));
+    mCamera = engine.createCamera(entities[0]);
+    mDebugCamera = engine.createCamera((entities[1]));
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
@@ -56,10 +55,6 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
 }
 
 void ShadowMap::terminate(FEngine& engine) {
-}
-
-ShadowMap::~ShadowMap() {
-    FEngine& engine = mEngine;
     Entity entities[] = { mCamera->getEntity(), mDebugCamera->getEntity() };
     for (Entity e : entities) {
         engine.destroyCameraComponent(e);
@@ -67,28 +62,14 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
+ShadowMap::~ShadowMap() = default;
+
 void ShadowMap::initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex,
         LightManager::ShadowOptions const* options) {
     mLightIndex = lightIndex;
     mShadowIndex = shadowIndex;
     mOptions = options;
     mShadowType = shadowType;
-}
-
-void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
-        FScene::VisibleMaskType visibilityMask,
-        CameraInfo const& cameraInfo,
-        RenderPass* const pass) noexcept {
-    const backend::Viewport disabledScissor{ 0, 0,
-            (uint32_t)std::numeric_limits<int32_t>::max(),
-            (uint32_t)std::numeric_limits<int32_t>::max() };
-    pass->setCamera(cameraInfo);
-    pass->setVisibilityMask(visibilityMask);
-    pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
-    pass->overridePolygonOffset(&mShadowMapInfo.polygonOffset);
-    pass->overrideScissor(&disabledScissor);
-    pass->appendCommands(RenderPass::SHADOW);
-    pass->sortCommands();
 }
 
 mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 position) noexcept {
@@ -111,23 +92,22 @@ math::mat4f ShadowMap::getPointLightViewMatrix(backend::TextureCubemapFace face,
     return Mv;
 }
 
-void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t index,
+ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
+        const FScene::LightSoa& lightData, size_t index,
         filament::CameraInfo const& camera,
         ShadowMapInfo const& shadowMapInfo, FScene const& scene,
         SceneInfo& sceneInfo) noexcept {
 
-    mShadowMapInfo = shadowMapInfo;
-
     // Note: we keep the polygon offset even with VSM as it seems to help.
-    auto& lcm = mEngine.getLightManager();
+    auto& lcm = engine.getLightManager();
     FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
 
 #ifndef NDEBUG
     // LISPSM debugging for directional light (works because we only have one)
     const float dz = camera.zf - camera.zn;
-    float& dzn = mEngine.debug.shadowmap.dzn;
-    float& dzf = mEngine.debug.shadowmap.dzf;
+    float& dzn = engine.debug.shadowmap.dzn;
+    float& dzf = engine.debug.shadowmap.dzf;
     if (dzn < 0)    dzn = std::max(0.0f, params.options.shadowNearHint - camera.zn) / dz;
     else            params.options.shadowNearHint = dzn * dz - camera.zn;
     if (dzf > 0)    dzf =-std::max(0.0f, camera.zf - params.options.shadowFarHint) / dz;
@@ -165,7 +145,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
     const Aabb wsShadowReceiversVolume = sceneInfo.wsShadowReceiversVolume;
     if (wsShadowCastersVolume.isEmpty() || wsShadowReceiversVolume.isEmpty()) {
         mHasVisibleShadows = false;
-        return;
+        return {};
     }
 
     // view frustum vertices in world-space
@@ -185,7 +165,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
 
     if (UTILS_UNLIKELY(vertexCount < 4)) {
         mHasVisibleShadows = false;
-        return;
+        return {};
     }
 
     /*
@@ -216,7 +196,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
             lsLightFrustumBounds.max.z = std::max(lsLightFrustumBounds.max.z, v.z);
         }
     }
-    if (mEngine.debug.shadowmap.far_uses_shadowcasters) {
+    if (engine.debug.shadowmap.far_uses_shadowcasters) {
         // far: closest of the farthest shadow casters and receivers
         lsLightFrustumBounds.min.z = std::max(lsLightFrustumBounds.min.z, sceneInfo.lsNearFar[1]);
     }
@@ -233,7 +213,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
     // if znear >= zfar, it means we don't have any shadow caster in front of a shadow receiver
     if (UTILS_UNLIKELY(znear >= zfar)) {
         mHasVisibleShadows = false;
-        return;
+        return {};
     }
 
     float4 viewVolumeBoundingSphere = {};
@@ -341,7 +321,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         // For directional lights, we further constraint the light frustum to the
         // intersection of the shadow casters & shadow receivers in light-space.
         // ** This relies on the 1-texel shadow map border **
-        if (mEngine.debug.shadowmap.focus_shadowcasters) {
+        if (engine.debug.shadowmap.focus_shadowcasters) {
             intersectWithShadowCasters(lsLightFrustumBounds, WLMpMv, wsShadowCastersVolume);
         }
     }
@@ -351,7 +331,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         // this could happen if the only thing visible is a perfectly horizontal or
         // vertical thin line
         mHasVisibleShadows = false;
-        return;
+        return {};
     }
 
     assert_invariant(lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x);
@@ -364,7 +344,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
     if (params.options.stable) {
         // Use the world origin as reference point, fixed w.r.t. the camera
         snapLightFrustum(s, o, Mv, -camera.getWorldOffset(),
-                1.0f / mShadowMapInfo.shadowDimension);
+                1.0f / float(shadowMapInfo.shadowDimension));
     }
 
     const mat4f F(mat4f::row_major_init {
@@ -383,28 +363,32 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
 
     // Computes St the transform to use in the shader to access the shadow map texture
     // i.e. it transforms a world-space vertex to a texture coordinate in the shadowmap
-    const mat4 MbMt = getTextureCoordsMapping();
+    const mat4 MbMt = getTextureCoordsMapping(shadowMapInfo);
     const mat4f St = mat4f(MbMt * S);
+
+    ShadowMap::ShaderParameters shaderParameters;
 
     // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
     // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
     // if Wp[3][1] is 0, then LISPSM was cancelled.
     if (useLispsm && Wp[3][1] != 0.0f) {
-        mTexelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F));
+        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F),
+                shadowMapInfo.shadowDimension);
     } else {
         // We know we're using an ortho projection
-        mTexelSizeAtOneMeterWs = texelSizeWorldSpace(St.upperLeft());
+        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(St.upperLeft(),
+                shadowMapInfo.shadowDimension);
     }
-    if (!mShadowMapInfo.vsm) {
-        mLightSpace = St;
+    if (!shadowMapInfo.vsm) {
+        shaderParameters.lightSpace = St;
     } else {
-        mLightSpace = computeVsmLightSpaceMatrix(St, Mv, znear, zfar);
+        shaderParameters.lightSpace = computeVsmLightSpaceMatrix(St, Mv, znear, zfar);
     }
 
     // We apply the constant bias in world space (as opposed to light-space) to account
     // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
     // by baking it in the shadow-map itself.
-    const float constantBias = mShadowMapInfo.vsm ? 0.0f : params.options.constantBias;
+    const float constantBias = shadowMapInfo.vsm ? 0.0f : params.options.constantBias;
     const mat4f b = mat4f::translation(direction * constantBias);
 
     // It's important to set the light camera's model matrix separately from its projection, so
@@ -420,16 +404,19 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
 
     // for the debug camera, we need to undo the world origin
     mDebugCamera->setCustomProjection(mat4(S * b * camera.worldOrigin), znear, zfar);
+
+    return shaderParameters;
 }
 
-void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
+ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
+        const FScene::LightSoa& lightData, size_t index,
         filament::CameraInfo const& camera,
         const ShadowMapInfo& shadowMapInfo,
         FScene const& scene, SceneInfo sceneInfo) noexcept {
 
-    mShadowMapInfo = shadowMapInfo;
+    ShaderParameters shaderParameters;
 
-    auto& lcm = mEngine.getLightManager();
+    auto& lcm = engine.getLightManager();
     auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
     auto direction  = lightData.elementAt<FScene::DIRECTION>(index);
@@ -461,7 +448,7 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
     // Final shadow transform
     const mat4f S = MpMv;
 
-    const mat4 MbMt = getTextureCoordsMapping();
+    const mat4 MbMt = getTextureCoordsMapping(shadowMapInfo);
     const mat4f St = mat4f(MbMt * S);
 
     // TODO: focus projection
@@ -477,16 +464,16 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
     //                               = zInLightSpace * texelSizeAtOneMeter
     //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
     // Note: this would not work with LISPSM, which warps the texture space.
-    mTexelSizeAtOneMeterWs = (2.0f * std::tan(outerConeAngle) / float(mShadowMapInfo.shadowDimension));
-    mLightFromWorldZ = -transpose(Mv)[2]; // negate because camera looks in -Z
+    shaderParameters.texelSizeAtOneMeterWs = (2.0f * std::tan(outerConeAngle) / float(shadowMapInfo.shadowDimension));
+    shaderParameters.lightFromWorldZ = -transpose(Mv)[2]; // negate because camera looks in -Z
 
-    if (!mShadowMapInfo.vsm) {
-        mLightSpace = St;
+    if (!shadowMapInfo.vsm) {
+        shaderParameters.lightSpace = St;
     } else {
-        mLightSpace = computeVsmLightSpaceMatrix(St, Mv, nearPlane, farPlane);
+        shaderParameters.lightSpace = computeVsmLightSpaceMatrix(St, Mv, nearPlane, farPlane);
     }
 
-    const float constantBias = mShadowMapInfo.vsm ? 0.0f : params.options.constantBias;
+    const float constantBias = shadowMapInfo.vsm ? 0.0f : params.options.constantBias;
     const mat4f b = mat4f::translation(direction * constantBias);
     const mat4f Sb = S * b;
 
@@ -503,13 +490,16 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
 
     // for the debug camera, we need to undo the world origin
     mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
+
+    return shaderParameters;
 }
 
-void ShadowMap::updatePoint(const FScene::LightSoa& lightData, size_t index,
+ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
+        const FScene::LightSoa& lightData, size_t index,
         filament::CameraInfo const& camera, const ShadowMapInfo& shadowMapInfo, FScene const& scene,
         SceneInfo, uint8_t face) noexcept {
 
-    mShadowMapInfo = shadowMapInfo;
+    ShaderParameters shaderParameters;
 
     // check if this shadow map has anything to render
     mHasVisibleShadows = false;
@@ -523,10 +513,10 @@ void ShadowMap::updatePoint(const FScene::LightSoa& lightData, size_t index,
         }
     }
     if (!mHasVisibleShadows) {
-        return;
+        return shaderParameters;
     }
 
-    auto& lcm = mEngine.getLightManager();
+    auto& lcm = engine.getLightManager();
 
     auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
@@ -552,9 +542,10 @@ void ShadowMap::updatePoint(const FScene::LightSoa& lightData, size_t index,
     //                               = zInLightSpace * texelSizeAtOneMeter
     //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
     // Note: this would not work with LISPSM, which warps the texture space.
-    mTexelSizeAtOneMeterWs = (2.0f * std::tan(f::PI_4) / float(mShadowMapInfo.shadowDimension));
+    shaderParameters.texelSizeAtOneMeterWs =
+            (2.0f * std::tan(f::PI_4) / float(shadowMapInfo.shadowDimension));
 
-    const float constantBias = mShadowMapInfo.vsm ? 0.0f : params.options.constantBias;
+    const float constantBias = shadowMapInfo.vsm ? 0.0f : params.options.constantBias;
     const mat4f b = mat4f::translation(direction * constantBias);
 
     // It's important to set the light camera's model matrix separately from its projection, so that
@@ -567,6 +558,8 @@ void ShadowMap::updatePoint(const FScene::LightSoa& lightData, size_t index,
     // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
     mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
     mCamera->setCustomProjection(mat4(Mp), nearPlane, farPlane);
+
+    return shaderParameters;
 }
 
 mat4f ShadowMap::applyLISPSM(mat4f& Wp,
@@ -648,10 +641,10 @@ mat4f ShadowMap::applyLISPSM(mat4f& Wp,
 
 
 // Apply these remapping in double to maintain a high precision for the depth axis
-mat4 ShadowMap::getTextureCoordsMapping() const noexcept {
+mat4 ShadowMap::getTextureCoordsMapping(ShadowMapInfo const& info) noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     // ([1, 0] for depth mapping)
-    const mat4f Mt(mClipSpaceFlipped ? mat4f::row_major_init{
+    const mat4f Mt(info.clipSpaceFlipped ? mat4f::row_major_init{
             0.5f,  0.0f,   0.0f, 0.5f,
             0.0f, -0.5f,   0.0f, 0.5f,
             0.0f,  0.0f,  -0.5f, 0.5f,
@@ -665,7 +658,7 @@ mat4 ShadowMap::getTextureCoordsMapping() const noexcept {
 
     // the shadow map texture might be larger than the shadow map dimension, so we add a scaling
     // factor
-    const float v = (float) mShadowMapInfo.textureDimension / mShadowMapInfo.atlasDimension;
+    const float v = float(info.textureDimension) / float(info.atlasDimension);
     const mat4f Mv(mat4f::row_major_init{
             v,    0.0f, 0.0f, 0.0f,
             0.0f, v,    0.0f, 0.0f,
@@ -674,8 +667,8 @@ mat4 ShadowMap::getTextureCoordsMapping() const noexcept {
     });
 
     // apply the 1-texel border viewport transform
-    const float o = 1.0f / mShadowMapInfo.atlasDimension;
-    const float s = 1.0f - 2.0f * (1.0f / mShadowMapInfo.textureDimension);
+    const float o = 1.0f / float(info.atlasDimension);
+    const float s = 1.0f - 2.0f * (1.0f / float(info.textureDimension));
     const mat4f Mb(mat4f::row_major_init{
              s,    0.0f, 0.0f, o,
              0.0f, s,    0.0f, o,
@@ -683,7 +676,7 @@ mat4 ShadowMap::getTextureCoordsMapping() const noexcept {
              0.0f, 0.0f, 0.0f, 1.0f
     });
 
-    const mat4f Mf = mTextureSpaceFlipped ? mat4f(mat4f::row_major_init{
+    const mat4f Mf = info.textureSpaceFlipped ? mat4f(mat4f::row_major_init{
             1.0f,  0.0f,  0.0f,  0.0f,
             0.0f, -1.0f,  0.0f,  1.0f,
             0.0f,  0.0f,  1.0f,  0.0f,
@@ -1074,13 +1067,14 @@ bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
     return hit;
 }
 
-float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const noexcept {
+float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture,
+        uint16_t shadowDimension) const noexcept {
     // The Jacobian of the transformation from texture-to-world is the matrix itself for
     // orthographic projections. We just need to inverse worldToShadowTexture,
     // which is guaranteed to be orthographic.
     // The two first columns give us how a texel maps in world-space.
-    const float ures = 1.0f / float(mShadowMapInfo.shadowDimension);
-    const float vres = 1.0f / float(mShadowMapInfo.shadowDimension);
+    const float ures = 1.0f / float(shadowDimension);
+    const float vres = 1.0f / float(shadowDimension);
     const mat3f shadowTextureToWorld(inverse(worldToShadowTexture));
     const float3 Jx = shadowTextureToWorld[0];
     const float3 Jy = shadowTextureToWorld[1];
@@ -1088,7 +1082,8 @@ float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const no
     return s;
 }
 
-float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const noexcept {
+float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF,
+        uint16_t shadowDimension) const noexcept {
     // Here we compute the Jacobian of inverse(MbMtF * Wp).
     // The expression below has been computed with Mathematica. However, it's not very hard,
     // albeit error-prone, to do it by hand because MbMtF is a linear transform.
@@ -1103,8 +1098,8 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
     // It might be better to do this computation in the vertex shader.
     float3 p = {0.5, 0.5, 0.0};
 
-    const float ures = 1.0f / float(mShadowMapInfo.shadowDimension);
-    const float vres = 1.0f / float(mShadowMapInfo.shadowDimension);
+    const float ures = 1.0f / float(shadowDimension);
+    const float vres = 1.0f / float(shadowDimension);
     const float dres = 1.0f / 65536.0f;
 
     constexpr bool JACOBIAN_ESTIMATE = false;
