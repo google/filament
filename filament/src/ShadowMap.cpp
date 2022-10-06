@@ -67,11 +67,12 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
-void ShadowMap::initialize(size_t lightIndex, uint16_t shadowIndex,
+void ShadowMap::initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex,
         LightManager::ShadowOptions const* options) {
     mLightIndex = lightIndex;
     mShadowIndex = shadowIndex;
     mOptions = options;
+    mShadowType = shadowType;
 }
 
 void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
@@ -91,8 +92,23 @@ void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
 }
 
 mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 position) noexcept {
-    const mat4f M = mat4f::lookAt(position, position + direction, float3{ 0, 1, 0 });
-    return FCamera::rigidTransformInverse(M);
+    const mat4f Mm = mat4f::lookAt(position, position + direction, float3{ 0, 1, 0 });
+    return FCamera::rigidTransformInverse(Mm);
+}
+
+math::mat4f ShadowMap::getPointLightViewMatrix(backend::TextureCubemapFace face,
+        math::float3 position) noexcept {
+    float3 direction;
+    switch (TextureCubemapFace(face)) {
+        case TextureCubemapFace::POSITIVE_X:    direction = {  1,  0,  0 }; break;
+        case TextureCubemapFace::NEGATIVE_X:    direction = { -1,  0,  0 }; break;
+        case TextureCubemapFace::POSITIVE_Y:    direction = {  0,  1,  0 }; break;
+        case TextureCubemapFace::NEGATIVE_Y:    direction = {  0, -1,  0 }; break;
+        case TextureCubemapFace::POSITIVE_Z:    direction = {  0,  0,  1 }; break;
+        case TextureCubemapFace::NEGATIVE_Z:    direction = {  0,  0, -1 }; break;
+    }
+    const mat4f Mv = getDirectionalLightViewMatrix(direction, position);
+    return Mv;
 }
 
 void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t index,
@@ -487,6 +503,70 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
 
     // for the debug camera, we need to undo the world origin
     mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
+}
+
+void ShadowMap::updatePoint(const FScene::LightSoa& lightData, size_t index,
+        filament::CameraInfo const& camera, const ShadowMapInfo& shadowMapInfo, FScene const& scene,
+        SceneInfo, uint8_t face) noexcept {
+
+    mShadowMapInfo = shadowMapInfo;
+
+    // check if this shadow map has anything to render
+    mHasVisibleShadows = false;
+    FScene::RenderableSoa const& UTILS_RESTRICT soa = scene.getRenderableData();
+    auto const* const UTILS_RESTRICT visibleMasks = soa.data<FScene::VISIBLE_MASK>();
+    size_t c = soa.size();
+    for (size_t i = 0; i < c; i++) {
+        if (visibleMasks[i] & VISIBLE_DYN_SHADOW_RENDERABLE) {
+            mHasVisibleShadows = true;
+            break;
+        }
+    }
+    if (!mHasVisibleShadows) {
+        return;
+    }
+
+    auto& lcm = mEngine.getLightManager();
+
+    auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
+    auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
+    auto radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
+    const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
+
+    /*
+     * Compute the light model matrix.
+     */
+
+    const mat4f Mv = getPointLightViewMatrix(TextureCubemapFace(face), position);
+    const float3 direction = -transpose(Mv)[2].xyz;
+
+    // TODO: don't hardcode near plane
+    // Choose a reasonable value for the near plane.
+    float nearPlane = 0.01f;
+    float farPlane  = radius;
+    const mat4f Mp = mat4f::perspective(90.0f, 1.0f, nearPlane, farPlane);
+
+    // For calculating the point light normal bias, we need the texel size in world space at the
+    // sample location. Using Thales's theorem, we find:
+    //      texelSize(zInLightSpace) = zInLightSpace * texelSizeOnTheNearPlane / near
+    //                               = zInLightSpace * texelSizeAtOneMeter
+    //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
+    // Note: this would not work with LISPSM, which warps the texture space.
+    mTexelSizeAtOneMeterWs = (2.0f * std::tan(f::PI_4) / float(mShadowMapInfo.shadowDimension));
+
+    const float constantBias = mShadowMapInfo.vsm ? 0.0f : params.options.constantBias;
+    const mat4f b = mat4f::translation(direction * constantBias);
+
+    // It's important to set the light camera's model matrix separately from its projection, so that
+    // the cameraPosition uniform gets set correctly.
+    // mLightSpace is used in the shader to access the shadow map texture, and has the model matrix
+    // baked in.
+
+    // The model matrix below is in fact inverted to get the view matrix and passed to the
+    // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
+    // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
+    mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
+    mCamera->setCustomProjection(mat4(Mp), nearPlane, farPlane);
 }
 
 mat4f ShadowMap::applyLISPSM(mat4f& Wp,

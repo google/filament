@@ -245,21 +245,21 @@ static_assert(sizeof(LightsUib) == 64,
 // ------------------------------------------------------------------------------------------------
 // MARK: -
 
-// UBO for punctual (spot light) shadows.
+// UBO for punctual (pointlight and spotlight) shadows.
 struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ShadowUniforms" };
     struct alignas(16) ShadowData {
-        math::mat4f lightFromWorldMatrix;       // 64
-        math::float3 direction;                 // 12
-        float normalBias;                       //  4
-        math::float4 lightFromWorldZ;           // 16
+        math::mat4f lightFromWorldMatrix;       // 64 - unused for point lights
+        math::float3 direction;                 // 12 - unused for point lights
+        float normalBias;                       //  4 - unused for point lights
+        math::float4 lightFromWorldZ;           // 16 - point lights { depth reconstruction values }
 
         float texelSizeAtOneMeter;              //  4
         float bulbRadiusLs;                     //  4
         float nearOverFarMinusNear;             //  4
         bool elvsm;                             //  4
     };
-    ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
+    ShadowData shadows[CONFIG_MAX_SHADOWMAP_PUNCTUAL];
 };
 static_assert(sizeof(ShadowUib) <= CONFIG_MINSPEC_UBO_SIZE,
         "ShadowUib exceeds max UBO size");

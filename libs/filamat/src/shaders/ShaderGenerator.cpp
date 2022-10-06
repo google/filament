@@ -205,8 +205,6 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
 
     cg.generateQualityDefine(vs, material.quality);
 
-    CodeGenerator::generateDefine(vs, "MAX_SHADOW_CASTING_SPOTS", uint32_t(CONFIG_MAX_SHADOW_CASTING_SPOTS));
-
     CodeGenerator::generateDefine(vs, "FLIP_UV_ATTRIBUTE", material.flipUV);
 
     CodeGenerator::generateDefine(vs, "LEGACY_MORPHING", material.useLegacyMorphing);
@@ -345,8 +343,6 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     CodeGenerator::generateDefine(fs, "GEOMETRIC_SPECULAR_AA", material.specularAntiAliasing && lit);
 
     CodeGenerator::generateDefine(fs, "CLEAR_COAT_IOR_CHANGE", material.clearCoatIorChange);
-
-    CodeGenerator::generateDefine(fs, "MAX_SHADOW_CASTING_SPOTS", uint32_t(CONFIG_MAX_SHADOW_CASTING_SPOTS));
 
     auto defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
             SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;

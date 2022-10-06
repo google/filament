@@ -495,11 +495,6 @@ public class LightManager {
         /**
          * Whether this Light casts shadows (disabled by default)
          *
-         * <p>
-         * <b>warning:</b>
-         *  {@link Type#POINT} lights cannot cast shadows.
-         * </p>
-         *
          * @param enable Enables or disables casting shadows from this Light.
          *
          * @return This Builder, for chaining calls.

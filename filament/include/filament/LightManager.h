@@ -446,9 +446,6 @@ public:
          * @param enable Enables or disables casting shadows from this Light.
          *
          * @return This Builder, for chaining calls.
-         *
-         * @warning
-         * - Only a Type.DIRECTIONAL, Type.SUN, Type.SPOT, or Type.FOCUSED_SPOT light can cast shadows
          */
         Builder& castShadows(bool enable) noexcept;
 
