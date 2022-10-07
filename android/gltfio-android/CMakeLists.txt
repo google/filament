@@ -76,7 +76,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/UbershaderProvider.cpp
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
-        ${GLTFIO_DIR}/src/upcast.h
+        ${GLTFIO_DIR}/src/downcast.h
 
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp

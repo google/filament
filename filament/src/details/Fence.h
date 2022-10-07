@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_FENCE_H
 #define TNT_FILAMENT_DETAILS_FENCE_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/Fence.h>
 
@@ -70,7 +70,7 @@ private:
     std::shared_ptr<FenceSignal> mFenceSignal;
 };
 
-FILAMENT_UPCAST(Fence)
+FILAMENT_DOWNCAST(Fence)
 
 } // namespace filament
 

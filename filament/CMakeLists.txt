@@ -198,7 +198,7 @@ set(PRIVATE_HDRS
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
         src/materials/fsr/ffx_fsr1_mobile.fs
-        src/upcast.h
+        src/downcast.h
 )
 
 set(MATERIAL_SRCS

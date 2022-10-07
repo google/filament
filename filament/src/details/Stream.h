@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_STREAM_H
 #define TNT_FILAMENT_DETAILS_STREAM_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/Stream.h>
 
@@ -58,7 +58,7 @@ private:
     uint32_t mHeight;
 };
 
-FILAMENT_UPCAST(Stream)
+FILAMENT_DOWNCAST(Stream)
 
 } // namespace filament
 

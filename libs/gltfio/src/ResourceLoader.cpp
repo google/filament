@@ -20,7 +20,7 @@
 #include "GltfEnums.h"
 #include "FFilamentAsset.h"
 #include "TangentsJob.h"
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/BufferObject.h>
 #include <filament/Engine.h>
@@ -318,7 +318,7 @@ void ResourceLoader::evictResourceData() {
 }
 
 bool ResourceLoader::loadResources(FilamentAsset* asset) {
-    FFilamentAsset* fasset = upcast(asset);
+    FFilamentAsset* fasset = downcast(asset);
     return loadResources(fasset, false);
 }
 
@@ -529,8 +529,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 }
 
 bool ResourceLoader::asyncBeginLoad(FilamentAsset* asset) {
-    pImpl->mAsyncAsset = upcast(asset);
-    return loadResources(upcast(asset), true);
+    pImpl->mAsyncAsset = downcast(asset);
+    return loadResources(downcast(asset), true);
 }
 
 void ResourceLoader::asyncCancelLoad() {

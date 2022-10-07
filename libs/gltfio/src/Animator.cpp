@@ -19,7 +19,7 @@
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/VertexBuffer.h>
 #include <filament/RenderableManager.h>

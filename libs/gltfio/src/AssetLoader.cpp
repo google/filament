@@ -53,7 +53,7 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
-#include "upcast.h"
+#include "downcast.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -308,7 +308,7 @@ public:
     BufferObject* mDummyBufferObject = nullptr;
 };
 
-FILAMENT_UPCAST(AssetLoader)
+FILAMENT_DOWNCAST(AssetLoader)
 
 FFilamentAsset* FAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
     FilamentInstance* instances;
@@ -1552,46 +1552,46 @@ AssetLoader* AssetLoader::create(const AssetConfiguration& config) {
 }
 
 void AssetLoader::destroy(AssetLoader** loader) {
-    FAssetLoader* temp(upcast(*loader));
+    FAssetLoader* temp(downcast(*loader));
     FAssetLoader::destroy(&temp);
     *loader = temp;
 }
 
 FilamentAsset* AssetLoader::createAsset(uint8_t const* bytes, uint32_t nbytes) {
-    return upcast(this)->createAsset(bytes, nbytes);
+    return downcast(this)->createAsset(bytes, nbytes);
 }
 
 FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
         FilamentInstance** instances, size_t numInstances) {
-    return upcast(this)->createInstancedAsset(bytes, numBytes, instances, numInstances);
+    return downcast(this)->createInstancedAsset(bytes, numBytes, instances, numInstances);
 }
 
 FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
-    return upcast(this)->createInstance(upcast(asset));
+    return downcast(this)->createInstance(downcast(asset));
 }
 
 void AssetLoader::enableDiagnostics(bool enable) {
-    upcast(this)->mDiagnosticsEnabled = enable;
+    downcast(this)->mDiagnosticsEnabled = enable;
 }
 
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {
-    upcast(this)->destroyAsset(upcast(asset));
+    downcast(this)->destroyAsset(downcast(asset));
 }
 
 size_t AssetLoader::getMaterialsCount() const noexcept {
-    return upcast(this)->getMaterialsCount();
+    return downcast(this)->getMaterialsCount();
 }
 
 NameComponentManager* AssetLoader::getNames() const noexcept {
-    return upcast(this)->getNames();
+    return downcast(this)->getNames();
 }
 
 const Material* const* AssetLoader::getMaterials() const noexcept {
-    return upcast(this)->getMaterials();
+    return downcast(this)->getMaterials();
 }
 
 MaterialProvider& AssetLoader::getMaterialProvider() noexcept {
-    return upcast(this)->mMaterials;
+    return downcast(this)->mMaterials;
 }
 
 } // namespace filament::gltfio

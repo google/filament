@@ -23,132 +23,132 @@ namespace filament {
 using namespace math;
 
 size_t LightManager::getComponentCount() const noexcept {
-    return upcast(this)->getComponentCount();
+    return downcast(this)->getComponentCount();
 }
 
 utils::Entity const* LightManager::getEntities() const noexcept {
-    return upcast(this)->getEntities();
+    return downcast(this)->getEntities();
 }
 
 bool LightManager::hasComponent(Entity e) const noexcept {
-    return upcast(this)->hasComponent(e);
+    return downcast(this)->hasComponent(e);
 }
 
 LightManager::Instance LightManager::getInstance(Entity e) const noexcept {
-    return upcast(this)->getInstance(e);
+    return downcast(this)->getInstance(e);
 }
 
 void LightManager::destroy(Entity e) noexcept {
-    return upcast(this)->destroy(e);
+    return downcast(this)->destroy(e);
 }
 
 void LightManager::setLightChannel(Instance i, unsigned int channel, bool enable) noexcept {
-    upcast(this)->setLightChannel(i, channel, enable);
+    downcast(this)->setLightChannel(i, channel, enable);
 }
 
 bool LightManager::getLightChannel(LightManager::Instance i, unsigned int channel) const noexcept {
-    return upcast(this)->getLightChannel(i, channel);
+    return downcast(this)->getLightChannel(i, channel);
 }
 
 void LightManager::setPosition(Instance i, const float3& position) noexcept {
-    upcast(this)->setLocalPosition(i, position);
+    downcast(this)->setLocalPosition(i, position);
 }
 
 const float3& LightManager::getPosition(Instance i) const noexcept {
-    return upcast(this)->getLocalPosition(i);
+    return downcast(this)->getLocalPosition(i);
 }
 
 void LightManager::setDirection(Instance i, const float3& direction) noexcept {
-    upcast(this)->setLocalDirection(i, direction);
+    downcast(this)->setLocalDirection(i, direction);
 }
 
 const float3& LightManager::getDirection(Instance i) const noexcept {
-    return upcast(this)->getLocalDirection(i);
+    return downcast(this)->getLocalDirection(i);
 }
 
 void LightManager::setColor(Instance i, const LinearColor& color) noexcept {
-    upcast(this)->setColor(i, color);
+    downcast(this)->setColor(i, color);
 }
 
 const float3& LightManager::getColor(Instance i) const noexcept {
-    return upcast(this)->getColor(i);
+    return downcast(this)->getColor(i);
 }
 
 void LightManager::setIntensity(Instance i, float intensity) noexcept {
-    upcast(this)->setIntensity(i, intensity, FLightManager::IntensityUnit::LUMEN_LUX);
+    downcast(this)->setIntensity(i, intensity, FLightManager::IntensityUnit::LUMEN_LUX);
 }
 
 void LightManager::setIntensityCandela(Instance i, float intensity) noexcept {
-    upcast(this)->setIntensity(i, intensity, FLightManager::IntensityUnit::CANDELA);
+    downcast(this)->setIntensity(i, intensity, FLightManager::IntensityUnit::CANDELA);
 }
 
 float LightManager::getIntensity(Instance i) const noexcept {
-    return upcast(this)->getIntensity(i);
+    return downcast(this)->getIntensity(i);
 }
 
 void LightManager::setFalloff(Instance i, float radius) noexcept {
-    upcast(this)->setFalloff(i, radius);
+    downcast(this)->setFalloff(i, radius);
 }
 
 float LightManager::getFalloff(Instance i) const noexcept {
-    return upcast(this)->getFalloff(i);
+    return downcast(this)->getFalloff(i);
 }
 
 void LightManager::setSpotLightCone(Instance i, float inner, float outer) noexcept {
-    upcast(this)->setSpotLightCone(i, inner, outer);
+    downcast(this)->setSpotLightCone(i, inner, outer);
 }
 
 float LightManager::getSpotLightOuterCone(Instance i) const noexcept {
-    return upcast(this)->getSpotParams(i).outerClamped;
+    return downcast(this)->getSpotParams(i).outerClamped;
 }
 
 float LightManager::getSpotLightInnerCone(Instance i) const noexcept {
-    return upcast(this)->getSpotLightInnerCone(i);
+    return downcast(this)->getSpotLightInnerCone(i);
 }
 
 void LightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {
-    upcast(this)->setSunAngularRadius(i, angularRadius);
+    downcast(this)->setSunAngularRadius(i, angularRadius);
 }
 
 float LightManager::getSunAngularRadius(Instance i) const noexcept {
-    float radius = upcast(this)->getSunAngularRadius(i);
+    float radius = downcast(this)->getSunAngularRadius(i);
     return radius * f::RAD_TO_DEG;
 }
 
 void LightManager::setSunHaloSize(Instance i, float haloSize) noexcept {
-    upcast(this)->setSunHaloSize(i, haloSize);
+    downcast(this)->setSunHaloSize(i, haloSize);
 }
 
 float LightManager::getSunHaloSize(Instance i) const noexcept {
-    return upcast(this)->getSunHaloSize(i);
+    return downcast(this)->getSunHaloSize(i);
 }
 
 void LightManager::setSunHaloFalloff(Instance i, float haloFalloff) noexcept {
-    upcast(this)->setSunHaloFalloff(i, haloFalloff);
+    downcast(this)->setSunHaloFalloff(i, haloFalloff);
 }
 
 float LightManager::getSunHaloFalloff(Instance i) const noexcept {
-    return upcast(this)->getSunHaloFalloff(i);
+    return downcast(this)->getSunHaloFalloff(i);
 }
 
 LightManager::Type LightManager::getType(LightManager::Instance i) const noexcept {
-    return upcast(this)->getType(i);
+    return downcast(this)->getType(i);
 }
 
 const LightManager::ShadowOptions& LightManager::getShadowOptions(Instance i) const noexcept {
-    return upcast(this)->getShadowOptions(i);
+    return downcast(this)->getShadowOptions(i);
 }
 
 void LightManager::setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
-    upcast(this)->setShadowOptions(i, options);
+    downcast(this)->setShadowOptions(i, options);
 }
 
 bool LightManager::isShadowCaster(Instance i) const noexcept {
-    return upcast(this)->isShadowCaster(i);
+    return downcast(this)->isShadowCaster(i);
 }
 
 void LightManager::setShadowCaster(Instance i, bool castShadows) noexcept {
-    upcast(this)->setShadowCaster(i, castShadows);
+    downcast(this)->setShadowCaster(i, castShadows);
 }
 
 } // namespace filament

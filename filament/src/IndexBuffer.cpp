@@ -22,11 +22,11 @@ namespace filament {
 
 void IndexBuffer::setBuffer(Engine& engine,
         IndexBuffer::BufferDescriptor&& buffer, uint32_t byteOffset) {
-    upcast(this)->setBuffer(upcast(engine), std::move(buffer), byteOffset);
+    downcast(this)->setBuffer(downcast(engine), std::move(buffer), byteOffset);
 }
 
 size_t IndexBuffer::getIndexCount() const noexcept {
-    return upcast(this)->getIndexCount();
+    return downcast(this)->getIndexCount();
 }
 
 } // namespace filament

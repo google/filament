@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 #define TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 
-#include "upcast.h"
+#include "downcast.h"
 #include "UniformBuffer.h"
 #include "details/Engine.h"
 
@@ -247,7 +247,7 @@ private:
     utils::CString mName;
 };
 
-FILAMENT_UPCAST(MaterialInstance)
+FILAMENT_DOWNCAST(MaterialInstance)
 
 } // namespace filament
 

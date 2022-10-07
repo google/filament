@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_INDIRECTLIGHT_H
 #define TNT_FILAMENT_DETAILS_INDIRECTLIGHT_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/Handle.h>
 
@@ -66,7 +66,7 @@ private:
     uint8_t mLevelCount = 0;
 };
 
-FILAMENT_UPCAST(IndirectLight)
+FILAMENT_DOWNCAST(IndirectLight)
 
 } // namespace filament
 

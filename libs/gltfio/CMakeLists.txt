@@ -44,7 +44,7 @@ set(SRCS
         src/UbershaderProvider.cpp
         src/Wireframe.cpp
         src/Wireframe.h
-        src/upcast.h
+        src/downcast.h
 )
 
 # ==================================================================================================

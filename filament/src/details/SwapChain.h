@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_SWAPCHAIN_H
 #define TNT_FILAMENT_DETAILS_SWAPCHAIN_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "private/backend/DriverApi.h"
 
@@ -70,7 +70,7 @@ private:
     uint64_t mConfigFlags = 0;
 };
 
-FILAMENT_UPCAST(SwapChain)
+FILAMENT_DOWNCAST(SwapChain)
 
 } // namespace filament
 

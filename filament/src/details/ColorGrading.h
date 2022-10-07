@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_COLORGRADING_H
 #define TNT_FILAMENT_DETAILS_COLORGRADING_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -50,7 +50,7 @@ private:
     uint32_t mDimension;
 };
 
-FILAMENT_UPCAST(ColorGrading)
+FILAMENT_DOWNCAST(ColorGrading)
 
 } // namespace filament
 

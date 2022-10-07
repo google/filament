@@ -132,7 +132,7 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     ASSERT_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount,
             "At least one buffer slot was never assigned to an attribute.");
 
-    return upcast(engine).createVertexBuffer(*this);
+    return downcast(engine).createVertexBuffer(*this);
 }
 
 // ------------------------------------------------------------------------------------------------

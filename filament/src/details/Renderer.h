@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_RENDERER_H
 #define TNT_FILAMENT_DETAILS_RENDERER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "Allocators.h"
 #include "FrameInfo.h"
@@ -188,7 +188,7 @@ private:
     LinearAllocatorArena& mPerRenderPassArena;
 };
 
-FILAMENT_UPCAST(Renderer)
+FILAMENT_DOWNCAST(Renderer)
 
 } // namespace filament
 
