@@ -279,24 +279,20 @@ public:
 
     // Encode a MTLTexture into this SamplerGroup at the given index.
     inline void setFinalizedTexture(size_t index, id<MTLTexture> t) {
-        assert_invariant(encoder);
         assert_invariant(!finalized);
-        [encoder setTexture:t atIndex:(index * 2 + 0)];
         textures[index] = t;
     }
 
     // Encode a MTLSamplerState into this SamplerGroup at the given index.
     inline void setFinalizedSampler(size_t index, id<MTLSamplerState> s) {
-        assert_invariant(encoder);
         assert_invariant(!finalized);
-        [encoder setSamplerState:s atIndex:(index * 2 + 1)];
         samplers[index] = s;
     }
 
     // A SamplerGroup is "finalized" when all of its textures have been set and is ready for use in
     // a draw call.
     // Once a SamplerGroup is finalized, it must be reset or mutated to be written into again.
-    void finalize() { finalized = true; }
+    void finalize();
     bool isFinalized() const noexcept { return finalized; }
 
     // Both of these methods "unfinalize" a SamplerGroup, allowing it to be updated via calls to
