@@ -94,3 +94,11 @@ if (NOT MSVC)
             $<$<CONFIG:Release>:-ffast-math>
     )
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+
+set(INSTALL_TYPE ARCHIVE)
+install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/${TARGET} DESTINATION include)

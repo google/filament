@@ -231,3 +231,12 @@ else()
     #        implementation for aarch64 on certain targets. ideally, we would just std::atomic
     target_compile_definitions(${TARGET} PRIVATE SDL_ATOMIC_DISABLED=1)
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+
+file(GLOB PUBLIC_HDR_FILES ${PUBLIC_HDR_DIR}/*.h)
+set(INSTALL_TYPE ARCHIVE)
+install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
+install(FILES ${PUBLIC_HDR_FILES} DESTINATION include)

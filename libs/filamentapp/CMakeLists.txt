@@ -156,3 +156,18 @@ if (_isMultiConfig)
 else()
     target_compile_definitions(${TARGET} PRIVATE RELATIVE_ASSET_PATH=".")
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+
+set(TARGET_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/lib${TARGET}_combined.a")
+set(TARGET_DEPS
+        ${TARGET}
+        filamentapp-resources
+)
+combine_static_libs(${TARGET} "${TARGET_COMBINED_OUTPUT}" "${TARGET_DEPS}")
+
+set(TARGET_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}${TARGET}${CMAKE_STATIC_LIBRARY_SUFFIX})
+install(FILES "${TARGET_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${TARGET_LIB_NAME})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/${TARGET} DESTINATION include)
