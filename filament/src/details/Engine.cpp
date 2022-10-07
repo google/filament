@@ -230,6 +230,12 @@ uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
 void FEngine::init() {
     SYSTRACE_CALL();
 
+#if FILAMENT_ENABLE_FGDBG
+  if (!debug.fgdbg) {
+      debug.fgdbg = new fgdbg::DebugServer();
+    }
+#endif
+
     // this must be first.
     assert_invariant( intptr_t(&mDriverApiStorage) % alignof(DriverApi) == 0 );
     ::new(&mDriverApiStorage) DriverApi(*mDriver, mCommandBufferQueue.getCircularBuffer());
@@ -378,6 +384,10 @@ void FEngine::shutdown() {
 
     ASSERT_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId),
             "Engine::shutdown() called from the wrong thread!");
+
+#if FILAMENT_ENABLE_FGDBG
+    delete debug.fgdbg;
+#endif
 
 #ifndef NDEBUG
     // print out some statistics about this run

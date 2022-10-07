@@ -172,6 +172,8 @@ MATOPT_GRADLE_OPTION=""
 
 ASAN_UBSAN_OPTION=""
 
+FGDBG_OPTION="-DFILAMENT_ENABLE_FGDBG=OFF"
+
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
 
@@ -233,6 +235,7 @@ function build_desktop_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
+            ${FGDBG_OPTION} \
             ${deployment_target} \
             ${architectures} \
             ../..
@@ -360,6 +363,7 @@ function build_android_target {
             -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
+            ${FGDBG_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
             ../..
     fi
@@ -594,6 +598,7 @@ function build_ios_target {
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
+            ${FGDBG_OPTION} \
             ../..
     fi
 
@@ -778,6 +783,7 @@ while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
             PRINT_MATDBG_HELP=true
             MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_BUILD_FILAMAT=ON"
             MATDBG_GRADLE_OPTION="-Pcom.google.android.filament.matdbg"
+            FGDBG_OPTION="-DFILAMENT_ENABLE_FGDBG=ON"
             ;;
         f)
             ISSUE_CMAKE_ALWAYS=true

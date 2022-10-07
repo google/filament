@@ -324,6 +324,7 @@ and tools.
   - `image`:                  Image filtering and simple transforms
   - `imageio`:                Image file reading / writing, only intended for internal use
   - `matdbg`:                 DebugServer for inspecting shaders at run-time (debug builds only)
+  - `fgdbg`:                  Frame Graph inspector and debugger (debug builds only)
   - `math`:                   Math library
   - `mathio`:                 Math types support for output streams
   - `utils`:                  Utility library (threads, memory, data structures, etc.)
