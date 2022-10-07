@@ -459,6 +459,13 @@ else()
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
 endif()
 
+# By default, link in fgdbg for Desktop + Debug
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND IS_HOST_PLATFORM)
+    option(FILAMENT_ENABLE_FGDBG "Enable the framegraph debugger" ON)
+else()
+    option(FILAMENT_ENABLE_FGDBG "Enable the framegraph debugger" OFF)
+endif()
+
 # Only optimize materials in Release mode (so error message lines match the source code)
 if (CMAKE_BUILD_TYPE MATCHES Release)
     option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" OFF)
@@ -684,6 +691,10 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     # the material debugger requires filamat
     if (FILAMENT_ENABLE_MATDBG OR IS_HOST_PLATFORM)
         add_subdirectory(${LIBRARIES}/matdbg)
+    endif()
+
+    if (FILAMENT_ENABLE_FRAMEGRAPH OR IS_HOST_PLATFORM)
+        add_subdirectory(${LIBRARIES}/fgdbg)
     endif()
 endif()
 

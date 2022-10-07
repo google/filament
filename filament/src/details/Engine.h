@@ -57,6 +57,16 @@
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
+#if FILAMENT_ENABLE_FGDBG
+#include <fgdbg/DebugServer.h>
+#else
+namespace filament {
+namespace fgdbg {
+class DebugServer;
+} // namespace fgdbg
+} // namespace filament
+#endif
+
 #if FILAMENT_ENABLE_MATDBG
 #include <matdbg/DebugServer.h>
 #else
@@ -516,6 +526,7 @@ public:
             bool doFrameCapture = false;
         } renderer;
         matdbg::DebugServer* server = nullptr;
+        fgdbg::DebugServer* fgdbg = nullptr;
     } debug;
 };
 
