@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_ENGINE_H
 #define TNT_FILAMENT_DETAILS_ENGINE_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "Allocators.h"
 #include "DFG.h"
@@ -519,7 +519,7 @@ public:
     } debug;
 };
 
-FILAMENT_UPCAST(Engine)
+FILAMENT_DOWNCAST(Engine)
 
 } // namespace filament
 

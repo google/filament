@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_BUFFEROBJECT_H
 #define TNT_FILAMENT_DETAILS_BUFFEROBJECT_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/Handle.h>
 
@@ -50,7 +50,7 @@ private:
     BindingType mBindingType;
 };
 
-FILAMENT_UPCAST(BufferObject)
+FILAMENT_DOWNCAST(BufferObject)
 
 } // namespace filament
 

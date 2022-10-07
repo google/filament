@@ -21,23 +21,23 @@ namespace filament {
 using namespace backend;
 
 StreamType Stream::getStreamType() const noexcept {
-    return upcast(this)->getStreamType();
+    return downcast(this)->getStreamType();
 }
 
 void Stream::setAcquiredImage(void* image, Callback callback, void* userdata) noexcept {
-    upcast(this)->setAcquiredImage(image, callback, userdata);
+    downcast(this)->setAcquiredImage(image, callback, userdata);
 }
 
 void Stream::setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept {
-    upcast(this)->setAcquiredImage(image, handler, callback, userdata);
+    downcast(this)->setAcquiredImage(image, handler, callback, userdata);
 }
 
 void Stream::setDimensions(uint32_t width, uint32_t height) noexcept {
-    upcast(this)->setDimensions(width, height);
+    downcast(this)->setDimensions(width, height);
 }
 
 int64_t Stream::getTimestamp() const noexcept {
-    return upcast(this)->getTimestamp();
+    return downcast(this)->getTimestamp();
 }
 
 } // namespace filament

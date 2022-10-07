@@ -21,7 +21,7 @@
 
 #include <filament/Renderer.h>
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "Allocators.h"
 #include "FrameHistory.h"
@@ -542,7 +542,7 @@ private:
 #endif
 };
 
-FILAMENT_UPCAST(View)
+FILAMENT_DOWNCAST(View)
 
 } // namespace filament
 

@@ -69,134 +69,134 @@ mat4 Camera::inverseProjection(const mat4 & p) noexcept {
 
 void Camera::setProjection(Camera::Projection projection, double left, double right, double bottom,
         double top, double near, double far) {
-    upcast(this)->setProjection(projection, left, right, bottom, top, near, far);
+    downcast(this)->setProjection(projection, left, right, bottom, top, near, far);
 }
 
 void Camera::setProjection(double fovInDegrees, double aspect, double near, double far,
         Camera::Fov direction) {
-    upcast(this)->setProjection(fovInDegrees, aspect, near, far, direction);
+    downcast(this)->setProjection(fovInDegrees, aspect, near, far, direction);
 }
 
 void Camera::setLensProjection(double focalLengthInMillimeters,
         double aspect, double near, double far) {
-    upcast(this)->setLensProjection(focalLengthInMillimeters, aspect, near, far);
+    downcast(this)->setLensProjection(focalLengthInMillimeters, aspect, near, far);
 }
 
 void Camera::setCustomProjection(mat4 const& projection, double near, double far) noexcept {
-    upcast(this)->setCustomProjection(projection, near, far);
+    downcast(this)->setCustomProjection(projection, near, far);
 }
 
 void Camera::setCustomProjection(mat4 const& projection, mat4 const& projectionForCulling,
         double near, double far) noexcept {
-    upcast(this)->setCustomProjection(projection, projectionForCulling, near, far);
+    downcast(this)->setCustomProjection(projection, projectionForCulling, near, far);
 }
 
 void Camera::setScaling(double2 scaling) noexcept {
-    upcast(this)->setScaling(scaling);
+    downcast(this)->setScaling(scaling);
 }
 
 void Camera::setShift(double2 shift) noexcept {
-    upcast(this)->setShift(shift);
+    downcast(this)->setShift(shift);
 }
 
 mat4 Camera::getProjectionMatrix() const noexcept {
-    return upcast(this)->getUserProjectionMatrix();
+    return downcast(this)->getUserProjectionMatrix();
 }
 
 mat4 Camera::getCullingProjectionMatrix() const noexcept {
-    return upcast(this)->getUserCullingProjectionMatrix();
+    return downcast(this)->getUserCullingProjectionMatrix();
 }
 
 double4 Camera::getScaling() const noexcept {
-    return upcast(this)->getScaling();
+    return downcast(this)->getScaling();
 }
 
 double2 Camera::getShift() const noexcept {
-    return upcast(this)->getShift();
+    return downcast(this)->getShift();
 }
 
 double Camera::getNear() const noexcept {
-    return upcast(this)->getNear();
+    return downcast(this)->getNear();
 }
 
 double Camera::getCullingFar() const noexcept {
-    return upcast(this)->getCullingFar();
+    return downcast(this)->getCullingFar();
 }
 
 void Camera::setModelMatrix(const mat4& modelMatrix) noexcept {
-    upcast(this)->setModelMatrix(modelMatrix);
+    downcast(this)->setModelMatrix(modelMatrix);
 }
 
 void Camera::setModelMatrix(const mat4f& modelMatrix) noexcept {
-    upcast(this)->setModelMatrix(modelMatrix);
+    downcast(this)->setModelMatrix(modelMatrix);
 }
 
 void Camera::lookAt(double3 const& eye, double3 const& center, double3 const& up) noexcept {
-    upcast(this)->lookAt(eye, center, up);
+    downcast(this)->lookAt(eye, center, up);
 }
 
 mat4 Camera::getModelMatrix() const noexcept {
-    return upcast(this)->getModelMatrix();
+    return downcast(this)->getModelMatrix();
 }
 
 mat4 Camera::getViewMatrix() const noexcept {
-    return upcast(this)->getViewMatrix();
+    return downcast(this)->getViewMatrix();
 }
 
 double3 Camera::getPosition() const noexcept {
-    return upcast(this)->getPosition();
+    return downcast(this)->getPosition();
 }
 
 float3 Camera::getLeftVector() const noexcept {
-    return upcast(this)->getLeftVector();
+    return downcast(this)->getLeftVector();
 }
 
 float3 Camera::getUpVector() const noexcept {
-    return upcast(this)->getUpVector();
+    return downcast(this)->getUpVector();
 }
 
 float3 Camera::getForwardVector() const noexcept {
-    return upcast(this)->getForwardVector();
+    return downcast(this)->getForwardVector();
 }
 
 float Camera::getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
-    return upcast(this)->getFieldOfViewInDegrees(direction);
+    return downcast(this)->getFieldOfViewInDegrees(direction);
 }
 
 Frustum Camera::getFrustum() const noexcept {
-    return upcast(this)->getCullingFrustum();
+    return downcast(this)->getCullingFrustum();
 }
 
 utils::Entity Camera::getEntity() const noexcept {
-    return upcast(this)->getEntity();
+    return downcast(this)->getEntity();
 }
 
 void Camera::setExposure(float aperture, float shutterSpeed, float ISO) noexcept {
-    upcast(this)->setExposure(aperture, shutterSpeed, ISO);
+    downcast(this)->setExposure(aperture, shutterSpeed, ISO);
 }
 
 float Camera::getAperture() const noexcept {
-    return upcast(this)->getAperture();
+    return downcast(this)->getAperture();
 }
 
 float Camera::getShutterSpeed() const noexcept {
-    return upcast(this)->getShutterSpeed();
+    return downcast(this)->getShutterSpeed();
 }
 
 float Camera::getSensitivity() const noexcept {
-    return upcast(this)->getSensitivity();
+    return downcast(this)->getSensitivity();
 }
 
 void Camera::setFocusDistance(float distance) noexcept {
-    upcast(this)->setFocusDistance(distance);
+    downcast(this)->setFocusDistance(distance);
 }
 
 float Camera::getFocusDistance() const noexcept {
-    return upcast(this)->getFocusDistance();
+    return downcast(this)->getFocusDistance();
 }
 
 double Camera::getFocalLength() const noexcept {
-    return upcast(this)->getFocalLength();
+    return downcast(this)->getFocalLength();
 }
 
 double Camera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {

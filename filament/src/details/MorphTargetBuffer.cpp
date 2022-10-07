@@ -54,7 +54,7 @@ MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::count(size_t count) noex
 }
 
 MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
-    return upcast(engine).createMorphTargetBuffer(*this);
+    return downcast(engine).createMorphTargetBuffer(*this);
 }
 
 // ------------------------------------------------------------------------------------------------

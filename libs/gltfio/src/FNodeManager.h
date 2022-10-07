@@ -17,7 +17,7 @@
 #ifndef GLTFIO_FNODEMANAGER_H
 #define GLTFIO_FNODEMANAGER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <gltfio/NodeManager.h>
 
@@ -132,7 +132,7 @@ private:
     Sim mManager;
 };
 
-FILAMENT_UPCAST(NodeManager)
+FILAMENT_DOWNCAST(NodeManager)
 
 } // namespace filament::gltfio
 

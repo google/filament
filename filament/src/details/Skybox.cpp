@@ -76,18 +76,18 @@ Skybox::Builder& Skybox::Builder::showSun(bool show) noexcept {
 }
 
 Skybox* Skybox::Builder::build(Engine& engine) {
-    FTexture* cubemap = upcast(mImpl->mEnvironmentMap);
+    FTexture* cubemap = downcast(mImpl->mEnvironmentMap);
 
     ASSERT_PRECONDITION(!cubemap || cubemap->isCubemap(),
             "environment maps must be a cubemap");
 
-    return upcast(engine).createSkybox(*this);
+    return downcast(engine).createSkybox(*this);
 }
 
 // ------------------------------------------------------------------------------------------------
 
 FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
-        : mSkyboxTexture(upcast(builder->mEnvironmentMap)),
+        : mSkyboxTexture(downcast(builder->mEnvironmentMap)),
           mRenderableManager(engine.getRenderableManager()),
           mIntensity(builder->mIntensity) {
 
@@ -117,7 +117,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 }
 
 FMaterial const* FSkybox::createMaterial(FEngine& engine) {
-    FMaterial const* material = upcast(Material::Builder().package(
+    FMaterial const* material = downcast(Material::Builder().package(
             MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE).build(engine));
     return material;
 }

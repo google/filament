@@ -268,7 +268,7 @@ void FEngine::init() {
 
     mResourceAllocator = new ResourceAllocator(driverApi);
 
-    mFullScreenTriangleVb = upcast(VertexBuffer::Builder()
+    mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
             .bufferCount(1)
             .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
@@ -277,7 +277,7 @@ void FEngine::init() {
     mFullScreenTriangleVb->setBufferAt(*this, 0,
             { sFullScreenTriangleVertices, sizeof(sFullScreenTriangleVertices) });
 
-    mFullScreenTriangleIb = upcast(IndexBuffer::Builder()
+    mFullScreenTriangleIb = downcast(IndexBuffer::Builder()
             .indexCount(3)
             .bufferType(IndexBuffer::IndexType::USHORT)
             .build(*this));
@@ -308,7 +308,7 @@ void FEngine::init() {
         });
     }
 
-    mDefaultIblTexture = upcast(Texture::Builder()
+    mDefaultIblTexture = downcast(Texture::Builder()
             .width(1).height(1).levels(1)
             .format(Texture::InternalFormat::RGBA8)
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
@@ -316,14 +316,14 @@ void FEngine::init() {
 
     // 3 bands = 9 float3
     const float sh[9 * 3] = { 0.0f };
-    mDefaultIbl = upcast(IndirectLight::Builder()
+    mDefaultIbl = downcast(IndirectLight::Builder()
             .irradiance(3, reinterpret_cast<const float3*>(sh))
             .build(*this));
 
-    mDefaultColorGrading = upcast(ColorGrading::Builder().build(*this));
+    mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
 
     // Always initialize the default material, most materials' depth shaders fallback on it.
-    mDefaultMaterial = upcast(
+    mDefaultMaterial = downcast(
             FMaterial::DefaultMaterialBuilder()
                     .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));

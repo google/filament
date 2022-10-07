@@ -79,7 +79,7 @@ inline void FMaterialInstance::setParameterImpl(std::string_view name,
 
 template<typename T, typename>
 void MaterialInstance::setParameter(const char* name, size_t nameLength, T const& value) {
-    upcast(this)->setParameterImpl({ name, nameLength }, value);
+    downcast(this)->setParameterImpl({ name, nameLength }, value);
 }
 
 template<>
@@ -126,7 +126,7 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 
 template <typename T, typename>
 void MaterialInstance::setParameter(const char* name, size_t nameLength, const T* value, size_t count) {
-    upcast(this)->setParameterImpl({ name, nameLength }, value, count);
+    downcast(this)->setParameterImpl({ name, nameLength }, value, count);
 }
 
 template<>
@@ -184,111 +184,111 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 // ------------------------------------------------------------------------------------------------
 
 Material const* MaterialInstance::getMaterial() const noexcept {
-    return upcast(this)->getMaterial();
+    return downcast(this)->getMaterial();
 }
 
 const char* MaterialInstance::getName() const noexcept {
-    return upcast(this)->getName();
+    return downcast(this)->getName();
 }
 
 void MaterialInstance::setParameter(const char* name, size_t nameLength, Texture const* texture,
         TextureSampler const& sampler) {
-    return upcast(this)->setParameterImpl({ name, nameLength }, upcast(texture), sampler);
+    return downcast(this)->setParameterImpl({ name, nameLength }, downcast(texture), sampler);
 }
 
 void MaterialInstance::setParameter(
         const char* name, size_t nameLength, RgbType type, float3 color) {
-    upcast(this)->setParameterImpl<float3>({ name, nameLength }, Color::toLinear(type, color));
+    downcast(this)->setParameterImpl<float3>({ name, nameLength }, Color::toLinear(type, color));
 }
 
 void MaterialInstance::setParameter(
         const char* name, size_t nameLength, RgbaType type, float4 color) {
-    upcast(this)->setParameterImpl<float4>({ name, nameLength }, Color::toLinear(type, color));
+    downcast(this)->setParameterImpl<float4>({ name, nameLength }, Color::toLinear(type, color));
 }
 
 void MaterialInstance::setScissor(
         uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) noexcept {
-    upcast(this)->setScissor(left, bottom, width, height);
+    downcast(this)->setScissor(left, bottom, width, height);
 }
 
 void MaterialInstance::unsetScissor() noexcept {
-    upcast(this)->unsetScissor();
+    downcast(this)->unsetScissor();
 }
 
 void MaterialInstance::setPolygonOffset(float scale, float constant) noexcept {
-    upcast(this)->setPolygonOffset(scale, constant);
+    downcast(this)->setPolygonOffset(scale, constant);
 }
 
 void MaterialInstance::setMaskThreshold(float threshold) noexcept {
-    upcast(this)->setMaskThreshold(threshold);
+    downcast(this)->setMaskThreshold(threshold);
 }
 
 void MaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept {
-    upcast(this)->setSpecularAntiAliasingVariance(variance);
+    downcast(this)->setSpecularAntiAliasingVariance(variance);
 }
 
 void MaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
-    upcast(this)->setSpecularAntiAliasingThreshold(threshold);
+    downcast(this)->setSpecularAntiAliasingThreshold(threshold);
 }
 
 void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
-    upcast(this)->setDoubleSided(doubleSided);
+    downcast(this)->setDoubleSided(doubleSided);
 }
 
 void MaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
-    upcast(this)->setTransparencyMode(mode);
+    downcast(this)->setTransparencyMode(mode);
 }
 
 void MaterialInstance::setCullingMode(CullingMode culling) noexcept {
-    upcast(this)->setCullingMode(culling);
+    downcast(this)->setCullingMode(culling);
 }
 
 void MaterialInstance::setColorWrite(bool enable) noexcept {
-    upcast(this)->setColorWrite(enable);
+    downcast(this)->setColorWrite(enable);
 }
 
 void MaterialInstance::setDepthWrite(bool enable) noexcept {
-    upcast(this)->setDepthWrite(enable);
+    downcast(this)->setDepthWrite(enable);
 }
 
 void MaterialInstance::setDepthCulling(bool enable) noexcept {
-    upcast(this)->setDepthCulling(enable);
+    downcast(this)->setDepthCulling(enable);
 }
 
 void MaterialInstance::setStencilWrite(bool enable) noexcept {
-    upcast(this)->setStencilWrite(enable);
+    downcast(this)->setStencilWrite(enable);
 }
 
 void MaterialInstance::setStencilCompareFunction(StencilCompareFunc func, StencilFace face) noexcept {
-    upcast(this)->setStencilCompareFunction(func, face);
+    downcast(this)->setStencilCompareFunction(func, face);
 }
 
 void MaterialInstance::setStencilOpStencilFail(StencilOperation op, StencilFace face) noexcept {
-    upcast(this)->setStencilOpStencilFail(op, face);
+    downcast(this)->setStencilOpStencilFail(op, face);
 }
 
 void MaterialInstance::setStencilOpDepthFail(StencilOperation op, StencilFace face) noexcept {
-    upcast(this)->setStencilOpDepthFail(op, face);
+    downcast(this)->setStencilOpDepthFail(op, face);
 }
 
 void MaterialInstance::setStencilOpDepthStencilPass(StencilOperation op, StencilFace face) noexcept {
-    upcast(this)->setStencilOpDepthStencilPass(op, face);
+    downcast(this)->setStencilOpDepthStencilPass(op, face);
 }
 
 void MaterialInstance::setStencilReferenceValue(uint8_t value, StencilFace face) noexcept {
-    upcast(this)->setStencilReferenceValue(value, face);
+    downcast(this)->setStencilReferenceValue(value, face);
 }
 
 void MaterialInstance::setStencilReadMask(uint8_t readMask, StencilFace face) noexcept {
-    upcast(this)->setStencilReadMask(readMask, face);
+    downcast(this)->setStencilReadMask(readMask, face);
 }
 
 void MaterialInstance::setStencilWriteMask(uint8_t writeMask, StencilFace face) noexcept {
-    upcast(this)->setStencilWriteMask(writeMask, face);
+    downcast(this)->setStencilWriteMask(writeMask, face);
 }
 
 MaterialInstance* MaterialInstance::duplicate(MaterialInstance const* other, const char* name) noexcept {
-    return FMaterialInstance::duplicate(upcast(other), name);
+    return FMaterialInstance::duplicate(downcast(other), name);
 }
 
 

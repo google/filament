@@ -29,7 +29,7 @@
 
 #include <vector>
 
-#include "upcast.h"
+#include "downcast.h"
 
 struct cgltf_node;
 
@@ -120,7 +120,7 @@ struct FFilamentInstance : public FilamentInstance {
     void recomputeBoundingBoxes();
 };
 
-FILAMENT_UPCAST(FilamentInstance)
+FILAMENT_DOWNCAST(FilamentInstance)
 
 } // namespace filament::gltfio
 

@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_INDEXBUFFER_H
 #define TNT_FILAMENT_DETAILS_INDEXBUFFER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/Handle.h>
 
@@ -48,7 +48,7 @@ private:
     uint32_t mIndexCount;
 };
 
-FILAMENT_UPCAST(IndexBuffer)
+FILAMENT_DOWNCAST(IndexBuffer)
 
 } // namespace filament
 

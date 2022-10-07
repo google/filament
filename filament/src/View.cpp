@@ -19,273 +19,273 @@
 namespace filament {
 
 void View::setScene(Scene* scene) {
-    return upcast(this)->setScene(upcast(scene));
+    return downcast(this)->setScene(downcast(scene));
 }
 
 Scene* View::getScene() noexcept {
-    return upcast(this)->getScene();
+    return downcast(this)->getScene();
 }
 
 
 void View::setCamera(Camera* camera) noexcept {
-    upcast(this)->setCameraUser(upcast(camera));
+    downcast(this)->setCameraUser(downcast(camera));
 }
 
 Camera& View::getCamera() noexcept {
-    return upcast(this)->getCameraUser();
+    return downcast(this)->getCameraUser();
 }
 
 void View::setViewport(filament::Viewport const& viewport) noexcept {
-    upcast(this)->setViewport(viewport);
+    downcast(this)->setViewport(viewport);
 }
 
 filament::Viewport const& View::getViewport() const noexcept {
-    return upcast(this)->getViewport();
+    return downcast(this)->getViewport();
 }
 
 void View::setFrustumCullingEnabled(bool culling) noexcept {
-    upcast(this)->setFrustumCullingEnabled(culling);
+    downcast(this)->setFrustumCullingEnabled(culling);
 }
 
 bool View::isFrustumCullingEnabled() const noexcept {
-    return upcast(this)->isFrustumCullingEnabled();
+    return downcast(this)->isFrustumCullingEnabled();
 }
 
 void View::setDebugCamera(Camera* camera) noexcept {
-    upcast(this)->setViewingCamera(upcast(camera));
+    downcast(this)->setViewingCamera(downcast(camera));
 }
 
 void View::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
-    upcast(this)->setVisibleLayers(select, values);
+    downcast(this)->setVisibleLayers(select, values);
 }
 
 void View::setName(const char* name) noexcept {
-    upcast(this)->setName(name);
+    downcast(this)->setName(name);
 }
 
 const char* View::getName() const noexcept {
-    return upcast(this)->getName();
+    return downcast(this)->getName();
 }
 
 Camera const* View::getDirectionalLightCamera() const noexcept {
-    return upcast(this)->getDirectionalLightCamera();
+    return downcast(this)->getDirectionalLightCamera();
 }
 
 void View::setShadowingEnabled(bool enabled) noexcept {
-    upcast(this)->setShadowingEnabled(enabled);
+    downcast(this)->setShadowingEnabled(enabled);
 }
 
 void View::setRenderTarget(RenderTarget* renderTarget) noexcept {
-    upcast(this)->setRenderTarget(upcast(renderTarget));
+    downcast(this)->setRenderTarget(downcast(renderTarget));
 }
 
 RenderTarget* View::getRenderTarget() const noexcept {
-    return upcast(this)->getRenderTarget();
+    return downcast(this)->getRenderTarget();
 }
 
 void View::setSampleCount(uint8_t count) noexcept {
-    upcast(this)->setSampleCount(count);
+    downcast(this)->setSampleCount(count);
 }
 
 uint8_t View::getSampleCount() const noexcept {
-    return upcast(this)->getSampleCount();
+    return downcast(this)->getSampleCount();
 }
 
 void View::setAntiAliasing(AntiAliasing type) noexcept {
-    upcast(this)->setAntiAliasing(type);
+    downcast(this)->setAntiAliasing(type);
 }
 
 View::AntiAliasing View::getAntiAliasing() const noexcept {
-    return upcast(this)->getAntiAliasing();
+    return downcast(this)->getAntiAliasing();
 }
 
 void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
-    upcast(this)->setTemporalAntiAliasingOptions(options);
+    downcast(this)->setTemporalAntiAliasingOptions(options);
 }
 
 const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() const noexcept {
-    return upcast(this)->getTemporalAntiAliasingOptions();
+    return downcast(this)->getTemporalAntiAliasingOptions();
 }
 
 void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
-    upcast(this)->setMultiSampleAntiAliasingOptions(options);
+    downcast(this)->setMultiSampleAntiAliasingOptions(options);
 }
 
 const View::MultiSampleAntiAliasingOptions& View::getMultiSampleAntiAliasingOptions() const noexcept {
-    return upcast(this)->getMultiSampleAntiAliasingOptions();
+    return downcast(this)->getMultiSampleAntiAliasingOptions();
 }
 
 void View::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
-    upcast(this)->setScreenSpaceReflectionsOptions(options);
+    downcast(this)->setScreenSpaceReflectionsOptions(options);
 }
 
 const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOptions() const noexcept {
-    return upcast(this)->getScreenSpaceReflectionsOptions();
+    return downcast(this)->getScreenSpaceReflectionsOptions();
 }
 
 void View::setGuardBandOptions(GuardBandOptions options) noexcept {
-    upcast(this)->setGuardBandOptions(options);
+    downcast(this)->setGuardBandOptions(options);
 }
 
 GuardBandOptions const& View::getGuardBandOptions() const noexcept {
-    return upcast(this)->getGuardBandOptions();
+    return downcast(this)->getGuardBandOptions();
 }
 
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
-    return upcast(this)->setColorGrading(upcast(colorGrading));
+    return downcast(this)->setColorGrading(downcast(colorGrading));
 }
 
 const ColorGrading* View::getColorGrading() const noexcept {
-    return upcast(this)->getColorGrading();
+    return downcast(this)->getColorGrading();
 }
 
 void View::setDithering(Dithering dithering) noexcept {
-    upcast(this)->setDithering(dithering);
+    downcast(this)->setDithering(dithering);
 }
 
 View::Dithering View::getDithering() const noexcept {
-    return upcast(this)->getDithering();
+    return downcast(this)->getDithering();
 }
 
 void View::setDynamicResolutionOptions(const DynamicResolutionOptions& options) noexcept {
-    upcast(this)->setDynamicResolutionOptions(options);
+    downcast(this)->setDynamicResolutionOptions(options);
 }
 
 View::DynamicResolutionOptions View::getDynamicResolutionOptions() const noexcept {
-    return upcast(this)->getDynamicResolutionOptions();
+    return downcast(this)->getDynamicResolutionOptions();
 }
 
 void View::setRenderQuality(const RenderQuality& renderQuality) noexcept {
-    upcast(this)->setRenderQuality(renderQuality);
+    downcast(this)->setRenderQuality(renderQuality);
 }
 
 View::RenderQuality View::getRenderQuality() const noexcept {
-    return upcast(this)->getRenderQuality();
+    return downcast(this)->getRenderQuality();
 }
 
 void View::setPostProcessingEnabled(bool enabled) noexcept {
-    upcast(this)->setPostProcessingEnabled(enabled);
+    downcast(this)->setPostProcessingEnabled(enabled);
 }
 
 bool View::isPostProcessingEnabled() const noexcept {
-    return upcast(this)->hasPostProcessPass();
+    return downcast(this)->hasPostProcessPass();
 }
 
 void View::setFrontFaceWindingInverted(bool inverted) noexcept {
-    upcast(this)->setFrontFaceWindingInverted(inverted);
+    downcast(this)->setFrontFaceWindingInverted(inverted);
 }
 
 bool View::isFrontFaceWindingInverted() const noexcept {
-    return upcast(this)->isFrontFaceWindingInverted();
+    return downcast(this)->isFrontFaceWindingInverted();
 }
 
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
-    upcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
+    downcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
 
 void View::setShadowType(View::ShadowType shadow) noexcept {
-    upcast(this)->setShadowType(shadow);
+    downcast(this)->setShadowType(shadow);
 }
 
 void View::setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
-    upcast(this)->setVsmShadowOptions(options);
+    downcast(this)->setVsmShadowOptions(options);
 }
 
 View::VsmShadowOptions View::getVsmShadowOptions() const noexcept {
-    return upcast(this)->getVsmShadowOptions();
+    return downcast(this)->getVsmShadowOptions();
 }
 
 void View::setSoftShadowOptions(SoftShadowOptions const& options) noexcept {
-    upcast(this)->setSoftShadowOptions(options);
+    downcast(this)->setSoftShadowOptions(options);
 }
 
 SoftShadowOptions View::getSoftShadowOptions() const noexcept {
-    return upcast(this)->getSoftShadowOptions();
+    return downcast(this)->getSoftShadowOptions();
 }
 
 void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {
-    upcast(this)->setAmbientOcclusion(ambientOcclusion);
+    downcast(this)->setAmbientOcclusion(ambientOcclusion);
 }
 
 View::AmbientOcclusion View::getAmbientOcclusion() const noexcept {
-    return upcast(this)->getAmbientOcclusion();
+    return downcast(this)->getAmbientOcclusion();
 }
 
 void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& options) noexcept {
-    upcast(this)->setAmbientOcclusionOptions(options);
+    downcast(this)->setAmbientOcclusionOptions(options);
 }
 
 View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const noexcept {
-    return upcast(this)->getAmbientOcclusionOptions();
+    return downcast(this)->getAmbientOcclusionOptions();
 }
 
 void View::setBloomOptions(View::BloomOptions options) noexcept {
-    upcast(this)->setBloomOptions(options);
+    downcast(this)->setBloomOptions(options);
 }
 
 View::BloomOptions View::getBloomOptions() const noexcept {
-    return upcast(this)->getBloomOptions();
+    return downcast(this)->getBloomOptions();
 }
 
 void View::setFogOptions(View::FogOptions options) noexcept {
-    upcast(this)->setFogOptions(options);
+    downcast(this)->setFogOptions(options);
 }
 
 View::FogOptions View::getFogOptions() const noexcept {
-    return upcast(this)->getFogOptions();
+    return downcast(this)->getFogOptions();
 }
 
 void View::setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
-    upcast(this)->setDepthOfFieldOptions(options);
+    downcast(this)->setDepthOfFieldOptions(options);
 }
 
 View::DepthOfFieldOptions View::getDepthOfFieldOptions() const noexcept {
-    return upcast(this)->getDepthOfFieldOptions();
+    return downcast(this)->getDepthOfFieldOptions();
 }
 
 void View::setVignetteOptions(View::VignetteOptions options) noexcept {
-    upcast(this)->setVignetteOptions(options);
+    downcast(this)->setVignetteOptions(options);
 }
 
 View::VignetteOptions View::getVignetteOptions() const noexcept {
-    return upcast(this)->getVignetteOptions();
+    return downcast(this)->getVignetteOptions();
 }
 
 void View::setBlendMode(BlendMode blendMode) noexcept {
-    upcast(this)->setBlendMode(blendMode);
+    downcast(this)->setBlendMode(blendMode);
 }
 
 View::BlendMode View::getBlendMode() const noexcept {
-    return upcast(this)->getBlendMode();
+    return downcast(this)->getBlendMode();
 }
 
 uint8_t View::getVisibleLayers() const noexcept {
-  return upcast(this)->getVisibleLayers();
+  return downcast(this)->getVisibleLayers();
 }
 
 bool View::isShadowingEnabled() const noexcept {
-    return upcast(this)->isShadowingEnabled();
+    return downcast(this)->isShadowingEnabled();
 }
 
 void View::setScreenSpaceRefractionEnabled(bool enabled) noexcept {
-    upcast(this)->setScreenSpaceRefractionEnabled(enabled);
+    downcast(this)->setScreenSpaceRefractionEnabled(enabled);
 }
 
 bool View::isScreenSpaceRefractionEnabled() const noexcept {
-    return upcast(this)->isScreenSpaceRefractionEnabled();
+    return downcast(this)->isScreenSpaceRefractionEnabled();
 }
 
 void View::setStencilBufferEnabled(bool enabled) noexcept {
-    upcast(this)->setStencilBufferEnabled(enabled);
+    downcast(this)->setStencilBufferEnabled(enabled);
 }
 
 bool View::isStencilBufferEnabled() const noexcept {
-    return upcast(this)->isStencilBufferEnabled();
+    return downcast(this)->isStencilBufferEnabled();
 }
 
 View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
         View::PickingQueryResultCallback callback) noexcept {
-    return upcast(this)->pick(x, y, handler, callback);
+    return downcast(this)->pick(x, y, handler, callback);
 }
 
 } // namespace filament

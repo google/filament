@@ -473,7 +473,7 @@ void FTransformManager::gc(utils::EntityManager& em) noexcept {
 }
 
 TransformManager::children_iterator& TransformManager::children_iterator::operator++() {
-    FTransformManager const& that = upcast(mManager);
+    FTransformManager const& that = downcast(mManager);
     mInstance = that.mManager[mInstance].next;
     return *this;
 }

@@ -19,7 +19,7 @@
 
 #include <filament/Camera.h>
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/Frustum.h>
 
@@ -223,7 +223,7 @@ struct CameraInfo {
     math::mat4 getUserViewMatrix() const noexcept { return view * worldOrigin; }
 };
 
-FILAMENT_UPCAST(Camera)
+FILAMENT_DOWNCAST(Camera)
 
 } // namespace filament
 

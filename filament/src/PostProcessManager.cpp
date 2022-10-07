@@ -127,7 +127,7 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
     // TODO: After all materials using this class have been converted to the post-process material
     //       domain, load both OPAQUE and TRANSPARENT variants here.
     mHasMaterial = true;
-    mMaterial = upcast(Material::Builder().package(mData, mSize).build(engine));
+    mMaterial = downcast(Material::Builder().package(mData, mSize).build(engine));
 }
 
 UTILS_NOINLINE
@@ -2265,7 +2265,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
     if (bloomOptions.enabled) {
         bloomStrength = clamp(bloomOptions.strength, 0.0f, 1.0f);
         if (bloomOptions.dirt) {
-            FTexture* fdirt = upcast(bloomOptions.dirt);
+            FTexture* fdirt = downcast(bloomOptions.dirt);
             FrameGraphTexture frameGraphTexture{ .handle = fdirt->getHwHandle() };
             bloomDirt = fg.import("dirt", {
                     .width = (uint32_t)fdirt->getWidth(0u),

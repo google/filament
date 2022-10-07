@@ -23,23 +23,23 @@ namespace filament {
 using namespace backend;
 
 Texture* RenderTarget::getTexture(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).texture;
+    return downcast(this)->getAttachment(attachment).texture;
 }
 
 uint8_t RenderTarget::getMipLevel(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).mipLevel;
+    return downcast(this)->getAttachment(attachment).mipLevel;
 }
 
 RenderTarget::CubemapFace RenderTarget::getFace(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).face;
+    return downcast(this)->getAttachment(attachment).face;
 }
 
 uint32_t RenderTarget::getLayer(AttachmentPoint attachment) const noexcept {
-    return upcast(this)->getAttachment(attachment).layer;
+    return downcast(this)->getAttachment(attachment).layer;
 }
 
 uint8_t RenderTarget::getSupportedColorAttachmentsCount() const noexcept {
-    return upcast(this)->getSupportedColorAttachmentsCount();
+    return downcast(this)->getSupportedColorAttachmentsCount();
 }
 
 } // namespace filament

@@ -284,7 +284,7 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
         }
     }
 
-    FColorGrading* colorGrading = upcast(engine).createColorGrading(*this);
+    FColorGrading* colorGrading = downcast(engine).createColorGrading(*this);
 
     if (needToneMapper) {
         delete mImpl->toneMapper;

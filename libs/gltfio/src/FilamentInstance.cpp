@@ -305,84 +305,84 @@ void FFilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
 }
 
 void FilamentInstance::detachMaterialInstances() {
-    upcast(this)->detachMaterialInstances();
+    downcast(this)->detachMaterialInstances();
 }
 
 size_t FilamentInstance::getMaterialInstanceCount() const noexcept {
-    return upcast(this)->getMaterialInstanceCount();
+    return downcast(this)->getMaterialInstanceCount();
 }
 
 const MaterialInstance* const* FilamentInstance::getMaterialInstances() const noexcept {
-    return upcast(this)->getMaterialInstances();
+    return downcast(this)->getMaterialInstances();
 }
 
 MaterialInstance* const* FilamentInstance::getMaterialInstances() noexcept {
-    return upcast(this)->getMaterialInstances();
+    return downcast(this)->getMaterialInstances();
 }
 
 const char* FilamentInstance::getMaterialVariantName(size_t variantIndex) const noexcept {
-    return upcast(this)->getMaterialVariantName(variantIndex);
+    return downcast(this)->getMaterialVariantName(variantIndex);
 }
 
 void FilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
-    return upcast(this)->applyMaterialVariant(variantIndex);
+    return downcast(this)->applyMaterialVariant(variantIndex);
 }
 
 size_t FilamentInstance::getMaterialVariantCount() const noexcept {
-    return upcast(this)->getMaterialVariantCount();
+    return downcast(this)->getMaterialVariantCount();
 }
 
 FilamentAsset const* FilamentInstance::getAsset() const noexcept {
-    return upcast(this)->owner;
+    return downcast(this)->owner;
 }
 
 size_t FilamentInstance::getEntityCount() const noexcept {
-    return upcast(this)->entities.size();
+    return downcast(this)->entities.size();
 }
 
 const Entity* FilamentInstance::getEntities() const noexcept {
-    const auto& entities = upcast(this)->entities;
+    const auto& entities = downcast(this)->entities;
     return entities.empty() ? nullptr : entities.data();
 }
 
 Entity FilamentInstance::getRoot() const noexcept {
-    return upcast(this)->root;
+    return downcast(this)->root;
 }
 
 Animator* FilamentInstance::getAnimator() noexcept {
-    return upcast(this)->getAnimator();
+    return downcast(this)->getAnimator();
 }
 
 size_t FilamentInstance::getSkinCount() const noexcept {
-    return upcast(this)->getSkinCount();
+    return downcast(this)->getSkinCount();
 }
 
 const char* FilamentInstance::getSkinNameAt(size_t skinIndex) const noexcept {
-    return upcast(this)->getSkinNameAt(skinIndex);
+    return downcast(this)->getSkinNameAt(skinIndex);
 }
 
 size_t FilamentInstance::getJointCountAt(size_t skinIndex) const noexcept {
-    return upcast(this)->getJointCountAt(skinIndex);
+    return downcast(this)->getJointCountAt(skinIndex);
 }
 
 const Entity* FilamentInstance::getJointsAt(size_t skinIndex) const noexcept {
-    return upcast(this)->getJointsAt(skinIndex);
+    return downcast(this)->getJointsAt(skinIndex);
 }
 
 void FilamentInstance::attachSkin(size_t skinIndex, Entity target) noexcept {
-    return upcast(this)->attachSkin(skinIndex, target);
+    return downcast(this)->attachSkin(skinIndex, target);
 }
 
 void FilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
-    return upcast(this)->detachSkin(skinIndex, target);
+    return downcast(this)->detachSkin(skinIndex, target);
 }
 
 void FilamentInstance::recomputeBoundingBoxes() {
-    return upcast(this)->recomputeBoundingBoxes();
+    return downcast(this)->recomputeBoundingBoxes();
 }
 
 Aabb FilamentInstance::getBoundingBox() const noexcept {
-    return upcast(this)->boundingBox;
+    return downcast(this)->boundingBox;
 }
 
 } // namespace filament::gltfio
