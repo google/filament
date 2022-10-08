@@ -21,9 +21,9 @@ namespace filament {
 namespace fgdbg {
 
 class DebugServer {
-  public:
-  DebugServer();
-  ~DebugServer();
+public:
+    DebugServer();
+    ~DebugServer();
 };
 }
 }
