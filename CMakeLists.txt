@@ -719,7 +719,7 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
         add_subdirectory(${LIBRARIES}/matdbg)
     endif()
 
-    if (FILAMENT_ENABLE_FRAMEGRAPH OR IS_HOST_PLATFORM)
+    if (FILAMENT_ENABLE_FGDBG OR IS_HOST_PLATFORM)
         add_subdirectory(${LIBRARIES}/fgdbg)
     endif()
 endif()
