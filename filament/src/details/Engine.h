@@ -516,6 +516,10 @@ public:
             bool doFrameCapture = false;
         } renderer;
         matdbg::DebugServer* server = nullptr;
+<<<<<<< HEAD
+=======
+        std::unique_ptr<fgdbg::DebugServer> fgdbg = nullptr;
+>>>>>>> 7c926e62a (Add dummy DebugServer for fgdbg with support for Websockets)
     } debug;
 };
 

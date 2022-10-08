@@ -258,6 +258,15 @@ uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
 void FEngine::init() {
     SYSTRACE_CALL();
 
+<<<<<<< HEAD
+=======
+#if FILAMENT_ENABLE_FGDBG
+    if (!debug.fgdbg) {
+        debug.fgdbg = std::make_unique<fgdbg::DebugServer>();
+    }
+#endif
+
+>>>>>>> 7c926e62a (Add dummy DebugServer for fgdbg with support for Websockets)
     // this must be first.
     assert_invariant( intptr_t(&mDriverApiStorage) % alignof(DriverApi) == 0 );
     ::new(&mDriverApiStorage) DriverApi(*mDriver, mCommandBufferQueue.getCircularBuffer());
@@ -640,6 +649,15 @@ int FEngine::loop() {
     uint32_t id = std::thread::hardware_concurrency() - 1;
 
     while (true) {
+        #if FILAMENT_ENABLE_FGDBG
+              if (debug.fgdbg) {
+                static int fgdbgMessage = 0;
+                fgdbgMessage++;
+                if (fgdbgMessage % 100 == 0) {
+                  debug.fgdbg->sendMessage(fgdbgMessage/100);
+                }
+              }
+        #endif
         // looks like thread affinity needs to be reset regularly (on Android)
         JobSystem::setThreadAffinityById(id);
         if (!execute()) {
