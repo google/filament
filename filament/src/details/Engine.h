@@ -524,7 +524,7 @@ public:
             bool doFrameCapture = false;
         } renderer;
         matdbg::DebugServer* server = nullptr;
-        fgdbg::DebugServer* fgdbg = nullptr;
+        std::unique_ptr<fgdbg::DebugServer> fgdbg = nullptr;
     } debug;
 };
 
