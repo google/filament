@@ -261,8 +261,8 @@ void FEngine::init() {
     SYSTRACE_CALL();
 
 #if FILAMENT_ENABLE_FGDBG
-  if (!debug.fgdbg) {
-      debug.fgdbg = new fgdbg::DebugServer();
+    if (!debug.fgdbg) {
+        debug.fgdbg = std::make_unique<fgdbg::DebugServer>();
     }
 #endif
 
@@ -403,10 +403,6 @@ void FEngine::shutdown() {
 
     ASSERT_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId),
             "Engine::shutdown() called from the wrong thread!");
-
-#if FILAMENT_ENABLE_FGDBG
-    delete debug.fgdbg;
-#endif
 
 #ifndef NDEBUG
     // print out some statistics about this run
