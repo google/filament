@@ -61,11 +61,9 @@
 #if FILAMENT_ENABLE_FGDBG
 #include <fgdbg/DebugServer.h>
 #else
-namespace filament {
-namespace fgdbg {
+namespace filament::fgdbg {
 class DebugServer;
-} // namespace fgdbg
-} // namespace filament
+} // namespace filament::fgdbg
 #endif
 
 #if FILAMENT_ENABLE_MATDBG
