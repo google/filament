@@ -15,15 +15,16 @@
  */
 
 #include "fgdbg/DebugServer.h"
-#include "iostream"
+#include <utils/Log.h>
 
+using namespace utils;
 namespace filament::fgdbg {
 
 DebugServer::DebugServer() {
-  std::cout << "FrameGraph debug server created" << std::endl;
+    slog.d << "FrameGraph debug server created" << io::endl;
 }
 
-DebugServer::~DebugServer(){
-  std::cout << "FrameGraph debug server destroyed" << std::endl;
+DebugServer::~DebugServer() {
+    slog.d << "FrameGraph debug server destroyed" << io::endl;
 }
 }

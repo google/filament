@@ -17,5 +17,6 @@ set(SRCS src/DebugServer.cpp)
 # ==================================================================================================
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
+target_link_libraries(${TARGET} PUBLIC utils)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 include_directories(${PUBLIC_HDR_DIR})
