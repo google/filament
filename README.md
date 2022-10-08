@@ -313,6 +313,7 @@ and tools.
   - `bluegl`:                 OpenGL bindings for macOS, Linux and Windows
   - `bluevk`:                 Vulkan bindings for macOS, Linux, Windows and Android
   - `camutils`:               Camera manipulation utilities
+  - `fgdbg`:                  Frame Graph inspector and debugger (debug builds only)
   - `filabridge`:             Library shared by the Filament engine and host tools
   - `filaflat`:               Serialization/deserialization library used for materials
   - `filagui`:                Helper library for [Dear ImGui](https://github.com/ocornut/imgui)
@@ -325,7 +326,6 @@ and tools.
   - `image`:                  Image filtering and simple transforms
   - `imageio`:                Image file reading / writing, only intended for internal use
   - `matdbg`:                 DebugServer for inspecting shaders at run-time (debug builds only)
-  - `fgdbg`:                  Frame Graph inspector and debugger (debug builds only)
   - `math`:                   Math library
   - `mathio`:                 Math types support for output streams
   - `utils`:                  Utility library (threads, memory, data structures, etc.)
