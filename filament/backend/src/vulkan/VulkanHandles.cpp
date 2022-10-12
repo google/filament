@@ -49,7 +49,8 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         HwProgram(builder.getName()), context(context) {
     auto const& blobs = builder.getShadersSource();
     VkShaderModule* modules[2] = { &bundle.vertex, &bundle.fragment };
-    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+    // TODO: handle compute shaders.
+    for (size_t i = 0; i < 2; i++) {
         const auto& blob = blobs[i];
         VkShaderModule* module = modules[i];
         VkShaderModuleCreateInfo moduleInfo = {};
