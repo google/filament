@@ -882,8 +882,10 @@ size_t ShadowMap::intersectFrustumWithBox(
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsFrustumCorners, wsSceneReceiversCorners.vertices);
         } else {
-            // by construction vertexCount must be 8 here
-            assert_invariant(vertexCount == 8);
+            // by construction vertexCount should be 8 here, but it can be more because
+            // step (b) above can classify a point as inside the frustum that isn't quite.
+            assert_invariant(vertexCount >= 8);
+            vertexCount = 8;
         }
     }
 
