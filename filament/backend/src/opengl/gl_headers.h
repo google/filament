@@ -93,8 +93,11 @@
  */
 
 #if defined(GL_ES_VERSION_2_0)
+
 #ifdef GL_EXT_disjoint_timer_query
-#       define GL_TIME_ELAPSED              GL_TIME_ELAPSED_EXT
+#    ifndef GL_TIME_ELAPSED
+#        define GL_TIME_ELAPSED             GL_TIME_ELAPSED_EXT
+#    endif
 #endif
 
 #ifdef GL_EXT_clip_control
@@ -165,7 +168,12 @@
     #define GL_COMPUTE_SHADER                       0x91B9
 
     #define GL_TEXTURE_2D_MULTISAMPLE               0x9100
+
+// FIXME: The GL_TIME_ELAPSED define is used unconditionally in Filament, but
+// requires extension support.
+#ifndef GL_TIME_ELAPSED
     #define GL_TIME_ELAPSED                         0x88BF
+#endif
 
     #define GL_TEXTURE_BINDING_CUBE_MAP_ARRAY       0x900A
     #define GL_SAMPLER_CUBE_MAP_ARRAY               0x900C
