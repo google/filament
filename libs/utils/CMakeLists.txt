@@ -145,6 +145,7 @@ set(TEST_SRCS
         test/test_FixedCapacityVector.cpp
         test/test_Hash.cpp
         test/test_JobSystem.cpp
+        test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
