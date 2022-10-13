@@ -107,7 +107,12 @@ public:
     // address space. Constant buffers have specific alignment requirements when specifying an
     // offset.
 #if defined(IOS)
+#if TARGET_OS_SIMULATOR
+    // The iOS simulator has differing alignment requirements.
+    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 256;
+#else
     static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 4;
+#endif  // TARGET_OS_SIMULATOR
 #else
     static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 32;
 #endif
