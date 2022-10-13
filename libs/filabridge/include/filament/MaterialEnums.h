@@ -27,7 +27,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 27;
+static constexpr size_t MATERIAL_VERSION = 28;
 
 /**
  * Supported shading models
@@ -160,6 +160,7 @@ static constexpr size_t MAX_CUSTOM_ATTRIBUTES = 8;
 enum class MaterialDomain : uint8_t {
     SURFACE         = 0, //!< shaders applied to renderables
     POST_PROCESS    = 1, //!< shaders applied to rendered buffers
+    COMPUTE         = 2, //!< compute shader
 };
 
 /**

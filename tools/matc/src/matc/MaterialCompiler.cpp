@@ -47,17 +47,20 @@ namespace matc {
 static constexpr const char* CONFIG_KEY_MATERIAL= "material";
 static constexpr const char* CONFIG_KEY_VERTEX_SHADER = "vertex";
 static constexpr const char* CONFIG_KEY_FRAGMENT_SHADER = "fragment";
+static constexpr const char* CONFIG_KEY_COMPUTE_SHADER = "compute";
 static constexpr const char* CONFIG_KEY_TOOL = "tool";
 
 MaterialCompiler::MaterialCompiler() {
     mConfigProcessor[CONFIG_KEY_MATERIAL] = &MaterialCompiler::processMaterial;
     mConfigProcessor[CONFIG_KEY_VERTEX_SHADER] = &MaterialCompiler::processVertexShader;
     mConfigProcessor[CONFIG_KEY_FRAGMENT_SHADER] = &MaterialCompiler::processFragmentShader;
+    mConfigProcessor[CONFIG_KEY_COMPUTE_SHADER] = &MaterialCompiler::processComputeShader;
     mConfigProcessor[CONFIG_KEY_TOOL] = &MaterialCompiler::ignoreLexeme;
 
     mConfigProcessorJSON[CONFIG_KEY_MATERIAL] = &MaterialCompiler::processMaterialJSON;
     mConfigProcessorJSON[CONFIG_KEY_VERTEX_SHADER] = &MaterialCompiler::processVertexShaderJSON;
     mConfigProcessorJSON[CONFIG_KEY_FRAGMENT_SHADER] = &MaterialCompiler::processFragmentShaderJSON;
+    mConfigProcessorJSON[CONFIG_KEY_COMPUTE_SHADER] = &MaterialCompiler::processComputeShaderJSON;
     mConfigProcessorJSON[CONFIG_KEY_TOOL] = &MaterialCompiler::ignoreLexemeJSON;
 }
 
@@ -107,6 +110,11 @@ bool MaterialCompiler::processFragmentShader(const MaterialLexeme& lexeme,
     // line number offset, where 0 is the first line.
     builder.material(shaderStr.c_str(), trimmedLexeme.getLine() - 1);
     return true;
+}
+
+bool MaterialCompiler::processComputeShader(const MaterialLexeme& lexeme,
+        MaterialBuilder& builder) const noexcept {
+    return MaterialCompiler::processFragmentShader(lexeme, builder);
 }
 
 bool MaterialCompiler::ignoreLexeme(const MaterialLexeme& lexeme,
@@ -170,6 +178,25 @@ bool MaterialCompiler::processFragmentShaderJSON(const JsonishValue* value,
 
     if (value->getType() != JsonishValue::STRING) {
         std::cerr << "'fragment' block has an invalid type: "
+                << JsonishValue::typeToString(value->getType())
+                << ", should be STRING."
+                << std::endl;
+        return false;
+    }
+
+    builder.material(value->toJsonString()->getString().c_str());
+    return true;
+}
+bool MaterialCompiler::processComputeShaderJSON(const JsonishValue* value,
+        filamat::MaterialBuilder& builder) const noexcept {
+
+    if (!value) {
+        std::cerr << "'compute' block does not have a value, one is required." << std::endl;
+        return false;
+    }
+
+    if (value->getType() != JsonishValue::STRING) {
+        std::cerr << "'compute' block has an invalid type: "
                 << JsonishValue::typeToString(value->getType())
                 << ", should be STRING."
                 << std::endl;

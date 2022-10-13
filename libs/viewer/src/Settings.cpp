@@ -346,6 +346,10 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "mapSize") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->mapSize);
+        } else if (compare(tok, jsonChunk, "stable") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->stable);
+        } else if (compare(tok, jsonChunk, "lispsm") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lispsm);
         } else if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceContactShadows);
         } else if (compare(tok, jsonChunk, "shadowCascades") == 0) {
@@ -676,6 +680,8 @@ static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOpt
         << "\"blurWidth\": " << in.vsm.blurWidth << "\n"
         << "},\n"
         << "\"mapSize\": " << in.mapSize << ",\n"
+        << "\"stable\": " << to_string(in.stable) << ",\n"
+        << "\"lispsm\": " << to_string(in.lispsm) << ",\n"
         << "\"screenSpaceContactShadows\": " << to_string(in.screenSpaceContactShadows) << ",\n"
         << "\"shadowCascades\": " << int(in.shadowCascades) << ",\n"
         << "\"cascadeSplitPositions\": " << (splitsVector) << "\n"

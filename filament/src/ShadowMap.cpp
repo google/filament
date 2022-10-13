@@ -40,8 +40,6 @@ using namespace backend;
 // do this only if depth-clamp is available
 static constexpr bool USE_DEPTH_CLAMP = false;
 
-static constexpr bool ENABLE_LISPSM = true;
-
 ShadowMap::ShadowMap(FEngine& engine) noexcept :
         mEngine(engine),
         mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN),
@@ -53,11 +51,8 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
-    if constexpr (ENABLE_LISPSM) {
-        debugRegistry.registerProperty("d.shadowmap.lispsm", &engine.debug.shadowmap.lispsm);
-        debugRegistry.registerProperty("d.shadowmap.dzn", &engine.debug.shadowmap.dzn);
-        debugRegistry.registerProperty("d.shadowmap.dzf", &engine.debug.shadowmap.dzf);
-    }
+    debugRegistry.registerProperty("d.shadowmap.dzn", &engine.debug.shadowmap.dzn);
+    debugRegistry.registerProperty("d.shadowmap.dzf", &engine.debug.shadowmap.dzf);
 }
 
 void ShadowMap::terminate(FEngine& engine) {
@@ -231,7 +226,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
     mHasVisibleShadows = vertexCount >= 4;
     if (mHasVisibleShadows) {
         // We can't use LISPSM in stable mode
-        const bool USE_LISPSM = ENABLE_LISPSM && mEngine.debug.shadowmap.lispsm && !params.options.stable;
+        const bool useLispsm = params.options.lispsm && !params.options.stable;
 
         /*
          * Compute the light's projection matrix
@@ -252,7 +247,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         // Compute the LiSPSM warping
         mat4f W, Wp;
         mat4f L; // Rotation matrix in light space
-        if (USE_LISPSM) {
+        if (useLispsm) {
             // Orient the shadow map in the direction of the view vector by constructing a
             // rotation matrix in light space around the z-axis, that aligns the y-axis with the camera's
             // forward vector (V) -- this gives the wrap direction, vp, for LiSPSM.
@@ -351,7 +346,7 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
         // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
         // if Wp[3][1] is 0, then LISPSM was cancelled.
-        if (USE_LISPSM && Wp[3][1] != 0.0f) {
+        if (useLispsm && Wp[3][1] != 0.0f) {
             mTexelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F));
         } else {
             // We know we're using an ortho projection
@@ -780,6 +775,7 @@ size_t ShadowMap::intersectFrustumWithBox(
         float3 const* UTILS_RESTRICT wsFrustumCorners,
         Aabb const& UTILS_RESTRICT wsBox)
 {
+    constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
     size_t vertexCount = 0;
 
     /*
@@ -808,11 +804,10 @@ size_t ShadowMap::intersectFrustumWithBox(
             vertexCount++;
         }
     }
-    const bool someFrustumVerticesAreInTheBox = vertexCount > 0;
-    constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
 
     // at this point if we have 8 vertices, we can skip the rest
     if (vertexCount < 8) {
+        const size_t frustumVerticesInsideBoxCount = vertexCount;
         float4 const* wsFrustumPlanes = wsFrustum.getNormalizedPlanes();
 
         // b) add the scene's vertices that are known to be inside the view frustum
@@ -832,7 +827,7 @@ size_t ShadowMap::intersectFrustumWithBox(
             if ((l <= EPSILON) && (b <= EPSILON) &&
                 (r <= EPSILON) && (t <= EPSILON) &&
                 (f <= EPSILON) && (n <= EPSILON)) {
-                ++vertexCount;
+                vertexCount++;
             }
         }
 
@@ -877,9 +872,8 @@ size_t ShadowMap::intersectFrustumWithBox(
          * However, a special case is if all the vertices of the box are inside the frustum.
          */
 
-        if (someFrustumVerticesAreInTheBox && vertexCount >= 8) {
-            // special case, we don't need to calculate any edge intersections
-        } else {
+        const size_t boxVerticesInsideFrustumCount = vertexCount - frustumVerticesInsideBoxCount;
+        if (boxVerticesInsideFrustumCount < 8) {
             // c) intersect scene's volume edges with frustum planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsSceneReceiversCorners.vertices, wsFrustumCorners);
@@ -887,6 +881,11 @@ size_t ShadowMap::intersectFrustumWithBox(
             // d) intersect frustum edges with the scene's volume planes
             vertexCount = intersectFrustum(outVertices.data(), vertexCount,
                     wsFrustumCorners, wsSceneReceiversCorners.vertices);
+        } else {
+            // by construction vertexCount should be 8 here, but it can be more because
+            // step (b) above can classify a point as inside the frustum that isn't quite.
+            assert_invariant(vertexCount >= 8);
+            vertexCount = 8;
         }
     }
 

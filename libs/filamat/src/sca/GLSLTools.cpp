@@ -54,13 +54,52 @@ static std::string_view getMaterialFunctionName(MaterialBuilder::MaterialDomain 
             return "material";
         case MaterialBuilder::MaterialDomain::POST_PROCESS:
             return "postProcess";
+        case MaterialBuilder::MaterialDomain::COMPUTE:
+            return "compute";
     }
 };
+
+bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
+        filament::backend::ShaderModel model, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialInfo const& info) noexcept {
+
+    // Parse to check syntax and semantic.
+    const char* shaderCString = shaderCode.c_str();
+
+    TShader tShader(EShLanguage::EShLangCompute);
+    tShader.setStrings(&shaderCString, 1);
+
+    GLSLangCleaner cleaner;
+    const int version = getGlslDefaultVersion(model);
+    EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
+    bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
+    if (!ok) {
+        utils::slog.e << "ERROR: Unable to parse compute shader:" << utils::io::endl;
+        utils::slog.e << tShader.getInfoLog() << utils::io::flush;
+        return false;
+    }
+
+    auto materialFunctionName = getMaterialFunctionName(filament::MaterialDomain::COMPUTE);
+
+    TIntermNode* root = tShader.getIntermediate()->getTreeRoot();
+    // Check there is a material function definition in this shader.
+    TIntermNode* materialFctNode = ASTUtils::getFunctionByNameOnly(materialFunctionName, *root);
+    if (materialFctNode == nullptr) {
+        utils::slog.e << "ERROR: Invalid compute shader:" << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
+        return false;
+    }
+
+    return true;
+}
 
 bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
         filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         bool hasCustomSurfaceShading, MaterialInfo const& info) noexcept {
+
+    assert_invariant(materialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
 
     // Parse to check syntax and semantic.
     const char* shaderCString = shaderCode.c_str();
@@ -69,7 +108,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
-    int version = glslangVersionFromShaderModel(model);
+    const int version = getGlslDefaultVersion(model);
     EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
@@ -131,6 +170,8 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
         MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& info) noexcept {
 
+    assert_invariant(materialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
+
     // TODO: After implementing post-process vertex shaders, properly analyze them here.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return true;
@@ -143,7 +184,7 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
-    int version = glslangVersionFromShaderModel(model);
+    const int version = getGlslDefaultVersion(model);
     EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
@@ -184,8 +225,9 @@ bool GLSLTools::findProperties(
 
     auto getShaderStage = [](ShaderStage type) {
         switch (type) {
-            case ShaderStage::VERTEX:        return EShLanguage::EShLangVertex;
-            case ShaderStage::FRAGMENT:      return EShLanguage::EShLangFragment;
+            case ShaderStage::VERTEX:   return EShLanguage::EShLangVertex;
+            case ShaderStage::FRAGMENT: return EShLanguage::EShLangFragment;
+            case ShaderStage::COMPUTE:  return EShLanguage::EShLangCompute;
         }
     };
 
@@ -193,7 +235,7 @@ bool GLSLTools::findProperties(
     tShader.setStrings(&shaderCString, 1);
 
     GLSLangCleaner cleaner;
-    int version = glslangVersionFromShaderModel(model);
+    const int version = getGlslDefaultVersion(model);
     EShMessages msg = glslangFlagsFromTargetApi(targetApi, targetLanguage);
     const TBuiltInResource* builtins = &DefaultTBuiltInResource;
     bool ok = tShader.parse(builtins, version, false, msg);
@@ -321,17 +363,28 @@ bool GLSLTools::findSymbolsUsage(std::string_view functionSignature, TIntermNode
     return true;
 }
 
-int GLSLTools::glslangVersionFromShaderModel(ShaderModel model) {
-    int version = 110;
+// use 100 for ES environment, 110 for desktop; this is the GLSL version, not SPIR-V or Vulkan
+// this is intended to be used with glslang's parse() method, which will figure out the actual
+// version.
+int GLSLTools::getGlslDefaultVersion(ShaderModel model) {
+        switch (model) {
+        case ShaderModel::MOBILE:
+            return 100;
+        case ShaderModel::DESKTOP:
+            return 110;
+    }
+}
+
+// The shading language version. Corresponds to #version $VALUE.
+std::pair<int, bool> GLSLTools::getShadingLanguageVersion(ShaderModel model,
+        filament::backend::FeatureLevel featureLevel) {
+    using FeatureLevel = filament::backend::FeatureLevel;
     switch (model) {
         case ShaderModel::MOBILE:
-            version = 100;
-            break;
+            return { featureLevel >= FeatureLevel::FEATURE_LEVEL_2 ? 310 : 300, true };
         case ShaderModel::DESKTOP:
-            version = 110;
-            break;
+            return { featureLevel >= FeatureLevel::FEATURE_LEVEL_2 ? 430 : 410, false };
     }
-    return version;
 }
 
 EShMessages GLSLTools::glslangFlagsFromTargetApi(

@@ -158,22 +158,23 @@ std::string shaderFromConfig(MaterialConfig config) {
 Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
     std::string shader = shaderFromConfig(config);
     MaterialBuilder::init();
-    MaterialBuilder builder = MaterialBuilder()
+    MaterialBuilder builder;
+    builder
             .name("material")
             .material(shader.c_str())
             .doubleSided(config.doubleSided)
             .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap")
-            .parameter(MaterialBuilder::UniformType::FLOAT4, "baseColorFactor")
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "metallicRoughnessMap")
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "aoMap")
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "emissiveMap")
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap")
-            .parameter(MaterialBuilder::UniformType::FLOAT, "metallicFactor")
-            .parameter(MaterialBuilder::UniformType::FLOAT, "roughnessFactor")
-            .parameter(MaterialBuilder::UniformType::FLOAT, "normalScale")
-            .parameter(MaterialBuilder::UniformType::FLOAT, "aoStrength")
-            .parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
+            .parameter("baseColorMap", MaterialBuilder::SamplerType::SAMPLER_2D)
+            .parameter("baseColorFactor", MaterialBuilder::UniformType::FLOAT4)
+            .parameter("metallicRoughnessMap", MaterialBuilder::SamplerType::SAMPLER_2D)
+            .parameter("aoMap", MaterialBuilder::SamplerType::SAMPLER_2D)
+            .parameter("emissiveMap", MaterialBuilder::SamplerType::SAMPLER_2D)
+            .parameter("normalMap", MaterialBuilder::SamplerType::SAMPLER_2D)
+            .parameter("metallicFactor", MaterialBuilder::UniformType::FLOAT)
+            .parameter("roughnessFactor", MaterialBuilder::UniformType::FLOAT)
+            .parameter("normalScale", MaterialBuilder::UniformType::FLOAT)
+            .parameter("aoStrength", MaterialBuilder::UniformType::FLOAT)
+            .parameter("emissiveFactor", MaterialBuilder::UniformType::FLOAT3);
 
     if (config.maxUVIndex() > 0) {
         builder.require(VertexAttribute::UV1);

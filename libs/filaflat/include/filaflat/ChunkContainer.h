@@ -66,13 +66,13 @@ public:
         return { it->first, it->second };
     }
 
-    const uint8_t* getChunkStart(Type type) const noexcept {
-        return mChunks.at(type).start;
-    }
-
-    const uint8_t* getChunkEnd(Type type) const noexcept {
-        ChunkDesc const& chunkDesc = mChunks.at(type);
-        return chunkDesc.start + chunkDesc.size;
+    std::pair<uint8_t const*, uint8_t const*> getChunkRange(Type type) const noexcept {
+        ChunkDesc const* pChunkDesc;
+        bool success = hasChunk(type, &pChunkDesc);
+        if (success) {
+            return { pChunkDesc->start, pChunkDesc->start + pChunkDesc->size };
+        }
+        return { nullptr, nullptr };
     }
 
     bool hasChunk(Type type, ChunkDesc const** pChunkDesc = nullptr) const noexcept {

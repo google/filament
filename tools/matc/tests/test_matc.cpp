@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "MockConfig.h"
+#include "TestMaterialCompiler.h"
 
 #include <matc/MaterialCompiler.h>
 #include <matc/MaterialLexer.h>
@@ -26,26 +27,7 @@
 class MaterialLexer: public ::testing::Test {
 protected:
     MaterialLexer() = default;
-    ~MaterialLexer() = default;
-};
-
-class TestMaterialCompiler {
-public:
-    explicit TestMaterialCompiler(const matc::MaterialCompiler& materialCompiler) :
-            mMaterialCompiler(materialCompiler) {}
-
-    bool parseMaterial(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
-            const noexcept{
-        return mMaterialCompiler.parseMaterial(buffer, size, builder);
-    }
-
-    bool parseMaterialAsJSON(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
-            const noexcept{
-        return mMaterialCompiler.parseMaterialAsJSON(buffer, size, builder);
-    }
-
-private:
-    const matc::MaterialCompiler& mMaterialCompiler;
+    ~MaterialLexer() override = default;
 };
 
 static std::string materialSource(R"(

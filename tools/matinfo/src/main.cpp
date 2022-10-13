@@ -114,19 +114,19 @@ static void license() {
 static int handleArguments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "hla:g:s:v:b:m:b:w:xyz";
     static const struct option OPTIONS[] = {
-            { "help",            no_argument,       0, 'h' },
-            { "license",         no_argument,       0, 'l' },
-            { "analyze-spirv",   required_argument, 0, 'a' },
-            { "print-glsl",      required_argument, 0, 'g' },
-            { "print-spirv",     required_argument, 0, 's' },
-            { "print-vkglsl",    required_argument, 0, 'v' },
-            { "print-metal",     required_argument, 0, 'm' },
-            { "print-dic-glsl",  no_argument,       0, 'x' },
-            { "print-dic-metal", no_argument,       0, 'y' },
-            { "print-dic-vk",    no_argument,       0, 'z' },
-            { "dump-binary",     required_argument, 0, 'b' },
-            { "web-server",      required_argument, 0, 'w' },
-            { 0, 0, 0, 0 }  // termination of the option list
+            { "help",            no_argument,       nullptr, 'h' },
+            { "license",         no_argument,       nullptr, 'l' },
+            { "analyze-spirv",   required_argument, nullptr, 'a' },
+            { "print-glsl",      required_argument, nullptr, 'g' },
+            { "print-spirv",     required_argument, nullptr, 's' },
+            { "print-vkglsl",    required_argument, nullptr, 'v' },
+            { "print-metal",     required_argument, nullptr, 'm' },
+            { "print-dic-glsl",  no_argument,       nullptr, 'x' },
+            { "print-dic-metal", no_argument,       nullptr, 'y' },
+            { "print-dic-vk",    no_argument,       nullptr, 'z' },
+            { "dump-binary",     required_argument, nullptr, 'b' },
+            { "web-server",      required_argument, nullptr, 'w' },
+            { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
     int opt;
@@ -194,7 +194,8 @@ static bool read(const filaflat::ChunkContainer& container, filamat::ChunkType t
         return false;
     }
 
-    filaflat::Unflattener unflattener(container.getChunkStart(type), container.getChunkEnd(type));
+    auto [start, end] = container.getChunkRange(type);
+    filaflat::Unflattener unflattener(start, end);
     return unflattener.read(value);
 }
 
@@ -219,7 +220,7 @@ static std::map<int, std::string> transpileSpirvToLines(const std::vector<uint32
     emitOptions.vulkan_semantics = true;
     emitOptions.emit_line_directives = true;
 
-    CompilerGLSL glslCompiler(move(spirv));
+    CompilerGLSL glslCompiler(spirv);
     glslCompiler.set_common_options(emitOptions);
     std::string transpiled = glslCompiler.compile();
 
@@ -369,7 +370,7 @@ static void disassembleSpirv(const std::vector<uint32_t>& spirv, bool analyze) {
     }
 }
 
-static void dumpSpirvBinary(const std::vector<uint32_t>& spirv, std::string filename) {
+static void dumpSpirvBinary(const std::vector<uint32_t>& spirv, const std::string& filename) {
     std::ofstream out(filename, std::ofstream::binary);
     out.write((const char*) spirv.data(), spirv.size() * 4);
     std::cout << "Binary SPIR-V dumped to " << filename << std::endl;
@@ -426,7 +427,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             const auto& item = info[config.shaderIndex];
             parser.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
-            // Casted to char* to print as a string rather than hex value.
+            // Cast to char* to print as a string rather than hex value.
             std::cout << (const char*) content.data();
 
             return true;
@@ -510,8 +511,8 @@ static bool parseChunks(Config config, void* data, size_t size) {
             return false;
         }
 
-        for (size_t i = 0; i < dictionary.size(); i++) {
-            std::cout << (const char*)dictionary[i].data() << std::endl;
+        for (auto const& i : dictionary) {
+            std::cout << (const char*)i.data() << std::endl;
         }
 
         return true;

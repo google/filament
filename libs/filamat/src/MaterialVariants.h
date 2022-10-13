@@ -37,6 +37,8 @@ std::vector<Variant> determineSurfaceVariants(
 
 std::vector<Variant> determinePostProcessVariants();
 
+std::vector<Variant> determineComputeVariants();
+
 } // namespace filamat
 
 #endif

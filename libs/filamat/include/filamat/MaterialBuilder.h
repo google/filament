@@ -19,14 +19,6 @@
 #ifndef TNT_FILAMAT_MATERIAL_PACKAGE_BUILDER_H
 #define TNT_FILAMAT_MATERIAL_PACKAGE_BUILDER_H
 
-#include <cstddef>
-#include <cstdint>
-
-#include <atomic>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <filament/MaterialEnums.h>
 
 #include <filamat/IncludeCallback.h>
@@ -40,8 +32,22 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+#include <math/vec3.h>
+
+#include <atomic>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
+
 namespace utils {
 class JobSystem;
+}
+
+namespace filament {
+class BufferInterfaceBlock;
 }
 
 namespace filamat {
@@ -136,10 +142,10 @@ protected:
     std::vector<CodeGenParams> mCodeGenPermutations;
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
-    const CodeGenParams mSemanticCodeGenParams = {
-        .shaderModel = ShaderModel::MOBILE,
-        .targetApi = TargetApi::OPENGL,
-        .targetLanguage = TargetLanguage::SPIRV
+    static constexpr const CodeGenParams mSemanticCodeGenParams = {
+            .shaderModel = ShaderModel::MOBILE,
+            .targetApi = TargetApi::OPENGL,
+            .targetLanguage = TargetLanguage::SPIRV
     };
 
     // Keeps track of how many times MaterialBuilder::init() has been called without a call to
@@ -151,7 +157,7 @@ protected:
 
 // Utility function that looks at an Engine backend to determine TargetApi
 inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
-            filament::backend::Backend backend) noexcept {
+        filament::backend::Backend backend) noexcept {
     using filament::backend::Backend;
     using TargetApi = MaterialBuilderBase::TargetApi;
     switch (backend) {
@@ -199,6 +205,13 @@ inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
 class UTILS_PUBLIC MaterialBuilder : public MaterialBuilderBase {
 public:
     MaterialBuilder();
+    ~MaterialBuilder();
+
+    MaterialBuilder(const MaterialBuilder& rhs) = delete;
+    MaterialBuilder& operator=(const MaterialBuilder& rhs) = delete;
+
+    MaterialBuilder(MaterialBuilder&& rhs) noexcept = default;
+    MaterialBuilder& operator=(MaterialBuilder&& rhs) noexcept = default;
 
     static constexpr size_t MATERIAL_VARIABLES_COUNT = 4;
     enum class Variable : uint8_t {
@@ -252,7 +265,7 @@ public:
         std::string value;
 
         PreprocessorDefine(std::string  name, std::string  value) :
-            name(std::move(name)), value(std::move(value)) {}
+                name(std::move(name)), value(std::move(value)) {}
     };
     using PreprocessorDefineList = std::vector<PreprocessorDefine>;
 
@@ -269,38 +282,28 @@ public:
     MaterialBuilder& interpolation(Interpolation interpolation) noexcept;
 
     //! Add a parameter (i.e., a uniform) to this material.
-    MaterialBuilder& parameter(UniformType type, ParameterPrecision precision,
-            const char* name) noexcept;
-
-    //! Add a parameter (i.e., a uniform) to this material.
-    MaterialBuilder& parameter(UniformType type, const char* name) noexcept {
-        return parameter(type, ParameterPrecision::DEFAULT, name);
-    }
+    MaterialBuilder& parameter(const char* name, UniformType type,
+            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
 
     //! Add a parameter array to this material.
-    MaterialBuilder& parameter(UniformType type, size_t size,
-            ParameterPrecision precision, const char* name) noexcept;
-
-    //! Add a parameter array to this material.
-    MaterialBuilder& parameter(UniformType type, size_t size, const char* name) noexcept {
-        return parameter(type, size, ParameterPrecision::DEFAULT, name);
-    }
+    MaterialBuilder& parameter(const char* name, size_t size, UniformType type,
+            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
 
     /**
      * Add a sampler parameter to this material.
      *
-     * When SamplerType::SAMPLER_EXTERNAL is specifed, format and precision are ignored.
+     * When SamplerType::SAMPLER_EXTERNAL is specified, format and precision are ignored.
      */
-    MaterialBuilder& parameter(SamplerType samplerType, SamplerFormat format,
-            ParameterPrecision precision, const char* name) noexcept;
+    MaterialBuilder& parameter(const char* name, SamplerType samplerType,
+            SamplerFormat format = SamplerFormat::FLOAT,
+            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
+
     /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(SamplerType samplerType, SamplerFormat format,
-            const char* name) noexcept;
-    /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(SamplerType samplerType, ParameterPrecision precision,
-            const char* name) noexcept;
-    /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(SamplerType samplerType, const char* name) noexcept;
+    MaterialBuilder& parameter(const char* name, SamplerType samplerType,
+            ParameterPrecision precision) noexcept;
+
+
+    MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
 
     //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
@@ -313,7 +316,7 @@ public:
     MaterialBuilder& require(VertexAttribute attribute) noexcept;
 
     //! Specify the domain that this material will operate in.
-    MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
+    MaterialBuilder& materialDomain(MaterialBuilder::MaterialDomain materialDomain) noexcept;
 
     /**
      * Set the code content of this material.
@@ -565,6 +568,9 @@ public:
      */
     MaterialBuilder& useLegacyMorphing() noexcept;
 
+    //! specify compute kernel group size
+    MaterialBuilder& groupSize(filament::math::uint3 groupSize) noexcept;
+
     /**
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
@@ -578,16 +584,16 @@ public:
     /**
      * Add a subpass parameter to this material.
      */
-    MaterialBuilder& parameter(SubpassType subpassType, SamplerFormat format, ParameterPrecision
-            precision, const char* name) noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType, SamplerFormat format, const char* name)
-        noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType, ParameterPrecision precision,
-            const char* name) noexcept;
-    MaterialBuilder& parameter(SubpassType subpassType, const char* name) noexcept;
+    MaterialBuilder& subpass(SubpassType subpassType,
+            SamplerFormat format, ParameterPrecision precision, const char* name) noexcept;
+    MaterialBuilder& subpass(SubpassType subpassType,
+            SamplerFormat format, const char* name) noexcept;
+    MaterialBuilder& subpass(SubpassType subpassType,
+            ParameterPrecision precision, const char* name) noexcept;
+    MaterialBuilder& subpass(SubpassType subpassType, const char* name) noexcept;
 
     struct Parameter {
-        Parameter() noexcept : parameterType(INVALID) {}
+        Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p)
@@ -624,8 +630,8 @@ public:
         Output() noexcept = default;
         Output(const char* outputName, VariableQualifier qualifier, OutputTarget target,
                 OutputType type, int location) noexcept
-            : name(outputName), qualifier(qualifier), target(target), type(type),
-            location(location) { }
+                : name(outputName), qualifier(qualifier), target(target), type(type),
+                  location(location) { }
 
         utils::CString name;
         VariableQualifier qualifier;
@@ -657,13 +663,22 @@ public:
 
     static constexpr size_t MAX_PARAMETERS_COUNT = 48;
     static constexpr size_t MAX_SUBPASS_COUNT = 1;
+    static constexpr size_t MAX_BUFFERS_COUNT = 4;
     using ParameterList = Parameter[MAX_PARAMETERS_COUNT];
+    using SubpassList = Parameter[MAX_SUBPASS_COUNT];
+    using BufferList = std::vector<std::unique_ptr<filament::BufferInterfaceBlock>>;
 
     // returns the number of parameters declared in this material
     uint8_t getParameterCount() const noexcept { return mParameterCount; }
 
     // returns a list of at least getParameterCount() parameters
     const ParameterList& getParameters() const noexcept { return mParameters; }
+
+    // returns the number of parameters declared in this material
+    uint8_t getSubpassCount() const noexcept { return mSubpassCount; }
+
+    // returns a list of at least getParameterCount() parameters
+    const SubpassList& getSubPasses() const noexcept { return mSubpasses; }
 
     filament::UserVariantFilterMask getVariantFilter() const { return mVariantFilter; }
 
@@ -735,8 +750,10 @@ private:
 
     PropertyList mProperties;
     ParameterList mParameters;
+    SubpassList mSubpasses;
     VariableList mVariables;
     OutputList mOutputs;
+    BufferList mBuffers;
 
     ShaderQuality mShaderQuality = ShaderQuality::DEFAULT;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
@@ -758,10 +775,13 @@ private:
     float mSpecularAntiAliasingVariance = 0.15f;
     float mSpecularAntiAliasingThreshold = 0.2f;
 
+    filament::math::uint3 mGroupSize = { 1, 1, 1 };
+
     bool mShadowMultiplier = false;
     bool mTransparentShadow = false;
 
     uint8_t mParameterCount = 0;
+    uint8_t mSubpassCount = 0;
 
     bool mDoubleSided = false;
     bool mDoubleSidedCapability = false;

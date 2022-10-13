@@ -34,7 +34,7 @@ namespace filament::backend {
 class Program {
 public:
 
-    static constexpr size_t SHADER_TYPE_COUNT = 2;
+    static constexpr size_t SHADER_TYPE_COUNT = 3;
     static constexpr size_t UNIFORM_BINDING_COUNT = CONFIG_UNIFORM_BINDING_COUNT;
     static constexpr size_t SAMPLER_BINDING_COUNT = CONFIG_SAMPLER_BINDING_COUNT;
 

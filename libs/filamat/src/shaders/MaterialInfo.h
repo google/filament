@@ -23,7 +23,7 @@
 
 #include <filament/MaterialEnums.h>
 
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 
@@ -59,12 +59,16 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::BlendingMode blendingMode;
     filament::BlendingMode postLightingBlendingMode;
     filament::Shading shading;
-    filament::UniformInterfaceBlock uib;
+    filament::BufferInterfaceBlock uib;
     filament::SamplerInterfaceBlock sib;
     filament::SubpassInfo subpass;
     filament::SamplerBindingMap samplerBindings;
     filament::ShaderQuality quality;
     filament::backend::FeatureLevel featureLevel;
+    filament::math::uint3 groupSize;
+
+    using BufferContainer = utils::FixedCapacityVector<filament::BufferInterfaceBlock const*>;
+    BufferContainer buffers{ BufferContainer::with_capacity(filament::backend::MAX_SSBO_COUNT) };
 };
 
 }

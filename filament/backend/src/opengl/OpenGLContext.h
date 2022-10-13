@@ -311,7 +311,7 @@ public:
                     GLsizeiptr size = 0;
                 } buffers[MAX_BUFFER_BINDINGS];
             } targets[2];   // there are only 2 indexed buffer target (uniform and transform feedback)
-            GLuint genericBinding[8] = { 0 };
+            GLuint genericBinding[9] = { 0 };
         } buffers;
 
         struct {
@@ -460,17 +460,18 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
 constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept {
     size_t index = 0;
     switch (target) {
-        // The indexed buffers MUST be first in this list
+        // The indexed buffers MUST be first in this list (those usable with bindBufferRange)
         case GL_UNIFORM_BUFFER:             index = 0; break;
         case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
+        case GL_SHADER_STORAGE_BUFFER:      index = 2; break;
 
-        case GL_ARRAY_BUFFER:               index = 2; break;
-        case GL_COPY_READ_BUFFER:           index = 3; break;
-        case GL_COPY_WRITE_BUFFER:          index = 4; break;
-        case GL_ELEMENT_ARRAY_BUFFER:       index = 5; break;
-        case GL_PIXEL_PACK_BUFFER:          index = 6; break;
-        case GL_PIXEL_UNPACK_BUFFER:        index = 7; break;
-        default: index = 8; break; // should never happen
+        case GL_ARRAY_BUFFER:               index = 3; break;
+        case GL_COPY_READ_BUFFER:           index = 4; break;
+        case GL_COPY_WRITE_BUFFER:          index = 5; break;
+        case GL_ELEMENT_ARRAY_BUFFER:       index = 6; break;
+        case GL_PIXEL_PACK_BUFFER:          index = 7; break;
+        case GL_PIXEL_UNPACK_BUFFER:        index = 8; break;
+        default: index = 9; break; // should never happen
     }
     assert_invariant(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
     return index;
@@ -531,7 +532,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
     size_t targetIndex = getIndexForBufferTarget(target);
-    assert_invariant(targetIndex <= 1); // validity check
+    assert_invariant(targetIndex <= 2); // validity check
 
     // this ALSO sets the generic binding
     if (   state.buffers.targets[targetIndex].buffers[index].name != buffer

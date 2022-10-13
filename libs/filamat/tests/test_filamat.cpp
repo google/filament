@@ -756,8 +756,8 @@ TEST_F(MaterialCompiler, Uv0AndUv1) {
 TEST_F(MaterialCompiler, Arrays) {
     filamat::MaterialBuilder builder;
 
-    builder.parameter(UniformType::FLOAT4, 1, "f4");
-    builder.parameter(UniformType::FLOAT, 1, "f1");
+    builder.parameter("f4", 1, UniformType::FLOAT4);
+    builder.parameter("f1", 1, UniformType::FLOAT);
 
     filamat::Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());

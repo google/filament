@@ -30,7 +30,9 @@ material {
         {
             type : float4,
             name : vignetteColor
-        },
+        }
+    ],
+    subpasses : [
         {
             type : subpassInput,
             format : float,

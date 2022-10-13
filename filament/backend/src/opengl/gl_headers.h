@@ -19,7 +19,11 @@
 
 #if defined(__ANDROID__) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
-    #include <GLES3/gl31.h>
+    #if defined(__EMSCRIPTEN__)
+    #   include <GLES3/gl3.h>
+    #else
+    #   include <GLES3/gl31.h>
+    #endif
     #include <GLES2/gl2ext.h>
 
     /* The Android NDK doesn't expose extensions, fake it with eglGetProcAddress */
@@ -89,8 +93,11 @@
  */
 
 #if defined(GL_ES_VERSION_2_0)
+
 #ifdef GL_EXT_disjoint_timer_query
-#       define GL_TIME_ELAPSED              GL_TIME_ELAPSED_EXT
+#    ifndef GL_TIME_ELAPSED
+#        define GL_TIME_ELAPSED             GL_TIME_ELAPSED_EXT
+#    endif
 #endif
 
 #ifdef GL_EXT_clip_control
@@ -157,9 +164,16 @@
 /* The iOS SDK only provides OpenGL ES headers up to 3.0. Filament works with OpenGL 3.0, but
  * requires ES3.1 headers */
 #if !defined(GL_ES_VERSION_3_1)
+    #define GL_SHADER_STORAGE_BUFFER                0x90D2
+    #define GL_COMPUTE_SHADER                       0x91B9
 
     #define GL_TEXTURE_2D_MULTISAMPLE               0x9100
+
+// FIXME: The GL_TIME_ELAPSED define is used unconditionally in Filament, but
+// requires extension support.
+#ifndef GL_TIME_ELAPSED
     #define GL_TIME_ELAPSED                         0x88BF
+#endif
 
     #define GL_TEXTURE_BINDING_CUBE_MAP_ARRAY       0x900A
     #define GL_SAMPLER_CUBE_MAP_ARRAY               0x900C

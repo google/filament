@@ -30,7 +30,7 @@ using namespace backend;
 template<size_t Size>
 UTILS_NOINLINE
 void FMaterialInstance::setParameterUntypedImpl(std::string_view name, const void* value) {
-    ssize_t offset = mMaterial->getUniformInterfaceBlock().getUniformOffset(name, 0);
+    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
     if (UTILS_LIKELY(offset >= 0)) {
         mUniforms.setUniformUntyped<Size>(size_t(offset), value);  // handles specialization for mat3f
     }
@@ -49,7 +49,7 @@ inline void FMaterialInstance::setParameterImpl(std::string_view name, T const& 
 // specialization for mat3f
 template<>
 inline void FMaterialInstance::setParameterImpl(std::string_view name, mat3f const& value) {
-    ssize_t offset = mMaterial->getUniformInterfaceBlock().getUniformOffset(name, 0);
+    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
     if (UTILS_LIKELY(offset >= 0)) {
         mUniforms.setUniform(size_t(offset), value);
     }
@@ -61,7 +61,7 @@ template<size_t Size>
 UTILS_NOINLINE
 void FMaterialInstance::setParameterUntypedImpl(std::string_view name,
         const void* value, size_t count) {
-    ssize_t offset = mMaterial->getUniformInterfaceBlock().getUniformOffset(name, 0);
+    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
     if (UTILS_LIKELY(offset >= 0)) {
         mUniforms.setUniformArrayUntyped<Size>(size_t(offset), value, count);
     }

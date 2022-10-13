@@ -38,8 +38,8 @@ static bool read(const filaflat::ChunkContainer& container, filamat::ChunkType t
     if (!container.hasChunk(type)) {
         return false;
     }
-
-    filaflat::Unflattener unflattener(container.getChunkStart(type), container.getChunkEnd(type));
+    auto [start, end] = container.getChunkRange(type);
+    filaflat::Unflattener unflattener(start, end);
     return unflattener.read(value);
 }
 
@@ -95,6 +95,7 @@ const char* toString(MaterialDomain domain) noexcept {
     switch (domain) {
         case MaterialDomain::SURFACE: return "surface";
         case MaterialDomain::POST_PROCESS: return "post process";
+        case MaterialDomain::COMPUTE: return "compute";
     }
     return "--";
 }

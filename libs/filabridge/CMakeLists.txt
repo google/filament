@@ -11,7 +11,7 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/**/*.h)
 
 set(SRCS
         src/SamplerInterfaceBlock.cpp
-        src/UniformInterfaceBlock.cpp
+        src/BufferInterfaceBlock.cpp
         src/Variant.cpp
 )
 

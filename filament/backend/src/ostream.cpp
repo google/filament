@@ -367,6 +367,7 @@ io::ostream& operator<<(io::ostream& out, BufferObjectBinding binding) {
     switch (binding) {
         CASE(BufferObjectBinding, VERTEX)
         CASE(BufferObjectBinding, UNIFORM)
+        CASE(BufferObjectBinding, SHADER_STORAGE)
     }
     return out;
 }
@@ -498,8 +499,11 @@ io::ostream& operator<<(io::ostream& stream, ShaderStageFlags stageFlags) {
         case ShaderStageFlags::FRAGMENT:
             str = "{ fragment }";
             break;
+        case ShaderStageFlags::COMPUTE:
+            str = "{ compute }";
+            break;
         case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:
-            str = "{ vertex | fragment }";
+            str = "{ vertex | fragment | compute }";
             break;
     }
     return stream << str;

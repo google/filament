@@ -41,11 +41,11 @@ class MetalDriver;
 class MetalBlitter;
 class MetalBufferPool;
 class MetalRenderTarget;
+class MetalSamplerGroup;
 class MetalSwapChain;
 class MetalTimerQueryInterface;
 struct MetalUniformBuffer;
 struct MetalIndexBuffer;
-struct MetalSamplerGroup;
 struct MetalVertexBuffer;
 
 constexpr static uint8_t MAX_SAMPLE_COUNT = 8;  // Metal devices support at most 8 MSAA samples
@@ -79,7 +79,7 @@ struct MetalContext {
     // State trackers.
     PipelineStateTracker pipelineState;
     DepthStencilStateTracker depthStencilState;
-    UniformBufferState uniformState[UNIFORM_BUFFER_COUNT];
+    UniformBufferState uniformState[Program::UNIFORM_BINDING_COUNT];
     CullModeStateTracker cullModeState;
     WindingStateTracker windingState;
 
@@ -87,8 +87,12 @@ struct MetalContext {
     DepthStencilStateCache depthStencilStateCache;
     PipelineStateCache pipelineStateCache;
     SamplerStateCache samplerStateCache;
+    ArgumentEncoderCache argumentEncoderCache;
 
-    MetalSamplerGroup* samplerBindings[SAMPLER_BINDING_COUNT] = {};
+    MetalSamplerGroup* samplerBindings[Program::SAMPLER_BINDING_COUNT] = {};
+
+    // Keeps track of sampler groups we've finalized for the current render pass.
+    tsl::robin_set<MetalSamplerGroup*> finalizedSamplerGroups;
 
     // Keeps track of all alive sampler groups.
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;

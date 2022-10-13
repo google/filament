@@ -826,7 +826,8 @@ void ViewerGui::updateUserInterface() {
             int mapSize = light.shadowOptions.mapSize;
             ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);
             light.shadowOptions.mapSize = mapSize;
-
+            ImGui::Checkbox("Stable Shadows", &light.shadowOptions.stable);
+            ImGui::Checkbox("Enable LiSPSM", &light.shadowOptions.lispsm);
 
             int shadowType = (int)mSettings.view.shadowType;
             ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0PCSS\0\0");

@@ -18,11 +18,7 @@
 
 #include <filamentapp/FilamentApp.h>
 
-#if !defined(WIN32)
-#if defined(FILAMENT_SUPPORTS_WAYLAND)
-#    include <SDL_syswm.h>
-#endif
-#else
+#if defined(WIN32)
 #    include <SDL_syswm.h>
 #    include <utils/unwindows.h>
 #endif
@@ -549,33 +545,13 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mHeight = h;
     } else {
 
-#if defined(FILAMENT_SUPPORTS_WAYLAND)
-        struct {
-            struct wl_display *display;
-            struct wl_surface *surface;
-        } wayland{};
-
-        SDL_SysWMinfo wmi;
-        SDL_VERSION(&wmi.version);
-        ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(mWindow, &wmi), "SDL version unsupported!");
-        if (wmi.subsystem == SDL_SYSWM_WAYLAND) {
-            wayland.display = wmi.info.wl.display;
-            wayland.surface = wmi.info.wl.surface;
-        }
-        void* nativeWindow = &wayland;
-
-        // Create the Engine after the window in case this happens to be a single-threaded platform.
-        // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
-        // current, rather than the one created by SDL.
-        mFilamentApp->mEngine = Engine::create(config.backend, nullptr, nativeWindow);
-#else
         void* nativeWindow = ::getNativeWindow(mWindow);
 
         // Create the Engine after the window in case this happens to be a single-threaded platform.
         // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
         // current, rather than the one created by SDL.
         mFilamentApp->mEngine = Engine::create(config.backend);
-#endif
+
         // get the resolved backend
         mBackend = config.backend = mFilamentApp->mEngine->getBackend();
 

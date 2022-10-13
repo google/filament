@@ -2574,15 +2574,31 @@ void OpenGLDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh)
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> ubh,
-        uint32_t offset, uint32_t size) {
+void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
+        Handle<HwBufferObject> ubh, uint32_t offset, uint32_t size) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
+    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
+                     bindingType == BufferObjectBinding::UNIFORM);
+
     GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
-    assert_invariant(ub->gl.binding == GL_UNIFORM_BUFFER);
+
+    GLenum target = GLUtils::getBufferBindingType(bindingType);
+
+    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
+            ub->gl.binding == target);
+
     assert_invariant(offset + size <= ub->byteCount);
-    gl.bindBufferRange(ub->gl.binding, GLuint(index), ub->gl.id, offset, size);
+    gl.bindBufferRange(target, GLuint(index), ub->gl.id, offset, size);
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
+    DEBUG_MARKER()
+    auto& gl = mContext;
+    GLenum target = GLUtils::getBufferBindingType(bindingType);
+    gl.bindBufferRange(target, GLuint(index), 0, 0, 0);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -2757,6 +2773,58 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         delete pUserBuffer;
         CHECK_GL_ERROR(utils::slog.e)
     });
+}
+
+void OpenGLDriver::readBufferSubData(backend::BufferObjectHandle boh,
+        uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
+    auto& gl = mContext;
+
+    GLBufferObject const* bo = handle_cast<GLBufferObject const*>(boh);
+
+    // TODO: measure the two solutions
+    if constexpr (true) {
+        // schedule a copy of the buffer we're reading into a PBO, this *should* happen
+        // asynchronously without stalling the CPU.
+        GLuint pbo;
+        glGenBuffers(1, &pbo);
+        gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+        glBufferData(GL_PIXEL_PACK_BUFFER, (GLsizeiptr)size, nullptr, GL_STATIC_DRAW);
+        gl.bindBuffer(bo->gl.binding, bo->gl.id);
+        glCopyBufferSubData(bo->gl.binding, GL_PIXEL_PACK_BUFFER, offset, 0, size);
+        gl.bindBuffer(bo->gl.binding, 0);
+        gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+        CHECK_GL_ERROR(utils::slog.e)
+
+        // then, we schedule a mapBuffer of the PBO later, once the fence has signaled
+        auto* pUserBuffer = new BufferDescriptor(std::move(p));
+        whenGpuCommandsComplete([this, size, pbo, pUserBuffer]() mutable {
+            BufferDescriptor& p = *pUserBuffer;
+            auto& gl = mContext;
+            gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+            void* vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, size, GL_MAP_READ_BIT);
+            if (vaddr) {
+                memcpy(p.buffer, vaddr, size);
+                glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+            }
+            gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+            glDeleteBuffers(1, &pbo);
+            scheduleDestroy(std::move(p));
+            delete pUserBuffer;
+            CHECK_GL_ERROR(utils::slog.e)
+        });
+    } else {
+        gl.bindBuffer(bo->gl.binding, bo->gl.id);
+        // TODO: this glMapBufferRange may stall. Ideally we want to use whenGpuCommandsComplete
+        //       but that's tricky because boh could be destroyed right after this call.
+        void* vaddr = glMapBufferRange(bo->gl.binding, offset, size, GL_MAP_READ_BIT);
+        if (vaddr) {
+            memcpy(p.buffer, vaddr, size);
+            glUnmapBuffer(bo->gl.binding);
+        }
+        gl.bindBuffer(bo->gl.binding, 0);
+        scheduleDestroy(std::move(p));
+        CHECK_GL_ERROR(utils::slog.e)
+    }
 }
 
 void OpenGLDriver::whenGpuCommandsComplete(std::function<void()> fn) noexcept {
@@ -3094,6 +3162,31 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
                 rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset),
                 (GLsizei)instanceCount);
     }
+
+#ifdef FILAMENT_ENABLE_MATDBG
+    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+#else
+    CHECK_GL_ERROR(utils::slog.e)
+#endif
+}
+
+void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+    executeRenderPassOps();
+
+    OpenGLProgram* p = handle_cast<OpenGLProgram*>(program);
+
+    // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
+    // during the draw call when the program is invalid. The shader compile error has already been
+    // dumped to the console at this point, so it's fine to simply return early.
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!p->isValid())) {
+        return;
+    }
+
+    useProgram(p);
+
+#if defined(GL_ES_VERSION_3_1) || defined(GL_VERSION_4_3)
+    glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
+#endif
 
 #ifdef FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)

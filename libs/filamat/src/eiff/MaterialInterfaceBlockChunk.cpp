@@ -19,7 +19,7 @@
 
 #include "../SamplerBindingMap.h"
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 
 #include <utility>
@@ -29,14 +29,14 @@ using namespace filament;
 namespace filamat {
 
 MaterialUniformInterfaceBlockChunk::MaterialUniformInterfaceBlockChunk(
-        UniformInterfaceBlock const& uib) :
+        BufferInterfaceBlock const& uib) :
         Chunk(ChunkType::MaterialUib),
         mUib(uib) {
 }
 
 void MaterialUniformInterfaceBlockChunk::flatten(Flattener& f) {
     f.writeString(mUib.getName());
-    auto uibFields = mUib.getUniformInfoList();
+    auto uibFields = mUib.getFieldInfoList();
     f.writeUint64(uibFields.size());
     for (auto uInfo: uibFields) {
         f.writeString(uInfo.name.c_str());

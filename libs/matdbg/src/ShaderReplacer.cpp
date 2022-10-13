@@ -176,8 +176,9 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
 
     auto getShaderStage = [](ShaderStage type) {
         switch (type) {
-            case ShaderStage::VERTEX:        return EShLanguage::EShLangVertex;
-            case ShaderStage::FRAGMENT:      return EShLanguage::EShLangFragment;
+            case ShaderStage::VERTEX:   return EShLanguage::EShLangVertex;
+            case ShaderStage::FRAGMENT: return EShLanguage::EShLangFragment;
+            case ShaderStage::COMPUTE:  return EShLanguage::EShLangCompute;
         }
     };
 
@@ -192,10 +193,10 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     MaterialBuilder::TargetApi targetApi = targetApiFromBackend(mBackend);
     assert_invariant(targetApi == MaterialBuilder::TargetApi::VULKAN);
 
-    const int langVersion = GLSLTools::glslangVersionFromShaderModel(shaderModel);
+    const int version = GLSLTools::getGlslDefaultVersion(shaderModel);
     const EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi,
             MaterialBuilder::TargetLanguage::SPIRV);
-    const bool ok = tShader.parse(&DefaultTBuiltInResource, langVersion, false, msg);
+    const bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
         slog.e << "ShaderReplacer parse:\n" << tShader.getInfoLog() << io::endl;
         return false;

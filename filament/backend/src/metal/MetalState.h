@@ -24,6 +24,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/FixedCapacityVector.h>
+
 #include <memory>
 #include <tsl/robin_map.h>
 #include <utils/Hash.h>
@@ -39,13 +41,10 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
 //   ------------------------------------------------------
 //   0           Zero buffer (placeholder vertex buffer)  1
 //   1-16        Filament vertex buffers                 16   limited by MAX_VERTEX_BUFFER_COUNT
-//   17-26       Uniform buffers                         10
-//   27-30       Sampler Uniforms (argument buffers)      4   TODO: use arg buffers for samplers
+//   17-26       Uniform buffers                         10   Program::UNIFORM_BINDING_COUNT
+//   27-30       Sampler groups (argument buffers)        4   Program::SAMPLER_BINDING_COUNT
 //
 //   Total                                               31
-
-static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::SAMPLER_BINDING_COUNT;
-static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
 
 // The total number of vertex buffer "slots" that the Metal backend can bind.
 // + 1 to account for the zero buffer, a placeholder buffer used internally by the Metal backend.
@@ -58,10 +57,9 @@ static constexpr uint32_t ZERO_VERTEX_BUFFER_BINDING = 0u;
 
 static constexpr uint32_t USER_VERTEX_BUFFER_BINDING_START = 1u;
 
-// The max number of uniform buffers that the Metal backend can simultaneously bind.
-static constexpr uint32_t UNIFORM_BUFFER_COUNT = 10u;
-// This constant must match the equivalent in CodeGenerator.cpp.
+// These constants must match the equivalent in CodeGenerator.h.
 static constexpr uint32_t UNIFORM_BUFFER_BINDING_START = 17u;
+static constexpr uint32_t SAMPLER_GROUP_BINDING_START = 27u;
 
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);
@@ -143,9 +141,11 @@ static_assert(sizeof(BlendState) == 56, "BlendState is unexpected size.");
 // StateCache caches Metal state objects using StateType as a key.
 // MetalType is the corresponding Metal API type.
 // StateCreator is a functor that creates a new state of type MetalType.
+// HashFn is a functor that hashes StateType.
 template<typename StateType,
          typename MetalType,
-         typename StateCreator>
+         typename StateCreator,
+         typename HashFn = utils::hash::MurmurHashFn<StateType>>
 class StateCache {
 
 public:
@@ -158,6 +158,8 @@ public:
     void setDevice(id<MTLDevice> device) noexcept { mDevice = device; }
 
     MetalType getOrCreateState(const StateType& state) noexcept {
+        assert_invariant(mDevice);
+
         // Check if a valid state already exists in the cache.
         auto iter = mStateCache.find(state);
         if (UTILS_LIKELY(iter != mStateCache.end())) {
@@ -167,6 +169,7 @@ public:
 
         // If we reach this point, we couldn't find one in the cache; create a new one.
         const auto& metalObject = creator(mDevice, state);
+        assert_invariant(metalObject);
 
         mStateCache.emplace(std::make_pair(
             state,
@@ -181,7 +184,6 @@ private:
     StateCreator creator;
     id<MTLDevice> mDevice = nil;
 
-    using HashFn = utils::hash::MurmurHashFn<StateType>;
     tsl::robin_map<StateType, MetalType, HashFn> mStateCache;
 
 };
@@ -358,13 +360,9 @@ using UniformBufferStateTracker = StateTracker<UniformBufferState>;
 
 struct SamplerState {
     SamplerParams samplerParams;
-    uint32_t minLod = 0;
-    uint32_t maxLod = UINT_MAX;
 
     bool operator==(const SamplerState& rhs) const noexcept {
-        return this->samplerParams == rhs.samplerParams &&
-               this->minLod == rhs.minLod &&
-               this->maxLod == rhs.maxLod;
+        return this->samplerParams == rhs.samplerParams;
     }
 
     bool operator!=(const SamplerState& rhs) const noexcept {
@@ -372,7 +370,7 @@ struct SamplerState {
     }
 };
 
-static_assert(sizeof(SamplerState) == 12, "SamplerState unexpected size.");
+static_assert(sizeof(SamplerState) == 4, "SamplerState unexpected size.");
 
 struct SamplerStateCreator {
     id<MTLSamplerState> operator()(id<MTLDevice> device, const SamplerState& state) noexcept;
@@ -384,6 +382,38 @@ using SamplerStateCache = StateCache<SamplerState, id<MTLSamplerState>, SamplerS
 
 using CullModeStateTracker = StateTracker<MTLCullMode>;
 using WindingStateTracker = StateTracker<MTLWinding>;
+
+// Argument encoder
+
+struct ArgumentEncoderState {
+    utils::FixedCapacityVector<MTLTextureType> textureTypes;
+
+    explicit ArgumentEncoderState(utils::FixedCapacityVector<MTLTextureType>&& types)
+        : textureTypes(std::move(types)) {}
+
+    bool operator==(const ArgumentEncoderState& rhs) const noexcept {
+        return std::equal(textureTypes.begin(), textureTypes.end(), rhs.textureTypes.begin(),
+                rhs.textureTypes.end());
+    }
+
+    bool operator!=(const ArgumentEncoderState& rhs) const noexcept {
+        return !operator==(rhs);
+    }
+};
+
+struct ArgumentEncoderHasher {
+    uint32_t operator()(const ArgumentEncoderState& key) const noexcept {
+        return utils::hash::murmur3((const uint32_t*)key.textureTypes.data(),
+                sizeof(MTLTextureType) * key.textureTypes.size() / 4, 0);
+    }
+};
+
+struct ArgumentEncoderCreator {
+    id<MTLArgumentEncoder> operator()(id<MTLDevice> device, const ArgumentEncoderState& state) noexcept;
+};
+
+using ArgumentEncoderCache = StateCache<ArgumentEncoderState, id<MTLArgumentEncoder>,
+        ArgumentEncoderCreator, ArgumentEncoderHasher>;
 
 } // namespace backend
 } // namespace filament

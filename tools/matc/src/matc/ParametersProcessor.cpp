@@ -15,15 +15,21 @@
  */
 
 #include "ParametersProcessor.h"
-#include "backend/DriverEnums.h"
+
+#include <filamat/Enums.h>
+
+#include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/Variant.h>
+
+#include <backend/DriverEnums.h>
+
+#include <math/vec3.h>
 
 #include <algorithm>
 #include <iostream>
+#include <string_view>
 
 #include <ctype.h>
-#include <private/filament/Variant.h>
-
-#include <filamat/Enums.h>
 
 using namespace filamat;
 using namespace utils;
@@ -90,24 +96,25 @@ static bool processInterpolation(MaterialBuilder& builder, const JsonishValue& v
  * For instance:
  * "float" returns 0 and "float" is unmodified
  * "float[4]" returns 4 and "float[4]" is changed to "float"
+ * "float[]" returns -1 and "float[]" is changed to "float"
  * "float[3" returns 0 and "float[3" is unmodified
  * "float[2]foo" returns 0 and "float[2]foo" is unmodified
  * "float[2foo]" returns 0 and "float[2foo]" is unmodified
  */
-static size_t extractArraySize(std::string& type) {
-    size_t start = type.find_first_of('[');
+static ssize_t extractArraySize(std::string& type) {
+    auto start = type.find_first_of('[');
     // Not an array
     if (start == std::string::npos) {
         return 0;
     }
 
-    size_t end = type.find_first_of(']', start);
+    auto end = type.find_first_of(']', start);
     // If we cannot find ']' or if it's not the last character, return to fail later
     if (end == std::string::npos || end != type.length() - 1) {
         return 0;
     }
 
-    // If not all of the characters in the array declaration are digits, return to fail later
+    // If not all the characters in the array declaration are digits, return to fail later
     if (!std::all_of(type.cbegin() + start + 1, type.cbegin() + end,
             [](char c) { return isdigit(c); })) {
         return 0;
@@ -116,8 +123,13 @@ static size_t extractArraySize(std::string& type) {
     // Remove the [...] bit
     type.erase(start);
 
+    // handle an empty size array: []
+    if (end - start == 1) {
+        return -1;
+    }
+
     // Return the size (we already validated this part of the string contains only digits)
-    return std::stoul(type.c_str() + start + 1, nullptr);
+    return (ssize_t)std::stoul(type.c_str() + start + 1, nullptr);
 }
 
 static bool processParameter(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
@@ -181,9 +193,9 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                     Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
         }
         if (arraySize == 0) {
-            builder.parameter(type, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, precision);
         } else {
-            builder.parameter(type, arraySize, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), arraySize, type, precision);
         }
     } else if (Enums::isValid<SamplerType>(typeString)) {
         if (arraySize > 0) {
@@ -198,40 +210,16 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
             auto precision =
                     Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, format, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, format, precision);
         } else if (formatValue) {
             auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            builder.parameter(type, format, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, format);
         } else if (precisionValue) {
             auto precision =
                     Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, precision, nameString.c_str());
+            builder.parameter(nameString.c_str(), type, precision);
         } else {
-            builder.parameter(type, nameString.c_str());
-        }
-    } else if (Enums::isValid<SubpassType>(typeString)) {
-        if (arraySize > 0) {
-            std::cerr << "parameters: the parameter with name '" << nameString << "'"
-                    << " is an array of subpasses of size " << arraySize << ". Arrays of subpasses"
-                    << " are currently not supported." << std::endl;
-            return false;
-        }
-
-        MaterialBuilder::SubpassType type = Enums::toEnum<SubpassType>(typeString);
-        if (precisionValue && formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, format, precision, nameString.c_str());
-        } else if (formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            builder.parameter(type, format, nameString.c_str());
-        } else if (precisionValue) {
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(type, precision, nameString.c_str());
-        } else {
-            builder.parameter(type, nameString.c_str());
+            builder.parameter(nameString.c_str(), type);
         }
     } else {
         std::cerr << "parameters: the type '" << typeString
@@ -253,6 +241,271 @@ static bool processParameters(MaterialBuilder& builder, const JsonishValue& v) {
             continue;
         }
         std::cerr << "parameters must be an array of OBJECTs." << std::endl;
+        return false;
+    }
+    return ok;
+}
+
+
+static bool processBufferField(filament::BufferInterfaceBlock::Builder& builder,
+        const JsonishObject& jsonObject) noexcept {
+
+    const JsonishValue* nameValue = jsonObject.getValue("name");
+    if (!nameValue) {
+        std::cerr << "buffers: entry without 'name' key." << std::endl;
+        return false;
+    }
+    if (nameValue->getType() != JsonishValue::STRING) {
+        std::cerr << "buffers: name value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* typeValue = jsonObject.getValue("type");
+    if (!typeValue) {
+        std::cerr << "buffers: entry without key 'type'." << std::endl;
+        return false;
+    }
+    if (typeValue->getType() != JsonishValue::STRING) {
+        std::cerr << "buffers: type value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* precisionValue = jsonObject.getValue("precision");
+    if (precisionValue) {
+        if (precisionValue->getType() != JsonishValue::STRING) {
+            std::cerr << "buffers: precision must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto precisionString = precisionValue->toJsonString();
+        if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
+            return logEnumIssue("buffers", *precisionString, Enums::map<ParameterPrecision>());
+        }
+    }
+
+    auto typeString = typeValue->toJsonString()->getString();
+    auto nameString = nameValue->toJsonString()->getString();
+
+    size_t arraySize = extractArraySize(typeString);
+
+    if (Enums::isValid<UniformType>(typeString)) {
+        MaterialBuilder::UniformType type = Enums::toEnum<UniformType>(typeString);
+        ParameterPrecision precision = ParameterPrecision::DEFAULT;
+        if (precisionValue) {
+            precision = Enums::toEnum<ParameterPrecision>(
+                    precisionValue->toJsonString()->getString());
+        }
+        if (arraySize == -1) {
+            builder.addVariableSizedArray({
+                { nameString.data(), nameString.size() }, 0, type, precision });
+        } else {
+            builder.add({{
+                { nameString.data(), nameString.size() }, uint32_t(arraySize), type, precision } });
+        }
+    } else {
+        std::cerr << "buffers: the type '" << typeString << "' for parameter with name '"
+                  << nameString << "' is not a valid buffer field type." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+static bool processBuffer(MaterialBuilder& builder,
+        const JsonishObject& jsonObject) noexcept {
+
+    filament::BufferInterfaceBlock::Builder bibb;
+
+    bibb.target(filament::BufferInterfaceBlock::Target::SSBO);
+    bibb.alignment(filament::BufferInterfaceBlock::Alignment::std430);
+
+    const JsonishValue* nameValue = jsonObject.getValue("name");
+    if (!nameValue) {
+        std::cerr << "buffers: entry without 'name' key." << std::endl;
+        return false;
+    }
+    if (nameValue->getType() != JsonishValue::STRING) {
+        std::cerr << "buffers: name value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* qualifiersValue = jsonObject.getValue("qualifiers");
+    if (!qualifiersValue) {
+        std::cerr << "buffers: entry without key 'qualifiers'." << std::endl;
+        return false;
+    }
+    if (qualifiersValue->getType() != JsonishValue::ARRAY) {
+        std::cerr << "buffers: qualifiers value must be an ARRAY." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* fieldsValue = jsonObject.getValue("fields");
+    if (!fieldsValue) {
+        std::cerr << "buffers: entry without key 'fields'." << std::endl;
+        return false;
+    }
+    if (fieldsValue->getType() != JsonishValue::ARRAY) {
+        std::cerr << "buffers: fields value must be an ARRAY." << std::endl;
+        return false;
+    }
+
+    auto nameString = nameValue->toJsonString()->getString();
+    bibb.name({ nameString.data(), nameString.size() });
+
+    for (auto value : qualifiersValue->toJsonArray()->getElements()) {
+        if (value->getType() == JsonishValue::Type::STRING) {
+            using namespace std::literals;
+            using Qualifier = filament::BufferInterfaceBlock::Qualifier;
+            auto qualifierString = value->toJsonString()->getString();
+            if (qualifierString == "coherent"sv) {
+                bibb.qualifier(Qualifier::COHERENT);
+            } else if (qualifierString == "writeonly"sv) {
+                bibb.qualifier(Qualifier::WRITEONLY);
+            } else if (qualifierString == "readonly"sv) {
+                bibb.qualifier(Qualifier::READONLY);
+            } else if (qualifierString == "volatile"sv) {
+                bibb.qualifier(Qualifier::VOLATILE);
+            } else if (qualifierString == "restrict"sv) {
+                bibb.qualifier(Qualifier::RESTRICT);
+            }
+            continue;
+        }
+        std::cerr << "buffers: qualifiers must be an array of STRINGs." << std::endl;
+        return false;
+    }
+
+    bool ok = true;
+    for (auto value : fieldsValue->toJsonArray()->getElements()) {
+
+        if (bibb.hasVariableSizeArray()) {
+            std::cerr << "buffers: a variable size array must be the only and last field." << std::endl;
+            return false;
+        }
+
+        if (value->getType() == JsonishValue::Type::OBJECT) {
+            ok &= processBufferField(bibb, *value->toJsonObject());
+            continue;
+        }
+        std::cerr << "buffers: fields must be an array of OBJECTs." << std::endl;
+        return false;
+    }
+
+    builder.buffer(bibb.build());
+    return ok;
+}
+
+static bool processBuffers(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+    bool ok = true;
+    for (auto value : jsonArray->getElements()) {
+        if (value->getType() == JsonishValue::Type::OBJECT) {
+            ok &= processBuffer(builder, *value->toJsonObject());
+            continue;
+        }
+        std::cerr << "buffers must be an array of OBJECTs." << std::endl;
+        return false;
+    }
+    return ok;
+}
+
+
+static bool processSubpass(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+
+    const JsonishValue* typeValue = jsonObject.getValue("type");
+    if (!typeValue) {
+        std::cerr << "subpasses: entry without key 'type'." << std::endl;
+        return false;
+    }
+    if (typeValue->getType() != JsonishValue::STRING) {
+        std::cerr << "subpasses: type value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* nameValue = jsonObject.getValue("name");
+    if (!nameValue) {
+        std::cerr << "subpasses: entry without 'name' key." << std::endl;
+        return false;
+    }
+    if (nameValue->getType() != JsonishValue::STRING) {
+        std::cerr << "subpasses: name value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* precisionValue = jsonObject.getValue("precision");
+    if (precisionValue) {
+        if (precisionValue->getType() != JsonishValue::STRING) {
+            std::cerr << "subpasses: precision must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto precisionString = precisionValue->toJsonString();
+        if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
+            return logEnumIssue("subpasses", *precisionString, Enums::map<ParameterPrecision>());
+        }
+    }
+
+    const JsonishValue* formatValue = jsonObject.getValue("format");
+    if (formatValue) {
+        if (formatValue->getType() != JsonishValue::STRING) {
+            std::cerr << "subpasses: format must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto formatString = formatValue->toJsonString();
+        if (!Enums::isValid<SamplerFormat>(formatString->getString())){
+            return logEnumIssue("subpasses", *formatString, Enums::map<SamplerFormat>());
+        }
+    }
+
+    auto typeString = typeValue->toJsonString()->getString();
+    auto nameString = nameValue->toJsonString()->getString();
+
+    size_t arraySize = extractArraySize(typeString);
+
+    if (Enums::isValid<SubpassType>(typeString)) {
+        if (arraySize > 0) {
+            std::cerr << "subpasses: the parameter with name '" << nameString << "'"
+                      << " is an array of subpasses of size " << arraySize << ". Arrays of subpasses"
+                      << " are currently not supported." << std::endl;
+            return false;
+        }
+
+        MaterialBuilder::SubpassType type = Enums::toEnum<SubpassType>(typeString);
+        if (precisionValue && formatValue) {
+            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
+            auto precision =
+                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
+            builder.subpass(type, format, precision, nameString.c_str());
+        } else if (formatValue) {
+            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
+            builder.subpass(type, format, nameString.c_str());
+        } else if (precisionValue) {
+            auto precision =
+                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
+            builder.subpass(type, precision, nameString.c_str());
+        } else {
+            builder.subpass(type, nameString.c_str());
+        }
+    } else {
+        std::cerr << "subpasses: the type '" << typeString
+                  << "' for parameter with name '" << nameString << "' is neither a valid uniform "
+                  << "type nor a valid sampler type." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+static bool processSubpasses(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+
+    bool ok = true;
+    for (auto value : jsonArray->getElements()) {
+        if (value->getType() == JsonishValue::Type::OBJECT) {
+            ok &= processSubpass(builder, *value->toJsonObject());
+            continue;
+        }
+        std::cerr << "subpasses must be an array of OBJECTs." << std::endl;
         return false;
     }
     return ok;
@@ -414,6 +667,36 @@ static bool processFeatureLevel(MaterialBuilder& builder, const JsonishValue& va
         return false;
     }
     builder.featureLevel(featureLevel);
+    return true;
+}
+
+static bool processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+
+    filament::math::uint3 groupSize{ 1, 1, 1 };
+    size_t index = 0;
+
+    for (auto value : jsonArray->getElements()) {
+        if (index >= 3) {
+            std::cerr << "groupSize: must be an array no larger than 3" << std::endl;
+            return false;
+        }
+        if (value->getType() == JsonishValue::Type::NUMBER) {
+            JsonishNumber const* const number = value->toJsonNumber();
+            float aFloat = number->getFloat();
+            if (aFloat > 0 && floor(aFloat) == aFloat) {
+                groupSize[index] = uint32_t(floor(aFloat));
+            } else {
+                std::cerr << "groupSize: invalid value " << aFloat << std::endl;
+                return false;
+            }
+            index++;
+            continue;
+        }
+        std::cerr << "groupSize must be an array of NUMBERs." << std::endl;
+        return false;
+    }
+    builder.groupSize(groupSize);
     return true;
 }
 
@@ -670,6 +953,7 @@ static bool processDomain(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::MaterialDomain> strToEnum {
         { "surface",            MaterialBuilder::MaterialDomain::SURFACE },
         { "postprocess",        MaterialBuilder::MaterialDomain::POST_PROCESS },
+        { "compute",            MaterialBuilder::MaterialDomain::COMPUTE },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {
@@ -770,6 +1054,8 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["name"]                          = { &processName, Type::STRING };
     mParameters["interpolation"]                 = { &processInterpolation, Type::STRING };
     mParameters["parameters"]                    = { &processParameters, Type::ARRAY };
+    mParameters["buffers"]                       = { &processBuffers, Type::ARRAY };
+    mParameters["subpasses"]                     = { &processSubpasses, Type::ARRAY };
     mParameters["variables"]                     = { &processVariables, Type::ARRAY };
     mParameters["requires"]                      = { &processRequires, Type::ARRAY };
     mParameters["blending"]                      = { &processBlending, Type::STRING };
@@ -805,6 +1091,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["quality"]                       = { &processQuality, Type::STRING };
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };
     mParameters["featureLevel"]                  = { &processFeatureLevel, Type::NUMBER };
+    mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

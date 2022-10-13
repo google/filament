@@ -86,6 +86,8 @@ set(TARGET test_matc)
 set(SRCS
     tests/test_matc.cpp
     tests/test_includer.cpp
+    tests/TestMaterialCompiler.h
+    tests/test_compute_material.cpp
     tests/MockConfig.cpp
     tests/MockConfig.h)
 

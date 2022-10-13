@@ -52,7 +52,7 @@ public:
 private:
     ChunkContainer const& mContainer;
     filamat::ChunkType mMaterialTag = filamat::ChunkType::Unknown;
-    Unflattener mUnflattener{nullptr, nullptr};
+    Unflattener mUnflattener;
     const uint8_t* mBase = nullptr;
     tsl::robin_map<uint32_t, uint32_t> mOffsets;
 
