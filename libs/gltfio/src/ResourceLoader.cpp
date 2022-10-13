@@ -437,6 +437,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             continue;
         }
         auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
+        assert_invariant(bufferData);
         const uint8_t* data = computeBindingOffset(accessor) + bufferData;
         const uint32_t size = computeBindingSize(accessor);
         if (slot.vertexBuffer) {
