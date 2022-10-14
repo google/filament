@@ -10,8 +10,8 @@
 #include <algorithm>
 #include <vector>
 
-#include "../demo/objparser.h"
 #include "../src/meshoptimizer.h"
+#include "../extern/fast_obj.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -396,26 +396,40 @@ void testCacheMeshes(IDXGIAdapter* adapter, int argc, char** argv)
 			continue;
 		}
 
-		ObjFile file;
-
-		if (!objParseFile(file, path))
+		fastObjMesh* obj = fast_obj_read(path);
+		if (!obj)
 		{
 			printf("Error loading %s: file not found\n", path);
 			continue;
 		}
 
-		if (!objValidate(file))
-		{
-			printf("Error loading %s: invalid file data\n", path);
-			continue;
-		}
-
 		std::vector<unsigned int> ib1;
 
-		for (size_t i = 0; i < file.f_size; i += 3)
-			ib1.push_back(file.f[i]);
+		size_t index_offset = 0;
 
-		unsigned int vertex_count = file.v_size / 3;
+		for (unsigned int i = 0; i < obj->face_count; ++i)
+		{
+			for (unsigned int j = 0; j < obj->face_vertices[i]; ++j)
+			{
+				fastObjIndex gi = obj->indices[index_offset + j];
+
+				// triangulate polygon on the fly; offset-3 is always the first polygon vertex
+				if (j >= 3)
+				{
+					unsigned int i0 = ib1[ib1.size() - 3];
+					unsigned int i1 = ib1[ib1.size() - 1];
+
+					ib1.push_back(i0);
+					ib1.push_back(i1);
+				}
+
+				ib1.push_back(gi.p);
+			}
+
+			index_offset += obj->face_vertices[i];
+		}
+
+		unsigned int vertex_count = obj->position_count;
 		unsigned int index_count = ib1.size();
 
 		unsigned int invocations1 = queryVSInvocations(device, context, ib1.data(), index_count);
