@@ -247,26 +247,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         view.updatePrimitivesLod(engine,
                                 cameraInfo, scene->getRenderableData(), entry.range);
 
-                        if (!view.hasVSM()) {
-                            auto li = scene->getLightData().elementAt<FScene::LIGHT_INSTANCE>(
-                                    shadowMap.getLightIndex());
-                            auto const& params = engine.getLightManager().getShadowParams(li);
-                            const PolygonOffset polygonOffset = { // handle reversed Z
-                                    .slope    = -params.options.polygonOffsetSlope,
-                                    .constant = -params.options.polygonOffsetConstant
-                            };
-                            entry.pass.overridePolygonOffset(&polygonOffset);
-                        }
-
-                        constexpr const backend::Viewport disabledScissor{ 0, 0,
-                                (uint32_t)std::numeric_limits<int32_t>::max(),
-                                (uint32_t)std::numeric_limits<int32_t>::max() };
-
                         entry.pass.setCamera(cameraInfo);
                         entry.pass.setVisibilityMask(entry.visibilityMask);
                         entry.pass.setGeometry(scene->getRenderableData(),
                                 entry.range, scene->getRenderableUBO());
-                        entry.pass.overrideScissor(&disabledScissor);
                         entry.pass.appendCommands(engine, RenderPass::SHADOW);
                         entry.pass.sortCommands(engine);
                         entry.cameraInfo = cameraInfo;
@@ -379,7 +363,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
 
                     CameraInfo const& cameraInfo = entry.cameraInfo;
 
-                    const auto& executor = entry.pass.getExecutor();
+                    auto executor = entry.pass.getExecutor();
                     const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
                     // set uniforms relative to the camera
@@ -411,7 +395,29 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                     auto rt = resources.getRenderPassInfo(blur ? data.blurRt : data.shadowRt);
                     rt.params.viewport = viewport;
 
-                    executor.execute(engine, "Shadow Pass", rt.target, rt.params);
+                    constexpr const backend::Viewport disabledScissor{ 0, 0,
+                            (uint32_t)std::numeric_limits<int32_t>::max(),
+                            (uint32_t)std::numeric_limits<int32_t>::max() };
+
+                    if (!view.hasVSM()) {
+                        auto li = scene->getLightData().elementAt<FScene::LIGHT_INSTANCE>(
+                                entry.shadowMap->getLightIndex());
+
+                        auto const& params = engine.getLightManager().getShadowParams(li);
+
+                        const PolygonOffset polygonOffset = { // handle reversed Z
+                                .slope    = -params.options.polygonOffsetSlope,
+                                .constant = -params.options.polygonOffsetConstant
+                        };
+                        executor.overridePolygonOffset(&polygonOffset);
+                    }
+
+                    executor.overrideScissor(&disabledScissor);
+
+                    engine.flush();
+                    driver.beginRenderPass(rt.target, rt.params);
+                    executor.execute(engine, "Shadow Pass");
+                    driver.endRenderPass();
                 });
 
 
