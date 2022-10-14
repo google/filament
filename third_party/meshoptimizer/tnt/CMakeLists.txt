@@ -122,3 +122,10 @@ if(MESHOPT_BUILD_GLTFPACK)
         endif()
     endif()
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+
+set(INSTALL_TYPE ARCHIVE)
+install(TARGETS meshoptimizer ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
