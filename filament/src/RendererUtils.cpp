@@ -217,7 +217,14 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 if (colorGradingConfig.asSubpass || colorGradingConfig.customResolve) {
                     out.params.subpassMask = 1;
                 }
-                passExecutor.execute(engine, resources.getPassName(), out.target, out.params);
+
+                // this is a good time to flush the CommandStream, because we're about to potentially
+                // output a lot of commands. This guarantees here that we have at least
+                // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
+                engine.flush();
+                driver.beginRenderPass(out.target, out.params);
+                passExecutor.execute(engine, resources.getPassName());
+                driver.endRenderPass();
 
                 // color pass is typically heavy, and we don't have much CPU work left after
                 // this point, so flushing now allows us to start the GPU earlier and reduce
