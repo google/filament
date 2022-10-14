@@ -984,9 +984,11 @@ size_t ShadowMap::intersectFrustumWithBox(
                     wsFrustumCorners, wsSceneReceiversCorners.vertices);
         } else {
             // by construction vertexCount should be 8 here, but it can be more because
-            // step (b) above can classify a point as inside the frustum that isn't quite.
+            // step (b) above can classify a point as inside the frustum that isn't quite inside.
+            // -> We can't blindly reset vertexCount to 8, we need to remove the "duplicate"
+            //    vertices.
+            //  It shouldn't cause any major issues later to have "nearly" duplicate vertices.
             assert_invariant(vertexCount >= 8);
-            vertexCount = 8;
         }
     }
 
