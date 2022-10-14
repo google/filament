@@ -179,6 +179,7 @@ steps:
   - [x] KHR_mesh_quantization
   - [x] KHR_texture_basisu
   - [x] KHR_texture_transform
+  - [x] EXT_meshopt_compression
 
 
 ## Rendering with Filament
