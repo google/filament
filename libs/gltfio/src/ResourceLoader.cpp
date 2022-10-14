@@ -38,6 +38,7 @@
 #include <utils/Path.h>
 
 #include <cgltf.h>
+#include <meshoptimizer.h>
 
 #include <math/quat.h>
 #include <math/vec3.h>
@@ -223,6 +224,64 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     }
 }
 
+static void decodeMeshoptCompression(cgltf_data* data) {
+    for (size_t i = 0; i < data->buffer_views_count; ++i) {
+        if (!data->buffer_views[i].has_meshopt_compression) {
+            continue;
+        }
+
+        cgltf_meshopt_compression* compression = &data->buffer_views[i].meshopt_compression;
+        const uint8_t* source = (const uint8_t*) compression->buffer->data;
+        assert_invariant(source);
+        source += compression->offset;
+
+        // This memory is freed by cgltf.
+        void* destination = malloc(compression->count * compression->stride);
+        assert_invariant(destination);
+
+        int error = 0;
+        switch (compression->mode) {
+            case cgltf_meshopt_compression_mode_invalid:
+                break;
+            case cgltf_meshopt_compression_mode_attributes:
+                error = meshopt_decodeVertexBuffer(destination, compression->count, compression->stride,
+                        source, compression->size);
+                break;
+            case cgltf_meshopt_compression_mode_triangles:
+                error = meshopt_decodeIndexBuffer(destination, compression->count, compression->stride,
+                        source, compression->size);
+                break;
+            case cgltf_meshopt_compression_mode_indices:
+                error = meshopt_decodeIndexSequence(destination, compression->count, compression->stride,
+                        source, compression->size);
+                break;
+            default:
+                assert_invariant(false);
+                break;
+        }
+        assert_invariant(!error);
+
+        switch (compression->filter) {
+            case cgltf_meshopt_compression_filter_none:
+                break;
+            case cgltf_meshopt_compression_filter_octahedral:
+                meshopt_decodeFilterOct(destination, compression->count, compression->stride);
+                break;
+            case cgltf_meshopt_compression_filter_quaternion:
+                meshopt_decodeFilterQuat(destination, compression->count, compression->stride);
+                break;
+            case cgltf_meshopt_compression_filter_exponential:
+                meshopt_decodeFilterExp(destination, compression->count, compression->stride);
+                break;
+            default:
+                assert_invariant(false);
+                break;
+        }
+
+        data->buffer_views[i].data = destination;
+    }
+}
+
 // Parses a data URI and returns a blob that gets malloc'd in cgltf, which the caller must free.
 // (implementation snarfed from meshoptimizer)
 static const uint8_t* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
@@ -394,10 +453,10 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         return false;
     }
     #endif
-
     // Decompress Draco meshes early on, which allows us to exploit subsequent processing such as
     // tangent generation.
     decodeDracoMeshes(asset);
+    decodeMeshoptCompression((cgltf_data*) gltf);
 
     // For each skin, optionally normalize skinning weights and store a copy of the bind matrices.
     if (gltf->skins_count > 0) {
@@ -414,9 +473,16 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
             FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
             if (srcMatrices) {
-                uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
+                uint8_t* bytes = nullptr;
+                uint8_t* srcBuffer = nullptr;
+                if (srcMatrices->buffer_view->has_meshopt_compression) {
+                    bytes = (uint8_t*) srcMatrices->buffer_view->data;
+                    srcBuffer = bytes + srcMatrices->offset;
+                } else {
+                    bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
+                    srcBuffer = bytes + srcMatrices->offset + srcMatrices->buffer_view->offset;
+                }
                 assert_invariant(bytes);
-                uint8_t* srcBuffer = bytes + srcMatrices->offset + srcMatrices->buffer_view->offset;
                 memcpy((uint8_t*) inverseBindMatrices.data(),
                         (const void*) srcBuffer, srcSkin.joints_count * sizeof(mat4f));
             }
@@ -436,8 +502,16 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         if (!accessor->buffer_view) {
             continue;
         }
-        auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
-        const uint8_t* data = computeBindingOffset(accessor) + bufferData;
+        const uint8_t* bufferData = nullptr;
+        const uint8_t* data = nullptr;
+        if (accessor->buffer_view->has_meshopt_compression) {
+            bufferData = (const uint8_t*) accessor->buffer_view->data;
+            data = bufferData + accessor->offset;
+        } else {
+            bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
+            data = computeBindingOffset(accessor) + bufferData + accessor->offset;
+        }
+        assert_invariant(bufferData);
         const uint32_t size = computeBindingSize(accessor);
         if (slot.vertexBuffer) {
             if (requiresConversion(accessor)) {

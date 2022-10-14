@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- gltfio: support EXT_meshopt_compression
+
 ## v1.28.1
 
 - gltfio: fix reloading crash in ubershader mode
