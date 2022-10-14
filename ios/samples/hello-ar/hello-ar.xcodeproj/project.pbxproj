@@ -165,7 +165,7 @@
 				};
 			};
 			buildConfigurationList = 281E763643B2F1F3B903864B /* Build configuration list for PBXProject "hello-ar" */;
-			compatibilityVersion = "Xcode 10.0";
+			compatibilityVersion = "Xcode 11.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (

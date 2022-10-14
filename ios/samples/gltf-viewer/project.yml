@@ -20,7 +20,8 @@ targets:
         settings:
             base:
                 OTHER_LDFLAGS: ["-lgltfio_core", "-luberarchive", "-limage", "-lgeometry", "-lstb", "-lbasis_transcoder",
-                                "-lzstd", "-lcamutils", "-ldracodec", "-lviewer", "-lcivetweb", "-lktxreader", "-luberzlib"]
+                                "-lzstd", "-lcamutils", "-ldracodec", "-lmeshoptimizer", "-lviewer", "-lcivetweb", "-lktxreader",
+                                "-luberzlib"]
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources
