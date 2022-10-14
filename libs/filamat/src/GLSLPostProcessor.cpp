@@ -247,8 +247,12 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
         mslCompiler.add_msl_resource_binding(newBinding);
     };
 
-    auto resources = mslCompiler.get_shader_resources();
-    for (const auto& resource : resources.uniform_buffers) {
+    auto uniformResources = mslCompiler.get_shader_resources();
+    for (const auto& resource : uniformResources.uniform_buffers) {
+        updateResourceBindingDefault(resource);
+    }
+    auto ssboResources = mslCompiler.get_shader_resources();
+    for (const auto& resource : ssboResources.storage_buffers) {
         updateResourceBindingDefault(resource);
     }
 

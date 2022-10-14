@@ -84,7 +84,8 @@ struct MetalContext {
     // State trackers.
     PipelineStateTracker pipelineState;
     DepthStencilStateTracker depthStencilState;
-    UniformBufferState uniformState[Program::UNIFORM_BINDING_COUNT];
+    BufferState uniformState[Program::UNIFORM_BINDING_COUNT];
+    BufferState ssboState[MAX_SSBO_COUNT];
     CullModeStateTracker cullModeState;
     WindingStateTracker windingState;
 

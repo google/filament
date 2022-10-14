@@ -39,7 +39,7 @@ class MetalTexture;
 struct MetalUniformBuffer;
 struct MetalContext;
 struct MetalProgram;
-struct UniformBufferState;
+struct BufferState;
 
 #ifndef FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB
 #define FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB 8
@@ -129,7 +129,9 @@ private:
             uint32_t offset, uint32_t minIndex, uint32_t maxIndex, uint32_t count);
 
     void finalizeSamplerGroup(MetalSamplerGroup* sg);
-    void enumerateBoundUniformBuffers(const std::function<void(const UniformBufferState&,
+    void enumerateBoundUniformBuffers(const std::function<void(const BufferState&,
+            MetalBuffer*, uint32_t)>& f);
+    void enumerateBoundSsbos(const std::function<void(const BufferState&,
             MetalBuffer*, uint32_t)>& f);
 
 };

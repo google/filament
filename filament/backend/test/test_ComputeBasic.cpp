@@ -22,25 +22,29 @@ using namespace filament::backend;
 TEST_F(ComputeTest, basic) {
     auto& driver = getDriverApi();
 
-    std::string_view shader_gles310 = {R"(
+    std::string shader_gles310 = {R"(
 #version 310 es
 layout(local_size_x = 16) in;
 void main() {
 }
 )"};
 
-    std::string_view shader_gl450 = {R"(
+    std::string shader_gl450 = {R"(
 #version 450 core
 layout(local_size_x = 16) in;
 void main() {
 }
 )"};
 
-    std::string_view shader_msl = {R"(
-// TODO: msl test
+    std::string shader_msl = {R"(
+#include <simd/simd.h>
+#include <metal_stdlib>
+using namespace metal;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 1u, 1u);
+kernel void main0() {}
 )"};
 
-    std::string_view shader_spirv = {R"(
+    std::string shader_spirv = {R"(
 // TODO: spirv test
 )"};
 
@@ -54,7 +58,7 @@ void main() {
     }
 
     Program program;
-    program.shader(ShaderStage::COMPUTE, shader.data(), shader.size());
+    program.shader(ShaderStage::COMPUTE, shader.data(), shader.size() + 1);
 
     Handle<HwProgram> ph = driver.createProgram(std::move(program));
     driver.dispatchCompute(ph, { 1, 1, 1 });
@@ -68,7 +72,7 @@ void main() {
 TEST_F(ComputeTest, copy) {
     auto& driver = getDriverApi();
 
-    std::string_view shader_gles310 = {R"(
+    std::string shader_gles310 = {R"(
 #version 310 es
 layout(local_size_x = 16) in;
 layout(std430) buffer;
@@ -80,7 +84,7 @@ void main() {
 }
 )"};
 
-    std::string_view shader_gl450 = {R"(
+    std::string shader_gl450 = {R"(
 #version 450 core
 layout(local_size_x = 16) in;
 layout(std430) buffer;
@@ -92,11 +96,25 @@ void main() {
 }
 )"};
 
-    std::string_view shader_msl = {R"(
-// TODO: msl test
+    std::string shader_msl = {R"(
+#include <simd/simd.h>
+#include <metal_stdlib>
+using namespace metal;
+struct Output_data {
+    float elements[1];
+};
+struct Input_data {
+    float elements[1];
+};
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 1u, 1u);
+kernel void main0(device Output_data& output_data [[buffer(0)]],
+        device Input_data& input_data [[buffer(1)]],
+        uint3 gl_GlobalInvocationID [[thread_position_in_grid]]) {
+    output_data.elements[gl_GlobalInvocationID.x] = input_data.elements[gl_GlobalInvocationID.x];
+}
 )"};
 
-    std::string_view shader_spirv = {R"(
+    std::string shader_spirv = {R"(
 // TODO: spirv test
 )"};
 
@@ -119,12 +137,14 @@ void main() {
         return v;
     });
 
+    driver.startCapture(0);
+
     auto output_data = driver.createBufferObject(size, BufferObjectBinding::SHADER_STORAGE, BufferUsage::STATIC);
     auto input_data = driver.createBufferObject(size, BufferObjectBinding::SHADER_STORAGE, BufferUsage::STATIC);
     driver.updateBufferObject(input_data, { data.data(), size }, 0);
 
     Program program;
-    program.shader(ShaderStage::COMPUTE, shader.data(), shader.size());
+    program.shader(ShaderStage::COMPUTE, shader.data(), shader.size() + 1);
     Handle<HwProgram> ph = driver.createProgram(std::move(program));
 
 
@@ -143,6 +163,8 @@ void main() {
     driver.destroyBufferObject(input_data);
     driver.destroyBufferObject(output_data);
     driver.finish();
+
+    driver.stopCapture(0);
 
     executeCommands();
     getDriver().purge();
