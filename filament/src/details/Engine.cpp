@@ -596,16 +596,16 @@ int FEngine::loop() {
     #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
-        debug.server = new matdbg::DebugServer(mBackend, port);
+        debug.matdbg = std::make_unique<matdbg::DebugServer>(mBackend, port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
-        if (!debug.server->isReady()) {
-            delete debug.server;
-            debug.server = nullptr;
+        if (!debug.matdbg->isReady()) {
+            delete debug.matdbg.get();
+            debug.matdbg = nullptr;
         } else {
-            debug.server->setEditCallback(FMaterial::onEditCallback);
-            debug.server->setQueryCallback(FMaterial::onQueryCallback);
+            debug.matdbg->setEditCallback(FMaterial::onEditCallback);
+            debug.matdbg->setQueryCallback(FMaterial::onQueryCallback);
         }
     }
 #endif
