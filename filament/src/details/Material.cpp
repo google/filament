@@ -168,7 +168,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
-    matdbg::DebugServer* server = downcast(engine).debug.server;
+    matdbg::DebugServer* server = downcast(engine).debug.matdbg.get();
     if (UTILS_UNLIKELY(server)) {
         auto details = builder.mImpl;
         mDebuggerId = server->addMaterial(mName, details->mPayload, details->mSize, this);
@@ -319,7 +319,7 @@ void FMaterial::terminate(FEngine& engine) {
 
 #if FILAMENT_ENABLE_MATDBG
     // Unregister the material with matdbg.
-    matdbg::DebugServer* server = downcast(mEngine).debug.server;
+    matdbg::DebugServer* server = downcast(mEngine).debug.matdbg.get();
     if (UTILS_UNLIKELY(server)) {
         server->removeMaterial(mDebuggerId);
     }

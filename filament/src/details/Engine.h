@@ -523,7 +523,7 @@ public:
             // capture to file. At the moment, only supported by the Metal backend.
             bool doFrameCapture = false;
         } renderer;
-        matdbg::DebugServer* server = nullptr;
+        std::unique_ptr<matdbg::DebugServer> matdbg = nullptr;
         std::unique_ptr<fgdbg::DebugServer> fgdbg = nullptr;
     } debug;
 };
