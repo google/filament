@@ -19,8 +19,7 @@
 
 class CivetServer;
 
-namespace filament {
-namespace fgdbg {
+namespace filament::fgdbg {
 
 class DebugServer {
 public:
@@ -38,7 +37,6 @@ private:
     friend class RestRequestHandler;
     friend class WebSocketHandler;
 };
-}
 }
 
 #endif  // FGDBG_DEBUGSERVER_H

@@ -19,7 +19,6 @@
 #include <utils/Log.h>
 #include <tsl/robin_set.h>
 
-using namespace utils;
 namespace filament::fgdbg {
 
 using namespace utils;

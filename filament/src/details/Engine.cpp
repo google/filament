@@ -646,15 +646,16 @@ int FEngine::loop() {
     uint32_t id = std::thread::hardware_concurrency() - 1;
 
     while (true) {
-        #if FILAMENT_ENABLE_FGDBG
-              if (debug.fgdbg) {
-                static int fgdbgMessage = 0;
-                fgdbgMessage++;
-                if (fgdbgMessage % 100 == 0) {
-                  debug.fgdbg->sendMessage(fgdbgMessage/100);
-                }
-              }
-        #endif
+#if FILAMENT_ENABLE_FGDBG
+        // TODO (@feresr): Only for testing purposes, remove
+        if (debug.fgdbg) {
+            static int fgdbgMessage = 0;
+            fgdbgMessage++;
+            if (fgdbgMessage % 100 == 0) {
+                debug.fgdbg->sendMessage(fgdbgMessage/100);
+            }
+        }
+#endif
         // looks like thread affinity needs to be reset regularly (on Android)
         JobSystem::setThreadAffinityById(id);
         if (!execute()) {
