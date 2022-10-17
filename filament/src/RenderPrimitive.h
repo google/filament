@@ -71,7 +71,7 @@ private:
     AttributeBitset mEnabledAttributes = {};
     uint16_t mBlendOrder = 0;
     bool mGlobalBlendOrderEnabled = false;
-    backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::NONE;
+    backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::TRIANGLES;
     UTILS_UNUSED uint8_t reserved[4] = {};
 };
 
