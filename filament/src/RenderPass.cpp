@@ -541,11 +541,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
             auto const& primitive = primitives[pi];
-            // handle the case where this primitive is empty / no-op
-            if (primitive.getPrimitiveType() == PrimitiveType::NONE) {
-                continue;
-            }
-
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();

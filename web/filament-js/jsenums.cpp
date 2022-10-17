@@ -120,8 +120,7 @@ enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("LINES", RenderableManager::PrimitiveType::LINES)
     .value("LINE_STRIP", RenderableManager::PrimitiveType::LINE_STRIP)
     .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
-    .value("TRIANGLE_STRIP", RenderableManager::PrimitiveType::TRIANGLE_STRIP)
-    .value("NONE", RenderableManager::PrimitiveType::NONE);
+    .value("TRIANGLE_STRIP", RenderableManager::PrimitiveType::TRIANGLE_STRIP);
 
 enum_<View::AmbientOcclusion>("View$AmbientOcclusion")
     .value("NONE", View::AmbientOcclusion::NONE)
