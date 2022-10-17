@@ -38,6 +38,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fix regression with meshes that have no material
 - gltfio: fix regression with recomputeBoundingBoxes()
 - filamesh / matinfo: fix minor ASAN issues
+- engine: Added `Engine::resetBackendState()`, available only in WebGL builds
 
 ## v1.27.1
 

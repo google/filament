@@ -1806,6 +1806,9 @@ void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
     }
 }
 
+void MetalDriver::resetState(int) {
+}
+
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<MetalDriver>;
 

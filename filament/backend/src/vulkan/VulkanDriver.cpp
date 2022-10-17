@@ -2012,6 +2012,9 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 #endif
 }
 
+void VulkanDriver::resetState(int) {
+}
+
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<VulkanDriver>;
 

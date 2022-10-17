@@ -73,6 +73,7 @@ public:
 
     ShaderModel getShaderModel() const noexcept { return mShaderModel; }
 
+    void resetState() noexcept;
 
     inline void useProgram(GLuint program) noexcept;
 
@@ -129,6 +130,8 @@ public:
         GLint max_uniform_block_size;
         GLint max_texture_image_units;
         GLint max_combined_texture_image_units;
+        GLint max_transform_feedback_separate_attribs;
+        GLint max_uniform_buffer_bindings; 
         GLint uniform_buffer_offset_alignment;
     } gets = {};
 
@@ -408,6 +411,8 @@ private:
             functor();
         }
     }
+
+    void setDefaultState() noexcept;
 
     static constexpr const size_t TEXTURE_TARGET_COUNT =
             sizeof(state.textures.units[0].targets) / sizeof(state.textures.units[0].targets[0]);

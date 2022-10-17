@@ -725,6 +725,22 @@ public:
       */
     utils::JobSystem& getJobSystem() noexcept;
 
+#if defined(__EMSCRIPTEN__)
+    /**
+      * WebGL only: Tells the driver to reset any internal state tracking if necessary.
+      * 
+      * This is only useful when integrating an external renderer into Filament on platforms 
+      * like WebGL, where share contexts do not exist. Filament keeps track of the GL
+      * state it has set (like which texture is bound), and does not re-set that state if
+      * it does not think it needs to. However, if an external renderer has set different
+      * state in the mean time, Filament will use that new state unknowingly.
+      * 
+      * If you are in this situation, call this function - ideally only once per frame, 
+      * immediately after calling Engine::execute().
+      */
+    void resetBackendState() noexcept;
+#endif
+
     DebugRegistry& getDebugRegistry() noexcept;
 
 protected:
