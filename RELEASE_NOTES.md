@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - gltfio: support EXT_meshopt_compression
+- release packaging: fixed location of default IBL file
 
 ## v1.28.1
 

@@ -271,7 +271,7 @@ if (NOT ANDROID)
 
     # Install resources
     install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/fonts DESTINATION bin/assets)
-    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/ibl/ DESTINATION bin/assets)
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/ibl/ DESTINATION bin/assets/ibl)
 endif()
 
 # ==================================================================================================
