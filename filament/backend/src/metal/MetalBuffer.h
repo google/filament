@@ -27,6 +27,7 @@
 #include <utils/compiler.h>
 
 #include <utility>
+#include <memory>
 
 namespace filament::backend {
 
@@ -137,7 +138,7 @@ public:
      * @return the id<MTLBuffer> and offset for the new allocation
      */
     std::pair<id<MTLBuffer>, NSUInteger> createNewAllocation(id<MTLCommandBuffer> cmdBuffer) {
-        const auto occupiedSlots = mOccupiedSlots.load(std::memory_order_relaxed);
+        const auto occupiedSlots = mOccupiedSlots->load(std::memory_order_relaxed);
         assert_invariant(occupiedSlots <= mSlotCount);
         if (UTILS_UNLIKELY(occupiedSlots == mSlotCount)) {
             // We don't have any room left, so we fall back to creating a one-off aux buffer.
@@ -149,14 +150,19 @@ public:
             return {mAuxBuffer, 0};
         }
         mCurrentSlot = (mCurrentSlot + 1) % mSlotCount;
-        mOccupiedSlots.fetch_add(1, std::memory_order_relaxed);
+        mOccupiedSlots->fetch_add(1, std::memory_order_relaxed);
 
         // Release the previous allocation.
         if (UTILS_UNLIKELY(mAuxBuffer)) {
             mAuxBuffer = nil;
         } else {
+            // Capture the mOccupiedSlots var via a weak_ptr because the MetalRingBuffer could be
+            // destructed before the block executes.
+            std::weak_ptr<AtomicCounterType> slots = mOccupiedSlots;
             [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
-                mOccupiedSlots.fetch_sub(1, std::memory_order_relaxed);
+                if (auto s = slots.lock()) {
+                    s->fetch_sub(1, std::memory_order_relaxed);
+                }
             }];
         }
         return getCurrentAllocation();
@@ -190,7 +196,8 @@ private:
     NSUInteger mSlotCount;
 
     NSUInteger mCurrentSlot = 0;
-    std::atomic<NSUInteger> mOccupiedSlots = 1;
+    using AtomicCounterType = std::atomic<NSUInteger>;
+    std::shared_ptr<AtomicCounterType> mOccupiedSlots = std::make_shared<AtomicCounterType>(1);
 };
 
 } // namespace filament::backend
