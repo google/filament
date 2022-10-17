@@ -226,10 +226,10 @@ Animator::Animator(FFilamentAsset const* asset, FFilamentInstance* instance) {
 
         // Import each glTF channel into a custom data structure.
         if (instance) {
-            mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+            mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
-                mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+                mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
             }
         }
     }
@@ -247,7 +247,7 @@ void Animator::addInstance(FFilamentInstance* instance) {
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& srcAnim = srcAnims[i];
         Animation& dstAnim = mImpl->animations[i];
-        mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+        mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
     }
 }
 
@@ -524,7 +524,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
 }
 
 void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {
-    for (const auto& skin : instance->skins) {
+    for (const auto& skin : instance->mSkins) {
         size_t njoints = skin.joints.size();
         boneMatrices.resize(njoints);
         for (const auto& entity : skin.targets) {
@@ -540,9 +540,9 @@ void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {
 }
 
 void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
-    assert_invariant(instance->skins.size() == asset->mSkins.size());
+    assert_invariant(instance->mSkins.size() == asset->mSkins.size());
     size_t skinIndex = 0;
-    for (const auto& skin : instance->skins) {
+    for (const auto& skin : instance->mSkins) {
         const auto& assetSkin = asset->mSkins[skinIndex++];
         size_t njoints = skin.joints.size();
         boneMatrices.resize(njoints);

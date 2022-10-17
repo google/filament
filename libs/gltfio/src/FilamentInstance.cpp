@@ -29,81 +29,81 @@ using namespace utils;
 namespace filament::gltfio {
 
 FFilamentInstance::FFilamentInstance(Entity root, FFilamentAsset const* owner) :
-    root(root),
-    owner(owner),
-    nodeMap(owner->mSourceAsset->hierarchy->nodes_count, Entity()) {}
+    mRoot(root),
+    mOwner(owner),
+    mNodeMap(owner->mSourceAsset->hierarchy->nodes_count, Entity()) {}
 
 FFilamentInstance::~FFilamentInstance() {
-    delete animator;
+    delete mAnimator;
     for (auto mi : mMaterialInstances) {
-        owner->mEngine->destroy(mi);
+        mOwner->mEngine->destroy(mi);
     }
 }
 
 Animator* FFilamentInstance::getAnimator() const noexcept {
-    assert_invariant(animator);
-    return animator;
+    assert_invariant(mAnimator);
+    return mAnimator;
 }
 
 void FFilamentInstance::createAnimator() {
-    if (animator == nullptr && owner->mResourcesLoaded) {
-        animator = new Animator(owner, this);
+    if (mAnimator == nullptr && mOwner->mResourcesLoaded) {
+        mAnimator = new Animator(mOwner, this);
     }
 }
 
 size_t FFilamentInstance::getSkinCount() const noexcept {
-    return skins.size();
+    return mSkins.size();
 }
 
 const char* FFilamentInstance::getSkinNameAt(size_t skinIndex) const noexcept {
-    if (skins.size() <= skinIndex) {
+    if (mSkins.size() <= skinIndex) {
         return nullptr;
     }
-    return owner->mSkins[skinIndex].name.c_str();
+    return mOwner->mSkins[skinIndex].name.c_str();
 }
 
 size_t FFilamentInstance::getJointCountAt(size_t skinIndex) const noexcept {
-    if (skins.size() <= skinIndex) {
+    if (mSkins.size() <= skinIndex) {
         return 0;
     }
-    return skins[skinIndex].joints.size();
+    return mSkins[skinIndex].joints.size();
 }
 
 const utils::Entity* FFilamentInstance::getJointsAt(size_t skinIndex) const noexcept {
-    if (skins.size() <= skinIndex) {
+    if (mSkins.size() <= skinIndex) {
         return nullptr;
     }
-    return skins[skinIndex].joints.data();
+    return mSkins[skinIndex].joints.data();
 }
 
 void FFilamentInstance::attachSkin(size_t skinIndex, Entity target) noexcept {
-    if (UTILS_UNLIKELY(skins.size() <= skinIndex || target.isNull())) {
+    if (UTILS_UNLIKELY(mSkins.size() <= skinIndex || target.isNull())) {
         return;
     }
-    skins[skinIndex].targets.insert(target);
+    mSkins[skinIndex].targets.insert(target);
 }
 
 void FFilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
-    if (UTILS_UNLIKELY(skins.size() <= skinIndex || target.isNull())) {
+    if (UTILS_UNLIKELY(mSkins.size() <= skinIndex || target.isNull())) {
         return;
     }
-    skins[skinIndex].targets.erase(target);
+    mSkins[skinIndex].targets.erase(target);
 }
 
 void FFilamentInstance::recomputeBoundingBoxes() {
-    ASSERT_PRECONDITION(owner->mSourceAsset,
+    ASSERT_PRECONDITION(mOwner->mSourceAsset,
             "Do not call releaseSourceData before recomputeBoundingBoxes");
 
-    ASSERT_PRECONDITION(owner->mResourcesLoaded,
+    ASSERT_PRECONDITION(mOwner->mResourcesLoaded,
             "Do not call recomputeBoundingBoxes before loadResources or asyncBeginLoad");
 
-    auto& rm = owner->mEngine->getRenderableManager();
-    auto& tm = owner->mEngine->getTransformManager();
+    auto& rm = mOwner->mEngine->getRenderableManager();
+    auto& tm = mOwner->mEngine->getTransformManager();
 
     // The purpose of the root node is to give the client a place for custom transforms.
     // Since it is not part of the source model, it should be ignored when computing the
     // bounding box.
-    TransformManager::Instance root = tm.getInstance(owner->getRoot());
+    TransformManager::Instance root = tm.getInstance(mOwner->getRoot());
     utils::FixedCapacityVector<Entity> modelRoots(tm.getChildCount(root));
     tm.getChildren(root, modelRoots.data(), modelRoots.size());
     for (auto e : modelRoots) {
@@ -169,8 +169,8 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         Aabb aabb;
         TransformManager::Instance transformable = tm.getInstance(prim.node);
         const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
-        const Skin& instanceSkin = skins[prim.skinIndex];
-        const FFilamentAsset::Skin& assetSkin = owner->mSkins[prim.skinIndex];
+        const Skin& instanceSkin = mSkins[prim.skinIndex];
+        const FFilamentAsset::Skin& assetSkin = mOwner->mSkins[prim.skinIndex];
         for (size_t i = 0, n = verts.size(); i < n; i++) {
             mat4f tmp = mat4f(0.0f);
             for (size_t j = 0; j < 4; j++) {
@@ -202,7 +202,7 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     // Collect all mesh primitives that we wish to find bounds for. For each mesh primitive, we also
     // collect the skin it is bound to (nullptr if not skinned) for bounds computation.
     size_t primCount = 0;
-    const cgltf_data* hierarchy = owner->mSourceAsset->hierarchy;
+    const cgltf_data* hierarchy = mOwner->mSourceAsset->hierarchy;
     const cgltf_node* nodes = hierarchy->nodes;
     for (size_t i = 0, n = hierarchy->nodes_count; i < n; ++i) {
         if (const cgltf_mesh* mesh = nodes[i].mesh; mesh) {
@@ -213,7 +213,7 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     const cgltf_skin* baseSkin = &hierarchy->skins[0];
     for (size_t i = 0, n = hierarchy->nodes_count; i < n; ++i) {
         const cgltf_node& node = nodes[i];
-        const Entity entity = nodeMap[i];
+        const Entity entity = mNodeMap[i];
         if (entity.isNull()) {
             continue;
         }
@@ -230,7 +230,7 @@ void FFilamentInstance::recomputeBoundingBoxes() {
 
     // Kick off a bounding box job for every primitive.
     FixedCapacityVector<Aabb> bounds(primitives.size());
-    JobSystem& js = owner->mEngine->getJobSystem();
+    JobSystem& js = mOwner->mEngine->getJobSystem();
     JobSystem::Job* parent = js.createJob();
     for (size_t i = 0; i < primitives.size(); ++i) {
         Aabb& result = bounds[i];
@@ -250,9 +250,9 @@ void FFilamentInstance::recomputeBoundingBoxes() {
     // Compute the asset-level bounding box.
     size_t primIndex = 0;
     Aabb assetBounds;
-    for (size_t i = 0, n = owner->mSourceAsset->hierarchy->nodes_count; i < n; ++i) {
+    for (size_t i = 0, n = mOwner->mSourceAsset->hierarchy->nodes_count; i < n; ++i) {
         const cgltf_node& node = nodes[i];
-        const Entity entity = nodeMap[i];
+        const Entity entity = mNodeMap[i];
         if (const cgltf_mesh* mesh = node.mesh; mesh) {
             // Find the object-space bounds for the renderable by unioning the bounds of each prim.
             Aabb aabb;
@@ -278,26 +278,26 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         tm.setParent(tm.getInstance(e), root);
     }
 
-    boundingBox = assetBounds;
+    mBoundingBox = assetBounds;
 }
 
 size_t FFilamentInstance::getMaterialVariantCount() const noexcept {
-    return variants.size();
+    return mVariants.size();
 }
 
 const char* FFilamentInstance::getMaterialVariantName(size_t variantIndex) const noexcept {
-    if (variantIndex >= variants.size()) {
+    if (variantIndex >= mVariants.size()) {
         return nullptr;
     }
-    return variants[variantIndex].name.c_str();
+    return mVariants[variantIndex].name.c_str();
 }
 
 void FFilamentInstance::applyMaterialVariant(size_t variantIndex) noexcept {
-    if (variantIndex >= variants.size()) {
+    if (variantIndex >= mVariants.size()) {
         return;
     }
-    const auto& mappings = variants[variantIndex].mappings;
-    RenderableManager& rm = owner->mEngine->getRenderableManager();
+    const auto& mappings = mVariants[variantIndex].mappings;
+    RenderableManager& rm = mOwner->mEngine->getRenderableManager();
     for (const auto& mapping : mappings) {
         auto renderable = rm.getInstance(mapping.renderable);
         rm.setMaterialInstanceAt(renderable, mapping.primitiveIndex, mapping.material);
@@ -333,20 +333,20 @@ size_t FilamentInstance::getMaterialVariantCount() const noexcept {
 }
 
 FilamentAsset const* FilamentInstance::getAsset() const noexcept {
-    return downcast(this)->owner;
+    return downcast(this)->mOwner;
 }
 
 size_t FilamentInstance::getEntityCount() const noexcept {
-    return downcast(this)->entities.size();
+    return downcast(this)->mEntities.size();
 }
 
 const Entity* FilamentInstance::getEntities() const noexcept {
-    const auto& entities = downcast(this)->entities;
+    const auto& entities = downcast(this)->mEntities;
     return entities.empty() ? nullptr : entities.data();
 }
 
 Entity FilamentInstance::getRoot() const noexcept {
-    return downcast(this)->root;
+    return downcast(this)->mRoot;
 }
 
 Animator* FilamentInstance::getAnimator() noexcept {
@@ -382,7 +382,7 @@ void FilamentInstance::recomputeBoundingBoxes() {
 }
 
 Aabb FilamentInstance::getBoundingBox() const noexcept {
-    return downcast(this)->boundingBox;
+    return downcast(this)->mBoundingBox;
 }
 
 } // namespace filament::gltfio

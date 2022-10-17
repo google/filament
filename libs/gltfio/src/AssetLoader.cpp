@@ -519,9 +519,9 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
     FFilamentInstance* instance = new FFilamentInstance(instanceRoot, mAsset);
 
     // Check if the asset has variants.
-    instance->variants.reserve(srcAsset->variants_count);
+    instance->mVariants.reserve(srcAsset->variants_count);
     for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
-        instance->variants.push_back({CString(srcAsset->variants[i].name)});
+        instance->mVariants.push_back({CString(srcAsset->variants[i].name)});
     }
 
     // For each scene root, recursively create all entities.
@@ -540,7 +540,7 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
     // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
     // be affected by entity transforms. However, upon instance creation we can safely copy over
     // the asset's bounding box.
-    instance->boundingBox = mAsset->mBoundingBox;
+    instance->mBoundingBox = mAsset->mBoundingBox;
 
     mMaterialInstanceCache.flush(&instance->mMaterialInstances);
 
@@ -579,8 +579,8 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
 
     // Update the asset's entity list and private node mapping.
     mAsset->mEntities.push_back(entity);
-    instance->entities.push_back(entity);
-    instance->nodeMap[node - srcAsset->nodes] = entity;
+    instance->mEntities.push_back(entity);
+    instance->mNodeMap[node - srcAsset->nodes] = entity;
 
     const char* name = getNodeName(node, mDefaultNodeName);
 
@@ -782,7 +782,7 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
                 break;
             }
             mAsset->mDependencyGraph.addEdge(entity, mi);
-            instance->variants[variantIndex].mappings.push_back({entity, prim, mi});
+            instance->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
         }
     }
 }
@@ -1524,19 +1524,19 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
 void FAssetLoader::importSkins(FFilamentAsset* primary,
         FFilamentInstance* instance, const cgltf_data* gltf) {
-    instance->skins.reserve(gltf->skins_count);
-    instance->skins.resize(gltf->skins_count);
-    const auto& nodeMap = instance->nodeMap;
+    instance->mSkins.reserve(gltf->skins_count);
+    instance->mSkins.resize(gltf->skins_count);
+    const auto& nodeMap = instance->mNodeMap;
     for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
         const cgltf_node& node = gltf->nodes[i];
         Entity entity = nodeMap[i];
         if (node.skin && entity) {
             int skinIndex = node.skin - &gltf->skins[0];
-            instance->skins[skinIndex].targets.insert(entity);
+            instance->mSkins[skinIndex].targets.insert(entity);
         }
     }
     for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
-        FFilamentInstance::Skin& dstSkin = instance->skins[i];
+        FFilamentInstance::Skin& dstSkin = instance->mSkins[i];
         const cgltf_skin& srcSkin = gltf->skins[i];
 
         // Build a list of transformables for this skin, one for each joint.
