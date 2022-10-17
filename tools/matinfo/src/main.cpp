@@ -63,6 +63,11 @@ static void printUsage(const char* name) {
     std::string execName(utils::Path(name).getName());
     std::string usage(
             "MATINFO prints information about material files compiled with matc\n"
+            "\n"
+            "Caution! MATINFO was designed to operate on trusted inputs. To minimize the risk of\n"
+            "triggering memory corruption vulnerabilities, please make sure that the files passed\n"
+            "to MATINFO come from a trusted source, or run MATINFO in a sandboxed environment.\n"
+            "\n"
             "Usage:\n"
             "    MATINFO [options] <material file>\n"
             "\n"
