@@ -40,7 +40,7 @@ void main() {
 #include <simd/simd.h>
 #include <metal_stdlib>
 using namespace metal;
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 1u, 1u);
+constant uint3 WorkGroupSize [[maybe_unused]] = uint3(16u, 1u, 1u);
 kernel void main0() {}
 )"};
 
@@ -106,11 +106,11 @@ struct Output_data {
 struct Input_data {
     float elements[1];
 };
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 1u, 1u);
+constant uint3 WorkGroupSize [[maybe_unused]] = uint3(16u, 1u, 1u);
 kernel void main0(device Output_data& output_data [[buffer(0)]],
         device Input_data& input_data [[buffer(1)]],
-        uint3 gl_GlobalInvocationID [[thread_position_in_grid]]) {
-    output_data.elements[gl_GlobalInvocationID.x] = input_data.elements[gl_GlobalInvocationID.x];
+        uint3 GlobalInvocationID [[thread_position_in_grid]]) {
+    output_data.elements[GlobalInvocationID.x] = input_data.elements[GlobalInvocationID.x];
 }
 )"};
 
