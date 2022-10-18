@@ -23,6 +23,7 @@
 #include <ktxreader/Ktx1Reader.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 #include <gltfio/materials/uberarchive.h>
 
 #include <fstream>
@@ -139,10 +140,21 @@ void App::setupMesh() {
     }
     app.asset = app.assetLoader->createAsset(buffer.data(), static_cast<uint32_t>(size));
 
-    filament::gltfio::ResourceLoader({
+    auto resourceLoader = new filament::gltfio::ResourceLoader({
         .engine = engine,
         .normalizeSkinningWeights = true
-    }).loadResources(app.asset);
+    });
+    auto stbDecoder = filament::gltfio::createStbProvider(engine);
+    auto ktxDecoder = filament::gltfio::createKtx2Provider(engine);
+
+    resourceLoader->addTextureProvider("image/png", stbDecoder);
+    resourceLoader->addTextureProvider("image/jpeg", stbDecoder);
+    resourceLoader->addTextureProvider("image/ktx2", ktxDecoder);
+    resourceLoader->loadResources(app.asset);
+
+    delete resourceLoader;
+    delete stbDecoder;
+    delete ktxDecoder;
 
     scene->addEntities(app.asset->getEntities(), app.asset->getEntityCount());
 }
