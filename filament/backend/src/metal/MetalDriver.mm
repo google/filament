@@ -243,7 +243,7 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
-    construct_handle<MetalBufferObject>(boh, *mContext, usage, byteCount);
+    construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage, byteCount);
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -481,10 +481,20 @@ void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
         return;
     }
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    // Unbind this buffer object from any uniform slots it's still bound to.
+    // Unbind this buffer object from any uniform / SSBO slots it's still bound to.
     bo->boundUniformBuffers.forEachSetBit([this](size_t index) {
-        mContext->uniformState[index].buffer = nullptr;
-        mContext->uniformState[index].bound = false;
+        mContext->uniformState[index] = BufferState {
+                .buffer = nullptr,
+                .offset = 0,
+                .bound = false
+        };
+    });
+    bo->boundSsbos.forEachSetBit([this](size_t index) {
+        mContext->ssboState[index] = BufferState {
+                .buffer = nullptr,
+                .offset = 0,
+                .bound = false
+        };
     });
     destruct_handle<MetalBufferObject>(boh);
 }
@@ -1051,7 +1061,7 @@ void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) 
         currentBo->boundUniformBuffers.unset(index);
     }
     bo->boundUniformBuffers.set(index);
-    mContext->uniformState[index] = UniformBufferState{
+    mContext->uniformState[index] = BufferState{
             .buffer = bo,
             .offset = 0,
             .bound = true
@@ -1064,24 +1074,81 @@ void MetalDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t inde
     assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
                      bindingType == BufferObjectBinding::UNIFORM);
 
-    // TODO: implement BufferObjectBinding::SHADER_STORAGE case
-
-    assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    auto* currentBo = mContext->uniformState[index].buffer;
-    if (currentBo) {
-        currentBo->boundUniformBuffers.unset(index);
+
+    switch (bindingType) {
+        default:
+        case BufferObjectBinding::UNIFORM: {
+            assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
+            auto* currentBo = mContext->uniformState[index].buffer;
+            if (currentBo) {
+                currentBo->boundUniformBuffers.unset(index);
+            }
+            bo->boundUniformBuffers.set(index);
+            mContext->uniformState[index] = BufferState {
+                    .buffer = bo,
+                    .offset = offset,
+                    .bound = true
+            };
+
+            break;
+        }
+
+        case BufferObjectBinding::SHADER_STORAGE: {
+            assert_invariant(index < MAX_SSBO_COUNT);
+            auto* currentBo = mContext->ssboState[index].buffer;
+            if (currentBo) {
+                currentBo->boundSsbos.unset(index);
+            }
+            bo->boundSsbos.set(index);
+            mContext->ssboState[index] = BufferState {
+                    .buffer = bo,
+                    .offset = offset,
+                    .bound = true
+            };
+
+            break;
+        }
     }
-    bo->boundUniformBuffers.set(index);
-    mContext->uniformState[index] = UniformBufferState{
-            .buffer = bo,
-            .offset = offset,
-            .bound = true
-    };
 }
 
 void MetalDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
-    // TODO: implement unbindBuffer()
+
+    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
+                     bindingType == BufferObjectBinding::UNIFORM);
+
+    switch (bindingType) {
+        default:
+        case BufferObjectBinding::UNIFORM: {
+            assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
+            auto* currentBo = mContext->uniformState[index].buffer;
+            if (currentBo) {
+                currentBo->boundUniformBuffers.unset(index);
+            }
+            mContext->uniformState[index] = BufferState {
+                    .buffer = nullptr,
+                    .offset = 0,
+                    .bound = false
+            };
+
+            break;
+        }
+
+        case BufferObjectBinding::SHADER_STORAGE: {
+            assert_invariant(index < MAX_SSBO_COUNT);
+            auto* currentBo = mContext->ssboState[index].buffer;
+            if (currentBo) {
+                currentBo->boundSsbos.unset(index);
+            }
+            mContext->ssboState[index] = BufferState {
+                    .buffer = nullptr,
+                    .offset = 0,
+                    .bound = false
+            };
+
+            break;
+        }
+    }
 }
 
 void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
@@ -1552,8 +1619,9 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
     NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
-    enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
-            MetalBuffer* buffer, uint32_t index) {
+    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
+            [&uniformsToBind, &offsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
         uniformsToBind[index] = buffer;
         offsets[index] = state.offset;
     });
@@ -1635,7 +1703,67 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 }
 
 void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
-    // FIXME: implement me
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "dispatchCompute must be called outside of a render pass.");
+
+    auto mtlProgram = handle_cast<MetalProgram>(program);
+
+    // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
+    // during the draw call when the program is invalid. The shader compile error has already been
+    // dumped to the console at this point, so it's fine to simply return early.
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!mtlProgram->isValid)) {
+        return;
+    }
+
+    assert_invariant(mtlProgram->isValid && mtlProgram->computeFunction);
+
+    id<MTLComputeCommandEncoder> computeEncoder =
+            [getPendingCommandBuffer(mContext) computeCommandEncoder];
+
+    NSError* error = nil;
+    id<MTLComputePipelineState> computePipelineState =
+            [mContext->device newComputePipelineStateWithFunction:mtlProgram->computeFunction
+                                                            error:&error];
+    if (error) {
+        auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+        utils::slog.e << description << utils::io::endl;
+    }
+    assert_invariant(!error);
+
+    // Bind uniform buffers.
+    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
+    NSUInteger uniformOffsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
+    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
+            [&uniformsToBind, &uniformOffsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
+        uniformsToBind[index] = buffer;
+        uniformOffsets[index] = state.offset;
+    });
+    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), computeEncoder,
+            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::COMPUTE, uniformsToBind,
+            uniformOffsets, Program::UNIFORM_BINDING_COUNT);
+
+    // Bind SSBOs.
+    MetalBuffer* ssbosToBind[MAX_SSBO_COUNT] = { nil };
+    NSUInteger ssboOffsets[MAX_SSBO_COUNT] = { 0 };
+    enumerateBoundBuffers(BufferObjectBinding::SHADER_STORAGE,
+            [&ssbosToBind, &ssboOffsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
+        ssbosToBind[index] = buffer;
+        ssboOffsets[index] = state.offset;
+    });
+    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), computeEncoder, SSBO_BINDING_START,
+            MetalBuffer::Stage::COMPUTE, ssbosToBind, ssboOffsets, MAX_SSBO_COUNT);
+
+    [computeEncoder setComputePipelineState:computePipelineState];
+
+    MTLSize threadgroupsPerGrid = MTLSizeMake(workGroupCount.x, workGroupCount.y, workGroupCount.z);
+    // FIXME: the threadgroup size should be specified in the Program
+    MTLSize threadsPerThreadgroup = MTLSizeMake(16u, 1u, 1u);
+    [computeEncoder dispatchThreadgroups:threadgroupsPerGrid
+                   threadsPerThreadgroup:threadsPerThreadgroup];
+
+    [computeEncoder endEncoding];
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
@@ -1652,14 +1780,29 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     mContext->timerQueryImpl->endTimeElapsedQuery(tq);
 }
 
-void MetalDriver::enumerateBoundUniformBuffers(
-        const std::function<void(const UniformBufferState&, MetalBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-        auto& thisUniform = mContext->uniformState[i];
-        if (!thisUniform.bound) {
-            continue;
+void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
+        const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f) {
+    assert_invariant(bindingType == BufferObjectBinding::UNIFORM ||
+            bindingType == BufferObjectBinding::SHADER_STORAGE);
+
+    auto enumerate = [&](auto arrayType){
+        for (auto i = 0u; i < arrayType.size(); i++) {
+            const auto& thisBuffer = arrayType[i];
+            if (!thisBuffer.bound) {
+                continue;
+            }
+            f(thisBuffer, thisBuffer.buffer->getBuffer(), i);
         }
-        f(thisUniform, thisUniform.buffer->getBuffer(), i);
+    };
+
+    switch (bindingType) {
+        default:
+        case (BufferObjectBinding::UNIFORM):
+            enumerate(mContext->uniformState);
+            break;
+        case (BufferObjectBinding::SHADER_STORAGE):
+            enumerate(mContext->ssboState);
+            break;
     }
 }
 

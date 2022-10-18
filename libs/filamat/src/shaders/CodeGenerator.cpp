@@ -368,12 +368,22 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     Precision uniformPrecision = getDefaultUniformPrecision();
     Precision defaultPrecision = getDefaultPrecision(stage);
 
+    auto metalBufferBindingOffset = 0;
+    switch (uib.getTarget()) {
+        case BufferInterfaceBlock::Target::UNIFORM:
+            metalBufferBindingOffset = METAL_UNIFORM_BUFFER_BINDING_START;
+            break;
+        case BufferInterfaceBlock::Target::SSBO:
+            metalBufferBindingOffset = METAL_SSBO_BINDING_START;
+            break;
+    }
+
     out << "\nlayout(";
     if (mTargetLanguage == TargetLanguage::SPIRV ||
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
         switch (mTargetApi) {
             case TargetApi::METAL:
-                out << "binding = " << METAL_UNIFORM_BUFFER_BINDING_START + binding << ", ";
+                out << "binding = " << metalBufferBindingOffset + binding << ", ";
                 break;
 
             case TargetApi::OPENGL:

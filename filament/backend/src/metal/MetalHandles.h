@@ -118,15 +118,18 @@ private:
 
 class MetalBufferObject : public HwBufferObject {
 public:
-    MetalBufferObject(MetalContext& context, BufferUsage usage, uint32_t byteCount);
+    MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
+         uint32_t byteCount);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
     void updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
 
-    // Tracks which uniform buffers this buffer object is bound into.
+    // Tracks which uniform/ssbo buffers this buffer object is bound into.
     static_assert(Program::UNIFORM_BINDING_COUNT <= 32);
+    static_assert(MAX_SSBO_COUNT <= 32);
     utils::bitset32 boundUniformBuffers;
+    utils::bitset32 boundSsbos;
 
 private:
     MetalBuffer buffer;
@@ -163,6 +166,7 @@ struct MetalProgram : public HwProgram {
 
     id<MTLFunction> vertexFunction;
     id<MTLFunction> fragmentFunction;
+    id<MTLFunction> computeFunction;
 
     Program::SamplerGroupInfo samplerGroupInfo;
 

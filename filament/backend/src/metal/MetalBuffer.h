@@ -34,7 +34,8 @@ namespace filament::backend {
 class MetalBuffer {
 public:
 
-    MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer = false);
+    MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
+         size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
@@ -61,18 +62,21 @@ public:
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
-    enum Stage {
-        VERTEX = 1,
-        FRAGMENT = 2
+    enum Stage : uint8_t {
+        VERTEX      = 1u << 0u,
+        FRAGMENT    = 1u << 1u,
+        COMPUTE     = 1u << 2u
     };
 
     /**
      * Bind multiple buffers to pipeline stages.
      *
-     * bindBuffers binds an array of buffers to the given stage(s) of a MTLRenderCommandEncoder's
-     * pipeline.
+     * bindBuffers binds an array of buffers to the given stage(s) of a MTLCommandEncoders's
+     * pipeline. The encoder must be either a MTLRenderCommandEncoder or a MTLComputeCommandEncoder.
+     * For MTLRenderCommandEncoders, only the VERTEX and FRAGMENT stages may be specified.
+     * For MTLComputeCommandEncoders, only the COMPUTE stage may be specified.
      */
-    static void bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,
+    static void bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncoder> encoder,
             size_t bufferStart, uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets,
             size_t count);
 

@@ -21,15 +21,17 @@
 namespace filament {
 namespace backend {
 
-MetalBuffer::MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer)
-        : mBufferSize(size), mContext(context) {
+MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
+        size_t size, bool forceGpuBuffer) : mBufferSize(size), mContext(context) {
     // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
     // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
-   if (size <= 4 * 1024 && usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
-       mBuffer = nil;
-       mCpuBuffer = malloc(size);
-       return;
-   }
+    // This won't work for SSBOs, since they are read/write.
+    if (size <= 4 * 1024 && bindingType != BufferObjectBinding::SHADER_STORAGE &&
+            usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
+        mBuffer = nil;
+        mCpuBuffer = malloc(size);
+        return;
+    }
 
     // Otherwise, we allocate a private GPU buffer.
     mBuffer = [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate];
@@ -93,9 +95,24 @@ id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) n
     return mBuffer;
 }
 
-void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,
+void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncoder> encoder,
         size_t bufferStart, uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets,
         size_t count) {
+    // Ensure we were given the correct type of encoder:
+    // either a MTLRenderCommandEncoder or a MTLComputeCommandEncoder.
+    if (stages & MetalBuffer::Stage::VERTEX || stages & MetalBuffer::Stage::FRAGMENT) {
+        assert_invariant([encoder respondsToSelector:@selector(setVertexBuffers:offsets:withRange:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setFragmentBuffers:offsets:withRange:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setVertexBytes:length:atIndex:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setFragmentBytes:length:atIndex:)]);
+        assert_invariant(!(stages & MetalBuffer::Stage::COMPUTE));
+    }
+    if (stages & MetalBuffer::Stage::COMPUTE) {
+        assert_invariant([encoder respondsToSelector:@selector(setBuffers:offsets:withRange:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setBytes:length:atIndex:)]);
+        assert_invariant(!(stages & (MetalBuffer::Stage::FRAGMENT | MetalBuffer::Stage::VERTEX)));
+    }
+
     const NSRange bufferRange = NSMakeRange(bufferStart, count);
 
     constexpr size_t MAX_BUFFERS = 16;
@@ -120,14 +137,19 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
     }
 
     if (stages & Stage::VERTEX) {
-        [encoder setVertexBuffers:metalBuffers.data()
-                          offsets:metalOffsets.data()
-                        withRange:bufferRange];
+        [(id<MTLRenderCommandEncoder>) encoder setVertexBuffers:metalBuffers.data()
+                                                        offsets:metalOffsets.data()
+                                                      withRange:bufferRange];
     }
     if (stages & Stage::FRAGMENT) {
-        [encoder setFragmentBuffers:metalBuffers.data()
-                            offsets:metalOffsets.data()
-                          withRange:bufferRange];
+        [(id<MTLRenderCommandEncoder>) encoder setFragmentBuffers:metalBuffers.data()
+                                                          offsets:metalOffsets.data()
+                                                        withRange:bufferRange];
+    }
+    if (stages & Stage::COMPUTE) {
+        [(id<MTLComputeCommandEncoder>) encoder setBuffers:metalBuffers.data()
+                                                   offsets:metalOffsets.data()
+                                                 withRange:bufferRange];
     }
 
     for (size_t b = 0; b < count; b++) {
@@ -146,14 +168,22 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
         auto* bytes = static_cast<const uint8_t*>(cpuBuffer);
 
         if (stages & Stage::VERTEX) {
-            [encoder setVertexBytes:(bytes + offset)
-                             length:(buffer->getSize() - offset)
-                            atIndex:bufferIndex];
+            [(id<MTLRenderCommandEncoder>) encoder setVertexBytes:(bytes + offset)
+                                                           length:(buffer->getSize() - offset)
+                                                          atIndex:bufferIndex];
         }
         if (stages & Stage::FRAGMENT) {
-            [encoder setFragmentBytes:(bytes + offset)
-                               length:(buffer->getSize() - offset)
-                              atIndex:bufferIndex];
+            [(id<MTLRenderCommandEncoder>) encoder setFragmentBytes:(bytes + offset)
+                                                             length:(buffer->getSize() - offset)
+                                                            atIndex:bufferIndex];
+        }
+        if (stages & Stage::COMPUTE) {
+            // TODO: using setBytes means the data is read-only, which currently isn't enforced.
+            // In practice this won't be an issue since MetalBuffer ensures all SSBOs are realized
+            // through actual id<MTLBuffer> allocations.
+            [(id<MTLComputeCommandEncoder>) encoder setBytes:(bytes + offset)
+                                                      length:(buffer->getSize() - offset)
+                                                     atIndex:bufferIndex];
         }
     }
 }
