@@ -1755,7 +1755,7 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
     [computeEncoder setComputePipelineState:computePipelineState];
 
     MTLSize threadgroupsPerGrid = MTLSizeMake(workGroupCount.x, workGroupCount.y, workGroupCount.z);
-    // TODO: the threadgroup size should be specified in the Program
+    // FIXME: the threadgroup size should be specified in the Program
     MTLSize threadsPerThreadgroup = MTLSizeMake(16u, 1u, 1u);
     [computeEncoder dispatchThreadgroups:threadgroupsPerGrid
                    threadsPerThreadgroup:threadsPerThreadgroup];
