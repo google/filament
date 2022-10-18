@@ -1619,8 +1619,9 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
     NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
-    enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const BufferState& state,
-            MetalBuffer* buffer, uint32_t index) {
+    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
+            [&uniformsToBind, &offsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
         uniformsToBind[index] = buffer;
         offsets[index] = state.offset;
     });
@@ -1732,8 +1733,9 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
     // Bind uniform buffers.
     MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
     NSUInteger uniformOffsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
-    enumerateBoundUniformBuffers([&uniformsToBind, &uniformOffsets](const BufferState& state,
-            MetalBuffer* buffer, uint32_t index) {
+    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
+            [&uniformsToBind, &uniformOffsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
         uniformsToBind[index] = buffer;
         uniformOffsets[index] = state.offset;
     });
@@ -1744,8 +1746,9 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
     // Bind SSBOs.
     MetalBuffer* ssbosToBind[MAX_SSBO_COUNT] = { nil };
     NSUInteger ssboOffsets[MAX_SSBO_COUNT] = { 0 };
-    enumerateBoundSsbos([&ssbosToBind, &ssboOffsets](const BufferState& state,
-            MetalBuffer* buffer, uint32_t index) {
+    enumerateBoundBuffers(BufferObjectBinding::SHADER_STORAGE,
+            [&ssbosToBind, &ssboOffsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
         ssbosToBind[index] = buffer;
         ssboOffsets[index] = state.offset;
     });
@@ -1777,25 +1780,29 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     mContext->timerQueryImpl->endTimeElapsedQuery(tq);
 }
 
-void MetalDriver::enumerateBoundUniformBuffers(
+void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
         const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-        auto& thisUniform = mContext->uniformState[i];
-        if (!thisUniform.bound) {
-            continue;
-        }
-        f(thisUniform, thisUniform.buffer->getBuffer(), i);
-    }
-}
+    assert_invariant(bindingType == BufferObjectBinding::UNIFORM ||
+            bindingType == BufferObjectBinding::SHADER_STORAGE);
 
-void MetalDriver::enumerateBoundSsbos(
-        const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < MAX_SSBO_COUNT; i++) {
-        auto& thisSsbo = mContext->ssboState[i];
-        if (!thisSsbo.bound) {
-            continue;
+    auto enumerate = [&](auto arrayType){
+        for (auto i = 0u; i < arrayType.size(); i++) {
+            const auto& thisBuffer = arrayType[i];
+            if (!thisBuffer.bound) {
+                continue;
+            }
+            f(thisBuffer, thisBuffer.buffer->getBuffer(), i);
         }
-        f(thisSsbo, thisSsbo.buffer->getBuffer(), i);
+    };
+
+    switch (bindingType) {
+        default:
+        case (BufferObjectBinding::UNIFORM):
+            enumerate(mContext->uniformState);
+            break;
+        case (BufferObjectBinding::SHADER_STORAGE):
+            enumerate(mContext->ssboState);
+            break;
     }
 }
 

@@ -129,10 +129,8 @@ private:
             uint32_t offset, uint32_t minIndex, uint32_t maxIndex, uint32_t count);
 
     void finalizeSamplerGroup(MetalSamplerGroup* sg);
-    void enumerateBoundUniformBuffers(const std::function<void(const BufferState&,
-            MetalBuffer*, uint32_t)>& f);
-    void enumerateBoundSsbos(const std::function<void(const BufferState&,
-            MetalBuffer*, uint32_t)>& f);
+    void enumerateBoundBuffers(BufferObjectBinding bindingType,
+            const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f);
 
 };
 
