@@ -26,6 +26,7 @@
 
 #include "private/backend/BackendUtils.h"
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 #include <utils/debug.h>
@@ -394,8 +395,9 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         *shaderFunctions[i] = function;
     }
 
-    const bool isRasterizationProgram = vertexFunction != nil && fragmentFunction != nil;
-    const bool isComputeProgram = computeFunction != nil;
+    UTILS_UNUSED_IN_RELEASE const bool isRasterizationProgram =
+            vertexFunction != nil && fragmentFunction != nil;
+    UTILS_UNUSED_IN_RELEASE const bool isComputeProgram = computeFunction != nil;
     // The program must be either a rasterization program XOR a compute program.
     assert_invariant(isRasterizationProgram != isComputeProgram);
 
