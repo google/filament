@@ -17,15 +17,26 @@
 #ifndef FGDBG_DEBUGSERVER_H
 #define FGDBG_DEBUGSERVER_H
 
-namespace filament {
-namespace fgdbg {
+class CivetServer;
+
+namespace filament::fgdbg {
 
 class DebugServer {
 public:
     DebugServer();
     ~DebugServer();
+
+    void sendMessage(int number);
+
+private:
+    CivetServer* mServer;
+
+    class RestRequestHandler *mRestRequestHandler = nullptr;
+    class WebSocketHandler* mWebSocketHandler = nullptr;
+
+    friend class RestRequestHandler;
+    friend class WebSocketHandler;
 };
-}
 }
 
 #endif  // FGDBG_DEBUGSERVER_H
