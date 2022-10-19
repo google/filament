@@ -61,6 +61,8 @@ OpenGLContext::OpenGLContext() noexcept {
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &gets.max_texture_image_units);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &gets.max_combined_texture_image_units);
+    glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS, &gets.max_transform_feedback_separate_attribs);
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &gets.max_uniform_buffer_bindings);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
 
     constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
@@ -247,31 +249,7 @@ OpenGLContext::OpenGLContext() noexcept {
     flush(slog.v);
 #endif
 
-    /*
-     * Set our default state
-     */
-
-    // We need to make sure our internal state matches the GL state when we start.
-    // (some of these calls may be unneeded as they might be the gl defaults)
-    glDisable(GL_BLEND);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_STENCIL_TEST);
-    glDisable(GL_DITHER);
-    glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
-    glDisable(GL_SAMPLE_COVERAGE);
-    glDisable(GL_POLYGON_OFFSET_FILL);
-
-    // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
-    // In OpenGL ES, these flags do not exist because they are always on.
-#if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
-    enable(GL_PROGRAM_POINT_SIZE);
-#endif
-
-#ifdef GL_ARB_seamless_cube_map
-    enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
+    setDefaultState();
 
 #ifdef GL_EXT_texture_filter_anisotropic
     if (ext.EXT_texture_filter_anisotropic) {
@@ -288,10 +266,6 @@ OpenGLContext::OpenGLContext() noexcept {
         }
         glDeleteSamplers(1, &s);
     }
-#endif
-
-#ifdef GL_FRAGMENT_SHADER_DERIVATIVE_HINT
-    glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
 #if !defined(NDEBUG) && defined(GL_KHR_debug)
@@ -324,6 +298,50 @@ OpenGLContext::OpenGLContext() noexcept {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(cb, nullptr);
     }
+#endif
+}
+
+void OpenGLContext::setDefaultState() noexcept {
+    // We need to make sure our internal state matches the GL state when we start.
+    // (some of these calls may be unneeded as they might be the gl defaults)
+    GLenum caps[] = {
+        GL_BLEND,
+        GL_CULL_FACE,
+        GL_SCISSOR_TEST,
+        GL_DEPTH_TEST,
+        GL_STENCIL_TEST,
+        GL_DITHER,
+        GL_SAMPLE_ALPHA_TO_COVERAGE,
+        GL_SAMPLE_COVERAGE,
+        GL_POLYGON_OFFSET_FILL,  
+    };
+    size_t capsCount = sizeof(caps) / sizeof(caps[0]);
+
+    UTILS_NOUNROLL
+    for (GLenum capi = 0; capi < capsCount; ++capi) {
+        size_t capIndex = getIndexForCap(caps[capi]);
+        GLenum cap = caps[capi];
+        if (state.enables.caps[capIndex]) {
+            glEnable(cap);
+        } else {
+            glDisable(cap);
+        }
+    }
+
+    // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
+    // In OpenGL ES, these flags do not exist because they are always on.
+#if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    enable(GL_PROGRAM_POINT_SIZE);
+#endif
+
+#ifdef GL_ARB_seamless_cube_map
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+#endif
+
+#ifdef GL_FRAGMENT_SHADER_DERIVATIVE_HINT
+    glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
 #if defined(GL_EXT_clip_control) || defined(GL_ARB_clip_control) || defined(GL_VERSION_4_5)
@@ -519,6 +537,163 @@ void OpenGLContext::deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept
             bindVertexArray(nullptr);
         }
     }
+}
+
+void OpenGLContext::resetState() noexcept {
+    // Force GL state to match the Filament state
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.draw_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, state.read_fbo);
+
+    // state.program
+    glUseProgram(state.program.use);
+
+    // state.vao
+    if (state.vao.p) {
+        glBindVertexArray(state.vao.p->vao);
+    } else {
+        bindVertexArray(nullptr);
+    }
+
+    // state.raster
+    glFrontFace(state.raster.frontFace);
+    glCullFace(state.raster.cullFace);
+    glBlendEquationSeparate(state.raster.blendEquationRGB, state.raster.blendEquationA);
+    glBlendFuncSeparate(
+        state.raster.blendFunctionSrcRGB, 
+        state.raster.blendFunctionDstRGB,
+        state.raster.blendFunctionSrcA,
+        state.raster.blendFunctionDstA
+    );
+    glColorMask(
+        state.raster.colorMask, 
+        state.raster.colorMask, 
+        state.raster.colorMask, 
+        state.raster.colorMask
+    );
+    glDepthMask(state.raster.depthMask);
+    glDepthFunc(state.raster.depthFunc);
+    
+    // state.stencil
+    glStencilFuncSeparate(
+        GL_FRONT, 
+        state.stencil.front.func.func, 
+        state.stencil.front.func.ref, 
+        state.stencil.front.func.mask
+    );
+    glStencilFuncSeparate(
+        GL_BACK, 
+        state.stencil.back.func.func, 
+        state.stencil.back.func.ref, 
+        state.stencil.back.func.mask
+    );
+    glStencilOpSeparate(
+        GL_FRONT, 
+        state.stencil.front.op.sfail,
+        state.stencil.front.op.dpfail,
+        state.stencil.front.op.dppass
+    );
+    glStencilOpSeparate(
+        GL_BACK, 
+        state.stencil.back.op.sfail,
+        state.stencil.back.op.dpfail,
+        state.stencil.back.op.dppass
+    );
+    glStencilMaskSeparate(GL_FRONT, state.stencil.front.stencilMask);
+    glStencilMaskSeparate(GL_BACK, state.stencil.back.stencilMask);
+
+    // state.polygonOffset
+    glPolygonOffset(state.polygonOffset.factor, state.polygonOffset.units);
+
+    // state.enables
+    setDefaultState();
+
+    // state.buffers
+    // Reset state.buffers to its default state to avoid the complexity and error-prone
+    // nature of resetting the GL state to its existing state
+    state.buffers = {};
+    GLenum bufferTargets[] = {
+        GL_UNIFORM_BUFFER,
+        GL_TRANSFORM_FEEDBACK_BUFFER,
+#if !defined(__EMSCRIPTEN__)
+        GL_SHADER_STORAGE_BUFFER,
+#endif
+        GL_ARRAY_BUFFER,
+        GL_COPY_READ_BUFFER,
+        GL_COPY_WRITE_BUFFER,
+        GL_ELEMENT_ARRAY_BUFFER,
+        GL_PIXEL_PACK_BUFFER,
+        GL_PIXEL_UNPACK_BUFFER,
+    };
+    size_t bufferTargetCount = sizeof(bufferTargets) / sizeof(bufferTargets[0]);
+    for (size_t targetArrayIndex = 0; targetArrayIndex < bufferTargetCount; ++targetArrayIndex) {
+        GLenum target = bufferTargets[targetArrayIndex];
+        glBindBuffer(target, 0);
+    }
+
+    for (size_t bufferIndex = 0; bufferIndex < MAX_BUFFER_BINDINGS; ++bufferIndex) {
+        if (bufferIndex < (size_t)gets.max_uniform_buffer_bindings) {
+            glBindBufferBase(GL_UNIFORM_BUFFER, bufferIndex, 0);
+        }
+
+        if (bufferIndex < (size_t)gets.max_transform_feedback_separate_attribs) {
+            glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, bufferIndex, 0);
+        }
+    }
+
+    // state.textures
+    // Reset state.textures to its default state to avoid the complexity and error-prone
+    // nature of resetting the GL state to its existing state
+    state.textures = {};
+    const GLuint textureTargets[] = {
+        GL_TEXTURE_2D,
+        GL_TEXTURE_2D_ARRAY,
+        GL_TEXTURE_CUBE_MAP,
+        GL_TEXTURE_3D,
+#if !defined(__EMSCRIPTEN__)
+        GL_TEXTURE_2D_MULTISAMPLE,
+        GL_TEXTURE_EXTERNAL_OES,
+        GL_TEXTURE_CUBE_MAP_ARRAY,
+#endif
+    };
+    const size_t textureTargetCount = sizeof(textureTargets) / sizeof(textureTargets[0]);
+    for (GLint unit = 0; unit < gets.max_combined_texture_image_units; ++unit) {
+        glActiveTexture(GL_TEXTURE0 + unit);
+        glBindSampler(unit, 0);
+
+        for (size_t textureTargetArrayIndex = 0; textureTargetArrayIndex < textureTargetCount; ++textureTargetArrayIndex) {
+            GLuint target = textureTargets[textureTargetArrayIndex];
+            glBindTexture(target, 0);
+        }
+    }
+    glActiveTexture(GL_TEXTURE0 + state.textures.active);
+
+    // state.unpack
+    glPixelStorei(GL_UNPACK_ALIGNMENT, state.unpack.alignment);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, state.unpack.row_length);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, state.unpack.skip_pixels);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, state.unpack.skip_row);
+
+    // state.pack
+    glPixelStorei(GL_PACK_ALIGNMENT, state.pack.alignment);
+    glPixelStorei(GL_PACK_ROW_LENGTH, state.pack.row_length);
+    glPixelStorei(GL_PACK_SKIP_PIXELS, state.pack.skip_pixels);
+    glPixelStorei(GL_PACK_SKIP_ROWS, state.pack.skip_row);
+
+    // state.window
+    glScissor(
+        state.window.scissor.x, 
+        state.window.scissor.y, 
+        state.window.scissor.z, 
+        state.window.scissor.w
+    );
+    glViewport(
+        state.window.viewport.x,
+        state.window.viewport.y,
+        state.window.viewport.z,
+        state.window.viewport.w
+    );
+    glDepthRangef(state.window.depthRange.x, state.window.depthRange.y);
+    
 }
 
 } // namesapce filament

@@ -235,6 +235,9 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
 // ------------------------------------------------------------------------------------------------
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
+void OpenGLDriver::resetState(int) {
+    mContext.resetState();
+}
 
 void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
     mContext.bindSampler(unit, sampler);

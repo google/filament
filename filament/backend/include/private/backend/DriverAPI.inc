@@ -158,6 +158,9 @@ DECL_DRIVER_API_0(flush)
 // flush and wait for the effects to be done
 DECL_DRIVER_API_0(finish)
 
+// reset state tracking, if the driver does any state tracking (e.g. GL)
+DECL_DRIVER_API_0(resetState)
+
 /*
  * Creating driver objects
  * -----------------------
