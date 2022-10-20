@@ -893,7 +893,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     auto& encoderCache = mContext->argumentEncoderCache;
     id<MTLArgumentEncoder> encoder =
             encoderCache.getOrCreateState(ArgumentEncoderState(std::move(textureTypes)));
-    sb->reset(getPendingCommandBuffer(mContext), encoder);
+    sb->reset(getPendingCommandBuffer(mContext), encoder, mContext->device);
 
     // In a perfect world, all the MTLTexture bindings would be known at updateSamplerGroup time.
     // However, there are two special cases preventing this:
