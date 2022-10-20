@@ -305,7 +305,7 @@ public:
     // the texture types have changed.
     // Mutate re-encodes the current set of samplers/textures into the new argument
     // buffer.
-    void reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e);
+    void reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e, id<MTLDevice> device);
     void mutate(id<MTLCommandBuffer> cmdBuffer);
 
     id<MTLBuffer> getArgumentBuffer() const {

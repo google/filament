@@ -828,7 +828,8 @@ void MetalSamplerGroup::finalize() {
     finalized = true;
 }
 
-void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e) {
+void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e,
+        id<MTLDevice> device) {
     encoder = e;
 
     // The number of slots in the ring buffer we use to manage argument buffer allocations.
@@ -846,7 +847,7 @@ void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEnco
     // Chances are, even though the MTLArgumentEncoder might change, the required size and alignment
     // probably won't. So we can re-use the previous ring buffer.
     if (UTILS_UNLIKELY(!argBuffer || !argBuffer->canAccomodateLayout(argBufferLayout))) {
-        argBuffer = std::make_unique<MetalRingBuffer>(encoder.device, MTLResourceStorageModeShared,
+        argBuffer = std::make_unique<MetalRingBuffer>(device, MTLResourceStorageModeShared,
                 argBufferLayout, METAL_ARGUMENT_BUFFER_SLOTS);
     } else {
         argBuffer->createNewAllocation(cmdBuffer);
