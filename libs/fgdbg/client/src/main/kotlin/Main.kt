@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2022 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import androidx.compose.material.MaterialTheme
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Row
@@ -28,58 +44,61 @@ import kotlinx.coroutines.delay
 private enum class ConnectionState { UNKNOWN, CONNECTED, CONNECTING, ERROR }
 
 private data class Connection(
-  val host: String = "localhost",
-  val port: Int = 8082,
-  val path: String = "/",
-  val state: MutableState<ConnectionState> = mutableStateOf(ConnectionState.UNKNOWN),
-  val reconnectDelay: Int = 5,
+    val host: String = "localhost",
+    val port: Int = 8082,
+    val path: String = "/",
+    val state: MutableState<ConnectionState> = mutableStateOf(ConnectionState.UNKNOWN),
+    val reconnectDelay: Int = 5,
 )
 
 @Composable
 @Preview
 fun App() {
-  val connection = remember { Connection() }
-  val client = remember { HttpClient { install(WebSockets) } }
-  var message by remember { mutableStateOf("") }
+    val connection = remember { Connection() }
+    val client = remember { HttpClient { install(WebSockets) } }
+    var message by remember { mutableStateOf("") }
 
-  LaunchedEffect(Unit) {
-    while (true) {
-      connection.state.value = ConnectionState.CONNECTING
-      try {
-        client.webSocket(HttpMethod.Get, connection.host, connection.port, connection.path) {
-          message = "Connected!"
-          connection.state.value = ConnectionState.CONNECTED
-          while (true) {
-            val frame = incoming.receive() as? Frame.Text ?: continue
-            message = frame.readText()
-          }
+    LaunchedEffect(Unit) {
+        while (true) {
+            connection.state.value = ConnectionState.CONNECTING
+            try {
+                client.webSocket(HttpMethod.Get,
+                                 connection.host,
+                                 connection.port,
+                                 connection.path) {
+                    message = "Connected!"
+                    connection.state.value = ConnectionState.CONNECTED
+                    while (true) {
+                        val frame = incoming.receive() as? Frame.Text ?: continue
+                        message = frame.readText()
+                    }
+                }
+            } catch (e: Exception) {
+                connection.state.value = ConnectionState.ERROR
+                repeat(connection.reconnectDelay) {
+                    val remaining = connection.reconnectDelay - it
+                    message = "Connection interrupted, will re-connect in $remaining seconds..."
+                    delay(1000)
+                }
+            }
         }
-      } catch (e: Exception) {
-        connection.state.value = ConnectionState.ERROR
-        repeat(connection.reconnectDelay) {
-          val remaining = connection.reconnectDelay - it
-          message = "Connection interrupted, will re-connect in $remaining seconds..."
-          delay(1000)
-        }
-      }
     }
-  }
 
-  DisposableEffect(Unit) { onDispose { client.close() } }
+    DisposableEffect(Unit) { onDispose { client.close() } }
 
-  MaterialTheme {
-    when (connection.state.value) {
-      ConnectionState.CONNECTED -> {
-        Row(Modifier.height(40.dp)) {
-          Text(modifier = Modifier.align(Alignment.CenterVertically),
-               text = "Listening on ${connection.host}:${connection.port} ")
-          Button(onClick = {}) { Text(message) }
+    MaterialTheme {
+        when (connection.state.value) {
+            ConnectionState.CONNECTED -> {
+                Row(Modifier.height(40.dp)) {
+                    Text(modifier = Modifier.align(Alignment.CenterVertically),
+                         text = "Listening on ${connection.host}:${connection.port} ")
+                    Button(onClick = {}) { Text(message) }
+                }
+            }
+            ConnectionState.ERROR -> Text(text = message, color = Color.Red)
+            else -> Text(connection.state.value.name)
         }
-      }
-      ConnectionState.ERROR -> Text(text = message, color = Color.Red)
-      else -> Text(connection.state.value.name)
     }
-  }
 }
 
 fun main() = application { Window(onCloseRequest = ::exitApplication) { App() } }
