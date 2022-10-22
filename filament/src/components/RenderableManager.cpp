@@ -683,9 +683,9 @@ static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBuffe
 void FRenderableManager::setMorphWeights(Instance instance, float const* weights,
         size_t count, size_t offset) {
     if (instance) {
-        ASSERT_PRECONDITION(count + offset <= CONFIG_MAX_MORPH_TARGET_COUNT / 4,
+        ASSERT_PRECONDITION(count + offset <= CONFIG_MAX_MORPH_TARGET_COUNT * 4,
                 "Only %d morph targets are supported (count=%d, offset=%d)",
-                CONFIG_MAX_MORPH_TARGET_COUNT / 4, count, offset);
+                CONFIG_MAX_MORPH_TARGET_COUNT * 4, count, offset);
 
         MorphWeights& morphWeights = mManager[instance].morphWeights;
         if (morphWeights.handle) {
