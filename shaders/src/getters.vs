@@ -100,7 +100,9 @@ void morphPosition(inout vec4 p) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     uint c = getObjectUniforms().morphTargetCount;
     for (uint i = 0u; i < c; ++i) {
-        float w = morphingUniforms.weights[i][0];
+        uint pos = i / 4;
+        uint idx_pos = i % 4;
+        float w = morphingUniforms.weights[pos][idx_pos];
         if (w != 0.0) {
             texcoord.z = int(i);
             p += w * texelFetch(morphTargetBuffer_positions, texcoord, 0);

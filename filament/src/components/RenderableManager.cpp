@@ -667,10 +667,16 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
 static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
         float const* weights, size_t count, size_t offset) noexcept {
     auto& driver = engine.getDriverApi();
-    auto size = sizeof(float4) * count;
+    auto size = sizeof(float4) * ((count + 3) / 4);
     auto* UTILS_RESTRICT out = (float4*)driver.allocate(size);
-    std::transform(weights, weights + count, out,
-            [](float value) { return float4(value, 0, 0, 0); });
+
+    for (size_t i = 0; i < count; i++)
+    {
+        auto pos = i / 4;
+        auto pos_idx = i % 4;
+        out[pos][pos_idx] = weights[i];
+    }
+
     driver.updateBufferObject(handle, { out, size }, sizeof(float4) * offset);
 }
 
