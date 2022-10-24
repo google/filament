@@ -1054,6 +1054,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.depthAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::DEPTH);
         if (!discard) {
+            assert_invariant(context->supportsAutoDepthResolve);
             descriptor.depthAttachment.resolveTexture = depthAttachment.getTexture();
             descriptor.depthAttachment.resolveLevel = depthAttachment.level;
             descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
@@ -1086,10 +1087,12 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.stencilAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::STENCIL);
         if (!discard) {
+            assert_invariant(context->supportsAutoDepthResolve);
             descriptor.stencilAttachment.resolveTexture = stencilAttachment.getTexture();
             descriptor.stencilAttachment.resolveLevel = stencilAttachment.level;
             descriptor.stencilAttachment.resolveSlice = stencilAttachment.layer;
             descriptor.stencilAttachment.storeAction = MTLStoreActionMultisampleResolve;
+            descriptor.stencilAttachment.stencilResolveFilter = MTLMultisampleStencilResolveFilterSample0;
         }
     }
 }

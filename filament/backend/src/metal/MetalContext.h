@@ -64,6 +64,7 @@ struct MetalContext {
 
     // Supported features.
     bool supportsTextureSwizzling = false;
+    bool supportsAutoDepthResolve = false;
     bool supportsMemorylessRenderTargets = false;
     uint8_t maxColorRenderTargets = 4;
     struct {
