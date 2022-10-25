@@ -67,7 +67,7 @@ struct PixelParams {
 
 float computeMicroShadowing(float NoL, float visibility) {
     // Chan 2018, "Material Advances in Call of Duty: WWII"
-    float aperture = inversesqrt(1.0 - visibility);
+    float aperture = inversesqrt(1.0 - min(visibility, 0.9999));
     float microShadow = saturate(NoL * aperture);
     return microShadow * microShadow;
 }
