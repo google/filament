@@ -1092,7 +1092,9 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.stencilAttachment.resolveLevel = stencilAttachment.level;
             descriptor.stencilAttachment.resolveSlice = stencilAttachment.layer;
             descriptor.stencilAttachment.storeAction = MTLStoreActionMultisampleResolve;
-            descriptor.stencilAttachment.stencilResolveFilter = MTLMultisampleStencilResolveFilterSample0;
+            if (@available(iOS 12.0, *)) {
+                descriptor.stencilAttachment.stencilResolveFilter = MTLMultisampleStencilResolveFilterSample0;
+            }
         }
     }
 }
